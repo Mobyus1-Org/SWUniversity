@@ -1,0 +1,1502 @@
+[
+   {
+      "id": 1,
+      "question": "Player A has the initiative and a **_Baze Malbus, Temple Guardian_**, in play. Player B plays a **_SpecForce Soldier_** and targets **_Baze_**, causing him to lose **Sentinel** for the phase. Later in the same phase, Player A plays **_Protector_** and attaches it to **_Baze_**. What best describes what happens?",
+      "choices": {
+         "a": "**_Protector_** gives **_Baze_** both +1/+1 and **Sentinel** immediately.",
+         "b": "**_Protector_** gives **_Baze_** +1/+1 immediately, but he cannot regain **Sentinel** until the end of the phase.",
+         "c": "**_Protector_** waits until the end of the phase to give **_Baze_** both +1/+1 and **Sentinel**.",
+         "d": "**_Protector_** cannot be attached to **_Baze_**."
+      },
+      "answer": "b",
+      "relevantCards": ["SOR/065", "SOR/140", "SOR/057"],
+      "relevantRule": "If an effect causes a unit to lose an ability or keyword for a specific duration of time, that unit is not able to regain that particular ability or keyword until the specified period has ended.\n\n**8.15.1** - If an ability causes a unit to \"lose\" a keyword, the unit ceases to have the specified keyword and any abilities granting it that keyword when the \"lose\" effect is resolved cease granting the keyword for the duration of the \"lose\" effect. The unit cannot regain that keyword for the duration of the effect.",
+      "tags": ["baze malbus","specforce soldier","protector","sentinel","losing abilities","upgrade"],
+      "difficulty": 1
+   },
+   {
+      "id": 2,
+      "question": "Player A plays **_Mon Mothma, Voice of the Rebellion_**. Among the searched cards, they find a **_SpecForce Soldier_**. Do they have to draw it even if they don't want to?",
+      "choices": {
+         "a": "Yes. **_SpecForce Soldier_** is a _Rebel_ card so it must be drawn.",
+         "b": "No. **_SpecForce Soldier_** is not a _Rebel_ card, so it is not a valid choice.",
+         "c": "Yes. **_SpecForce Soldier_** has a **When Played** ability so it must be drawn.",
+         "d": "No. It is possible to fail to find a card from a hidden zone, even if one exists."
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/096", "SOR/140"],
+      "relevantRule": "When an ability instructs a player to select something from a hidden zone, such as their hand, resources, or a portion of their deck, since that information is unknown to their opponents, the player is permitted to act as if the contents of the hidden zone do not contain the intended target. This would not be the case, however, if the player was instructed to \"reveal\" their hand or a portion of their deck instead.\n\n**1.3.2** - While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.) \n\n**8.27.1** - When an ability instructs a player to \"search\" a deck, that player looks at a number of cards from that deck to find one or more cards, often with a specified attribute. The player chooses one or more cards (as indicated by the ability) and returns the other cards to that deck as specified below. The ability then instructs the player on what to do with the card(s) they have chosen. The player may also choose to resolve the ability as though no appropriate card was found.",
+      "tags": ["mon mothma", "specforce soldier", "search", "hidden zone", "draw", "reveal", "when played", "rebel"],
+      "difficulty": 1
+   },
+   {
+      "id": 3,
+      "question": "Player A plays **_Chewbacca, Faithful First Mate_**, as a _Pilot_, attaching him to a friendly **_Cartel Turncoat_**. Player B then plays **_Spare the Target_**, targeting Player A's **_Cartel Turncoat_**. What best describes what happens?",
+      "choices": {
+         "a": "**_Cartel Turncoat_** is returned to Player A's hand, defeating **_Chewbacca_**, and Player B draws a card.",
+         "b": "**_Chewbacca_** prevents **_Cartel Turncoat_** from being returned to hand, so nothing happens.",
+         "c": "**_Chewbacca_** prevents **_Cartel Turncoat_** from being returned to hand, but Player B still draws a card.",
+         "d": "**_Chewbacca's_** ability prevents **_Spare the Target_** from being played on **_Cartel Turncoat_**, so this play is illegal."
+      },
+     "answer": "c",
+     "relevantCards": ["JTL/103", "SHD/195", "SHD/206"],
+     "relevantRule": "Since **_Spare the Target_** does not specify \"If you do...\", collecting the target's **Bounties** happens whether the unit is returned to hand or not.\n\n**1.3.2** - While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.)",
+     "tags": ["chewbacca", "cartel turncoat", "spare the target", "bounty", "bounce", "removal", "prevent", "pilot"],
+      "difficulty": 1
+   },
+   {
+      "id": 4,
+      "question": "Player A is playing the leader **_Grand Inquisitor, Hunting the Jedi_**, and has an exhausted **_Hylobon Enforcer_** with 1 damage on it in play. They use **_Grand Inquisitor's_** leader ability, targeting their **_Hylobon Enforcer_**. What best describes what happens?",
+      "choices": {
+         "a": "**_Hylobon Enforcer_** takes 2 damage, becoming a 4/1, then readies.",
+         "b": "**_Hylobon Enforcer_** takes 2 damage, becoming a 4/1, and does not ready.",
+         "c": "**_Hylobon Enforcer_** is not a valid target because the 2 damage would result in it having more than 3 power.",
+         "d": "**_Hylobon Enforcer_** is not a valid target because it is not an _Aggression_ unit."
+      },
+      "answer": "a",
+      "relevantCards": ["SOR/011", "SHD/027"],
+      "relevantRule": "Once a target is chosen for an ability, the ability resolves in full even if the target becomes what would have been an ineligible target for the ability in the first place. Since **_Hylobon Enforcer_** had less than 3 power when it was targeted by **_Grand Inquisitor's_** ability, it still readies despite having 4 power by the end of the effect.",
+      "tags": ["grand inquisitor", "hylobon enforcer", "target", "bounty", "grit", "readying"],
+      "difficulty": 1
+   },
+   {
+      "id": 5,
+      "question": "Player A attacks Player B's base with **_Chimaera, Flagship of the Seventh Fleet_**, and names \"Maul.\" Player B reveals their hand which contains **_Maul, Shadow Collective Visionary_**, and **_Darth Maul, Revenge at Last_**. Which card(s) can Player A make Player B discard?",
+      "choices": {
+         "a": "Only **_Maul, Shadow Collective Visionary_**.",
+         "b": "Only **_Darth Maul, Revenge at Last_**.",
+         "c": "Either of the two.",
+         "d": "Neither of the two."
+      },
+      "answer": "a",
+      "relevantCards": ["SOR/185", "SHD/090", "TWI/135"],
+      "relevantRule": "Even though the name \"Darth Maul\" contains the name \"Maul\", they are not identical names and therefore different targets when naming a card.\n\n**8.18.2** - A card \"shares a name\" with another card if their full names are identical. A card does not need to share a subtitle with another card to share a name with it.",
+      "tags": ["chimaera", "name", "discard", "maul", "darth maul", "hand", "when played", "reveal"],
+      "difficulty": 0
+   },
+   {
+      "id": 6,
+      "question": "Player A plays a **_Privateer Scyk_** with no other units in play. On their next action, they play **_Liberated Slaves_**. Does their **_Privateer Scyk_** get a shield token and why/why not?",
+      "choices": {
+         "a": "Yes. Player A now controls another _Cunning_ unit so **_Privateer Scyk_** gains **Shielded** _and_ a shield token.",
+         "b": "No. Even though Player A now controls another _Cunning_ unit, the trigger timing for **Shielded** has passed.",
+         "c": "Yes, but only because **_Privateer Scyk_** did not get a shield token earlier in the round.",
+         "d": "No. **_Liberated Slaves_** has both the _Cunning_ and _Heroism_ aspects and therefore does not satisfy **_Privateer Scyk's_** requirements."
+      },
+      "answer": "b",
+      "relevantCards": ["SHD/212", "SHD/200"],
+      "relevantRule": "While **_Privateer Scyk_** would technically gain the keyword **Shielded** while **_Liberated Slaves_** is in play, **Shielded** is a keyword that resolves when the unit is played, meaning it would not get a shield token unless **_Liberated Slaves_** (or any friendly _Cunning_ unit) was in play at the time **_Privateer Scyk_** was played.\n\n**7.5.12.B** - Shielded resolves in the same window as any \"When Played\" abilities on the unit.",
+      "tags": ["privateer scyk", "liberated slaves", "shielded", "trigger", "when played", "timing"],
+      "difficulty": 1
+   },
+   {
+      "id": 7,
+      "question": "Player A controls a deployed **_Darth Vader, Dark Lord of the Sith_**. Player B controls a **_Supercommando Squad_** with a shield token and no other units. Player A declares that they are attacking with **_Darth Vader_** and use his **On Attack** to deal 2 damage to **_Supercommando Squad_**, defeating its shield token. Player A then declares Player B's base as the target for **_Darth Vader's_** attack and deals 5 damage to it. Is this a legal attack and why/why not?",
+      "choices": {
+         "a": "Yes. **_Darth Vader's_** **On Attack** defeating the shield token means the **_Supercommando Squad_** is no longer upgraded and loses **Sentinel**.",
+         "b": "Yes. The **_Supercommando Squad_** was not upgraded and therefore did not have **Sentinel** in the first place.",
+         "c": "No. Since **_Darth Vader_** is attacking Player B's base, his **On Attack** cannot damage the **_Supercommando Squad_**.",
+         "d": "No. The target of an attack must be declared before any **On Attack** abilities resolve. Since the **_Supercommando Squad_** had **Sentinel** when the attack was declared, it must be the target of the attack."
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/010-portrait", "SHD/034", "TSOR/T02"],
+      "relevantRule": "The first step in an attack is to \"Declare the attack\", and the first sub-step in that step is to choose a valid target. Only after a target for the attack has been selected do **On Attack** abilities resolve.\n\n**6.3.0.E** - Attacking With a Unit consists of the following 3 steps in order, explained in detail below: Declare the attack, Deal combat damage, and Complete the attack. After each step, resolve any abilities triggered during that step before proceeding to the next step in the attack. See 7.6. Triggered Abilities",
+      "tags": ["darth vader", "supercommando squad", "sentinel", "upgrade", "target", "on attack", "combat steps", "shield token"],
+      "difficulty": 1
+   },
+   {
+      "id": 8,
+      "question": "Player A controls **_Grogu, Irresistable_**. Player B controls an exhausted **_Death Star Stormtrooper_**, a ready **_TIE/ln Fighter_**, and a deployed and ready **_Grand Moff Tarkin, Oversector Governor_**. Which of the above is _NOT_ a valid target for **_Grogu's_** ability?",
+      "choices": {
+         "a": "The **_Death Star Stormtrooper_** because it is already exhausted.",
+         "b": "The **_TIE/ln Fighter_** because it is a space unit.",
+         "c": "**_Grand Moff Tarkin_** because he is a leader unit.",
+         "d": "They are all valid targets."
+      },
+      "answer": "d",
+      "relevantCards": ["SHD/196", "SOR/128", "SOR/225", "SOR/007-portrait"],
+      "relevantRule": "**_Grogu's_** ability does not state any restrictions on valid targets, meaning any unit in play can be chosen, even an already exhausted unit... although in that case, it would not trigger any other abilities requiring a unit to become exhausted.\n\n**1.5.4.E** - A ready card can be chosen for a readying effect, but the chosen card does not change orientation and is not considered to have been readied for the purpose of \"If you do\" effects. An exhausted card can be chosen for an exhausting effect, but the chosen card does not change orientation and is not considered to have been exhausted for the purpose of \"If you do\" effects",
+      "tags": ["grogu", "exhaust", "death star stormtrooper", "tie/ln fighter", "grand moff tarkin", "target"],
+      "difficulty": 0
+   },
+   {
+      "id": 9,
+      "question": "Player A has zero cards remaining in their deck. They attack with **_Reinforcement Walker_**. What best describes what happens?",
+      "choices": {
+         "a": "**_Reinforcement Walker's_** ability causes Player A's base to take 3 damage by attempting to look at a card from an empty deck.",
+         "b": "**_Reinforcement Walker's_** ability heals Player A's base for 3 HP.",
+         "c": "**_Reinforcement Walker's_** ability does nothing.",
+         "d": "**_Reinforcement Walker's_** ability causes Player A's base to take 3 damage by attempting to look at a card from an empty deck initially, but then heals it for 3 HP since Player A was not able to draw the non-existent card."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/119"],
+      "relevantRule": "Only attempting the specific act of drawing a card from an empty deck results in taking 3 damage to base. Other effects, such as looking at, revealing, searching, discarding, etc... all do not. In the case of **_Reinforcement Walker_**, the ability attempts to look at a card that does not exist, so the ability simply does nothing.\n\n**1.3.2** - Do as Much as You Can: While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.)\n\n**8.7.2** - If an ability would cause a player to shuffle, discard, search, reveal, or look at cards from an empty deck, they ignore that part of the ability.",
+      "tags": ["reinforcement walker", "draw", "on attack", "empty deck"],
+      "difficulty": 1
+   },
+   {
+      "id": 10,
+      "question": "Player A has played two cards already this phase. Player A then uses **_Han Solo, Worth the Risk's,_** leader ability to play **_Vanguard Ace_**. What best describes what happens?",
+      "choices": {
+         "a": "**_Vanguard Ace_** enters play as a 3/3, then takes 2 damage from **_Han's_** ability.",
+         "b": "**_Vanguard Ace_** enters play as a 1/1 and is defeated by **_Han's_** ability before its **When Played** resolves.",
+         "c": "It depends on how many of the two previously played cards were units.",
+         "d": "Player A gets to decide in what order **_Han's_** ability and **_Vanguard Ace's_** abilities resolve."
+      },
+      "answer": "b",
+      "relevantCards": ["SOR/191", "SHD/013"],
+      "relevantRule": "**_Han's_** leader ability results in a modified \"Play a card\" action and, like any all abilities that result in a modified action, must resolve in full before any resulting triggers can resolve. This means the 2 damage is dealt to the Vanguard Ace while it's still a 1/1, defeating it before its own **When Played** ability resolves.\n\n**7.1.6.B** - A modified \"Play a Card\" action might include: restrictions on the type of card that can be played, cost adjustments, playing cards from other zones, or other effects. Any abilities triggered during or as a result of a modified \"Play a Card\" action are resolved after the current ability is finished resolving.\n\n**NOTE** - While not relevant to this question, it's worth mentioning that **_Vanguard Ace's_** **When Played** ability _DOES_ still resolve after it's defeated. It simply can not give itself experience tokens while it's in a discard pile. However, if the ability, say, gave the experience tokens to a different unit, that would still occur!",
+      "tags": ["vanguard ace", "han solo", "when played", "experience", "trigger"],
+      "difficulty": 1
+   },
+   {
+      "id": 11,
+      "question": "Player A claims the initiative while still having 2 ready resources. Player B plays **_Cunning_** and chooses to have Player A discard a random card from their hand. Player A randomly discards **_Kylo's TIE Silencer, Ruthlessly Efficient_**. When can Player A play the discarded **_Kylo's TIE Silencer_** from their discard pile?",
+      "choices": {
+         "a": "They can play it immediately in response to discarding it.",
+         "b": "They can play it as their next action.",
+         "c": "They can play it any time during the next round.",
+         "d": "They cannot play it."
+      },
+      "answer": "d",
+      "relevantCards": ["SHD/135", "SOR/203"],
+      "relevantRule": "Since **_Kylo's TIE Silencer's_** ability is an Action Ability and not a Triggered Ability, Player A would need to use an action to play it from their discard pile. Unfortunately, once a player claims the initiative, they are forced to pass for the remainder of the phase, meaning although Player A has the resources to play **_Kylo's TIE_**, they will not be able to.\n\n**1.15.5.B** - After taking the initiative, a player cannot use their turn to take any further actions for the rest of that round’s action phase. They are considered to have \"passed,\" and they automatically \"pass\" for all remaining turns they would take that phase. However, they still resolve any triggered abilities they control during that phase.",
+      "tags": ["kylo's tie silencer", "cunning", "random", "discard", "discard pile", "play a card", "initiative", "for this phase"],
+      "difficulty": 1
+   },
+   {
+      "id": 12,
+      "question": "Player A controls **_Bossk, Deadly Stalker_**, and Player B controls **_Bib Fortuna, Jabba's Majordomo_**, with a shield token. Player A plays **_Ma Klounkee_** returning **_Bossk_** to hand. Does this defeat **_Bib Fortuna_** and why?",
+      "choices": {
+        "a": "Yes. As the active player, Player A can choose the order triggers resolve and can choose to resolve **_Bossk's_** ability before **_Ma Klounkee_**, defeating the shield token before the 3 damage.",
+        "b": "No. Since **_Bossk_** was returned to hand, his ability does not resolve. **_Ma Klounkee_** defeats the shield token and **_Bib_** takes no damage.",
+        "c": "No. Events must fully resolve before any abilities that trigger because of them can resolve. Therefore **_Ma Klounkee's_** damage defeats the shield token first, then **_Bossk's_** 2 damage is dealt after.",
+        "d": "No. **_Ma Klounkee_** cannot return **_Bossk_** to hand and therefore does no damage."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/182", "SOR/177", "SHD/229"],
+      "relevantRule": "Even though **_Bossk's_** ability triggers as soon as **_Ma Klounkee_** is played, it waits to resolve until after the Event has finished resolving, regardless of whether **_Bossk_** is in play or not. This means the 3 damage from **_Ma Klounkee_** must be assigned first, removing **_Bib's_** shield. Only after can the 2 damage from **_Bossk_** be assigned.\n\n**3.3.6** - If a triggered ability has the triggering condition \"When you play an event,\" the event ability must be resolved as completely as possible before resolving the triggered ability.\n\n**7.6.3** - For a triggered ability to resolve, the card with the ability must be in play when the triggering condition occurs, unless the ability specifies that it can be triggered from an out-of-play zone. Additionally, the triggered ability must resolve once triggered, even if the card with the ability leaves play before the triggered ability resolves.\n\n**7.6.8** - If an ability triggers during or as the result of a non-attack action, resolve that ability at the next available opportunity after that action is fully completed. If an ability triggers during an attack, resolve that ability at the appropriate timing point within that attack. Resolving a triggered ability never interrupts an action or ability that is currently resolving (other than the specified timing points during an attack), unless the currently resolving action or ability uses \"after,\" as described below. See 6.3. Attack With a Unit",
+      "tags": ["bossk", "bib fortuna", "ma klounkee", "shield token", "trigger", "shielded", "event", "bounce", "abilities"],
+      "difficulty": 2
+   },
+   {
+      "id": 13,
+      "question": "Player A has 2 HP remaining on their base and controls a **_Krayt Dragon_**. Player B has 1 HP remaining on their base and plays a **_Daring Raid_**, targeting Player A's base. Who wins the game and why?",
+      "choices": {
+        "a": "Player B wins. As the active player, Player B gets to choose which player resolves their triggers first and can choose to resolve **_Daring Raid_** before Player A resolves **_Krayt Dragon_**.",
+        "b": "Player B wins. Events must fully resolve before any abilities that trigger because of them can resolve, so **_Daring Raid_** must resolve before **_Krayt Dragon_**.",
+        "c": "Player A wins. Since **_Krayt Dragon_** triggers whenever an opponent plays a card, it resolves before the Event, meaning Player A can deal 1 damage to Player B's base first.",
+        "d": "Both players take damage to their bases at the same time. The game ends in a draw."
+      },
+      "answer": "b",
+      "relevantCards": ["SHD/172", "SHD/178"],
+      "relevantRule": "While **_Krayt Dragon's_** ability triggers as soon as Player B plays **_Daring Raid_**, the ability waits to resolve until the next available window, which is after the Event resolves. Unfortunately for Player A in this case, as soon as a base has 0 HP remaining, the game ends.\n\n**5.6.2** - Once a player’s base has 0 remaining HP, they cannot take any actions, and cannot resolve any abilities or effects.\n\n**7.6.8** - If an ability triggers during or as the result of a non-attack action, resolve that ability at the next available opportunity after that action is fully completed. If an ability triggers during an attack, resolve that ability at the appropriate timing point within that attack. Resolving a triggered ability never interrupts an action or ability that is currently resolving (other than the specified timing points during an attack), unless the currently resolving action or ability uses \"after,\" as described below. See 6.3. Attack With a Unit",
+      "tags": ["krayt dragon", "daring raid", "trigger", "event", "play a card", "timing", "abilities"],
+      "difficulty": 1
+   },
+   {
+      "id": 14,
+      "question": "Player A controls a **_Lurking TIE Phantom_** and a **_Sanctioner's Shuttle_**. Player B plays **_Caught in the Crossfire_** and chooses those two units. What best describes what happens?",
+      "choices": {
+        "a": "**_Sanctioner's Shuttle_** takes 2 damage. **_Lurking TIE_** takes 0 damage.",
+        "b": "**_Sanctioner's Shuttle_** takes 2 damage. **_Lurking TIE_** takes 2 damage and is defeated.",
+        "c": "**_Sanctioner's Shuttle_** takes 4 damage and is defeated. **_Lurking TIE_** takes 0 damage.",
+        "d": "**_Sanctioner's Shuttle_** takes 4 damage and is defeated. **_Lurking TIE_** takes 2 damage and is defeated."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/187", "TWI/213", "TWI/176"],
+      "relevantRule": "While the text on **_Caught in the Crossfire_** states that the units are dealing damage to one another, since the cause of the damage is **_Caught in the Crossfire_**, it's still considered to be originating from an enemy card ability, meaning **_Lurking TIE_** still prevents the damage.",
+      "tags": ["lurking tie", "sanctioner's shuttle", "caught in the crossfire", "prevent", "event", "choose"],
+      "difficulty": 2
+   },
+   {
+      "id": 15,
+      "question": "Player A controls **_Millennium Falcon, Piece of Junk_**, and **_Luke Skywalker, You Still With Me?_**, attached to it as a _Pilot_. When readying cards during the Regroup Phase, Player A chooses not to pay the 1 resource for **_Millennium Falcon's_** ability, returning it to Player A's hand. What best describes what happens to **_Luke Skywalker_**?",
+      "choices": {
+        "a": "**_Luke Skywalker_** returns to Player A's hand.",
+        "b": "**_Luke Skywalker_** is discarded.",
+        "c": "**_Luke Skywalker_** is either discarded or becomes a ground unit. If he's a ground unit, he will remain exhausted at the start of the next round.",
+        "d": "**_Luke Skywalker_** is either discarded or becomes a ground unit. If he's a ground unit, he will be ready at the start of the next round."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/193", "JTL/094"],
+      "relevantRule": "When a unit returns to hand, all upgrades attached to it are defeated, meaning Player A has the choice to make **_Luke_** a ground unit. If they do, the timing for readying cards during the Regroup Phase has already passed (that's when **_Millennium Falcon's_** ability triggered), meaning he will remain exhausted leading into the next round.\n\n**3.6.11** - An upgrade is defeated when either the unit it is attached to leaves play, or when an ability defeats it directly. When an upgrade is defeated, the attached unit loses all power, HP, and abilities given to it by the upgrade, and the upgrade is placed in its owner’s discard pile.\n\n**5.5.1** - The regroup phase consists of the following 5 steps, in order: Start of the regroup phase, Draw cards, Resource cards, Ready cards, End of the regroup phase.",
+      "tags": ["millennium falcon", "luke skywalker", "trigger", "timing", "regroup phase", "bounce", "pilot", "ability"],
+      "difficulty": 1
+   },
+   {
+      "id": 16,
+      "question": "Player A plays **_Rallying Cry_**. Later in the same phase, Player A deploys **_Leia Organa, Alliance General_**. Assuming there are no other relevant effects, how much damage would **_Leia_** do when she attacks?",
+      "choices": {
+        "a": "4",
+        "b": "3",
+        "c": "5",
+        "d": "6"
+      },
+      "answer": "a",
+      "relevantCards": ["SOR/154", "SOR/009-portrait"],
+      "relevantRule": "Only units in play at the time a lasting effect is created, such as the one created by **_Rallying Cry_**, benefit from the effect.\n\n**7.7.3.D** - By default, a lasting effect only applies to a card that’s in play at the time of the lasting effect’s creation. For a lasting effect to affect a card in an out-of-play zone, the ability that created that effect must explicitly state so.",
+      "tags": ["rallying cry", "leia organa", "lasting effect", "raid", "event"],
+      "difficulty": 1
+   },
+   {
+      "id": 17,
+      "question": "Player A controls **_Boba Fett, Any Methods Necessary_**, attached to a **_TIE Bomber_** as a _Pilot_ and no other units. If they were to play a **_Fett's Firespray, Pursuing the Bounty_**, would it ready as a result of its **When Played** ability?",
+      "choices": {
+        "a": "Yes. Player A still controls a **_Boba Fett_**.",
+        "b": "No. The reminder text does not specify \"as an upgrade\" which is what **_Boba Fett_** currently is.",
+        "c": "No. This version of **_Boba Fett_** was released in a different card set and therefore does not work with this **_Fett's Firespray_**.",
+        "d": "It depends on if there are any **_Boba Fett_** units in Player A's discard pile."
+      },
+      "answer": "a",
+      "relevantCards": ["JTL/009-portrait", "JTL/237", "SOR/184"],
+      "relevantRule": "Italicized reminder text on cards has no impact on game rules and can be wholly ignored when reading a card's effect. In the case of **_Fett's Firespray_**, so long as the player controls a **_Boba Fett_** in any form, it can ready as a result of its **When Played** ability.\n\n**2.13.2** - A card’s ability may be followed by italicized text in parentheses. Such text is called \"reminder text,\" and offers a simplified clarification of how that ability affects the game. Reminder text serves as a guide for ease of play, but does not override any rules in this Comprehensive Rules document. The presence or absence of reminder text does not mechanically affect the abilities on a card.\n\n**8.18.2** - A card \"shares a name\" with another card if their full names are identical. A card does not need to share a subtitle with another card to share a name with it.",
+      "tags": ["fett's firespray", "boba fett", "readying", "when played", "pilot", "control"],
+      "difficulty": 1
+   },
+   {
+      "id": 18,
+      "question": "Player A has a **_Green Squadron A-Wing_**, a **_Blue Leader, Scarif Air Support_**, that was moved to the ground arena as a result of its **When Played** ability, and no other units. Player B plays a **_Special Forces TIE Fighter_**. Does it ready and why/why not?",
+      "choices": {
+        "a": "Yes. Player A controls two space units and Player B now only controls one.",
+        "b": "Yes. Player A only controls one space unit, and **_Special Forces TIE Fighter_** doesn't count itself when it resolves its ability.",
+        "c": "No, both players now control one space unit.",
+        "d": "No, Player B controls more space units than player A."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/141", "JTL/096", "JTL/135"],
+      "relevantRule": "When **_Blue Leader_** moves to the ground arena as a result of its ability, it becomes a ground unit, even if it still says \"Space Unit\" at the top of the card. Also, a unit enters play before its own **When Played** ability resolves, so **_Special Forces TIE Fighter_** absolutely does count itself.\n\n**4.3.5** - Units in the ground arena are considered ground units and not space units while in play, regardless of what their arena type is.\n\n**7.6.13.A** - Some triggered abilities are indicated with \"When Played\" in bold, followed by a colon and an effect. These abilities trigger when the card they’re on is played and resolve after the card’s cost is paid and it is put into play.",
+      "tags": ["special forces tie fighter", "blue leader", "green squadron a-wing", "when played"],
+      "difficulty": 1
+   },
+   {
+      "id": 19,
+      "question": "Player A controls a **_Black One, Straight at Them_**, with **_R2-D2, Artooooooooo_**, attached to it as a _Pilot_ and have 4 total resources, all readied. They want to pay 1 resource and use their readied **_Poe Dameron, I Can Fly Anything_**, leader's ability to attach **_Poe_** to their **_Black One_**. Is this a legal play and why/why not?",
+      "choices": {
+        "a": "Yes. **_R2-D2_** says that you may play or deploy one additional _Pilot_ on the attached _Vehicle_, so **_Poe_** can deploy onto it.",
+        "b": "Yes, but Player A will need to defeat **_R2-D2_** in order to make room for **_Poe_**.",
+        "c": "No. **_Poe_** needs at least 5 resources to use his leader ability.",
+        "d": "No. **_Poe's_** ability does not play or deploy him, so **_R2-D2's_** text does not override his restriction of the target _Vehicle_ already having a _Pilot_ on it."
+      },
+      "answer": "d",
+      "relevantCards": ["JTL/147", "JTL/245", "JTL/013"],
+      "relevantRule": "Due to **_Poe's_** wording, he is neither \"played\" nor \"deployed\" but rather \"attaches\" himself to a friendly _Vehicle_ unit without a _Pilot_ on it. Since **_R2-D2_** specifically mentions those two methods, you cannot attach **_Poe_** to a _Vehicle_ with **_R2-D2_** (or any _Pilot_ for that matter!) already attached. **_Poe_** would have to attach first.",
+      "tags": ["poe dameron", "r2-d2", "black one", "pilot", "ability", "restriction", "leader", "upgrade", "wording"],
+      "difficulty": 2
+   },
+   {
+      "id": 20,
+      "question": "Player A controls **_Chirrut Imwe, One With the Force_**, with 3 damage on him. Player B attacks into **_Chirrut_** with a **_First Legion Snowtrooper_**. What best describes what happens?",
+      "choices": {
+         "a": "**_Chirrut_** takes 4 damage and Player A's base takes 0.",
+         "b": "**_Chirrut_** takes 2 damage and Player A's base takes 0.",
+         "c": "**_Chirrut_** takes 4 damage and Player A's base takes 2.",
+         "d": "**_Chirrut_** takes 2 damage and Player A's base takes 2."
+      },
+      "answer": "a",
+      "relevantCards": ["SOR/004-portrait", "SOR/130"],
+      "relevantRule": "Since **_Chirrut's_** ability prevents him from being defeated during the Action Phase no matter how much damage he takes, no **Overwhelm** damage may be done to the base.\n\n**7.5.7.F** - If an attacker with Overwhelm does not defeat the defender while attacking, no damage is dealt to the enemy base.",
+      "tags": ["chirrut", "first legion snowtrooper", "abilities", "overwhelm", "leader", "damaged unit", "on attack"],
+      "difficulty": 1
+   },
+   {
+      "id": 21,
+      "question": "Player A has **_Ahsoka Tano, Snips_**, deployed as a unit and an exhausted **_Advanced Recon Commando_** in play with no other units. They play a **_Pelta Supply Frigate_**. Do they create a **_Clone Trooper_** token and why?",
+      "choices": {
+         "a": "Yes. **_Pelta Supply Frigate_** counts itself as the third unit needed for **Coordinate** to be active.",
+         "b": "Yes. **Coordinate** is always active when your leader is deployed.",
+         "c": "No. They only have two units in play at the time **_Pelta Supply Frigate_** is played.",
+         "d": "No. **_Advanced Recon Commando_** needs to be ready to count towards **Coordinate**."
+      },
+      "answer": "a",
+      "relevantCards": ["TWI/011-portrait", "TWI/093", "TWI/095"],
+      "relevantRule": "**Coordinate** doesn't care whether your units are ground, space, ready, exhausted, or your leader. So long as you control 3 units, **Coordinate** is active. Also, since **When Played** abilities resolve after the unit is in play, units with **When Played** abilities using **Coordinate** count themselves!\n\n**7.5.15.A** - \"Coordinate\" is a keyword followed by a dash and ability text whose effect is the same as the constant ability: \"While you control 3 or more units, this card gains the following ability.\"\n\n**7.6.13.A** - Some triggered abilities are indicated with \"When Played\" in bold, followed by a colon and an effect. These abilities trigger when the card they’re on is played and resolve after the card’s cost is paid and it is put into play.",
+      "tags": ["pelta supply frigate", "ahsoka tano", "advanced recon commando", "coordinate", "when played", "trigger"],
+      "difficulty": 0
+   },
+   {
+      "id": 22,
+      "question": "Player A has a **_Restored ARC-170_** with **_Devotion_** attached to it and **_Home One, Alliance Flagship_**, in play with no other units. When Player A attacks with their **_Restored ARC-170_**, how much damage is healed from their base?",
+      "choices": {
+         "a": "1",
+         "b": "2",
+         "c": "3",
+         "d": "4"
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/044", "SOR/070", "SOR/102"],
+      "relevantRule": "Keywords whose names are followed by a numeral are cumulative. Since **Restore** has a numeral, the total amount healed is the sum of all instances of **Restore** on a unit. In this case, 1 from itself, 2 from **_Devotion_**, and 1 from **_Home One_** for a total of 4.\n\n**7.5.4** - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n**7.5.9.B** - Multiple instances of Restore stack. If a unit gains Restore when it already has Restore, the numerals following each instance of Restore are added together, and when the unit attacks it heals damage equal to the total value.",
+      "tags": ["restored arc-170", "devotion", "home one", "restore", "keyword", "heal", "upgrade"],
+      "difficulty": 0
+   },
+   {
+      "id": 23,
+      "question": "Player A plays **_Grim Resolve_** and chooses to attack with a **_Heroic Renegade_** with 2 damage on it. How much damage would they do?",
+      "choices": {
+         "a": "2",
+         "b": "4",
+         "c": "3",
+         "d": "6"
+      },
+      "answer": "b",
+      "relevantCards": ["TWI/172", "SHD/146"],
+      "relevantRule": "Keywords do not stack unless they are followed by a numeral, cost, or dash with ability text. In this case, **_Heroic Renegade_** already has **Grit** and does not gain any additional benefit from attacking with **_Grim Resolve_**. The 2 extra damage is added to its Power, resulting in 4 damage done.\n\n**7.5.4** - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n**7.5.6.B** - Multiple instances of Grit do not stack. If a unit gains Grit when it already has Grit, the unit’s power does not change.",
+      "tags": ["grim resolve", "heroic renegade", "grit", "keyword"],
+      "difficulty": 0
+   },
+   {
+      "id": 24,
+      "question": "Player A wants to attack with an **_Imperial Interceptor_**. Player B has a **_Battlefield Marine_**, an **_Echo Base Defender_**, and a **_Bright Hope, The Last Transport_**. Which targets are valid?",
+      "choices": {
+         "a": "The **_Echo Base Defender_** and **_Bright Hope_**.",
+         "b": "Any of Player B's units, but not their base.",
+         "c": "Only **_Bright Hope_**.",
+         "d": "**_Bright Hope_** and Player B's base."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/132", "SOR/095", "SOR/098", "SOR/099"],
+      "relevantRule": "Even though **_Echo Base Defender_** has **Sentinel**, since Player A's **_Imperial Interceptor_** is a space unit, it cannot attack ground units (at least not without the use of other cards!). When an enemy **Sentinel** unit is in the same arena, it prevents an attacker from attacking any non-**Sentinel** units as well as the opponent's base.\n\n**7.5.11.B** - When a player makes an attack, after exhausting the attacker, the player checks if there are any enemy units in the attacker’s arena with Sentinel. If there are one or more, the attacking player cannot choose a non-Sentinel unit as the defender (unless the attacker has Saboteur). If their opponent controls multiple units with Sentinel in that arena, the attacking player may choose any one of those units to be the defender.",
+      "tags": ["imperial interceptor", "battlefield marine", "echo base defender", "bright hope", "sentinel", "keyword", "target"],
+      "difficulty": 0
+   },
+   {
+      "id": 25,
+      "question": "Player A plays **_Syndicate Lackeys_** from hand and chooses to resolve **Ambush**. Player B has a **_Fleet Lieutenant_**, an **_Alliance X-Wing_**, and a **_Tantive IV, Fleeing the Empire_**, in play. Which are valid targets?",
+      "choices": {
+         "a": "Any of the units, but not Player B's base.",
+         "b": "Only the **_Tantive IV_**.",
+         "c": "Only the **_Fleet Lieutenant_**.",
+         "d": "The **_Fleet Lieutenant_** or Player B's base."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/213", "SOR/240", "SOR/237", "JTL/252"],
+      "relevantRule": "When a unit attacks using **Ambush**, it can only attack valid enemy units, not the enemy base. Since **_Syndicate Lackeys_** is a ground unit, the only legal target for **Ambush** is the enemy **_Fleet Lieutenant_**.\n\n**7.5.5.C** - A unit with Ambush still enters play exhausted like any other (non-leader) unit and cannot attack if there are no enemy units it can attack.",
+      "tags": ["syndicate lackeys", "fleet lieutenant", "alliance x-wing", "tantive iv", "ambush", "sentinel", "keyword", "target"],
+      "difficulty": 0
+   },
+   {
+      "id": 26,
+      "question": "Player A has an **_AT-ST_** in play with 5 damage on it. They attack into Player B's **_Consular Security Force_** that already has 3 damage on it. How much damage does the **_AT-ST's_** **Overwhelm** deal to Player B's base?",
+      "choices": {
+         "a": "None since the **_AT-ST_** doesn't survive the attack.",
+         "b": "6",
+         "c": "3",
+         "d": "2"
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/232", "SOR/046"],
+      "relevantRule": "Since the **_AT-ST_** attacks for 6 damage and only 4 is needed to reduce the **_Consular Security Force's_** HP to 0, the remaining 2 damage is dealt to Player B's base due to **Overwhelm**. The **_AT-ST_** doesn't need to survive the attack to damage the base.\n\n**7.5.7.A** - \"Overwhelm\" is a keyword whose effect is the same as the constant ability: \"While attacking, this unit deals its excess damage to the defending player’s base.\"\n\n*7.5.7.C* - An attacker with Overwhelm deals combat damage to the defender and the enemy base simultaneously.",
+      "tags": ["at-st", "consular security force", "overwhelm", "keyword"],
+      "difficulty": 0
+   },
+   {
+      "id": 27,
+      "question": "Player A has a **_Red Three, Unstoppable_**, and a **_Soldier of the 501st_** with **_Clone Cohort_** attached to it in play with no other units. How much damage would **_Soldier of the 501st_** do to Player B's base if it attacked?",
+      "choices": {
+         "a": "1",
+         "b": "2",
+         "c": "4",
+         "d": "5"
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/144", "TWI/141", "TWI/169"],
+      "relevantRule": "Since **Raid** is a keyword followed by a numeral, the effect is cumulative. When **_Soldier of the 501st_** attacks, its own **Raid 1** is added with the **Raid 2** from **_Clone Cohort_** as well as the **Raid 1** from **_Red Three_**. All of that is then added to its base Power to determine how much damage it will do.\n\n**7.5.4** - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n**7.5.8.B** - Multiple instances of Raid stack. If a unit gains Raid when it already has Raid, the numerals following each instance of Raid are added together, and when the unit attacks, it gets bonus power equal to the total value.",
+      "tags": ["red three", "soldier of the 501st", "clone cohort", "raid", "keyword"],
+      "difficulty": 0
+   },
+   {
+      "id": 28,
+      "question": "Player A wants to attack with their **_House Kast Soldier_**. Player B has a deployed **_Count Dooku, Face of the Confederacy_**, a **_Pirate Battle Tank_**, and a **_Confederate Courier_** in play. What are valid targets for Player A to attack?",
+      "choices": {
+         "a": "Only the **_Pirate Battle Tank_**.",
+         "b": "The **_Pirate Battle Tank_** or Player B's base.",
+         "c": "Anything except the **_Confederate Courier_**, including Player B's base.",
+         "d": "All of Player B's units, but not their base."
+      },
+      "answer": "c",
+      "relevantCards": ["SHD/162", "TWI/005-portrait", "SHD/089", "TWI/079"],
+      "relevantRule": "Since **_House Kast Soldier_** has **Saboteur**, it can ignore enemy **Sentinel** units when attacking. This means it can freely choose to attack any enemy units in the same arena as well as the enemy base.\n\n**7.5.10.B** - To \"ignore\" Sentinel means to determine the defender or base being attacked as if no enemy units in the attacker’s arena have Sentinel. Enemy units do not lose Sentinel while Sentinel is ignored.",
+      "tags": ["house kast soldier", "count dooku", "pirate battle tank", "confederate courier", "saboteur", "sentinel", "keyword", "target"],
+      "difficulty": 0
+   },
+   {
+      "id": 29,
+      "question": "Player A attacks with their **_Orbiting K-Wing_** into Player B's **_Techno Union Transport_** which has two shield tokens. What best describes what happens?",
+      "choices": {
+         "a": "One of the **_Techno Union Transport's_** shields is defeated and it takes 0 damage.",
+         "b": "Both of the **_Techno Union Transport's_** shields are defeated and it takes 0 damage.",
+         "c": "Both of the **_Techno Union Transport's_** shields are defeated and it takes 4 damage.",
+         "d": "One of the **_Techno Union Transport's_** shields is defeated and it takes 4 damage."
+      },
+      "answer": "c",
+      "relevantCards": ["JTL/166", "JTL/190"],
+      "relevantRule": "Since **_Orbiting K-Wing_** has **Saboteur**, all shield tokens on the defending unit are defeated and it takes the full damage of the attacking unit.\n\n**7.5.10.A** - \"Saboteur\" is a keyword whose effect encompasses two abilities: a constant ability and a triggered ability. Saboteur’s first effect is the same as the constant ability: \"You may ignore Sentinel when choosing what this unit attacks.\" Saboteur’s second effect resolves like the triggered ability: \"On Attack: Defeat all Shield tokens attached to the defender.\"",
+      "tags": ["orbiting k-wing", "techno union transport", "saboteur", "shielded", "keyword", "shield token"],
+      "difficulty": 0
+   },
+   {
+      "id": 30,
+      "question": "Player A just defeated Player B's **_Guavian Antagonizer_**, but is afraid their deck is running low on cards and doesn't want to draw a card from the **Bounty**. Do they need to draw and why?",
+      "choices": {
+         "a": "Yes. It does not say \"You may\", so it's required.",
+         "b": "Yes, but only if Player B has the initiative.",
+         "c": "No. A **Bounty** is only collected when the unit is captured.",
+         "d": "No. Collecting a **Bounty** is optional."
+      },
+      "answer": "d",
+      "relevantCards": ["SHD/134"],
+      "relevantRule": "Players do not need to collect the **Bounty** on units they capture or defeat. It's always optional.\n\n**7.5.13.E** - Resolving a Bounty ability is optional. If a player chooses not to resolve a Bounty ability, they are not considered to have collected that Bounty.",
+      "tags": ["guavian antagonizer", "bounty", "keyword", "trigger"],
+      "difficulty": 1
+   },
+   {
+      "id": 31,
+      "question": "Player A attacked with their own **_Wanted Insurgents_** into Player B's **_Academy Defense Walker_**, defeating itself. Which player gets to collect **_Wanted Insurgents'_** **Bounty** and why?",
+      "choices": {
+         "a": "Player A. The attacking player always collects the **Bounty**.",
+         "b": "Player B. Their unit survived combat and therefore they collect the **Bounty**.",
+         "c": "Whichever player has the initiative collects the **Bounty**.",
+         "d": "Player B. A **Bounty** is always collected by an opponent of the unit they are on."
+      },
+      "answer": "d",
+      "relevantCards": ["SHD/167", "SOR/037"],
+      "relevantRule": "Since the **Bounty** is on Player A's unit, Player B has the option of collecting it when **_Wanted Insurgents_** is defeated.\n\n**7.5.13.F** - Bounty abilities are always resolved by an opponent of the player who controls the unit with the Bounty ability. If a player defeats their own unit that has a Bounty ability, they must choose an opponent to resolve its Bounty ability.",
+      "tags": ["wanted insurgents", "academy defense walker", "bounty", "keyword"],
+      "difficulty": 0
+   },
+   {
+      "id": 32,
+      "question": "Player A has 5 HP remaining on their base. Player B only has 2 HP remaining on their base. Both players' decks are empty going into the start of the Regroup Phase. How does the game end?",
+      "choices": {
+         "a": "Player A wins.",
+         "b": "Player B wins.",
+         "c": "The game is a draw.",
+         "d": "The player with the initiative wins."
+      },
+      "answer": "c",
+      "relevantCards": [],
+      "relevantRule": "Even though Player A's base had more HP remaining at the start of the Regroup Phase, both players draw simultaneously and, because they both have empty decks, they will both take 6 damage at time same time, resulting in a draw.\n\n**5.6.3** - In a case where both players’ bases reach 0 remaining HP at the same time, the game ends in a draw.",
+      "tags": ["mill", "draw"],
+      "difficulty": 0
+   },
+   {
+      "id": 33,
+      "question": "Player A's leader is **_Luke Skywalker, Faithful Friend_**, and their base is **_Echo Base_**. If they want to play the card **_Bendu, The One in the Middle_**, how many resources would they need to pay?",
+      "choices": {
+         "a": "4",
+         "b": "8",
+         "c": "6",
+         "d": "10"
+      },
+      "answer": "b",
+      "relevantCards": ["SOR/005", "SOR/024", "SOR/056"],
+      "relevantRule": "Player A's leader only provides one blue _Vigilance_ aspect icon, so in order to play the double-blue **_Bendu_** card, they would incur a 2-cost penalty for the missing second blue aspect.\n\n**8.1.2** - Each aspect icon depicted on a leader or base provides only 1 icon of the given type. In order to play a card that has 2 of the same type of aspect icon without incurring the aspect penalty, the player’s leader and base must each have an icon of that type.\n\n**NOTE:** - Starting in the _Secrets of Power_ set, we have begun to see leaders that have two of the same color aspect icon on them. In that case, you would not need your base to match your leader.",
+      "tags": ["luke skywalker", "echo base", "bendu", "aspects", "cost", "aspect penalty"],
+      "difficulty": 0
+   },
+   {
+      "id": 34,
+      "question": "At the start of a game, Player A chooses two cards from their hand to become resources, but Player B really likes 5 of the 6 cards they drew in their opening hand. Is it legal for Player B to only resource one card and why?",
+      "choices": {
+         "a": "No. Each player must always resource two cards at the start of the game.",
+         "b": "Yes. Resourcing cards is optional.",
+         "c": "No. Since Player A resourced two cards, Player B must also resource two cards.",
+         "d": "Only if they start the game with the initiative."
+      },
+      "answer": "a",
+      "relevantCards": [],
+      "relevantRule": "While resourcing a card during the Regroup Phase is optional, the two cards resourced at the start of the game are mandatory.\n\n**5.2.1.F** - Resource two cards. Each player chooses two cards from their hand and puts them into play as resources, facedown and ready. Each player must place exactly two cards as resources.",
+      "tags": ["resource"],
+      "difficulty": 0
+   },
+   {
+      "id": 35,
+      "question": "Player A has an **_N-1 Starfighter_** with **_Chewbacca, Faithful First Mate_**, attached to it as a _Pilot_. Player B plays **_No Glory, Only Results_** targeting Player A's **_N-1 Starfighter_**. What best describes what happens?",
+      "choices": {
+         "a": "Player B takes control of the **_N-1_** with **_Chewbacca_** still attached, but it is not defeated.",
+         "b": "Nothing happens.",
+         "c": "Both the **_N-1_** and **_Chewbacca_** are defeated and placed in Player A's discard pile.",
+         "d": "Both the **_N-1_** and **_Chewbacca_** are defeated and placed in Player B's discard pile."
+      },
+      "answer": "c",
+      "relevantCards": ["LOF/192", "JTL/103", "JTL/043"],
+      "relevantRule": "**_Chewbacca's_** ability only prevents the attached unit from being defeated by \"enemy\" card abilities, but since **_No Glory, Only Results_** gives Player B control of the unit before defeating it, it is no longer an \"enemy\" ability that is doing the defeating. Defeated cards always go to their owner's discard pile, regardless of who controlled them at the time they were defeated.\n\n**1.5.3.A** - A card that a player controls is considered \"friendly\" for that player.\n\n**1.5.5.C** - A unit is defeated when it has damage on it equal to or greater than its HP, or when an ability defeats it directly. When a non-leader unit is defeated, it is moved to its owner’s discard pile. The unit’s abilities are no longer considered active (though some delayed effects may still be active). The unit loses all abilities and modifiers it was given by effects while in play. See 3.4. for more on Leader Units.\n\n**1.5.5.D** - An upgrade is defeated when the unit it is attached to leaves play, or when an ability defeats it directly. When a non-leader upgrade is defeated, it is moved to its owner’s discard pile. The upgrade’s abilities are no longer considered active (though some delayed effects may still be active). See 3.4. for more on Leader Upgrades.\n\n**8.28.1** - If an ability instructs a player to \"take control\" of a card, that player will become that card’s controller, and remain so until either that card leaves play or their opponent takes control of that card.",
+      "tags": ["n-1 starfighter", "chewbacca", "no glory only results", "target", "control", "pilot", "ownership"],
+      "difficulty": 1
+   },
+   {
+   "id": 36,
+      "question": "Player A is playing a red _Aggression_ leader and the **_Energy Conversion Lab_** base. Which of the following units is a valid option when using **_Energy Conversion Lab's_** **Epic Action**?",
+      "choices": {
+         "a": "**_Warbird Stowaway_** from resources using **Smuggle**.",
+         "b": "**_Separatist Super Tank_** using **Exploit** to discount its cost to 5.",
+         "c": "**_Trandoshan Hunters_** when only 4 resources are ready.",
+         "d": "**_Darth Vader, Twilight of the Apprentice_**, when 8 resources are ready."
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/022", "SHD/086", "TWI/087", "SHD/140", "LOF/037"],
+      "relevantRule": "When referencing a unit's \"cost\", always use the number in the top-left corner of the card before any penalties or discounts are applied. Since **_Energy Conversion Lab_** does not say \"for free\", the unit you play with it must still be paid for normally. Also, since it specifies \"from hand\", the unit you play cannot come from another zone, such as with **Smuggle**.\n\n**1.8.6** - If an ability refers to the \"cost\" of a card, that ability always refers to the printed cost of the card. It does not take into account any modifiers to the card’s cost as it was played. See 8.16. Modifiers.",
+      "tags": ["energy conversion lab", "warbird stowaway", "separatist super tank", "trandoshan hunters", "darth vader", "epic action", "ambush", "smuggle", "cost", "aspect penalty", "for free", "exploit", "keyword"],
+      "difficulty": 1
+   },
+   {
+      "id": 37,
+      "question": "Which of the following would NOT be defeated by playing **_Takedown_**?",
+      "choices": {
+         "a": "A **_Clan Saxon Gauntlet_** with an experience token on it.",
+         "b": "A **_Desperado Freighter_** with 2 damage counters on it.",
+         "c": "A **_Secretive Sage_** with a shield token on it.",
+         "d": "A deployed **_Sabine Wren, Galvanized Revolutionary_**, leader unit."
+      },
+      "answer": "a",
+      "relevantCards": ["SOR/077", "LOF/061", "SHD/152", "SOR/014-portrait", "SHD/035", "TSHD/T01"],
+      "relevantRule": "When a card references a unit's HP, use the amount of HP remaining after applying any relevant modifiers and subtracting one for each damage counter on the unit. Also, if a card does not specify \"non-leader\", it can target deployed leader units as well!\n\n**1.11.6** - A card’s \"remaining HP\" is calculated by subtracting the number of damage counters on it from its HP (accounting for any modifiers to its HP). If the remaining HP of a card is 0 or less, that card is defeated immediately.",
+      "tags": ["takdown", "secretive sage", "desperado freighter", "sabine wren", "clan saxon gauntlet", "target", "event", "hp"],
+      "difficulty": 0
+   },
+   {
+      "id": 38,
+      "question": "Player A has a **_Phoenix Squadron A-Wing_** with **_Luke Skywalker, Hero of Yavin_**, attached to it as a _Pilot_. Player B plays **_Nebula Ignition_**. What best describes what happens?",
+      "choices": {
+         "a": "The **_Phoenix Squadron A-Wing_** survives because it is upgraded.",
+         "b": "**_Luke's_** ability prevents the **_Phoenix Squadron A-Wing_** from being defeated.",
+         "c": "The **_Phoenix Squadron A-Wing_** is defeated and **_Luke_** becomes a ground unit.",
+         "d": "The **_Phoenix Squadron A-Wing_** is defeated, resulting in **_Luke_** being defeated as well."
+      },
+      "answer": "a",
+      "relevantCards": ["JTL/095", "JTL/012-portrait", "JTL/080"],
+      "relevantRule": "_Pilots_, both leaders and non-leaders, are considered upgrades when attached to _Vehicles_, so **_Nebula Ignition_** does not defeat the **_A-Wing_**.\n\n**3.6.13** - A unit is considered \"upgraded\" while it has at least one upgrade attached to it.",
+      "tags": ["phoenix squadron a-wing", "luke skywalker", "nebula ignition", "event", "removal", "target", "upgrade"],
+      "difficulty": 0
+   },
+   {
+      "id": 39,
+      "question": "Player A uses **_Han Solo, Worth the Risk's_**, ability to play a **_Secretive Sage_** for 1 resource. What best describes what happens?",
+      "choices": {
+         "a": "**_Secretive Sage_** enters play, gets a shield token, and then takes 2 damage from **_Han's_** ability, defeating the shield.",
+         "b": "**_Secretive Sage_** enters play and immediately takes 2 damage from **_Han's_** ability, defeating it.",
+         "c": "**_Secretive Sage_** enters play and Player A gets to choose whether to deal the 2 damage to it or give it a shield first.",
+         "d": "**_Han's_** ability wouldn't discount **_Secretive Sage_**."
+      },
+      "answer": "b",
+      "relevantCards": ["SHD/013", "LOF/061"],
+      "relevantRule": "**_Han's_** leader ability results in a modified \"Play a card\" action and, like any all abilities that result in a modified action, must resolve in full before any resulting triggers can resolve, meaning the 2 damage is dealt to the **_Secretive Sage_** before **Shielded** gives it a shield token.\n\n**7.1.6.B** - A modified \"Play a Card\" action might include: restrictions on the type of card that can be played, cost adjustments, playing cards from other zones, or other effects. Any abilities triggered during or as a result of a modified \"Play a Card\" action are resolved after the current ability is finished resolving.",
+      "tags": ["han solo", "secretive sage", "timing", "shielded", "leader"],
+      "difficulty": 1
+   },
+   {
+      "id": 40,
+      "question": "Which number on the card **_C-3PO, Protocol Droid_**, represents his cost?",
+      "choices": {
+         "a": "The red \"1\" on the left side.",
+         "b": "The gold \"2\" in the top-left corner.",
+         "c": "The blue \"4\" on the right side.",
+         "d": "The \"3\" in his name."
+      },
+      "answer": "b",
+      "relevantCards": ["SOR/238"],
+      "relevantRule": "A card's cost is always found in the top-left corner of the card.\n\n**2.6.1** - A card’s cost is located in the top left corner of the card and indicates how many resources must be spent to play the card. If it is a leader card, this number instead is related to deploying that leader (typically, how many resources a player must control to deploy it). Units, events, upgrades, and tokens have a cost. See 1.8. Cost.",
+      "tags": ["c-3po", "cost", "card anatomy"],
+      "difficulty": 0
+   },
+   {
+      "id": 41,
+      "question": "Player A attacks Player B's base with **_Ketsu Onyo, Old Friend_**. Which of the following targets can Player A choose to defeat with **_Ketsu's_** ability?",
+      "choices": {
+         "a": "A **_Biggs Darklighter, They'll Never Stop Us_**, attached to a vehicle as a _Pilot_.",
+         "b": "A **_Protector_** that Player B paid 3 resources for due to an aspect penalty.",
+         "c": "A **_Traitorous_** attached to a 2-cost unit.",
+         "d": "A **_Shadowed Intentions_** attached to Player B's leader."
+      },
+      "answer": "b",
+      "relevantCards": ["SHD/147", "JTL/150", "SOR/057", "SOR/122", "TWI/220"],
+      "relevantRule": "When a card refers to another card's \"cost\", it always refers to the number printed in the top-left of the card, no matter what penalties or reductions a player actually paid for it. In this case, it doesn't matter that Player B paid 3 resources for **_Protector_**, it still only costs 1.\n\n**1.8.6** - If an ability refers to the \"cost\" of a card, that ability always refers to the printed cost of the card. It does not take into account any modifiers to the card’s cost as it was played. See 8.16. Modifiers.",
+      "tags": ["ketsu onyo", "biggs darklighter", "protector", "traitorous", "shadowed intentions", "cost", "upgrade"],
+      "difficulty": 1
+   },
+   {
+      "id": 42,
+      "question": "Player A plays **_Clone_**. Which of the following units would NOT be a valid target for **_Clone_** to enter play as a copy of?",
+      "choices": {
+         "a": "**_Yoda, Old Master_**",
+         "b": "**_Falchion Ion Tank_**",
+         "c": "**_Graceful Purrgil_**",
+         "d": "**_Ion Cannon_**"
+      },
+      "answer": "b",
+      "relevantCards": ["TWI/116", "SOR/045", "TWI/065", "LOF/069", "IBH/016"],
+      "relevantRule": "Since the only restriction **_Clone_** has is that the target mustn't be a _Vehicle_, meaning, as strange as it is, it CAN be a clone of an **_Ion Cannon_**.",
+      "tags": ["clone", "yoda", "falcion ion tank", "graceful purrgil", "ion cannon", "target"],
+      "difficulty": 1
+   },
+   {
+      "id": 43,
+      "question": "Player A controls **_General Grievous, General of the Droid Armies_**, deployed as a unit. Player B controls **_Rose Tico, Saving What We Love_**, also deployed as a unit. No other units are in play. Player A plays **_Merciless Contest_**. What best describes what happens?",
+      "choices": {
+         "a": "No units are defeated.",
+         "b": "**_General Grievous_** is defeated.",
+         "c": "Both units are defeated.",
+         "d": "**_Rose Tico_** is defeated."
+      },
+      "answer": "a",
+      "relevantCards": ["TWI/015-portrait", "JTL/004-portrait", "TWI/238"],
+      "relevantRule": "**_Merciless Contest_** specifies that each player chooses a non-leader unit to defeat. Since neither player has a non-leader unit, no units are defeated.",
+      "tags": ["general grievous", "rose tico", "merciless contest", "event", "target", "removal", "leader"],
+      "difficulty": 0
+   },
+   {
+      "id": 44,
+      "question": "At the start of a new round, Player A has a **_Luke Skywalker, Jedi Knight_**, in play upgraded with a **_Jedi Lightsaber_**. As the first action in a new round, they play a second **_Luke Skywalker, Jedi Knight_**, knowing they will need to choose one to defeat due to uniqueness. What best describes what happens?",
+      "choices": {
+         "a": "They will only be able to give an enemy unit -6/-6 if they choose to defeat the upgraded **_Luke_**.",
+         "b": "They will only be able to give an enemy unit -6/-6 if they choose to defeat the newly played **_Luke_**.",
+         "c": "They will give an enemy unit -6/-6 no matter which **_Luke_** they choose to defeat.",
+         "d": "They will give an enemy unit -3/-3 no matter which **_Luke_** they choose to defeat since the **When Played** resolves first."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/051", "SOR/054"],
+      "relevantRule": "Since the uniqueness rule is resolved before the pending **When Played** ability, it doesn't matter which copy of **_Luke_** is chosen to be defeated, by the time the pending trigger resolves, there will have been a friendly unit that was defeated, meaning Player A will give an enemy unit -6/-6.\n\n**8.30.4** - A player can only control one copy of each unique card at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
+      "tags": ["luke skywalker", "jedi lightsaber", "upgrade", "when played", "target", "unique"],
+      "difficulty": 1
+   },
+   {
+      "id": 45,
+      "question": "Player A controls **_The Ghost, Heart of the Family_**, upgraded with **_For the Republic_**. They also control **_Ezra Bridger, Attuned With Life_**, and an **_X-Wing_** token. How much HP does their base heal when **_Ezra_** attacks?",
+      "choices": {
+         "a": "2",
+         "b": "4",
+         "c": "0",
+         "d": "6"
+      },
+      "answer": "b",
+      "relevantCards": ["JTL/053", "TWI/051", "LOF/046", "TJTL/T02"],
+      "relevantRule": "This is a rather unintuitive one, so here goes...\nDue to the wording in the rules for **Coordinate**, when a player controls 3 or more units, the unit \"gains\" whatever is after the dash. This means that while **_The Ghost_** is upgraded with **_For The Republic_**, it passes \"**Coordinate** - **Restore 2**\" on to friendly _Spectres_. Then once **Coordinate** becomes active, **_The Ghost_** gains \"**Restore 2**\" and passes that on as well, meaning **_Ezra_** has a total of **Restore 4**.\n\n**7.5.15.A** - \"Coordinate\" is a keyword followed by a dash and ability text whose effect is the same as the constant ability: \"While you control 3 or more units, this card gains the following ability.\"",
+      "tags": ["the ghost", "ezra bridger", "x-wing", "coordinate", "keyword", "restore", "spectre", "upgrade"],
+      "difficulty": 2
+   },
+   {
+      "id": 46,
+      "question": "Player A is playing **_Qui-Gon Jinn, Student of the Living Force_**, and the **_Jedi Temple_** base. After completing an attack with **_Qui-Gon_**, Player A chooses to return **_Depa Billaba, A Higher Purpose_**, to their hand. Which of the following is a valid choice for them to play for free?",
+      "choices": {
+         "a": "**_Ki-Adi-Mundi, Composed and Confident_**",
+         "b": "**_Shin Hati, Overeager Apprentice_**",
+         "c": "**_General Rieekan, Defensive Strategist_**",
+         "d": "**_Jedi Lightsaber_**"
+      },
+      "answer": "a",
+      "relevantCards": ["LOF/016-back", "LOF/023", "LOF/199", "TWI/064", "LOF/183", "SHD/103", "SOR/054"],
+      "relevantRule": "Even though **_Ki-Adi-Mundi_** is out of aspect in this situation, the aspect penalty is ignored when instructed to play a card for free. The rest of the options do not meet the criteria specified by **_Qui-Gon's_** ability.\n\n**8.1.3** - If an ability instructs a player to play a card \"for free,\" the player bypasses all modifiers to that card’s cost, including the aspect penalty, and does not pay any resources to play that card. The player must still pay any additional non-resource costs of the card.",
+      "tags": ["qui-gon jinn", "jedi temple", "ki-adi-mundi", "shin hati", "general rieekan", "jedi lightsaber", "ability", "cost", "for free", "aspect penalty"],
+      "difficulty": 1
+   },
+   {
+      "id": 47,
+      "question": "Player A plays **_Discerning Veteran_**, capturing Player B's **_Village Protectors_** which had a shield token. What best describes what will happen when **_Discerning Veteran_** leaves play?",
+      "choices": {
+         "a": "**_Village Protectors_** returns to play under Player B's control exhausted with full HP but no shield token.",
+         "b": "**_Village Protectors_** returns to play under Player B's control ready with full HP but no shield token.",
+         "c": "**_Village Protectors_** returns to play under Player B's control exhausted with full HP and a shield token.",
+         "d": "**_Village Protectors_** returns to play under Player A's control exhausted with full HP but no shield token."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/120", "SHD/043"],
+      "relevantRule": "When a captured unit returns to play, it returns to its owner's control exhausted. It does not trigger any **When Played** abilities, including keywords that trigger when a unit is played such as **Shielded**.\n\n**1.16.5.D** - If a unit that was guarding a captured unit is no longer in play, the captured unit enters play under its owner’s control, exhausted.",
+      "tags": ["discerning veteran", "village protectors", "capture", "enters play", "shield token", "shielded"],
+      "difficulty": 1
+   },
+   {
+      "id": 48,
+      "question": "Player A plays **_Legal Authority_**, choosing their **_Steadfast Battalion_** to capture Player B's **_Pyke Sentinel_**. Player B then plays **_Disabling Fang Fighter_**, defeating **_Legal Authority_**. What best describes what happens?",
+      "choices": {
+         "a": "**_Steadfast Battalion_** loses the +0/+2, but **_Pyke Sentinel_** remains captured.",
+         "b": "**_Steadfast Battalion_** loses the +0/+2 and **_Pyke Sentinel_** returns to play under Player B's control ready.",
+         "c": "**_Steadfast Battalion_** loses the +0/+2 and **_Pyke Sentinel_** returns to play under Player B's control exhausted.",
+         "d": "**_Steadfast Battalion_** loses the +0/+2 and **_Pyke Sentinel_** returns to play under Player A's control exhausted."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/124", "SOR/116", "SHD/029", "SOR/162"],
+      "relevantRule": "**_Legal Authority's_** ability doesn't require the upgrade itself to remain in play for the unit to remain captured. Its ability triggers when it's played, and that's that.",
+      "tags": ["steadfast battalion", "legal authority", "pyke sentinel", "capture", "upgrade", "rescue"],
+      "difficulty": 1
+   },
+   {
+      "id": 49,
+      "question": "Player A controls an **_Alliance X-Wing_** and no other units. Player B plays a **_Death Trooper_** and has no other units. What best describes what happens?",
+      "choices": {
+         "a": "**_Death Trooper_** deals 2 damage to itself and 2 damage to the **_Alliance X-Wing_**.",
+         "b": "**_Death Trooper_** deals 2 damage to itself only.",
+         "c": "**_Death Trooper_** deals no damage.",
+         "d": "**_Death Trooper_** deals 2 damage to each players' base."
+      },
+      "answer": "b",
+      "relevantCards": ["SOR/237", "SOR/033"],
+      "relevantRule": "Since **_Death Trooper's_** ability does not say \"You may...\", Player B must resolve as much of the ability as they can. Since Player A has no ground units, the **_Death Trooper_** deals 2 damage to itself and no other units.\n\n**1.3.2** - Do as Much as You Can: While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.)\n\n**7.6.7** - A triggered ability must resolve once its triggering condition is met unless the ability uses the phrase \"you may.\" Once triggered, these abilities must resolve at the next available opportunity.",
+      "tags": ["alliance x-wing", "death trooper", "when played", "target", "ability"],
+      "difficulty": 0
+   },
+   {
+      "id": 50,
+      "question": "Player A controls a **_Loth-Wolf_**. Player B controls a **_Viper Probe Droid_** and plays **_Give In to Your Anger_**, targeting the **_Loth-Wolf_**. What best describes Player A's next action?",
+      "choices": {
+         "a": "The **_Loth-Wolf_** must attack the **_Viper Probe Droid_**.",
+         "b": "The **_Loth-Wolf_** must attack either the **_Viper Probe Droid_** or Player B's base.",
+         "c": "The **_Loth-Wolf_** must attack Player B's base.",
+         "d": "Player A has free choice of their next action."
+      },
+      "answer": "d",
+      "relevantCards": ["LOF/044", "SOR/228", "SHD/144"],
+      "relevantRule": "The fact that **_Loth-Wolf_**'s ability specifies that it \"can't attack\" means that if another ability attempts to make it attack, that second ability fails. Restrictions always override permissions.\n\n**8.4.3** - Restrictive abilities override permissive abilities. If an ability with the word \"may\" or \"can\" directly contradicts an ability that uses the word \"can’t\", then the ability that uses \"can’t\" takes precedence.",
+      "tags": ["loth-wolf", "viper probe droid", "give in to your anger", "event", "target", "can't attack"],
+      "difficulty": 1
+   },
+   {
+      "id": 51,
+      "question": "Player A controls a **_Seasoned Fleet Admiral_** and claims initiative. Player B plays **_Sneak Attack_**, playing a **_Nightsister Warrior_** as a result. After attacking Player A's base with the **_Nightsister Warrior_**, Player B passes. What best describes what happens?",
+      "choices": {
+         "a": "**_Nightsister Warrior_** is defeated, drawing Player B a card. **_Seasoned Fleet Admiral_** only triggers if it hadn't triggered earlier in the round.",
+         "b": "**_Nightsister Warrior_** survives since it attacked Player A's base.",
+         "c": "**_Nightsister Warrior_** is defeated, drawing Player B a card. **_Seasoned Fleet Admiral_** triggers, letting Player A give an experience token to a unit.",
+         "d": "**_Nightsister Warrior_** is defeated, drawing Player B a card. **_Seasoned Fleet Admiral_** does not trigger."
+      },
+      "answer": "d",
+      "relevantCards": ["JTL/111", "SOR/219", "LOF/059"],
+      "relevantRule": "Due to **_Sneak Attack_**, **_Nightsister Warrior_** is defeated at the start of the Regroup Phase, letting Player B draw a card. This does not trigger **_Seasoned Fleet Admiral_** since we are no longer in the Action Phase.\n\n**5.3.1** - A round of the game consists of two phases in order: an action phase and a regroup phase. The start of each action phase is also the start of a new game round.\n\n**5.5.1.A** - Start of the regroup phase. Any lasting effects that expire when the regroup phase starts expire now. Any abilities or effects that trigger at the start of the regroup phase trigger now.",
+      "tags": ["seasoned fleet admiral", "sneak attack", "nightsister warrior", "timing", "trigger", "draw", "when defeated"],
+      "difficulty": 1
+   },
+   {
+      "id": 52,
+      "question": "Player A has 6 ready resources and the initiative. They control a **_Seasoned Shoretrooper_**, a **_First Order TIE Fighter_**, a **_Battle Droid_** token, and a **_Warbird Stowaway_** with **_Perilous Position_** attached to it. Each of those units has attacked already this phase. They then play **_Consolidation of Power_**, choosing all four of those units. Which of the following is the most expensive unit Player A can play for free?",
+      "choices": {
+         "a": "**_Devastator, Inescapable_**",
+         "b": "**_Relentless, Konstantine's Folly_**",
+         "c": "**_Blizzard Assault AT-AT_**",
+         "d": "**_Maul, Shadow Collective Visionary_**"
+      },
+      "answer": "b",
+      "relevantCards": ["SOR/081", "JTL/081", "TTWI/T01", "SHD/086", "TWI/070", "TWI/089", "SOR/090", "SOR/089", "SOR/088", "SHD/090"],
+      "relevantRule": "This one is all about math. Since Player A has 6 resources, **_Seasoned Shoretrooper_** has 4 power _(4 total)_. The **_First Order TIE_** may have **Raid 1**, but that doesn't add to its power unless it's attacking, so it has 2 power _(6 total)_. The **_Battle Droid_** is a simple 1 more _(7 total)_. The **_Warbird Stowaway_** starts with 2, goes to 4 due to Player A having the initiative, then is reduced back to 2 from **_Perilous Position_** _(9 total)_. That means Player A can play a unit from their hand for free with a total cost 9 or less.",
+      "tags": ["seasoned shoretrooper", "first order tie fighter", "battle droid", "warbird stowaway", "perilous position", "consolidation of power", "devastator", "blizzard assault at-at", "maul", "relentless", "token", "event", "cost", "power"],
+      "difficulty": 2
+   },
+   {
+      "id": 53,
+      "question": "Player A controls a readied **_Saw Gerrera, Extremist_**. Player B has 2 HP remaining on their base and plays **_Bamboozle_**, targeting **_Saw_**, and choosing to discard a **_Spark of Rebellion_** from their hand to pay for it. What best describes what happens?",
+      "choices": {
+         "a": "**_Bamboozle_** cannot be paid for by discarding **_Spark of Rebellion_**. This play is illegal.",
+         "b": "Since **_Bamboozle_** exhausts **_Saw_**, his ability is ignored.",
+         "c": "**_Saw_** becomes exhausted and Player B takes no damage to base.",
+         "d": "Player B must deal 2 damage to their base and lose the game."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/153", "SOR/199", "SOR/200"],
+      "relevantRule": "Since **_Bamboozle_** says that by discarding a _Cunning_ card to play it instead of \"paying this event's cost,\" **_Saw's_** effect is bypassed and Player B takes no damage.\n\nOfficial clarification added by FFG on Mar 1, 2024.",
+      "tags": ["saw gerrera", "bamboozle", "spark of rebellion", "event", "timing", "cost", "discard"],
+      "difficulty": 2
+   },
+   {
+      "id": 54,
+      "question": "Player A controls a ready **_Finn, This is a Rescue_**, and a **_HWK-290 Freighter_** upgraded with Player B's **_Entrenched_**. One of Player B's units was defeated earlier this phase, so Player A plays **_A Fine Addition_** choosing a **_Clone Pilot_** from Player B's discard pile and plays it on their **_HWK-290 Freighter_** as an upgrade. Player B then plays **_Darth Vader, Twilight of the Apprentice_**, giving a shield token to himself and Player A's **_HWK-290 Freighter_**. Which upgrades can Player A defeat with **_Finn's_** Action ability?",
+      "choices": {
+         "a": "Only the **_Clone Pilot_**.",
+         "b": "**_Entrenched_** and **_Clone Pilot_**.",
+         "c": "**_Entrenched_**, **_Clone Pilot_**, and the shield token on the **_HWK-290 Freighter_**.",
+         "d": "**_Entrenched_**, **_Clone Pilot_**, and both shield tokens."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/003", "SHD/060", "SOR/072", "TWI/040", "JTL/108", "LOF/037", "TSOR/T02"],
+      "relevantRule": "If an opponent plays an upgrade on one of your units, they are still the controller of that upgrade, meaning it is not a \"friendly upgrade.\" Even though Player B is the _owner_ of **_Clone Pilot_**, since Player A is the player that put it into play using **_A Fine Addition_**, they are it's _controller_, making it the only friendly upgrade in play.\n\n**1.5.2.B** - A player is the \"controller\" of a card they put into play. This includes their base, their leader, resources in their resource zone, and units, upgrades, and tokens they play or put into play. A player keeps control of a card until either that card leaves play or their opponent takes control of it.\n\n**1.5.3.A** - A card that a player controls is considered \"friendly\" for that player.",
+      "tags": ["finn", "hwk-290 freighter", "entrenched", "a fine addition", "clone pilot", "darth vader", "shield token", "target", "leader", "action", "upgrade", "controller", "owner"],
+      "difficulty": 2
+   },
+   {
+      "id": 55,
+      "question": "Player A controls a ready **_Lando Calrissian, With Impeccable Taste_**, and 3 total resources which are all ready. They use **_Lando's_** ability and choose _not_ to play a card using **Smuggle**. What best describes what happens?",
+      "choices": {
+         "a": "**_Lando_** exhausts. Player A must still defeat a resource they own and control.",
+         "b": "Player A cannot use **_Lando's_** ability if they don't have a **Smuggle** card to play.",
+         "c": "Player A can't use **_Lando's_** ability unless they have 4 or more resources.",
+         "d": "**_Lando_** exhausts, but nothing else happens."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/017"],
+      "relevantRule": "Since **_Lando's_** ability does not say \"If you do,\" Player A is required to defeat one of their resources whether they play a card using **Smuggle** or not.\n\n**1.3.2** - Do as Much as You Can: While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.)",
+      "tags": ["lando calrissian", "smuggle", "leader", "ability"],
+      "difficulty": 1
+   },
+   {
+      "id": 56,
+      "question": "Player A controls an exhausted **_Raddus, Holdo's Final Command_**. Player B plays **_Force Slow_**, targeting Player A's **_Raddus_**. Later in the same phase, **_Raddus_** is defeated. How much damage does it do with its **When Defeated** ability?",
+      "choices": {
+         "a": "6",
+         "b": "8",
+         "c": "0",
+         "d": "7"
+      },
+      "answer": "c",
+      "relevantCards": ["JTL/104", "LOF/217"],
+      "relevantRule": "When a unit with a **When Defeated** ability is defeated, if that ability references itself, the gamestate uses \"last known information,\" or, what the unit was right before it was defeated, when referencing information about the unit that was just defeated.\n\n**8.12.1** - \"Last Known Information\" is information about a card that’s no longer in play that amounts to a snapshot of its status immediately before it left play. Last Known Information includes the attributes of the card, the controller of the card, the modifiers applied to that card, the card’s ready/exhausted status, upgrades attached to that card, and how the card was defeated or removed from play. Last Known Information is used primarily when resolving \"When Defeated\" abilities.",
+      "tags": ["raddus", "force slow", "event", "debuff", "when defeated", "timing", "last known info", "power"],
+      "difficulty": 1
+   },
+   {
+      "id": 57,
+      "question": "Player A has a ready **_Cassian Andor, Dedicated to the Rebellion_**. Player B has no cards in hand and no cards remaining in their deck. Player A plays **_Lothal Insurgent_** after having played a card earlier in the phase. After **_Lothal Insurgent's_** **When Played** ability resolves, _(and assuming no other damage was dealt to Player B's base this phase)_ can Player A draw a card using **_Cassian's_** Action ability?",
+      "choices": {
+         "a": "No. Player B took 3 damage attempting to draw a card from an empty deck, but it was caused by Player B.",
+         "b": "No. Since Player B's deck was empty, **_Lothal Insurgent's_** ability did nothing.",
+         "c": "Yes. Player B took 3 damage attempting to draw a card from an empty deck, which was caused by Player A.",
+         "d": "Yes. Player B took 3 damage attempting to discard a card from an empty hand, which was caused by Player A."
+      },
+      "answer": "a",
+      "relevantCards": ["SOR/013", "SOR/190"],
+      "relevantRule": "Even though **_Lothal Insurgent's_** **When Played** ability is what made Player B attempt to draw from an empty deck, the 3 damage dealt to Player B's base from the attempt comes from Player B themself, not Player A.\n\n**8.7.1** - If a player runs out of cards in their deck, they continue playing with the cards they have in play and in hand. If a player would draw a card from their empty deck, they instead deal 3 damage to their base for each card they would draw.",
+      "tags": ["cassian andor", "lothal insurgent", "empty deck", "empty hand", "draw", "when played", "leader", "discard", "ability"],
+      "difficulty": 2
+   },
+   {
+      "id": 58,
+      "question": "Player A controls a **_Droid Missile Platform_** which is upgraded with a **_Targeting Computer_**. When the **_Droid Missile Platform_** is defeated, who gets to assign the indirect damage from its **When Defeated** ability and why?",
+      "choices": {
+         "a": "Player A. The **_Droid Missile Platform's_** **When Defeated** ability resolves before any attached upgrades are defeated.",
+         "b": "Player A. **_Targeting Computer_** lets the controller of the attached unit assign the indirect damage.",
+         "c": "Player B. Indirect damage is always assigned by an opponent of the card dealing it.",
+         "d": "Player B. By the time the **When Defeated** ability resolves, **_Targeting Computer_** is no longer attached to the **_Droid Missile Platform_**."
+      },
+      "answer": "d",
+      "relevantCards": ["JTL/162", "JTL/171"],
+      "relevantRule": "When a unit is defeated, all upgrades attached to it are _immediately_ defeated as well. This means that the **_Droid Missile Platform_** loses the text gained from **_Targeting Computer_** before its **When Defeated** ability resolves, so Player B gets to assign the indirect damage.\n\n**3.6.11** - An upgrade is defeated when either the unit it is attached to leaves play, or when an ability defeats it directly. When an upgrade is defeated, the attached unit loses all power, HP, and abilities given to it by the upgrade, and the upgrade is placed in its owner’s discard pile.\n\n**7.6.14.A** - Some triggered abilities are indicated with \"When Defeated\" in bold, followed by a colon and an effect. These abilities trigger when the card they’re on is defeated and resolve after the card is removed from play and placed in its owner’s discard pile.",
+      "tags": ["droid missile platform", "targeting computer", "upgrade", "when defeated", "last known info", "indirect damage", "timing", "discard"],
+      "difficulty": 2
+   },
+   {
+      "id": 59,
+      "question": "Player A has 3 HP remaining on their base. Player B controls a **_K-2SO, Cassian's Counterpart_**, and also has 3 HP remaining on their base. Player A plays **_Gor, Grievous's Pet_**, and uses **Ambush** to attack into **_K-2SO_**. What best describes what happens?",
+      "choices": {
+         "a": "Player A wins. **_Gor_** deals 3 damage to Player B's base due to **Overwhelm** before **_K-2SO's_** **When Defeated** resolves.",
+         "b": "Player A wins. As the active player, Player A can choose to resolve **_Gor's_** **Overwhelm** before **_K-2SO's_** **When Defeated**.",
+         "c": "Player B wins. **_K-2SO's_** **When Defeated** must resolve immediately, dealing 3 damage to Player A's base before **_Gor_** can **Overwhelm**.",
+         "d": "Player B wins. As the defending player, they can choose to resolve **_K-2SO's_** **When Defeated** ability before **_Gor's_** **Overwhelm**."
+      },
+      "answer": "a",
+      "relevantCards": ["SOR/145", "TWI/118"],
+      "relevantRule": "Combat damage and damage from **Overwhelm** are done to the defending player's base simultaneously, so Player B's base reaches 0 HP before **_K-2SO's_** **When Defeated** ability has time to resolve.\n\n**7.5.7.C** - An attacker with Overwhelm deals combat damage to the defender and the enemy base simultaneously.",
+      "tags": ["k-2so", "gor", "overwhelm", "when defeated", "timing", "ambush"],
+      "difficulty": 1
+   },
+   {
+      "id": 60,
+      "question": "Player A controls **_The Daughter, Embodiment of Light_**, has The Force token, and has 1 HP remaining on their base. Player B attacks **_The Daughter_** with **_Aurra Sing, Crackshot Sniper_**. What best describes what happens?",
+      "choices": {
+         "a": "Player B wins. As the active player, Player B can choose to resolve **_Aurra Sing's_** **Overwhelm** before **_The Daughter's_** ability.",
+         "b": "Player B wins. **_Aurra Sing_** deals 1 damage to Player A's base due to **Overwhelm** before **_The Daughter's_** ability can resolve.",
+         "c": "The game continues. Player A's base takes 1 damage from **Overwhelm** but immediately heals 2 damage from **_The Daughter's_** ability.",
+         "d": "The game continues. **_Aurra Sing_** can't deal **Overwhelm** damage when attacking a _Force_ unit."
+      },
+      "answer": "b",
+      "relevantCards": ["LOF/252", "TWI/166"],
+      "relevantRule": "Since combat damage and damage from **Overwhelm** are dealt simultaneously, Player A's base reaches 0 HP remaining before they have the opportunity to use **_The Daughter's_** ability.\n\n**7.5.7.C** - An attacker with Overwhelm deals combat damage to the defender and the enemy base simultaneously.",
+      "tags": ["the daughter", "aurra sing", "timing", "the force", "overwhelm"],
+      "difficulty": 1
+   },
+   {
+      "id": 61,
+      "question": "Player A controls **_Ezra Bridger, Resourceful Troublemaker_**, upgraded with **_Clone Cohort_**. Player B controls **_General Krell, Heartless Tactician_**, and a **_Landing Shuttle_**, both with full HP. Player A attacks with **_Ezra_** into Player B's base. Once damage is dealt, Player A resolves **_Ezra's_** ability and decides to play the top card of their deck, which is **_Strike True_**. Player A chooses their own **_Ezra Bridger_** and Player B's **_Landing Shuttle_**. How many cards can Player B draw?",
+      "choices": {
+         "a": "1",
+         "b": "0",
+         "c": "2",
+         "d": "3"
+      },
+      "answer": "b",
+      "relevantCards": ["SOR/192", "TWI/169", "SOR/105", "JTL/063", "SOR/127"],
+      "relevantRule": "The power buff from **Raid** only applies while a unit is attacking. Since **_Ezra's_** ability doesn't trigger until after the attack has been completed, **_Strike True_** only sees his power as 3. If **_Ezra's_** ability were an **On Attack** ability instead, **_Strike True_** would, in that case, deal 5 damage.\n\n**7.5.8.C** - An attacker gets bonus power from Raid during an attack and loses the bonus power when the attack completes, for the same duration as \"While this unit is attacking\" abilities.",
+      "tags": ["ezra bridger", "clone cohort", "general krell", "landing shuttle", "strike true", "event", "raid", "when defeated", "draw", "other", "timing", "completes an attack"],
+      "difficulty": 2
+   },
+   {
+      "id": 62,
+      "question": "Player A controls a **_Crafty Smuggler_** with a shield token. Player B controls a **_Seventh Fleet Defender_** with a shield token and a **_Trench Defender_**. Player A plays **_Moment of Peace_**. What units are legal targets?",
+      "choices": {
+         "a": "Only the **_Crafty Smuggler_**.",
+         "b": "Only the **_Trench Defender_**.",
+         "c": "None of them.",
+         "d": "All of them."
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/207", "SOR/180", "IBH/008", "SOR/073", "TSOR/T02"],
+      "relevantRule": "There is no limit to the number of shield tokens a unit can have, and **_Moment of Peace_** does not specify any restrictions on what units it can target, so any unit in play is legal.",
+      "tags": ["crafty smuggler", "seventh fleet defender", "trench defender", "moment of peace", "shield token", "event", "target"],
+      "difficulty": 0
+   },
+   {
+      "id": 63,
+      "question": "Player A controls **_Admiral Ozzel, As Clumsy As He Is Stupid_**. Player B controls **_Padmé Amidala, What Do You Have To Hide?_**, and has no cards in hand. Player A attacks with **_Admiral Ozzel_** into **_Padmé_**, resulting in **_Ozzel_** being defeated. What best describes what happens when **_Ozzel's_** **When Defeated** ability resolves?",
+      "choices": {
+         "a": "Player B can use **_Padmé's_** ability to deal 1 damage to a unit.",
+         "b": "Player B takes 3 damage to their base.",
+         "c": "Nothing happens.",
+         "d": "Player A discards a card from their hand."
+      },
+      "answer": "c",
+      "relevantCards": ["IBH/082", "SEC/016-back"],
+      "relevantRule": "Since Player B has no cards in their hand, they cannot discard a card from it, meaning **_Padmé's_** ability does not trigger.\n\n**1.14.5** - If a player has no cards in their hand, they cannot discard a card from their hand",
+      "tags": ["admiral ozzel", "padme amidala", "when defeated", "ability", "discard", "leader"],
+      "difficulty": 1
+   },
+   {
+      "id": 64,
+      "question": "Player A is playing **_Padmé Amidala, What Do You Have To Hide?_**, as their leader and has no cards in hand. Player A then plays **_Black One, Scourge of Starkiller Base_**. What best describes what happens?",
+      "choices": {
+         "a": "**_Padmé's_** ability triggers, but Player A draws no cards.",
+         "b": "**_Padmé's_** ability triggers, then Player A draws 3 cards.",
+         "c": "**_Padmé_** does not trigger, but Player A still draws 3 cards.",
+         "d": "Nothing happens."
+      },
+      "answer": "c",
+      "relevantCards": ["SEC/016", "SOR/147"],
+      "relevantRule": "This is a weird one, but it's true according to the rules. While discarding a hand of 0 cards will not trigger **_Padmé's_** ability, it _does_ still satisfy **_Black One's_** \"If you do\" condition.\n\n**1.14.6** - When instructed to \"discard your hand,\" a player must discard cards from their hand until they have no cards in hand. If they already have no cards in hand, they are considered to have discarded their hand for relevant game effects.",
+      "tags": ["padme amidala", "black one", "when played", "ability", "discard", "leader", "hand"],
+      "difficulty": 2
+   },
+   {
+      "id": 65,
+      "question": "Player A controls **_Snowtrooper Vanguard_** and has 1 damage on their base. They then play **_General Veers, Leading the Assault_**. What best describes what happens next?",
+      "choices": {
+         "a": "Player B's base takes 2 damage and Player A's base heals 0 damage.",
+         "b": "Player B's base takes 2 damage and Player A's base heals 1 damage.",
+         "c": "Player B's base takes 1 damage and Player A's base heals 1 damage.",
+         "d": "Nothing happens since Player A does not have 2 damage on their base to heal."
+      },
+      "answer": "b",
+      "relevantCards": ["IBH/057", "IBH/068"],
+      "relevantRule": "When HP is healed for more damage than they have on them, player's remove as much damage as they can and are only considered to have healed that much damage.\n\n**1.11.5** - A card cannot be healed in excess of its HP. If a card would be healed in excess of its HP, heal as much damage as possible instead. The player only is considered to have healed damage equal to the number of damage counters removed.",
+      "tags": ["snowtrooper vanguard", "general veers", "heal", "when played", "ability"],
+      "difficulty": 0
+   },
+   {
+      "id": 66,
+      "question": "Player A only has 6 cards remaining in their deck. They play **_U-Wing Reinforcement_** and find a **_Kelleran Beq, The Sabered Hand_**, a **_Mon Mothma, Voice of the Rebellion_**, and an **_Admiral Ackbar, Brilliant Strategist_**. If they choose to play **_Kelleran_**, what best describes what happens?",
+      "choices": {
+         "a": "Since there are no cards left in the deck, **_Kelleran's_** ability will do nothing.",
+         "b": "Since there are no cards left in the deck, Player A will take 3 damage for each card they attempt to search with **_Kelleran's_** ability.",
+         "c": "The non-selected cards are shuffled to re-form the deck, allowing **_Kelleran's_** ability to play **_Mon Mothma_**. The non-selected cards from his ability will re-form the deck again, allowing **_Mon's_** ability to draw **_Ackbar_**.",
+         "d": "**_Kelleran's_** ability will allow Player A to play **_Mon Mothma_**, but **_Mon's_** ability will search an empty deck."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/104", "LOF/100", "SOR/096", "SOR/097"],
+      "relevantRule": "When resolving an ability that makes a player search a set number of cards from their deck to play or draw something, the portion of cards not selected to play or draw are immediately returned to the bottom of the deck upon completion of the search, before any newly triggered abilities resolve.\n\n**8.27.1** - When an ability instructs a player to\"search\" a deck, that player looks at a number of cards from that deck to find one or more cards, often with a specified attribute. The player chooses one or more cards (as indicated by the ability) and returns the other cards to that deck as specified below. The ability then instructs the player on what to do with the card(s) they have chosen. The player may also choose to resolve the ability as though no appropriate card was found.",
+      "tags": ["u-wing reinforcement", "kelleran beq", "mon mothma", "admiral ackbar", "search", "draw", "ordering", "when played", "random order", "nested ability"],
+      "difficulty": 2
+   },
+   {
+      "id": 67,
+      "question": "Player A plays **_C-3PO, Oh Dear, Oh Dear_**. Which of the follow cards would player A need to control to draw a card from **_C-3PO's_** **When Played** ability?",
+      "choices": {
+         "a": "**_C-3PO, Human-Cyborg Relations_** (not deployed).",
+         "b": "**_C-3PO, Protocol Droid_**.",
+         "c": "**_R2-D2, Full of Solutions_**.",
+         "d": "**_C-3PO, Anything I Might Do?_**."
+      },
+      "answer": "c",
+      "relevantCards": ["IBH/019", "SEC/015", "SOR/238", "SEC/093", "TWI/193"],
+      "relevantRule": "Since Player A would need to control a unit with the yellow _Cunning_ aspect, the only one in this list that would work is **_R2-D2, Full of Solutions_**. The Leader, **_C-3PO, Human-Cyborg Relations_**, would count if he was deployed as a unit, but does not count while he remains in the leader zone.\n\n**2.7.1** - If a card belongs to one or more aspects, those aspects are indicated by aspect icons located on one side of the card. Bases and both sides of leaders have aspect icons on the right, indicating that they provide those aspects to their deck. Units, events, and upgrades have aspect icons on the left, indicating that they incur those aspect penalties to play if not provided by a player’s leader or base. Each card has between 0 and 2 aspect icons. See 1.5.6. Aspects",
+      "tags": ["c-3po", "r2-d2", "when played", "aspects"],
+      "difficulty": 0
+   },
+   {
+      "id": 68,
+      "question": "At the start of a new round, Player A plays **_Gungi, Finding Himself_**. Player B, who already has two other units in play, plays **_Ki-Adi-Mundi, Composed and Confident_**. Then, Player A plays **_General's Blade_**, attaching it to **_Gungi_**. What best describes what happens?",
+      "choices": {
+         "a": "**_Ki-Adi-Mundi_** does not trigger because Player A has only played one card since he entered play.",
+         "b": "**_Ki-Adi-Mundi_** does not trigger because **_General's Blade_** is not a unit.",
+         "c": "**_Ki-Adi-Mundi_** does not trigger because Player B hasn't played their second card.",
+         "d": "**_Ki-Adi-Mundi_** triggers and Player B may draw 2 cards."
+      },
+      "answer": "d",
+      "relevantCards": ["LOF/093", "TWI/064", "TWI/121"],
+      "relevantRule": "Even though **_Ki-Adi-Mundi_** wasn't in play when Player A played their first card in the phase, he _was_ in play when they played their second, so his ability still triggers.\n\n**8.9.2** - Abilities that refer to the \"second\" or later occurrence in a phase or round (e.g. \"The second event played this phase\") likewise refer to the second or later occurrence that happens in that phase or round, regardless of when the ability becomes active. Abilities that affect the second or later occurrence in a phase or round do not apply their effects retroactively if they become active after the occurrence has already taken place.",
+      "tags": ["gungi", "ki-adi-mundi", "general's blade", "timing", "ability", "upgrade"],
+      "difficulty": 1
+   },
+   {
+      "id": 69,
+      "question": "Player A controls a **_Luke Skywalker, Jedi Knight_**. They play an **_Echo, Restored_**, and choose to discard a **_Luke Skywalker, A Hero's Beginning_**, from their hand. What best describes what happens?",
+      "choices": {
+         "a": "Nothing happens.",
+         "b": "Player A's base heals 2 damage.",
+         "c": "**_Luke Skywalker, A Hero's Beginning_**, cannot be discarded this way.",
+         "d": "**_Luke Skywalker, Jedi Knight_**, gets 2 Experience tokens."
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/051", "SHD/099", "LOF/249"],
+      "relevantRule": "Even though **_Luke Skywalker, Jedi Knight_**, and **_Luke Skywalker, A Hero's Beginning_**, are not the same card, they do have the same name, so **_Echo's_** ability will give Experience tokens in this scenario.\n\n**8.18.2** -  A card \"shares a name\" with another card if their full names are identical. A card does not need to share a subtitle with another card to share a name with it.",
+      "tags": ["luke skywalker", "echo", "name", "when played", "discard", "experience token", "unique"],
+      "difficulty": 1
+   },
+   {
+      "id": 70,
+      "question": "At the start of a new round, Player A controls **_Inferno Four, Unforgetting_**, with 1 damage on it. Player B controls a **_Cartel Turncoat_** with 1 damage on it and **_Bossk, Hunting His Prey_**, deployed as a unit. Player A attacks the **_Cartel Turncoat_** with **_Inferno Four_**. What best describes what happens?",
+      "choices": {
+         "a": "Player A gets to resolve **_Inferno Four's_** **When Defeated** and Player B may resolve **_Cartel Turncoat's_** **Bounty** twice.",
+         "b": "**_Cartel Turncoat's_** **Bounty** must be resolved first.",
+         "c": "**_Inferno Four's_** **When Defeated** must be resolved first.",
+         "d": "Player A gets to decide whether to resolve **_Inferno Four's_** **When Defeated** first or **_Cartel Turncoat's_** **Bounty**."
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/031", "SHD/195", "SHD/010-portrait"],
+      "relevantRule": "Since Player A is the controller of both **_Inferno Four's_** **When Defeated** ability as well as the **Bounty** on **_Cartel Turncoat_**, they can choose which ability to resolve first. Even though the **_Cartel Turncoat_** is Player B's unit, the **Bounty** will be collected by Player A.\n\n**7.5.13.A** - \"Bounty\" is a keyword followed by a dash and ability text that resolves like the triggered ability: \"When Defeated/When Captured: Resolve the following ability,\" except that the triggered ability is considered controlled by an opponent.\n\n**7.5.13.C** - Bounty resolves in the same window as any \"When Defeated\" or \"When Captured\" abilities on the unit.\n\n**7.6.9** - If a player must resolve multiple triggered abilities on cards they control at the same time, that player chooses the order in which to resolve those abilities.",
+      "tags": ["inferno four", "cartel turncoat", "bossk", "bounty", "when defeated", "search", "draw", "timing", "leader"],
+      "difficulty": 2
+   },
+   {
+      "id": 71,
+      "question": "Player A controls an **_Unlicensed Headhunter_** with **_Kazuda Xiono, Best Pilot in the Galaxy_**, attached to it as a _Pilot_. Player B controls **_The Client, Dictated by Discretion_**. Earlier in the phase, Player A attacked with their **_Unlicensed Headhunter_** and targeted it with **_Kazuda's_** **On Attack** ability. Player B then uses **_The Client's_** Action ability on the **_Unlicensed Headhunter_**. If Player A then claims initiative, and Player B defeats the **_Unlicensed Headhunter_**, what best describes happens?",
+      "choices": {
+         "a": "Player B's base is healed for 5 from **_Unlicensed Headhunter's_** own **Bounty**.",
+         "b": "Player B's base is healed for 0.",
+         "c": "Player B's base is healed for 5 from the **Bounty** placed on it by **_The Client_**.",
+         "d": "Player B's base is healed for 10."
+      },
+      "answer": "b",
+      "relevantCards": ["SHD/165", "JTL/018-back", "SHD/031"],
+      "relevantRule": "When an effect causes a unit to lose an ability, it cannot regain that ability for the duration of the effect. Since **_Kazuda's_** ability causes a unit to lose _all_ abilities until the end of the phase, and **Bounty** is a type of ability, **_The Client_** is not able to give **_Unlicensed Headhunter_** a new **Bounty** for the rest of the phase.\n\n**8.15.2** - If an ability causes a card to \"lose all abilities,\" the card ceases to have any abilities, including abilities given to it by other cards, for the duration of the \"lose\" effect. The card cannot gain abilities for the duration of the effect.",
+      "tags": ["unlicensed headhunter", "kazuda xiono", "the client", "bounty", "keyword", "when defeated", "losing abilities", "leader", "ability"],
+      "difficulty": 2
+   },
+   {
+      "id": 72,
+      "question": "Player A controls a ready **_Hotshot V-Wing_**. Player B plays an **_Entrenched_**, attaching it to the **_V-Wing_**. Player A then uses their leader, **_Kazuda Xiono, The Best Pilot in the Galaxy's_**, ability to remove all abilities from their **_Hotshot V-Wing_**. Can the **_V-Wing_** attack and why or why not?",
+      "choices": {
+         "a": "No. The **_Hotshot V-Wing_** was exhausted by **_Entrenched_**.",
+         "b": "No. **_Entrenched_** doesn't give the attached unit an ability.",
+         "c": "Yes. **_Kazuda's_** ability removed the effect of **_Entrenched_**.",
+         "d": "Yes. **_Entrenched_** has no affect on **_Hotshot V-Wing_**."
+      },
+      "answer": "b",
+      "relevantCards": ["TWI/209", "SOR/072", "JTL/018"],
+      "relevantRule": "Since **_Entrenched_** doesn't actually give the attached unit an ability, **_Kazuda's_** ability has no effect here. If **_Entrenched_** instead read \"Attached unit gains: This unit can't attack,\" then **_Kazuda's_** ability would work.\n\n**3.6.8** - Some upgrades give abilities to the unit they’re attached to. If an upgrade’s text box uses the phrase \"attached unit gains _,\" the text following \"gains\" is considered an ability that the attached unit has while the upgrade is attached to it, and such an ability can be lost, ignored, or affected by other abilities.\n\n**3.6.10** - Some upgrades have abilities that affect the unit they’re attached to, but do not give the attached unit an ability. Such abilities refer to the attached unit but do not use the phrase \"attached unit gains.\"",
+      "tags": ["hotshot v-wing", "entrenched", "kazuda xiono", "upgrade", "can't attack", "leader"],
+      "difficulty": 1
+   },
+   {
+      "id": 73,
+      "question": "Player A controls a **_Techno Union Transport_**, a **_Death Space Skirmisher_**, a **_Swoop Racer_**, and a **_Skyway Cloud Car_**, all ready. Player B attacks Player A's base with a **_Snowspeeder_**. What units can Player B exhaust with the **_Snowspeeder's_** **On Attack** ability?",
+      "choices": {
+         "a": "All of them.",
+         "b": "The **_Techno Union Transport_**, the **_Death Space Skirmisher_**, and the **_Skyway Cloud Car_**",
+         "c": "Only the **_Skyway Cloud Car_**.",
+         "d": "The **_Swoop Racer_** and the **_Skyway Cloud Car_**."
+      },
+      "answer": "c",
+      "relevantCards": ["JTL/190", "JTL/217", "SOR/210", "JTL/220", "SOR/244"],
+      "relevantRule": "Since **_Snowspeeder's_** **On Attack** ability specifies \"enemy _Vehicle_ ground unit,\" only the **_Skyway Cloud Car_** is a valid target.",
+      "tags": ["techno union transport", "death space skirmisher", "swoop racer", "skyway cloud car", "snowspeeder", "target", "on attack", "traits", "vehicle"],
+      "difficulty": 1
+   },
+   {
+      "id": 74,
+      "question": "Player A controls a ready **_Poe Dameron, I Can Fly Anything_** deployed as a unit, a ready **_Black One, Straight at Them_**, with no upgrades attached to it, and one ready resource. Can Player A use **_Poe's_** ability to attach him to **_Black One_**? Why or why not?",
+      "choices": {
+         "a": "No. **_Poe's_** Action can only be used while he's an upgrade, not a unit.",
+         "b": "No. Player A would need 5 ready resources.",
+         "c": "Yes. **_Poe_** is ready and Player A has the resource to spend.",
+         "d": "No. **_Black One_** requires any _Pilots_ that attach to it to be non-leaders."
+      },
+      "answer": "a",
+      "relevantCards": ["JTL/013-back", "JTL/147"],
+      "relevantRule": "Any abilities in the bottom portion of _Pilot's_ text box only apply when they are attached to a unit as an upgrade. Similarly, any abilities in the top portion only apply when they are a unit. In **_Poe's_** case, he has no abilities he can use while deployed as a ground unit.\n\n**2.13.3** - Some units (like those with the PILOT trait) have split text boxes to account for the fact that they can be in play either as a unit or as an upgrade. This split text box has no rules meaning and is purely a visual cue to indicate which abilities apply when the card is an upgrade and which apply when it is a unit. A card with a split text box still has all of the text in its text box, regardless of how it is in play.",
+      "tags": ["poe dameron", "black one", "leader", "ability", "pilot", "upgrade"],
+      "difficulty": 1
+   },
+   {
+      "id": 75,
+      "question": "Player A controls **_Saw Gerrera, Resistance is Not Terrorism_**,  upgraded with **_Vambrace Flamethrower_** and has 13 damage on their base. Player B controls an **_OOM-Series Officer_**, 8 **_Battle Droid_** tokens, and 8 **_TIE Fighter_** tokens. Player A attacks Player B's base with **_Saw Gerrera_**, and uses **_Vambrace Flamethrower_** to defeat the **_OOM-Series Officer_** and 2 **_Battle Droids_**. What best descibes what happens next?",
+      "choices": {
+         "a": "Player A's base takes 2 damage and **_Saw's_** ability defeats the rest of the **_Battle Droids_**.",
+         "b": "Player A's base takes 2 damage and that's it.",
+         "c": "Player A's base takes 2 damage and **_Saw's_** ability defeats the rest of the **_Battle Droids_** and all of the **_TIE Fighters_**.",
+         "d": "Player A's base takes 2 damage and **_Saw's_** ability defeats 3 more **_Battle Droids_**."
+      },
+      "answer": "a",
+      "relevantCards": ["TWI/150", "SHD/177", "TWI/131", "TTWI/T01", "TJTL/T01"],
+      "relevantRule": "While Player A's base did not have 15 damage on it when **_Saw_** attacked, his **On Attack** ability would still trigger since the amount of damage on his base is not checked until the ability resolves. This means that the 2 damage done by the **_OOM-Series Officer's_** **When Defeated** arrives just in time for **_Saw's_** **On Attack** to deal 1 damage to each other ground unit.\n\n**6.3.1.G** - After declaring the attack, resolve any \"On Attack\" abilities on the attacker and any other abilities triggered during this step, including Restore, Saboteur, and \"When this unit is attacked\" abilities on the defender. See 7.6. Triggered Abilities",
+      "tags": ["saw gerrera", "vambrace flamethrower", "oom-series officer", "battle droid", "tie fighter", "token", "upgrade", "on attack", "timing", "when defeated"],
+      "difficulty": 2
+   },
+   {
+      "id": 76,
+      "question": "Player A controls a **_DRK-1 Probe Droid_**, **_Red Three, Unstopable_**, and **_Babu Frik, Heyyy!_** all with no damage on them. Earlier in this phase, Player A attacked with **_Benthic \"Two Tubes\", Partisan Lieutenant_**, and chose their **_DRK-1 Probe Droid_** as the target for his **On Attack** ability. Player A uses **_Babu Frik's_** Action ability and attacks with the **_DRK-1 Probe Droid_**. How much damage does it deal?",
+      "choices": {
+         "a": "3",
+         "b": "4",
+         "c": "5",
+         "d": "6"
+      },
+      "answer": "a",
+      "relevantCards": ["LOF/155", "SOR/144", "LOF/206", "SOR/156"],
+      "relevantRule": "**_Babu Frik's_** ability specifies that the _Droid_ that attacks \"deals damage equal to its remaining HP\", which means that any buffs to its power are irrelevant. For extra credit, how much damage would the **_DRK-1_** do if it simply attacked in this situation? ...4. It's 4. **_Red Three_** wouldn't buff its power anyway.",
+      "tags": ["drk-1 probe droid", "red three", "babu frik", "benthic two tubes", "action ability", "raid", "droid"],
+      "difficulty": 2
+   },
+   {
+      "id": 77,
+      "question": "Player A controls a **_TIE Fighter_** token, a **_Secretive Sage_** with a shield token, and Player B's **_Lurking TIE Phantom_** that they took control of with **_Traitorous_**. Player A wants to play **_First Light, _**, from their Resource zone with 7 ready resources. When Player A plays **_First Light_**, which units can be chosen to take 4 damage to pay for part of its **Smuggle** cost?",
+      "choices": {
+         "a": "Only the **_Secretive Sage_** or the **_Lurking TIE Phantom_**.",
+         "b": "Only the **_TIE Fighter_** token.",
+         "c": "The **_TIE Fighter_** token or the **_Secretive Sage_**.",
+         "d": "Any of them."
+      },
+      "answer": "d",
+      "relevantCards": ["TJTL/T01", "LOF/061", "TSOR/T02", "SHD/187", "SOR/122", "SHD/036"],
+      "relevantRule": "Any of the mentioned units are valid targets. In the case of the **_TIE Fighter_** token, just because it has 1 HP doesn't mean you can't deal 4 damage to it. While the **_Secretive Sage's_** shield token would prevent the damage, that prevention is considered a \"repalcement effect\" and still satisfies **_First Light's_** requirement. Since the **_Lurking TIE_** is now considered \"friendly\", it will be damaged and defeated if chosen.\n\n**1.8.10** - If a replacement effect replaces part or all of a cost with another effect, the cost is still considered paid as long as that other effect can be resolved. If a replacement effect can’t be resolved, the original cost must be paid in full.",
+      "tags": ["tie fighter", "token", "secretive sage", "shield", "lurking tie phantom", "traitorous", "first light", "smuggle", "target", "keyword", "friendly"],
+      "difficulty": 2
+   },
+   {
+      "id": 78,
+      "question": "Player A controls a **_Mercenary Gunship_** with their leader, **_Poe Dameron, I Can Fly Anything_**, attached to it as a _Pilot_. Player B pays the 4 resources to take control of **_Mercenary Gunship_**. Which of the following statements is true?",
+      "choices": {
+         "a": "Player A can still use **_Poe's_** ability to move him to a different _Vehicle_ they control so long as it does not already have a _Pilot_ attached to it.",
+         "b": "**_Poe_** is defeated upon **_Mercenary Gunship_** changing control.",
+         "c": "Player B can now use **_Poe's_** ability to move him to a different _Vehicle_ they control so long as it does not already have a _Pilot_ attached to it.",
+         "d": "This play is not legal since **_Mercenary Gunship_** is a leader unit."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/256", "JTL/013-back"],
+      "relevantRule": "Interestingly, **_Poe Dameron, I Can Fly Anything_**, is the one _Pilot_ leader that does not make the _Vehicle_ he attached to into a leader unit. This means if his attached _Vehicle_ changes control, he goes with it. However, changing control of a unit does not change control of the upgrades attached to it. This means that not only does the unit survive the transfer of control (it would be immediately defeated otherwise), it also means that Player A is still the one who can use **_Poe's_** leader ability.\n\n**8.28.1.A** - If the card is a unit, it maintains its ready or exhausted status and keeps all damage counters on it. All upgrades attached to it remain attached and keep their original controllers. Its new controller orients it in its arena to face them.",
+      "tags": ["mercenary gunship", "poe dameron", "control", "pilot", "leader", "ability", "upgrade"],
+      "difficulty": 2
+   },
+   {
+      "id": 79,
+      "question": "Player A controls a **_Poe Dameron, Quick to Improvise_**. Player B controls a **_Concord Dawn Interceptors_** and no other units. Player B plays **_Entrenched_**, attaching it to **_Poe_**. Which of the following statements is true?",
+      "choices": {
+         "a": "**_Poe_** can attack Player B's base if Player A chooses to use his **On Attack** ability to discard a card and defeat the **_Entrenched_** upgrade.",
+         "b": "If **_Poe_** attacks, he must attack into **_Concord Dawn Interceptors_**.",
+         "c": "**_Poe_** can't attack at all.",
+         "d": "**_Entrenched_** can't be attached to **_Poe_** so this play is not legal."
+      },
+      "answer": "c",
+      "relevantCards": ["SHD/153", "SOR/072", "SHD/042"],
+      "relevantRule": "Since the first step of an attack is to \"Declare the attack\", **_Poe_** needs a valid target to attack before his **On Attack** ability can trigger, meaning in this situation, he cannot attack at all.\n\n**6.3.1** - Declare the attack. The active player chooses and exhausts a ready unit they control and then chooses what to attack: either an enemy unit in the same arena as it or the opponent’s base. Any abilities that are active \"while attacking\" become active.",
+      "tags": ["poe dameron", "entrenched", "concord dawn interceptors", "upgrade", "can't attack", "discard", "target", "sentinel", "on attack"],
+      "difficulty": 1
+   },
+   {
+      "id": 80,
+      "question": "Player A controls **_Chewbacca, Walking Carpet_**, with no damage on him, deployed as a unit, a **_Wilderness Fighter_** with a shield token, an **_X-Wing_** token, and a **_Vanguard Infantry_** in their discard pile that was defeated earlier this phase. Player B controls a **_Skyway Cloud Car_**. Player A defeats Player B's **_Skyway Cloud Car_**. What units can Player B choose to be returned to Player A's hand?",
+      "choices": {
+         "a": "**_Chewbacca_**, the **_Wilderness Fighter_**, and the **_X-Wing_** token.",
+         "b": "The **_Wilderness Fighter_** and the **_Vanguard Infantry_**.",
+         "c": "Only the **_Wilderness Fighter_**.",
+         "d": "The **_Wilderness Fighter_** and the **_X-Wing_** token."
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/003-portrait", "SOR/064", "TJTL/T02", "SOR/108", "JTL/220"],
+      "relevantRule": "**_Skyway Cloud Car_** specifies \"non-leader,\" so **_Chewbacca_** can't be chosen. Only units in play can be chosen as targets for abilities unless specifically stated, so the **_Vanguard Infantry_** is out. While the **_X-Wing_** is a token unit and cannot be returned to Player A's hand, it _can_ still be chosen. It will simply be set aside, out of play, instead.\n\n**3.7.3** - Tokens cannot enter out-of-play zones such as a player’s hand or discard pile. If a token would leave play for any reason, set it aside. It is still considered to have left play.\n\n**4.9.2** - There are three types of \"out-of-play\" zones: each player’s deck, each player’s hand, and each player’s discard pile. Cards in these zones are considered \"out of play,\" which means that by default they cannot affect the game through use of their abilities, power, or HP. For an ability to resolve from an out-of-play zone or to affect a card in an out-of-play zone, the ability must either explicitly state the out-of-play zone it resolves from or affects, or it must be a type of ability that by default resolves from an out-of-play zone.",
+      "tags": ["chewbacca", "wilderness fighter", "x-wing", "vanguard infantry", "skyway cloud car", "token", "target", "bounce", "when defeated", "leader", "power"],
+      "difficulty": 1
+   },
+   {
+      "id": 81,
+      "question": "Player A controls **_Migs Mayfeld_, Triggerman**, which has attacked Player B's base for 2 damage and has not used his triggered ability yet this phase. Player A's base has 6 HP remaining while Player B's base has 2 HP remaining and 1 card in hand. Player A plays **_Forced Surrender_**. What best describes what happens?",
+      "choices": {
+         "a": "Player B discards the only card in their hand. Player A may deal 2 damage to their base to win the game.",
+         "b": "Player B discards the only card in their hand. **_Migs_** does not trigger.",
+         "c": "Player B does not discard any cards since they don't have 2 cards to discard.",
+         "d": "Nothing happens."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/163", "SOR/175"],
+      "relevantRule": "Even though Player B doesn't have 2 cards in hand to discard, they must still discard the one they have. Also, **_Migs_** does not care who caused a player to discard a card. The action of any player discarding a card triggers his ability.\n\n**1.14.1** - To \"discard\" a card means to move it to its owner’s discard pile from another zone, usually from a player’s hand or deck. Certain abilities can cause a player to discard a card.",
+      "tags": ["migs mayfeld", "forced surrender", "discard", "ability"],
+      "difficulty": 1
+   },
+   {
+      "id": 82,
+      "question": "Player A controls a ready **_Boba Fett, Any Methods Necessary_**, a **_Devastator, Hunting the Rebellion_**, and has 6 HP remaining on their base. Player B controls a **_Krayt Dragon_** and has 13 HP remaining on their base. Player A plays **_Planetary Bombardment_** and chooses to deal all of its indirect damage to Player B's base. Which of the following is a possible outcome of the game?",
+      "choices": {
+         "a": "**_Planetary Bombardment_** deals 12 damage to Player B's base. **_Krayt Dragon_** _must_ resolve next, dealing 6 damage to Player A's base. Player B wins.",
+         "b": "**_Planetary Bombardment_** deals 12 damage to Player B's base. Player A _chooses_ to resolve their pending triggers first, exhausting **_Boba_** to deal 1 additional indirect damage to Player B's base. Player A wins.",
+         "c": "**_Planetary Bombardment_** deals 8 damage to Player B's base. Player A _chooses_ to resolve their pending triggers first, exhausting **_Boba_** to deal 1 additional indirect damage to Player B's base. **_Krayt Dragon_** resolves, dealing 6 damage to Player A's base. Player B wins.",
+         "d": "**_Planetary Bombardment_** deals 12 damage to Player B's base. **_Boba_** _must_ resolve next, so Player A exhausts him to deal 1 additional indirect damage to Player B's base. Player A wins."
+      },
+      "answer": "b",
+      "relevantCards": ["JTL/009", "JTL/143", "SHD/172", "JTL/181"],
+      "relevantRule": "The key here is that after **_Planetary Bombardment_** is finished resolving, there will be two pending triggers: **_Boba's_** and the **_Krayt's_**. Since Player A is the active player, they get to decide which player resolves their triggers first, meaning Player A literally holds their own fate in their hands.\n\n**7.6.10** - If both players must resolve triggered abilities on cards they control at the same time, the active player chooses one player at a time to resolve abilities. When chosen, that player resolves all abilities triggered on cards they control in the order of their choice, and once they finish, the other player does the same on cards they control.",
+      "tags": ["boba fett", "devastator", "krayt dragon", "planetary bombardment", "timing", "indirect damage", "leader", "event"],
+      "difficulty": 2
+   },
+   {
+      "id": 83,
+      "question": "Players A and B are playing _Premier_ (not _Twin Suns_). Player A controls 3 **_Clone Trooper_** tokens and 3 **_X-Wing_** tokens. Player B controls 2 **_Battle Droid_** tokens and 1 **_TIE Fighter_** token. If Player A wants to play a **_Republic Defense Carrier_**, how much would it cost?",
+      "choices": {
+         "a": "11",
+         "b": "8",
+         "c": "5",
+         "d": "6"
+      },
+      "answer": "b",
+      "relevantCards": ["TTWI/T02", "TJTL/T02", "TTWI/T01", "TJTL/T01", "TWI/098"],
+      "relevantRule": "It doesn't matter how many units Player A has, **_Republic Defense Carrier's_** cost is reduced by the number of units controlled by the _opponent_ with the most units. In this case, Player A's only opponent is Player B, so the cost is reduced by 3.",
+      "tags": ["clone trooper", "x-wing", "battle droid", "tie fighet", "republic defense carrier", "cost", "discount", "token"],
+      "difficulty": 1
+   },
+   {
+      "id": 84,
+      "question": "Player A controls a ready **_Count Dooku, Face of the Confederacy_**, and 4 **_Battle Droid_** tokens. Player A wants to use **_Count Dooku's_** leader ability to play **_Vuutun Palaa, Droid Control Ship_**, from their hand. How many resources would they need to pay?",
+      "choices": {
+         "a": "7",
+         "b": "0",
+         "c": "3",
+         "d": "5"
+      },
+      "answer": "c",
+      "relevantCards": ["TWI/005", "TTWI/T01", "SEC/122"],
+      "relevantRule": "Since **_Battle Droid_** tokens have the _Droid_ trait, Player A's 4 **_Battle Droids_** discount **_Vuutun Palaa_** from 9 down to 5. Then, by using **_Count Dooku's_** leader ability, they may defeat one of the **_Battle Droids_** using **Exploit**, further reducing the cost to 3. Unfortunately, **_Vuutun Palaa's_** second ability cannot be used to exhaust _Droids_ to pay for itself since that ability is not active until after **_Vuutun Palaa_** is in play.\n\n**7.3.2** - A constant ability immediately comes into effect when the card it is on enters play and remains in effect while the card is in play.\n\n**7.5.16.C** - Exploit is used during Step 3 of the \"Play a Card\" action: Determine cost(s).",
+      "tags": ["count dooku", "battle droid", "vuutun palaa", "token", "exploit", "keyword", "cost", "discount", "droid", "separatist", "leader", "ability"],
+      "difficulty": 1
+   },
+   {
+      "id": 85,
+      "question": "Player A controls **_Tech, Source of Insight_**. Player B plays **_Scanning Officer_** and chooses 3 of Player A's resources. The revealed resources are a **_Vigilant Pursuit Craft_**, a **_Smuggler's Aid_**, and a **_Clan Wren Rescuer_**. Which resources are defeated?",
+      "choices": {
+         "a": "The **_Vigilant Pursuit Craft_** and the **_Smuggler's Aid_**.",
+         "b": "None of them.",
+         "c": "Only the **_Smuggler's Aid_**.",
+         "d": "All of them."
+      },
+      "answer": "d",
+      "relevantCards": ["SHD/248", "SHD/114", "SHD/065", "SHD/252", "SHD/040"],
+      "relevantRule": "Player A's **_Tech_** grants each of their resources the **Smuggle** keyword, meaning when Player B reveals them with **_Scanning Officer_**, it doesn't matter what is on the card, it's going to be defeated.",
+      "tags": ["tech", "scanning officer", "vigilant pursuit craft", "smuggler's aid", "clan wren rescuer", "smuggle", "resources", "keyword", "target"],
+      "difficulty": 1
+   },
+   {
+      "id": 86,
+      "question": "Player A controls an exhausted **_Toro Calican, Ambitious Upstart_**. They play a second **_Toro Calican_**, dealing 1 damage to it to ready their original **_Toro_**, then choosing to defeat the new one due to uniqueness. Is this play legal? Why or why not?",
+      "choices": {
+         "a": "No. One would need to be chosen to be defeated before **_Toro's_** ability resolves.",
+         "b": "No. Player A would need to deal the 1 damage to their original **_Toro_**.",
+         "c": "No. **_Toro's_** ability specifies \"another _Bounty Hunter_ unit,\" so a second **_Toro_** would not work.",
+         "d": "Yes. **_Toro's_** ability resolves immediately when you play a _Bounty Hunter_ unit."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/239"],
+      "relevantRule": "When Player A's second **_Toro_** enters play, the first **_Toro's_** ability triggers, but waits to resolve until after one has been defeated due to uniquness. This means the only two options are to either defeat the new **_Toro_**, meaning you can no longer deal 1 damage to it, or to defeat the original **_Toro_**, in which case it could not ready... it'd be in the discard pile.\n\n**8.30.4** - A player can only control one copy of each unique card at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
+      "tags": ["toro calican", "uniqueness", "ability", "timing"],
+      "difficulty": 1
+   },
+   {
+      "id": 87,
+      "question": "Player A controls a **_Seasoned Fleet Admiral_**. Player B plays **_I Am Your Father_**, targeting one of Player A's units. Player A says, \"no,\" with great passion. How many Experience tokens does Player A give to their units?",
+      "choices": {
+         "a": "3",
+         "b": "1",
+         "c": "7",
+         "d": "0"
+      },
+      "answer": "b",
+      "relevantCards": ["JTL/111", "SOR/233"],
+      "relevantRule": "Since **_Seasoned Fleet Admiral_** specifies \"1 or more cards,\" it doesn't matter how many cards Player B draws, its ability only allows Player A to give one Experience token for each instance of drawing cards.",
+      "tags": ["seasoned fleet admiral", "i am your father", "ability", "removal", "experience", "token", "trigger"],
+      "difficulty": 0
+   },
+   {
+      "id": 88,
+      "question": "Player A has 7 resources, 4 of which are readied. Player B also has 7 resources, 4 of which are readied. Player B plays **_Cham Syndulla, Rallying Ryloth_**. What best describes what happens?",
+      "choices": {
+         "a": "Nothing.",
+         "b": "Player B places the top card of their deck into play as a ready resource.",
+         "c": "Player B places the top card of their deck into play as an exhausted resource.",
+         "d": "Player B readies 4 of their resources."
+      },
+      "answer": "a",
+      "relevantCards": ["JTL/164"],
+      "relevantRule": "Since **_Cham's_** ability does not specify \"ready\" or \"exhausted\" resources, the state of Player A's resources is irrelevant. The fact that both players control a total of 7 resources at the time he is played means nothing happens.",
+      "tags": ["cham syndulla", "when played", "resources"],
+      "difficulty": 0
+   },
+   {
+      "id": 89,
+      "question": "Player A controls **_Tech, Source of Insight_**, and **_Bright Hope, The Last Transport_**. How much would they have to pay to **Smuggle** a **_Luke Skywalker, You Still With Me?_** into play as a _Pilot_ and attach him to **_Bright Hope_**?",
+      "choices": {
+         "a": "3",
+         "b": "This play is illegal.",
+         "c": "4",
+         "d": "5"
+      },
+      "answer": "b",
+      "relevantCards": ["SHD/248", "SOR/099", "JTL/094"],
+      "relevantRule": "Unfortunately **Smuggle** and **Piloting** are both considered \"alternate costs\" for cards and therefore only one can be chosen. In this case, if Player A wants to **Smuggle** **_Luke_** into play, he'd have to enter play as a ground unit for 4 resources.\n\nOfficial clarification Tweeted by Tyler Parrott on Dec 4, 2024.",
+      "tags": ["tech", "bright hope", "luke skywalker", "pilot", "upgrade", "smuggle", "resources", "cost"],
+      "difficulty": 1
+   },
+   {
+      "id": 90,
+      "question": "Player A is playing **_Cassian Andor, Dedicated to the Rebellion_**, as their leader and **_Echo Base_** as their base. They also control **_Tech, Source of Insight_**. Player A reveals that they intend to play **_Tobias Beckett, I Tust No One_**, from resources using **Smuggle**. What is the fewest number of resources needed to pay for him?",
+      "choices": {
+         "a": "6",
+         "b": "8",
+         "c": "7",
+         "d": "5"
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/013", "SOR/024", "SHD/248", "SHD/217"],
+      "relevantRule": "Having **_Tech_** in play gives **_Tobias_** a second **Smuggle** option which Player A can choose from. Unfortunately, this option would be **_Tobias's_** regular cost, including aspects, plus 2. Since neither Player A's leader nor their base provide the _Cunning_ aspect, that means paying for **_Tobias_** using **_Tech_** would actually cost 8 resources. It'd be cheaper to pay for him using his own **Smuggle** cost, resulting in only having to pay 7.\n\n**7.5.14.A** - \"Smuggle\" is a keyword whose effect is the same as the constant ability: \"You may play this card from your resource zone by paying cost Y instead of its printed cost, replacing it with the top card of your deck. This ability is active while this card is a resource,\" where Y is the cost in brackets following \"Smuggle.\" Paying this cost follows all normal rules for paying costs, including accounting for any aspect penalties that modify this cost",
+      "tags": ["cassian andor", "echo base", "tech", "tobias backett", "smuggle", "keyword", "cost", "aspects", "leader"],
+      "difficulty": 2
+   },
+   {
+      "id": 91,
+      "question": "Player A controls a ready **_Cad Bane, He Who Needs No Introduction_**, a **_Lady Proxima, White Worm Matriarch_**, and has a **_Ma Klounkee_** in their discard pile. They then play **_Bounty Hunter Crew_**. What best describes what happens?",
+      "choices": {
+         "a": "Player A must resolve **_Bounty Hunter Crew's_** trigger first, but can then order **_Cad Bane's_** and **_Lady Proxima's_** how they want.",
+         "b": "Player A can resolve **_Cad Bane's_**, **_Lady Proxima's_**, and **_Bounty Hunter Crew's_** triggers in any order.",
+         "c": "Player A must resolve **_Cad Bane's_** trigger first, but then can order **_Lady Proxima's_** and **_Bounty Hunter Crew's_** how they want.",
+         "d": "Player A must resolve **_Bounty Hunter Crew's_** trigger first, **_Lady Proxima's_** second, and **_Cad Bane's_** last."
+      },
+      "answer": "b",
+      "relevantCards": ["SHD/014", "SHD/255", "SHD/229", "SOR/183"],
+      "relevantRule": "Since all 3 cards trigger at the same time, Player A has the freedom to resolve them in any order they wish.\n\n**7.6.9** - If a player must resolve multiple triggered abilities on cards they control at the same time, that player chooses the order in which to resolve those abilities.",
+      "tags": ["cad bane", "lady proxima", "bounty hunter crew", "ma klounkee", "when played", "underworld", "timing", "leader"],
+      "difficulty": 1
+   },
+   {
+      "id": 92,
+      "question": "Player A controls a **_Battlefield Marine_**, a **_Warzone Lieutenant_**, a **_Sundari Peacekeeper_**, a **_Clone Deserter_**, and two **_Clone Trooper_** tokens. Player A then plays **_Unity of Purpose_**. Player B takes the initiative. Player A then plays **_Shaak Ti, Unity Wins Wars_**. How much damage would one of Player A's **_Clone Trooper_** tokens do if it were to attack?",
+      "choices": {
+         "a": "10",
+         "b": "7",
+         "c": "9",
+         "d": "8"
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/095", "SHD/110", "SHD/098", "SHD/095", "TTWI/T02", "JTL/106", "TWI/094"],
+      "relevantRule": "When **_Unity of Purpose_** is played, Player A controls 5 units with different names, so each of their units gets a +5/+5 buff for the phase. That +5/+5 does not change when Player A's number of uniquely-named units changes over the course of the phase, so **_Shaak Ti's_** presence does not result in an additional +1/+1. It _does_, however, give Player A's token units +1/+0, meaning the **_Clone Trooper_** token would now attack for 2+5+1, or 8 damage.",
+      "tags": ["battlefield marine", "warzone lieutenant", "sundari peacekeeper", "clone deserter", "clone trooper", "token", "unity of purpose", "shaak ti", "math", "lasting effect", "buff", "event"],
+      "difficulty": 2
+   },
+   {
+      "id": 93,
+      "question": "Player A controls a **_Red Squadron Y-Wing_** and a **_Hunting Aggressor_**. Player B controls a **_Lurking TIE Phantom_** with a shield token. Player A attacks Player B's base with their **_Red Squadron Y-Wing_**. What is the most indirect damage Player B can assign to their **_Lurking TIE Phantom_**?",
+      "choices": {
+         "a": "0 because of the shield token.",
+         "b": "2",
+         "c": "4",
+         "d": "3"
+      },
+      "answer": "b",
+      "relevantCards": ["JTL/149", "JTL/165", "SHD/187", "TSOR/T02"],
+      "relevantRule": "When **_Red Squadron Y-Wing_** attacks, it normally deals 3 indirect damage. **_Hunting Aggressor's_** ability does not increase each point of damage by 1. Instead, it simply adds 1 to the total indirect damage dealt. This means the **_Y-Wing_** deals 4 indirect damage total. Since a player can only assign as much indirect damage to a unit as it has remaining HP, the **_Lurking TIE_** can only be assigned, at most, 2 indirect damage.\n\n**8.36.2** - Indirect damage is unpreventable, which means it ignores any effects that would prevent the chosen unit from being dealt damage, including Shield tokens and abilities such as \"This unit can’t be damaged.\"\n\n**8.36.3** - A player cannot assign more indirect damage to a unit than it has remaining HP.",
+      "tags": ["red squadron y-wing", "hunting aggressor", "lurking tie phantom", "indirect damage", "ability", "on attack", "shield", "token"],
+      "difficulty": 2
+   },
+   {
+      "id": 94,
+      "question": "Player A controls **_L3-37, Get Out of My Seat_**, and a **_Black Squadron Scout Wing_** without a _Pilot_ on it. Player B defeats **_L3-37_** and Player A chooses to attach her to the **_Black Squadron Scout Wing_** instead. Does this trigger **_Black Squadron Scout Wing's_** ability? Why or why not?",
+      "choices": {
+         "a": "No. **_L3-37_** is not have the _Resistance_ trait.",
+         "b": "No. **_L3-37_** is not an upgrade.",
+         "c": "No. Player A did not play an upgrade on **_Black Squadron Scout Wing_**.",
+         "d": "Yes. An upgrade was played on **_Black Squadron Scout Wing_**."
+      },
+      "answer": "c",
+      "relevantCards": ["JTL/049", "JTL/202"],
+      "relevantRule": "Even though **_L3-37_** becomes an upgrade when she attaches to **_Black Squadron Scout Wing_**, her ability is simply moving her from one zone to another, not actually \"playing\" her. The fact that she was not specifically \"played\" means **_Black Squadron Scout Wing_** does not trigger.\n\n**6.2.0.B** - In order to play a card, a player must have a card in their hand or must be resolving an ability that allows them to play a card from another zone. The player must be able to pay resources equal to the card’s cost, unless otherwise specified.",
+      "tags": ["l3-37", "black squadron scout wing", "ability", "pilot", "trigger", "replacement effect"],
+      "difficulty": 1
+   },
+   {
+      "id": 95,
+      "question": "Player A controls **_Hound's Tooth, Reliable and Deadly_**, upgraded with **_Superheavy Ion Cannon_**. Player B controls an exhausted **_Niima Outpost Constables_** and a ready **_System Patrol Craft_**, both of which were played in a previous round. Player A attacks the **_System Patrol Craft_** with **_Hound's Tooth_**. Which of the following is a legal outcome of the attack?",
+      "choices": {
+         "a": "Player A may exhaust the **_Niima Outpost Constables_**, dealing 2 indirect damage to Player B. Then **_Hound's Tooth_** deals 4 combat damage to the **_System Patrol Craft_**, defeating it and taking 3 damage in return.",
+         "b": "Player A may exhaust the **_System Patrol Craft_**, dealing 3 indirect damage to Player B. **_Hound's Tooth_** deals 4 combat damage to the **_System Patrol Craft_**, defeating it and taking 3 damage in return.",
+         "c": "**_Hound's Tooth_** deals 4 combat damage to the **_System Patrol Craft_**, defeating it and taking 3 damage in return. Player A may then choose to exhaust the **_Niima Outpost Constables_**, dealing 2 indirect damage to Player B.",
+         "d": "Player A may exhaust the **_System Patrol Craft_**, dealing 3 indirect damage to Player B. **_Hound's Tooth_** will deal 4 damage to it, defeating it, and take no damage in return."
+      },
+      "answer": "d",
+      "relevantCards": ["JTL/185", "JTL/227", "SHD/062", "SOR/066"],
+      "relevantRule": "When a unit attacks, any **On Attack** abilities that trigger must resolve before combat damage, so **_Superheavy Ion Cannon's_** ability must resolve first. While Player A _can_ choose either of Player B's units for this, since **_Niima Outpost Constables_** is already exhausted, it would not satisfy **_Superheavy Ion Cannon's_** \"If you do\" condition and would result in no indirect damage being dealt. If **_System Patrol Craft_** is chosen, since it is now an exhausted unit that did not enter play this phase, **_Hound's Tooth_** will deal combat damage first, defeating the **_System Patrol Craft_** before it can deal combat damage back.\n\n**1.5.4.E** - A ready card can be chosen for a readying effect, but the chosen card does not change orientation and is not considered to have been readied for the purpose of \"If you do\" effects. An exhausted card can be chosen for an exhausting effect, but the chosen card does not change orientation and is not considered to have been exhausted for the purpose of \"If you do\" effects.\n\n**8.10.1** - Some abilities use the phrase \"If you do\" to make part of the ability conditional on another part of the ability resolving. If a player fulfills the \"If you do\" condition, they must resolve the conditional text following \"If you do.\" \"If you do\" only makes the rest of its sentence conditional.",
+      "tags": ["hound's tooth", "superheavy ion cannon", "system patrol craft", "niima outpost constables", "upgrade", "on attack", "trigger", "sentinel", "indirect damage", "keyword", "timing"],
+      "difficulty": 2
+   },
+   {
+      "id": 96,
+      "question": "Player A controls **_L3-37, Get Out of My Seat_**, and **_Millennium Falcon, Get Out and Push_**, with **_R2-D2, Artooooooooo!_**, and **_Chewbacca, Faithful First Mate_** attached to it as _Pilots_. Player B plays **_Superlaster Blast_**. What best describes what happens?",
+      "choices": {
+         "a": "**_L3-37_** is defeated and nothing else.",
+         "b": "Player A may choose to attach **_L3-37_** to the **_Millennium Falcon_** as a _Pilot_.",
+         "c": "**_L3-37_**, the **_Millennium Falcon_**, **_R2-D2_**, and **_Chewbacca_** are all defeated.",
+         "d": "**_L3-37_**, the **_Millennium Falcon_**, and **_R2-D2_** are defeated. **_Chewbacca_** becomes a ground unit."
+      },
+      "answer": "a",
+      "relevantCards": ["JTL/049", "JTL/249", "JTL/245", "JTL/103", "SOR/043"],
+      "relevantRule": "**_Superlaser Blast_** cannot defeat Player A's **_Millennium Falcon_** due to **_Chewbacca's_** ability, so it and the attached _Pilots_ are safe. **_L3-37_**, however, is not so lucky. Not only is she defeated by **_Superlaser Blast_**, but since her ability is not considered \"playing\" or \"deploying\" her as a _Pilot_, she cannot be attached to the **_Millennium Falcon_** because it already has a _Pilot_ attached to it, despite what the **_Falcon_** and **_R2-D2's_** abilities say.",
+      "tags": ["l3-37", "millennium falcon", "r2-d2", "chewbacca", "superlaser blast", "upgrade", "pilot", "removal", "restriction", "wording"],
+      "difficulty": 2
+   },
+   {
+      "id": 97,
+      "question": "Player A controls an **_Avenger, Hunting Star Destroyer_**. Player B controls a **_Redemption, Medical Frigate_**, a **_Concord Dawn Interceptors_**, and a **_Yoda, Old Master_**. Player A attacks with **_Avenger_** into Player B's **_Redemption_**. Which of the following is a possible outcome of the attack?",
+      "choices": {
+         "a": "Player B chooses to defeat **_Redemption_**. **_Avenger_** deals 8 damage to **_Concord Dawn Interceptors_** which deals 3 damage back to **_Avenger_**.",
+         "b": "Player B chooses to defeat **_Concord Dawn Interceptors_**. **_Avenger_** deals 8 damage to Player B's base.",
+         "c": "Player B chooses to defeat **_Redemption_**. **_Avenger_** deals 8 damage to Player B's base.",
+         "d": "Player B chooses to defeat **_Redemption_**. **_Avenger_** does no damage to anything."
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/040", "SOR/052", "SHD/042", "SOR/045"],
+      "relevantRule": "The first step in attacking with a unit is to \"declare the attack,\" so when Player A chooses to attack into Player B's **_Redemption_**, the target for that attack does not change. If Player B then chooses to defeat their **_Redemption_** as a result of **_Avenger's_** **On Attack** ability, the combat damage step is simply skipped and no damage is done.\n\n**6.3.1** - Declare the attack. The active player chooses and exhausts a ready unit they control and then chooses what to attack: either an enemy unit in the same arena as it or the opponent’s base. Any abilities that are active \"while attacking\" become active.\n\n**6.3.2.A** - If the attacker is no longer in-play, no combat damage is dealt. Proceed directly to the next step of this attack.",
+      "tags": ["avenger", "redemption", "yoda", "on attack", "sentinel", "target"],
+      "difficulty": 1
+   },
+   {
+      "id": 98,
+      "question": "Player A is playing **_Yoda, Sensing Darkness_** as their leader with the **_Strangled Cliffs_** base. After a unit has left play during a phase, they use **_Yoda's_** leader ability and draw **_Rey, With Palpatine's Power_**. If Player A wishes to use **_Rey's_** ability to deal 2 damage to a unit and 2 damage to a base, what is required of them?",
+      "choices": {
+         "a": "Player A must reveal and keep the drawn **_Rey_** separate from their hand as they place a different card from their hand on either the top or bottom of their deck. They then may resolve **_Rey's_** ability.",
+         "b": "Player A must immediately reveal **_Rey_** to their opponent, resolve her ability, then may return any card, including her, to either the top or bottom of their deck.",
+         "c": "Player A must immediately reveal **_Rey_** to their opponent, resolve her ability, then must return a card other than **_Rey_** to either the top or bottom of their deck.",
+         "d": "Player A may add **_Rey_** to their hand, place a card from their hand other than **_Rey_** either on the top or bottom of their deck, then reveal **_Rey_** to their opponent."
+      },
+      "answer": "a",
+      "relevantCards": ["TWI/004", "LOF/027", "LOF/148"],
+      "relevantRule": "Firstly, in order to prove that **_Rey_** was, in fact, the card drawn using **_Yoda's_** ability, she must be kept separate from the other cards that were already in Player A's hand. Secondly, since **_Rey's_** ability requires Player A to specifically \"reveal this card from your hand,\" she must not be the card they return to their deck, otherwise, while her ability will technically still resolve, it will be impossible for Player A to fulfill the requirement.\n\n**1.13.3** - If a card’s ability triggers when that card is drawn, the drawn card must be revealed before being added to the other cards in a player’s hand",
+      "tags": ["yoda", "rey", "timing", "draw", "leader", "ability", "reveal"],
+      "difficulty": 2
+   },
+   {
+      "id": 99,
+      "question": "Player A has their Force token and their only unit is a ready **_Jedi Consular_**. They exhaust him, using his ability to play a **_Yoda, My Ally is the Force_**, for 6 resources. They resolve **_Yoda's_** first ability, healing 5 damage from their base. They then resolve **_Yoda's_** other ability and deal 4 damage to one of Player B's units. Was this a legal sequence of events? If not, why?",
+      "choices": {
+         "a": "No. Neither of Yoda's abilities should not have triggered.",
+         "b": "No. Yoda's first ability should not have triggered.",
+         "c": "No. Yoda's second ability should not have triggered.",
+         "d": "Yes. This sequence was legal."
+      },
+      "answer": "a",
+      "relevantCards": ["LOF/094", "LOF/101"],
+      "relevantRule": "Since **_Jedi Consular's_** ability requires Player A to use their Force token as part of the cost of the ability, **_Yoda_** was not yet in play when Player A used the Force. This means that neither of **_Yoda's_** abilities would trigger.\n\n**6.4.3.A** - If an action ability has a cost, it is found in brackets following the word \"Action.\"\n\n**8.38.4** -  If an ability instructs a player to \"Use the Force,\" they may defeat their Force token. If they do, they are considered to have Used the Force. A player may not Use the Force if they do not control their Force token.",
+      "tags": ["jedi consular", "yoda", "force token", "ability", "discount", "when played", "timing"],
+      "difficulty": 1
+   },
+   {
+      "id": 100,
+      "question": "Player A controls **_Millennium Falcon, Piece of Junk_** with no damage on it. Player B plays **_Timely Intervention_** to play **_Poe Dameron, One Hell of a Pilot_**, from hand. They resolve his **When Played** ability to create an **_X-Wing_** token and choose to attach **_Poe_** to it as a _Pilot_. They then resolve **Ambush** from **_Timely Intervention_** to defeat Player A's **_Millennium Falcon_**. Was this a legal sequence of events? If not, why?",
+      "choices": {
+         "a": "No. **_Poe_** cannot immediately attach to the **_X-Wing_** token created by his ability.",
+         "b": "No. **_Timely Intervention_** gave **Ambush** to **_Poe_**, not the **_X-Wing_** token.",
+         "c": "Yes. This sequence was legal.",
+         "d": "No. The **_Millennium Falcon_** would not be defeated by this attack."
+      },
+      "answer": "b",
+      "relevantCards": ["SOR/193", "SHD/129", "JTL/100", "TJTL/T02"],
+      "relevantRule": "When a unit is played using **_Timely Intervention_**, that unit is given the **Ambush** keyword. While it is legal to resolve **_Poe's_** **When Played** ability before resolving **Ambush**, if Player B chooses to attach **_Poe_** to a _Vehicle_ as a _Pilot_, **_Poe_** becomes an upgrade and is no longer a unit. Since upgrades cannot attack, the **Ambush** is wasted in this case.",
+      "tags": ["millennium falcon", "timely intervention", "poe dameron", "x-wing", "token", "ambush", "event", "timing", "pilot", "upgrade", "when played"],
+      "difficulty": 1
+   }
+]
