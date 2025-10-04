@@ -16,7 +16,7 @@ export function QuizModeButtons({quizMode, allQuizzes, marathonSet, standardQuiz
   const renderButtons = () => <>
   <div className="flex flex-col md:flex-row gap-2 mb-8 h-full">
       <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1`}>
-        <h3 className="text-xl mb-4">DESCRIPTION TEXT</h3>
+        <h3 className="text-xl mb-4">Choose a number of questions and see how many you can answer correctly!</h3>
         <button
           className="btn btn-primary text-lg py-8 lg:py-5 w-1/2"
           onClick={() => {
