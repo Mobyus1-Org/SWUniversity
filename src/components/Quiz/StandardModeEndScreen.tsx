@@ -42,9 +42,9 @@ export function StandardModeEndScreen({
         <summary className="text-xl font-bold mb-4 cursor-pointer">Review Your Answers</summary>
         <div className="mt-4">
           {
-            Object.keys(userResponses).map((quizId, index) => {
+            Object.keys(userResponses).map((quizId) => {
               const response = userResponses[parseInt(quizId)];
-              const quiz = currentQuizSet[index];
+              const quiz = currentQuizSet.find((q) => q.id === parseInt(quizId))!;
 
               return <div key={quizId} className="mb-6 p-4 border rounded">
                 <p className="font-bold">Q: {quiz.question}</p>
