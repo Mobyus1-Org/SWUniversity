@@ -355,8 +355,7 @@
       },
       "answer": "c",
       "relevantCards": ["SOR/132", "SOR/095", "SOR/098", "SOR/099"],
-      "relevantRule": "Even though Echo Base Defender has Sentinel, since Player A's Imperial Interceptor is a space unit, it cannot attack ground units (at least not without the use of other cards!). When an enemy Sentinel unit is in the same arena, it prevents an attacker from attacking any non-Sentinel units as well as the opponent's base.\n\n7.5.11.B - When a player makes an attack, after exhausting the attacker, the player checks if there are any enemy units in the attacker’s arena with Sentinel. If there are one or more, the attacking player cannot choose a non-Sentinel unit as the defender (unless the attacker has Saboteur). If their opponent controls multiple units with Sentinel in that arena, the attacking player may choose any
-one of those units to be the defender.",
+      "relevantRule": "Even though Echo Base Defender has Sentinel, since Player A's Imperial Interceptor is a space unit, it cannot attack ground units (at least not without the use of other cards!). When an enemy Sentinel unit is in the same arena, it prevents an attacker from attacking any non-Sentinel units as well as the opponent's base.\n\n7.5.11.B - When a player makes an attack, after exhausting the attacker, the player checks if there are any enemy units in the attacker’s arena with Sentinel. If there are one or more, the attacking player cannot choose a non-Sentinel unit as the defender (unless the attacker has Saboteur). If their opponent controls multiple units with Sentinel in that arena, the attacking player may choose any one of those units to be the defender.",
       "tags": ["imperial interceptor", "battlefield marine", "echo base defender", "bright hope", "sentinel", "keyword", "target"],
       "difficulty": 0
    }
