@@ -11,6 +11,12 @@ export type Quiz = {
   difficulty: number;
 }
 
+export type UserResponse = {
+  quizId: number;
+  selected: string;
+  correct: string;
+}
+
 const notBeforeId = 1;
 const excludedIds: number[] = [
 

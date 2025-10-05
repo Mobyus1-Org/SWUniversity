@@ -1,6 +1,6 @@
 import React from "react";
 import { globalBackgroundStyle, type QuizModes } from "../../util/const";
-import type { Quiz } from "../../util/func";
+import type { Quiz, UserResponse } from "../../util/func";
 import { StandardModeEndScreen } from "./StandardModeEndScreen";
 import { MarathonModeEndScreen } from "./MarathonModeEndScreen";
 
@@ -14,7 +14,7 @@ interface IProps {
   selectedAnswer: string;
   currentQuizKeys: string[];
   standardQuizLength: number;
-  userResponses: {[key: number]: {selected: string; correct: string}};
+  userResponses: UserResponse[];
   setCurrentQuizId: (id: number) => void;
   setQuizResult: (result: boolean) => void;
   setSelectedAnswer: (answer: string) => void;
@@ -23,7 +23,7 @@ interface IProps {
   setCurrentQuizKeys: (keys: string[]) => void;
   setQuizMode: (mode: QuizModes) => void;
   setStandardQuizLength: (length: number) => void;
-  setUserResponses: (responses: {[key: number]: {selected: string; correct: string}}) => void;
+  setUserResponses: (responses: UserResponse[]) => void;
 }
 
 export function QuizContent({
@@ -196,13 +196,13 @@ function onNextQuestion(
   quizzesCompleted: number[],
   lastEndlessQuizzes: number[],
   standardQuizLength: number,
-  userResponses: {[key: number]: {selected: string; correct: string}},
+  userResponses: UserResponse[],
   setQuizzesCompleted: (completed: number[]) => void,
   setCurrentQuizId: (id: number) => void,
   setQuizResult: (result: boolean) => void,
   setSelectedAnswer: (answer: string) => void,
   setLastEndlessQuizzes: (list: number[]) => void,
-  setUserResponses: (responses: {[key: number]: {selected: string; correct: string}}) => void
+  setUserResponses: (responses: UserResponse[]) => void
 )
 {
   const endlessThreshold = 10; // Number of recent quizzes to track in endless mode
@@ -239,8 +239,8 @@ function onNextQuestion(
     const updatedCompleted = [...quizzesCompleted];
     updatedCompleted.push(currentQuizId);
     setQuizzesCompleted(updatedCompleted);
-    const updatedResponses = {...userResponses};
-    updatedResponses[currentQuizId] = {selected: selectedAnswer, correct: currentQuizAnswer};
+    const updatedResponses = [...userResponses];
+    updatedResponses.push({quizId: currentQuizId, selected: selectedAnswer, correct: currentQuizAnswer});
     setUserResponses(updatedResponses);
     if(updatedCompleted.length < standardQuizLength) {
       console.log(currentQuizSet);

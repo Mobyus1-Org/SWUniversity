@@ -1,9 +1,9 @@
 import { globalBackgroundStyle, type QuizModes } from "../../util/const";
-import type { Quiz } from "../../util/func";
+import type { Quiz, UserResponse } from "../../util/func";
 
 interface IProps {
-  userResponses: {[key: number]: {selected: string; correct: string}};
-  setUserResponses: (responses: {[key: number]: {selected: string; correct: string}}) => void;
+  userResponses: UserResponse[];
+  setUserResponses: (responses: UserResponse[]) => void;
   currentQuizSet: Quiz[];
   standardQuizLength: number;
   setQuizMode: (mode: QuizModes) => void;
@@ -30,7 +30,7 @@ export function StandardModeEndScreen({
     <p className="text-2xl md:text-4xl font-bold mb-4 h-32">Quiz Complete! You answered {Object.values(userResponses).filter(response => response.selected === response.correct).length} out of {standardQuizLength} questions correctly.</p>
     <button className="btn btn-primary text-lg p-4" onClick={() => {
       setQuizzesCompleted([]);
-      setUserResponses({});
+      setUserResponses([]);
       setCurrentQuizId(0);
       setQuizResult(false);
       setSelectedAnswer("");
@@ -42,11 +42,10 @@ export function StandardModeEndScreen({
         <summary className="text-xl font-bold mb-4 cursor-pointer">Review Your Answers</summary>
         <div className="mt-4">
           {
-            Object.keys(userResponses).map((quizId) => {
-              const response = userResponses[parseInt(quizId)];
-              const quiz = currentQuizSet.find((q) => q.id === parseInt(quizId))!;
+            userResponses.map((response) => {
+              const quiz = currentQuizSet.find(q => q.id === response.quizId)!;
 
-              return <div key={quizId} className="mb-6 p-4 border rounded">
+              return <div key={response.quizId} className="mb-6 p-4 border rounded">
                 <p className="font-bold">Q: {quiz.question}</p>
                 <p>Your answer: <span className={response.selected === response.correct ? "text-green-500 font-bold" : "text-red-500 font-bold"}>{quiz.choices[response.selected]}</span></p>
                 {response.selected !== response.correct && <p>Correct answer: <span className="text-green-500 font-bold">{quiz.choices[response.correct]}</span></p>}

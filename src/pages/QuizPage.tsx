@@ -1,6 +1,6 @@
 import React from "react";
 import { getQuizDataAsync } from "../util/func";
-import type { Quiz } from "../util/func";
+import type { Quiz, UserResponse } from "../util/func";
 import { QuizModeButtons } from "../components/Quiz/QuizModeButtons";
 import { QuizContent } from "../components/Quiz/QuizContent";
 import type { QuizModes } from "../util/const";
@@ -20,7 +20,7 @@ function QuizPage() {
   const [selectedAnswer, setSelectedAnswer] = React.useState<string>("");
   const [quizResult, setQuizResult] = React.useState<boolean>(false);
   const [standardQuizLength, setStandardQuizLength] = React.useState<number>(0);
-  const [userResponses, setUserResponses] = React.useState<{[key: number]: {selected: string; correct: string}}>({});
+  const [userResponses, setUserResponses] = React.useState<UserResponse[]>([]);
 
   React.useEffect(() => {
     getQuizDataAsync().then(data => {
