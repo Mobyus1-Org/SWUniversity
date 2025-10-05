@@ -38,8 +38,7 @@ export function StandardModeEndScreen({
       setStandardQuizLength(0);
     }}>Go Back to Quiz Menu</button>
     <div className={"mt-8 text-left p-8 " + globalBackgroundStyle}>
-      <details>
-        <summary className="text-xl font-bold mb-4 cursor-pointer">Review Your Answers</summary>
+      <summary className="text-xl font-bold mb-4 cursor-pointer">Review Your Answers</summary>
         <div className="mt-4 max-h-80 overflow-y-scroll">
           {
             userResponses.map((response) => {
@@ -52,8 +51,7 @@ export function StandardModeEndScreen({
               </div>;
             })
           }
-        </div>
-      </details>
+      </div>
     </div>
   </div>;
 }
