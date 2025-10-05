@@ -448,5 +448,20 @@
       "relevantRule": "Players do not need to collecting the Bounty on units they capture or defeat. It's always optional.\n\n7.5.13.E - Resolving a Bounty ability is optional. If a player chooses not to resolve a Bounty ability, they are not considered to have collected that Bounty.",
       "tags": ["guavian antagonizer", "bounty", "keyword", "trigger"],
       "difficulty": 0
+   },
+   {
+      "id": 31,
+      "question": "Player A attacked with their own Wanted Insurgents into Player B's Academy Defense Walker, defeating both units. Which player gets to collect Wanted Insurgents' Bounty and why?",
+      "choices": {
+         "a": "Player A. The attacking player collects the Bounty.",
+         "b": "Player B. Their unit survived combat and therefore gets to collect the Bounty.",
+         "c": "Whichever player has the initiative collects the Bounty.",
+         "d": "Player B. Bounties are always collected by an opponent of the unit they are on."
+      },
+      "answer": "d",
+      "relevantCards": ["SHD/167", "SOR/037],
+      "relevantRule": "Player B has the option of collecting the bounty.\n\n7.5.13.F - Bounty abilities are always resolved by an opponent of the player who controls the unit with the Bounty ability. If a player defeats their own unit that has a Bounty ability, they must choose an opponent to resolve its Bounty ability.",
+      "tags": ["wanted insurgents," "academy defense walker", "bounty", "keyword"],
+      "difficulty": 0
    }
 ]
