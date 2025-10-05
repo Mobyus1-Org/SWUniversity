@@ -333,8 +333,8 @@
       "id": 23,
       "question": "Player A plays Grim Resolve and chooses to attack with a Heroic Renegade with 2 damage on it. How much damage would they do?",
       "choices": {
-         "a": "4",
-         "b": "2",
+         "a": "2",
+         "b": "4",
          "c": "3",
          "d": "6"
       },
