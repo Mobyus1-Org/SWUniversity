@@ -358,5 +358,35 @@
       "relevantRule": "Even though Echo Base Defender has Sentinel, since Player A's Imperial Interceptor is a space unit, it cannot attack ground units (at least not without the use of other cards!). When an enemy Sentinel unit is in the same arena, it prevents an attacker from attacking any non-Sentinel units as well as the opponent's base.\n\n7.5.11.B - When a player makes an attack, after exhausting the attacker, the player checks if there are any enemy units in the attacker’s arena with Sentinel. If there are one or more, the attacking player cannot choose a non-Sentinel unit as the defender (unless the attacker has Saboteur). If their opponent controls multiple units with Sentinel in that arena, the attacking player may choose any one of those units to be the defender.",
       "tags": ["imperial interceptor", "battlefield marine", "echo base defender", "bright hope", "sentinel", "keyword", "target"],
       "difficulty": 0
+   },
+   {
+      "id": 25,
+      "question": "Player A plays Syndicate Lackeys from hand and chooses to resolve Ambush. Player B has a Fleet Lieutenant, an Alliance X-Wing, and a Tantive IV, Fleeting the Empire, in play. Which are valid targets?",
+      "choices": {
+         "a": "Any of the units, but not Player B's base.",
+         "b": "Only the Tantive IV.",
+         "c": "Only the Fleet Lieutenant.",
+         "d": "The Fleet Lieutenant or Player B's base."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/213", "SOR/240", "SOR/237", "JTL/252"],
+      "relevantRule": "When a unit attacks using Ambush, it can only attack valid enemy units, not the enemy base. Since Syndicate Lackeys is a ground unit, the only legal target for Ambush is the enemy Fleet Lieutenant.\n\n7.5.5.C - A unit with Ambush still enters play exhausted like any other (non-leader) unit and cannot attack if there are no enemy units it can attack.",
+      "tags": ["syndicate lackeys", "fleet lieutenant", "alliance x-wing", "tantive iv", "ambush", "sentinel", "keyword", "target"],
+      "difficulty": 0
+   },
+   {
+      "id": 26,
+      "question": "Player A has an AT-ST in play with 5 damage on it. They attack into Player B's Consular Security Force that already has 3 damage on it. How much damage does the AT-ST's Overwhelm deal to Player B's base?",
+      "choices": {
+         "a": "None since the AT-ST doesn't survive the attack.",
+         "b": "6",
+         "c": "3",
+         "d": "2"
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/232", "SOR/046"],
+      "relevantRule": "Since the AT-ST attacks for 6 damage and only 4 is needed to reduce the Consular Security Force's HP to 0, the remaining 2 damage is dealt to Player B's base due to Overwhelm. The AT-ST doesn't need to survive the attack to damage the base.\n\n7.5.7.A - \"Overwhelm\" is a keyword whose effect is the same as the constant ability: \"While attacking, this unit deals its excess damage to the defending player’s base.\"\n\n7.5.7.C - An attacker with Overwhelm deals combat damage to the defender and the enemy base simultaneously.",
+      "tags": ["at-st", "consular security force", "overwhelm", "keyword"],
+      "difficulty": 0
    }
 ]
