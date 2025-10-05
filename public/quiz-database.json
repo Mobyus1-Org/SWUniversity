@@ -461,7 +461,7 @@
       "answer": "d",
       "relevantCards": ["SHD/167", "SOR/037"],
       "relevantRule": "Since the Bounty is on Player A's unit, Player B has the option of collecting it when Wanted Insurgents is defeated.\n\n7.5.13.F - Bounty abilities are always resolved by an opponent of the player who controls the unit with the Bounty ability. If a player defeats their own unit that has a Bounty ability, they must choose an opponent to resolve its Bounty ability.",
-      "tags": ["wanted insurgents," "academy defense walker", "bounty", "keyword"],
+      "tags": ["wanted insurgents", "academy defense walker", "bounty", "keyword"],
       "difficulty": 0
    },
    {
