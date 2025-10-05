@@ -508,5 +508,20 @@
       "relevantRule": "While resourcing a card during the Regroup Phase is optional, the two cards resourced at the start of the game are mandatory.\n\n5.2.1.F - Resource two cards. Each player chooses two cards from their hand and puts them into play as resources, facedown and ready. Each player must place exactly two cards as resources.",
       "tags": ["resource"],
       "difficulty": 0
+   },
+   {
+      "id": 35,
+      "question": "Player A has an N-1 Starfighter with Chewbacca, Faithful First Mate, attached to it as a Pilot. Player B plays No Glory, Only Results targeting Player A's N-1 Starfighter.  What best describes happens?",
+      "choices": {
+         "a": "Player B takes control of the N-1 with Chewbacca still attached, but it is not defeated.",
+         "b": "Nothing happens.",
+         "c": "Both the N-1 and Chewbacca are defeated and placed in Player A's discard pile.",
+         "d": "Both the N-1 and Chewbacca are defeated and placed in Player B's discard pile."
+      },
+      "answer": "c",
+      "relevantCards": ["LOF/192", "JTL/103", "JTL/043"],
+      "relevantRule": "Chewbacca's ability only prevents the attached unit from being defeated by \"enemy\" card abilities, but since No Glory, Only Results gives Player B control of the unit before defeating it, it is no longer an \"enemy\" ability that is doing the defeating. Defeated cards always go to their owner's discard, regardless of who controlled them at the time they were defeated.\n\n1.5.3.A - A card that a player controls is considered \"friendly\" for that player.\n\n1.5.5.C - A unit is defeated when it has damage on it equal to or greater than its HP, or when an ability defeats it directly. When a non-leader unit is defeated, it is moved to its owner’s discard pile. The unit’s abilities are no longer considered active (though some delayed effects may still be active). The unit loses all abilities and modifiers it was given by effects while in play. See 3.4. for more on Leader Units.\n\n1.5.5.D - An upgrade is defeated when the unit it is attached to leaves play, or when an ability defeats it directly. When a non-leader upgrade is defeated, it is moved to its owner’s discard pile. The upgrade’s abilities are no longer considered active (though some delayed effects may still be active). See 3.4. for more on Leader Upgrades.\n\n8.28.1 - If an ability instructs a player to \"take control\" of a card, that player will become that card’s controller, and remain so until either that card leaves play or their opponent takes control of that card.",
+      "tags": ["n-1 starfighter", "chewbacca", "no glory only results", "target", "control", "pilot", "ownership"],
+      "difficulty": 1
    }
 ]
