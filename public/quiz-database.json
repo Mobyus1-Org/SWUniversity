@@ -433,5 +433,20 @@
       "relevantRule": "Since Orbiting K-Wing has Saboteur, all shield tokens on the defending unit are defeated and it takes the full damage of the attacking unit.\n\n7.5.10.A - \"Saboteur\" is a keyword whose effect encompasses two abilities: a constant ability and a triggered ability. Saboteur’s first effect is the same as the constant ability: \"You may ignore Sentinel when choosing what this unit attacks.\" Saboteur’s second effect resolves like the triggered ability: \"On Attack: Defeat all Shield tokens attached to the defender.\"",
       "tags": ["orbiting k-wing", "techno union transport", "saboteur", "shielded", "keyword", "shield token"],
       "difficulty": 0
+   },
+   {
+      "id": 30,
+      "question": "Player A just defeated Player B's Guavian Antagonizer, but is afraid their deck is running low on cards and doesn't want to draw a card from the Bounty. Do they need to and why?",
+      "choices": {
+         "a": "Yes. It does not say \"You may\", so it's required.",
+         "b": "No. Collecting a Bounty is optional.",
+         "c": "No. Bounties are only collected when the unit is captured.",
+         "d": "Yes, but only if Player B has the initiative."
+      },
+      "answer": "b",
+      "relevantCards": ["SHD/134"],
+      "relevantRule": "Players do not need to collecting the Bounty on units they capture or defeat. It's always optional.\n\n7.5.13.E - Resolving a Bounty ability is optional. If a player chooses not to resolve a Bounty ability, they are not considered to have collected that Bounty.",
+      "tags": ["guavian antagonizer", "bounty", "keyword", "trigger"],
+      "difficulty": 0
    }
 ]
