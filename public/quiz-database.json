@@ -474,7 +474,7 @@
          "d": "The player with the initiative wins."
       },
       "answer": "c",
-      "relevantCards": ["SOR/069"],
+      "relevantCards": [" "],
       "relevantRule": "Even though Player A's base had more HP remaining at the start of the Regroup Phase, both players draw simultaneously and, because they both have empty decks, they will both take 6 damage at time same time, resulting in a draw.\n\n5.6.3 - In a case where both players’ bases reach 0 remaining HP at the same time, the game ends in a draw.",
       "tags": ["mill", "draw"],
       "difficulty": 0
