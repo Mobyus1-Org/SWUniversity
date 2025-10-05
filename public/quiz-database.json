@@ -403,5 +403,35 @@
       "relevantRule": "Since Raid is a keyword followed by a numeral, the effect is cumulative. When Soldier of the 501st attacks, its own Raid 1 is added with the Raid 2 from Clone Cohort as well as the Raid 1 from Red Three. All of that is then added to its base Power to determine how much damage it will do.\n\n7.5.4 - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n7.5.8.B - Multiple instances of Raid stack. If a unit gains Raid when it already has Raid, the numerals following each instance of Raid are added together, and when the unit attacks, it gets bonus power equal to the total value.",
       "tags": ["red three", "soldier of the 501st", "clone cohort", "raid", "keyword"],
       "difficulty": 0
+   },
+   {
+      "id": 28,
+      "question": "Player A wants to attack with their House Kast Soldier. Player B has a deployed Count Dooku, Face of the Confederacy, a Pirate Battle Tank, and a Confederate Courier in play. What are valid targets for Player A to attack?",
+      "choices": {
+         "a": "Only the Pirate Battle Tank.",
+         "b": "The Pirate Battle Tank or Player B's base.",
+         "c": "Anything except the Confederate Courier, including Player B's base.",
+         "d": "All of Player B's units, but not their base."
+      },
+      "answer": "c",
+      "relevantCards": ["SHD/162", "TWI/005-portrait", "SHD/089", "TWI/079"],
+      "relevantRule": "Since House Kast Soldier has Saboteur, it can ignore enemy Sentinel units when attacking. This means it can freely choose to attack any enemy units in the same arena as well as the enemy base.\n\n7.5.10.B - To \"ignore\" Sentinel means to determine the defender or base being attacked as if no enemy units in the attacker’s arena have Sentinel. Enemy units do not lose Sentinel while Sentinel is ignored.",
+      "tags": ["house kast soldier", "count dooku", "pirate battle tank", "confederate courier", "saboteur", "sentinel", "keyword", "target"],
+      "difficulty": 0
+   },
+   {
+      "id": 29,
+      "question": "Player A attacks with their Orbiting K-Wing into Player B's Techno Union Transport which has two shield tokens. What best describes what happens?",
+      "choices": {
+         "a": "One of the Techno Union Transport's shields is defeated and it takes 0 damage.",
+         "b": "Both of the Techno Union Transport's shields are defeated and it takes 0 damage.",
+         "c": "Both of the Techno Union Transport's shields are defeated and it takes 4 damage.",
+         "d": "One of the Techno Union Transport's shields is defeated and it takes 4 damage."
+      },
+      "answer": "c",
+      "relevantCards": ["JTL/166", "JTL/190"],
+      "relevantRule": "Since Orbiting K-Wing has Saboteur, all shield tokens on the defending unit are defeated and it takes the full damage of the attacking unit.\n\n7.5.10.A - \"Saboteur\" is a keyword whose effect encompasses two abilities: a constant ability and a triggered ability. Saboteur’s first effect is the same as the constant ability: \"You may ignore Sentinel when choosing what this unit attacks.\" Saboteur’s second effect resolves like the triggered ability: \"On Attack: Defeat all Shield tokens attached to the defender.\"",
+      "tags": ["orbiting k-wing", "techno union transport", "saboteur", "shielded", "keyword", "shield token"],
+      "difficulty": 0
    }
 ]
