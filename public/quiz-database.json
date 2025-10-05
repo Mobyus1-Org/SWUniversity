@@ -474,7 +474,7 @@
          "d": "The player with the initiative wins."
       },
       "answer": "c",
-      "relevantCards": [" "],
+      "relevantCards": ["P25/178"],
       "relevantRule": "Even though Player A's base had more HP remaining at the start of the Regroup Phase, both players draw simultaneously and, because they both have empty decks, they will both take 6 damage at time same time, resulting in a draw.\n\n5.6.3 - In a case where both players’ bases reach 0 remaining HP at the same time, the game ends in a draw.",
       "tags": ["mill", "draw"],
       "difficulty": 0
@@ -492,6 +492,21 @@
       "relevantCards": ["SOR/005", "SOR/024", "SOR/056"],
       "relevantRule": "Player A's leader only provides one blue Vigilance aspect icon, so in order to play the double-blue Bendu card, they would incur a 2-cost penalty for the missing second blue aspect.\n\n8.1.2 - Each aspect icon depicted on a leader or base provides only 1 icon of the given type. In order to play a card that has 2 of the same type of aspect icon without incurring the aspect penalty, the player’s leader and base must each have an icon of that type.\n\nIt's worth noting that, starting in the Secrets of Power set, we have begun to see leaders that have two of the same color aspect icon on them. In that case, you would not need your base to match your leader.",
       "tags": ["luke skywalker", "echo base", "bendu", "aspects", "cost", "aspect penalty"],
+      "difficulty": 0
+   },
+   {
+      "id": 34,
+      "question": "At the start of a game, Player A chooses two cards from their hand to become resources, but Player B really likes 5 of the 6 cards they drew in their opening hand. Is it legal for Player B to only resource one card and why?",
+      "choices": {
+         "a": "Only if they start the game with the initiative.",
+         "b": "Yes. Resourcing cards is optional.",
+         "c": "No. Since Player A resourced two cards, Player B must also resource two cards.",
+         "d": "No. Each player must always resource two cards at the start of the game."
+      },
+      "answer": "d",
+      "relevantCards": ["P25/178"],
+      "relevantRule": "While resourcing a card during the Regroup Phase is optional, the two cards resourced at the start of the game are mandatory.\n\n5.2.1.F - Resource two cards. Each player chooses two cards from their hand and puts them into play as resources, facedown and ready. Each player must place exactly two cards as resources.",
+      "tags": ["resource"],
       "difficulty": 0
    }
 ]
