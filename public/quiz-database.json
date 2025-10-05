@@ -388,5 +388,20 @@
       "relevantRule": "Since the AT-ST attacks for 6 damage and only 4 is needed to reduce the Consular Security Force's HP to 0, the remaining 2 damage is dealt to Player B's base due to Overwhelm. The AT-ST doesn't need to survive the attack to damage the base.\n\n7.5.7.A - \"Overwhelm\" is a keyword whose effect is the same as the constant ability: \"While attacking, this unit deals its excess damage to the defending player’s base.\"\n\n7.5.7.C - An attacker with Overwhelm deals combat damage to the defender and the enemy base simultaneously.",
       "tags": ["at-st", "consular security force", "overwhelm", "keyword"],
       "difficulty": 0
+   },
+   {
+      "id": 27,
+      "question": "Player A has a Red Three, Unstoppable, and a Soldier of the 501st with Clone Cohort attached to it in play with no other units. How much damage would Soldier of the 501st do to Player B's base if it attacked?",
+      "choices": {
+         "a": "1",
+         "b": "2",
+         "c": "4",
+         "d": "5"
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/144", "TWI/141", "TWI/169"],
+      "relevantRule": "Since Raid is a keyword followed by a numeral, the effect is cumulative. When Soldier of the 501st attacks, its own Raid 1 is added with the Raid 2 from Clone Cohort as well as the Raid 1 from Red Three. All of that is then added to its base Power to determine how much damage it will do.\n\n7.5.4 - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n7.5.8.B - Multiple instances of Raid stack. If a unit gains Raid when it already has Raid, the numerals following each instance of Raid are added together, and when the unit attacks, it gets bonus power equal to the total value.",
+      "tags": ["red three", "soldier of the 501st", "clone cohort", "raid", "keyword"],
+      "difficulty": 0
    }
 ]
