@@ -38,8 +38,8 @@ export function StandardModeEndScreen({
       setStandardQuizLength(0);
     }}>Go Back to Quiz Menu</button>
     <div className={"mt-8 text-left p-8 " + globalBackgroundStyle}>
-      <summary className="text-xl font-bold mb-4 cursor-pointer">Review Your Answers</summary>
-        <div className="mt-4 max-h-80 overflow-y-scroll">
+      <summary className="text-xl font-bold mb-4 cursor-pointer">Your Answers:</summary>
+        <div className="mt-4 max-h-160 overflow-y-scroll">
           {
             userResponses.map((response) => {
               const quiz = currentQuizSet.find(q => q.id === response.quizId)!;
