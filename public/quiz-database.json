@@ -463,5 +463,20 @@
       "relevantRule": "Since the Bounty is on Player A's unit, Player B has the option of collecting it when Wanted Insurgents is defeated.\n\n7.5.13.F - Bounty abilities are always resolved by an opponent of the player who controls the unit with the Bounty ability. If a player defeats their own unit that has a Bounty ability, they must choose an opponent to resolve its Bounty ability.",
       "tags": ["wanted insurgents," "academy defense walker", "bounty", "keyword"],
       "difficulty": 0
+   },
+   {
+      "id": 32,
+      "question": "Player A has 5 HP remaining on their base. Player B only has 2 HP remaining on their base. Both players' decks are empty going into the start of the Regroup Phase. How does the game end?",
+      "choices": {
+         "a": "Player A wins.",
+         "b": "Player B wins.",
+         "c": "The game is a draw.",
+         "d": "The player with the initiative wins."
+      },
+      "answer": "c",
+      "relevantCards": [""],
+      "relevantRule": "Even though Player A's base had more HP remaining at the start of the Regroup Phase, both players draw simultaneously and, because they both have empty decks, they will both take 6 damage at time same time, resulting in a draw.\n\n5.6.3 - In a case where both players’ bases reach 0 remaining HP at the same time, the game ends in a draw.",
+      "tags": ["mill", "draw"],
+      "difficulty": 0
    }
 ]
