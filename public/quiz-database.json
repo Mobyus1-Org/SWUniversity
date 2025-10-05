@@ -328,5 +328,20 @@
       "relevantRule": "Keywords whose names are followed by a numeral are cumulative. Since Restore has a numeral, the total amount healed is the sum of all instances of Restore on a unit. In this case, 1 from itself, 2 from Devotion, and 1 from Home One for a total of 4.\n\n7.5.4 - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability",
       "tags": ["restored arc-170", "devotion", "home one", "restore", "keyword", "heal"],
       "difficulty": 0
+   },
+   {
+      "id": 23,
+      "question": "Player A plays Grim Resolve and chooses to attack with a Heroic Renegade with 2 damage on it. How much damage would they do?",
+      "choices": {
+         "a": "4",
+         "b": "2",
+         "c": "3",
+         "d": "6"
+      },
+      "answer": "b",
+      "relevantCards": ["TWI/172", "SHD/146"],
+      "relevantRule": "Keywords do not stack unless they are followed by a numeral, cost, or dash with ability text. In this case, Heroic Renegade already has Grit and does not gain any additional benefit from attacking with Grim Resolve. The two extra damage is added to its power, resulting in 4 damage done.\n\n7.5.4 - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.",
+      "tags": ["grim resolve", "heroic renegade", "grit", "keyword"],
+      "difficulty": 0
    }
 ]
