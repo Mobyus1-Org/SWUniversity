@@ -28,7 +28,7 @@ export function StandardModeEndScreen({
 }: IProps) {
   return <div className="text-center m-[15%_10%] lg:m-[5%_10%]">
     <p className="text-2xl md:text-4xl font-bold mb-4 h-16">Quiz Complete! You answered {Object.values(userResponses).filter(response => response.selected === response.correct).length} out of {standardQuizLength} questions correctly.</p>
-    <button className="btn btn-primary text-lg p-4" onClick={() => {
+    <button className="btn btn-primary text-lg p-1" onClick={() => {
       setQuizzesCompleted([]);
       setUserResponses([]);
       setCurrentQuizId(0);
