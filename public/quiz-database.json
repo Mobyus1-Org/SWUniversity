@@ -313,5 +313,20 @@
       "relevantRule": "Coordinate doesn't care whether your units are ground, space, ready, exhausted, or your leader. So long as you control 3 units, Coordinate is active. Also, since When Played abilities resolve after the unit is in play, units with When Played abilities using Coordinate count themselves!\n\n7.5.15.A - \"Coordinate\" is a keyword followed by a dash and ability text whose effect is the same as the constant ability: \"While you control 3 or more units, this card gains the following ability.\"\n\n7.6.13.A - Some triggered abilities are indicated with \"When Played\" in bold, followed by a colon and an effect. These abilities trigger when the card they’re on is played and resolve after the card’s cost is paid and it is put into play.",
       "tags": ["pelta supply frigate", "ahsoka tano", "advanced recon commando", "coordinate", "when played", "trigger"],
       "difficulty": 0
+   },
+   {
+      "id": 22,
+      "question": "Player A has a Restored ARC-170 with Devotion attached to it and Home One, Alliance Flagship, in play with no other units. When Player A attacks with their Restored ARC-170, how much damage is healed from their base?",
+      "choices": {
+         "a": "1",
+         "b": "2",
+         "c": "3",
+         "d": "4"
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/044", "SOR/070", "SOR/102"],
+      "relevantRule": "Keywords whose names are followed by a numeral are cumulative. Since Restore has a numeral, the total amount healed is the sum of all instances of Restore on a unit. In this case, 1 from itself, 2 from Devotion, and 1 from Home One for a total of 4.\n\n7.5.4 - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability",
+      "tags": ["restored arc-170", "devotion", "home one", "restore", "keyword", "heal"],
+      "difficulty": 0
    }
 ]
