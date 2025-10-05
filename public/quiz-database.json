@@ -325,7 +325,7 @@
       },
       "answer": "d",
       "relevantCards": ["SOR/044", "SOR/070", "SOR/102"],
-      "relevantRule": "Keywords whose names are followed by a numeral are cumulative. Since Restore has a numeral, the total amount healed is the sum of all instances of Restore on a unit. In this case, 1 from itself, 2 from Devotion, and 1 from Home One for a total of 4.\n\n7.5.4 - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability",
+      "relevantRule": "Keywords whose names are followed by a numeral are cumulative. Since Restore has a numeral, the total amount healed is the sum of all instances of Restore on a unit. In this case, 1 from itself, 2 from Devotion, and 1 from Home One for a total of 4.\n\n7.5.4 - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n7.5.9.B - Multiple instances of Restore stack. If a unit gains Restore when it already has Restore, the numerals following each instance of Restore are added together, and when the unit attacks it heals damage equal to the total value.",
       "tags": ["restored arc-170", "devotion", "home one", "restore", "keyword", "heal"],
       "difficulty": 0
    },
@@ -340,8 +340,24 @@
       },
       "answer": "b",
       "relevantCards": ["TWI/172", "SHD/146"],
-      "relevantRule": "Keywords do not stack unless they are followed by a numeral, cost, or dash with ability text. In this case, Heroic Renegade already has Grit and does not gain any additional benefit from attacking with Grim Resolve. The two extra damage is added to its power, resulting in 4 damage done.\n\n7.5.4 - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.",
+      "relevantRule": "Keywords do not stack unless they are followed by a numeral, cost, or dash with ability text. In this case, Heroic Renegade already has Grit and does not gain any additional benefit from attacking with Grim Resolve. The two extra damage is added to its power, resulting in 4 damage done.\n\n7.5.4 - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n7.5.6.B - Multiple instances of Grit do not stack. If a unit gains Grit when it already has Grit, the unit’s power does not change.",
       "tags": ["grim resolve", "heroic renegade", "grit", "keyword"],
+      "difficulty": 0
+   },
+   {
+      "id": 24,
+      "question": "Player A wants to attack with an Imperial Interceptor. Player B has a Battlefield Marine, an Echo Base Defender, and a Bright Hope, The Last Transport. Which targets are valid?",
+      "choices": {
+         "a": "The Echo Base Defender and Bright Hope.",
+         "b": "Any of Player B's units, but not their base.",
+         "c": "Only Bright Hope.",
+         "d": "Bright Hope or Player B's base."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/132", "SOR/095", "SOR/098", "SOR/099"],
+      "relevantRule": "Even though Echo Base Defender has Sentinel, since Player A's Imperial Interceptor is a space unit, it cannot attack ground units (at least not without the use of other cards!). When an enemy Sentinel unit is in the same arena, it prevents an attacker from attacking any non-Sentinel units as well as the opponent's base.\n\n7.5.11.B - When a player makes an attack, after exhausting the attacker, the player checks if there are any enemy units in the attacker’s arena with Sentinel. If there are one or more, the attacking player cannot choose a non-Sentinel unit as the defender (unless the attacker has Saboteur). If their opponent controls multiple units with Sentinel in that arena, the attacking player may choose any
+one of those units to be the defender.",
+      "tags": ["imperial interceptor", "battlefield marine", "echo base defender", "bright hope", "sentinel", "keyword", "target"],
       "difficulty": 0
    }
 ]
