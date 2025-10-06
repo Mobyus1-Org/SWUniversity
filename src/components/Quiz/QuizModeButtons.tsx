@@ -30,6 +30,20 @@ export function QuizModeButtons({quizMode, allQuizzes, marathonSet, standardQuiz
       </div>
 
       <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1`}>
+        <h3 className="text-xl mb-4">A perfect place for new players to test their knowledge of the basics of SWU!</h3>
+        <button
+          className="btn btn-primary text-lg py-8 lg:py-5 w-1/2"
+          onClick={() => {
+            setQuizMode("newplayer");
+            setCurrentQuizSet([]);
+            setCurrentQuizId(0);
+          }}
+        >
+          New Player Mode
+        </button>
+      </div>
+
+      <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1`}>
         <h3 className="text-xl mb-4">Correctly answer every question in the database once to complete the marathon!</h3>
         <button
           className="btn btn-primary text-lg py-8 lg:py-5 w-1/2"
