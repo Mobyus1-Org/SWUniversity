@@ -80,6 +80,8 @@ function getQuizModeTitle(mode: QuizModes): string {
       return "Endless Mode";
     case "standard":
       return "Standard Mode";
+    case "newplayer":
+      return "New Player Mode";
     default:
       return "";
   }
