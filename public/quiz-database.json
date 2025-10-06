@@ -526,7 +526,7 @@
    },
    {
    "id": 36,
-      "question": "Player A is playing Bossk, Hunting His Prey, with the Energy Conversion Lab base. Which of the following units is a valid option when using Energy Conversion Lab's Epic Action?",
+      "question": "Player A is playing a red Aggression leader and the Energy Conversion Lab base. Which of the following units is a valid option when using Energy Conversion Lab's Epic Action?",
       "choices": {
          "a": "Warbird Stowaway from resources using Smuggle.",
          "b": "Separatist Super Tank using Exploit to discount its cost to 5.",
@@ -534,9 +534,9 @@
          "d": "Darth Vader, Twilight of the Apprentice, when 8 resources are ready."
       },
       "answer": "d",
-      "relevantCards": ["SHD/010", "SOR/022", "SHD/086", "TWI/087", "SHD/140", "LOF/037"],
+      "relevantCards": ["SOR/022", "SHD/086", "TWI/087", "SHD/140", "LOF/037"],
       "relevantRule": "When referencing a unit's \"cost\", always use the number in the top-left corner of the card before any penalties or discounts are applied. Since Energy Conversion Lab does not say \"for free\", the unit you play with it must still be paid for normally. Also, since it specifies \"from hand\", the unit you play cannot come from another zone, such as with Smuggle.\n\n1.8.6 - If an ability refers to the \"cost\" of a card, that ability always refers to the printed cost of the card. It does not take into account any modifiers to the card’s cost as it was played. See 8.16. Modifiers.",
-      "tags": ["bossk", "energy conversion lab", "warbird stowaway", "separatist super tank", "trandoshan hunters", "darth vader", "epic action", "ambush", "smuggle", "cost", "aspect penalty", "for free", "exploit", "keyword"],
+      "tags": ["energy conversion lab", "warbird stowaway", "separatist super tank", "trandoshan hunters", "darth vader", "epic action", "ambush", "smuggle", "cost", "aspect penalty", "for free", "exploit", "keyword"],
       "difficulty": 1
    }
 ]
