@@ -524,6 +524,7 @@
       "tags": ["n-1 starfighter", "chewbacca", "no glory only results", "target", "control", "pilot", "ownership"],
       "difficulty": 1
    },
+   {
    "id": 36,
       "question": "Player A is playing Bossk, Hunting His Prey, with the Energy Conversion Lab base. Which of the following units is a valid option when using Energy Conversion Lab's Epic Action?",
       "choices": {
