@@ -568,5 +568,18 @@
       "relevantRule": "Pilots, both leaders and non-leaders, are considered upgrades when attached to vehicles, so Nebula Ignition does not defeat the A-Wing.\n\n3.6.13 - A unit is considered \"upgraded\" while it has at least one upgrade attached to it.",
       "tags": ["phoenix squadron a-wing", "luke skywalker", "nebula ignition", "event", "removal", "target", "upgrade"],
       "difficulty": 0
+   },
+   {
+      "id": 39,
+      "question": "True or False test. The answer is True.",
+      "choices": {
+         "a": "True.",
+         "b": "False."
+      },
+      "answer": "a",
+      "relevantCards": ["P25/177"],
+      "relevantRule": "No explanation needed.",
+      "tags": [""],
+      "difficulty": 0
    }
 ]
