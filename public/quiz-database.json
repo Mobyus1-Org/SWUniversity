@@ -571,15 +571,17 @@
    },
    {
       "id": 39,
-      "question": "True or False test. The answer is True.",
+      "question": "Player A uses Han Solo, Worth the Risk's, ability to play a Secretive Sage for 1 resource. What best describes what happens?",
       "choices": {
-         "a": "True.",
-         "b": "False."
+         "a": "Secretive Sage enters play, gets a shield token, and then takes 2 damage from Han's ability, defeating the shield.",
+         "b": "Secretive Sage enters play and immediately takes 2 damage from Han's ability, defeating it.",
+         "c": "Secretive Sage enters play and Player A gets to choose whether to deal the 2 damage to it or give it a shield first.",
+         "d": "Han's ability wouldn't discount Secretive Sage."
       },
-      "answer": "a",
-      "relevantCards": ["P25/177"],
-      "relevantRule": "No explanation needed.",
-      "tags": [""],
-      "difficulty": 0
+      "answer": "b",
+      "relevantCards": ["SHD/013, "LOF/061"],
+      "relevantRule": "Han's leader ability results in a modified \"Play a card\" action and, like any all abilities that result in a modified action, must resolve in full before any resulting triggers can resolve, meaning the 2 damage is dealt to the Secretive Sage before Shielded gives it a shield token.\n\n7.1.6.B - A modified \"Play a Card\" action might include: restrictions on the type of card that can be played, cost adjustments, playing cards from other zones, or other effects. Any abilities triggered during or as a result of a modified \"Play a Card\" action are resolved after the current ability is finished resolving.",
+      "tags": ["han solo", "secretive sage", "timing", "shielded", "leader"],
+      "difficulty": 1
    }
 ]
