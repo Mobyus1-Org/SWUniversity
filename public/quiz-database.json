@@ -628,5 +628,20 @@
       "relevantRule": "Since the only restriction Clone has is that the target mustn't be a Vehicle, meaning, as strange as it is, it CAN be a clone of an Ion Cannon.",
       "tags": ["clone", "yoda", "falcion ion tank", "graceful purrgil", "ion cannon", "target"],
       "difficulty": 1
+   },
+   {
+      "id": 43,
+      "question": "Player A controls General Grievous, General of the Droid Armies, deployed as a unit. Player B controls Rose Tico, Saving What We Love, also deployed as a unit. No other units are in play. Player A plays Merciless Contest. What best describes what happens?",
+      "choices": {
+         "a": "Rose Tico is defeated.",
+         "b": "General Grievous is defeated.",
+         "c": "Both units are defeated.",
+         "d": "No units are defeated."
+      },
+      "answer": "d",
+      "relevantCards": ["TWI/015-portrait", "JTL/004-portrait", "TWI/238"],
+      "relevantRule": "Merciless Contest specifies that each player chooses a non-leader unit to defeat. Since neither player has a non-leader unit, no units are defeated.",
+      "tags": ["general grievous", "rose tico", "merciless contest", "event", "target", "removal", "leader"],
+      "difficulty": 1
    }
 ]
