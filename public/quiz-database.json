@@ -26,7 +26,7 @@
       "answer": "d",
       "relevantCards": ["SOR/096", "SOR/140"],
       "relevantRule": "When an ability instructs a player to select something from a hidden zone, such as their hand, resources, or a portion of their deck, since that information is unknown to their opponents, the player is permitted to act as if the contents of the hidden zone do not contain the intended target. This would not be the case, however, if the player was instructed to \"reveal\" a portion of their deck instead.\n\n1.3.2 - While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.) \n\n8.27.1 - When an ability instructs a player to \"search\" a deck, that player looks at a number of cards from that deck to find one or more cards, often with a specified attribute. The player chooses one or more cards (as indicated by the ability) and returns the other cards to that deck as specified below. The ability then instructs the player on what to do with the card(s) they have chosen. The player may also choose to resolve the ability as though no appropriate card was found.",
-      "tags": ["mon mothma", "search", "hidden zone", "draw", "reveal", "when played", "rebel"],
+      "tags": ["mon mothma", "specforce soldier", "search", "hidden zone", "draw", "reveal", "when played", "rebel"],
       "difficulty": 1
    },
    {
@@ -41,7 +41,7 @@
      "answer": "c",
      "relevantCards": ["JTL/103", "SHD/195", "SHD/206"],
      "relevantRule": "Since Spare the Target does not specify \"If you do...\", collecting the target's Bounties happens whether the unit is returned to hand or not.\n\n1.3.2 - While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.)",
-     "tags": ["chewbacca", "spare the target", "bounty", "bounce", "removal", "prevent", "pilot"],
+     "tags": ["chewbacca", "cartel turncoat", "spare the target", "bounty", "bounce", "removal", "prevent", "pilot"],
       "difficulty": 1
    },
    {
@@ -642,6 +642,21 @@
       "relevantCards": ["TWI/015-portrait", "JTL/004-portrait", "TWI/238"],
       "relevantRule": "Merciless Contest specifies that each player chooses a non-leader unit to defeat. Since neither player has a non-leader unit, no units are defeated.",
       "tags": ["general grievous", "rose tico", "merciless contest", "event", "target", "removal", "leader"],
+      "difficulty": 1
+   },
+   {
+      "id": 44,
+      "question": "At the start of a new round, Player A has a Luke Skywalker, Jedi Knight, in play upgraded with a Jedi Lightsaber. As the first action in a new round, they play a second Luke Skywalker, Jedi Knight, knowing they will need to choose one to defeat due to uniqueness. What best describes what happens?",
+      "choices": {
+         "a": "They will only be able to give an enemy unit -6/-6 if they choose to defeat the upgraded Luke.",
+         "b": "They will only be able to give an enemy unit -6/-6 if they choose to defeat the newly played Luke.",
+         "c": "They will give an enemy unit -6/-6 no matter which Luke they choose to defeat.",
+         "d": "They will give an enemy unit -3/-3 no matter which Luke they choose to defeat since the When Played resolves first."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/051", "SOR/054"],
+      "relevantRule": "Since the uniqueness rule is resolved before the pending When Played ability, it doesn't matter which copy of Luke is chosen to be defeated, by the time the pending trigger resolves, there will have been a friendly unit that was defeated, meaning Player A will give an enemy unit -6/-6.\n\n8.30.4 - A player can only control one copy of each unique card at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
+      "tags": ["luke skywalker", "jedi lightsaber", "upgrade", "when played", "target", "unique"],
       "difficulty": 1
    }
 ]
