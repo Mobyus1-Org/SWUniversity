@@ -658,5 +658,20 @@
       "relevantRule": "Since the uniqueness rule is resolved before the pending When Played ability, it doesn't matter which copy of Luke is chosen to be defeated, by the time the pending trigger resolves, there will have been a friendly unit that was defeated, meaning Player A will give an enemy unit -6/-6.\n\n8.30.4 - A player can only control one copy of each unique card at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
       "tags": ["luke skywalker", "jedi lightsaber", "upgrade", "when played", "target", "unique"],
       "difficulty": 1
+   },
+   {
+      "id": 45,
+      "question": "Player A controls The Ghost, Heart of the Family, upgraded with For the Republic. They also control Ezra Bridger, Attuned With Life, and an X-Wing token. How much HP does their base heal when Ezra attacks?",
+      "choices": {
+         "a": "2",
+         "b": "4",
+         "c": "0",
+         "d": "6"
+      },
+      "answer": "b",
+      "relevantCards": ["JTL/053", "TWI/051", "TJTL/T02"],
+      "relevantRule": "This is a rather unintuitive one, so here goes...\nDue to the wording in the rules for Coordinate, when a player controls 3 or more units, the unit \"gains\" whatever is after the dash. This means that while The Ghost is upgraded with For The Republic, it passes \"Coordinate - Restore 2\" on to friendly Spectres. Then once Coordinate becomes active, The Ghost gains \"Restore 2\" and passes that on as well, meaning Ezra has a total of Restore 4.\n\n7.5.15.A - \"Coordinate\" is a keyword followed by a dash and ability text whose effect is the same as the constant ability: \"While you control 3 or more units, this card gains the following ability.\"",
+      "tags": ["the ghost", "ezra bridger", "x-wing", "coordinate", "keyword", "restore", "spectre", "upgrade"],
+      "difficulty": 2
    }
 ]
