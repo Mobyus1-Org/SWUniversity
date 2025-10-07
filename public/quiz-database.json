@@ -613,5 +613,20 @@
       "relevantRule": "When a card refers to another card's \"cost\", it always refers to the number printed in the top-left of the card, no matter what penalties or reductions a player actually paid for it. In this case, it doesn't matter that Player B paid 3 resources for Protector, it still only costs 1.\n\n1.8.6 - If an ability refers to the \"cost\" of a card, that ability always refers to the printed cost of the card. It does not take into account any modifiers to the card’s cost as it was played. See 8.16. Modifiers.",
       "tags": ["ketsu onyo", "biggs darklighter", "protector", "traitorous", "shadowed intentions", "cost", "upgrade"],
       "difficulty": 1
+   },
+   {
+      "id": 42,
+      "question": "Player A plays Clone. Which of the following units would NOT be a valid target for Clone to enter play as a copy of?",
+      "choices": {
+         "a": "Yoda, Old Master",
+         "b": "Falchion Ion Tank",
+         "c": "Graceful Purrgil",
+         "d": "Ion Cannon"
+      },
+      "answer": "b",
+      "relevantCards": ["TWI/116", "SOR/045", "TWI/065", "LOF/069", "IBH/016"],
+      "relevantRule": "Since the only restriction Clone has is that the target mustn't be a Vehicle, meaning, as strange as it is, it CAN be a clone of an Ion Cannon.",
+      "tags": ["clone", "yoda", "falcion ion tank", "graceful purrgil", "ion cannon", "target"],
+      "difficulty": 1
    }
 ]
