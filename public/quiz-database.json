@@ -579,7 +579,7 @@
          "d": "Han's ability wouldn't discount Secretive Sage."
       },
       "answer": "b",
-      "relevantCards": ["SHD/013, "LOF/061"],
+      "relevantCards": ["SHD/013", "LOF/061"],
       "relevantRule": "Han's leader ability results in a modified \"Play a card\" action and, like any all abilities that result in a modified action, must resolve in full before any resulting triggers can resolve, meaning the 2 damage is dealt to the Secretive Sage before Shielded gives it a shield token.\n\n7.1.6.B - A modified \"Play a Card\" action might include: restrictions on the type of card that can be played, cost adjustments, playing cards from other zones, or other effects. Any abilities triggered during or as a result of a modified \"Play a Card\" action are resolved after the current ability is finished resolving.",
       "tags": ["han solo", "secretive sage", "timing", "shielded", "leader"],
       "difficulty": 1
