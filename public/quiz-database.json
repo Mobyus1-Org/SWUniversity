@@ -583,5 +583,35 @@
       "relevantRule": "Han's leader ability results in a modified \"Play a card\" action and, like any all abilities that result in a modified action, must resolve in full before any resulting triggers can resolve, meaning the 2 damage is dealt to the Secretive Sage before Shielded gives it a shield token.\n\n7.1.6.B - A modified \"Play a Card\" action might include: restrictions on the type of card that can be played, cost adjustments, playing cards from other zones, or other effects. Any abilities triggered during or as a result of a modified \"Play a Card\" action are resolved after the current ability is finished resolving.",
       "tags": ["han solo", "secretive sage", "timing", "shielded", "leader"],
       "difficulty": 1
+   },
+   {
+      "id": 40,
+      "question": "Which number on the card C-3PO, Protocol Droid, represents his cost?",
+      "choices": {
+         "a": "The red \"1\" on the left side.",
+         "b": "The gold \"2\" in the top-left corner.",
+         "c": "The blue \"4\" on the right side.",
+         "d": "The \"3\" in his name."
+      },
+      "answer": "b",
+      "relevantCards": ["SOR/238"],
+      "relevantRule": "A card's cost is always found in the top-left corner of the card.\n\nA card’s cost is located in the top left corner of the card and indicates how many resources must be spent to play the card. If it is a leader card, this number instead is related to deploying that leader (typically, how many resources a player must control to deploy it). Units, events, upgrades, and tokens have a cost. See 1.8. Cost.",
+      "tags": ["c-3po", "cost", "card anatomy"],
+      "difficulty": 0
+   },
+   {
+      "id": 41,
+      "question": "Player A attacks Player B's base with Ketsu Onyo, Old Friend. Which of the following targets can Player A choose to defeat with Ketsu's ability?",
+      "choices": {
+         "a": "A Biggs Darklighter, They'll Never Stop Us, attached to a vehicle as a Pilot.",
+         "b": "A Protector that Player B paid 3 resources for due to an aspect penalty.",
+         "c": "A Traitorous attached to a 2-cost unit.",
+         "d": "A Shadowed Intentions attached to Player B's leader."
+      },
+      "answer": "b",
+      "relevantCards": ["SHD/147", "JTL/150", "SOR/057", "SOR/122", "TWI/220"],
+      "relevantRule": "When a card refers to another card's \"cost\", it always refers to the number printed in the top-left of the card, no matter what penalties or reductions a player actually paid for it. In this case, it doesn't matter that Player B paid 3 resources for Protector, it still only costs 1.\n\n1.8.6 - If an ability refers to the \"cost\" of a card, that ability always refers to the printed cost of the card. It does not take into account any modifiers to the card’s cost as it was played. See 8.16. Modifiers.",
+      "tags": ["ketsu onyo", "biggs darklighter", "protector", "traitorous", "shadowed intentions", "cost", "upgrade"],
+      "difficulty": 1
    }
 ]
