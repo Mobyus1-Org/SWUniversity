@@ -1,15 +1,25 @@
 import React from 'react';
 import { globalBackgroundStyle } from './util/const';
+import { AudioContext } from './util/context';
 
 function Layout({ children }: { children: React.ReactNode }) {
+  const { sfx } = React.useContext(AudioContext) ?? { sfx: () => {} };
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (window.location.hash === e.currentTarget.getAttribute('href')) {
+      e.preventDefault();
+      return;
+    }
+    sfx("transition");
+  }
+
   return <div className="layout">
     <main>
       <div className={"relative navbar z-10 border-b " + globalBackgroundStyle}>
         <div className="flex justify-between items-center w-full px-4">
           {/* Left side links */}
           <div className="flex gap-4">
-            <a className="btn btn-ghost text-xl md:text-3xl" href="#/">Home</a>
-            <a className="btn btn-ghost text-xl md:text-3xl" href="#/quiz">Quiz</a>
+            <a className="btn btn-ghost text-xl md:text-3xl" href="#/" onClick={handleNavClick}>Home</a>
+            <a className="btn btn-ghost text-xl md:text-3xl" href="#/quiz" onClick={handleNavClick}>Quiz</a>
             {/* <a className="btn btn-ghost text-xl md:text-3xl" href="#/puzzles">Puzzles</a> */}
           </div>
           {/* Right side tray */}

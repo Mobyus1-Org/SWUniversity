@@ -1,8 +1,9 @@
 import React from "react";
-import { globalBackgroundStyle, isMarathonVariant, type QuizModes } from "../../util/const";
+import { globalBackgroundStyle, isMarathonVariant, type QuizModes, type SfxType } from "../../util/const";
 import type { Quiz, UserResponse } from "../../util/func";
 import { StandardModeEndScreen } from "./StandardModeEndScreen";
 import { MarathonModeEndScreen } from "./MarathonModeEndScreen";
+import { AudioContext } from "../../util/context";
 
 interface IProps {
   currentQuizSet: Quiz[];
@@ -67,6 +68,8 @@ export function QuizContent({
     }
   }, [currentQuiz, currentQuizKeys.length, setCurrentQuizKeys]);
 
+  const { sfx } = React.useContext(AudioContext) ?? { sfx: () => {} };
+
   if(!currentQuiz) return <p className="text-lg">Loading quiz...</p>;
 
   const renderChoices = () => {
@@ -90,7 +93,10 @@ export function QuizContent({
             value={currentQuizKeys[index]}
             className="mr-2.5 md:scale-110"
             checked={selectedAnswer === currentQuizKeys[index]}
-            onChange={() => setSelectedAnswer(currentQuizKeys[index])}
+            onChange={() => {
+              sfx("click");
+              setSelectedAnswer(currentQuizKeys[index])
+            }}
             disabled={quizResult}
           />
           {currentQuiz.choices[currentQuizKeys[index]]}
@@ -129,7 +135,7 @@ export function QuizContent({
           const selected = formData.get("quiz-choice");
 
           if (selected) {
-            onSubmitAnswer(selected as string, setQuizResult);
+            onSubmitAnswer(selected as string, setQuizResult, sfx);
           }
         }}>
         {renderChoices()}
@@ -138,7 +144,7 @@ export function QuizContent({
           quizResult && quizzesCompleted.length < currentQuizSet.length
             ? <button className="btn btn-secondary mt-4 text-lg p-4" onClick={() =>
                   onNextQuestion(quizMode, selectedAnswer, currentQuizId, currentQuiz.answer.toString(),
-                    currentQuizSet, quizzesCompleted, lastEndlessQuizzes, standardQuizLength, userResponses,
+                    currentQuizSet, quizzesCompleted, lastEndlessQuizzes, standardQuizLength, userResponses, sfx,
                     setQuizzesCompleted, setCurrentQuizId, setLastEndlessQuizzes, setUserResponses, resetCurrentQuizState)}>
                 Next Question
               </button>
@@ -192,9 +198,10 @@ export function QuizContent({
 </div>
 }
 
-function onSubmitAnswer(selectedIndex: string, setQuizResult: (result: boolean) => void) {
+function onSubmitAnswer(selectedIndex: string, setQuizResult: (result: boolean) => void, sfx: (type: SfxType) => void) {
   if (selectedIndex) {
     setQuizResult(true);
+    sfx("hub");
   }
 }
 
@@ -208,6 +215,7 @@ function onNextQuestion(
   lastEndlessQuizzes: number[],
   standardQuizLength: number,
   userResponses: UserResponse[],
+  sfx: (type: SfxType) => void,
   setQuizzesCompleted: (completed: number[]) => void,
   setCurrentQuizId: (id: number) => void,
   setLastEndlessQuizzes: (list: number[]) => void,
@@ -257,5 +265,7 @@ function onNextQuestion(
       resetCurrentQuizState();
     }
   }
+
+  sfx("hub");
 }
 

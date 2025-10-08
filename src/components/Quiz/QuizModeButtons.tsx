@@ -1,6 +1,8 @@
 import type { Quiz } from "../../util/func";
 import { globalBackgroundStyle, type QuizModes } from "../../util/const";
 import { QuizModeButtonItem } from "./QuizModeButtonItem";
+import React from "react";
+import { AudioContext } from "../../util/context";
 
 interface IProps {
   quizMode: QuizModes;
@@ -76,6 +78,8 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     />
   </div>
 
+  const { sfx } = React.useContext(AudioContext) ?? { sfx: () => {} };
+
   return <div>
   {
     quizMode === "standard" && standardQuizLength === 0
@@ -83,7 +87,9 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
         <label className="text-2xl md:mr-24">Select number of questions:</label>
         <select
           className="rounded text-2xl w-full md:w-1/8 bg-[rgba(255,255,255,0.25)] mt-8 md:mt-0"
+          onClick={() => sfx("click")}
           onChange={(e) => {
+            sfx("click");
             setStandardQuizLength(parseInt(e.target.value));
             const filteredSet = ([...allQuizzes].sort(() => 0.5 - Math.random())).slice(0, parseInt(e.target.value));
             setCurrentQuizSet(filteredSet);
