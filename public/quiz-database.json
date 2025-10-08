@@ -718,5 +718,35 @@
       "relevantRule": "Legal Authority's ability doesn't require the upgrade itself to remain in play for the unit to remain captured. Its ability triggers when it's played, and that's that.",
       "tags": ["steadfast battalion", "legal authority", "pyke sentinel", "capture", "upgrade", "rescue"],
       "difficulty": 1
+   },
+   {
+      "id": 49,
+      "question": "Player A controls an Alliance X-Wing and no other units. Player B plays a Death Trooper and has no other units. What best describes what happens?",
+      "choices": {
+         "a": "Death Trooper deals 2 damage to itself and 2 damage to the Alliance X-Wing.",
+         "b": "Death Trooper deals 2 damage to itself only.",
+         "c": "Death Trooper deals no damage.",
+         "d": "Death Trooper deals 2 damage to each players' base."
+      },
+      "answer": "b",
+      "relevantCards": ["SOR/237", SOR/033"],
+      "relevantRule": "Since Death Trooper's ability does not say \"You may...\", Player B must resolve as much of the ability as they can. Since Player A has no ground units, the Death Trooper deals 2 damage to itself and no other units.\n\n7.6.7 - A triggered ability must resolve once its triggering condition is met unless the ability uses the phrase \"you may.\" Once triggered, these abilities must resolve at the next available opportunity.",
+      "tags": ["alliance x-wing", "death trooper", "when played", "target", "ability"],
+      "difficulty": 0
+   },
+   {
+      "id": 50,
+      "question": "Player A controls a Loth-Wolf. Player B controls a Viper Probe Droid and plays Give In to Your Anger, targeting the Loth-Wolf. What best describes Player A's next action?",
+      "choices": {
+         "a": "The Loth-Wolf must attack the Viper Probe Droid.",
+         "b": "Player A has free choice of their next action.",
+         "c": "The Loth-Wolf must attack Player B's base.",
+         "d": "The Loth-Wolf must attack either the Viper Probe Droid or Player B's base."
+      },
+      "answer": "b",
+      "relevantCards": ["LOF/044", "SOR/228", "SHD/144"],
+      "relevantRule": " ",
+      "tags": ["loth-wolf", "viper probe droid", "give in to your anger", "event", "target", "can't attack"],
+      "difficulty": 1
    }
 ]
