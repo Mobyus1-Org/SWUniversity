@@ -14,15 +14,15 @@ import { AudioContextProvider } from './util/context';
 
 function App() {
   const clickSound = React.useMemo(() => new Audio({
-    volume: 0.05,
+    volume: 0.1,
     src: ['/assets/sfx/click.mp3']
     }), []);
   const confirmSound = React.useMemo(() => new Audio({
-    volume: 0.05,
+    volume: 0.1,
     src: ['/assets/sfx/confirm.mp3']
     }), []);
   const transitionSound = React.useMemo(() => new Audio({
-    volume: 0.05,
+    volume: 0.1,
     src: ['/assets/sfx/transition.mp3']
     }), []);
 
