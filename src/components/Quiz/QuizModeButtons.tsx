@@ -17,7 +17,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="standard"
       title="Standard Mode"
-      description="Choose a number of questions and see how many you can answer correctly!"
+      description="Choose a set number of questions to be pulled from our databank and see how many you can answer correctly!"
       quizSet={[]}
       initQuizId={false}
       setQuizMode={setQuizMode}
@@ -27,7 +27,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="marathon"
       title="Marathon Mode"
-      description="Correctly answer every question in the database once to complete the marathon!"
+      description="Correctly answer every question in the databank once to complete the marathon!"
       quizSet={allQuizzes}
       initQuizId={true}
       setQuizMode={setQuizMode}
@@ -57,7 +57,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="knight"
       title="Jedi Knight Mode"
-      description="DESCRIPTION HERE"
+      description="The majority of our questions fall under this category. See how many you know!"
       quizSet={allQuizzes.filter(quiz => quiz.difficulty === 1)}
       initQuizId={true}
       setQuizMode={setQuizMode}
@@ -67,7 +67,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="master"
       title="Jedi Master Mode"
-      description="Only the SWU players strongest in the Force understand these obscure interactions. And now you will too!\nTest\n\nTest2"
+      description="Only the SWU players strongest in the Force understand these obscure interactions. And now you will too!"
       quizSet={allQuizzes.filter(quiz => quiz.difficulty === 2)}
       initQuizId={true}
       setQuizMode={setQuizMode}
