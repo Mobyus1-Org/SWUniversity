@@ -673,5 +673,18 @@
       "relevantRule": "This is a rather unintuitive one, so here goes...\nDue to the wording in the rules for Coordinate, when a player controls 3 or more units, the unit \"gains\" whatever is after the dash. This means that while The Ghost is upgraded with For The Republic, it passes \"Coordinate - Restore 2\" on to friendly Spectres. Then once Coordinate becomes active, The Ghost gains \"Restore 2\" and passes that on as well, meaning Ezra has a total of Restore 4.\n\n7.5.15.A - \"Coordinate\" is a keyword followed by a dash and ability text whose effect is the same as the constant ability: \"While you control 3 or more units, this card gains the following ability.\"",
       "tags": ["the ghost", "ezra bridger", "x-wing", "coordinate", "keyword", "restore", "spectre", "upgrade"],
       "difficulty": 2
+   },
+   {
+      "id": 46,
+      "question": "This is a test question. The answer is True."
+      "choices": {
+         "a": "True.",
+         "b": "False."
+      },
+      "answer": "a",
+      "relevantCards": [""],
+      "relevantRule": "",
+      "tags": [""],
+      "difficulty": 0
    }
 ]
