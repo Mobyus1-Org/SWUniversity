@@ -228,12 +228,12 @@
       "id": 16,
       "question": "Player A plays Rallying Cry. Later in the same phase, Player A deploys Leia Organa, Alliance General. Assuming there are no other relevant effects, how much damage would Leia do when she attacks?",
       "choices": {
-        "a": "3",
-        "b": "4",
+        "a": "4",
+        "b": "3",
         "c": "5",
         "d": "6"
       },
-      "answer": "b",
+      "answer": "a",
       "relevantCards": ["SOR/154", "SOR/009-portrait"],
       "relevantRule": "Only units in play at the time a lasting effect is created, such as the one created by Rallying Cry, benefit from the effect.\n\n7.7.3.D - By default, a lasting effect only applies to a card that’s in play at the time of the lasting effect’s creation. For a lasting effect to affect a card in an out-of-play zone, the ability that created that effect must explicitly state so.",
       "tags": ["rallying cry", "leia organa", "lasting effect", "raid", "event"],
@@ -498,12 +498,12 @@
       "id": 34,
       "question": "At the start of a game, Player A chooses two cards from their hand to become resources, but Player B really likes 5 of the 6 cards they drew in their opening hand. Is it legal for Player B to only resource one card and why?",
       "choices": {
-         "a": "Only if they start the game with the initiative.",
+         "a": "No. Each player must always resource two cards at the start of the game.",
          "b": "Yes. Resourcing cards is optional.",
          "c": "No. Since Player A resourced two cards, Player B must also resource two cards.",
-         "d": "No. Each player must always resource two cards at the start of the game."
+         "d": "Only if they start the game with the initiative."
       },
-      "answer": "d",
+      "answer": "a",
       "relevantCards": [],
       "relevantRule": "While resourcing a card during the Regroup Phase is optional, the two cards resourced at the start of the game are mandatory.\n\n5.2.1.F - Resource two cards. Each player chooses two cards from their hand and puts them into play as resources, facedown and ready. Each player must place exactly two cards as resources.",
       "tags": ["resource"],
@@ -543,12 +543,12 @@
       "id": 37,
       "question": "Which of the following would NOT be defeated by playing Takedown?",
       "choices": {
-         "a": "A Secretive Sage with a shield token on it.",
+         "a": "A Clan Saxon Gauntlet with an Experience token on it.",
          "b": "A Desperado Freighter with 2 damage counters on it.",
-         "c": "A Clan Saxon Gauntlet with an Experience token on it.",
+         "c": "A Secretive Sage with a shield token on it.",
          "d": "A deployed Sabine Wren, Galvanized Revolutionary, leader unit."
       },
-      "answer": "c",
+      "answer": "a",
       "relevantCards": ["SOR/077", "LOF/061", "SHD/152", "SOR/014-portrait", "SHD/035"],
       "relevantRule": "When a card references a unit's HP, use the amount of HP remaining after applying any relevant modifiers and subtracting one for each damage counter on the unit. Also, if a card does not specify \"non-leader\", it can target deployed leader units as well!\n\n1.11.6 - A card’s \"remaining HP\" is calculated by subtracting the number of damage counters on it from its HP (accounting for any modifiers to its HP). If the remaining HP of a card is 0 or less, that card is defeated immediately.",
       "tags": ["takdown", "secretive sage", "desperado freighter", "sabine wren", "clan saxon gauntlet", "target", "event", "hp"],
@@ -558,12 +558,12 @@
       "id": 38,
       "question": "Player A has a Phoenix Squadron A-Wing with Luke Skywalker, Hero of Yavin, attached to it as a Pilot. Player B plays Nebula Ignition. What best describes what happens?",
       "choices": {
-         "a": "The Phoenix Squadron A-Wing is defeated and Luke becomes a ground unit.",
+         "a": "The Phoenix Squadron A-Wing survives because it is upgraded.",
          "b": "Luke's ability prevents the Phoenix Squadron A-Wing from being defeated.",
-         "c": "The Phoenix Squadron A-Wing survives because it is upgraded.",
+         "c": "The Phoenix Squadron A-Wing is defeated and Luke becomes a ground unit.",
          "d": "The Phoenix Squadron A-Wing is defeated, resulting in Luke being defeated as well."
       },
-      "answer": "c",
+      "answer": "a",
       "relevantCards": ["JTL/095", "JTL/012-portrait", "JTL/080"],
       "relevantRule": "Pilots, both leaders and non-leaders, are considered upgrades when attached to vehicles, so Nebula Ignition does not defeat the A-Wing.\n\n3.6.13 - A unit is considered \"upgraded\" while it has at least one upgrade attached to it.",
       "tags": ["phoenix squadron a-wing", "luke skywalker", "nebula ignition", "event", "removal", "target", "upgrade"],
@@ -739,11 +739,11 @@
       "question": "Player A controls a Loth-Wolf. Player B controls a Viper Probe Droid and plays Give In to Your Anger, targeting the Loth-Wolf. What best describes Player A's next action?",
       "choices": {
          "a": "The Loth-Wolf must attack the Viper Probe Droid.",
-         "b": "Player A has free choice of their next action.",
+         "b": "The Loth-Wolf must attack either the Viper Probe Droid or Player B's base.",
          "c": "The Loth-Wolf must attack Player B's base.",
-         "d": "The Loth-Wolf must attack either the Viper Probe Droid or Player B's base."
+         "d": "Player A has free choice of their next action."
       },
-      "answer": "b",
+      "answer": "d",
       "relevantCards": ["LOF/044", "SOR/228", "SHD/144"],
       "relevantRule": "The fact that Loth-Wolf's ability specifies that it \"can't attack\" means that if another ability attempts to make it attack, that second ability fails. Restrictions always override permissions.\n\n8.4.3 - Restrictive abilities override permissive abilities. If an ability with the word \"may\" or \"can\" directly contradicts an ability that uses the word \"can’t\", then the ability that uses \"can’t\" takes precedence.",
       "tags": ["loth-wolf", "viper probe droid", "give in to your anger", "event", "target", "can't attack"],
