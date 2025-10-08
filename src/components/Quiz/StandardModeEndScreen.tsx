@@ -12,6 +12,7 @@ interface IProps {
   setQuizzesCompleted: (completed: number[]) => void;
   setQuizResult: (result: boolean) => void;
   setSelectedAnswer: (answer: string) => void;
+  setCurrentQuizKeys: (keys: string[]) => void;
 }
 
 export function StandardModeEndScreen({
@@ -24,7 +25,8 @@ export function StandardModeEndScreen({
   setStandardQuizLength,
   setQuizzesCompleted,
   setQuizResult,
-  setSelectedAnswer
+  setSelectedAnswer,
+  setCurrentQuizKeys
 }: IProps) {
   return <div className="text-center m-[10%_10%] lg:m-[1%_10%]">
     <p className="text-2xl md:text-4xl font-bold mb-4 h-16">Quiz Complete! You answered {Object.values(userResponses).filter(response => response.selected === response.correct).length} out of {standardQuizLength} questions correctly.</p>
@@ -34,6 +36,7 @@ export function StandardModeEndScreen({
       setCurrentQuizId(0);
       setQuizResult(false);
       setSelectedAnswer("");
+      setCurrentQuizKeys([]);
       setQuizMode("");
       setStandardQuizLength(0);
     }}>Go Back to Quiz Menu</button>

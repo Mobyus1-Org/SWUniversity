@@ -7,6 +7,7 @@ interface IProps {
   setQuizResult: (result: boolean) => void;
   setSelectedAnswer: (answer: string) => void;
   setQuizMode: (mode: QuizModes) => void;
+  setCurrentQuizKeys: (keys: string[]) => void;
   currentQuizSet: Quiz[];
 }
 
@@ -16,6 +17,7 @@ export function MarathonModeEndScreen({
   setQuizResult,
   setSelectedAnswer,
   setQuizMode,
+  setCurrentQuizKeys,
   currentQuizSet
 }: IProps) {
   return <div className="text-center m-[35%_10%] lg:m-[15%_10%]">
@@ -25,6 +27,7 @@ export function MarathonModeEndScreen({
       setCurrentQuizId(Math.floor(Math.random() * currentQuizSet.length));
       setQuizResult(false);
       setSelectedAnswer("");
+      setCurrentQuizKeys([]);
       setQuizMode("");
     }}>Go Back to Quiz Menu</button>
   </div>

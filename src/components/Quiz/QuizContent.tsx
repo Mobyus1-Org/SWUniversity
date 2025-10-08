@@ -96,6 +96,7 @@ export function QuizContent({
       setQuizResult={setQuizResult}
       setSelectedAnswer={setSelectedAnswer}
       setQuizMode={setQuizMode}
+      setCurrentQuizKeys={setCurrentQuizKeys}
       currentQuizSet={currentQuizSet}
     />
   }
@@ -111,6 +112,7 @@ export function QuizContent({
       setQuizzesCompleted={setQuizzesCompleted}
       setQuizResult={setQuizResult}
       setSelectedAnswer={setSelectedAnswer}
+      setCurrentQuizKeys={setCurrentQuizKeys}
     />
   }
   {
@@ -131,7 +133,8 @@ export function QuizContent({
             ? <button className="btn btn-secondary mt-4 text-lg p-4" onClick={() =>
                   onNextQuestion(quizMode, selectedAnswer, currentQuizId, currentQuiz!.answer.toString(),
                     currentQuizSet, quizzesCompleted, lastEndlessQuizzes, standardQuizLength, userResponses,
-                    setQuizzesCompleted, setCurrentQuizId, setQuizResult, setSelectedAnswer, setLastEndlessQuizzes, setUserResponses)}>
+                    setQuizzesCompleted, setCurrentQuizId, setQuizResult,
+                      setSelectedAnswer, setLastEndlessQuizzes, setUserResponses, setCurrentQuizKeys)}>
                 Next Question
               </button>
             : null
@@ -206,7 +209,8 @@ function onNextQuestion(
   setQuizResult: (result: boolean) => void,
   setSelectedAnswer: (answer: string) => void,
   setLastEndlessQuizzes: (list: number[]) => void,
-  setUserResponses: (responses: UserResponse[]) => void
+  setUserResponses: (responses: UserResponse[]) => void,
+  setCurrentQuizKeys: (keys: string[]) => void
 )
 {
   const endlessThreshold = 25; // Number of recent quizzes to track in endless mode
@@ -225,6 +229,7 @@ function onNextQuestion(
       setCurrentQuizId(nextQuiz);
       setQuizResult(false);
       setSelectedAnswer("");
+      setCurrentQuizKeys([]);
     }
   } else if(quizMode === "endless") {
     const updatedLastEndless = [...lastEndlessQuizzes, currentQuizId];
@@ -239,6 +244,7 @@ function onNextQuestion(
     setCurrentQuizId(nextQuiz);
     setQuizResult(false);
     setSelectedAnswer("");
+    setCurrentQuizKeys([]);
   } else if(quizMode === "standard") {
     const updatedCompleted = [...quizzesCompleted];
     updatedCompleted.push(currentQuizId);
@@ -252,6 +258,7 @@ function onNextQuestion(
       setCurrentQuizId(currentQuizSet[updatedCompleted.length].id);
       setQuizResult(false);
       setSelectedAnswer("");
+      setCurrentQuizKeys([]);
     }
   }
 }
