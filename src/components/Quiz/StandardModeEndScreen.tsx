@@ -1,5 +1,7 @@
-import { globalBackgroundStyle } from "../../util/const";
+import React from "react";
 import type { Quiz, UserResponse } from "../../util/func";
+import { AudioContext } from "../../util/context";
+import { globalBackgroundStyle } from "../../util/const";
 
 interface IProps {
   userResponses: UserResponse[];
@@ -14,9 +16,13 @@ export function StandardModeEndScreen({
   standardQuizLength,
   resetQuizMode,
 }: IProps) {
+  const { sfx } = React.useContext(AudioContext) ?? { sfx: () => {} };
   return <div className="text-center m-[10%_10%] lg:m-[1%_10%]">
     <p className="text-2xl md:text-4xl font-bold mb-4 h-16">Quiz Complete! You answered {Object.values(userResponses).filter(response => response.selected === response.correct).length} out of {standardQuizLength} questions correctly.</p>
-    <button className="btn btn-primary text-lg p-4" onClick={resetQuizMode}>Go Back to Quiz Menu</button>
+    <button className="btn btn-primary text-lg p-4" onClick={() => {
+      sfx("hub");
+      resetQuizMode();
+    }}>Go Back to Quiz Menu</button>
     <div className={"mt-8 text-left p-8 " + globalBackgroundStyle}>
       <summary className="text-xl font-bold mb-4 cursor-pointer">Your Answers:</summary>
         <div className="mt-4 max-h-140 overflow-y-scroll">

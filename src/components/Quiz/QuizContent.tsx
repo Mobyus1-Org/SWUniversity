@@ -266,6 +266,6 @@ function onNextQuestion(
     }
   }
 
-  sfx("hub");
+  sfx("click");
 }
 
