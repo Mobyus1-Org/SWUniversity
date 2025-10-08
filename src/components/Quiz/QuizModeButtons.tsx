@@ -13,23 +13,13 @@ interface IProps {
 }
 
 export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQuizMode, setCurrentQuizSet, setCurrentQuizId, setStandardQuizLength}: IProps) {
-  const renderButtons = () => <div className="flex flex-col md:flex-row gap-4 mb-8 h-full">
+  const renderButtons = () => <div className="grid md:grid-cols-3 gap-4 mb-8 h-full">
     <QuizModeButtonItem
       quizMode="standard"
       title="Standard Mode"
       description="Choose a number of questions and see how many you can answer correctly!"
       quizSet={[]}
       initQuizId={false}
-      setQuizMode={setQuizMode}
-      setCurrentQuizSet={setCurrentQuizSet}
-      setCurrentQuizId={setCurrentQuizId}
-    />
-    <QuizModeButtonItem
-      quizMode="newplayer"
-      title="New Player Mode"
-      description="A perfect place for new players to test their knowledge of the basics of SWU!"
-      quizSet={allQuizzes.filter(quiz => quiz.difficulty === 0)}
-      initQuizId={true}
       setQuizMode={setQuizMode}
       setCurrentQuizSet={setCurrentQuizSet}
       setCurrentQuizId={setCurrentQuizId}
@@ -49,6 +39,36 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
       title="Endless Mode"
       description="Answer random questions with no end in sight!"
       quizSet={allQuizzes}
+      initQuizId={true}
+      setQuizMode={setQuizMode}
+      setCurrentQuizSet={setCurrentQuizSet}
+      setCurrentQuizId={setCurrentQuizId}
+    />
+    <QuizModeButtonItem
+      quizMode="padawan"
+      title="Padawan Mode"
+      description="A perfect place for new players to test their knowledge of the basics of SWU!"
+      quizSet={allQuizzes.filter(quiz => quiz.difficulty === 0)}
+      initQuizId={true}
+      setQuizMode={setQuizMode}
+      setCurrentQuizSet={setCurrentQuizSet}
+      setCurrentQuizId={setCurrentQuizId}
+    />
+    <QuizModeButtonItem
+      quizMode="knight"
+      title="Jedi Knight Mode"
+      description="DESCRIPTION HERE"
+      quizSet={allQuizzes.filter(quiz => quiz.difficulty === 1)}
+      initQuizId={true}
+      setQuizMode={setQuizMode}
+      setCurrentQuizSet={setCurrentQuizSet}
+      setCurrentQuizId={setCurrentQuizId}
+    />
+    <QuizModeButtonItem
+      quizMode="master"
+      title="Jedi Master Mode"
+      description="DESCRIPTION HERE"
+      quizSet={allQuizzes.filter(quiz => quiz.difficulty === 2)}
       initQuizId={true}
       setQuizMode={setQuizMode}
       setCurrentQuizSet={setCurrentQuizSet}

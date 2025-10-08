@@ -1,5 +1,5 @@
 import React from "react";
-import { globalBackgroundStyle, type QuizModes } from "../../util/const";
+import { globalBackgroundStyle, isMarathonVariant, type QuizModes } from "../../util/const";
 import type { Quiz, UserResponse } from "../../util/func";
 import { StandardModeEndScreen } from "./StandardModeEndScreen";
 import { MarathonModeEndScreen } from "./MarathonModeEndScreen";
@@ -92,7 +92,7 @@ export function QuizContent({
 
   return <div>
   {
-    (quizMode == "marathon" || quizMode == "newplayer")
+    (quizMode == "marathon" || quizMode == "padawan" || quizMode == "knight" || quizMode == "master")
       && quizzesCompleted.length === currentQuizSet.length
       && <MarathonModeEndScreen resetQuizMode={resetQuizMode} />
   }
@@ -203,7 +203,7 @@ function onNextQuestion(
 {
   const endlessThreshold = 25; // Number of recent quizzes to track in endless mode
 
-  if(quizMode === "marathon" || quizMode === "newplayer") {
+  if(isMarathonVariant(quizMode)) {
     const updatedCompleted = [...quizzesCompleted];
     if(selectedAnswer === currentQuizAnswer) {
       updatedCompleted.push(currentQuizId);
@@ -244,3 +244,4 @@ function onNextQuestion(
     }
   }
 }
+

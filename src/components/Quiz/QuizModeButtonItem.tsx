@@ -15,15 +15,17 @@ interface IProps {
 export function QuizModeButtonItem({ quizMode, title, description, quizSet, initQuizId, setQuizMode, setCurrentQuizSet, setCurrentQuizId }: IProps) {
   return <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1`}>
     <h3 className="text-xl mb-4">{description}</h3>
-    <button
-      className="btn btn-primary text-lg py-8 lg:py-5 w-1/2"
-      onClick={() => {
-        setQuizMode(quizMode);
-        setCurrentQuizSet(quizSet);
-        setCurrentQuizId(initQuizId ? quizSet[Math.floor(Math.random() * quizSet.length)].id : 0);
-      }}
-    >
-      {title}
-    </button>
+    {
+      title !== "" && <button
+        className="btn btn-primary text-md xl:text-lg py-8 lg:py-5 w-1/2"
+        onClick={() => {
+          setQuizMode(quizMode);
+          setCurrentQuizSet(quizSet);
+          setCurrentQuizId(initQuizId ? quizSet[Math.floor(Math.random() * quizSet.length)].id : 0);
+        }}
+      >
+        {title}
+      </button>
+    }
   </div>
 }
