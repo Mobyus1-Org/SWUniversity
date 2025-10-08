@@ -676,15 +676,17 @@
    },
    {
       "id": 46,
-      "question": "This is a test question. The answer is True.",
+      "question": "Player A is playing Qui-Gon Jinn, Student of the Living Force, and the Jedi Temple base. After completing an attack with Qui-Gon, Player A chooses to return Depa Billaba, A Higher Purpose, to their hand. Which of the following is a valid choice for them to play for free?",
       "choices": {
-         "a": "True.",
-         "b": "False."
+         "a": "Ki-Adi-Mundi, Composed and Confident",
+         "b": "Shin Hati, Overeager Apprentice",
+         "c": "General Rieekan, Defensive Strategist",
+         "d": "Jedi Lightsaber"
       },
       "answer": "a",
-      "relevantCards": [" "],
-      "relevantRule": "",
-      "tags": [""],
-      "difficulty": 0
+      "relevantCards": ["LOF/016-portrait", "LOF/023", "LOF/199", "TWI/064", "LOF/183", "SHD/103", "SOR/054"],
+      "relevantRule": "Even though Ki-Adi-Mundi is out of aspect in this situation, the aspect penalty is ignored when instructed to play a card for free. The rest of the options do not meet the criteria specified by Qui-Gon's ability.\n\n8.1.3 - If an ability instructs a player to play a card \"for free,\" the player bypasses all modifiers to that card’s cost, including the aspect penalty, and does not pay any resources to play that card. The player must still pay any additional non-resource costs of the card.",
+      "tags": ["qui-gon jinn", "jedi temple", "ki-adi-mundi", "shin hati", "general rieekan", "jedi lightsaber", "ability", "cost", "for free", "aspect penalty"],
+      "difficulty": 1
    }
 ]
