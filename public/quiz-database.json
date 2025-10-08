@@ -676,7 +676,7 @@
    },
    {
       "id": 46,
-      "question": "This is a test question. The answer is True."
+      "question": "This is a test question. The answer is True.",
       "choices": {
          "a": "True.",
          "b": "False."
