@@ -745,7 +745,7 @@
       },
       "answer": "b",
       "relevantCards": ["LOF/044", "SOR/228", "SHD/144"],
-      "relevantRule": " ",
+      "relevantRule": "The fact that Loth-Wolf's ability specifies that it \"can't attack\" means that if another ability attempts to make it attack, that second ability fails. Restrictions always override permissions.\n\n8.4.3 - Restrictive abilities override permissive abilities. If an ability with the word \"may\" or \"can\" directly contradicts an ability that uses the word \"can’t\", then the ability that uses \"can’t\" takes precedence.",
       "tags": ["loth-wolf", "viper probe droid", "give in to your anger", "event", "target", "can't attack"],
       "difficulty": 1
    }
