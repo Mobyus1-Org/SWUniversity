@@ -11,7 +11,7 @@ function HomePage() {
       <h1 className="text-3xl font-bold">News</h1>
       <div>
         <h3>Some Good News!</h3>
-        <img src="https://placecats.com/800/250" alt="Some Good News" />
+        <img src="https://static0.cbrimages.com/wordpress/wp-content/uploads/2020/11/death-star-in-rogue-one.jpg" alt="Some Good News" />
         <p className="text-lg">
           We are excited to announce that we have some good news to share with you! Our team has been working hard to improve the SWUniversity experience, and we are thrilled to unveil some new features and updates that we believe will enhance your enjoyment of the site. Stay tuned for more details in the coming weeks!
         </p>
