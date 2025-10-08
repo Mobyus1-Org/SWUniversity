@@ -46,7 +46,24 @@ function QuizPage() {
         setQuizMode={setQuizMode}
         setStandardQuizLength={setStandardQuizLength}
         setUserResponses={setUserResponses}
+        resetCurrentQuizState={resetCurrentQuizState}
+        resetQuizMode={resetQuizMode}
       />;
+
+  const resetCurrentQuizState = () => {
+    setSelectedAnswer("");
+    setQuizResult(false);
+    setCurrentQuizKeys([]);
+  };
+
+  const resetQuizMode = () => {
+    resetCurrentQuizState();
+    setQuizzesCompleted([]);
+    setQuizMode("");
+    setUserResponses([]);
+    setStandardQuizLength(0);
+    setCurrentQuizId(0);
+  }
 
   return <div>
     <h1 className="text-2xl md:text-4xl font-bold mb-4">{getQuizModeTitle(quizMode)}</h1>

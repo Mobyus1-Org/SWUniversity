@@ -24,6 +24,8 @@ interface IProps {
   setQuizMode: (mode: QuizModes) => void;
   setStandardQuizLength: (length: number) => void;
   setUserResponses: (responses: UserResponse[]) => void;
+  resetCurrentQuizState: () => void;
+  resetQuizMode: () => void;
 }
 
 export function QuizContent({
@@ -43,9 +45,9 @@ export function QuizContent({
   setQuizzesCompleted,
   setCurrentQuizKeys,
   setLastEndlessQuizzes,
-  setQuizMode,
-  setStandardQuizLength,
-  setUserResponses
+  setUserResponses,
+  resetCurrentQuizState,
+  resetQuizMode
 }: IProps) {
   const [showModal, setShowModal] = React.useState(false);
   const currentQuiz = currentQuizSet.find(quiz => quiz.id === currentQuizId);
@@ -90,30 +92,19 @@ export function QuizContent({
 
   return <div>
   {
-    (quizMode == "marathon" || quizMode == "newplayer") && quizzesCompleted.length === currentQuizSet.length && <MarathonModeEndScreen
-      setQuizzesCompleted={setQuizzesCompleted}
-      setCurrentQuizId={setCurrentQuizId}
-      setQuizResult={setQuizResult}
-      setSelectedAnswer={setSelectedAnswer}
-      setQuizMode={setQuizMode}
-      setCurrentQuizKeys={setCurrentQuizKeys}
-      currentQuizSet={currentQuizSet}
-    />
+    (quizMode == "marathon" || quizMode == "newplayer")
+      && quizzesCompleted.length === currentQuizSet.length
+      && <MarathonModeEndScreen resetQuizMode={resetQuizMode} />
   }
   {
-    quizMode == "standard" && quizzesCompleted.length === standardQuizLength && <StandardModeEndScreen
-      userResponses={userResponses}
-      setUserResponses={setUserResponses}
-      currentQuizSet={currentQuizSet}
-      standardQuizLength={standardQuizLength}
-      setQuizMode={setQuizMode}
-      setCurrentQuizId={setCurrentQuizId}
-      setStandardQuizLength={setStandardQuizLength}
-      setQuizzesCompleted={setQuizzesCompleted}
-      setQuizResult={setQuizResult}
-      setSelectedAnswer={setSelectedAnswer}
-      setCurrentQuizKeys={setCurrentQuizKeys}
-    />
+    quizMode == "standard"
+      && quizzesCompleted.length === standardQuizLength
+      && <StandardModeEndScreen
+        userResponses={userResponses}
+        currentQuizSet={currentQuizSet}
+        standardQuizLength={standardQuizLength}
+        resetQuizMode={resetQuizMode}
+      />
   }
   {
       quizzesCompleted.length < currentQuizSet.length && currentQuiz && <div className={`grid ${globalBackgroundStyle} shadow-md md:grid-cols-[40%_60%] border p-8 rounded shadow-md gap-4`}>
@@ -133,8 +124,7 @@ export function QuizContent({
             ? <button className="btn btn-secondary mt-4 text-lg p-4" onClick={() =>
                   onNextQuestion(quizMode, selectedAnswer, currentQuizId, currentQuiz!.answer.toString(),
                     currentQuizSet, quizzesCompleted, lastEndlessQuizzes, standardQuizLength, userResponses,
-                    setQuizzesCompleted, setCurrentQuizId, setQuizResult,
-                      setSelectedAnswer, setLastEndlessQuizzes, setUserResponses, setCurrentQuizKeys)}>
+                    setQuizzesCompleted, setCurrentQuizId, setLastEndlessQuizzes, setUserResponses, resetCurrentQuizState)}>
                 Next Question
               </button>
             : null
@@ -206,11 +196,9 @@ function onNextQuestion(
   userResponses: UserResponse[],
   setQuizzesCompleted: (completed: number[]) => void,
   setCurrentQuizId: (id: number) => void,
-  setQuizResult: (result: boolean) => void,
-  setSelectedAnswer: (answer: string) => void,
   setLastEndlessQuizzes: (list: number[]) => void,
   setUserResponses: (responses: UserResponse[]) => void,
-  setCurrentQuizKeys: (keys: string[]) => void
+  resetCurrentQuizState: () => void
 )
 {
   const endlessThreshold = 25; // Number of recent quizzes to track in endless mode
@@ -227,9 +215,7 @@ function onNextQuestion(
         nextQuiz = currentQuizSet[Math.floor(Math.random() * currentQuizSet.length)].id;
       }
       setCurrentQuizId(nextQuiz);
-      setQuizResult(false);
-      setSelectedAnswer("");
-      setCurrentQuizKeys([]);
+      resetCurrentQuizState();
     }
   } else if(quizMode === "endless") {
     const updatedLastEndless = [...lastEndlessQuizzes, currentQuizId];
@@ -242,9 +228,7 @@ function onNextQuestion(
         nextQuiz = currentQuizSet[Math.floor(Math.random() * currentQuizSet.length)].id;
     }
     setCurrentQuizId(nextQuiz);
-    setQuizResult(false);
-    setSelectedAnswer("");
-    setCurrentQuizKeys([]);
+    resetCurrentQuizState();
   } else if(quizMode === "standard") {
     const updatedCompleted = [...quizzesCompleted];
     updatedCompleted.push(currentQuizId);
@@ -256,9 +240,7 @@ function onNextQuestion(
       console.log(currentQuizSet);
       console.log(currentQuizId, updatedCompleted.length, currentQuizSet[updatedCompleted.length]);
       setCurrentQuizId(currentQuizSet[updatedCompleted.length].id);
-      setQuizResult(false);
-      setSelectedAnswer("");
-      setCurrentQuizKeys([]);
+      resetCurrentQuizState();
     }
   }
 }

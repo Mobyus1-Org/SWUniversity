@@ -1,45 +1,22 @@
-import { globalBackgroundStyle, type QuizModes } from "../../util/const";
+import { globalBackgroundStyle } from "../../util/const";
 import type { Quiz, UserResponse } from "../../util/func";
 
 interface IProps {
   userResponses: UserResponse[];
-  setUserResponses: (responses: UserResponse[]) => void;
   currentQuizSet: Quiz[];
   standardQuizLength: number;
-  setQuizMode: (mode: QuizModes) => void;
-  setCurrentQuizId: (id: number) => void;
-  setStandardQuizLength: (length: number) => void;
-  setQuizzesCompleted: (completed: number[]) => void;
-  setQuizResult: (result: boolean) => void;
-  setSelectedAnswer: (answer: string) => void;
-  setCurrentQuizKeys: (keys: string[]) => void;
+  resetQuizMode: () => void;
 }
 
 export function StandardModeEndScreen({
   userResponses,
-  setUserResponses,
   currentQuizSet,
   standardQuizLength,
-  setQuizMode,
-  setCurrentQuizId,
-  setStandardQuizLength,
-  setQuizzesCompleted,
-  setQuizResult,
-  setSelectedAnswer,
-  setCurrentQuizKeys
+  resetQuizMode,
 }: IProps) {
   return <div className="text-center m-[10%_10%] lg:m-[1%_10%]">
     <p className="text-2xl md:text-4xl font-bold mb-4 h-16">Quiz Complete! You answered {Object.values(userResponses).filter(response => response.selected === response.correct).length} out of {standardQuizLength} questions correctly.</p>
-    <button className="btn btn-primary text-lg p-4" onClick={() => {
-      setQuizzesCompleted([]);
-      setUserResponses([]);
-      setCurrentQuizId(0);
-      setQuizResult(false);
-      setSelectedAnswer("");
-      setCurrentQuizKeys([]);
-      setQuizMode("");
-      setStandardQuizLength(0);
-    }}>Go Back to Quiz Menu</button>
+    <button className="btn btn-primary text-lg p-4" onClick={resetQuizMode}>Go Back to Quiz Menu</button>
     <div className={"mt-8 text-left p-8 " + globalBackgroundStyle}>
       <summary className="text-xl font-bold mb-4 cursor-pointer">Your Answers:</summary>
         <div className="mt-4 max-h-140 overflow-y-scroll">
