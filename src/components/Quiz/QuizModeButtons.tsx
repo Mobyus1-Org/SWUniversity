@@ -1,5 +1,6 @@
 import type { Quiz } from "../../util/func";
 import { globalBackgroundStyle, type QuizModes } from "../../util/const";
+import { QuizModeButtonItem } from "./QuizModeButtonItem";
 
 interface IProps {
   quizMode: QuizModes;
@@ -12,66 +13,48 @@ interface IProps {
 }
 
 export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQuizMode, setCurrentQuizSet, setCurrentQuizId, setStandardQuizLength}: IProps) {
-  const renderButtons = () => <>
-  <div className="flex flex-col md:flex-row gap-2 mb-8 h-full">
-      <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1`}>
-        <h3 className="text-xl mb-4">Choose a number of questions and see how many you can answer correctly!</h3>
-        <button
-          className="btn btn-primary text-lg py-8 lg:py-5 w-1/2"
-          onClick={() => {
-            setQuizMode("standard");
-            setCurrentQuizSet([]);
-            setCurrentQuizId(0);
-          }}
-        >
-          Standard Mode
-        </button>
-      </div>
-
-      <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1`}>
-        <h3 className="text-xl mb-4">A perfect place for new players to test their knowledge of the basics of SWU!</h3>
-        <button
-          className="btn btn-primary text-lg py-8 lg:py-5 w-1/2"
-          onClick={() => {
-            setQuizMode("newplayer");
-            const filteredSet = allQuizzes.filter(quiz => quiz.difficulty === 0);
-            setCurrentQuizSet(filteredSet);
-            setCurrentQuizId(filteredSet[Math.floor(Math.random() * filteredSet.length)].id);
-          }}
-        >
-          New Player Mode
-        </button>
-      </div>
-
-      <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1`}>
-        <h3 className="text-xl mb-4">Correctly answer every question in the database once to complete the marathon!</h3>
-        <button
-          className="btn btn-primary text-lg py-8 lg:py-5 w-1/2"
-          onClick={() => {
-            setQuizMode("marathon");
-            setCurrentQuizSet(allQuizzes);
-            setCurrentQuizId(Math.floor(Math.random() * allQuizzes.length));
-          }}
-        >
-          Marathon Mode
-        </button>
-      </div>
-
-      <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1`}>
-        <h3 className="text-xl mb-4">Answer random questions with no end in sight!</h3>
-        <button
-          className="btn btn-primary text-lg py-8 lg:py-5 w-1/2"
-          onClick={() => {
-            setQuizMode("endless");
-            setCurrentQuizSet(allQuizzes);
-            setCurrentQuizId(Math.floor(Math.random() * allQuizzes.length));
-          }}
-        >
-          Endless Mode
-        </button>
-      </div>
-    </div>
-  </>
+  const renderButtons = () => <div className="flex flex-col md:flex-row gap-4 mb-8 h-full">
+    <QuizModeButtonItem
+      quizMode="standard"
+      title="Standard Mode"
+      description="Choose a number of questions and see how many you can answer correctly!"
+      quizSet={[]}
+      initQuizId={false}
+      setQuizMode={setQuizMode}
+      setCurrentQuizSet={setCurrentQuizSet}
+      setCurrentQuizId={setCurrentQuizId}
+    />
+    <QuizModeButtonItem
+      quizMode="newplayer"
+      title="New Player Mode"
+      description="A perfect place for new players to test their knowledge of the basics of SWU!"
+      quizSet={allQuizzes.filter(quiz => quiz.difficulty === 0)}
+      initQuizId={true}
+      setQuizMode={setQuizMode}
+      setCurrentQuizSet={setCurrentQuizSet}
+      setCurrentQuizId={setCurrentQuizId}
+    />
+    <QuizModeButtonItem
+      quizMode="marathon"
+      title="Marathon Mode"
+      description="Correctly answer every question in the database once to complete the marathon!"
+      quizSet={allQuizzes}
+      initQuizId={true}
+      setQuizMode={setQuizMode}
+      setCurrentQuizSet={setCurrentQuizSet}
+      setCurrentQuizId={setCurrentQuizId}
+    />
+    <QuizModeButtonItem
+      quizMode="endless"
+      title="Endless Mode"
+      description="Answer random questions with no end in sight!"
+      quizSet={allQuizzes}
+      initQuizId={true}
+      setQuizMode={setQuizMode}
+      setCurrentQuizSet={setCurrentQuizSet}
+      setCurrentQuizId={setCurrentQuizId}
+    />
+  </div>
 
   return <div>
   {
