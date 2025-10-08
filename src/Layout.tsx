@@ -4,10 +4,25 @@ function Layout({ children }: { children: React.ReactNode }) {
   return <div className="layout">
     <main>
       <div className="relative navbar z-10">
-        <div className="flex gap-4">
-          <a className="btn btn-ghost text-xl" href="#/">Home</a>
-          <a className="btn btn-ghost text-xl" href="#/quiz">Quiz</a>
-          {/* <a className="btn btn-ghost text-xl" href="#/puzzles">Puzzle</a> */}
+        <div className="flex justify-between items-center w-full px-4">
+          {/* Left side links */}
+          <div className="flex gap-4">
+            <a className="btn btn-ghost text-xl md:text-3xl" href="#/">Home</a>
+            <a className="btn btn-ghost text-xl md:text-3xl" href="#/quiz">Quiz</a>
+            {/* <a className="btn btn-ghost text-xl md:text-3xl" href="#/puzzles">Puzzles</a> */}
+          </div>
+          {/* Right side tray */}
+          <div className="gap-4 bg-opacity-50 py-2 px-10 bg-[rgba(255,255,255,0.25)] rounded-full absolute -right-8 top-1/2 transform -translate-y-1/2">
+            <a
+              href="https://discord.gg/dbQXnVkjFV"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative right-4"
+              aria-label="Join our Discord"
+            >
+              <img src="/assets/Discord-logo.svg" alt="Discord" className="w-8 h-8" />
+            </a>
+          </div>
         </div>
       </div>
       <div className="relative p-4 z-10 min-h-[75vh]">
