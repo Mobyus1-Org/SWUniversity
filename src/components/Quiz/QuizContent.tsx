@@ -90,7 +90,7 @@ export function QuizContent({
 
   return <div>
   {
-    quizMode == "marathon" && quizzesCompleted.length === currentQuizSet.length && <MarathonModeEndScreen
+    (quizMode == "marathon" || quizMode == "newplayer") && quizzesCompleted.length === currentQuizSet.length && <MarathonModeEndScreen
       setQuizzesCompleted={setQuizzesCompleted}
       setCurrentQuizId={setCurrentQuizId}
       setQuizResult={setQuizResult}
@@ -141,7 +141,8 @@ export function QuizContent({
       {/* Images */}
       <div className="flex-1 flex flex-[0_0_50%] flex-wrap items-center justify-center">
       {
-        currentQuiz!.relevantCards && currentQuiz!.relevantCards.length > 0 && <div>
+        currentQuiz!.relevantCards && currentQuiz!.relevantCards.length > 0
+        ? <div>
           <div className="text-xl mb-2.5 mr-2">Relevant Cards</div>
           <div className="text-sm"><u onClick={() => setShowModal(true)}>(Click here to see enlarged images)</u></div>
           <div className="flex flex-wrap justify-center">
@@ -151,6 +152,9 @@ export function QuizContent({
               </div>)
             }
           </div>
+        </div>
+        : <div className="w-fit h-72 m-2.5">
+          <img src="/assets/Mobyus1_Cardback.png" alt="card back" className="max-h-full object-contain" />
         </div>
       }
       </div>
@@ -205,9 +209,9 @@ function onNextQuestion(
   setUserResponses: (responses: UserResponse[]) => void
 )
 {
-  const endlessThreshold = 10; // Number of recent quizzes to track in endless mode
+  const endlessThreshold = 25; // Number of recent quizzes to track in endless mode
 
-  if(quizMode === "marathon") {
+  if(quizMode === "marathon" || quizMode === "newplayer") {
     const updatedCompleted = [...quizzesCompleted];
     if(selectedAnswer === currentQuizAnswer) {
       updatedCompleted.push(currentQuizId);

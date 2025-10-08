@@ -5,10 +5,6 @@ import { QuizModeButtons } from "../components/Quiz/QuizModeButtons";
 import { QuizContent } from "../components/Quiz/QuizContent";
 import type { QuizModes } from "../util/const";
 
-const marathonSet: number[] = [
-  //TODO: fill with specific quiz IDs when we have a lot more
-];
-
 function QuizPage() {
   const [allQuizzes, setAllQuizzes] = React.useState<Quiz[]>([]);
   const [currentQuizSet, setCurrentQuizSet] = React.useState<Quiz[]>(allQuizzes);
@@ -25,7 +21,6 @@ function QuizPage() {
   React.useEffect(() => {
     getQuizDataAsync().then(data => {
       setAllQuizzes(data);
-      marathonSet.push(...data.map(quiz => quiz.id));//identical to all quizzes for now
     });
   }, []);
 
@@ -60,7 +55,6 @@ function QuizPage() {
         ? <QuizModeButtons
           quizMode={quizMode}
           allQuizzes={allQuizzes}
-          marathonSet={marathonSet}
           standardQuizLength={standardQuizLength}
           setQuizMode={setQuizMode}
           setCurrentQuizSet={setCurrentQuizSet}

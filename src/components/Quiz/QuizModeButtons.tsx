@@ -4,7 +4,6 @@ import { globalBackgroundStyle, type QuizModes } from "../../util/const";
 interface IProps {
   quizMode: QuizModes;
   allQuizzes: Quiz[];
-  marathonSet: number[];
   standardQuizLength: number;
   setQuizMode: (mode: QuizModes) => void;
   setCurrentQuizSet: (set: Quiz[]) => void;
@@ -12,7 +11,7 @@ interface IProps {
   setStandardQuizLength: (length: number) => void;
 }
 
-export function QuizModeButtons({quizMode, allQuizzes, marathonSet, standardQuizLength, setQuizMode, setCurrentQuizSet, setCurrentQuizId, setStandardQuizLength}: IProps) {
+export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQuizMode, setCurrentQuizSet, setCurrentQuizId, setStandardQuizLength}: IProps) {
   const renderButtons = () => <>
   <div className="flex flex-col md:flex-row gap-2 mb-8 h-full">
       <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1`}>
@@ -35,8 +34,9 @@ export function QuizModeButtons({quizMode, allQuizzes, marathonSet, standardQuiz
           className="btn btn-primary text-lg py-8 lg:py-5 w-1/2"
           onClick={() => {
             setQuizMode("newplayer");
-            setCurrentQuizSet([]);
-            setCurrentQuizId(0);
+            const filteredSet = allQuizzes.filter(quiz => quiz.difficulty === 0);
+            setCurrentQuizSet(filteredSet);
+            setCurrentQuizId(filteredSet[Math.floor(Math.random() * filteredSet.length)].id);
           }}
         >
           New Player Mode
@@ -49,9 +49,8 @@ export function QuizModeButtons({quizMode, allQuizzes, marathonSet, standardQuiz
           className="btn btn-primary text-lg py-8 lg:py-5 w-1/2"
           onClick={() => {
             setQuizMode("marathon");
-            const filteredSet = allQuizzes.filter(quiz => marathonSet.includes(quiz.id));
-            setCurrentQuizSet(filteredSet);
-            setCurrentQuizId(Math.floor(Math.random() * filteredSet.length));
+            setCurrentQuizSet(allQuizzes);
+            setCurrentQuizId(Math.floor(Math.random() * allQuizzes.length));
           }}
         >
           Marathon Mode

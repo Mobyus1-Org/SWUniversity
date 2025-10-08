@@ -199,7 +199,7 @@
       "question": "Player A controls a Lurking TIE Phantom and a Sanctioner's Shuttle. Player B plays Caught in the Crossfire and chooses those two units. What best describes what happens?",
       "choices": {
         "a": "Sanctioner's Shuttle takes 2 damage. Lurking TIE takes 0 damage.",
-        "b": "Sanctioner's Shuttle takes 2 damage. Lurking TIE takes 2 damage and is defeated.", 
+        "b": "Sanctioner's Shuttle takes 2 damage. Lurking TIE takes 2 damage and is defeated.",
         "c": "Sanctioner's Shuttle takes 4 damage and is defeated. Lurking TIE takes 0 damage.",
         "d": "Sanctioner's Shuttle takes 4 damage and is defeated. Lurking TIE takes 2 damage and is defeated."
       },
@@ -214,7 +214,7 @@
       "question": "Player A controls Millennium Falcon, Piece of Junk, and Luke Skywalker, You Still With Me, attached to it as a Pilot. When readying cards during the Regroup Phase, Player A chooses not to pay the 1 resource for Millennium Falcon's ability, returning it to Player A's hand. What best describes what happens to Luke Skywalker?",
       "choices": {
         "a": "Luke Skywalker returns to Player A's hand.",
-        "b": "Luke Skywalker is discarded.", 
+        "b": "Luke Skywalker is discarded.",
         "c": "Luke Skywalker is either discarded or becomes a ground unit. If he's a ground unit, he will remain exhausted at the start of the next round.",
         "d": "Luke Skywalker is either discarded or becomes a ground unit. If he's a ground unit, he will be ready at the start of the next round."
       },
@@ -229,7 +229,7 @@
       "question": "Player A plays Rallying Cry. Later in the same phase, Player A deploys Leia Organa, Alliance General. Assuming there are no other relevant effects, how much damage would Leia do when she attacks?",
       "choices": {
         "a": "3",
-        "b": "4", 
+        "b": "4",
         "c": "5",
         "d": "6"
       },
@@ -244,7 +244,7 @@
       "question": "Player A controls Boba Fett, Any Methods Necessary, attached to a TIE Bomber as a Pilot and no other units. If they were to play a Fett's Firespray, Pursuing the Bounty, would it ready as a result of its When Played ability?",
       "choices": {
         "a": "Yes. Player A still controls Boba Fett.",
-        "b": "No. The reminder text does not specify 'as an upgrade' which is what Boba Fett currently is.", 
+        "b": "No. The reminder text does not specify 'as an upgrade' which is what Boba Fett currently is.",
         "c": "No. This version of Boba Fett was released in a different card set and therefore does not work with this Fett's Firespray.",
         "d": "It depends on if there are any Boba Fett units in Player A's discard pile."
       },
@@ -259,7 +259,7 @@
       "question": "Player A has a Green Squadron A-Wing, a Blue Leader that was moved to the ground arena as a result of its When Played ability, and no other units. Player B plays a Special Forces TIE Fighter. Does it ready?",
       "choices": {
         "a": "Yes. Player A controls two space units and Player B now only controls one.",
-        "b": "Yes. Player A only controls one space unit, and Special Forces TIE Fighter doesn't count itself when it resolves its ability.", 
+        "b": "Yes. Player A only controls one space unit, and Special Forces TIE Fighter doesn't count itself when it resolves its ability.",
         "c": "No, both players now control one space unit.",
         "d": "No, Player B controls more space units than player A."
       },
@@ -275,7 +275,7 @@
       "choices": {
         "a": "Yes. R2-D2 says that you may play or deploy one additional Pilot on the attached vehicle, so Poe can deploy onto it.",
         "b": "Yes, but Player A will need to defeat R2-D2 in order to make room for Poe.",
-        "c": "No. Poe needs at least 5 resources to use his leader ability.", 
+        "c": "No. Poe needs at least 5 resources to use his leader ability.",
         "d": "No. Poe's ability does not play or deploy him, so R2-D2's text does not override his restriction of the target vehicle already having a Pilot on it."
       },
       "answer": "d",
@@ -474,7 +474,7 @@
          "d": "The player with the initiative wins."
       },
       "answer": "c",
-      "relevantCards": ["P25/178"],
+      "relevantCards": [],
       "relevantRule": "Even though Player A's base had more HP remaining at the start of the Regroup Phase, both players draw simultaneously and, because they both have empty decks, they will both take 6 damage at time same time, resulting in a draw.\n\n5.6.3 - In a case where both players’ bases reach 0 remaining HP at the same time, the game ends in a draw.",
       "tags": ["mill", "draw"],
       "difficulty": 0
@@ -504,7 +504,7 @@
          "d": "No. Each player must always resource two cards at the start of the game."
       },
       "answer": "d",
-      "relevantCards": ["P25/178"],
+      "relevantCards": [],
       "relevantRule": "While resourcing a card during the Regroup Phase is optional, the two cards resourced at the start of the game are mandatory.\n\n5.2.1.F - Resource two cards. Each player chooses two cards from their hand and puts them into play as resources, facedown and ready. Each player must place exactly two cards as resources.",
       "tags": ["resource"],
       "difficulty": 0
