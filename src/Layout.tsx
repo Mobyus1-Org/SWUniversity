@@ -1,9 +1,10 @@
 import React from 'react';
+import { globalBackgroundStyle } from './util/const';
 
 function Layout({ children }: { children: React.ReactNode }) {
   return <div className="layout">
     <main>
-      <div className="relative navbar z-10">
+      <div className={"relative navbar z-10 border-b " + globalBackgroundStyle}>
         <div className="flex justify-between items-center w-full px-4">
           {/* Left side links */}
           <div className="flex gap-4">
