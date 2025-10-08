@@ -174,7 +174,10 @@ export function QuizContent({
       </div>
       {/* Relevant rule */}
       {
-        quizResult && currentQuiz.relevantRule != " " && <div className="md:col-span-2 mt-4">
+        quizResult && currentQuiz.relevantRule != " " && <div className="md:col-span-2">
+          <p className={`${currentQuiz.answer === selectedAnswer ? "text-green-500" : "text-red-500"} text-xl font-bold mb-4`}>
+            {currentQuiz.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
+          </p>
           <p className="text-xl mb-2.5">Relevant Rules:</p>
           <p className="whitespace-pre-wrap">{currentQuiz.relevantRule}</p>
         </div>
