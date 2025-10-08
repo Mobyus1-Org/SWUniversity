@@ -13,9 +13,18 @@ import './App.css';
 import { AudioContextProvider } from './util/context';
 
 function App() {
-  const clickSound = React.useMemo(() => new Audio('/assets/sfx/click.mp3'), []);
-  const confirmSound = React.useMemo(() => new Audio('/assets/sfx/confirm.mp3'), []);
-  const transitionSound = React.useMemo(() => new Audio('/assets/sfx/transition.mp3'), []);
+  const clickSound = React.useMemo(() => new Audio({
+    volume: 0.25,
+    src: ['/assets/sfx/click.mp3']
+    }), []);
+  const confirmSound = React.useMemo(() => new Audio({
+    volume: 0.25,
+    src: ['/assets/sfx/confirm.mp3']
+    }), []);
+  const transitionSound = React.useMemo(() => new Audio({
+    volume: 0.25,
+    src: ['/assets/sfx/transition.mp3']
+    }), []);
 
   const sfx = (type: SfxType) => {
     let sound: HTMLAudioElement;
