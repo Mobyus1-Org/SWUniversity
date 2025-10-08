@@ -154,7 +154,7 @@ export function QuizContent({
           </div>
         </div>
         : <div className="w-fit h-72 m-2.5">
-          <img src="/assets/Mobyus1_Cardback.png" alt="card back" className="max-h-full object-contain" />
+          <img src="/assets/SWUniversity_Cardback.png" alt="card back" className="max-h-full object-contain" />
         </div>
       }
       </div>
