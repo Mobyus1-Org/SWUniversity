@@ -729,7 +729,7 @@
          "d": "Death Trooper deals 2 damage to each players' base."
       },
       "answer": "b",
-      "relevantCards": ["SOR/237", SOR/033"],
+      "relevantCards": ["SOR/237", "SOR/033"],
       "relevantRule": "Since Death Trooper's ability does not say \"You may...\", Player B must resolve as much of the ability as they can. Since Player A has no ground units, the Death Trooper deals 2 damage to itself and no other units.\n\n7.6.7 - A triggered ability must resolve once its triggering condition is met unless the ability uses the phrase \"you may.\" Once triggered, these abilities must resolve at the next available opportunity.",
       "tags": ["alliance x-wing", "death trooper", "when played", "target", "ability"],
       "difficulty": 0
