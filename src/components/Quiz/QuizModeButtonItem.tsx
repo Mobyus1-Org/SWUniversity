@@ -22,7 +22,7 @@ export function QuizModeButtonItem({ quizMode, title, description, quizSet, init
       title !== "" && <button
         className="btn btn-primary text-md xl:text-lg py-8 lg:py-5 w-1/2"
         onClick={() => {
-          sfx("hub");
+          sfx("confirm");
           setQuizMode(quizMode);
           setCurrentQuizSet(quizSet);
           setCurrentQuizId(initQuizId ? quizSet[Math.floor(Math.random() * quizSet.length)].id : 0);

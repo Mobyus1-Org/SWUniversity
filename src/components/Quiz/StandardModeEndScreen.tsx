@@ -20,7 +20,7 @@ export function StandardModeEndScreen({
   return <div className="text-center m-[10%_10%] lg:m-[1%_10%]">
     <p className="text-2xl md:text-4xl font-bold mb-4 h-16">Quiz Complete! You answered {Object.values(userResponses).filter(response => response.selected === response.correct).length} out of {standardQuizLength} questions correctly.</p>
     <button className="btn btn-primary text-lg p-4" onClick={() => {
-      sfx("hub");
+      sfx("confirm");
       resetQuizMode();
     }}>Go Back to Quiz Menu</button>
     <div className={"mt-8 text-left p-8 " + globalBackgroundStyle}>

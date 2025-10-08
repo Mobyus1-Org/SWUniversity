@@ -204,7 +204,7 @@ export function QuizContent({
 function onSubmitAnswer(selectedIndex: string, setQuizResult: (result: boolean) => void, sfx: (type: SfxType) => void) {
   if (selectedIndex) {
     setQuizResult(true);
-    sfx("hub");
+    sfx("confirm");
   }
 }
 
