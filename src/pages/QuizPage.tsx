@@ -91,8 +91,12 @@ function getQuizModeTitle(mode: QuizModes): string {
       return "Endless Mode";
     case "standard":
       return "Standard Mode";
-    case "newplayer":
-      return "New Player Mode";
+    case "padawan":
+      return "Padawan Mode";
+    case "knight":
+      return "Jedi Knight Mode";
+    case "master":
+      return "Jedi Master Mode";
     default:
       return "";
   }
