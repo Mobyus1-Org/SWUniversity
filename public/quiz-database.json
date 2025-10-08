@@ -684,9 +684,39 @@
          "d": "Jedi Lightsaber"
       },
       "answer": "a",
-      "relevantCards": ["LOF/016-portrait", "LOF/023", "LOF/199", "TWI/064", "LOF/183", "SHD/103", "SOR/054"],
+      "relevantCards": ["LOF/016-back", "LOF/023", "LOF/199", "TWI/064", "LOF/183", "SHD/103", "SOR/054"],
       "relevantRule": "Even though Ki-Adi-Mundi is out of aspect in this situation, the aspect penalty is ignored when instructed to play a card for free. The rest of the options do not meet the criteria specified by Qui-Gon's ability.\n\n8.1.3 - If an ability instructs a player to play a card \"for free,\" the player bypasses all modifiers to that card’s cost, including the aspect penalty, and does not pay any resources to play that card. The player must still pay any additional non-resource costs of the card.",
       "tags": ["qui-gon jinn", "jedi temple", "ki-adi-mundi", "shin hati", "general rieekan", "jedi lightsaber", "ability", "cost", "for free", "aspect penalty"],
+      "difficulty": 1
+   },
+   {
+      "id": 47,
+      "question": "Player A plays Discerning Veteran, capturing Player B's Village Protectors which had a shield token. What best describes what will happen when Discerning Veteran leaves play?",
+      "choices": {
+         "a": "Village Protectors returns to play under Player B's control exhausted with full HP but no shield token.",
+         "b": "Village Protectors returns to play under Player B's control ready with full HP but no shield token.",
+         "c": "Village Protectors returns to play under Player B's control exhausted with full HP and a shield token.",
+         "d": "Village Protectors returns to play under Player A's control exhausted with full HP but no shield token."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/120", "SHD/043"],
+      "relevantRule": "When a captured unit returns to play, it returns to its owner's control exhausted. It does not trigger any When Played abilities, including keywords that trigger when a unit is played such as \"Shielded\".\n\n1.16.5.D - If a unit that was guarding a captured unit is no longer in play, the captured unit enters play under its owner’s control, exhausted.",
+      "tags": ["discerning veteran", "village protectors", "capture", "enters play", "shield token", "shielded"],
+      "difficulty": 0
+   },
+   {
+      "id": 48,
+      "question": "Player A plays Legal Authority, choosing their Steadfast Battalion to capture Player B's Pyke Sentinel. Player B then plays Disabling Fang Fighter, defeating Legal Authority. What best describes what happens?",
+      "choices": {
+         "a": "Steadfast Battalion loses the +0/+2, but Pyke Sentinel remains captured.",
+         "b": "Steadfast Battalion loses the +0/+2 and Pyke Sentinel returns to play under Player B's control ready.",
+         "c": "Steadfast Battalion loses the +0/+2 and Pyke Sentinel returns to play under Player B's control exhausted.",
+         "d": "Steadfast Battalion loses the +0/+2 and Pyke Sentinel returns to play under Player A's control exhausted."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/124", "SOR/116", "SHD/029", "SOR/162"],
+      "relevantRule": "Legal Authority's ability doesn't require the upgrade itself to remain in play for the unit to remain captured. Its ability triggers when it's played, and that's that.",
+      "tags": ["steadfast battalion", "legal authority", "pyke sentinel", "capture", "upgrade", "rescue"],
       "difficulty": 1
    }
 ]
