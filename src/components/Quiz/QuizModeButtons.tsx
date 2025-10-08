@@ -37,7 +37,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="endless"
       title="Endless Mode"
-      description="Answer random questions with no end in sight!"
+      description="Answer random questions with no end in sight! What if this text was longer?"
       quizSet={allQuizzes}
       initQuizId={true}
       setQuizMode={setQuizMode}
