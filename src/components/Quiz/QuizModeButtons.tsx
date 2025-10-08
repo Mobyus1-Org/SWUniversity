@@ -67,7 +67,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="master"
       title="Jedi Master Mode"
-      description="DESCRIPTION HERE"
+      description="Only the SWU players strongest in the Force understand these obscure interactions. And now you will too!\nTest\n\nTest2"
       quizSet={allQuizzes.filter(quiz => quiz.difficulty === 2)}
       initQuizId={true}
       setQuizMode={setQuizMode}
@@ -93,7 +93,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
         >
           <option value={0} disabled></option>
           {
-            [5, 10].map(length => <option key={length} value={length}>{length}</option>)
+            [5, 10, 25].map(length => <option key={length} value={length}>{length}</option>)
           }
         </select>
       </div>
