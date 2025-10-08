@@ -14,7 +14,7 @@ interface IProps {
 
 export function QuizModeButtonItem({ quizMode, title, description, quizSet, initQuizId, setQuizMode, setCurrentQuizSet, setCurrentQuizId }: IProps) {
   return <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1`}>
-    <h3 className="text-xl mb-4">{description}</h3>
+    <h3 className="text-xl mb-4">{description.split("\\n").map((line, index) => <span key={index}>{line}<br /></span>)}</h3>
     {
       title !== "" && <button
         className="btn btn-primary text-md xl:text-lg py-8 lg:py-5 w-1/2"

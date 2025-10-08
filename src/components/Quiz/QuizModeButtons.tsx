@@ -57,7 +57,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="knight"
       title="Jedi Knight Mode"
-      description="The majority of our questions fall under this category. See how many you know!"
+      description="The majority of our questions fall under this category.\nSee how many you know!"
       quizSet={allQuizzes.filter(quiz => quiz.difficulty === 1)}
       initQuizId={true}
       setQuizMode={setQuizMode}
