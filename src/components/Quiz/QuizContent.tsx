@@ -90,7 +90,7 @@ export function QuizContent({
     return divs;
   }
 
-  return <div>
+  return <div className={"border rounded p-2 " + globalBackgroundStyle}>
   {
     (quizMode == "marathon" || quizMode == "padawan" || quizMode == "knight" || quizMode == "master")
       && quizzesCompleted.length === currentQuizSet.length
