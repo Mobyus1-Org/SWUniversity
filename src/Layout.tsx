@@ -21,7 +21,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               className="relative right-4"
               aria-label="Join our Discord"
             >
-              <img src="/assets/Discord-logo.svg" alt="Discord" className="w-8 h-8" />
+              <img src="/assets/Discord-logo2.png" alt="Discord" className="w-8 h-8" />
             </a>
           </div>
         </div>
