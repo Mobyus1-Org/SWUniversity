@@ -586,7 +586,7 @@
    },
    {
       "id": 40,
-      "question": "Which number on the card C-3PO, Protocol Droid, represents his cost?",
+      "question": "Which number on the card **_C-3PO, Protocol Droid_**, represents his cost?",
       "choices": {
          "a": "The red \"1\" on the left side.",
          "b": "The gold \"2\" in the top-left corner.",
@@ -595,67 +595,67 @@
       },
       "answer": "b",
       "relevantCards": ["SOR/238"],
-      "relevantRule": "A card's cost is always found in the top-left corner of the card.\n\nA card’s cost is located in the top left corner of the card and indicates how many resources must be spent to play the card. If it is a leader card, this number instead is related to deploying that leader (typically, how many resources a player must control to deploy it). Units, events, upgrades, and tokens have a cost. See 1.8. Cost.",
+      "relevantRule": "A card's cost is always found in the top-left corner of the card.\n\n**2.6.1** - A card’s cost is located in the top left corner of the card and indicates how many resources must be spent to play the card. If it is a leader card, this number instead is related to deploying that leader (typically, how many resources a player must control to deploy it). Units, events, upgrades, and tokens have a cost. See 1.8. Cost.",
       "tags": ["c-3po", "cost", "card anatomy"],
       "difficulty": 0
    },
    {
       "id": 41,
-      "question": "Player A attacks Player B's base with Ketsu Onyo, Old Friend. Which of the following targets can Player A choose to defeat with Ketsu's ability?",
+      "question": "Player A attacks Player B's base with **_Ketsu Onyo, Old Friend_**. Which of the following targets can Player A choose to defeat with **_Ketsu's_** ability?",
       "choices": {
-         "a": "A Biggs Darklighter, They'll Never Stop Us, attached to a vehicle as a Pilot.",
-         "b": "A Protector that Player B paid 3 resources for due to an aspect penalty.",
-         "c": "A Traitorous attached to a 2-cost unit.",
-         "d": "A Shadowed Intentions attached to Player B's leader."
+         "a": "A **_Biggs Darklighter, They'll Never Stop Us_**, attached to a vehicle as a _Pilot_.",
+         "b": "A **_Protector_** that Player B paid 3 resources for due to an aspect penalty.",
+         "c": "A **_Traitorous_** attached to a 2-cost unit.",
+         "d": "A **_Shadowed Intentions_** attached to Player B's leader."
       },
       "answer": "b",
       "relevantCards": ["SHD/147", "JTL/150", "SOR/057", "SOR/122", "TWI/220"],
-      "relevantRule": "When a card refers to another card's \"cost\", it always refers to the number printed in the top-left of the card, no matter what penalties or reductions a player actually paid for it. In this case, it doesn't matter that Player B paid 3 resources for Protector, it still only costs 1.\n\n1.8.6 - If an ability refers to the \"cost\" of a card, that ability always refers to the printed cost of the card. It does not take into account any modifiers to the card’s cost as it was played. See 8.16. Modifiers.",
+      "relevantRule": "When a card refers to another card's \"cost\", it always refers to the number printed in the top-left of the card, no matter what penalties or reductions a player actually paid for it. In this case, it doesn't matter that Player B paid 3 resources for **_Protector_**, it still only costs 1.\n\n**1.8.6** - If an ability refers to the \"cost\" of a card, that ability always refers to the printed cost of the card. It does not take into account any modifiers to the card’s cost as it was played. See 8.16. Modifiers.",
       "tags": ["ketsu onyo", "biggs darklighter", "protector", "traitorous", "shadowed intentions", "cost", "upgrade"],
       "difficulty": 1
    },
    {
       "id": 42,
-      "question": "Player A plays Clone. Which of the following units would NOT be a valid target for Clone to enter play as a copy of?",
+      "question": "Player A plays **_Clone_**. Which of the following units would NOT be a valid target for **_Clone_** to enter play as a copy of?",
       "choices": {
-         "a": "Yoda, Old Master",
-         "b": "Falchion Ion Tank",
-         "c": "Graceful Purrgil",
-         "d": "Ion Cannon"
+         "a": "**_Yoda, Old Master_**",
+         "b": "**_Falchion Ion Tank_**",
+         "c": "**_Graceful Purrgil_**",
+         "d": "**_Ion Cannon_**"
       },
       "answer": "b",
       "relevantCards": ["TWI/116", "SOR/045", "TWI/065", "LOF/069", "IBH/016"],
-      "relevantRule": "Since the only restriction Clone has is that the target mustn't be a Vehicle, meaning, as strange as it is, it CAN be a clone of an Ion Cannon.",
+      "relevantRule": "Since the only restriction **_Clone_** has is that the target mustn't be a _Vehicle_, meaning, as strange as it is, it CAN be a clone of an **_Ion Cannon_**.",
       "tags": ["clone", "yoda", "falcion ion tank", "graceful purrgil", "ion cannon", "target"],
       "difficulty": 1
    },
    {
       "id": 43,
-      "question": "Player A controls General Grievous, General of the Droid Armies, deployed as a unit. Player B controls Rose Tico, Saving What We Love, also deployed as a unit. No other units are in play. Player A plays Merciless Contest. What best describes what happens?",
+      "question": "Player A controls **_General Grievous, General of the Droid Armies_**, deployed as a unit. Player B controls **_Rose Tico, Saving What We Love_**, also deployed as a unit. No other units are in play. Player A plays **_Merciless Contest_**. What best describes what happens?",
       "choices": {
-         "a": "Rose Tico is defeated.",
-         "b": "General Grievous is defeated.",
+         "a": "**_Rose Tico_** is defeated.",
+         "b": "**_General Grievous_** is defeated.",
          "c": "Both units are defeated.",
          "d": "No units are defeated."
       },
       "answer": "d",
       "relevantCards": ["TWI/015-portrait", "JTL/004-portrait", "TWI/238"],
-      "relevantRule": "Merciless Contest specifies that each player chooses a non-leader unit to defeat. Since neither player has a non-leader unit, no units are defeated.",
+      "relevantRule": "**_Merciless Contest_** specifies that each player chooses a non-leader unit to defeat. Since neither player has a non-leader unit, no units are defeated.",
       "tags": ["general grievous", "rose tico", "merciless contest", "event", "target", "removal", "leader"],
       "difficulty": 1
    },
    {
       "id": 44,
-      "question": "At the start of a new round, Player A has a Luke Skywalker, Jedi Knight, in play upgraded with a Jedi Lightsaber. As the first action in a new round, they play a second Luke Skywalker, Jedi Knight, knowing they will need to choose one to defeat due to uniqueness. What best describes what happens?",
+      "question": "At the start of a new round, Player A has a **_Luke Skywalker, Jedi Knight_**, in play upgraded with a **_Jedi Lightsaber_**. As the first action in a new round, they play a second **_Luke Skywalker, Jedi Knight_**, knowing they will need to choose one to defeat due to uniqueness. What best describes what happens?",
       "choices": {
-         "a": "They will only be able to give an enemy unit -6/-6 if they choose to defeat the upgraded Luke.",
-         "b": "They will only be able to give an enemy unit -6/-6 if they choose to defeat the newly played Luke.",
-         "c": "They will give an enemy unit -6/-6 no matter which Luke they choose to defeat.",
-         "d": "They will give an enemy unit -3/-3 no matter which Luke they choose to defeat since the When Played resolves first."
+         "a": "They will only be able to give an enemy unit -6/-6 if they choose to defeat the upgraded **_Luke_**.",
+         "b": "They will only be able to give an enemy unit -6/-6 if they choose to defeat the newly played **_Luke_**.",
+         "c": "They will give an enemy unit -6/-6 no matter which **_Luke_** they choose to defeat.",
+         "d": "They will give an enemy unit -3/-3 no matter which **_Luke_** they choose to defeat since the **When Played** resolves first."
       },
       "answer": "c",
       "relevantCards": ["SOR/051", "SOR/054"],
-      "relevantRule": "Since the uniqueness rule is resolved before the pending When Played ability, it doesn't matter which copy of Luke is chosen to be defeated, by the time the pending trigger resolves, there will have been a friendly unit that was defeated, meaning Player A will give an enemy unit -6/-6.\n\n8.30.4 - A player can only control one copy of each unique card at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
+      "relevantRule": "Since the uniqueness rule is resolved before the pending **When Played** ability, it doesn't matter which copy of **_Luke_** is chosen to be defeated, by the time the pending trigger resolves, there will have been a friendly unit that was defeated, meaning Player A will give an enemy unit -6/-6.\n\n**8.30.4** - A player can only control one copy of each unique card at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
       "tags": ["luke skywalker", "jedi lightsaber", "upgrade", "when played", "target", "unique"],
       "difficulty": 1
    },
