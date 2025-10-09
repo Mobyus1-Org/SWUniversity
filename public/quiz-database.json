@@ -748,5 +748,20 @@
       "relevantRule": "The fact that **_Loth-Wolf_**'s ability specifies that it \"can't attack\" means that if another ability attempts to make it attack, that second ability fails. Restrictions always override permissions.\n\n**8.4.3** - Restrictive abilities override permissive abilities. If an ability with the word \"may\" or \"can\" directly contradicts an ability that uses the word \"can’t\", then the ability that uses \"can’t\" takes precedence.",
       "tags": ["loth-wolf", "viper probe droid", "give in to your anger", "event", "target", "can't attack"],
       "difficulty": 1
+   },
+   {
+      "id": 51,
+      "question": "Player A controls a **_Seasoned Fleet Admiral_** and claims initiative. Player B plays **_Sneak Attack_**, playing a **_Nightsister Warrior_** as a result. After attacking Player A's base with the **_Nightsister Warrior_**, Player B passes. What best describes what happens?",
+      "choices": {
+         "a": "**_Nightsister Warrior_** is defeated, drawing Player B a card. **_Seasoned Fleet Admiral_** only triggers if it hadn't triggered earlier in the round.",
+         "b": "**_Nightsister Warrior_** survives since it attacked Player A's base.",
+         "c": "**_Nightsister Warrior_** is defeated, drawing Player B a card. **_Seasoned Fleet Admiral_** triggers, letting Player A give an experience token to a unit.",
+         "d": "**_Nightsister Warrior_** is defeated, drawing Player B a card. **_Seasoned Fleet Admiral_** does not trigger."
+      },
+      "answer": "d",
+      "relevantCards": ["JTL/111", "SOR/219", "LOF/059"],
+      "relevantRule": "Due to **_Sneak Attack_**, **_Nightsister Warrior_** is defeated at the start of the Regroup Phase, letting Player B draw a card. This does not trigger **_Seasoned Fleet Admiral_** since we are no longer in the Action Phase.\n\n**5.3.1** - A round of the game consists of two phases in order: an action phase and a regroup phase. The start of each action phase is also the start of a new game round.\n\n**5.5.1.A** - Start of the regroup phase. Any lasting effects that expire when the regroup phase starts expire now. Any abilities or effects that trigger at the start of the regroup phase trigger now.",
+      "tags": ["seasoned fleet admiral", "sneak attack", "nightsister warrior", "timing", "trigger", "draw", "when defeated"],
+      "difficulty": 1
    }
 ]
