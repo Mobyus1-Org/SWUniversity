@@ -14,11 +14,11 @@ import { AudioContextProvider } from './util/context';
 
 function App() {
   const clickSound = React.useMemo(() => new Audio('/assets/sfx/click.mp3'), []);
-  clickSound.volume = 0.10;
+  clickSound.volume = 0.05;
   const confirmSound = React.useMemo(() => new Audio('/assets/sfx/confirm.mp3'), []);
-  confirmSound.volume = 0.20;
+  confirmSound.volume = 0.10;
   const transitionSound = React.useMemo(() => new Audio('/assets/sfx/transition.mp3'), []);
-  transitionSound.volume = 0.30;
+  transitionSound.volume = 0.20;
 
   const sfx = (type: SfxType) => {
     let sound: HTMLAudioElement;
