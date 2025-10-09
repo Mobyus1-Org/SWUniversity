@@ -421,46 +421,46 @@
    },
    {
       "id": 29,
-      "question": "Player A attacks with their Orbiting K-Wing into Player B's Techno Union Transport which has two shield tokens. What best describes what happens?",
+      "question": "Player A attacks with their **_Orbiting K-Wing_** into Player B's **_Techno Union Transport_** which has two shield tokens. What best describes what happens?",
       "choices": {
-         "a": "One of the Techno Union Transport's shields is defeated and it takes 0 damage.",
-         "b": "Both of the Techno Union Transport's shields are defeated and it takes 0 damage.",
-         "c": "Both of the Techno Union Transport's shields are defeated and it takes 4 damage.",
-         "d": "One of the Techno Union Transport's shields is defeated and it takes 4 damage."
+         "a": "One of the **_Techno Union Transport's_** shields is defeated and it takes 0 damage.",
+         "b": "Both of the **_Techno Union Transport's_** shields are defeated and it takes 0 damage.",
+         "c": "Both of the **_Techno Union Transport's_** shields are defeated and it takes 4 damage.",
+         "d": "One of the **_Techno Union Transport's_** shields is defeated and it takes 4 damage."
       },
       "answer": "c",
       "relevantCards": ["JTL/166", "JTL/190"],
-      "relevantRule": "Since Orbiting K-Wing has Saboteur, all shield tokens on the defending unit are defeated and it takes the full damage of the attacking unit.\n\n7.5.10.A - \"Saboteur\" is a keyword whose effect encompasses two abilities: a constant ability and a triggered ability. Saboteur’s first effect is the same as the constant ability: \"You may ignore Sentinel when choosing what this unit attacks.\" Saboteur’s second effect resolves like the triggered ability: \"On Attack: Defeat all Shield tokens attached to the defender.\"",
+      "relevantRule": "Since **_Orbiting K-Wing_** has **Saboteur**, all shield tokens on the defending unit are defeated and it takes the full damage of the attacking unit.\n\n**7.5.10.A** - \"Saboteur\" is a keyword whose effect encompasses two abilities: a constant ability and a triggered ability. Saboteur’s first effect is the same as the constant ability: \"You may ignore Sentinel when choosing what this unit attacks.\" Saboteur’s second effect resolves like the triggered ability: \"On Attack: Defeat all Shield tokens attached to the defender.\"",
       "tags": ["orbiting k-wing", "techno union transport", "saboteur", "shielded", "keyword", "shield token"],
       "difficulty": 0
    },
    {
       "id": 30,
-      "question": "Player A just defeated Player B's Guavian Antagonizer, but is afraid their deck is running low on cards and doesn't want to draw a card from the Bounty. Do they need to and why?",
+      "question": "Player A just defeated Player B's **_Guavian Antagonizer_**, but is afraid their deck is running low on cards and doesn't want to draw a card from the **Bounty**. Do they need to draw and why?",
       "choices": {
          "a": "Yes. It does not say \"You may\", so it's required.",
-         "b": "No. Collecting a Bounty is optional.",
-         "c": "No. Bounties are only collected when the unit is captured.",
+         "b": "No. Collecting a **Bounty** is optional.",
+         "c": "No. **Bounties** are only collected when the unit is captured.",
          "d": "Yes, but only if Player B has the initiative."
       },
       "answer": "b",
       "relevantCards": ["SHD/134"],
-      "relevantRule": "Players do not need to collecting the Bounty on units they capture or defeat. It's always optional.\n\n7.5.13.E - Resolving a Bounty ability is optional. If a player chooses not to resolve a Bounty ability, they are not considered to have collected that Bounty.",
+      "relevantRule": "Players do not need to collect the **Bounty** on units they capture or defeat. It's always optional.\n\n**7.5.13.E** - Resolving a Bounty ability is optional. If a player chooses not to resolve a Bounty ability, they are not considered to have collected that Bounty.",
       "tags": ["guavian antagonizer", "bounty", "keyword", "trigger"],
       "difficulty": 0
    },
    {
       "id": 31,
-      "question": "Player A attacked with their own Wanted Insurgents into Player B's Academy Defense Walker, defeating itself. Which player gets to collect Wanted Insurgents' Bounty and why?",
+      "question": "Player A attacked with their own **_Wanted Insurgents_** into Player B's **_Academy Defense Walker_**, defeating itself. Which player gets to collect **_Wanted Insurgents'_** **Bounty** and why?",
       "choices": {
-         "a": "Player A. The attacking player collects the Bounty.",
-         "b": "Player B. Their unit survived combat and therefore gets to collect the Bounty.",
-         "c": "Whichever player has the initiative collects the Bounty.",
-         "d": "Player B. Bounties are always collected by an opponent of the unit they are on."
+         "a": "Player A. The attacking player always collects the **Bounty**.",
+         "b": "Player B. Their unit survived combat and therefore they collect the **Bounty**.",
+         "c": "Whichever player has the initiative collects the **Bounty**.",
+         "d": "Player B. **Bounties** are always collected by an opponent of the unit they are on."
       },
       "answer": "d",
       "relevantCards": ["SHD/167", "SOR/037"],
-      "relevantRule": "Since the Bounty is on Player A's unit, Player B has the option of collecting it when Wanted Insurgents is defeated.\n\n7.5.13.F - Bounty abilities are always resolved by an opponent of the player who controls the unit with the Bounty ability. If a player defeats their own unit that has a Bounty ability, they must choose an opponent to resolve its Bounty ability.",
+      "relevantRule": "Since the **Bounty** is on Player A's unit, Player B has the option of collecting it when **_Wanted Insurgents_** is defeated.\n\n**7.5.13.F** - Bounty abilities are always resolved by an opponent of the player who controls the unit with the Bounty ability. If a player defeats their own unit that has a Bounty ability, they must choose an opponent to resolve its Bounty ability.",
       "tags": ["wanted insurgents", "academy defense walker", "bounty", "keyword"],
       "difficulty": 0
    },
@@ -475,13 +475,13 @@
       },
       "answer": "c",
       "relevantCards": [],
-      "relevantRule": "Even though Player A's base had more HP remaining at the start of the Regroup Phase, both players draw simultaneously and, because they both have empty decks, they will both take 6 damage at time same time, resulting in a draw.\n\n5.6.3 - In a case where both players’ bases reach 0 remaining HP at the same time, the game ends in a draw.",
+      "relevantRule": "Even though Player A's base had more HP remaining at the start of the Regroup Phase, both players draw simultaneously and, because they both have empty decks, they will both take 6 damage at time same time, resulting in a draw.\n\n**5.6.3** - In a case where both players’ bases reach 0 remaining HP at the same time, the game ends in a draw.",
       "tags": ["mill", "draw"],
       "difficulty": 0
    },
    {
       "id": 33,
-      "question": "Player A's leader is Luke Skywalker, Faithful Friend, and their base is Echo Base. If they want to play the card Bendu, The One in the Middle, how many resources would they need to pay?",
+      "question": "Player A's leader is **_Luke Skywalker, Faithful Friend_**, and their base is **_Echo Base_**. If they want to play the card **_Bendu, The One in the Middle_**, how many resources would they need to pay?",
       "choices": {
          "a": "4",
          "b": "8",
@@ -490,7 +490,7 @@
       },
       "answer": "b",
       "relevantCards": ["SOR/005", "SOR/024", "SOR/056"],
-      "relevantRule": "Player A's leader only provides one blue Vigilance aspect icon, so in order to play the double-blue Bendu card, they would incur a 2-cost penalty for the missing second blue aspect.\n\n8.1.2 - Each aspect icon depicted on a leader or base provides only 1 icon of the given type. In order to play a card that has 2 of the same type of aspect icon without incurring the aspect penalty, the player’s leader and base must each have an icon of that type.\n\nIt's worth noting that, starting in the Secrets of Power set, we have begun to see leaders that have two of the same color aspect icon on them. In that case, you would not need your base to match your leader.",
+      "relevantRule": "Player A's leader only provides one blue _Vigilance_ aspect icon, so in order to play the double-blue **_Bendu_** card, they would incur a 2-cost penalty for the missing second blue aspect.\n\n**8.1.2** - Each aspect icon depicted on a leader or base provides only 1 icon of the given type. In order to play a card that has 2 of the same type of aspect icon without incurring the aspect penalty, the player’s leader and base must each have an icon of that type.\n\n**NOTE:** - Starting in the _Secrets of Power_ set, we have begun to see leaders that have two of the same color aspect icon on them. In that case, you would not need your base to match your leader.",
       "tags": ["luke skywalker", "echo base", "bendu", "aspects", "cost", "aspect penalty"],
       "difficulty": 0
    },
@@ -505,82 +505,82 @@
       },
       "answer": "a",
       "relevantCards": [],
-      "relevantRule": "While resourcing a card during the Regroup Phase is optional, the two cards resourced at the start of the game are mandatory.\n\n5.2.1.F - Resource two cards. Each player chooses two cards from their hand and puts them into play as resources, facedown and ready. Each player must place exactly two cards as resources.",
+      "relevantRule": "While resourcing a card during the Regroup Phase is optional, the two cards resourced at the start of the game are mandatory.\n\n**5.2.1.F** - Resource two cards. Each player chooses two cards from their hand and puts them into play as resources, facedown and ready. Each player must place exactly two cards as resources.",
       "tags": ["resource"],
       "difficulty": 0
    },
    {
       "id": 35,
-      "question": "Player A has an N-1 Starfighter with Chewbacca, Faithful First Mate, attached to it as a Pilot. Player B plays No Glory, Only Results targeting Player A's N-1 Starfighter.  What best describes happens?",
+      "question": "Player A has an **_N-1 Starfighter_** with **_Chewbacca, Faithful First Mate_**, attached to it as a _Pilot_. Player B plays **_No Glory, Only Results_** targeting Player A's **_N-1 Starfighter_**.  What best describes happens?",
       "choices": {
-         "a": "Player B takes control of the N-1 with Chewbacca still attached, but it is not defeated.",
+         "a": "Player B takes control of the **_N-1_** with **_Chewbacca_** still attached, but it is not defeated.",
          "b": "Nothing happens.",
-         "c": "Both the N-1 and Chewbacca are defeated and placed in Player A's discard pile.",
-         "d": "Both the N-1 and Chewbacca are defeated and placed in Player B's discard pile."
+         "c": "Both the **_N-1_** and **_Chewbacca_** are defeated and placed in Player A's discard pile.",
+         "d": "Both the **_N-1_** and **_Chewbacca_** are defeated and placed in Player B's discard pile."
       },
       "answer": "c",
       "relevantCards": ["LOF/192", "JTL/103", "JTL/043"],
-      "relevantRule": "Chewbacca's ability only prevents the attached unit from being defeated by \"enemy\" card abilities, but since No Glory, Only Results gives Player B control of the unit before defeating it, it is no longer an \"enemy\" ability that is doing the defeating. Defeated cards always go to their owner's discard, regardless of who controlled them at the time they were defeated.\n\n1.5.3.A - A card that a player controls is considered \"friendly\" for that player.\n\n1.5.5.C - A unit is defeated when it has damage on it equal to or greater than its HP, or when an ability defeats it directly. When a non-leader unit is defeated, it is moved to its owner’s discard pile. The unit’s abilities are no longer considered active (though some delayed effects may still be active). The unit loses all abilities and modifiers it was given by effects while in play. See 3.4. for more on Leader Units.\n\n1.5.5.D - An upgrade is defeated when the unit it is attached to leaves play, or when an ability defeats it directly. When a non-leader upgrade is defeated, it is moved to its owner’s discard pile. The upgrade’s abilities are no longer considered active (though some delayed effects may still be active). See 3.4. for more on Leader Upgrades.\n\n8.28.1 - If an ability instructs a player to \"take control\" of a card, that player will become that card’s controller, and remain so until either that card leaves play or their opponent takes control of that card.",
+      "relevantRule": "**_Chewbacca's_** ability only prevents the attached unit from being defeated by \"enemy\" card abilities, but since **_No Glory, Only Results_** gives Player B control of the unit before defeating it, it is no longer an \"enemy\" ability that is doing the defeating. Defeated cards always go to their owner's discard pile, regardless of who controlled them at the time they were defeated.\n\n**1.5.3.A** - A card that a player controls is considered \"friendly\" for that player.\n\n**1.5.5.C** - A unit is defeated when it has damage on it equal to or greater than its HP, or when an ability defeats it directly. When a non-leader unit is defeated, it is moved to its owner’s discard pile. The unit’s abilities are no longer considered active (though some delayed effects may still be active). The unit loses all abilities and modifiers it was given by effects while in play. See 3.4. for more on Leader Units.\n\n**1.5.5.D** - An upgrade is defeated when the unit it is attached to leaves play, or when an ability defeats it directly. When a non-leader upgrade is defeated, it is moved to its owner’s discard pile. The upgrade’s abilities are no longer considered active (though some delayed effects may still be active). See 3.4. for more on Leader Upgrades.\n\n**8.28.1** - If an ability instructs a player to \"take control\" of a card, that player will become that card’s controller, and remain so until either that card leaves play or their opponent takes control of that card.",
       "tags": ["n-1 starfighter", "chewbacca", "no glory only results", "target", "control", "pilot", "ownership"],
       "difficulty": 1
    },
    {
    "id": 36,
-      "question": "Player A is playing a red Aggression leader and the Energy Conversion Lab base. Which of the following units is a valid option when using Energy Conversion Lab's Epic Action?",
+      "question": "Player A is playing a red _Aggression_ leader and the **_Energy Conversion Lab_** base. Which of the following units is a valid option when using **_Energy Conversion Lab's_** **Epic Action**?",
       "choices": {
-         "a": "Warbird Stowaway from resources using Smuggle.",
-         "b": "Separatist Super Tank using Exploit to discount its cost to 5.",
-         "c": "Trandoshan Hunters when only 4 resources are ready.",
-         "d": "Darth Vader, Twilight of the Apprentice, when 8 resources are ready."
+         "a": "**_Warbird Stowaway_** from resources using **Smuggle**.",
+         "b": "**_Separatist Super Tank_** using **Exploit** to discount its cost to 5.",
+         "c": "**_Trandoshan Hunters_** when only 4 resources are ready.",
+         "d": "**_Darth Vader, Twilight of the Apprentice_**, when 8 resources are ready."
       },
       "answer": "d",
       "relevantCards": ["SOR/022", "SHD/086", "TWI/087", "SHD/140", "LOF/037"],
-      "relevantRule": "When referencing a unit's \"cost\", always use the number in the top-left corner of the card before any penalties or discounts are applied. Since Energy Conversion Lab does not say \"for free\", the unit you play with it must still be paid for normally. Also, since it specifies \"from hand\", the unit you play cannot come from another zone, such as with Smuggle.\n\n1.8.6 - If an ability refers to the \"cost\" of a card, that ability always refers to the printed cost of the card. It does not take into account any modifiers to the card’s cost as it was played. See 8.16. Modifiers.",
+      "relevantRule": "When referencing a unit's \"cost\", always use the number in the top-left corner of the card before any penalties or discounts are applied. Since **_Energy Conversion Lab_** does not say \"for free\", the unit you play with it must still be paid for normally. Also, since it specifies \"from hand\", the unit you play cannot come from another zone, such as with **Smuggle**.\n\n**1.8.6** - If an ability refers to the \"cost\" of a card, that ability always refers to the printed cost of the card. It does not take into account any modifiers to the card’s cost as it was played. See 8.16. Modifiers.",
       "tags": ["energy conversion lab", "warbird stowaway", "separatist super tank", "trandoshan hunters", "darth vader", "epic action", "ambush", "smuggle", "cost", "aspect penalty", "for free", "exploit", "keyword"],
       "difficulty": 1
    },
    {
       "id": 37,
-      "question": "Which of the following would NOT be defeated by playing Takedown?",
+      "question": "Which of the following would NOT be defeated by playing **_Takedown_**?",
       "choices": {
-         "a": "A Clan Saxon Gauntlet with an Experience token on it.",
-         "b": "A Desperado Freighter with 2 damage counters on it.",
-         "c": "A Secretive Sage with a shield token on it.",
-         "d": "A deployed Sabine Wren, Galvanized Revolutionary, leader unit."
+         "a": "A **_Clan Saxon Gauntlet_** with an experience token on it.",
+         "b": "A **_Desperado Freighter_** with 2 damage counters on it.",
+         "c": "A **_Secretive Sage_** with a shield token on it.",
+         "d": "A deployed **_Sabine Wren, Galvanized Revolutionary_**, leader unit."
       },
       "answer": "a",
       "relevantCards": ["SOR/077", "LOF/061", "SHD/152", "SOR/014-portrait", "SHD/035"],
-      "relevantRule": "When a card references a unit's HP, use the amount of HP remaining after applying any relevant modifiers and subtracting one for each damage counter on the unit. Also, if a card does not specify \"non-leader\", it can target deployed leader units as well!\n\n1.11.6 - A card’s \"remaining HP\" is calculated by subtracting the number of damage counters on it from its HP (accounting for any modifiers to its HP). If the remaining HP of a card is 0 or less, that card is defeated immediately.",
+      "relevantRule": "When a card references a unit's HP, use the amount of HP remaining after applying any relevant modifiers and subtracting one for each damage counter on the unit. Also, if a card does not specify \"non-leader\", it can target deployed leader units as well!\n\n**1.11.6** - A card’s \"remaining HP\" is calculated by subtracting the number of damage counters on it from its HP (accounting for any modifiers to its HP). If the remaining HP of a card is 0 or less, that card is defeated immediately.",
       "tags": ["takdown", "secretive sage", "desperado freighter", "sabine wren", "clan saxon gauntlet", "target", "event", "hp"],
       "difficulty": 0
    },
    {
       "id": 38,
-      "question": "Player A has a Phoenix Squadron A-Wing with Luke Skywalker, Hero of Yavin, attached to it as a Pilot. Player B plays Nebula Ignition. What best describes what happens?",
+      "question": "Player A has a **_Phoenix Squadron A-Wing_** with **_Luke Skywalker, Hero of Yavin_**, attached to it as a _Pilot_. Player B plays **_Nebula Ignition_**. What best describes what happens?",
       "choices": {
-         "a": "The Phoenix Squadron A-Wing survives because it is upgraded.",
-         "b": "Luke's ability prevents the Phoenix Squadron A-Wing from being defeated.",
-         "c": "The Phoenix Squadron A-Wing is defeated and Luke becomes a ground unit.",
-         "d": "The Phoenix Squadron A-Wing is defeated, resulting in Luke being defeated as well."
+         "a": "The **_Phoenix Squadron A-Wing_** survives because it is upgraded.",
+         "b": "**_Luke's_** ability prevents the **_Phoenix Squadron A-Wing_** from being defeated.",
+         "c": "The **_Phoenix Squadron A-Wing_** is defeated and **_Luke_** becomes a ground unit.",
+         "d": "The **_Phoenix Squadron A-Wing_** is defeated, resulting in **_Luke_** being defeated as well."
       },
       "answer": "a",
       "relevantCards": ["JTL/095", "JTL/012-portrait", "JTL/080"],
-      "relevantRule": "Pilots, both leaders and non-leaders, are considered upgrades when attached to vehicles, so Nebula Ignition does not defeat the A-Wing.\n\n3.6.13 - A unit is considered \"upgraded\" while it has at least one upgrade attached to it.",
+      "relevantRule": "_Pilots_, both leaders and non-leaders, are considered upgrades when attached to _Vehicles_, so **_Nebula Ignition_** does not defeat the **_A-Wing_**.\n\n**3.6.13** - A unit is considered \"upgraded\" while it has at least one upgrade attached to it.",
       "tags": ["phoenix squadron a-wing", "luke skywalker", "nebula ignition", "event", "removal", "target", "upgrade"],
       "difficulty": 0
    },
    {
       "id": 39,
-      "question": "Player A uses Han Solo, Worth the Risk's, ability to play a Secretive Sage for 1 resource. What best describes what happens?",
+      "question": "Player A uses **_Han Solo, Worth the Risk's_**, ability to play a **_Secretive Sage_** for 1 resource. What best describes what happens?",
       "choices": {
-         "a": "Secretive Sage enters play, gets a shield token, and then takes 2 damage from Han's ability, defeating the shield.",
-         "b": "Secretive Sage enters play and immediately takes 2 damage from Han's ability, defeating it.",
-         "c": "Secretive Sage enters play and Player A gets to choose whether to deal the 2 damage to it or give it a shield first.",
-         "d": "Han's ability wouldn't discount Secretive Sage."
+         "a": "**_Secretive Sage_** enters play, gets a shield token, and then takes 2 damage from **_Han's_** ability, defeating the shield.",
+         "b": "**_Secretive Sage_** enters play and immediately takes 2 damage from **_Han's_** ability, defeating it.",
+         "c": "**_Secretive Sage_** enters play and Player A gets to choose whether to deal the 2 damage to it or give it a shield first.",
+         "d": "**_Han's_** ability wouldn't discount **_Secretive Sage_**."
       },
       "answer": "b",
       "relevantCards": ["SHD/013", "LOF/061"],
-      "relevantRule": "Han's leader ability results in a modified \"Play a card\" action and, like any all abilities that result in a modified action, must resolve in full before any resulting triggers can resolve, meaning the 2 damage is dealt to the Secretive Sage before Shielded gives it a shield token.\n\n7.1.6.B - A modified \"Play a Card\" action might include: restrictions on the type of card that can be played, cost adjustments, playing cards from other zones, or other effects. Any abilities triggered during or as a result of a modified \"Play a Card\" action are resolved after the current ability is finished resolving.",
+      "relevantRule": "**_Han's_** leader ability results in a modified \"Play a card\" action and, like any all abilities that result in a modified action, must resolve in full before any resulting triggers can resolve, meaning the 2 damage is dealt to the **_Secretive Sage_** before **Shielded** gives it a shield token.\n\n**7.1.6.B** - A modified \"Play a Card\" action might include: restrictions on the type of card that can be played, cost adjustments, playing cards from other zones, or other effects. Any abilities triggered during or as a result of a modified \"Play a Card\" action are resolved after the current ability is finished resolving.",
       "tags": ["han solo", "secretive sage", "timing", "shielded", "leader"],
       "difficulty": 1
    },
