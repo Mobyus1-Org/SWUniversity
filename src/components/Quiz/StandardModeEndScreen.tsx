@@ -1,5 +1,5 @@
 import React from "react";
-import type { Quiz, UserResponse } from "../../util/func";
+import { renderItalicsAndBold, type Quiz, type UserResponse } from "../../util/func";
 import { AudioContext } from "../../util/context";
 import { globalBackgroundStyle } from "../../util/const";
 
@@ -31,9 +31,9 @@ export function StandardModeEndScreen({
               const quiz = currentQuizSet.find(q => q.id === response.quizId)!;
 
               return <div key={response.quizId} className="mb-6 p-4 border rounded">
-                <p className="font-bold">Q: {quiz.question}</p>
-                <p>Your answer: <span className={response.selected === response.correct ? "text-green-500 font-bold" : "text-red-500 font-bold"}>{quiz.choices[response.selected]}</span></p>
-                {response.selected !== response.correct && <p>Correct answer: <span className="text-green-500 font-bold">{quiz.choices[response.correct]}</span></p>}
+                <p className="font-bold">Q: {renderItalicsAndBold(quiz.question)}</p>
+                <p>Your answer: <span className={response.selected === response.correct ? "text-green-500 font-bold" : "text-red-500 font-bold"}>{renderItalicsAndBold(quiz.choices[response.selected])}</span></p>
+                {response.selected !== response.correct && <p>Correct answer: <span className="text-green-500 font-bold">{renderItalicsAndBold(quiz.choices[response.correct])}</span></p>}
               </div>;
             })
           }

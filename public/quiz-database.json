@@ -736,16 +736,16 @@
    },
    {
       "id": 50,
-      "question": "Player A controls a Loth-Wolf. Player B controls a Viper Probe Droid and plays Give In to Your Anger, targeting the Loth-Wolf. What best describes Player A's next action?",
+      "question": "Player A controls a **_Loth-Wolf_**. Player B controls a **_Viper Probe Droid_** and plays **_Give In to Your Anger_**, targeting the **_Loth-Wolf_**. What best describes Player A's next action?",
       "choices": {
-         "a": "The Loth-Wolf must attack the Viper Probe Droid.",
-         "b": "The Loth-Wolf must attack either the Viper Probe Droid or Player B's base.",
-         "c": "The Loth-Wolf must attack Player B's base.",
+         "a": "The **_Loth-Wolf_** must attack the **_Viper Probe Droid_**.",
+         "b": "The **_Loth-Wolf_** must attack either the **_Viper Probe Droid_** or Player B's base.",
+         "c": "The **_Loth-Wolf_** must attack Player B's base.",
          "d": "Player A has free choice of their next action."
       },
       "answer": "d",
       "relevantCards": ["LOF/044", "SOR/228", "SHD/144"],
-      "relevantRule": "The fact that Loth-Wolf's ability specifies that it \"can't attack\" means that if another ability attempts to make it attack, that second ability fails. Restrictions always override permissions.\n\n8.4.3 - Restrictive abilities override permissive abilities. If an ability with the word \"may\" or \"can\" directly contradicts an ability that uses the word \"can’t\", then the ability that uses \"can’t\" takes precedence.",
+      "relevantRule": "The fact that **_Loth-Wolf_**'s ability specifies that it \"can't attack\" means that if another ability attempts to make it attack, that second ability fails. Restrictions always override permissions.\n\n**8.4.3** - Restrictive abilities override permissive abilities. If an ability with the word \"may\" or \"can\" directly contradicts an ability that uses the word \"can’t\", then the ability that uses \"can’t\" takes precedence.",
       "tags": ["loth-wolf", "viper probe droid", "give in to your anger", "event", "target", "can't attack"],
       "difficulty": 1
    }

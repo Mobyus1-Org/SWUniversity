@@ -1,6 +1,6 @@
 import React from "react";
-import { globalBackgroundStyle, isMarathonVariant, type QuizModes, type SfxType } from "../../util/const";
-import type { Quiz, UserResponse } from "../../util/func";
+import { globalBackgroundStyle, type QuizModes, type SfxType } from "../../util/const";
+import { renderItalicsAndBold, isMarathonVariant, type Quiz, type UserResponse } from "../../util/func";
 import { StandardModeEndScreen } from "./StandardModeEndScreen";
 import { MarathonModeEndScreen } from "./MarathonModeEndScreen";
 import { AudioContext } from "../../util/context";
@@ -109,7 +109,7 @@ export function QuizContent({
           disabled={quizResult}
         >
           <div className="text-md md:text-lg">
-            {currentQuiz.choices[currentQuizKeys[index]]}
+            {renderItalicsAndBold(currentQuiz.choices[currentQuizKeys[index]])}
           </div>
         </button>
       </div>
@@ -138,7 +138,7 @@ export function QuizContent({
       quizzesCompleted.length < currentQuizSet.length && <div className={`grid ${globalBackgroundStyle} shadow-md md:grid-cols-[40%_60%] border p-8 rounded gap-4`}>
       {/* Question and choices */}
       <div>
-        <p className="mb-2.5 text-lg md:text-xl">{currentQuiz.question}</p>
+        <p className="mb-2.5 text-lg md:text-xl">{renderItalicsAndBold(currentQuiz.question)}</p>
         <form onSubmit={(e) => {
           e.preventDefault();
           if (selectedAnswer !== "") {
@@ -186,7 +186,7 @@ export function QuizContent({
             {currentQuiz.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
           </p>
           <p className="text-xl mb-2.5">Relevant Rules:</p>
-          <p className="whitespace-pre-wrap">{currentQuiz.relevantRule}</p>
+          <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentQuiz.relevantRule)}</p>
         </div>
       }
       {/*Relevant Cards Modal*/}
