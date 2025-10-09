@@ -661,7 +661,7 @@
    },
    {
       "id": 45,
-      "question": "Player A controls The Ghost, Heart of the Family, upgraded with For the Republic. They also control Ezra Bridger, Attuned With Life, and an X-Wing token. How much HP does their base heal when Ezra attacks?",
+      "question": "Player A controls **_The Ghost, Heart of the Family_**, upgraded with **_For the Republic_**. They also control **_Ezra Bridger, Attuned With Life_**, and an **_X-Wing_** token. How much HP does their base heal when **_Ezra_** attacks?",
       "choices": {
          "a": "2",
          "b": "4",
@@ -670,67 +670,67 @@
       },
       "answer": "b",
       "relevantCards": ["JTL/053", "TWI/051", "LOF/046", "TJTL/T02"],
-      "relevantRule": "This is a rather unintuitive one, so here goes...\nDue to the wording in the rules for Coordinate, when a player controls 3 or more units, the unit \"gains\" whatever is after the dash. This means that while The Ghost is upgraded with For The Republic, it passes \"Coordinate - Restore 2\" on to friendly Spectres. Then once Coordinate becomes active, The Ghost gains \"Restore 2\" and passes that on as well, meaning Ezra has a total of Restore 4.\n\n7.5.15.A - \"Coordinate\" is a keyword followed by a dash and ability text whose effect is the same as the constant ability: \"While you control 3 or more units, this card gains the following ability.\"",
+      "relevantRule": "This is a rather unintuitive one, so here goes...\nDue to the wording in the rules for **Coordinate**, when a player controls 3 or more units, the unit \"gains\" whatever is after the dash. This means that while **_The Ghost_** is upgraded with **_For The Republic_**, it passes **\"Coordinate - Restore 2\"** on to friendly _Spectres_. Then once **Coordinate** becomes active, **_The Ghost_** gains **\"Restore 2\"** and passes that on as well, meaning **_Ezra_** has a total of **Restore 4**.\n\n**7.5.15.A** - \"Coordinate\" is a keyword followed by a dash and ability text whose effect is the same as the constant ability: \"While you control 3 or more units, this card gains the following ability.\"",
       "tags": ["the ghost", "ezra bridger", "x-wing", "coordinate", "keyword", "restore", "spectre", "upgrade"],
       "difficulty": 2
    },
    {
       "id": 46,
-      "question": "Player A is playing Qui-Gon Jinn, Student of the Living Force, and the Jedi Temple base. After completing an attack with Qui-Gon, Player A chooses to return Depa Billaba, A Higher Purpose, to their hand. Which of the following is a valid choice for them to play for free?",
+      "question": "Player A is playing **_Qui-Gon Jinn, Student of the Living Force_**, and the **_Jedi Temple_** base. After completing an attack with **_Qui-Gon_**, Player A chooses to return **_Depa Billaba, A Higher Purpose_**, to their hand. Which of the following is a valid choice for them to play for free?",
       "choices": {
-         "a": "Ki-Adi-Mundi, Composed and Confident",
-         "b": "Shin Hati, Overeager Apprentice",
-         "c": "General Rieekan, Defensive Strategist",
-         "d": "Jedi Lightsaber"
+         "a": "**_Ki-Adi-Mundi, Composed and Confident_**",
+         "b": "**_Shin Hati, Overeager Apprentice_**",
+         "c": "**_General Rieekan, Defensive Strategist_**",
+         "d": "**_Jedi Lightsaber_**"
       },
       "answer": "a",
       "relevantCards": ["LOF/016-back", "LOF/023", "LOF/199", "TWI/064", "LOF/183", "SHD/103", "SOR/054"],
-      "relevantRule": "Even though Ki-Adi-Mundi is out of aspect in this situation, the aspect penalty is ignored when instructed to play a card for free. The rest of the options do not meet the criteria specified by Qui-Gon's ability.\n\n8.1.3 - If an ability instructs a player to play a card \"for free,\" the player bypasses all modifiers to that card’s cost, including the aspect penalty, and does not pay any resources to play that card. The player must still pay any additional non-resource costs of the card.",
+      "relevantRule": "Even though **_Ki-Adi-Mundi_** is out of aspect in this situation, the aspect penalty is ignored when instructed to play a card for free. The rest of the options do not meet the criteria specified by **_Qui-Gon's_** ability_**.\n\n**8.1.3** - If an ability instructs a player to play a card \"for free,\" the player bypasses all modifiers to that card’s cost, including the aspect penalty, and does not pay any resources to play that card. The player must still pay any additional non-resource costs of the card.",
       "tags": ["qui-gon jinn", "jedi temple", "ki-adi-mundi", "shin hati", "general rieekan", "jedi lightsaber", "ability", "cost", "for free", "aspect penalty"],
       "difficulty": 1
    },
    {
       "id": 47,
-      "question": "Player A plays Discerning Veteran, capturing Player B's Village Protectors which had a shield token. What best describes what will happen when Discerning Veteran leaves play?",
+      "question": "Player A plays **_Discerning Veteran_**, capturing Player B's **_Village Protectors_** which had a shield token. What best describes what will happen when **_Discerning Veteran_** leaves play?",
       "choices": {
-         "a": "Village Protectors returns to play under Player B's control exhausted with full HP but no shield token.",
-         "b": "Village Protectors returns to play under Player B's control ready with full HP but no shield token.",
-         "c": "Village Protectors returns to play under Player B's control exhausted with full HP and a shield token.",
-         "d": "Village Protectors returns to play under Player A's control exhausted with full HP but no shield token."
+         "a": "**_Village Protectors_** returns to play under Player B's control exhausted with full HP but no shield token.",
+         "b": "**_Village Protectors_** returns to play under Player B's control ready with full HP but no shield token.",
+         "c": "**_Village Protectors_** returns to play under Player B's control exhausted with full HP and a shield token.",
+         "d": "**_Village Protectors_** returns to play under Player A's control exhausted with full HP but no shield token."
       },
       "answer": "a",
       "relevantCards": ["SHD/120", "SHD/043"],
-      "relevantRule": "When a captured unit returns to play, it returns to its owner's control exhausted. It does not trigger any When Played abilities, including keywords that trigger when a unit is played such as \"Shielded\".\n\n1.16.5.D - If a unit that was guarding a captured unit is no longer in play, the captured unit enters play under its owner’s control, exhausted.",
+      "relevantRule": "When a captured unit returns to play, it returns to its owner's control exhausted. It does not trigger any **When Played** abilities, including keywords that trigger when a unit is played such as **Shielded**.\n\n**1.16.5.D** - If a unit that was guarding a captured unit is no longer in play, the captured unit enters play under its owner’s control, exhausted.",
       "tags": ["discerning veteran", "village protectors", "capture", "enters play", "shield token", "shielded"],
       "difficulty": 0
    },
    {
       "id": 48,
-      "question": "Player A plays Legal Authority, choosing their Steadfast Battalion to capture Player B's Pyke Sentinel. Player B then plays Disabling Fang Fighter, defeating Legal Authority. What best describes what happens?",
+      "question": "Player A plays **_Legal Authority_**, choosing their **_Steadfast Battalion_** to capture Player B's **_Pyke Sentinel_**. Player B then plays **_Disabling Fang Fighter_**, defeating **_Legal Authority_**. What best describes what happens?",
       "choices": {
-         "a": "Steadfast Battalion loses the +0/+2, but Pyke Sentinel remains captured.",
-         "b": "Steadfast Battalion loses the +0/+2 and Pyke Sentinel returns to play under Player B's control ready.",
-         "c": "Steadfast Battalion loses the +0/+2 and Pyke Sentinel returns to play under Player B's control exhausted.",
-         "d": "Steadfast Battalion loses the +0/+2 and Pyke Sentinel returns to play under Player A's control exhausted."
+         "a": "**_Steadfast Battalion_** loses the +0/+2, but **_Pyke Sentinel_** remains captured.",
+         "b": "**_Steadfast Battalion_** loses the +0/+2 and **_Pyke Sentinel_** returns to play under Player B's control ready.",
+         "c": "**_Steadfast Battalion_** loses the +0/+2 and **_Pyke Sentinel_** returns to play under Player B's control exhausted.",
+         "d": "**_Steadfast Battalion_** loses the +0/+2 and **_Pyke Sentinel_** returns to play under Player A's control exhausted."
       },
       "answer": "a",
       "relevantCards": ["SHD/124", "SOR/116", "SHD/029", "SOR/162"],
-      "relevantRule": "Legal Authority's ability doesn't require the upgrade itself to remain in play for the unit to remain captured. Its ability triggers when it's played, and that's that.",
+      "relevantRule": "**_Legal Authority's_** ability doesn't require the upgrade itself to remain in play for the unit to remain captured. Its ability triggers when it's played, and that's that.",
       "tags": ["steadfast battalion", "legal authority", "pyke sentinel", "capture", "upgrade", "rescue"],
       "difficulty": 1
    },
    {
       "id": 49,
-      "question": "Player A controls an Alliance X-Wing and no other units. Player B plays a Death Trooper and has no other units. What best describes what happens?",
+      "question": "Player A controls an **_Alliance X-Wing_** and no other units. Player B plays a **_Death Trooper_** and has no other units. What best describes what happens?",
       "choices": {
-         "a": "Death Trooper deals 2 damage to itself and 2 damage to the Alliance X-Wing.",
-         "b": "Death Trooper deals 2 damage to itself only.",
-         "c": "Death Trooper deals no damage.",
-         "d": "Death Trooper deals 2 damage to each players' base."
+         "a": "**_Death Trooper_** deals 2 damage to itself and 2 damage to the **_Alliance X-Wing_**.",
+         "b": "**_Death Trooper_** deals 2 damage to itself only.",
+         "c": "**_Death Trooper_** deals no damage.",
+         "d": "**_Death Trooper_** deals 2 damage to each players' base."
       },
       "answer": "b",
       "relevantCards": ["SOR/237", "SOR/033"],
-      "relevantRule": "Since Death Trooper's ability does not say \"You may...\", Player B must resolve as much of the ability as they can. Since Player A has no ground units, the Death Trooper deals 2 damage to itself and no other units.\n\n7.6.7 - A triggered ability must resolve once its triggering condition is met unless the ability uses the phrase \"you may.\" Once triggered, these abilities must resolve at the next available opportunity.",
+      "relevantRule": "Since **_Death Trooper's_** ability does not say \"You may...\", Player B must resolve as much of the ability as they can. Since Player A has no ground units, the **_Death Trooper_** deals 2 damage to itself and no other units.\n\n**7.6.7** - A triggered ability must resolve once its triggering condition is met unless the ability uses the phrase \"you may.\" Once triggered, these abilities must resolve at the next available opportunity.",
       "tags": ["alliance x-wing", "death trooper", "when played", "target", "ability"],
       "difficulty": 0
    },
