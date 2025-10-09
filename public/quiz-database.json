@@ -685,7 +685,7 @@
       },
       "answer": "a",
       "relevantCards": ["LOF/016-back", "LOF/023", "LOF/199", "TWI/064", "LOF/183", "SHD/103", "SOR/054"],
-      "relevantRule": "Even though **_Ki-Adi-Mundi_** is out of aspect in this situation, the aspect penalty is ignored when instructed to play a card for free. The rest of the options do not meet the criteria specified by **_Qui-Gon's_** ability_**.\n\n**8.1.3** - If an ability instructs a player to play a card \"for free,\" the player bypasses all modifiers to that card’s cost, including the aspect penalty, and does not pay any resources to play that card. The player must still pay any additional non-resource costs of the card.",
+      "relevantRule": "Even though **_Ki-Adi-Mundi_** is out of aspect in this situation, the aspect penalty is ignored when instructed to play a card for free. The rest of the options do not meet the criteria specified by **_Qui-Gon's_** ability.\n\n**8.1.3** - If an ability instructs a player to play a card \"for free,\" the player bypasses all modifiers to that card’s cost, including the aspect penalty, and does not pay any resources to play that card. The player must still pay any additional non-resource costs of the card.",
       "tags": ["qui-gon jinn", "jedi temple", "ki-adi-mundi", "shin hati", "general rieekan", "jedi lightsaber", "ability", "cost", "for free", "aspect penalty"],
       "difficulty": 1
    },
