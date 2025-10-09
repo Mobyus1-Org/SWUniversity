@@ -36,8 +36,33 @@ export function isMarathonVariant(mode: QuizModes): boolean {
 }
 
 export function renderItalicsAndBold(text: string): React.JSX.Element {
-  //brute force co-pilot implementation (maybe update/optimize later)
   const lines = text.split('\n');
+  const highlightWords = [
+    "Shielded",
+    "Sentinel",
+    "Saboteur",
+    "Raid",
+    "Restore",
+    "Ambush",
+    "Grit",
+    "Overwhelm",
+    "Smuggle",
+    "Bounty",
+    "Bounties",
+    "Coordinate",
+    "Exploit",
+    "Piloting",
+    "Hidden",
+    "Plot",
+  ];
+
+  const processText = (text: string): React.JSX.Element => {
+    if (highlightWords.includes(text)) {
+      return <span className="text-red-400">{text}</span>;
+    }
+    return <>{text}</>;
+  };
+
   return <>{lines.map((line, index) => {
     const parts = line.split(/(\*\*.*?\*\*|_.*?_)/g); //split by **text** or _text_
     return <span key={index}>
@@ -49,16 +74,18 @@ export function renderItalicsAndBold(text: string): React.JSX.Element {
           return <strong key={partIndex}>
             {innerParts.map((innerPart, innerPartIndex) => {
               if (innerPart.startsWith('_') && innerPart.endsWith('_')) {
-                return <em key={innerPartIndex}>{innerPart.slice(1, -1)}</em>;
+                const emphText = innerPart.slice(1, -1);
+                return <em key={innerPartIndex}>{processText(emphText)}</em>;
               } else {
-                return <span key={innerPartIndex}>{innerPart}</span>;
+                return processText(innerPart);
               }
             })}
           </strong>;
         } else if (part.startsWith('_') && part.endsWith('_')) {
-          return <em key={partIndex}>{part.slice(1, -1)}</em>;
+          const emphText = part.slice(1, -1);
+          return <em key={partIndex}>{processText(emphText)}</em>;
         } else {
-          return <span key={partIndex}>{part}</span>;
+          return processText(part);
         }
       })}
       <br />
