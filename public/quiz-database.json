@@ -763,5 +763,20 @@
       "relevantRule": "Due to **_Sneak Attack_**, **_Nightsister Warrior_** is defeated at the start of the Regroup Phase, letting Player B draw a card. This does not trigger **_Seasoned Fleet Admiral_** since we are no longer in the Action Phase.\n\n**5.3.1** - A round of the game consists of two phases in order: an action phase and a regroup phase. The start of each action phase is also the start of a new game round.\n\n**5.5.1.A** - Start of the regroup phase. Any lasting effects that expire when the regroup phase starts expire now. Any abilities or effects that trigger at the start of the regroup phase trigger now.",
       "tags": ["seasoned fleet admiral", "sneak attack", "nightsister warrior", "timing", "trigger", "draw", "when defeated"],
       "difficulty": 1
+   },
+   {
+      "id": 52,
+      "question": "Player A has 6 ready resources and the initiative. They control a **_Seasoned Shoretrooper_**, a **_First Order TIE Fighter_**, a **_Battle Droid_** token, and **_Warbird Stowaway_** with **_Perilous Position_** attached to it. Each of those units has attacked already this phase. They then play **_Consolodation of Power_**, choosing all four of those units. Which of the following is the largest unit Player A can play for free?",
+      "choices": {
+         "a": "**_Devastator, Inescapable_**",
+         "b": "**_Blizzard Assault AT-AT_**",
+         "c": "**_Maul, Shadow Collective Visionary_**",
+         "d": "**_The Invisible Hand, Crawling With Vultures_**"
+      },
+      "answer": "b",
+      "relevantCards": ["SOR/081", "JTL/081", "TTWI/T01", "SHD/086", "TWI/070", "TWI/089", "SOR/090", "SOR/088", "SHD/090", "JTL/089"],
+      "relevantRule": "This one is all about math. Since Player A has 6 resources, **_Seasoned Shoretrooper_** has 4 power _(4 total)_. The **_First Order TIE_** may have **Raid 1**, but that doesn't add to its power unless it's attacking, so it has 2 power _(6 total)_. The **_Battle Droid_** is a simple 1 more _(7 total)_. The **_Warbird Stowaway_** starts with 2, goes to 4 due to Player A having the initiative, then is reduced back to 2 from **_Perilous Position_** _(9 total)_. That means Player A can play a unit from their hand for free with a total power 9 or less.",
+      "tags": ["seasoned shoretrooper", "first order tie fighter", "battle droid", "warbird stowaway", "perilous position", "consolodation of power", "devastator", "blizzard assault at-at", "maul", "the invisible hand", "token", "event", "cost", "power"],
+      "difficulty": 2
    }
 ]
