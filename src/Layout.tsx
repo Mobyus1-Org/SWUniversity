@@ -14,7 +14,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 
   return <div className="layout">
     <main>
-      <div className={"relative navbar z-10 border-b " + globalBackgroundStyle}>
+      <div className={`relative navbar z-10 border-b ${globalBackgroundStyle}`}>
         <div className="flex justify-between items-center w-full px-4">
           {/* Left side links */}
           <div className="flex gap-4">

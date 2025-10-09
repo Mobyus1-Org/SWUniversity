@@ -23,7 +23,7 @@ export function StandardModeEndScreen({
       sfx("confirm");
       resetQuizMode();
     }}>Go Back to Quiz Menu</button>
-    <div className={"mt-8 text-left p-8 " + globalBackgroundStyle}>
+    <div className={`mt-8 text-left p-8 ${globalBackgroundStyle}`}>
       <summary className="text-xl font-bold mb-4 cursor-pointer">Your Answers:</summary>
         <div className="mt-4 max-h-140 overflow-y-scroll">
           {

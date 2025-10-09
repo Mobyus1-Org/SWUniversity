@@ -85,10 +85,10 @@ export function QuizContent({
       return "";
     };
 
-    const divs = currentQuizKeys.map((_, index) => <div key={index} className={"mb-2.5 " + highlighted(index)}>
+    const divs = currentQuizKeys.map((_, index) => <div key={index} className={`mb-2.5 ${highlighted(index)}`}>
         <button
           type="button"
-          className={`w-full text-left p-3 border rounded-lg hover:bg-slate-700/50 transition-colors
+          className={`w-full text-left px-4 py-2 border rounded-lg hover:bg-slate-700/50 transition-colors
             ${
               selectedAnswer === currentQuizKeys[index]
                 ? 'border-white bg-slate-600/50'
@@ -118,7 +118,7 @@ export function QuizContent({
     return divs;
   }
 
-  return <div className={"border rounded p-2 " + globalBackgroundStyle}>
+  return <div className={`border rounded p-2 ${globalBackgroundStyle}`}>
   {
     isMarathonVariant(quizMode)
       && quizzesCompleted.length === currentQuizSet.length
