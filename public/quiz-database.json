@@ -1,157 +1,157 @@
 [
    {
       "id": 1,
-      "question": "Player A has the initiative and a Baze Malbus, Temple Guardian, in play. Player B plays a SpecForce Soldier and targets Baze Malbus, causing it to lose Sentinel for the phase. Later in the same phase, Player A plays Protector and attaches it to their Baze Malbus. What best describes what happens?",
+      "question": "Player A has the initiative and a **_Baze Malbus, Temple Guardian_**, in play. Player B plays a **_SpecForce Soldier_** and targets **_Baze_**, causing him to lose **Sentinel** for the phase. Later in the same phase, Player A plays **_Protector_** and attaches it to **_Baze_**. What best describes what happens?",
       "choices": {
-         "a": "Protector gives Baze Malbus both +1/+1 and Sentinel immediately.",
-         "b": "Protector gives Baze +1/+1 immediately, but he cannot regain Sentinel until the end of the phase.",
-         "c": "Protector waits until the end of the phase to give Baze both +1/+1 and Sentinel.",
-         "d": "Protector cannot be attached to Baze."
+         "a": "**_Protector_** gives **_Baze_** both +1/+1 and **Sentinel** immediately.",
+         "b": "**_Protector_** gives **_Baze_** +1/+1 immediately, but he cannot regain **Sentinel** until the end of the phase.",
+         "c": "**_Protector_** waits until the end of the phase to give **_Baze_** both +1/+1 and **Sentinel**.",
+         "d": "**_Protector_** cannot be attached to **_Baze_**."
       },
       "answer": "b",
       "relevantCards": ["SOR/065", "SOR/140", "SOR/057"],
-      "relevantRule": "If an effect causes a unit to lose an ability or keyword for a specific duration of time, that unit is not able to regain that particular ability or keyword until the specified period has ended.\n\n8.15.1 - If an ability causes a unit to \"lose\" a keyword, the unit ceases to have the specified keyword and any abilities granting it that keyword when the \"lose\" effect is resolved cease granting the keyword for the duration of the \"lose\" effect. The unit cannot regain that keyword for the duration of the effect.",
+      "relevantRule": "If an effect causes a unit to lose an ability or keyword for a specific duration of time, that unit is not able to regain that particular ability or keyword until the specified period has ended.\n\n**8.15.1** - If an ability causes a unit to \"lose\" a keyword, the unit ceases to have the specified keyword and any abilities granting it that keyword when the \"lose\" effect is resolved cease granting the keyword for the duration of the \"lose\" effect. The unit cannot regain that keyword for the duration of the effect.",
       "tags": ["baze malbus","specforce soldier","protector","sentinel","losing abilities","upgrade"],
       "difficulty": 1
    },
    {
       "id": 2,
-      "question": "Player A plays Mon Mothma, Voice of the Rebellion. Among the searched cards, they find a SpecForce Soldier. Do they have to draw it?",
+      "question": "Player A plays **_Mon Mothma, Voice of the Rebellion_**. Among the searched cards, they find a **_SpecForce Soldier_**. Do they have to draw it even if they don't want to?",
       "choices": {
-         "a": "Yes. SpecForce Soldier is a Rebel card so it must be drawn.",
-         "b": "No. SpecForce Soldier is not a Rebel card, so it is not a valid choice.",
-         "c": "Yes. SpecForce Soldier has a When Played ability so it must be drawn.",
+         "a": "Yes. **_SpecForce Soldier_** is a _Rebel_ card so it must be drawn.",
+         "b": "No. **_SpecForce Soldier_** is not a _Rebel_ card, so it is not a valid choice.",
+         "c": "Yes. **_SpecForce Soldier_** has a **When Played** ability so it must be drawn.",
          "d": "No. It is possible to fail to find a card from a hidden zone, even if one exists."
       },
       "answer": "d",
       "relevantCards": ["SOR/096", "SOR/140"],
-      "relevantRule": "When an ability instructs a player to select something from a hidden zone, such as their hand, resources, or a portion of their deck, since that information is unknown to their opponents, the player is permitted to act as if the contents of the hidden zone do not contain the intended target. This would not be the case, however, if the player was instructed to \"reveal\" a portion of their deck instead.\n\n1.3.2 - While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.) \n\n8.27.1 - When an ability instructs a player to \"search\" a deck, that player looks at a number of cards from that deck to find one or more cards, often with a specified attribute. The player chooses one or more cards (as indicated by the ability) and returns the other cards to that deck as specified below. The ability then instructs the player on what to do with the card(s) they have chosen. The player may also choose to resolve the ability as though no appropriate card was found.",
+      "relevantRule": "When an ability instructs a player to select something from a hidden zone, such as their hand, resources, or a portion of their deck, since that information is unknown to their opponents, the player is permitted to act as if the contents of the hidden zone do not contain the intended target. This would not be the case, however, if the player was instructed to \"reveal\" their hand or a portion of their deck instead.\n\n**1.3.2** - While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.) \n\n**8.27.1** - When an ability instructs a player to \"search\" a deck, that player looks at a number of cards from that deck to find one or more cards, often with a specified attribute. The player chooses one or more cards (as indicated by the ability) and returns the other cards to that deck as specified below. The ability then instructs the player on what to do with the card(s) they have chosen. The player may also choose to resolve the ability as though no appropriate card was found.",
       "tags": ["mon mothma", "specforce soldier", "search", "hidden zone", "draw", "reveal", "when played", "rebel"],
       "difficulty": 1
    },
    {
       "id": 3,
-      "question": "Player A plays Chewbacca, Faithful First Mate, as a Pilot, attaching him to a friendly Cartel Turncoat. Player B then plays Spare the Target, targeting Player A's Cartel Turncoat. What best describes what happens?",
+      "question": "Player A plays **_Chewbacca, Faithful First Mate_**, as a _Pilot_, attaching him to a friendly **_Cartel Turncoat_**. Player B then plays **_Spare the Target_**, targeting Player A's **_Cartel Turncoat_**. What best describes what happens?",
       "choices": {
-         "a": "Cartel Turncoat is returned to Player A's hand, defeating Chewbacca, and Player B draws a card.",
-         "b": "Chewbacca prevents Cartel Turncoat from being returned to hand, so nothing happens.",
-         "c": "Chewbacca prevents Cartel Turncoat from being returned to hand, but Player B still draws a card.",
-         "d": "Chewbacca's ability prevents Spare the Target from being played on Cartel Turncoat, so this play is illegal."
+         "a": "**_Cartel Turncoat_** is returned to Player A's hand, defeating **_Chewbacca_**, and Player B draws a card.",
+         "b": "**_Chewbacca_** prevents **_Cartel Turncoat_** from being returned to hand, so nothing happens.",
+         "c": "**_Chewbacca_** prevents **_Cartel Turncoat_** from being returned to hand, but Player B still draws a card.",
+         "d": "**_Chewbacca's_** ability prevents **_Spare the Target_** from being played on **_Cartel Turncoat_**, so this play is illegal."
       },
      "answer": "c",
      "relevantCards": ["JTL/103", "SHD/195", "SHD/206"],
-     "relevantRule": "Since Spare the Target does not specify \"If you do...\", collecting the target's Bounties happens whether the unit is returned to hand or not.\n\n1.3.2 - While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.)",
+     "relevantRule": "Since **_Spare the Target_** does not specify \"If you do...\", collecting the target's **Bounties** happens whether the unit is returned to hand or not.\n\n**1.3.2** - While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.)",
      "tags": ["chewbacca", "cartel turncoat", "spare the target", "bounty", "bounce", "removal", "prevent", "pilot"],
       "difficulty": 1
    },
    {
       "id": 4,
-      "question": "Player A is playing the leader Grand Inquisitor, Hunting the Jedi, and has an exhausted Hylobon Enforcer with 1 damage on it in play. They use Grand Inquisitor's leader ability, targeting their Hylobon Enforcer. What best describes what happens?",
+      "question": "Player A is playing the leader **_Grand Inquisitor, Hunting the Jedi_**, and has an exhausted **_Hylobon Enforcer_** with 1 damage on it in play. They use **_Grand Inquisitor's_** leader ability, targeting their **_Hylobon Enforcer_**. What best describes what happens?",
       "choices": {
-         "a": "Hylobon Enforcer takes 2 damage, becoming a 4/1, then readies.",
-         "b": "Hylobon Enforcer takes 2 damage, becoming a 4/1, and does not ready.",
-         "c": "Hylobon Enforcer is not a valid target because the 2 damage would result in it having more than 3 power.",
-         "d": "Hylobon Enforcer is not a valid target because it is not an Aggression unit."
+         "a": "**_Hylobon Enforcer_** takes 2 damage, becoming a 4/1, then readies.",
+         "b": "**_Hylobon Enforcer_** takes 2 damage, becoming a 4/1, and does not ready.",
+         "c": "**_Hylobon Enforcer_** is not a valid target because the 2 damage would result in it having more than 3 power.",
+         "d": "**_Hylobon Enforcer_** is not a valid target because it is not an _Aggression_ unit."
       },
       "answer": "a",
       "relevantCards": ["SOR/011", "SHD/027"],
-      "relevantRule": "Once a target is chosen for an ability, the ability resolves in full even if the target becomes what would have been an ineligible target for the ability in the first place. Since Hylobon Enforcer had less than 3 power when it was targeted by Grand Inquisitor's ability, it still readies despite having 4 power by the end of the effect.",
+      "relevantRule": "Once a target is chosen for an ability, the ability resolves in full even if the target becomes what would have been an ineligible target for the ability in the first place. Since **_Hylobon Enforcer_** had less than 3 power when it was targeted by **_Grand Inquisitor's_** ability, it still readies despite having 4 power by the end of the effect.",
       "tags": ["grand inquisitor", "hylobon enforcer", "target", "bounty", "grit", "readying"],
       "difficulty": 1
    },
    {
       "id": 5,
-      "question": "Player A attacks Player B's base with Chimaera, Flagship of the Seventh Fleet, and names \"Maul.\" Player B reveals their hand which contains Maul, Shadow Collective Visionary, and Darth Maul, Revenge at Last. Which card(s) can Player A make Player B discard?",
+      "question": "Player A attacks Player B's base with **_Chimaera, Flagship of the Seventh Fleet_**, and names \"Maul.\" Player B reveals their hand which contains **_Maul, Shadow Collective Visionary_**, and **_Darth Maul, Revenge at Last_**. Which card(s) can Player A make Player B discard?",
       "choices": {
-         "a": "Only Maul, Shadow Collective Visionary.",
-         "b": "Only Darth Maul, Revenge at Last.",
+         "a": "Only **_Maul, Shadow Collective Visionary_**.",
+         "b": "Only **_Darth Maul, Revenge at Last_**.",
          "c": "Either of the two.",
          "d": "Neither of the two."
       },
       "answer": "a",
       "relevantCards": ["SOR/185", "SHD/090", "TWI/135"],
-      "relevantRule": "Even though the name \"Darth Maul\" contains the name \"Maul\", they are not identical names and therefore different targets when naming a card.\n\n8.18.2 - A card \"shares a name\" with another card if their full names are identical. A card does not need to share a subtitle with another card to share a name with it.",
+      "relevantRule": "Even though the name \"Darth Maul\" contains the name \"Maul\", they are not identical names and therefore different targets when naming a card.\n\n**8.18.2** - A card \"shares a name\" with another card if their full names are identical. A card does not need to share a subtitle with another card to share a name with it.",
       "tags": ["chimaera", "name", "discard", "maul", "darth maul", "hand", "when played", "reveal"],
       "difficulty": 0
    },
    {
       "id": 6,
-      "question": "Player A plays a Privateer Scyk with no other units in play. On their next action, they play Liberated Slaves. Does their Privateer Scyk get a shield token and why?",
+      "question": "Player A plays a **_Privateer Scyk_** with no other units in play. On their next action, they play **_Liberated Slaves_**. Does their **_Privateer Scyk_** get a shield token and why/why not?",
       "choices": {
-         "a": "Yes. Player A now controls another Cunning unit so Privateer Scyk gains Shielded and a shield token.",
-         "b": "No. Even though Player A now controls another Cunning unit, the trigger timing for Shielded has passed.",
-         "c": "Yes, but only because Privateer Scyk did not get a shield token earlier in the round.",
-         "d": "No. Liberated Slaves has both the Cunning and Heroism aspects and therefore does not satisfy Privateer Scyk's requirements."
+         "a": "Yes. Player A now controls another _Cunning_ unit so **_Privateer Scyk_** gains **Shielded** _and_ a shield token.",
+         "b": "No. Even though Player A now controls another _Cunning_ unit, the trigger timing for **Shielded** has passed.",
+         "c": "Yes, but only because **_Privateer Scyk_** did not get a shield token earlier in the round.",
+         "d": "No. **_Liberated Slaves_** has both the _Cunning_ and _Heroism_ aspects and therefore does not satisfy **_Privateer Scyk's_** requirements."
       },
       "answer": "b",
       "relevantCards": ["SHD/212", "SHD/200"],
-      "relevantRule": "While Privateer Scyk would technically gain the keyword Shielded while Liberated Slaves is in play, Shielded is a keyword that resolves when the unit is played, meaning it would not get a shield token unless Liberated Slaves (or any friendly Cunning unit) was in play at the time Privateer Scyk was played.\n\n7.5.12.B - Shielded resolves in the same window as any \"When Played\" abilities on the unit.",
+      "relevantRule": "While **_Privateer Scyk_** would technically gain the keyword **Shielded** while **_Liberated Slaves_** is in play, **Shielded** is a keyword that resolves when the unit is played, meaning it would not get a shield token unless **_Liberated Slaves_** (or any friendly _Cunning_ unit) was in play at the time **_Privateer Scyk_** was played.\n\n**7.5.12.B** - Shielded resolves in the same window as any \"When Played\" abilities on the unit.",
       "tags": ["privateer scyk", "liberated slaves", "shielded", "trigger", "when played", "timing"],
       "difficulty": 1
    },
    {
       "id": 7,
-      "question": "Player A controls a deployed Darth Vader, Dark Lord of the Sith. Player B controls a Supercommando Squad with a shield token and no other units. Player A declares that they are attacking with Darth Vader and use his On Attack to deal 2 damage to Supercommando Squad, defeating its shield token. Player A then declares Player B's base as the target for Darth Vader's attack and deals 5 damage to it. Is this a legal attack and why or why not?",
+      "question": "Player A controls a deployed **_Darth Vader, Dark Lord of the Sith_**. Player B controls a **_Supercommando Squad_** with a shield token and no other units. Player A declares that they are attacking with **_Darth Vader_** and use his **On Attack** to deal 2 damage to **_Supercommando Squad_**, defeating its shield token. Player A then declares Player B's base as the target for **_Darth Vader's_** attack and deals 5 damage to it. Is this a legal attack and why/why not?",
       "choices": {
-         "a": "Yes. Darth Vader's On Attack defeating the shield token means the Supercommando Squad is no longer upgraded and loses Sentinel.",
-         "b": "Yes. The Supercommando Squad was not upgraded and therefore did not have Sentinel in the first place.",
-         "c": "No. Since Darth Vader is attacking Player B's base, his On Attack cannot damage the Supercommando Squad.",
-         "d": "No. The target of an attack must be declared before any On Attack abilities resolve. Since the Supercommando Squad had Sentinel when the attack was declared, they must be the target of the attack."
+         "a": "Yes. **_Darth Vader's_** **On Attack** defeating the shield token means the **_Supercommando Squad_** is no longer upgraded and loses **Sentinel**.",
+         "b": "Yes. The **_Supercommando Squad_** was not upgraded and therefore did not have **Sentinel** in the first place.",
+         "c": "No. Since **_Darth Vader_** is attacking Player B's base, his **On Attack** cannot damage the **_Supercommando Squad_**.",
+         "d": "No. The target of an attack must be declared before any **On Attack** abilities resolve. Since the **_Supercommando Squad_** had **Sentinel** when the attack was declared, it must be the target of the attack."
       },
       "answer": "d",
       "relevantCards": ["SOR/010-portrait", "SHD/034", "TSOR/T02"],
-      "relevantRule": "The first step in an attack is to \"Declare the attack\", and the first sub-step in that step is to choose a valid target. Only after a target for the attack has been selected do On Attack abilities resolve.\n\n6.3.0.E - Attacking With a Unit consists of the following 3 steps in order, explained in detail below: Declare the attack, Deal combat damage, and Complete the attack. After each step, resolve any abilities triggered during that step before proceeding to the next step in the attack. See 7.6. Triggered Abilities",
+      "relevantRule": "The first step in an attack is to \"Declare the attack\", and the first sub-step in that step is to choose a valid target. Only after a target for the attack has been selected do **On Attack** abilities resolve.\n\n**6.3.0.E** - Attacking With a Unit consists of the following 3 steps in order, explained in detail below: Declare the attack, Deal combat damage, and Complete the attack. After each step, resolve any abilities triggered during that step before proceeding to the next step in the attack. See 7.6. Triggered Abilities",
       "tags": ["darth vader", "supercommando squad", "sentinel", "upgrade", "target", "on attack", "combat steps", "shield token"],
       "difficulty": 1
    },
    {
       "id": 8,
-      "question": "Player A controls Grogu, Irresistable. Player B controls an exhausted Death Star Stormtrooper, a ready TIE/ln Fighter, and a deployed and ready Grand Moff Tarkin, Oversector Governor. Which of the above is NOT a valid target for Grogu's ability?",
+      "question": "Player A controls **_Grogu, Irresistable_**. Player B controls an exhausted **_Death Star Stormtrooper_**, a ready **_TIE/ln Fighter_**, and a deployed and ready **_Grand Moff Tarkin, Oversector Governor_**. Which of the above is _NOT_ a valid target for **_Grogu's_** ability?",
       "choices": {
-         "a": "The Death Star Stormtrooper because it is already exhausted.",
-         "b": "The TIE/ln Fighter because it is a space unit.",
-         "c": "Grand Moff Tarkin because he is a leader unit.",
+         "a": "The **_Death Star Stormtrooper_** because it is already exhausted.",
+         "b": "The **_TIE/ln Fighter_** because it is a space unit.",
+         "c": "**_Grand Moff Tarkin_** because he is a leader unit.",
          "d": "They are all valid targets."
       },
       "answer": "d",
       "relevantCards": ["SHD/196", "SOR/128", "SOR/225", "SOR/007-portrait"],
-      "relevantRule": "Grogu's ability does not state any restrictions on valid targets, meaning any unit in play can be chosen, even an already exhausted unit... although in that case, it would not trigger any other abilities requiring a unit to become exhausted.\n\n1.5.4.E - A ready card can be chosen for a readying effect, but the chosen card does not change orientation and is not considered to have been readied for the purpose of \"If you do\" effects. An exhausted card can be chosen for an exhausting effect, but the chosen card does not change orientation and is not considered to have been exhausted for the purpose of \"If you do\" effects",
+      "relevantRule": "**_Grogu's_** ability does not state any restrictions on valid targets, meaning any unit in play can be chosen, even an already exhausted unit... although in that case, it would not trigger any other abilities requiring a unit to become exhausted.\n\n**1.5.4.E** - A ready card can be chosen for a readying effect, but the chosen card does not change orientation and is not considered to have been readied for the purpose of \"If you do\" effects. An exhausted card can be chosen for an exhausting effect, but the chosen card does not change orientation and is not considered to have been exhausted for the purpose of \"If you do\" effects",
       "tags": ["grogu", "exhaust", "death star stormtrooper", "tie/ln fighter", "grand moff tarkin", "target"],
       "difficulty": 0
    },
    {
       "id": 9,
-      "question": "Player A has zero cards remaining in their deck. They attack with Reinforcement Walker. What best describes what happens?",
+      "question": "Player A has zero cards remaining in their deck. They attack with **_Reinforcement Walker_**. What best describes what happens?",
       "choices": {
-         "a": "Reinforcement Walker's ability causes Player A's base to take 3 damage by attempting to look at a card from an empty deck.",
-         "b": "Reinforcement Walker's ability heals Player A's base for 3 HP.",
-         "c": "Reinforcement Walker's ability does nothing.",
-         "d": "Reinforcement Walker's ability causes Player A's base to take 3 damage by attempting to look at a card from an empty deck initially, but then heals it for 3 HP since Player A was not able to draw the non-existent card."
+         "a": "**_Reinforcement Walker's_** ability causes Player A's base to take 3 damage by attempting to look at a card from an empty deck.",
+         "b": "**_Reinforcement Walker's_** ability heals Player A's base for 3 HP.",
+         "c": "**_Reinforcement Walker's_** ability does nothing.",
+         "d": "**_Reinforcement Walker's_** ability causes Player A's base to take 3 damage by attempting to look at a card from an empty deck initially, but then heals it for 3 HP since Player A was not able to draw the non-existent card."
       },
       "answer": "c",
       "relevantCards": ["SOR/119"],
-      "relevantRule": "Only attempting the specific act of drawing a card from an empty deck results in taking 3 damage to base. Other effects, such as looking at, revealing, searching, discarding, etc... all do not. In the case of Reinforcement Walker, the ability attempts to look at a card that does not exist, so the ability simply does nothing.\n\n1.3.2 - Do as Much as You Can: While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.)\n\n8.7.2 - If an ability would cause a player to shuffle, discard, search, reveal, or look at cards from an empty deck, they ignore that part of the ability.",
+      "relevantRule": "Only attempting the specific act of drawing a card from an empty deck results in taking 3 damage to base. Other effects, such as looking at, revealing, searching, discarding, etc... all do not. In the case of **_Reinforcement Walker_**, the ability attempts to look at a card that does not exist, so the ability simply does nothing.\n\n**1.3.2** - Do as Much as You Can: While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.)\n\n**8.7.2** - If an ability would cause a player to shuffle, discard, search, reveal, or look at cards from an empty deck, they ignore that part of the ability.",
       "tags": ["reinforcement walker", "draw", "on attack", "empty deck"],
       "difficulty": 1
    },
    {
       "id": 10,
-      "question": "Player A has played two cards already this phase. Player A then uses Han Solo, Worth the Risk's leader ability to play Vanguard Ace. What best describes what happens?",
+      "question": "Player A has played two cards already this phase. Player A then uses **_Han Solo, Worth the Risk's,_** leader ability to play **_Vanguard Ace_**. What best describes what happens?",
       "choices": {
-         "a": "Vanguard Ace enters play as a 3/3, then takes 2 damage from Han's ability.",
-         "b": "Vanguard Ace enters play as a 1/1 and is defeated by Han's ability before its When Played resolves.",
+         "a": "**_Vanguard Ace_** enters play as a 3/3, then takes 2 damage from **_Han's_** ability.",
+         "b": "**_Vanguard Ace_** enters play as a 1/1 and is defeated by **_Han's_** ability before its **When Played** resolves.",
          "c": "It depends on how many of the two previously played cards were units.",
-         "d": "Player A gets to decide in what order Han's ability and Vanguard Ace's abilities resolve."
+         "d": "Player A gets to decide in what order **_Han's_** ability and **_Vanguard Ace's_** abilities resolve."
       },
       "answer": "b",
       "relevantCards": ["SOR/191", "SHD/013"],
-      "relevantRule": "Han's leader ability results in a modified \"Play a card\" action and, like any all abilities that result in a modified action, must resolve in full before any resulting triggers can resolve, meaning the 2 damage is dealt to the Vanguard Ace while it's still a 1/1, defeating it.\n\n7.1.6.B - A modified \"Play a Card\" action might include: restrictions on the type of card that can be played, cost adjustments, playing cards from other zones, or other effects. Any abilities triggered during or as a result of a modified \"Play a Card\" action are resolved after the current ability is finished resolving.",
+      "relevantRule": "**_Han's_** leader ability results in a modified \"Play a card\" action and, like any all abilities that result in a modified action, must resolve in full before any resulting triggers can resolve. This means the 2 damage is dealt to the Vanguard Ace while it's still a 1/1, defeating it before its own **When Played** ability resolves.\n\n**7.1.6.B** - A modified \"Play a Card\" action might include: restrictions on the type of card that can be played, cost adjustments, playing cards from other zones, or other effects. Any abilities triggered during or as a result of a modified \"Play a Card\" action are resolved after the current ability is finished resolving.\n\n**NOTE** - While not relevant to this question, it's worth mentioning that **_Vanguard Ace's_** **When Played** ability _DOES_ still resolve after it's defeated. It simply can not give itself experience tokens while it's in a discard pile. However, if the ability, say, gave the experience tokens to a different unit, that would still occur!",
       "tags": ["vanguard ace", "han solo", "when played", "experience", "trigger"],
       "difficulty": 1
    },
    {
       "id": 11,
-      "question": "Player A claims the initiative while still having 2 ready resources. Player B plays Cunning and chooses to have Player A discard a random card from their hand. Player A randomly discards Kylo's TIE Silencer, Ruthlessly Efficient. When can Player A play the discarded Kylo's TIE Silencer from their discard pile?",
+      "question": "Player A claims the initiative while still having 2 ready resources. Player B plays **_Cunning_** and chooses to have Player A discard a random card from their hand. Player A randomly discards **_Kylo's TIE Silencer, Ruthlessly Efficient_**. When can Player A play the discarded **_Kylo's TIE Silencer_** from their discard pile?",
       "choices": {
          "a": "They can play it immediately in response to discarding it.",
          "b": "They can play it as their next action.",
@@ -160,37 +160,37 @@
       },
       "answer": "d",
       "relevantCards": ["SHD/135", "SOR/203"],
-      "relevantRule": "Once a player claims the initiative, they are forced to pass for the remainder of the phase. Since Kylo's TIE Silencer's ability is an Action Ability and not a Triggered Ability, Player A would need to use an action to play it from their discard.\n\n1.15.5.B - After taking the initiative, a player cannot use their turn to take any further actions for the rest of that round’s action phase. They are considered to have \"passed,\" and they automatically \"pass\" for all remaining turns they would take that phase. However, they still resolve any triggered abilities they control during that phase.",
+      "relevantRule": "Since **_Kylo's TIE Silencer's_** ability is an Action Ability and not a Triggered Ability, Player A would need to use an action to play it from their discard pile. Unfortunately, once a player claims the initiative, they are forced to pass for the remainder of the phase, meaning although Player A has the resources to play **_Kylo's TIE_**, they will not be able to.\n\n**1.15.5.B** - After taking the initiative, a player cannot use their turn to take any further actions for the rest of that round’s action phase. They are considered to have \"passed,\" and they automatically \"pass\" for all remaining turns they would take that phase. However, they still resolve any triggered abilities they control during that phase.",
       "tags": ["kylo's tie silencer", "cunning", "random", "discard", "discard pile", "play a card", "initiative", "for this phase"],
       "difficulty": 1
    },
    {
       "id": 12,
-      "question": "Player A controls Bossk, Deadly Stalker, and Player B controls Bib Fortuna, Jabba's Majordomo, with a shield token. Player A plays Ma Klounkee returning Bossk to hand. Does this defeat Bib Fortuna and why?",
+      "question": "Player A controls **_Bossk, Deadly Stalker_**, and Player B controls **_Bib Fortuna, Jabba's Majordomo_**, with a shield token. Player A plays **_Ma Klounkee_** returning **_Bossk_** to hand. Does this defeat **_Bib Fortuna_** and why?",
       "choices": {
-        "a": "Yes. As the active player, Player A can choose the order triggers resolve and can choose to resolve Bossk's ability before Ma Klounkee, defeating the shield token before the 3 damage.",
-        "b": "No. Since Bossk was returned to hand, his ability does not resolve. Ma Klounkee defeats the shield token and Bib takes no damage.",
-        "c": "No. Events must fully resolve before any abilities that trigger because of them can resolve. Therefore Ma Klounkee's damage defeats the shield token first, then Bossk's 2 damage is dealt after.",
-        "d": "No. Ma Klounkee cannot return Bossk to hand and therefore does no damage."
+        "a": "Yes. As the active player, Player A can choose the order triggers resolve and can choose to resolve **_Bossk's_** ability before **_Ma Klounkee_**, defeating the shield token before the 3 damage.",
+        "b": "No. Since **_Bossk_** was returned to hand, his ability does not resolve. **_Ma Klounkee_** defeats the shield token and **_Bib_** takes no damage.",
+        "c": "No. Events must fully resolve before any abilities that trigger because of them can resolve. Therefore **_Ma Klounkee's_** damage defeats the shield token first, then **_Bossk's_** 2 damage is dealt after.",
+        "d": "No. **_Ma Klounkee_** cannot return **_Bossk_** to hand and therefore does no damage."
       },
       "answer": "c",
       "relevantCards": ["SOR/182", "SOR/177", "SHD/229"],
-      "relevantRule": "Even though Bossk's ability triggers as soon as Ma Klounkee is played, it waits to resolve until after the Event has finished resolving, even if Bossk is no longer in play.\n\n3.3.6 - If a triggered ability has the triggering condition \"When you play an event,\" the event ability must be resolved as completely as possible before resolving the triggered ability.\n\n7.6.3 - For a triggered ability to resolve, the card with the ability must be in play when the triggering condition occurs, unless the ability specifies that it can be triggered from an out-of-play zone. Additionally, the triggered ability must resolve once triggered, even if the card with the ability leaves play before the triggered ability resolves.\n\n7.6.8 - If an ability triggers during or as the result of a non-attack action, resolve that ability at the next available opportunity after that action is fully completed. If an ability triggers during an attack, resolve that ability at the appropriate timing point within that attack. Resolving a triggered ability never interrupts an action or ability that is currently resolving (other than the specified timing points during an attack), unless the currently resolving action or ability uses \"after,\" as described below. See 6.3. Attack With a Unit",
+      "relevantRule": "Even though **_Bossk's_** ability triggers as soon as **_Ma Klounkee_** is played, it waits to resolve until after the Event has finished resolving, regardless of whether **_Bossk_** is in play or not. This means the 3 damage from **_Ma Klounkee_** must be assigned first, removing **_Bib's_** shield. Only after can the 2 damage from **_Bossk_** be assigned.\n\n**3.3.6** - If a triggered ability has the triggering condition \"When you play an event,\" the event ability must be resolved as completely as possible before resolving the triggered ability.\n\n**7.6.3** - For a triggered ability to resolve, the card with the ability must be in play when the triggering condition occurs, unless the ability specifies that it can be triggered from an out-of-play zone. Additionally, the triggered ability must resolve once triggered, even if the card with the ability leaves play before the triggered ability resolves.\n\n**7.6.8** - If an ability triggers during or as the result of a non-attack action, resolve that ability at the next available opportunity after that action is fully completed. If an ability triggers during an attack, resolve that ability at the appropriate timing point within that attack. Resolving a triggered ability never interrupts an action or ability that is currently resolving (other than the specified timing points during an attack), unless the currently resolving action or ability uses \"after,\" as described below. See 6.3. Attack With a Unit",
       "tags": ["bossk", "bib fortuna", "ma klounkee", "shield token", "trigger", "shielded", "event", "bounce", "abilities"],
       "difficulty": 2
    },
    {
       "id": 13,
-      "question": "Player A has 2 HP remaining on their base and controls a Krayt Dragon. Player B has 1 HP remaining on their base and plays a Daring Raid, targeting Player A's base. What best describes what happens?",
+      "question": "Player A has 2 HP remaining on their base and controls a **_Krayt Dragon_**. Player B has 1 HP remaining on their base and plays a **_Daring Raid_**, targeting Player A's base. Who wins the game and why?",
       "choices": {
-        "a": "As the active player, Player B gets to choose which player resolves their triggers first and can choose to resolve Daring Raid before Player A resolves Krayt Dragon, meaning Player B wins the game.",
-        "b": "Events must fully resolve before any abilities that trigger because of them can resolve, meaning Player B wins the game.",
-        "c": "Since Krayt Dragon triggers whenever an opponent plays a card, it resolves before the Event, meaning Player A can deal 1 damage to Player B's base first, meaning Player A wins the game.",
+        "a": "Player B wins. As the active player, Player B gets to choose which player resolves their triggers first and can choose to resolve **_Daring Raid_** before Player A resolves **_Krayt Dragon_**.",
+        "b": "Player B wins. Events must fully resolve before any abilities that trigger because of them can resolve, so **_Daring Raid_** must resolve before **_Krayt Dragon_**.",
+        "c": "Player A wins. Since **_Krayt Dragon_** triggers whenever an opponent plays a card, it resolves before the Event, meaning Player A can deal 1 damage to Player B's base first.",
         "d": "Both players take damage to their bases at the same time. The game ends in a draw."
       },
       "answer": "b",
       "relevantCards": ["SHD/172", "SHD/178"],
-      "relevantRule": "While Krayt Dragon's ability triggers as soon as Player B plays Daring Raid, the ability waits to resolve until the next available window, which is after the Event resolves. Unfortunately for Player A in this case, as soon as a base has 0 HP remaining, the game ends.\n\n5.6.2 - Once a player’s base has 0 remaining HP, they cannot take any actions, and cannot resolve any abilities or effects.\n\n7.6.8 - If an ability triggers during or as the result of a non-attack action, resolve that ability at the next available opportunity after that action is fully completed. If an ability triggers during an attack, resolve that ability at the appropriate timing point within that attack. Resolving a triggered ability never interrupts an action or ability that is currently resolving (other than the specified timing points during an attack), unless the currently resolving action or ability uses \"after,\" as described below. See 6.3. Attack With a Unit",
+      "relevantRule": "While **_Krayt Dragon's_** ability triggers as soon as Player B plays **_Daring Raid_**, the ability waits to resolve until the next available window, which is after the Event resolves. Unfortunately for Player A in this case, as soon as a base has 0 HP remaining, the game ends.\n\n**5.6.2** - Once a player’s base has 0 remaining HP, they cannot take any actions, and cannot resolve any abilities or effects.\n\n**7.6.8** - If an ability triggers during or as the result of a non-attack action, resolve that ability at the next available opportunity after that action is fully completed. If an ability triggers during an attack, resolve that ability at the appropriate timing point within that attack. Resolving a triggered ability never interrupts an action or ability that is currently resolving (other than the specified timing points during an attack), unless the currently resolving action or ability uses \"after,\" as described below. See 6.3. Attack With a Unit",
       "tags": ["krayt dragon", "daring raid", "trigger", "event", "play a card", "timing", "abilities"],
       "difficulty": 1
    },
@@ -730,7 +730,7 @@
       },
       "answer": "b",
       "relevantCards": ["SOR/237", "SOR/033"],
-      "relevantRule": "Since **_Death Trooper's_** ability does not say \"You may...\", Player B must resolve as much of the ability as they can. Since Player A has no ground units, the **_Death Trooper_** deals 2 damage to itself and no other units.\n\n**7.6.7** - A triggered ability must resolve once its triggering condition is met unless the ability uses the phrase \"you may.\" Once triggered, these abilities must resolve at the next available opportunity.",
+      "relevantRule": "Since **_Death Trooper's_** ability does not say \"You may...\", Player B must resolve as much of the ability as they can. Since Player A has no ground units, the **_Death Trooper_** deals 2 damage to itself and no other units.\n\n**1.3.2** - Do as Much as You Can: While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.)\n\n**7.6.7** - A triggered ability must resolve once its triggering condition is met unless the ability uses the phrase \"you may.\" Once triggered, these abilities must resolve at the next available opportunity.",
       "tags": ["alliance x-wing", "death trooper", "when played", "target", "ability"],
       "difficulty": 0
    },
