@@ -286,37 +286,37 @@
    },
    {
       "id": 20,
-      "question": "Player A controls Chirrut Imwe, One With the Force with 3 damage on him. Player B attacks into Chirrut with a First Legion Snowtrooper. What best describes what happens?",
+      "question": "Player A controls **_Chirrut Imwe, One With the Force_**, with 3 damage on him. Player B attacks into **_Chirrut_** with a **_First Legion Snowtrooper_**. What best describes what happens?",
       "choices": {
-         "a": "Chirrut takes 4 damage and Player A's base takes 0.",
-         "b": "Chirrut takes 2 damage and Player A's base takes 0.",
-         "c": "Chirrut takes 4 damage and Player A's base takes 2.",
-         "d": "Chirrut takes 2 damage and Player A's base takes 2."
+         "a": "**_Chirrut_** takes 4 damage and Player A's base takes 0.",
+         "b": "**_Chirrut_** takes 2 damage and Player A's base takes 0.",
+         "c": "**_Chirrut_** takes 4 damage and Player A's base takes 2.",
+         "d": "**_Chirrut_** takes 2 damage and Player A's base takes 2."
       },
       "answer": "a",
       "relevantCards": ["SOR/004-portrait", "SOR/130"],
-      "relevantRule": "Since Chirrut's ability prevents him from being defeated during the Action Phase no matter how much damage he takes, no Overwhelm damage may be done to the base.\n\n7.5.7.F. - If an attacker with Overwhelm does not defeat the defender while attacking, no damage is dealt to the enemy base.",
+      "relevantRule": "Since **_Chirrut's_** ability prevents him from being defeated during the Action Phase no matter how much damage he takes, no **Overwhelm** damage may be done to the base.\n\n**7.5.7.F** - If an attacker with Overwhelm does not defeat the defender while attacking, no damage is dealt to the enemy base.",
       "tags": ["chirrut", "first legion snowtrooper", "abilities", "overwhelm", "leader", "damaged unit", "on attack"],
       "difficulty": 1
    },
    {
       "id": 21,
-      "question": "Player A has Ahsoka Tano, Snips, deployed as a unit and an exhausted Advanced Recon Commando in play with no other units. They play a Pelta Supply Frigate. Do they create a Clone Trooper token and why?",
+      "question": "Player A has **_Ahsoka Tano, Snips_**, deployed as a unit and an exhausted **_Advanced Recon Commando_** in play with no other units. They play a **_Pelta Supply Frigate_**. Do they create a **_Clone Trooper_** token and why?",
       "choices": {
-         "a": "Yes. Pelta Supply Frigate counts itself as the third unit needed for Coordinate to be active.",
-         "b": "Yes. Coordinate is always active when your leader is deployed.",
-         "c": "No. They only have two units in play at the time Pelta Supply Frigate is played.",
-         "d": "No. Advanced Recon Commando needs to be ready to count towards Coordinate."
+         "a": "Yes. **_Pelta Supply Frigate_** counts itself as the third unit needed for **Coordinate** to be active.",
+         "b": "Yes. **Coordinate** is always active when your leader is deployed.",
+         "c": "No. They only have two units in play at the time **_Pelta Supply Frigate_** is played.",
+         "d": "No. **_Advanced Recon Commando_** needs to be ready to count towards **Coordinate**."
       },
       "answer": "a",
       "relevantCards": ["TWI/011-portrait", "TWI/093", "TWI/095"],
-      "relevantRule": "Coordinate doesn't care whether your units are ground, space, ready, exhausted, or your leader. So long as you control 3 units, Coordinate is active. Also, since When Played abilities resolve after the unit is in play, units with When Played abilities using Coordinate count themselves!\n\n7.5.15.A - \"Coordinate\" is a keyword followed by a dash and ability text whose effect is the same as the constant ability: \"While you control 3 or more units, this card gains the following ability.\"\n\n7.6.13.A - Some triggered abilities are indicated with \"When Played\" in bold, followed by a colon and an effect. These abilities trigger when the card they’re on is played and resolve after the card’s cost is paid and it is put into play.",
+      "relevantRule": "**Coordinate** doesn't care whether your units are ground, space, ready, exhausted, or your leader. So long as you control 3 units, **Coordinate** is active. Also, since **When Played** abilities resolve after the unit is in play, units with **When Played** abilities using **Coordinate** count themselves!\n\n**7.5.15.A** - \"Coordinate\" is a keyword followed by a dash and ability text whose effect is the same as the constant ability: \"While you control 3 or more units, this card gains the following ability.\"\n\n**7.6.13.A** - Some triggered abilities are indicated with \"When Played\" in bold, followed by a colon and an effect. These abilities trigger when the card they’re on is played and resolve after the card’s cost is paid and it is put into play.",
       "tags": ["pelta supply frigate", "ahsoka tano", "advanced recon commando", "coordinate", "when played", "trigger"],
       "difficulty": 0
    },
    {
       "id": 22,
-      "question": "Player A has a Restored ARC-170 with Devotion attached to it and Home One, Alliance Flagship, in play with no other units. When Player A attacks with their Restored ARC-170, how much damage is healed from their base?",
+      "question": "Player A has a **_Restored ARC-170_** with **_Devotion_** attached to it and **_Home One, Alliance Flagship_**, in play with no other units. When Player A attacks with their **_Restored ARC-170_**, how much damage is healed from their base?",
       "choices": {
          "a": "1",
          "b": "2",
@@ -325,13 +325,13 @@
       },
       "answer": "d",
       "relevantCards": ["SOR/044", "SOR/070", "SOR/102"],
-      "relevantRule": "Keywords whose names are followed by a numeral are cumulative. Since Restore has a numeral, the total amount healed is the sum of all instances of Restore on a unit. In this case, 1 from itself, 2 from Devotion, and 1 from Home One for a total of 4.\n\n7.5.4 - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n7.5.9.B - Multiple instances of Restore stack. If a unit gains Restore when it already has Restore, the numerals following each instance of Restore are added together, and when the unit attacks it heals damage equal to the total value.",
+      "relevantRule": "Keywords whose names are followed by a numeral are cumulative. Since **Restore** has a numeral, the total amount healed is the sum of all instances of **Restore** on a unit. In this case, 1 from itself, 2 from **_Devotion_**, and 1 from **_Home One_** for a total of 4.\n\n**7.5.4** - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n**7.5.9.B** - Multiple instances of Restore stack. If a unit gains Restore when it already has Restore, the numerals following each instance of Restore are added together, and when the unit attacks it heals damage equal to the total value.",
       "tags": ["restored arc-170", "devotion", "home one", "restore", "keyword", "heal"],
       "difficulty": 0
    },
    {
       "id": 23,
-      "question": "Player A plays Grim Resolve and chooses to attack with a Heroic Renegade with 2 damage on it. How much damage would they do?",
+      "question": "Player A plays **_Grim Resolve_** and chooses to attack with a **_Heroic Renegade_** with 2 damage on it. How much damage would they do?",
       "choices": {
          "a": "2",
          "b": "4",
@@ -340,58 +340,58 @@
       },
       "answer": "b",
       "relevantCards": ["TWI/172", "SHD/146"],
-      "relevantRule": "Keywords do not stack unless they are followed by a numeral, cost, or dash with ability text. In this case, Heroic Renegade already has Grit and does not gain any additional benefit from attacking with Grim Resolve. The two extra damage is added to its power, resulting in 4 damage done.\n\n7.5.4 - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n7.5.6.B - Multiple instances of Grit do not stack. If a unit gains Grit when it already has Grit, the unit’s power does not change.",
+      "relevantRule": "Keywords do not stack unless they are followed by a numeral, cost, or dash with ability text. In this case, **_Heroic Renegade_** already has **Grit** and does not gain any additional benefit from attacking with **_Grim Resolve_**. The 2 extra damage is added to its Power, resulting in 4 damage done.\n\n**7.5.4** - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n**7.5.6.B** - Multiple instances of Grit do not stack. If a unit gains Grit when it already has Grit, the unit’s power does not change.",
       "tags": ["grim resolve", "heroic renegade", "grit", "keyword"],
       "difficulty": 0
    },
    {
       "id": 24,
-      "question": "Player A wants to attack with an Imperial Interceptor. Player B has a Battlefield Marine, an Echo Base Defender, and a Bright Hope, The Last Transport. Which targets are valid?",
+      "question": "Player A wants to attack with an **_Imperial Interceptor_**. Player B has a **_Battlefield Marine_**, an **_Echo Base Defender_**, and a **_Bright Hope, The Last Transport_**. Which targets are valid?",
       "choices": {
-         "a": "The Echo Base Defender and Bright Hope.",
+         "a": "The **_Echo Base Defender_** and **_Bright Hope_**.",
          "b": "Any of Player B's units, but not their base.",
-         "c": "Only Bright Hope.",
-         "d": "Bright Hope or Player B's base."
+         "c": "Only **_Bright Hope_**.",
+         "d": "**_Bright Hope_** and Player B's base."
       },
       "answer": "c",
       "relevantCards": ["SOR/132", "SOR/095", "SOR/098", "SOR/099"],
-      "relevantRule": "Even though Echo Base Defender has Sentinel, since Player A's Imperial Interceptor is a space unit, it cannot attack ground units (at least not without the use of other cards!). When an enemy Sentinel unit is in the same arena, it prevents an attacker from attacking any non-Sentinel units as well as the opponent's base.\n\n7.5.11.B - When a player makes an attack, after exhausting the attacker, the player checks if there are any enemy units in the attacker’s arena with Sentinel. If there are one or more, the attacking player cannot choose a non-Sentinel unit as the defender (unless the attacker has Saboteur). If their opponent controls multiple units with Sentinel in that arena, the attacking player may choose any one of those units to be the defender.",
+      "relevantRule": "Even though **_Echo Base Defender_** has **Sentinel**, since Player A's **_Imperial Interceptor_** is a space unit, it cannot attack ground units (at least not without the use of other cards!). When an enemy **Sentinel** unit is in the same arena, it prevents an attacker from attacking any non-**Sentinel** units as well as the opponent's base.\n\n**7.5.11.B** - When a player makes an attack, after exhausting the attacker, the player checks if there are any enemy units in the attacker’s arena with Sentinel. If there are one or more, the attacking player cannot choose a non-Sentinel unit as the defender (unless the attacker has Saboteur). If their opponent controls multiple units with Sentinel in that arena, the attacking player may choose any one of those units to be the defender.",
       "tags": ["imperial interceptor", "battlefield marine", "echo base defender", "bright hope", "sentinel", "keyword", "target"],
       "difficulty": 0
    },
    {
       "id": 25,
-      "question": "Player A plays Syndicate Lackeys from hand and chooses to resolve Ambush. Player B has a Fleet Lieutenant, an Alliance X-Wing, and a Tantive IV, Fleeting the Empire, in play. Which are valid targets?",
+      "question": "Player A plays **_Syndicate Lackeys_** from hand and chooses to resolve **Ambush**. Player B has a **_Fleet Lieutenant_**, an **_Alliance X-Wing_**, and a **_Tantive IV, Fleeing the Empire_**, in play. Which are valid targets?",
       "choices": {
          "a": "Any of the units, but not Player B's base.",
-         "b": "Only the Tantive IV.",
-         "c": "Only the Fleet Lieutenant.",
-         "d": "The Fleet Lieutenant or Player B's base."
+         "b": "Only the **_Tantive IV_**.",
+         "c": "Only the **_Fleet Lieutenant_**.",
+         "d": "The **_Fleet Lieutenant_** or Player B's base."
       },
       "answer": "c",
       "relevantCards": ["SOR/213", "SOR/240", "SOR/237", "JTL/252"],
-      "relevantRule": "When a unit attacks using Ambush, it can only attack valid enemy units, not the enemy base. Since Syndicate Lackeys is a ground unit, the only legal target for Ambush is the enemy Fleet Lieutenant.\n\n7.5.5.C - A unit with Ambush still enters play exhausted like any other (non-leader) unit and cannot attack if there are no enemy units it can attack.",
+      "relevantRule": "When a unit attacks using **Ambush**, it can only attack valid enemy units, not the enemy base. Since **_Syndicate Lackeys_** is a ground unit, the only legal target for **Ambush** is the enemy **_Fleet Lieutenant_**.\n\n**7.5.5.C** - A unit with Ambush still enters play exhausted like any other (non-leader) unit and cannot attack if there are no enemy units it can attack.",
       "tags": ["syndicate lackeys", "fleet lieutenant", "alliance x-wing", "tantive iv", "ambush", "sentinel", "keyword", "target"],
       "difficulty": 0
    },
    {
       "id": 26,
-      "question": "Player A has an AT-ST in play with 5 damage on it. They attack into Player B's Consular Security Force that already has 3 damage on it. How much damage does the AT-ST's Overwhelm deal to Player B's base?",
+      "question": "Player A has an **_AT-ST_** in play with 5 damage on it. They attack into Player B's **_Consular Security Force_** that already has 3 damage on it. How much damage does the **_AT-ST's_** **Overwhelm** deal to Player B's base?",
       "choices": {
-         "a": "None since the AT-ST doesn't survive the attack.",
+         "a": "None since the **_AT-ST_** doesn't survive the attack.",
          "b": "6",
          "c": "3",
          "d": "2"
       },
       "answer": "d",
       "relevantCards": ["SOR/232", "SOR/046"],
-      "relevantRule": "Since the AT-ST attacks for 6 damage and only 4 is needed to reduce the Consular Security Force's HP to 0, the remaining 2 damage is dealt to Player B's base due to Overwhelm. The AT-ST doesn't need to survive the attack to damage the base.\n\n7.5.7.A - \"Overwhelm\" is a keyword whose effect is the same as the constant ability: \"While attacking, this unit deals its excess damage to the defending player’s base.\"\n\n7.5.7.C - An attacker with Overwhelm deals combat damage to the defender and the enemy base simultaneously.",
+      "relevantRule": "Since the **_AT-ST_** attacks for 6 damage and only 4 is needed to reduce the **_Consular Security Force's_** HP to 0, the remaining 2 damage is dealt to Player B's base due to **Overwhelm**. The **_AT-ST_** doesn't need to survive the attack to damage the base.\n\n**7.5.7.A** - \"Overwhelm\" is a keyword whose effect is the same as the constant ability: \"While attacking, this unit deals its excess damage to the defending player’s base.\"\n\n*7.5.7.C* - An attacker with Overwhelm deals combat damage to the defender and the enemy base simultaneously.",
       "tags": ["at-st", "consular security force", "overwhelm", "keyword"],
       "difficulty": 0
    },
    {
       "id": 27,
-      "question": "Player A has a Red Three, Unstoppable, and a Soldier of the 501st with Clone Cohort attached to it in play with no other units. How much damage would Soldier of the 501st do to Player B's base if it attacked?",
+      "question": "Player A has a **_Red Three, Unstoppable_**, and a **_Soldier of the 501st_** with **_Clone Cohort_** attached to it in play with no other units. How much damage would **_Soldier of the 501st_** do to Player B's base if it attacked?",
       "choices": {
          "a": "1",
          "b": "2",
@@ -400,22 +400,22 @@
       },
       "answer": "d",
       "relevantCards": ["SOR/144", "TWI/141", "TWI/169"],
-      "relevantRule": "Since Raid is a keyword followed by a numeral, the effect is cumulative. When Soldier of the 501st attacks, its own Raid 1 is added with the Raid 2 from Clone Cohort as well as the Raid 1 from Red Three. All of that is then added to its base Power to determine how much damage it will do.\n\n7.5.4 - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n7.5.8.B - Multiple instances of Raid stack. If a unit gains Raid when it already has Raid, the numerals following each instance of Raid are added together, and when the unit attacks, it gets bonus power equal to the total value.",
+      "relevantRule": "Since **Raid** is a keyword followed by a numeral, the effect is cumulative. When **_Soldier of the 501st_** attacks, its own **Raid 1** is added with the **Raid 2** from **_Clone Cohort_** as well as the **Raid 1** from **_Red Three_**. All of that is then added to its base Power to determine how much damage it will do.\n\n**7.5.4** - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n**7.5.8.B** - Multiple instances of Raid stack. If a unit gains Raid when it already has Raid, the numerals following each instance of Raid are added together, and when the unit attacks, it gets bonus power equal to the total value.",
       "tags": ["red three", "soldier of the 501st", "clone cohort", "raid", "keyword"],
       "difficulty": 0
    },
    {
       "id": 28,
-      "question": "Player A wants to attack with their House Kast Soldier. Player B has a deployed Count Dooku, Face of the Confederacy, a Pirate Battle Tank, and a Confederate Courier in play. What are valid targets for Player A to attack?",
+      "question": "Player A wants to attack with their **_House Kast Soldier_**. Player B has a deployed **_Count Dooku, Face of the Confederacy_**, a **_Pirate Battle Tank_**, and a **_Confederate Courier_** in play. What are valid targets for Player A to attack?",
       "choices": {
-         "a": "Only the Pirate Battle Tank.",
-         "b": "The Pirate Battle Tank or Player B's base.",
-         "c": "Anything except the Confederate Courier, including Player B's base.",
+         "a": "Only the **_Pirate Battle Tank_**.",
+         "b": "The **_Pirate Battle Tank_** or Player B's base.",
+         "c": "Anything except the **_Confederate Courier_**, including Player B's base.",
          "d": "All of Player B's units, but not their base."
       },
       "answer": "c",
       "relevantCards": ["SHD/162", "TWI/005-portrait", "SHD/089", "TWI/079"],
-      "relevantRule": "Since House Kast Soldier has Saboteur, it can ignore enemy Sentinel units when attacking. This means it can freely choose to attack any enemy units in the same arena as well as the enemy base.\n\n7.5.10.B - To \"ignore\" Sentinel means to determine the defender or base being attacked as if no enemy units in the attacker’s arena have Sentinel. Enemy units do not lose Sentinel while Sentinel is ignored.",
+      "relevantRule": "Since **_House Kast Soldier_** has **Saboteur**, it can ignore enemy **Sentinel** units when attacking. This means it can freely choose to attack any enemy units in the same arena as well as the enemy base.\n\n**7.5.10.B** - To \"ignore\" Sentinel means to determine the defender or base being attacked as if no enemy units in the attacker’s arena have Sentinel. Enemy units do not lose Sentinel while Sentinel is ignored.",
       "tags": ["house kast soldier", "count dooku", "pirate battle tank", "confederate courier", "saboteur", "sentinel", "keyword", "target"],
       "difficulty": 0
    },
