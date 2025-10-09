@@ -766,7 +766,7 @@
    },
    {
       "id": 52,
-      "question": "Player A has 6 ready resources and the initiative. They control a **_Seasoned Shoretrooper_**, a **_First Order TIE Fighter_**, a **_Battle Droid_** token, and **_Warbird Stowaway_** with **_Perilous Position_** attached to it. Each of those units has attacked already this phase. They then play **_Consolodation of Power_**, choosing all four of those units. Which of the following is the largest unit Player A can play for free?",
+      "question": "Player A has 6 ready resources and the initiative. They control a **_Seasoned Shoretrooper_**, a **_First Order TIE Fighter_**, a **_Battle Droid_** token, and a **_Warbird Stowaway_** with **_Perilous Position_** attached to it. Each of those units has attacked already this phase. They then play **_Consolodation of Power_**, choosing all four of those units. Which of the following is the largest unit Player A can play for free?",
       "choices": {
          "a": "**_Devastator, Inescapable_**",
          "b": "**_Blizzard Assault AT-AT_**",
