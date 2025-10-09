@@ -24,7 +24,7 @@ export function StandardModeEndScreen({
       resetQuizMode();
     }}>Go Back to Quiz Menu</button>
     <div className={`mt-8 text-left p-8 ${globalBackgroundStyle}`}>
-      <summary className="text-xl font-bold mb-4 cursor-pointer">Your Answers:</summary>
+      <h1 className="text-xl font-bold mb-4 cursor">Your Answers:</h1>
         <div className="mt-4 max-h-140 overflow-y-scroll">
           {
             userResponses.map((response) => {
