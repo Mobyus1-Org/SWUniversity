@@ -456,7 +456,7 @@
          "a": "Player A. The attacking player always collects the **Bounty**.",
          "b": "Player B. Their unit survived combat and therefore they collect the **Bounty**.",
          "c": "Whichever player has the initiative collects the **Bounty**.",
-         "d": "Player B. **Bounties** are always collected by an opponent of the unit they are on."
+         "d": "Player B. A **Bounty** is always collected by an opponent of the unit they are on."
       },
       "answer": "d",
       "relevantCards": ["SHD/167", "SOR/037"],
