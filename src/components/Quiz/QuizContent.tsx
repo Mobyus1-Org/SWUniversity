@@ -185,7 +185,7 @@ export function QuizContent({
           <p className={`${currentQuiz.answer === selectedAnswer ? "text-green-500" : "text-red-500"} text-xl font-bold mb-4`}>
             {currentQuiz.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
           </p>
-          <p className="text-xl mb-2.5">Relevant Rules:</p>
+          <p className="text-xl mb-2.5 bold">Relevant Rules:</p>
           <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentQuiz.relevantRule)}</p>
         </div>
       }
