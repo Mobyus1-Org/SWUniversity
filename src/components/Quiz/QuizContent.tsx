@@ -79,28 +79,39 @@ export function QuizContent({
       if (!quizResult) return "";
 
       const key = currentQuizKeys[index];
-      if (currentQuiz.answer === key) return "bg-green-800/50 px-4 py-1 rounded";
-      if (selectedAnswer === key) return "bg-red-800/50 px-4 py-1 rounded";
+      if (currentQuiz.answer === key) return "bg-green-800/50 rounded";
+      if (selectedAnswer === key) return "bg-red-800/50 rounded";
 
       return "";
     };
 
     const divs = currentQuizKeys.map((_, index) => <div key={index} className={"mb-2.5 " + highlighted(index)}>
-        <label className="text-md md:text-lg">
-          <input
-            type="radio"
-            name="quiz-choice"
-            value={currentQuizKeys[index]}
-            className="mr-2.5 md:scale-110"
-            checked={selectedAnswer === currentQuizKeys[index]}
-            onChange={() => {
+        <button
+          type="button"
+          className={`w-full text-left p-3 border rounded-lg hover:bg-slate-700/50 transition-colors
+            ${
+              selectedAnswer === currentQuizKeys[index]
+                ? 'border-white bg-slate-600/50'
+                : 'border-slate-600'
+            }
+            ${
+              quizResult
+                ? 'cursor-not-allowed'
+                : 'cursor-pointer'
+            }
+          `}
+          onClick={() => {
+            if (!quizResult) {
               sfx("click");
-              setSelectedAnswer(currentQuizKeys[index])
-            }}
-            disabled={quizResult}
-          />
-          {currentQuiz.choices[currentQuizKeys[index]]}
-        </label>
+              setSelectedAnswer(currentQuizKeys[index]);
+            }
+          }}
+          disabled={quizResult}
+        >
+          <div className="text-md md:text-lg">
+            {currentQuiz.choices[currentQuizKeys[index]]}
+          </div>
+        </button>
       </div>
     );
 
@@ -130,12 +141,8 @@ export function QuizContent({
         <p className="mb-2.5 text-lg md:text-xl">{currentQuiz.question}</p>
         <form onSubmit={(e) => {
           e.preventDefault();
-          const form = e.target as HTMLFormElement;
-          const formData = new FormData(form);
-          const selected = formData.get("quiz-choice");
-
-          if (selected) {
-            onSubmitAnswer(selected as string, setQuizResult, sfx);
+          if (selectedAnswer !== "") {
+            onSubmitAnswer(selectedAnswer, setQuizResult, sfx);
           }
         }}>
         {renderChoices()}
