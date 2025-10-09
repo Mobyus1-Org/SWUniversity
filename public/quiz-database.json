@@ -196,37 +196,37 @@
    },
    {
       "id": 14,
-      "question": "Player A controls a Lurking TIE Phantom and a Sanctioner's Shuttle. Player B plays Caught in the Crossfire and chooses those two units. What best describes what happens?",
+      "question": "Player A controls a **_Lurking TIE Phantom_** and a **_Sanctioner's Shuttle_**. Player B plays **_Caught in the Crossfire_** and chooses those two units. What best describes what happens?",
       "choices": {
-        "a": "Sanctioner's Shuttle takes 2 damage. Lurking TIE takes 0 damage.",
-        "b": "Sanctioner's Shuttle takes 2 damage. Lurking TIE takes 2 damage and is defeated.",
-        "c": "Sanctioner's Shuttle takes 4 damage and is defeated. Lurking TIE takes 0 damage.",
-        "d": "Sanctioner's Shuttle takes 4 damage and is defeated. Lurking TIE takes 2 damage and is defeated."
+        "a": "**_Sanctioner's Shuttle_** takes 2 damage. **_Lurking TIE_** takes 0 damage.",
+        "b": "**_Sanctioner's Shuttle_** takes 2 damage. **_Lurking TIE_** takes 2 damage and is defeated.",
+        "c": "**_Sanctioner's Shuttle_** takes 4 damage and is defeated. **_Lurking TIE_** takes 0 damage.",
+        "d": "**_Sanctioner's Shuttle_** takes 4 damage and is defeated. **_Lurking TIE_** takes 2 damage and is defeated."
       },
       "answer": "a",
       "relevantCards": ["SHD/187", "TWI/213", "TWI/176"],
-      "relevantRule": "While the text on Caught in the Crossfire states that the units are dealing damage to one another, since the cause of the damage is Caught in the Crossfire, it's still considered to be originating from an enemy card ability, meaning Lurking TIE still prevents the damage.",
+      "relevantRule": "While the text on **_Caught in the Crossfire_** states that the units are dealing damage to one another, since the cause of the damage is **_Caught in the Crossfire_**, it's still considered to be originating from an enemy card ability, meaning **_Lurking TIE_** still prevents the damage.",
       "tags": ["lurking tie", "sanctioner's shuttle", "caught in the crossfire", "prevent", "event", "choose"],
-      "difficulty": 1
+      "difficulty": 2
    },
    {
       "id": 15,
-      "question": "Player A controls Millennium Falcon, Piece of Junk, and Luke Skywalker, You Still With Me, attached to it as a Pilot. When readying cards during the Regroup Phase, Player A chooses not to pay the 1 resource for Millennium Falcon's ability, returning it to Player A's hand. What best describes what happens to Luke Skywalker?",
+      "question": "Player A controls **_Millennium Falcon, Piece of Junk_**, and **_Luke Skywalker, You Still With Me?_**, attached to it as a _Pilot_. When readying cards during the Regroup Phase, Player A chooses not to pay the 1 resource for **_Millennium Falcon's_** ability, returning it to Player A's hand. What best describes what happens to **_Luke Skywalker_**?",
       "choices": {
-        "a": "Luke Skywalker returns to Player A's hand.",
-        "b": "Luke Skywalker is discarded.",
-        "c": "Luke Skywalker is either discarded or becomes a ground unit. If he's a ground unit, he will remain exhausted at the start of the next round.",
-        "d": "Luke Skywalker is either discarded or becomes a ground unit. If he's a ground unit, he will be ready at the start of the next round."
+        "a": "**_Luke Skywalker_** returns to Player A's hand.",
+        "b": "**_Luke Skywalker_** is discarded.",
+        "c": "**_Luke Skywalker_** is either discarded or becomes a ground unit. If he's a ground unit, he will remain exhausted at the start of the next round.",
+        "d": "**_Luke Skywalker_** is either discarded or becomes a ground unit. If he's a ground unit, he will be ready at the start of the next round."
       },
       "answer": "c",
       "relevantCards": ["SOR/193", "JTL/094"],
-      "relevantRule": "When a unit returns to hand, all upgrades attached to it are defeated, meaning Player A has the choice to make Luke a ground unit. If they do, the timing for readying cards during the Regroup Phase has already passed (that's when Millennium Falcon's ability triggered), meaning he will remain exhausted leading into the next round.\n\n3.6.11 - An upgrade is defeated when either the unit it is attached to leaves play, or when an ability defeats it directly. When an upgrade is defeated, the attached unit loses all power, HP, and abilities given to it by the upgrade, and the upgrade is placed in its owner’s discard pile.\n\n5.5.1 - The regroup phase consists of the following 5 steps, in order: Start of the regroup phase, Draw cards, Resource cards, Ready cards, End of the regroup phase.",
+      "relevantRule": "When a unit returns to hand, all upgrades attached to it are defeated, meaning Player A has the choice to make **_Luke_** a ground unit. If they do, the timing for readying cards during the Regroup Phase has already passed (that's when **_Millennium Falcon's_** ability triggered), meaning he will remain exhausted leading into the next round.\n\n**3.6.11** - An upgrade is defeated when either the unit it is attached to leaves play, or when an ability defeats it directly. When an upgrade is defeated, the attached unit loses all power, HP, and abilities given to it by the upgrade, and the upgrade is placed in its owner’s discard pile.\n\n**5.5.1** - The regroup phase consists of the following 5 steps, in order: Start of the regroup phase, Draw cards, Resource cards, Ready cards, End of the regroup phase.",
       "tags": ["millennium falcon", "luke skywalker", "trigger", "timing", "regroup phase", "bounce", "pilot", "ability"],
       "difficulty": 1
    },
    {
       "id": 16,
-      "question": "Player A plays Rallying Cry. Later in the same phase, Player A deploys Leia Organa, Alliance General. Assuming there are no other relevant effects, how much damage would Leia do when she attacks?",
+      "question": "Player A plays **_Rallying Cry_**. Later in the same phase, Player A deploys **_Leia Organa, Alliance General_**. Assuming there are no other relevant effects, how much damage would **_Leia_** do when she attacks?",
       "choices": {
         "a": "4",
         "b": "3",
@@ -235,52 +235,52 @@
       },
       "answer": "a",
       "relevantCards": ["SOR/154", "SOR/009-portrait"],
-      "relevantRule": "Only units in play at the time a lasting effect is created, such as the one created by Rallying Cry, benefit from the effect.\n\n7.7.3.D - By default, a lasting effect only applies to a card that’s in play at the time of the lasting effect’s creation. For a lasting effect to affect a card in an out-of-play zone, the ability that created that effect must explicitly state so.",
+      "relevantRule": "Only units in play at the time a lasting effect is created, such as the one created by **_Rallying Cry_**, benefit from the effect.\n\n**7.7.3.D** - By default, a lasting effect only applies to a card that’s in play at the time of the lasting effect’s creation. For a lasting effect to affect a card in an out-of-play zone, the ability that created that effect must explicitly state so.",
       "tags": ["rallying cry", "leia organa", "lasting effect", "raid", "event"],
       "difficulty": 1
    },
    {
       "id": 17,
-      "question": "Player A controls Boba Fett, Any Methods Necessary, attached to a TIE Bomber as a Pilot and no other units. If they were to play a Fett's Firespray, Pursuing the Bounty, would it ready as a result of its When Played ability?",
+      "question": "Player A controls **_Boba Fett, Any Methods Necessary_**, attached to a **_TIE Bomber_** as a _Pilot_ and no other units. If they were to play a **_Fett's Firespray, Pursuing the Bounty_**, would it ready as a result of its **When Played** ability?",
       "choices": {
-        "a": "Yes. Player A still controls Boba Fett.",
-        "b": "No. The reminder text does not specify 'as an upgrade' which is what Boba Fett currently is.",
-        "c": "No. This version of Boba Fett was released in a different card set and therefore does not work with this Fett's Firespray.",
-        "d": "It depends on if there are any Boba Fett units in Player A's discard pile."
+        "a": "Yes. Player A still controls a **_Boba Fett_**.",
+        "b": "No. The reminder text does not specify \"as an upgrade\" which is what **_Boba Fett_** currently is.",
+        "c": "No. This version of **_Boba Fett_** was released in a different card set and therefore does not work with this **_Fett's Firespray_**.",
+        "d": "It depends on if there are any **_Boba Fett_** units in Player A's discard pile."
       },
       "answer": "a",
       "relevantCards": ["JTL/009-portrait", "JTL/237", "SOR/184"],
-      "relevantRule": "Italicized reminder text on cards has no impact on game rules and can be wholly ignored when reading a card's effect. In the case of Fett's Firespray, so long as the player controls any Boba Fett in any form, it can ready as a result of its When Played ability.\n\n2.13.2 - A card’s ability may be followed by italicized text in parentheses. Such text is called \"reminder text,\" and offers a simplified clarification of how that ability affects the game. Reminder text serves as a guide for ease of play, but does not override any rules in this Comprehensive Rules document. The presence or absence of reminder text does not mechanically affect the abilities on a card.",
+      "relevantRule": "Italicized reminder text on cards has no impact on game rules and can be wholly ignored when reading a card's effect. In the case of **_Fett's Firespray_**, so long as the player controls a **_Boba Fett_** in any form, it can ready as a result of its **When Played** ability.\n\n**2.13.2** - A card’s ability may be followed by italicized text in parentheses. Such text is called \"reminder text,\" and offers a simplified clarification of how that ability affects the game. Reminder text serves as a guide for ease of play, but does not override any rules in this Comprehensive Rules document. The presence or absence of reminder text does not mechanically affect the abilities on a card.\n\n**8.18.2** - A card \"shares a name\" with another card if their full names are identical. A card does not need to share a subtitle with another card to share a name with it.",
       "tags": ["fett's firespray", "boba fett", "readying", "when played", "pilot", "control"],
       "difficulty": 1
    },
    {
       "id": 18,
-      "question": "Player A has a Green Squadron A-Wing, a Blue Leader that was moved to the ground arena as a result of its When Played ability, and no other units. Player B plays a Special Forces TIE Fighter. Does it ready?",
+      "question": "Player A has a **_Green Squadron A-Wing_**, a **_Blue Leader, Scarif Air Support_**, that was moved to the ground arena as a result of its **When Played** ability, and no other units. Player B plays a **_Special Forces TIE Fighter_**. Does it ready and why/why not?",
       "choices": {
         "a": "Yes. Player A controls two space units and Player B now only controls one.",
-        "b": "Yes. Player A only controls one space unit, and Special Forces TIE Fighter doesn't count itself when it resolves its ability.",
+        "b": "Yes. Player A only controls one space unit, and **_Special Forces TIE Fighter_** doesn't count itself when it resolves its ability.",
         "c": "No, both players now control one space unit.",
         "d": "No, Player B controls more space units than player A."
       },
       "answer": "c",
       "relevantCards": ["SOR/141", "JTL/096", "JTL/135"],
-      "relevantRule": "When Blue Leader moves to the ground arena as a result of its ability, it becomes a ground unit, even if it still says \"Space Unit\" at the top of the card. Also, a unit enters play before its own When Played ability resolves, so Special Forces TIE Fighter absolutely does count itself.\n\n4.3.5 - Units in the ground arena are considered ground units and not space units while in play, regardless of what their arena type is.\n\n7.6.13.A - Some triggered abilities are indicated with \"When Played\" in bold, followed by a colon and an effect. These abilities trigger when the card they’re on is played and resolve after the card’s cost is paid and it is put into play.",
+      "relevantRule": "When **_Blue Leader_** moves to the ground arena as a result of its ability, it becomes a ground unit, even if it still says \"Space Unit\" at the top of the card. Also, a unit enters play before its own **When Played** ability resolves, so **_Special Forces TIE Fighter_** absolutely does count itself.\n\n**4.3.5** - Units in the ground arena are considered ground units and not space units while in play, regardless of what their arena type is.\n\n**7.6.13.A** - Some triggered abilities are indicated with \"When Played\" in bold, followed by a colon and an effect. These abilities trigger when the card they’re on is played and resolve after the card’s cost is paid and it is put into play.",
       "tags": ["special forces tie fighter", "blue leader", "green squadron a-wing", "when played"],
       "difficulty": 1
    },
    {
       "id": 19,
-      "question": "Player A has Black One, Straight at Them, with R2-D2, Artooooooooo, attached to it as a Pilot in play. They also have 4 total resources, all readied. They want to pay 1 resource and use their readied Poe Dameron, I Can Fly Anything, leader's ability to attach Poe to their Black One. Is this a legal play and why/why not?",
+      "question": "Player A controls a **_Black One, Straight at Them_**, with **_R2-D2, Artooooooooo_**, attached to it as a _Pilot_ and have 4 total resources, all readied. They want to pay 1 resource and use their readied **_Poe Dameron, I Can Fly Anything_**, leader's ability to attach **_Poe_** to their **_Black One_**. Is this a legal play and why/why not?",
       "choices": {
-        "a": "Yes. R2-D2 says that you may play or deploy one additional Pilot on the attached vehicle, so Poe can deploy onto it.",
-        "b": "Yes, but Player A will need to defeat R2-D2 in order to make room for Poe.",
-        "c": "No. Poe needs at least 5 resources to use his leader ability.",
-        "d": "No. Poe's ability does not play or deploy him, so R2-D2's text does not override his restriction of the target vehicle already having a Pilot on it."
+        "a": "Yes. **_R2-D2_** says that you may play or deploy one additional _Pilot_ on the attached _Vehicle_, so **_Poe_** can deploy onto it.",
+        "b": "Yes, but Player A will need to defeat **_R2-D2_** in order to make room for **_Poe_**.",
+        "c": "No. **_Poe_** needs at least 5 resources to use his leader ability.",
+        "d": "No. **_Poe's_** ability does not play or deploy him, so **_R2-D2's_** text does not override his restriction of the target _Vehicle_ already having a _Pilot_ on it."
       },
       "answer": "d",
       "relevantCards": ["JTL/147", "JTL/245", "JTL/013"],
-      "relevantRule": "Due to Poe's wording, he is neither \"played\" nor \"deployed\" but rather \"attaches\" himself to a friendly Vehicle unit without a Pilot on it. Since R2-D2 specifically mentions those two methods of attaching, you cannot attach Poe to a Vehicle with R2-D2 (or any Pilot for that matter!) already attached.",
+      "relevantRule": "Due to **_Poe's_** wording, he is neither \"played\" nor \"deployed\" but rather \"attaches\" himself to a friendly _Vehicle_ unit without a _Pilot_ on it. Since **_R2-D2_** specifically mentions those two methods, you cannot attach **_Poe_** to a _Vehicle_ with **_R2-D2_** (or any _Pilot_ for that matter!) already attached. **_Poe_** would have to attach first.",
       "tags": ["poe dameron", "r2-d2", "black one", "pilot", "ability", "restriction", "leader", "upgrade", "wording"],
       "difficulty": 2
    },
