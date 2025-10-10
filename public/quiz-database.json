@@ -793,5 +793,20 @@
       "relevantRule": "Since **_Bamboozle_** says that by discarding a _Cunning_ card to play it instead of \"paying this event's cost,\" **_Saw's_** effect is bypassed and Player B takes no damage.\n\nOfficial clarification added by FFG on Mar 1, 2024.",
       "tags": ["saw gerrera", "bamboozle", "spark of rebellion", "event", "timing", "cost", "discard"],
       "difficulty": 2
+   },
+   {
+      "id": 54,
+      "question": "Player A controls a ready **_Finn, This is a Rescue_**, and a **_HWK-290 Freighter_** upgraded with Player B's **_Entrenched_**. One of Player B's units was defeated earlier this phase, so Player A plays **_A Fine Addition_** choosing a **_Clone Pilot_** from Player B's discard pile and plays it on their **_HWK-290 Freighter_** as an upgrade. Player B then plays **_Darth Vader, Twilight of the Apprentice_** giving a shield token to himself and Player A's **_HWK-290 Freighter_**. Which upgrades can Player A defeat with **_Finn's_** Action ability?",
+      "choices": {
+         "a": "Only the **_Clone Pilot_**.",
+         "b": "**_Entrenched_** and **_Clone Pilot_**.",
+         "c": "**_Entrenched_**, **_Clone Pilot_**, and the shield token on the **_HWK-290 Freighter_**.",
+         "d": "**_Entrenched_**, **_Clone Pilot_**, and both shield tokens."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/003", "SHD/060", "SOR/072", "TWI/040", "JTL/108", "LOF/037", "SOR/T02"],
+      "relevantRule": "If an opponent plays an upgrade on one of your units, they are still the controller of that upgrade, meaning it is not a \"friendly upgrade.\" Even though Player B is the _owner_ of **_Clone Pilot_**, since Player A is the player that put it into play using **_A Fine Addition_**, they are it's _controller_, making it the only friendly upgrade in play.\n\n**1.5.2.B** - A player is the \"controller\" of a card they put into play. This includes their base, their leader, resources in their resource zone, and units, upgrades, and tokens they play or put into play. A player keeps control of a card until either that card leaves play or their opponent takes control of it.\n\n**1.5.3.A** - A card that a player controls is considered \"friendly\" for that player.",
+      "tags": ["finn", "hwk-290 freighter", "entrenched", "a fine addition", "clone pilot", "darth vader", "shield token", "target", "leader", "action", "upgrade", "controller", "owner"],
+      "difficulty": 2
    }
 ]
