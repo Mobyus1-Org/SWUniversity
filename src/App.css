@@ -3,6 +3,11 @@
   themes: all;
 }
 
+@theme {
+  --breakpoint-uwd: 2560px;
+  --breakpoint-4k: 3840px;
+}
+
 .layout {
   @apply relative bg-[url('/assets/SWH01_Starfield.png')] bg-cover bg-center min-h-screen overflow-hidden;
 }

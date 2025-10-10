@@ -14,7 +14,7 @@ export function RelevantCardsPanel({ currentQuiz, setShowModal }: IProps) {
     ? <div>
       <div className="text-xl mb-2.5 mr-2">Relevant Cards</div>
       <div className="text-sm"><u onClick={() => setShowModal(true)}>(Click here to see enlarged images)</u></div>
-      <div className="flex flex-wrap justify-center items-center max-h-180 xl:max-h-280 overflow-y-scroll">
+      <div className="flex flex-wrap justify-center items-center max-h-180 uwd:max-h-240 4k:max-h-320 overflow-y-scroll">
         {
           currentQuiz.relevantCards.map((cardName: string, index: number) => {
             const scaleClass = isHorizontalCard(cardName)

@@ -25,7 +25,7 @@ function QuizPage() {
   }, []);
 
   const renderQuizContent = () => currentQuizSet.length === 0
-    ? <p className="text-lg">Loading quizzes...</p>
+    ? <p className="text-lg uwd:text-3xl 4k:text-5xl">Loading quizzes...</p>
     : <QuizContent
         currentQuizSet={currentQuizSet}
         currentQuizId={currentQuizId}
@@ -66,7 +66,7 @@ function QuizPage() {
   }
 
   return <div>
-    <h1 className="text-2xl md:text-4xl font-bold mb-4">{getQuizModeTitle(quizMode)}</h1>
+    <h1 className="text-2xl md:text-4xl uwd:!text-5xl 4k:!text-7xl font-bold mb-4">{getQuizModeTitle(quizMode)}</h1>
     {
       quizMode === "" || (quizMode === "standard" && standardQuizLength === 0)
         ? <QuizModeButtons

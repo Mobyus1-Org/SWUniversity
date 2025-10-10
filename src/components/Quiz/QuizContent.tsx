@@ -109,7 +109,7 @@ export function QuizContent({
           }}
           disabled={quizResult}
         >
-          <div className="text-md md:text-lg">
+          <div className="text-md md:text-lg uwd:!text-3xl 4k:!text-5xl">
             {renderItalicsAndBold(currentQuiz.choices[currentQuizKeys[index]])}
           </div>
         </button>
@@ -139,7 +139,7 @@ export function QuizContent({
       quizzesCompleted.length < currentQuizSet.length && <div className={`grid ${globalBackgroundStyle} shadow-md md:grid-cols-[40%_60%] border p-8 rounded gap-4`}>
       {/* Question and choices */}
       <div>
-        <p className="mb-2.5 text-lg md:text-xl">{renderItalicsAndBold(currentQuiz.question)}</p>
+        <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{renderItalicsAndBold(currentQuiz.question)}</p>
         <form onSubmit={(e) => {
           e.preventDefault();
           if (selectedAnswer !== "") {

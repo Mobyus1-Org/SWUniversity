@@ -15,7 +15,7 @@ interface IProps {
 }
 
 export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQuizMode, setCurrentQuizSet, setCurrentQuizId, setStandardQuizLength}: IProps) {
-  const renderButtons = () => <div className="grid md:grid-cols-3 gap-4 mb-8 h-full" style={{ textAlign: 'center' }}>
+  const renderButtons = () => <div className="grid md:grid-cols-3 gap-4 uwd:gap-5 mb-8 h-full" style={{ textAlign: 'center' }}>
     <QuizModeButtonItem
       quizMode="standard"
       title="Standard Mode"
