@@ -175,7 +175,7 @@ export function QuizContent({
       {/*Relevant Cards Modal*/}
       {
         currentQuiz.relevantCards.length > 0 &&
-        showModal && <div className="overflow-y-scroll fixed inset-0 bg-black bg-opacity-70 flex flex-wrap" onClick={() => setShowModal(false)}>
+        showModal && <div role="dialog" aria-modal="true" className="z-50 overflow-y-scroll fixed inset-0 bg-black bg-opacity-70 flex flex-wrap" onClick={() => setShowModal(false)}>
           <p className="absolute top-2 md:top-4 right-4 md:right-8 text-gray-400 md:text-4xl" onClick={() => setShowModal(false)}>X</p>
           <div className="flex flex-wrap justify-center py-8 md:px-24">
           {

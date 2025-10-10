@@ -14,7 +14,7 @@ export function RelevantCardsPanel({ currentQuiz, setShowModal }: IProps) {
     ? <div>
       <div className="text-xl mb-2.5 mr-2">Relevant Cards</div>
       <div className="text-sm"><u onClick={() => setShowModal(true)}>(Click here to see enlarged images)</u></div>
-      <div className="flex flex-wrap justify-center items-center">
+      <div className="flex flex-wrap justify-center items-center max-h-180 overflow-y-scroll">
         {
           currentQuiz.relevantCards.map((cardName: string, index: number) => {
             const scaleClass = isHorizontalCard(cardName)
@@ -22,8 +22,8 @@ export function RelevantCardsPanel({ currentQuiz, setShowModal }: IProps) {
               : `h-fit`;
 
             const scaleStyle = isHorizontalCard(cardName)
-              ? { height: `${scale}rem` }
-              : { width: `${scale}rem` };
+              ? { height: `${scale}vh`, }
+              : { width: `${scale}vh`, };
           return <div key={index} className={`${scaleClass} m-2.5 align`} style={scaleStyle}>
             <img src={`https://swudb.com/cdn-cgi/image/quality=40/images/cards/${cardName}.png`} alt={`card ${cardName}`} className="max-h-full object-contain" />
           </div>
@@ -63,16 +63,16 @@ function isHorizontalCard(cardName: string): boolean {
 
 const getScaleForCards = (count: number): number => {
     const scales: Record<number, number> = {
-      1: 18,
-      2: 16,
-      3: 14,
-      4: 13,
-      5: 9.5,
-      6: 13,
-      7: 13,
-      8: 13,
-      9: 13,
-      10: 9.5,
+      1: 30,
+      2: 27,
+      3: 24,
+      4: 22,
+      5: 16,
+      6: 20,
+      7: 20,
+      8: 20,
+      9: 17,
+      10: 16,
     };
 
     return scales[Math.min(count, 10)] || 8;
