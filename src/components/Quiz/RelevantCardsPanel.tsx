@@ -67,12 +67,12 @@ const getScaleForCards = (count: number): number => {
       2: 16,
       3: 14,
       4: 13,
-      5: 13,
-      6: 11,
-      7: 11,
-      8: 11,
-      9: 10,
-      10: 10,
+      5: 9.5,
+      6: 13,
+      7: 13,
+      8: 13,
+      9: 13,
+      10: 9.5,
     };
 
     return scales[Math.min(count, 10)] || 8;
