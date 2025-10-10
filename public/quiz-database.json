@@ -811,19 +811,19 @@
    },
    {
       "id": 55,
-      "question": "This is a test question with 5 images. The answer is A.",
+      "question": "Player A controls a ready **_Lando Calrissian, With Impeccable Taste_**, and 3 total resources which are all ready. They use **_Lando's_** ability and choose _not_ to play a card using **Smuggle**. What best describes what happens?",
       "choices": {
-         "a": "A",
-         "b": "B",
-         "c": "C",
-         "d": "D"
+         "a": "**_Lando_** exhausts. Player A must still defeat a resource they own and control.",
+         "b": "Player A cannot use **_Lando's_** ability if they don't have a **Smuggle** card to play.",
+         "c": "Player A can't use **_Lando's_** ability unless they have 4 or more resources.",
+         "d": "**_Lando_** exhausts, but nothing else happens."
       },
       "answer": "a",
-      "relevantCards": ["SOR/005", "SOR/051", "JTL/094", "LOF/249", "IBH/020"],
-      "relevantRule": "No rules to see here.",
-      "tags": [""],
-      "difficulty": 2
-   },
+      "relevantCards": ["SHD/017"],
+      "relevantRule": "Since **_Lando's_** ability does not say \"If you do,\" Player A is required to defeat one of their resources whether they play a card using **Smuggle** or not.\n\n**1.3.2** - Do as Much as You Can: While resolving a card ability, resolve as much of the ability as possible, and ignore any parts of the ability that cannot be resolved. (Note that you may choose to resolve abilities involving hidden information as though you have fewer options than you really do.)",
+      "tags": ["lando calrissian", "smuggle", "leader", "ability"],
+      "difficulty": 1
+   }
    {
       "id": 56,
       "question": "This is a test question with 6 images. The answer is A.",
