@@ -808,5 +808,95 @@
       "relevantRule": "If an opponent plays an upgrade on one of your units, they are still the controller of that upgrade, meaning it is not a \"friendly upgrade.\" Even though Player B is the _owner_ of **_Clone Pilot_**, since Player A is the player that put it into play using **_A Fine Addition_**, they are it's _controller_, making it the only friendly upgrade in play.\n\n**1.5.2.B** - A player is the \"controller\" of a card they put into play. This includes their base, their leader, resources in their resource zone, and units, upgrades, and tokens they play or put into play. A player keeps control of a card until either that card leaves play or their opponent takes control of it.\n\n**1.5.3.A** - A card that a player controls is considered \"friendly\" for that player.",
       "tags": ["finn", "hwk-290 freighter", "entrenched", "a fine addition", "clone pilot", "darth vader", "shield token", "target", "leader", "action", "upgrade", "controller", "owner"],
       "difficulty": 2
+   },
+   {
+      "id": 55,
+      "question": "This is a test question with 5 images. The answer is A.",
+      "choices": {
+         "a": "A",
+         "b": "B",
+         "c": "C",
+         "d": "D"
+      },
+      "answer": "a",
+      "relevantCards": ["SOR/005", "SOR/051", "JTL/094", "LOF/249", "IBH/020"],
+      "relevantRule": "No rules to see here.",
+      "tags": [""],
+      "difficulty": 2
+   },
+   {
+      "id": 56,
+      "question": "This is a test question with 6 images. The answer is A.",
+      "choices": {
+         "a": "A",
+         "b": "B",
+         "c": "C",
+         "d": "D"
+      },
+      "answer": "a",
+      "relevantCards": ["SOR/005", "SOR/051", "JTL/094", "LOF/249", "IBH/020", "TWI/147"],
+      "relevantRule": "No rules to see here.",
+      "tags": [""],
+      "difficulty": 2
+   },
+   {
+      "id": 57,
+      "question": "This is a test question with 7 images. The answer is A.",
+      "choices": {
+         "a": "A",
+         "b": "B",
+         "c": "C",
+         "d": "D"
+      },
+      "answer": "a",
+      "relevantCards": ["SOR/005", "SOR/051", "JTL/094", "LOF/249", "IBH/020", "TWI/147", "JTL/197"],
+      "relevantRule": "No rules to see here.",
+      "tags": [""],
+      "difficulty": 2
+   },
+   {
+      "id": 58,
+      "question": "This is a test question with 8 images. The answer is A.",
+      "choices": {
+         "a": "A",
+         "b": "B",
+         "c": "C",
+         "d": "D"
+      },
+      "answer": "a",
+      "relevantCards": ["SOR/005", "SOR/051", "JTL/094", "LOF/249", "IBH/020", "TWI/147", "JTL/197", "LOF/070"],
+      "relevantRule": "No rules to see here.",
+      "tags": [""],
+      "difficulty": 2
+   },
+   {
+      "id": 59,
+      "question": "This is a test question with 9 images. The answer is A.",
+      "choices": {
+         "a": "A",
+         "b": "B",
+         "c": "C",
+         "d": "D"
+      },
+      "answer": "a",
+      "relevantCards": ["SOR/005", "SOR/051", "JTL/094", "LOF/249", "IBH/020", "TWI/147", "JTL/197", "LOF/070", "LOF/190"],
+      "relevantRule": "No rules to see here.",
+      "tags": [""],
+      "difficulty": 2
+   },
+   {
+      "id": 60,
+      "question": "This is a test question with 10 images. The answer is A.",
+      "choices": {
+         "a": "A",
+         "b": "B",
+         "c": "C",
+         "d": "D"
+      },
+      "answer": "a",
+      "relevantCards": ["SOR/005", "SOR/051", "JTL/094", "LOF/249", "IBH/020", "TWI/147", "JTL/197", "LOF/070", "LOF/190", "LOF/018"],
+      "relevantRule": "No rules to see here.",
+      "tags": [""],
+      "difficulty": 2
    }
 ]
