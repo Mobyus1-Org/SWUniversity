@@ -10,9 +10,10 @@ import QuizPage from './pages/QuizPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 import './App.css';
-import { AudioContextProvider } from './util/context';
+import { AudioContextProvider, ModalContextProvider } from './util/context';
 
 function App() {
+  const [showModal, setShowModal] = React.useState(false);
   const clickSound = React.useMemo(() => new Audio('/assets/sfx/click.mp3'), []);
   clickSound.volume = 0.04;
   const confirmSound = React.useMemo(() => new Audio('/assets/sfx/confirm.mp3'), []);
@@ -43,14 +44,16 @@ function App() {
 
   return <HashRouter>
     <AudioContextProvider value={{ sfx }}>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/quiz" element={<QuizPage />} />
-          {/* <Route path="/puzzles" element={<PuzzlesPage />} /> */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Layout>
+      <ModalContextProvider value={{ showModal, setShowModal }}>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/quiz" element={<QuizPage />} />
+            {/* <Route path="/puzzles" element={<PuzzlesPage />} /> */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Layout>
+      </ModalContextProvider>
     </AudioContextProvider>
   </HashRouter>;
 }

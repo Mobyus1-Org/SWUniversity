@@ -3,7 +3,7 @@ import { globalBackgroundStyle, type QuizModes, type SfxType } from "../../util/
 import { renderItalicsAndBold, isMarathonVariant, type Quiz, type UserResponse } from "../../util/func";
 import { StandardModeEndScreen } from "./StandardModeEndScreen";
 import { MarathonModeEndScreen } from "./MarathonModeEndScreen";
-import { AudioContext } from "../../util/context";
+import { AudioContext, ModalContext } from "../../util/context";
 import { RelevantCardsPanel } from "./RelevantCardsPanel";
 
 interface IProps {
@@ -51,7 +51,7 @@ export function QuizContent({
   resetCurrentQuizState,
   resetQuizMode
 }: IProps) {
-  const [showModal, setShowModal] = React.useState(false);
+  const { showModal, setShowModal } = React.useContext(ModalContext) ?? { showModal: false, setShowModal: () => {} };
   const currentQuiz = currentQuizSet.find(quiz => quiz.id === currentQuizId);
 
   React.useEffect(() => {

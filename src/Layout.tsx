@@ -1,8 +1,9 @@
 import React from 'react';
 import { globalBackgroundStyle } from './util/const';
-import { AudioContext } from './util/context';
+import { AudioContext, ModalContext } from './util/context';
 
 function Layout({ children }: { children: React.ReactNode }) {
+  const { showModal } = React.useContext(ModalContext) ?? { showModal: false };
   const { sfx } = React.useContext(AudioContext) ?? { sfx: () => {} };
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (window.location.hash === e.currentTarget.getAttribute('href')) {
@@ -40,10 +41,12 @@ function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </div>
     </main>
-    <footer className="text-center text-sm mt-8 border-t pt-4 space-y-2 text-gray-400 z-10 relative">
-      <p className="p-2">For educational purposes only. Check out our <a href="https://discord.gg/dbQXnVkjFV" className="text-blue-500 underline">Discord server here</a>!</p>
-      <p className="p-2">SWUniversity is in no way affiliated with Disney or Fantasy Flight Games. Star Wars characters, cards, logos, and art are property of Disney and/or Fantasy Flight Games.</p>
-    </footer>
+    {
+      !showModal &&<footer className="text-center text-sm mt-8 border-t pt-4 space-y-2 text-gray-400 z-10 relative">
+        <p className="p-2">For educational purposes only. Check out our <a href="https://discord.gg/dbQXnVkjFV" className="text-blue-500 underline">Discord server here</a>!</p>
+        <p className="p-2">SWUniversity is in no way affiliated with Disney or Fantasy Flight Games. Star Wars characters, cards, logos, and art are property of Disney and/or Fantasy Flight Games.</p>
+      </footer>
+    }
   </div>;
 }
 
