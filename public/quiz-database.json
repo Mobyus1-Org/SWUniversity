@@ -778,5 +778,20 @@
       "relevantRule": "This one is all about math. Since Player A has 6 resources, **_Seasoned Shoretrooper_** has 4 power _(4 total)_. The **_First Order TIE_** may have **Raid 1**, but that doesn't add to its power unless it's attacking, so it has 2 power _(6 total)_. The **_Battle Droid_** is a simple 1 more _(7 total)_. The **_Warbird Stowaway_** starts with 2, goes to 4 due to Player A having the initiative, then is reduced back to 2 from **_Perilous Position_** _(9 total)_. That means Player A can play a unit from their hand for free with a total power 9 or less.",
       "tags": ["seasoned shoretrooper", "first order tie fighter", "battle droid", "warbird stowaway", "perilous position", "consolodation of power", "devastator", "blizzard assault at-at", "maul", "the invisible hand", "token", "event", "cost", "power"],
       "difficulty": 2
+   },
+   {
+      "id": 53,
+      "question": "Player A controls a readied **_Saw Gerrera, Extremist_**. Player B has 2 HP remaining on their base and plays **_Bamboozle_**, targeting **_Saw_**, and choosing to discard a **_Spark of Rebellion_** from their hand to pay for it. What best describes what happens?",
+      "choices": {
+         "a": "**_Bamboozle_** cannot be paid for by discarding **_Spark of Rebellion_**. This play is illegal.",
+         "b": "Since **_Bamboozle_** exhausts **_Saw_**, his ability is ignored.",
+         "c": "**_Saw_** becomes exhausted and Player B takes no damage to base."
+         "d": "Player B must deal 2 damage to their base and lose the game.",
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/153", "SOR/199", "SOR/200"],
+      "relevantRule": "Since **_Bamboozle_** says that by discarding a _Cunning_ card to play it instead of \"paying this event's cost,\" **_Saw's_** effect is bypassed and Player B takes no damage.\n\nOfficial clarification added by FFG on Mar 1, 2024.",
+      "tags": ["saw gerrera", "bamboozle", "spark of rebellion", "event", "timing", "cost", "discard"],
+      "difficulty": 2
    }
 ]
