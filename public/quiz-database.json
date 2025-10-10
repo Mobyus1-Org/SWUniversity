@@ -841,18 +841,18 @@
    },
    {
       "id": 57,
-      "question": "This is a test question with 7 images. The answer is A.",
+      "question": "Player A has a ready **_Cassian Andor, Dedicated to the Rebellion_**. Player B has no cards in hand and no cards remaining in their deck. Player A plays **_Lothal Insurgent_** after having played a card earlier in the phase. After **_Lothal Insurgent's_** **When Played** ability resolves, _(and assuming no other damage was dealt to Player B's base this phase)_ can Player A draw a card using **_Cassian's_** Action ability?",
       "choices": {
-         "a": "A",
-         "b": "B",
-         "c": "C",
-         "d": "D"
+         "a": "No. Player B took 3 damage attempting to draw a card from an empty deck, but it was caused by Player B.",
+         "b": "No. Since Player B's deck was empty, **_Lothal Insurgent's_** ability did nothing.",
+         "c": "Yes. Player B took 3 damage attempting to draw a card from an empty deck, which was caused by Player A.",
+         "d": "Yes. Player B took 3 damage attempting to discard a card from an empty hand, which was caused by Player A."
       },
       "answer": "a",
-      "relevantCards": ["SOR/005", "SOR/051", "JTL/094", "LOF/249", "IBH/020", "TWI/147", "JTL/197"],
-      "relevantRule": "No rules to see here.",
-      "tags": [""],
-      "difficulty": 2
+      "relevantCards": ["SOR/013", "SOR/190"],
+      "relevantRule": "Even though **_Lothal Insurgent's_** **When Played** ability is what made Player B attempt to draw from an empty deck, the 3 damage dealt to Player B's base from the attempt comes from Player B themself, not Player A.\n\n**8.7.1** - If a player runs out of cards in their deck, they continue playing with the cards they have in play and in hand. If a player would draw a card from their empty deck, they instead deal 3 damage to their base for each card they would draw.",
+      "tags": ["cassian andor", "lothal insurgent", "empty deck", "empty hand", "draw", "when played", "leader", "discard", "ability"],
+      "difficulty": 1
    },
    {
       "id": 58,
