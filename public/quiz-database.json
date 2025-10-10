@@ -826,18 +826,18 @@
    },
    {
       "id": 56,
-      "question": "This is a test question with 6 images. The answer is A.",
+      "question": "Player A controls an exhausted **_Raddus, Holdo's Final Command_**. Player B plays **_Force Slow_**, targeting Player A's **_Raddus_**. Later in the same phase, **_Raddus_** is defeated. How much damage does it do with its **When Defeated** ability?",
       "choices": {
-         "a": "A",
-         "b": "B",
-         "c": "C",
-         "d": "D"
+         "a": "6",
+         "b": "8",
+         "c": "0",
+         "d": "7"
       },
-      "answer": "a",
-      "relevantCards": ["SOR/005", "SOR/051", "JTL/094", "LOF/249", "IBH/020", "TWI/147"],
-      "relevantRule": "No rules to see here.",
-      "tags": [""],
-      "difficulty": 2
+      "answer": "c",
+      "relevantCards": ["JTL/104", "LOF/217"],
+      "relevantRule": "When a unit with a **When Defeated** ability is defeated, if that ability references itself, the gamestate uses \"last known information,\" or, what the unit was right before it was defeated, when referencing information about the unit that was just defeated.\n\n**8.12.1** - \"Last Known Information\" is information about a card that’s no longer in play that amounts to a snapshot of its status immediately before it left play. Last Known Information includes the attributes of the card, the controller of the card, the modifiers applied to that card, the card’s ready/exhausted status, upgrades attached to that card, and how the card was defeated or removed from play. Last Known Information is used primarily when resolving \"When Defeated\" abilities.",
+      "tags": ["raddus", "force slow", "event", "debuff", "when defeated", "timing", "last known info", "power"],
+      "difficulty": 1
    },
    {
       "id": 57,
