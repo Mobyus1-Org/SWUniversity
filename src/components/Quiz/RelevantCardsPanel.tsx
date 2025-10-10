@@ -62,18 +62,15 @@ function isHorizontalCard(cardName: string): boolean {
 }
 
 const getScaleForCards = (count: number): number => {
+    const minScale = 16;
     const scales: Record<number, number> = {
       1: 30,
       2: 27,
       3: 24,
       4: 22,
-      5: 16,
-      6: 20,
-      7: 20,
-      8: 20,
-      9: 17,
-      10: 16,
     };
 
-    return scales[Math.min(count, 10)] || 8;
+    return count < 5
+      ? scales[count]
+      : count % 5 === 0 ? minScale : (count % 5 === 4 ? minScale + 1 : minScale + 4);
   };
