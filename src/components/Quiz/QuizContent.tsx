@@ -4,6 +4,7 @@ import { renderItalicsAndBold, isMarathonVariant, type Quiz, type UserResponse }
 import { StandardModeEndScreen } from "./StandardModeEndScreen";
 import { MarathonModeEndScreen } from "./MarathonModeEndScreen";
 import { AudioContext } from "../../util/context";
+import { RelevantCardsPanel } from "./RelevantCardsPanel";
 
 interface IProps {
   currentQuizSet: Quiz[];
@@ -160,25 +161,7 @@ export function QuizContent({
         </form>
       </div>
       {/* Images */}
-      <div className="flex-1 flex flex-[0_0_50%] flex-wrap items-center justify-center">
-      {
-        currentQuiz.relevantCards.length > 0
-        ? <div>
-          <div className="text-xl mb-2.5 mr-2">Relevant Cards</div>
-          <div className="text-sm"><u onClick={() => setShowModal(true)}>(Click here to see enlarged images)</u></div>
-          <div className="flex flex-wrap justify-center">
-            {
-              currentQuiz.relevantCards.map((cardName: string, index: number) => <div key={index} className="w-fit h-72 m-2.5">
-                <img src={`https://swudb.com/cdn-cgi/image/quality=40/images/cards/${cardName}.png`} alt={`card ${cardName}`} className="max-h-full object-contain" />
-              </div>)
-            }
-          </div>
-        </div>
-        : <div className="w-fit h-72 m-2.5">
-          <img src="/assets/SWUniversity_Cardback.png" alt="card back" className="max-h-full object-contain" />
-        </div>
-      }
-      </div>
+      <RelevantCardsPanel currentQuiz={currentQuiz} setShowModal={setShowModal} />
       {/* Relevant rule */}
       {
         quizResult && currentQuiz.relevantRule != " " && <div className="md:col-span-2">
