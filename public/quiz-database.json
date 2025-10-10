@@ -856,17 +856,17 @@
    },
    {
       "id": 58,
-      "question": "This is a test question with 8 images. The answer is A.",
+      "question": "Player A controls a **_Droid Missile Platform_** which is upgraded with a **_Targeting Computer_**. When the **_Droid Missile Platform_** is defeated, who gets to assign the indirect damage from its **When Defeated** ability and why?",
       "choices": {
-         "a": "A",
-         "b": "B",
-         "c": "C",
-         "d": "D"
+         "a": "Player A. The **_Droid Missile Platform's_** **When Defeated** ability resolves before any attached upgrades are defeated.",
+         "b": "Player A. **_Targeting Computer_** lets the controller of the attached unit assign the indirect damage.",
+         "c": "Player B. Indirect damage is always assigned by an opponent of the card dealing it.",
+         "d": "Player B. By the time the **When Defeated** ability resolves, **_Targeting Computer_** is no longer attached to the **_Droid Missile Platform_**."
       },
-      "answer": "a",
-      "relevantCards": ["SOR/005", "SOR/051", "JTL/094", "LOF/249", "IBH/020", "TWI/147", "JTL/197", "LOF/070"],
-      "relevantRule": "No rules to see here.",
-      "tags": [""],
+      "answer": "d",
+      "relevantCards": ["JTL/162", "JTL/171"],
+      "relevantRule": "When a unit is defeated, all upgrades attached to it are _immediately_ defeated as well. This means that the **_Droid Missile Platform_** loses the text gained from **_Targeting Computer_** before its **When Defeated** ability resolves, so Player B gets to assign the indirect damage.\n\n**3.6.11** - An upgrade is defeated when either the unit it is attached to leaves play, or when an ability defeats it directly. When an upgrade is defeated, the attached unit loses all power, HP, and abilities given to it by the upgrade, and the upgrade is placed in its owner’s discard pile.\n\n**7.6.14.A** - Some triggered abilities are indicated with \"When Defeated\" in bold, followed by a colon and an effect. These abilities trigger when the card they’re on is defeated and resolve after the card is removed from play and placed in its owner’s discard pile.",
+      "tags": ["droid missile platform", "targeting computer", "upgrade", "when defeated", "last known info", "indirect damage", "timing", "discard"],
       "difficulty": 2
    },
    {
