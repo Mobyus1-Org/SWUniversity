@@ -852,7 +852,7 @@
       "relevantCards": ["SOR/013", "SOR/190"],
       "relevantRule": "Even though **_Lothal Insurgent's_** **When Played** ability is what made Player B attempt to draw from an empty deck, the 3 damage dealt to Player B's base from the attempt comes from Player B themself, not Player A.\n\n**8.7.1** - If a player runs out of cards in their deck, they continue playing with the cards they have in play and in hand. If a player would draw a card from their empty deck, they instead deal 3 damage to their base for each card they would draw.",
       "tags": ["cassian andor", "lothal insurgent", "empty deck", "empty hand", "draw", "when played", "leader", "discard", "ability"],
-      "difficulty": 1
+      "difficulty": 2
    },
    {
       "id": 58,
