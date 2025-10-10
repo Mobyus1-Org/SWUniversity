@@ -785,8 +785,8 @@
       "choices": {
          "a": "**_Bamboozle_** cannot be paid for by discarding **_Spark of Rebellion_**. This play is illegal.",
          "b": "Since **_Bamboozle_** exhausts **_Saw_**, his ability is ignored.",
-         "c": "**_Saw_** becomes exhausted and Player B takes no damage to base."
-         "d": "Player B must deal 2 damage to their base and lose the game.",
+         "c": "**_Saw_** becomes exhausted and Player B takes no damage to base.",
+         "d": "Player B must deal 2 damage to their base and lose the game."
       },
       "answer": "c",
       "relevantCards": ["SOR/153", "SOR/199", "SOR/200"],
