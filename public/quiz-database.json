@@ -511,7 +511,7 @@
    },
    {
       "id": 35,
-      "question": "Player A has an **_N-1 Starfighter_** with **_Chewbacca, Faithful First Mate_**, attached to it as a _Pilot_. Player B plays **_No Glory, Only Results_** targeting Player A's **_N-1 Starfighter_**.  What best describes happens?",
+      "question": "Player A has an **_N-1 Starfighter_** with **_Chewbacca, Faithful First Mate_**, attached to it as a _Pilot_. Player B plays **_No Glory, Only Results_** targeting Player A's **_N-1 Starfighter_**. What best describes what happens?",
       "choices": {
          "a": "Player B takes control of the **_N-1_** with **_Chewbacca_** still attached, but it is not defeated.",
          "b": "Nothing happens.",
