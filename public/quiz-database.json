@@ -928,5 +928,20 @@
       "relevantRule": "There is no limit to the number of shield tokens a unit can have, and **_Moment of Peace_** does not specify any restrictions on what units it can target, so any unit in play is legal.",
       "tags": ["crafty smuggler", "seventh fleet defender", "trench defender", "moment of peace", "shield token", "event", "target"],
       "difficulty": 0
+   },
+   {
+      "id": 63,
+      "question": "Player A controls **_Admiral Ozzel, As Clumsy As He Is Stupid_**. Player B controls **_Padmé Amidala, What Do You Have To Hide?_**, and has no cards in hand. Player A attacks with **_Admiral Ozzel_** into **_Padmé_**, resulting in **_Ozzel_** being defeated. What best describes what happens when **_Ozzel's_** **When Defeated** ability resolves?",
+      "choices": {
+        "a": "Player B can use **_Padmé's_** ability to deal 1 damage to a unit.",
+        "b": "Player B takes 3 damage to their base.",
+        "c": "Nothing happens.",
+        "d": "Player A discards a card from their hand."
+      },
+      "answer": "c",
+      "relevantCards": ["IBH/082", "SEC/016-back"],
+      "relevantRule": "Since Player B has no cards in their hand, they cannot discard a card from it, meaning **_Padmé's_** ability does not trigger.\n\n**1.14.5** - If a player has no cards in their hand, they cannot discard a card from their hand",
+      "tags": ["admiral ozzel", "padme amidala", "when defeated", "ability", "discard", "leader"],
+      "difficulty": 1
    }
 ]
