@@ -29,7 +29,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="marathon"
       title="Marathon Mode"
-      description="Correctly answer every question in the databank once to complete the marathon!\n\nNew Line Test"
+      description="Correctly answer every question in the databank once to complete the marathon!\n\nTotal Questions: 50+"
       quizSet={allQuizzes}
       initQuizId={true}
       setQuizMode={setQuizMode}
@@ -39,7 +39,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="endless"
       title="Endless Mode"
-      description="Answer random questions with no end in sight!\n\nNew Line Test"
+      description="Answer random questions with no end in sight!"
       quizSet={allQuizzes}
       initQuizId={true}
       setQuizMode={setQuizMode}
@@ -49,7 +49,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="padawan"
       title="Padawan Mode"
-      description="A perfect place for new players to test their knowledge of the basics of SWU!\n\nNew Line Test"
+      description="A perfect place for new players to test their knowledge of the basics of SWU!\n\nTotal Questions: 20+"
       quizSet={allQuizzes.filter(quiz => quiz.difficulty === 0)}
       initQuizId={true}
       setQuizMode={setQuizMode}
@@ -59,7 +59,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="knight"
       title="Jedi Knight Mode"
-      description="The majority of our questions fall under this category.\nSee how many you know!\n\nNew Line Test"
+      description="The majority of our questions fall under this category.\nSee how many you know!\n\nTotal Questions: 25+"
       quizSet={allQuizzes.filter(quiz => quiz.difficulty === 1)}
       initQuizId={true}
       setQuizMode={setQuizMode}
@@ -69,7 +69,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="master"
       title="Jedi Master Mode"
-      description="Only the SWU players strongest in the Force understand these obscure interactions. And now you will too!\n\nNew Line Test"
+      description="Only the SWU players strongest in the Force understand these obscure interactions. And now you will too!\n\nTotal Questions: 5+"
       quizSet={allQuizzes.filter(quiz => quiz.difficulty === 2)}
       initQuizId={true}
       setQuizMode={setQuizMode}
