@@ -15,10 +15,9 @@ interface IProps {
 }
 
 export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQuizMode, setCurrentQuizSet, setCurrentQuizId, setStandardQuizLength}: IProps) {
-  const totalCount = allQuizzes.length;
-  const padawanCount = allQuizzes.filter(quiz => quiz.difficulty === 0).length;
-  const knightCount = allQuizzes.filter(quiz => quiz.difficulty === 1).length;
-  const masterCount = allQuizzes.filter(quiz => quiz.difficulty === 2).length;
+  const padawanQuizzes = allQuizzes.filter(quiz => quiz.difficulty === 0);
+  const knightQuizzes = allQuizzes.filter(quiz => quiz.difficulty === 1);
+  const masterQuizzes = allQuizzes.filter(quiz => quiz.difficulty === 2);
   const renderButtons = () => <div className="grid md:grid-cols-3 gap-4 uwd:gap-5 mb-8 h-full" style={{ textAlign: 'center' }}>
     <QuizModeButtonItem
       quizMode="standard"
@@ -33,7 +32,7 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="marathon"
       title="Marathon Mode"
-      description={`Correctly answer every question in the databank once to complete the marathon!\n\nTotal Questions: ${totalCount}`}
+      description={`Correctly answer every question in the databank once to complete the marathon!\n\nTotal Questions: ${allQuizzes.length}`}
       quizSet={allQuizzes}
       initQuizId={true}
       setQuizMode={setQuizMode}
@@ -53,8 +52,8 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="padawan"
       title="Padawan Mode"
-      description={`A perfect place for new players to test their knowledge of the basics of SWU!\n\nTotal Questions: ${padawanCount}`}
-      quizSet={allQuizzes.filter(quiz => quiz.difficulty === 0)}
+      description={`A perfect place for new players to test their knowledge of the basics of SWU!\n\nTotal Questions: ${padawanQuizzes.length}`}
+      quizSet={padawanQuizzes}
       initQuizId={true}
       setQuizMode={setQuizMode}
       setCurrentQuizSet={setCurrentQuizSet}
@@ -63,8 +62,8 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="knight"
       title="Jedi Knight Mode"
-      description={`The majority of our questions fall under this category.\nSee how many you know!\n\nTotal Questions: ${knightCount}`}
-      quizSet={allQuizzes.filter(quiz => quiz.difficulty === 1)}
+      description={`The majority of our questions fall under this category.\nSee how many you know!\n\nTotal Questions: ${knightQuizzes.length}`}
+      quizSet={knightQuizzes}
       initQuizId={true}
       setQuizMode={setQuizMode}
       setCurrentQuizSet={setCurrentQuizSet}
@@ -73,8 +72,8 @@ export function QuizModeButtons({quizMode, allQuizzes, standardQuizLength, setQu
     <QuizModeButtonItem
       quizMode="master"
       title="Jedi Master Mode"
-      description={`Only the SWU players strongest in the Force understand these obscure interactions. And now you will too!\n\nTotal Questions: ${masterCount}`}
-      quizSet={allQuizzes.filter(quiz => quiz.difficulty === 2)}
+      description={`Only the SWU players strongest in the Force understand these obscure interactions. And now you will too!\n\nTotal Questions: ${masterQuizzes.length}`}
+      quizSet={masterQuizzes}
       initQuizId={true}
       setQuizMode={setQuizMode}
       setCurrentQuizSet={setCurrentQuizSet}
