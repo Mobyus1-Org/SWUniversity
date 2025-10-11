@@ -894,7 +894,7 @@
          "d": "The game continues. **_Aurra Sing_** can't deal **Overwhelm** damage when attacking a _Force_ unit."
       },
       "answer": "b",
-      "relevantCards": ["LOF/252", "SHD/166"],
+      "relevantCards": ["LOF/252", "TWI/166"],
       "relevantRule": "Since combat damage and damage from **Overwhelm** are dealt simultaneously, Player A's base reaches 0 HP remaining before they have the opportunity to use **_The Daughter's_** ability.\n\n**7.5.7.C** - An attacker with Overwhelm deals combat damage to the defender and the enemy base simultaneously.",
       "tags": ["the daughter", "aurra sing", "timing", "the force", "overwhelm"],
       "difficulty": 1
