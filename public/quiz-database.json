@@ -871,32 +871,32 @@
    },
    {
       "id": 59,
-      "question": "This is a test question with 9 images. The answer is A.",
+      "question": "Player A has 3 HP remaining on their base. Player B controls a **_K-2SO, Cassian's Counterpart_**, and also has 3 HP remaining on their base. Player A plays **_Gor, Grievous's Pet_**, and uses **Ambush** to attack into **_K-2SO_**. What best describes what happens?",
       "choices": {
-         "a": "A",
-         "b": "B",
-         "c": "C",
-         "d": "D"
+         "a": "Player A wins. **_Gor_** deals 3 damage to Player B's base due to **Overwhelm** before **_K-2SO's_** **When Defeated** resolves.",
+         "b": "Player A wins. As the active player, Player A can choose to resolve **_Gor's_** **Overwhelm** before **_K-2SO's_** **When Defeated**.",
+         "c": "Player B wins. **_K-2SO's_** **When Defeated** must resolve immediately, dealing 3 damage to Player A's base before **_Gor_** can **Overwhelm**.",
+         "d": "Player B wins. As the defending player, they can choose to resolve **_K-2SO's_** **When Defeated** ability before **_Gor's_** **Overwhelm**."
       },
       "answer": "a",
-      "relevantCards": ["SOR/005", "SOR/051", "JTL/094", "LOF/249", "IBH/020", "TWI/147", "JTL/197", "LOF/070", "LOF/190"],
-      "relevantRule": "No rules to see here.",
-      "tags": [""],
-      "difficulty": 2
+      "relevantCards": ["SOR/145", "TWI/118"],
+      "relevantRule": "Combat damage and damage from **Overwhelm** are done to the defending player's base simultaneously, so Player B's base reaches 0 HP before **_K-2SO's_** **When Defeated** ability has time to resolve.\n\n**7.5.7.C** - An attacker with Overwhelm deals combat damage to the defender and the enemy base simultaneously.",
+      "tags": ["k-2so", "gor", "overwhelm", "when defeated", "timing", "ambush"],
+      "difficulty": 1
    },
    {
       "id": 60,
-      "question": "This is a test question with 10 images. The answer is A.",
+      "question": "Player A controls **_The Daughter, Embodiment of Light_**, has The Force token, and has 1 HP remaining on their base. Player B attacks **_The Daughter_** with **_Aurra Sing, Crackshot Sniper_**. What best describes what happens?",
       "choices": {
-         "a": "A",
-         "b": "B",
-         "c": "C",
-         "d": "D"
+         "a": "Player B wins. As the active player, Player B can choose to resolve **_Aurra Sing's_** **Overwhelm** before **_The Daugheter's_** ability.",
+         "b": "Player B wins. **_Aurra Sing_** deals 1 damage to Player A's base due to **Overwhelm** before **_The Daughter's_** ability can resolve.",
+         "c": "The game continues. Player A's base takes 1 damage from **Overwhelm** but immediately heals 2 damage from **_The Daughter's_** ability.",
+         "d": "The game continues. **_Aurra Sing_** can't deal **Overwhelm** damage when attacking a _Force_ unit."
       },
-      "answer": "a",
-      "relevantCards": ["SOR/005", "SOR/051", "JTL/094", "LOF/249", "IBH/020", "TWI/147", "JTL/197", "LOF/070", "LOF/190", "LOF/018"],
-      "relevantRule": "No rules to see here.",
-      "tags": [""],
-      "difficulty": 2
+      "answer": "b",
+      "relevantCards": ["LOF/252", "SHD/166"],
+      "relevantRule": "Since combat damage and damage from **Overwhelm** are dealt simultaneously, Player A's base reaches 0 HP remaining before they have the opportunity to use **_The Daughter's_** ability.\n\n**7.5.7.C** - An attacker with Overwhelm deals combat damage to the defender and the enemy base simultaneously.",
+      "tags": ["the daughter", "aurra sing", "timing", "the force", "overwhelm"],
+      "difficulty": 1
    }
 ]
