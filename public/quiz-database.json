@@ -898,5 +898,20 @@
       "relevantRule": "Since combat damage and damage from **Overwhelm** are dealt simultaneously, Player A's base reaches 0 HP remaining before they have the opportunity to use **_The Daughter's_** ability.\n\n**7.5.7.C** - An attacker with Overwhelm deals combat damage to the defender and the enemy base simultaneously.",
       "tags": ["the daughter", "aurra sing", "timing", "the force", "overwhelm"],
       "difficulty": 1
+   },
+   {
+      "id": 61,
+      "question": "Player A controls **_Ezra Bridger, Resourceful Troublemaker_**, upgraded with **_Clone Cohort_**. Player B controls **_General Krell, Heartless Tactician_**, and a **_Landing Shuttle_**, both with full HP. Player A attacks with **_Ezra_** into Player B's base. Once damage is dealt, Player A resolves **_Ezra's_** ability and decides to play the top card of their deck, which is **_Strike True_**. Player A chooses their own **_Ezra Bridger_** and Player B's **_Landing Shuttle_**. How many cards can Player B draw?",
+      "choices": {
+         "a": "1",
+         "b": "0",
+         "c": "2",
+         "d": "3"
+      },
+      "answer": "b",
+      "relevantCards": ["SOR/192", "TWI/169", "SOR/105", "JTL/063", "SOR/127"],
+      "relevantRule": "The power buff from **Raid** only applies while a unit is attacking. Since **_Ezra's_** ability doesn't trigger until after the attack has been completed, **_Strike True_** only sees his power as 3. If **_Ezra's_** ability were an **On Attack** ability instead, **_Strike True_** would, in that case, deal 5 damage.\n\n**7.5.8.C** - An attacker gets bonus power from Raid during an attack and loses the bonus power when the attack completes, for the same duration as \"While this unit is attacking\" abilities.",
+      "tags": ["ezra bridger", "clone cohort", "general krell", "landing shuttle", "strike true", "event", "raid", "when defeated", "draw", "other", "timing", "completes an attack"],
+      "difficulty": 2
    }
 ]
