@@ -670,7 +670,7 @@
       },
       "answer": "b",
       "relevantCards": ["JTL/053", "TWI/051", "LOF/046", "TJTL/T02"],
-      "relevantRule": "This is a rather unintuitive one, so here goes...\nDue to the wording in the rules for **Coordinate**, when a player controls 3 or more units, the unit \"gains\" whatever is after the dash. This means that while **_The Ghost_** is upgraded with **_For The Republic_**, it passes **\"Coordinate - Restore 2\"** on to friendly _Spectres_. Then once **Coordinate** becomes active, **_The Ghost_** gains **\"Restore 2\"** and passes that on as well, meaning **_Ezra_** has a total of **Restore 4**.\n\n**7.5.15.A** - \"Coordinate\" is a keyword followed by a dash and ability text whose effect is the same as the constant ability: \"While you control 3 or more units, this card gains the following ability.\"",
+      "relevantRule": "This is a rather unintuitive one, so here goes...\nDue to the wording in the rules for **Coordinate**, when a player controls 3 or more units, the unit \"gains\" whatever is after the dash. This means that while **_The Ghost_** is upgraded with **_For The Republic_**, it passes \"**Coordinate** - **Restore 2**\" on to friendly _Spectres_. Then once **Coordinate** becomes active, **_The Ghost_** gains \"**Restore 2**\" and passes that on as well, meaning **_Ezra_** has a total of **Restore 4**.\n\n**7.5.15.A** - \"Coordinate\" is a keyword followed by a dash and ability text whose effect is the same as the constant ability: \"While you control 3 or more units, this card gains the following ability.\"",
       "tags": ["the ghost", "ezra bridger", "x-wing", "coordinate", "keyword", "restore", "spectre", "upgrade"],
       "difficulty": 2
    },
@@ -913,5 +913,20 @@
       "relevantRule": "The power buff from **Raid** only applies while a unit is attacking. Since **_Ezra's_** ability doesn't trigger until after the attack has been completed, **_Strike True_** only sees his power as 3. If **_Ezra's_** ability were an **On Attack** ability instead, **_Strike True_** would, in that case, deal 5 damage.\n\n**7.5.8.C** - An attacker gets bonus power from Raid during an attack and loses the bonus power when the attack completes, for the same duration as \"While this unit is attacking\" abilities.",
       "tags": ["ezra bridger", "clone cohort", "general krell", "landing shuttle", "strike true", "event", "raid", "when defeated", "draw", "other", "timing", "completes an attack"],
       "difficulty": 2
+   },
+   {
+      "id": 62,
+      "question": "Player A controls a **_Crafty Smuggler_** with a shield token. Player B controls a **_Seventh Fleet Defender_** with a shield token and a **_Trench Defender_**. Player A plays **_Moment of Peace_**. What units are legal targets?",
+      "choices": {
+        "a": "Only the **_Crafty Smuggler_**.",
+        "b": "Only the **_Trench Defender_**.", 
+        "c": "None of them.",
+        "d": "All of them."
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/207", "SOR/180", "IBH/008", "SOR/073"],
+      "relevantRule": "There is no limit to the number of shield tokens a unit can have, and **_Moment of Peace_** does not specify any restrictions on what units it can target, so any unit in play is legal.",
+      "tags": ["crafty smuggler", "seventh fleet defender", "trench defender", "moment of peace", "shield token", "event", "target"],
+      "difficulty": 0
    }
 ]
