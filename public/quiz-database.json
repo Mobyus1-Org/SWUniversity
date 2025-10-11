@@ -924,7 +924,7 @@
         "d": "All of them."
       },
       "answer": "d",
-      "relevantCards": ["SOR/207", "SOR/180", "IBH/008", "SOR/073"],
+      "relevantCards": ["SOR/207", "SOR/180", "IBH/008", "SOR/073", "TSOR/T02"],
       "relevantRule": "There is no limit to the number of shield tokens a unit can have, and **_Moment of Peace_** does not specify any restrictions on what units it can target, so any unit in play is legal.",
       "tags": ["crafty smuggler", "seventh fleet defender", "trench defender", "moment of peace", "shield token", "event", "target"],
       "difficulty": 0
