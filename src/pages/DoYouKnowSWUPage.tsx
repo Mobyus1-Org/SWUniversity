@@ -74,7 +74,7 @@ function DoYouKnowSWUPage() {
             setStandardModeLength={setStandardQuestionLength}
           />
           : renderQuestionContent()
-      }
+      };
     </div>;
   }
 
