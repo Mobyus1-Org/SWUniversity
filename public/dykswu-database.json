@@ -12,7 +12,7 @@
     "id": 2,
     "img": "redthree",
     "difficulty": 0,
-    "answer": "ability",
+    "answer": "ability-text",
     "actualCard": "SOR/144",
     "explanation": "Red Three gives friendly _Heroism_ units **Raid 1**.",
     "tags": ["red three", "keyword", "ability"]
