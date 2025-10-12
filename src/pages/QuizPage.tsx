@@ -23,7 +23,7 @@ function QuizPage() {
       setAllQuizzes(data);
     });
   }, []);
-
+ 
   const renderQuizContent = () => currentQuizSet.length === 0
     ? <p className="text-lg uwd:text-3xl 4k:text-5xl">Loading quizzes...</p>
     : <QuizContent
