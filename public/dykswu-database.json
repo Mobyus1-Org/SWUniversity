@@ -66,10 +66,10 @@
     "id": 8,
     "img": "darthvader1",
     "difficulty": 1,
-    "answer": "name",
+    "answer": "something-else",
     "actualCard": "SOR/087",
     "explanation": "The unique symbol is missing from **_Darth Vader's_** name.",
-    "tags": ["darth vader", "name"]
+    "tags": ["darth vader", "something-else"]
   },
   {
     "id": 9,
