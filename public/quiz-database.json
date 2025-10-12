@@ -958,5 +958,20 @@
       "relevantRule": "This is a weird one, but it's true according to the rules. While discarding a hand of 0 cards will not trigger **_Padmé's_** ability, it _does_ still satisfy **_Black One's_** \"If you do\" condition.\n\n**1.14.6** - When instructed to \"discard your hand,\" a player must discard cards from their hand until they have no cards in hand. If they already have no cards in hand, they are considered to have discarded their hand for relevant game effects.",
       "tags": ["padme amidala", "black one", "when played", "ability", "discard", "leader", "hand"],
       "difficulty": 2
+   },
+   {
+      "id": 65,
+      "question": "Player A controls **_Snowtrooper Vanguard_** and has 1 damage on their base. They then play **_General Veers, Leading the Assault_**. What best describes what happens next?",
+      "choices": {
+        "a": "Player B's base takes 2 damage and Player A's base heals 0 damage.",
+        "b": "Player B's base takes 2 damage and Player A's base heals 1 damage.", 
+        "c": "Player B's base takes 1 damage and Player A's base heals 1 damage.",
+        "d": "Nothing happens since Player A does not have 2 damage on their base to heal."
+      },
+      "answer": "b",
+      "relevantCards": ["IBH/057", "IBH/068"],
+      "relevantRule": "When HP is healed for more damage than they have on them, player's remove as much damage as they can and are only considered to have healed that much damage.\n\n**1.11.5** - A card cannot be healed in excess of its HP. If a card would be healed in excess of its HP, heal as much damage as possible instead. The player only is considered to have healed damage equal to the number of damage counters removed.",
+      "tags": ["snowtrooper vanguard", "general veers", "heal", "when played", "ability"],
+      "difficulty": 0
    }
 ]
