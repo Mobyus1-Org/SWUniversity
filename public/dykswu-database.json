@@ -88,5 +88,50 @@
     "actualCard": "SOR/091",
     "explanation": "No changes were made.",
     "tags": ["the emperor's legion", "no-change"]
+  },
+  {
+    "id": 11,
+    "img": "superlasertech1",
+    "difficulty": 0,
+    "answer": "ability-text",
+    "actualCard": "SOR/083",
+    "explanation": "When **_Superlaser Technician_** is defeated, it becomes a ready resource.",
+    "tags": ["superlaser technician", "ability-text"]
+  },
+  {
+    "id": 12,
+    "img": "bobafett1",
+    "difficulty": 2,
+    "answer": "subtitle",
+    "actualCard": "SOR/179",
+    "explanation": "This is **_Boba Fett, Disintigrator_**, not **_Boba Fett, Collecting the Bounty_**.",
+    "tags": ["boba fett", "subtitle"]
+  },
+  {
+    "id": 13,
+    "img": "stormtrooperlieutenant1",
+    "difficulty": 0,
+    "answer": "name",
+    "actualCard": "SOR/236",
+    "explanation": "This unit's name is actually **_Snowtrooper Liuetenant_**.",
+    "tags": ["snowtrooper lieutenant", "name"]
+  },
+  {
+    "id": 14,
+    "img": "97thlegion1",
+    "difficulty": 2,
+    "answer": "aspects",
+    "actualCard": "SOR/118",
+    "explanation": "While **_97th Legion_** does, in fact, have the _Imperial_ trait, it does not have the _Villainy_ aspect.",
+    "tags": ["97th legion", "aspects"]
+  },
+  {
+    "id": 15,
+    "img": "galacticambition1",
+    "difficulty": 1,
+    "answer": "no-change",
+    "actualCard": "SOR/235",
+    "explanation": "No changes were made.",
+    "tags": ["galactic ambition", "no-change"]
   }
 ]
