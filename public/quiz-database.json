@@ -1003,5 +1003,20 @@
       "relevantRule": "Since Player A would need to control a unit with the yellow _Cunning_ aspect, the only one in this list that would work is **_R2-D2, Full of Solutions_**. The Leader, **_C-3PO, Human-Cyborg Relations_**, would count if he was deployed as a unit, but does not count while he remains in the leader zone.\n\n**2.7.1** - If a card belongs to one or more aspects, those aspects are indicated by aspect icons located on one side of the card. Bases and both sides of leaders have aspect icons on the right, indicating that they provide those aspects to their deck. Units, events, and upgrades have aspect icons on the left, indicating that they incur those aspect penalties to play if not provided by a player’s leader or base. Each card has between 0 and 2 aspect icons. See 1.5.6. Aspects",
       "tags": ["c-3po", "r2-d2", "when played", "aspects"],
       "difficulty": 0
+   },
+   {
+      "id": 68,
+      "question": "At the start of a new round, Player A plays **_Gungi, Finding Himself_**. Player B, who already has two other units in play, plays **_Ki-Adi-Mundi, Composed and Confident_**. Then, Player A plays **_General's Blade_**, attaching it to **_Gungi_**. What best describes what happens?",
+      "choices": {
+         "a": "**_Ki-Adi-Mundi_** does not trigger because Player A has only played one card since he entered play.",
+         "b": "**_Ki-Adi-Mundi_** does not trigger because **_General's Blade_** is not a unit.", 
+         "c": "**_Ki-Adi-Mundi_** does not trigger because Player B hasn't played their second card.",
+         "d": "**_Ki-Adi-Mundi_** triggers and Player B may draw 2 cards."
+      },
+      "answer": "d",
+      "relevantCards": ["LOF/093", "TWI/064", "TWI/121"],
+      "relevantRule": "Even though **_Ki-Adi-Mundi_** wasn't in play when Player A played their first card in the phase, he _was_ in play when they played their second, so his ability still triggers.\n\n**8.9.2** - Abilities that refer to the \"second\" or later occurrence in a phase or round (e.g. \"The second event played this phase\") likewise refer to the second or later occurrence that happens in that phase or round, regardless of when the ability becomes active. Abilities that affect the second or later occurrence in a phase or round do not apply their effects retroactively if they become active after the occurrence has already taken place.",
+      "tags": ["gungi", "ki-adi-mundi", "general's blade", "timing", "ability", "upgrade"],
+      "difficulty": 1
    }
 ]
