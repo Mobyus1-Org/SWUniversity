@@ -75,9 +75,9 @@
     "id": 9,
     "img": "atatsuppressor",
     "difficulty": 2,
-    "answer": "trait",
+    "answer": "traits",
     "actualCard": "SOR/039",
     "explanation": "**_AT-AT Suppressor_** is missing the _Walker_ trait.",
-    "tags": ["at-at suppressor", "trait"]
+    "tags": ["at-at suppressor", "traits"]
   }
 ]
