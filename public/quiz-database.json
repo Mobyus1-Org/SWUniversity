@@ -989,5 +989,19 @@
       "tags": ["u-wing reinforcement", "kelleran beq", "mon mothma", "admiral ackbar", "search", "draw", "ordering", "when played", "random order", "nested ability"],
       "difficulty": 2
    },
-
+   {
+      "id": 67,
+      "question": "Player A plays **_C-3PO, Oh Dear, Oh Dear_**. Which of the follow cards would player A need to control to draw a card from **_C-3PO's_** **When Played** ability?",
+      "choices": {
+         "a": "**_C-3PO, Human-Cyborg Relations_** (not deployed).",
+         "b": "**_C-3PO, Protocol Droid_**.", 
+         "c": "**_R2-D2, Full of Solutions_**.",
+         "d": "**_C-3PO, Anything I Might Do?_**."
+      },
+      "answer": "c",
+      "relevantCards": ["IBH/019", "SEC/015", "SOR/238", "SEC/093", "TWI/193"],
+      "relevantRule": "Since Player A would need to control a unit with the yellow _Cunning_ aspect, the only one in this list that would work is **_R2-D2, Full of Solutions_**. The Leader, **_C-3PO, Human-Cyborg Relations_**, would count if he was deployed as a unit, but does not count while he remains in the leader zone.\n\n**2.7.1** - If a card belongs to one or more aspects, those aspects are indicated by aspect icons located on one side of the card. Bases and both sides of leaders have aspect icons on the right, indicating that they provide those aspects to their deck. Units, events, and upgrades have aspect icons on the left, indicating that they incur those aspect penalties to play if not provided by a player’s leader or base. Each card has between 0 and 2 aspect icons. See 1.5.6. Aspects",
+      "tags": ["c-3po", "r2-d2", "when played", "aspects"],
+      "difficulty": 0
+   }
 ]
