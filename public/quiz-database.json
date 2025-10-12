@@ -978,10 +978,10 @@
       "id": 66,
       "question": "Player A plays **_U-Wing Reinforcement_**. Among the top 10 cards, they find and play a **_Kelleran Beq, The Sabered Hand_**. Among the top 7 cards, they find and play a **_Mon Mothma, Voice of the Rebellion_**. Among the top 5 cards, they find an **_Admiral Ackbar, Brilliant Strategist_**. At what point are the non-selected cards placed on the bottom of Player A's deck in a random order?",
       "choices": {
-         "a": "The non-selected cards are set aside and kept separate until the chain of abilities has finished resolving, then placed on the bottom of Player A's deck in a random order starting with **_U-Wing Reinforcement's_** remaining cards and ending with **_Mon Mothma's_** remaining cards.",
-         "b": "The non-selected cards are set aside and kept separate until the chain of abilities has finished resolving, then placed on the bottom of Player A's deck in a random order starting with **_Mon Mothma's_** remaining cards and ending with **_U-Wing Reinforcement's_** remaining cards.",
-         "c": "Each portion of non-selected cards are immediately placed on the bottom of Player A's deck in a random order after the chosen card is played/drawn.",
-         "d": "The non-selected cards are set aside until the chain of abilities has finished resolving before being shuffled together and placed on the bottom of Player A's deck in a random order."
+         "a": "The non-selected cards from each ability are set aside in separate piles. Once the chain of abilities has finished resolving, the individual piles are placed on the bottom of the deck starting with the **_U-Wing Reinforcement_** pile going forwards.",
+         "b": "The non-selected cards from each ability are set aside in separate piles. Once the chain of abilities has finished resolving, the individual piles are placed on the bottom of the deck starting with the **_Mon Mothma_** pile going backwards.",
+         "c": "The non-selected cards are immediately placed on the bottom of Player A's deck after each selection.",
+         "d": "The non-selected cards are set aside after each selection. Once the chain of abilities has finished resolving, all set aside cards are shuffled together and placed on the bottom of Player A's deck."
       },
       "answer": "c",
       "relevantCards": ["SOR/104", "LOF/100", "SOR/096", "SOR/097"],
