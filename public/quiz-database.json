@@ -980,8 +980,8 @@
       "choices": {
          "a": "The non-selected cards from each ability are set aside in separate piles. Once the chain of abilities has finished resolving, the individual piles are placed on the bottom of the deck starting with the **_U-Wing Reinforcement_** pile going forwards.",
          "b": "The non-selected cards from each ability are set aside in separate piles. Once the chain of abilities has finished resolving, the individual piles are placed on the bottom of the deck starting with the **_Mon Mothma_** pile going backwards.",
-         "c": "The non-selected cards are immediately placed on the bottom of Player A's deck after each selection.",
-         "d": "The non-selected cards are set aside after each selection. Once the chain of abilities has finished resolving, all set aside cards are shuffled together and placed on the bottom of Player A's deck."
+         "c": "The non-selected cards are immediately placed on the bottom of the deck after each selection.",
+         "d": "The non-selected cards are set aside after each selection. Once the chain of abilities has finished resolving, all set aside cards are shuffled together and placed on the bottom of the deck."
       },
       "answer": "c",
       "relevantCards": ["SOR/104", "LOF/100", "SOR/096", "SOR/097"],
