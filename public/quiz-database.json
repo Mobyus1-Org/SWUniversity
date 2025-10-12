@@ -943,5 +943,20 @@
       "relevantRule": "Since Player B has no cards in their hand, they cannot discard a card from it, meaning **_Padmé's_** ability does not trigger.\n\n**1.14.5** - If a player has no cards in their hand, they cannot discard a card from their hand",
       "tags": ["admiral ozzel", "padme amidala", "when defeated", "ability", "discard", "leader"],
       "difficulty": 1
+   },
+   {
+      "id": 64,
+      "question": "Player A is playing **_Padmé Amidala, What Do You Have To Hide?_**, as their leader and has no cards in hand. Player A then plays **_Black One, Scourge of Starkiller Base_**. What best describes what happens?",
+      "choices": {
+        "a": "**_Padmé's_** ability triggers, but Player A draws no cards.",
+        "b": "**_Padmé's_** ability triggers, then Player A draws 3 cards.",
+        "c": "**_Padmé_** does not trigger, but Player A still draws 3 cards.",
+        "d": "Nothing happens."
+      },
+      "answer": "c",
+      "relevantCards": ["SEC/016", "SOR/147"],
+      "relevantRule": "This is a weird one, but it's true according to the rules. While discarding a hand of 0 cards will not trigger **_Padmé's_** ability, it _does_ still satisfy **_Black One's_** \"If you do\" condition.\n\n**1.14.6** - When instructed to \"discard your hand,\" a player must discard cards from their hand until they have no cards in hand. If they already have no cards in hand, they are considered to have discarded their hand for relevant game effects.",
+      "tags": ["padme amidala", "black one", "when played", "ability", "discard", "leader", "hand"],
+      "difficulty": 2
    }
 ]
