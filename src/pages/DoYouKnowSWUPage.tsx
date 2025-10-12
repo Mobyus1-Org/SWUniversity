@@ -60,7 +60,7 @@ function DoYouKnowSWUPage() {
     }
 
     return <div>
-      <h1 className="w-auto mx-auto text-center text-4xl font-bold md:text-4xl uwd:!text-5xl 4k:!text-7xl font-bold mb-4 uwd:ml-2 4k:ml-4">{getModeTitle("quizzz", dykswuMode)}</h1>
+      <h1 className="w-auto mx-auto text-center text-4xl font-bold md:text-4xl uwd:!text-5xl 4k:!text-7xl font-bold mb-4 uwd:ml-2 4k:ml-4">{getModeTitle("quiz", dykswuMode)}</h1>
       {
         dykswuMode === "" || (dykswuMode === "standard" && standardQuestionLength === 0)
           ? <ModeButtons
