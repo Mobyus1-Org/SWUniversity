@@ -54,7 +54,7 @@ function QuizPage() {
     setSelectedAnswer("");
     setQuizResult(false);
     setCurrentQuizKeys([]);
-  };
+  }
 
   const resetQuizMode = () => {
     resetCurrentQuizState();
