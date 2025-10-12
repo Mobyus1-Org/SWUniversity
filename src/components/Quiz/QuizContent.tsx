@@ -86,10 +86,10 @@ export function QuizContent({
       return "";
     };
 
-    const divs = currentQuizKeys.map((_, index) => <div key={index} className={`mb-2.5 ${highlighted(index)}`}>
+    const divs = currentQuizKeys.map((_, index) => <div key={index} className={`mb-2.5 uwd:mb-4 4k:mb-8 ${highlighted(index)}`}>
         <button
           type="button"
-          className={`w-full text-left px-4 py-2 border rounded-lg hover:bg-slate-700/50 transition-colors
+          className={`w-full text-left px-4 uwd:px-8 4k:px-16 py-2 uwd:py-4 4k:py-8 border rounded-lg hover:bg-slate-700/50 transition-colors
             ${
               selectedAnswer === currentQuizKeys[index]
                 ? 'border-white bg-slate-600/50'
@@ -140,7 +140,7 @@ export function QuizContent({
       quizzesCompleted.length < currentQuizSet.length && <div className={`grid ${globalBackgroundStyle} shadow-md md:grid-cols-[40%_60%] border p-8 rounded gap-4`}>
       {/* Question and choices */}
       <div>
-        <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{renderItalicsAndBold(currentQuiz.question)}</p>
+        <p className="mb-2.5 uwd:mb-8 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{renderItalicsAndBold(currentQuiz.question)}</p>
         <form onSubmit={(e) => {
           e.preventDefault();
           if (selectedAnswer !== "") {
@@ -148,10 +148,10 @@ export function QuizContent({
           }
         }}>
         {renderChoices()}
-        {!quizResult && <button type="submit" className="btn btn-primary mt-4 text-lg p-4">Submit Answer</button>}
+        {!quizResult && <button type="submit" className="btn btn-primary mt-4 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12">Submit Answer</button>}
         {
           quizResult && quizzesCompleted.length < currentQuizSet.length
-            ? <button className="btn btn-secondary mt-4 text-lg p-4" onClick={() =>
+            ? <button className="btn btn-secondary mt-4 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12" onClick={() =>
                   onNextQuestion(quizMode, selectedAnswer, currentQuizId, currentQuiz.answer.toString(),
                     currentQuizSet, quizzesCompleted, lastEndlessQuizzes, standardQuizLength, userResponses, sfx,
                     setQuizzesCompleted, setCurrentQuizId, setLastEndlessQuizzes, setUserResponses, resetCurrentQuizState)}>
@@ -165,11 +165,11 @@ export function QuizContent({
       <RelevantCardsPanel currentQuiz={currentQuiz} setShowModal={setShowModal} />
       {/* Relevant rule */}
       {
-        quizResult && currentQuiz.relevantRule != " " && <div className="md:col-span-2">
-          <p className={`${currentQuiz.answer === selectedAnswer ? "text-green-500" : "text-red-500"} text-xl font-bold mb-4`}>
+        quizResult && currentQuiz.relevantRule != " " && <div className="md:col-span-2 text-xl uwd:text-3xl 4k:text-5xl">
+          <p className={`${currentQuiz.answer === selectedAnswer ? "text-green-500" : "text-red-500"} font-bold mb-4`}>
             {currentQuiz.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
           </p>
-          <p className="text-xl mb-2.5 font-bold">Relevant Rules:</p>
+          <p className="mb-2.5 font-bold">Relevant Rules:</p>
           <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentQuiz.relevantRule)}</p>
         </div>
       }
@@ -177,10 +177,11 @@ export function QuizContent({
       {
         currentQuiz.relevantCards.length > 0 &&
         showModal && <div role="dialog" aria-modal="true" className="z-50 overflow-y-auto fixed inset-0 bg-black bg-opacity-70 flex flex-wrap" onClick={() => setShowModal(false)}>
-          <p className="absolute top-2 md:top-4 right-4 md:right-8 text-gray-400 md:text-4xl" onClick={() => setShowModal(false)}>X</p>
+          <p className="absolute top-2 md:top-4 right-4 md:right-8 text-gray-400 md:text-4xl 4k:!text-7xl" onClick={() => setShowModal(false)}>X</p>
           <div className="flex flex-wrap justify-center py-8 md:px-24">
           {
-            currentQuiz.relevantCards.map((cardName: string, index: number) => <div key={index} className="w-fit h-100 md:h-120 m-2.5">
+            currentQuiz.relevantCards.map((cardName: string, index: number) => <div key={index}
+                className="w-fit h-100 lg:h-120 uwd:!h-190 4k:!h-280 m-2.5">
               <img src={getSWUDBImageLink(cardName)} alt={`card ${cardName}`} className="max-h-full object-contain" />
             </div>)
           }

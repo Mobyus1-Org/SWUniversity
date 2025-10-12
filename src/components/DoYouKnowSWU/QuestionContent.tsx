@@ -75,13 +75,13 @@ export function QuestionContent({
     const renderChoiceTitle = (choice: string) =>
       choice == "hp" ? "HP" : choice.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 
-    const divs = <div className="grid grid-cols-2 gap-2.5">
+    const divs = <div className="grid grid-cols-2 gap-2.5 uwd:gap-3.8 4k:gap-5">
       {
         DYKSWUChoices.map((_, index) => (
           <div key={index} className={`${highlighted(index)}`}>
             <button
               type="button"
-              className={`w-full text-left px-4 py-2 border rounded-lg hover:bg-slate-700/50 transition-colors
+              className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 transition-colors
             ${selectedAnswer === DYKSWUChoices[index]
                   ? 'border-white bg-slate-600/50'
                   : 'border-slate-600'
@@ -140,10 +140,10 @@ export function QuestionContent({
             }
           }}>
             {renderChoices()}
-            {!questionResult && <button type="submit" className="btn btn-primary mt-18 text-lg p-4">Submit Answer</button>}
+            {!questionResult && <button type="submit" className="btn btn-primary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12">Submit Answer</button>}
             {
               questionResult && questionsCompleted.length < currentQuestionSet.length
-                ? <button className="btn btn-secondary mt-18 text-lg p-4" onClick={() =>
+                ? <button className="btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12" onClick={() =>
                   onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentQuestion.answer.toString(),
                     currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses, sfx,
                     setQuestionsCompleted, setCurrentQuestionId, setLastEndlessQuestions, setUserResponses, resetCurrentQuestionState)}>
