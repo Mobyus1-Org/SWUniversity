@@ -326,7 +326,7 @@
       "answer": "d",
       "relevantCards": ["SOR/044", "SOR/070", "SOR/102"],
       "relevantRule": "Keywords whose names are followed by a numeral are cumulative. Since **Restore** has a numeral, the total amount healed is the sum of all instances of **Restore** on a unit. In this case, 1 from itself, 2 from **_Devotion_**, and 1 from **_Home One_** for a total of 4.\n\n**7.5.4** - If a card is given a keyword it already has, those keywords do not \"stack\" (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral, a cost, or a dash and ability text. If they are followed by a numeral, the numbers following each keyword are added together. If they are followed by a cost or a dash and ability text, each keyword is considered its own ability.\n\n**7.5.9.B** - Multiple instances of Restore stack. If a unit gains Restore when it already has Restore, the numerals following each instance of Restore are added together, and when the unit attacks it heals damage equal to the total value.",
-      "tags": ["restored arc-170", "devotion", "home one", "restore", "keyword", "heal"],
+      "tags": ["restored arc-170", "devotion", "home one", "restore", "keyword", "heal", "upgrade"],
       "difficulty": 0
    },
    {
@@ -440,7 +440,7 @@
       "choices": {
          "a": "Yes. It does not say \"You may\", so it's required.",
          "b": "No. Collecting a **Bounty** is optional.",
-         "c": "No. **Bounties** are only collected when the unit is captured.",
+         "c": "No. A **Bounty** is only collected when the unit is captured.",
          "d": "Yes, but only if Player B has the initiative."
       },
       "answer": "b",
@@ -549,7 +549,7 @@
          "d": "A deployed **_Sabine Wren, Galvanized Revolutionary_**, leader unit."
       },
       "answer": "a",
-      "relevantCards": ["SOR/077", "LOF/061", "SHD/152", "SOR/014-portrait", "SHD/035"],
+      "relevantCards": ["SOR/077", "LOF/061", "SHD/152", "SOR/014-portrait", "SHD/035", "TSHD/T01"],
       "relevantRule": "When a card references a unit's HP, use the amount of HP remaining after applying any relevant modifiers and subtracting one for each damage counter on the unit. Also, if a card does not specify \"non-leader\", it can target deployed leader units as well!\n\n**1.11.6** - A card’s \"remaining HP\" is calculated by subtracting the number of damage counters on it from its HP (accounting for any modifiers to its HP). If the remaining HP of a card is 0 or less, that card is defeated immediately.",
       "tags": ["takdown", "secretive sage", "desperado freighter", "sabine wren", "clan saxon gauntlet", "target", "event", "hp"],
       "difficulty": 0
@@ -702,7 +702,7 @@
       "relevantCards": ["SHD/120", "SHD/043"],
       "relevantRule": "When a captured unit returns to play, it returns to its owner's control exhausted. It does not trigger any **When Played** abilities, including keywords that trigger when a unit is played such as **Shielded**.\n\n**1.16.5.D** - If a unit that was guarding a captured unit is no longer in play, the captured unit enters play under its owner’s control, exhausted.",
       "tags": ["discerning veteran", "village protectors", "capture", "enters play", "shield token", "shielded"],
-      "difficulty": 0
+      "difficulty": 1
    },
    {
       "id": 48,
