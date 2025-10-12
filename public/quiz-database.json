@@ -1048,5 +1048,20 @@
       "relevantRule": "Since Player A is the controller of both **_Inferno Four's_** **When Defeated** ability as well as the **Bounty** on **_Cartel Turncoat_**, they can choose which ability to resolve first. Even though the **_Cartel Turncoat_** is Player B's unit, the **Bounty** will be collected by Player A.\n\n**7.5.13.A** - \"Bounty\" is a keyword followed by a dash and ability text that resolves like the triggered ability: \"When Defeated/When Captured: Resolve the following ability,\" except that the triggered ability is considered controlled by an opponent.\n\n**7.5.13.C** - Bounty resolves in the same window as any \"When Defeated\" or \"When Captured\" abilities on the unit.\n\n**7.6.9** - If a player must resolve multiple triggered abilities on cards they control at the same time, that player chooses the order in which to resolve those abilities.",
       "tags": ["inferno four", "cartel turncoat", "bossk", "bounty", "when defeated", "search", "draw", "timing", "leader"],
       "difficulty": 2
+   },
+   {
+      "id": 71,
+      "question": "Player A controls an **_Unlicensed Headhunter_** with **_Kazuda Xiono, Best Pilot in the Galaxy_**, attached to it as a _Pilot_. Player B controls **_The Client, Dictated by Discretion_**. Earlier in the phase, Player A attacked with their **_Unlicensed_Headhunter_** and targeted it with **_Kazuda's_** **On Attack** ability. Player B then uses **_The Client's_** Action ability on the **_Unlicensed Headhunter_**. If Player A then claims initiative, and Player B defeats the **_Unlicensed Headhunter_**, what best describes happens?",
+      "choices": {
+         "a": "Player B's base is healed for 5 from **_Unlicensed Headhunter's_** own **Bounty**.",
+         "b": "Player B's base is healed for 0.", 
+         "c": "Player B's base is healed for 5 from the **Bounty** placed on it by **_The Client_**.",
+         "d": "Player B's base is healed for 10."
+      },
+      "answer": "b",
+      "relevantCards": ["SHD/165", "JTL/018-back", "SHD/031"],
+      "relevantRule": "When an effect causes a unit to lose an ability, it cannot regain that ability for the duration of the effect. Since **_Kazuda's_** ability causes a unit to lose _all_ abilities until the end of the phase, and **Bounty** is a type of ability, **_The Client_** is not able to give **_Unlicensed Headhunter_** a new **Bounty** for the rest of the phase.\n\n**8.15.2** - If an ability causes a card to "lose all abilities,\" the card ceases to have any abilities, including abilities given to it by other cards, for the duration of the \"lose\" effect. The card cannot gain abilities for the duration of the effect.",
+      "tags": ["unlicensed headhunter", "kazuda xiono", "the client", "bounty", "keyword", "when defeated", "losing abilities", "leader", "ability"],
+      "difficulty": 2
    }
 ]
