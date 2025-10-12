@@ -48,7 +48,7 @@ function DoYouKnowSWUPage() {
     const resetCurrentQuestionState = () => {
       setSelectedAnswer("");
       setQuestionResult(false);
-    }
+    };
 
     const resetDoYouKnowSWUMode = () => {
       resetCurrentQuestionState();
@@ -57,7 +57,7 @@ function DoYouKnowSWUPage() {
       setUserResponses([]);
       setStandardQuestionLength(0);
       setCurrentQuestionId(0);
-    }
+    };
 
     return <div>
       <h1 className="w-auto mx-auto text-center text-4xl font-bold md:text-4xl uwd:!text-5xl 4k:!text-7xl mb-4 uwd:ml-2 4k:ml-4">{getModeTitle("dykswu", dykswuMode)}</h1>
