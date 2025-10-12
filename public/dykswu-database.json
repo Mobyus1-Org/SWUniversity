@@ -43,5 +43,41 @@
     "actualCard": "SOR/147",
     "explanation": "**_Black One, Scourge of Starkiller Base's_** ability triggers **When Defeated**, not **On Attack**.",
     "tags": ["black one", "ability-text"]
+  },
+  {
+    "id": 6,
+    "img": "jedilightsaber",
+    "difficulty": 2,
+    "answer": "ability-text",
+    "actualCard": "SOR/054",
+    "explanation": "**_Jedi Lightsaber_** gives the defender -2/-2 for the rest of the entire phase, not just for the attack.",
+    "tags": ["jedi lightsaber", "ability-text"]
+  },
+  {
+    "id": 7,
+    "img": "vigilance",
+    "difficulty": 2,
+    "answer": "ability-text",
+    "actualCard": "SOR/058",
+    "explanation": "When choosing to give a shield token with **_Vigilance_**, you can choose to give it to an enemy unit as well, not just friendly.",
+    "tags": ["vigilance", "ability-text"]
+  },
+  {
+    "id": 8,
+    "img": "darthvader1",
+    "difficulty": 1,
+    "answer": "name",
+    "actualCard": "SOR/087",
+    "explanation": "The unique symbol is missing from **_Darth Vader's_** name.",
+    "tags": ["darth vader", "name"]
+  },
+  {
+    "id": 9,
+    "img": "atatsuppressor",
+    "difficulty": 2,
+    "answer": "trait",
+    "actualCard": "SOR/039",
+    "explanation": "**_AT-AT Suppressor_** is missing the _Walker_ trait.",
+    "tags": ["at-at suppressor", "trait"]
   }
 ]
