@@ -918,10 +918,10 @@
       "id": 62,
       "question": "Player A controls a **_Crafty Smuggler_** with a shield token. Player B controls a **_Seventh Fleet Defender_** with a shield token and a **_Trench Defender_**. Player A plays **_Moment of Peace_**. What units are legal targets?",
       "choices": {
-        "a": "Only the **_Crafty Smuggler_**.",
-        "b": "Only the **_Trench Defender_**.", 
-        "c": "None of them.",
-        "d": "All of them."
+         "a": "Only the **_Crafty Smuggler_**.",
+         "b": "Only the **_Trench Defender_**.", 
+         "c": "None of them.",
+         "d": "All of them."
       },
       "answer": "d",
       "relevantCards": ["SOR/207", "SOR/180", "IBH/008", "SOR/073", "TSOR/T02"],
@@ -933,10 +933,10 @@
       "id": 63,
       "question": "Player A controls **_Admiral Ozzel, As Clumsy As He Is Stupid_**. Player B controls **_Padmé Amidala, What Do You Have To Hide?_**, and has no cards in hand. Player A attacks with **_Admiral Ozzel_** into **_Padmé_**, resulting in **_Ozzel_** being defeated. What best describes what happens when **_Ozzel's_** **When Defeated** ability resolves?",
       "choices": {
-        "a": "Player B can use **_Padmé's_** ability to deal 1 damage to a unit.",
-        "b": "Player B takes 3 damage to their base.",
-        "c": "Nothing happens.",
-        "d": "Player A discards a card from their hand."
+         "a": "Player B can use **_Padmé's_** ability to deal 1 damage to a unit.",
+         "b": "Player B takes 3 damage to their base.",
+         "c": "Nothing happens.",
+         "d": "Player A discards a card from their hand."
       },
       "answer": "c",
       "relevantCards": ["IBH/082", "SEC/016-back"],
@@ -948,10 +948,10 @@
       "id": 64,
       "question": "Player A is playing **_Padmé Amidala, What Do You Have To Hide?_**, as their leader and has no cards in hand. Player A then plays **_Black One, Scourge of Starkiller Base_**. What best describes what happens?",
       "choices": {
-        "a": "**_Padmé's_** ability triggers, but Player A draws no cards.",
-        "b": "**_Padmé's_** ability triggers, then Player A draws 3 cards.",
-        "c": "**_Padmé_** does not trigger, but Player A still draws 3 cards.",
-        "d": "Nothing happens."
+         "a": "**_Padmé's_** ability triggers, but Player A draws no cards.",
+         "b": "**_Padmé's_** ability triggers, then Player A draws 3 cards.",
+         "c": "**_Padmé_** does not trigger, but Player A still draws 3 cards.",
+         "d": "Nothing happens."
       },
       "answer": "c",
       "relevantCards": ["SEC/016", "SOR/147"],
@@ -963,10 +963,10 @@
       "id": 65,
       "question": "Player A controls **_Snowtrooper Vanguard_** and has 1 damage on their base. They then play **_General Veers, Leading the Assault_**. What best describes what happens next?",
       "choices": {
-        "a": "Player B's base takes 2 damage and Player A's base heals 0 damage.",
-        "b": "Player B's base takes 2 damage and Player A's base heals 1 damage.", 
-        "c": "Player B's base takes 1 damage and Player A's base heals 1 damage.",
-        "d": "Nothing happens since Player A does not have 2 damage on their base to heal."
+         "a": "Player B's base takes 2 damage and Player A's base heals 0 damage.",
+         "b": "Player B's base takes 2 damage and Player A's base heals 1 damage.", 
+         "c": "Player B's base takes 1 damage and Player A's base heals 1 damage.",
+         "d": "Nothing happens since Player A does not have 2 damage on their base to heal."
       },
       "answer": "b",
       "relevantCards": ["IBH/057", "IBH/068"],
@@ -976,17 +976,18 @@
    },
    {
       "id": 66,
-      "question": "Player A plays **_U-Wing Reinforcement_**. Among the top 10 cards, they find and play a **_Kelleran Beq, The Sabered Hand_**. Among the top 7 cards, they find and play a **_Mon Mothma, Voice of the Rebellion_**. Among the top 5 cards, they find an **_Admiral Ackbar, Brilliant Strategist_**. At what point are the non-selected cards placed on the bottom of Player A's deck in a random order?",
+      "question": "Player A only has 6 cards remaining in their deck. They play **_U-Wing Reinforcement_** and find a **_Kelleran Beq, The Sabered Hand_**, a **_Mon Mothma, Voice of the Rebellion_**, and an **_Admiral Ackbar, Brilliant Strategist_**. If they choose to play **_Kelleran_**, what best describes what happens?",
       "choices": {
-         "a": "The non-selected cards from each ability are set aside in separate piles. Once the chain of abilities has finished resolving, the individual piles are placed on the bottom of the deck starting with the **_U-Wing Reinforcement_** pile going forwards.",
-         "b": "The non-selected cards from each ability are set aside in separate piles. Once the chain of abilities has finished resolving, the individual piles are placed on the bottom of the deck starting with the **_Mon Mothma_** pile going backwards.",
-         "c": "The non-selected cards are immediately placed on the bottom of the deck after each selection.",
-         "d": "The non-selected cards are set aside after each selection. Once the chain of abilities has finished resolving, all set aside cards are shuffled together and placed on the bottom of the deck."
+         "a": "Since there are no cards left in the deck, **_Kelleran's_** ability will do nothing.",
+         "b": "Since there are no cards left in the deck, Player A will take 3 damage for each card they attempt to search with **_Kelleran's_** ability.", 
+         "c": "The remaining 5 cards will be immediately searched again as a result of **_Kelleran's_** ability, allowing **_Mon Mothma_** to be played, who will then be able to draw **_Admiral Ackbar_**.",
+         "d": "**_Kelleran's_** ability will allow Player A to play **_Mon Mothma_**, but **_Mon's_** ability will search an empty deck."
       },
       "answer": "c",
       "relevantCards": ["SOR/104", "LOF/100", "SOR/096", "SOR/097"],
       "relevantRule": "When resolving an ability that makes a player search a set number of cards from their deck to play or draw something, the portion of cards not selected to play or draw are immediately returned to the bottom of the deck upon completion of the search, before any newly triggered abilities resolve.\n\n**8.27.1** - When an ability instructs a player to\"search\" a deck, that player looks at a number of cards from that deck to find one or more cards, often with a specified attribute. The player chooses one or more cards (as indicated by the ability) and returns the other cards to that deck as specified below. The ability then instructs the player on what to do with the card(s) they have chosen. The player may also choose to resolve the ability as though no appropriate card was found.",
       "tags": ["u-wing reinforcement", "kelleran beq", "mon mothma", "admiral ackbar", "search", "draw", "ordering", "when played", "random order", "nested ability"],
       "difficulty": 2
-   }
+   },
+
 ]
