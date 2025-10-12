@@ -138,7 +138,7 @@
     "id": 16,
     "img": "bendu1",
     "difficulty": 2,
-    "answer": "no-change",
+    "answer": "ability-text",
     "actualCard": "SOR/056",
     "explanation": "**_Bendu's_** ability discounts the next non-_Heroism_/non-_Villainy_ card you play by 2.",
     "tags": ["bendu", "ability-text"]
