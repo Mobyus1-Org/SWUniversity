@@ -7,5 +7,14 @@
     "actualCard": "SOR/221",
     "explanation": "Outmaneuver costs 3 resources to play and not 4.",
     "tags": ["outmaneuver", "resources", "cost"]
+  },
+  {
+    "id": 2,
+    "img": "redthree",
+    "difficulty": 0,
+    "answer": "ability",
+    "actualCard": "SOR/144",
+    "explanation": "Red Three gives friendly _Heroism_ units **Raid 1**.",
+    "tags": ["red three", "keyword", "ability"]
   }
 ]
