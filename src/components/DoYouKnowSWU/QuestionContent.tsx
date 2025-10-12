@@ -156,7 +156,7 @@ export function QuestionContent({
         {/* Images */}
         <div className="flex flex-wrap justify-center items-center gap-4">
           <div className="flex flex-col items-center">
-            <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">Mistaken Card</p>
+            <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">Mistaken Card</p>
             <img
               src={getDYKSWUImageLink(currentQuestion.img)}
               alt="SWU card to identify mistake on"
@@ -164,11 +164,11 @@ export function QuestionContent({
             />
           </div>
           <div className="flex flex-col items-center">
-            <p className={questionResult ? "" : "mb-8"}>{questionResult ? "Actual Card" : ""}</p>
+            <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{questionResult ? "Actual Card" : ""}</p>
             <img
               src={questionResult ? getSWUDBImageLink(currentQuestion.actualCard) : "/assets/SWUniversity_Cardback.png"}
               alt={questionResult ? "Actual Card" : "SWUniversity Cardback"}
-              className={`max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 rounded shadow-lg transition-all duration-500 ${revealCard ? "wipe-enter" : ""}`}
+              className={`max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 4k:ml-16 rounded shadow-lg transition-all duration-500 ${revealCard ? "wipe-enter" : ""}`}
             />
           </div>
         </div>
