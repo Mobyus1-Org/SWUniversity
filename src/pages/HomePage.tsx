@@ -5,7 +5,7 @@ function HomePage() {
     <div className={`p-4 border md:col-span-2 ${globalBackgroundStyle}`}>
       <h1 className="text-3xl uwd:text-4xl 4k:text-5xl uwd:mb-2 4k:mb-4 font-bold">Welcome to SWUniversity!</h1>
       <p className="text-lg uwd:text-2xl 4k:text-4xl 4k:mb-4"><br />This is a place where STAR WARS: Unlimited players can test their knowledge of the game they love to play!</p>
-      <p className="text-lg uwd:text-2xl 4k:text-4xl 4k:mb-4"><br /><br />
+      <p className="text-lg uwd:text-2xl 4k:text-4xl 4k:mb-4"><br />
         Please be patient as we continue to develop the site! We're planning on having multiple game modes which will be accessible from the menu at the top of your screen! Keep checking back for more updates!
         <br />
         <br />
