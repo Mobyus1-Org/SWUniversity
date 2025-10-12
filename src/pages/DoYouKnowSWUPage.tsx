@@ -48,7 +48,7 @@ function DoYouKnowSWUPage() {
     const resetCurrentQuestionState = () => {
       setSelectedAnswer("");
       setQuestionResult(false);
-    };
+    }
 
     const resetDoYouKnowSWUMode = () => {
       resetCurrentQuestionState();
