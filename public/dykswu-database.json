@@ -39,10 +39,10 @@
     "id": 5,
     "img": "blackone1",
     "difficulty": 2,
-    "answer": "ability-text",
+    "answer": "trigger-condition",
     "actualCard": "SOR/147",
     "explanation": "**_Black One, Scourge of Starkiller Base's_** ability triggers **When Defeated**, not **On Attack**.",
-    "tags": ["black one", "ability-text"]
+    "tags": ["black one", "trigger-condition"]
   },
   {
     "id": 6,
