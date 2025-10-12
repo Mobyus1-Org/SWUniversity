@@ -11,10 +11,19 @@
   {
     "id": 2,
     "img": "redthree",
-    "difficulty": 0,
+    "difficulty": 1,
     "answer": "ability-text",
     "actualCard": "SOR/144",
     "explanation": "Red Three gives friendly _Heroism_ units **Raid 1**.",
     "tags": ["red three", "keyword", "ability"]
+  },
+  {
+    "id": 3,
+    "img": "roguesquadronskirmisher",
+    "difficulty": 0,
+    "answer": "arena",
+    "actualCard": "SOR/101",
+    "explanation": "**_Rogue Squadron Skirmisher_** is a Ground unit.",
+    "tags": ["rogue squadron skirmisher", "arena"]
   }
 ]
