@@ -66,7 +66,7 @@ function QuizPage() {
   }
 
   return <div>
-    <h1 className="text-2xl md:text-4xl uwd:!text-5xl 4k:!text-7xl font-bold mb-4 uwd:ml-2 4k:ml-4"">{getModeTitle("quiz", quizMode)}</h1>
+    <h1 className="text-2xl md:text-4xl uwd:!text-5xl 4k:!text-7xl font-bold mb-4 uwd:ml-2 4k:ml-4">{getModeTitle("quiz", quizMode)}</h1>
     {
       quizMode === "" || (quizMode === "standard" && standardQuizLength === 0)
         ? <ModeButtons
