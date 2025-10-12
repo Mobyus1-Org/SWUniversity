@@ -1033,5 +1033,20 @@
       "relevantRule": "Even though **_Luke Skywalker, Jedi Knight_**, and **_Luke Skywalker, A Hero's Beginning_**, are not the same card, they do have the same name, so **_Echo's_** ability will give Experience tokens in this scenario.\n\n**8.18.2** -  A card \"shares a name\" with another card if their full names are identical. A card does not need to share a subtitle with another card to share a name with it.",
       "tags": ["luke skywalker", "echo", "name", "when played", "discard", "experience token", "unique"],
       "difficulty": 1
+   },
+   {
+      "id": 70,
+      "question": "At the start of a new round, Player A controls **_Inferno Four, Unforgetting_**, with 1 damage on it. Player B controls a **_Cartel Turncoat_** with 1 damage on it and **_Bossk, Hunting His Prey_**, deployed as a unit. Player A attacks the **_Cartel Turncoat_** with **_Inferno Four_**. What best describes what happens?",
+      "choices": {
+         "a": "Player A gets to resolve **_Inferno Four's_** **When Defeated** and Player B may resolve **_Cartel Turncoat's_** **Bounty** twice.",
+         "b": "**_Cartel Turncoat's_** **Bounty** must be resolved first.", 
+         "c": "**_Inferno Four's_** **When Defeated** must be resolved first.",
+         "d": "Player A gets to decide whether to resolve **_Inferno Four's_** **When Defeated** first or **_Cartel Turncoat's_** **Bounty**."
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/031", "SHD/195", "SHD/010-portrait"],
+      "relevantRule": "Since Player A is the controller of both **_Inferno Four's_** **When Defeated** ability as well as the **Bounty** on **_Cartel Turncoat_**, they can choose which ability to resolve first. Even though the **_Cartel Turncoat_** is Player B's unit, the **Bounty** will be collected by Player A.\n\n**7.5.13.A** - \"Bounty\" is a keyword followed by a dash and ability text that resolves like the triggered ability: \"When Defeated/When Captured: Resolve the following ability,\" except that the triggered ability is considered controlled by an opponent.\n\n**7.5.13.C** - Bounty resolves in the same window as any \"When Defeated\" or \"When Captured\" abilities on the unit.\n\n**7.6.9** - If a player must resolve multiple triggered abilities on cards they control at the same time, that player chooses the order in which to resolve those abilities.",
+      "tags": ["inferno four", "cartel turncoat", "bossk", "bounty", "when defeated", "search", "draw", "timing", "leader"],
+      "difficulty": 2
    }
 ]
