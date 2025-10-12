@@ -79,5 +79,14 @@
     "actualCard": "SOR/039",
     "explanation": "**_AT-AT Suppressor_** is missing the _Walker_ trait.",
     "tags": ["at-at suppressor", "traits"]
+  },
+  {
+    "id": 10,
+    "img": "theemperorslegion",
+    "difficulty": 2,
+    "answer": "no-change",
+    "actualCard": "SOR/091",
+    "explanation": "No changes were made.",
+    "tags": ["the emperor's legion", "no-change"]
   }
 ]
