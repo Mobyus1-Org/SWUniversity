@@ -4,7 +4,6 @@ function HomePage() {
   return <div className="grid md:grid-cols-3 gap-4 md:gap-8">
     <div className={`p-4 border md:col-span-2 ${globalBackgroundStyle}`}>
       <h1 className="text-3xl uwd:text-4xl 4k:text-5xl uwd:mb-2 4k:mb-4 font-bold">Welcome to SWUniversity!</h1>
-      <p className="text-lg uwd:text-2xl 4k:text-4xl 4k:mb-4"> </p>
       <p className="text-lg uwd:text-2xl 4k:text-4xl 4k:mb-4">This is a place where STAR WARS: Unlimited players can test their knowledge of the game they love to play!</p>
       <p className="text-lg uwd:text-2xl 4k:text-4xl 4k:mb-4">Please be patient as we continue to develop the site! Thank you and have fun!</p>
     </div>
