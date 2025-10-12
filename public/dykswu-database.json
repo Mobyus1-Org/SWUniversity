@@ -5,8 +5,8 @@
     "difficulty": 0,
     "answer": "cost",
     "actualCard": "SOR/221",
-    "explanation": "Outmaneuver costs 3 resources to play and not 4.",
-    "tags": ["outmaneuver", "resources", "cost"]
+    "explanation": "**_Outmaneuver_** costs 3 resources to play, not 4.",
+    "tags": ["outmaneuver", "cost"]
   },
   {
     "id": 2,
@@ -14,8 +14,8 @@
     "difficulty": 1,
     "answer": "ability-text",
     "actualCard": "SOR/144",
-    "explanation": "Red Three gives friendly _Heroism_ units **Raid 1**.",
-    "tags": ["red three", "keyword", "ability"]
+    "explanation": "**_Red Three, Unstoppable_** gives friendly _Heroism_ units **Raid 1**, not _Aggression_ units.",
+    "tags": ["red three", "ability-text"]
   },
   {
     "id": 3,
@@ -23,7 +23,25 @@
     "difficulty": 0,
     "answer": "arena",
     "actualCard": "SOR/101",
-    "explanation": "**_Rogue Squadron Skirmisher_** is a Ground unit.",
+    "explanation": "**_Rogue Squadron Skirmisher_** is a Ground unit, not a Space unit.",
     "tags": ["rogue squadron skirmisher", "arena"]
+  },
+  {
+    "id": 4,
+    "img": "precisionfire",
+    "difficulty": 2,
+    "answer": "ability-text",
+    "actualCard": "SOR/168",
+    "explanation": "If the chosen unit is a _Trooper_, **_Precision Fire_** gives +2/+0, not **Raid 2**.",
+    "tags": ["precision fire", "ability-text"]
+  },
+  {
+    "id": 5,
+    "img": "blackone1",
+    "difficulty": 2,
+    "answer": "ability-text",
+    "actualCard": "SOR/147",
+    "explanation": "**_Black One, Scourge of Starkiller Base's_** ability triggers **When Defeated**, not **On Attack**.",
+    "tags": ["black one", "ability-text"]
   }
 ]
