@@ -112,7 +112,7 @@
     "img": "stormtrooperlieutenant1",
     "difficulty": 0,
     "answer": "name",
-    "actualCard": "SOR/236",
+    "actualCard": "SOR/227",
     "explanation": "This unit's name is actually **_Snowtrooper Liuetenant_**.",
     "tags": ["snowtrooper lieutenant", "name"]
   },
@@ -133,5 +133,41 @@
     "actualCard": "SOR/235",
     "explanation": "No changes were made.",
     "tags": ["galactic ambition", "no-change"]
+  },
+  {
+    "id": 16,
+    "img": "bendu1",
+    "difficulty": 2,
+    "answer": "no-change",
+    "actualCard": "SOR/056",
+    "explanation": "**_Bendu's_** ability discounts the next non-_Heroism_/non-_Villainy_ card you play by 2.",
+    "tags": ["bendu", "ability-text"]
+  },
+  {
+    "id": 17,
+    "img": "vanguardace1",
+    "difficulty": 1,
+    "answer": "traits",
+    "actualCard": "SOR/191",
+    "explanation": "**_Vanguard Ace_** is a _New Republic_ unit, not a _Rebel_ unit.",
+    "tags": ["vanguard ace", "traits"]
+  },
+  {
+    "id": 18,
+    "img": "homeone",
+    "difficulty": 2,
+    "answer": "ability-text",
+    "actualCard": "SOR/102",
+    "explanation": "**_Home One's_** ability does not let you play a unit that costs 3 or less for free, it actually reduces the cost of the unit you play by 3.",
+    "tags": ["home one", "ability-text"]
+  },
+  {
+    "id": 19,
+    "img": "snowspeeder1",
+    "difficulty": 2,
+    "answer": "art",
+    "actualCard": "SOR/244",
+    "explanation": "A second snowspeeder was removed from the background of the art.",
+    "tags": ["snowspeeder", "art"]
   }
 ]
