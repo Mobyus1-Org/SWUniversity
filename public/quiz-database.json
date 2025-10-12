@@ -973,5 +973,20 @@
       "relevantRule": "When HP is healed for more damage than they have on them, player's remove as much damage as they can and are only considered to have healed that much damage.\n\n**1.11.5** - A card cannot be healed in excess of its HP. If a card would be healed in excess of its HP, heal as much damage as possible instead. The player only is considered to have healed damage equal to the number of damage counters removed.",
       "tags": ["snowtrooper vanguard", "general veers", "heal", "when played", "ability"],
       "difficulty": 0
+   },
+   {
+      "id": 66,
+      "question": "Player A plays **_U-Wing Reinforcement_**. Among the top 10 cards, they find and play a **_Kelleran Beq, The Sabered Hand_**. Among the top 7 cards, they find and play a **_Mon Mothma, Voice of the Rebellion_**. Among the top 5 cards, they find an **_Admiral Ackbar, Brilliant Strategist_**. At what point are the non-selected cards placed on the bottom of Player A's deck in a random order?",
+      "choices": {
+         "a": "The non-selected cards are set aside and kept separate until the chain of abilities has finished resolving, then placed on the bottom of Player A's deck in a random order starting with **_U-Wing Reinforcement's_** remaining cards and ending with **_Mon Mothma's_** remaining cards.",
+         "b": "The non-selected cards are set aside and kept separate until the chain of abilities has finished resolving, then placed on the bottom of Player A's deck in a random order starting with **_Mon Mothma's_** remaining cards and ending with **_U-Wing Reinforcement's_** remaining cards.",
+         "c": "Each portion of non-selected cards are immediately placed on the bottom of Player A's deck in a random order after the chosen card is played/drawn.",
+         "d": "The non-selected cards are set aside until the chain of abilities has finished resolving before being shuffled together and placed on the bottom of Player A's deck in a random order."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/104", "LOF/100", "SOR/096", "SOR/097"],
+      "relevantRule": "When resolving an ability that makes a player search a set number of cards from their deck to play or draw something, the portion of cards not selected to play or draw are immediately returned to the bottom of the deck upon completion of the search, before any newly triggered abilities resolve.\n\n**8.27.1** - When an ability instructs a player to\"search\" a deck, that player looks at a number of cards from that deck to find one or more cards, often with a specified attribute. The player chooses one or more cards (as indicated by the ability) and returns the other cards to that deck as specified below. The ability then instructs the player on what to do with the card(s) they have chosen. The player may also choose to resolve the ability as though no appropriate card was found.",
+      "tags": ["u-wing reinforcement", "kelleran beq", "mon mothma", "admiral ackbar", "search", "draw", "ordering", "when played", "random order", "nested ability"],
+      "difficulty": 2
    }
 ]
