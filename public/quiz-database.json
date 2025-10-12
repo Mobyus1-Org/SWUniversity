@@ -1018,5 +1018,20 @@
       "relevantRule": "Even though **_Ki-Adi-Mundi_** wasn't in play when Player A played their first card in the phase, he _was_ in play when they played their second, so his ability still triggers.\n\n**8.9.2** - Abilities that refer to the \"second\" or later occurrence in a phase or round (e.g. \"The second event played this phase\") likewise refer to the second or later occurrence that happens in that phase or round, regardless of when the ability becomes active. Abilities that affect the second or later occurrence in a phase or round do not apply their effects retroactively if they become active after the occurrence has already taken place.",
       "tags": ["gungi", "ki-adi-mundi", "general's blade", "timing", "ability", "upgrade"],
       "difficulty": 1
+   },
+   {
+      "id": 69,
+      "question": "Player A controls a **_Luke Skywalker, Jedi Knight_**. They play an **_Echo, Restored_**, and choose to discard a **_Luke Skywalker, A Hero's Beginning_**, from their hand. What best describes what happens?",
+      "choices": {
+         "a": "Nothing happens.",
+         "b": "Player A's base heals 2 damage.", 
+         "c": "**_Luke Skywalker, A Hero's Beginning_**, cannot be discarded this way.",
+         "d": "**_Luke Skywalker, Jedi Knight_**, gets 2 Experience tokens."
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/051", "SHD/099", "LOF/249"],
+      "relevantRule": "Even though **_Luke Skywalker, Jedi Knight_**, and **_Luke Skywalker, A Hero's Beginning_**, are not the same card, they do have the same name, so **_Echo's_** ability will give Experience tokens in this scenario.\n\n**8.18.2** -  A card \"shares a name\" with another card if their full names are identical. A card does not need to share a subtitle with another card to share a name with it.",
+      "tags": ["luke skywalker", "echo", "name", "when played", "discard", "experience token", "unique"],
+      "difficulty": 1
    }
 ]
