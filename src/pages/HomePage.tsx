@@ -18,7 +18,7 @@ function HomePage() {
         <h3 className="text-2xl uwd:text-3xl 4k:text-4xl">Some Good News!</h3>
         <img src="https://static0.cbrimages.com/wordpress/wp-content/uploads/2020/11/death-star-in-rogue-one.jpg" alt="Some Good News" />
         <p className="text-lg uwd:text-2xl 4k:text-4xl mb-4">
-          We are excited to announce that we have some good news to share with you! Our team has been working hard to improve the SWUniversity experience, and we are thrilled to unveil some new features and updates that we believe will enhance your enjoyment of the site. Stay tuned for more details in the coming weeks!
+          Our team has been working hard to improve the SWUniversity experience, and we are thrilled to unveil some new features and updates that we believe will enhance your enjoyment of the site. Stay tuned for more details in the coming weeks!
         </p>
       </div>
     </div>
