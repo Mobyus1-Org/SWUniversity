@@ -20,3 +20,21 @@
   opacity: 0.50;
   z-index: 0;
 }
+
+/* Animation for Do You Know SWU transition */
+/* CSS Animation for the placeholder card transitioning into the actual card */
+@keyframes wipeEffect {
+  0% {
+    transform: scaleX(0); /* Start as 0% visible */
+    opacity: 0;
+  }
+  100% {
+    transform: scaleX(1); /* Full width, fully visible */
+    opacity: 1;
+  }
+}
+
+/* Trigger the wipe effect */
+.wipe-enter {
+  animation: wipeEffect 0.5s ease-out forwards;
+}

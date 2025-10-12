@@ -1,4 +1,4 @@
-import { isHorizontalCard, type Quiz } from "../../util/func";
+import { getSWUDBImageLink, isHorizontalCard, type Quiz } from "../../util/func";
 
 interface IProps {
   currentQuiz: Quiz;
@@ -25,7 +25,7 @@ export function RelevantCardsPanel({ currentQuiz, setShowModal }: IProps) {
               ? { height: `${scale}vh`, }
               : { width: `${scale}vh`, };
           return <div key={index} className={`${scaleClass} m-2.5 align`} style={scaleStyle}>
-            <img src={`https://swudb.com/cdn-cgi/image/quality=40/images/cards/${cardName}.png`} alt={`card ${cardName}`} className="max-h-full object-contain" />
+            <img src={getSWUDBImageLink(cardName)} alt={`card ${cardName}`} className="max-h-full object-contain" />
           </div>
           })
         }

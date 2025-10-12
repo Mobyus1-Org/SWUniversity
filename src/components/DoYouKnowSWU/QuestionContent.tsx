@@ -1,4 +1,5 @@
 import React from "react";
+
 import { DYKSWUChoices, globalBackgroundStyle, type AppModes, type SfxType } from "../../util/const";
 import { renderItalicsAndBold, isMarathonVariant, type UserResponse, type DoYouKnowSWUQuestion, getSWUDBImageLink, getDYKSWUImageLink } from "../../util/func";
 import { StandardModeEndScreen } from "../Shared/StandardModeEndScreen";
@@ -48,6 +49,15 @@ export function QuestionContent({
 }: IProps) {
   const currentQuestion = currentQuestionSet.find(q => q.id === currentQuestionId);
   const { sfx } = React.useContext(AudioContext) ?? { sfx: () => { } };
+  const [revealCard, setRevealCard] = React.useState(false);
+
+  React.useEffect(() => {
+    if (questionResult) {
+      setRevealCard(true);
+    } else {
+      setRevealCard(false);
+    }
+  }, [questionResult])
 
   if (!currentQuestion) return <p className="text-lg">Loading question...</p>;
 
@@ -66,36 +76,36 @@ export function QuestionContent({
       choice == "hp" ? "HP" : choice.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 
     const divs = <div className="grid grid-cols-2 gap-2.5">
-    {
-      DYKSWUChoices.map((_, index) => (
-        <div key={index} className={`${highlighted(index)}`}>
-          <button
-            type="button"
-            className={`w-full text-left px-4 py-2 border rounded-lg hover:bg-slate-700/50 transition-colors
+      {
+        DYKSWUChoices.map((_, index) => (
+          <div key={index} className={`${highlighted(index)}`}>
+            <button
+              type="button"
+              className={`w-full text-left px-4 py-2 border rounded-lg hover:bg-slate-700/50 transition-colors
             ${selectedAnswer === DYKSWUChoices[index]
-                ? 'border-white bg-slate-600/50'
-                : 'border-slate-600'
-              }
+                  ? 'border-white bg-slate-600/50'
+                  : 'border-slate-600'
+                }
             ${questionResult
-                ? 'cursor-not-allowed'
-                : 'cursor-pointer'
-              }
+                  ? 'cursor-not-allowed'
+                  : 'cursor-pointer'
+                }
           `}
-            onClick={() => {
-              if (!questionResult) {
-                sfx("click");
-                setSelectedAnswer(DYKSWUChoices[index]);
-              }
-            }}
-            disabled={questionResult}
-          >
-            <div className="text-md md:text-lg uwd:!text-3xl 4k:!text-5xl">
-              {renderChoiceTitle(DYKSWUChoices[index])}
-            </div>
-          </button>
-        </div>
-      ))
-    }
+              onClick={() => {
+                if (!questionResult) {
+                  sfx("click");
+                  setSelectedAnswer(DYKSWUChoices[index]);
+                }
+              }}
+              disabled={questionResult}
+            >
+              <div className="text-md md:text-lg uwd:!text-3xl 4k:!text-5xl">
+                {renderChoiceTitle(DYKSWUChoices[index])}
+              </div>
+            </button>
+          </div>
+        ))
+      }
     </div>;
 
     return divs;
@@ -133,7 +143,7 @@ export function QuestionContent({
             {!questionResult && <button type="submit" className="btn btn-primary mt-18 text-lg p-4">Submit Answer</button>}
             {
               questionResult && questionsCompleted.length < currentQuestionSet.length
-                ? <button className="btn btn-secondary mt-4 text-lg p-4" onClick={() =>
+                ? <button className="btn btn-secondary mt-18 text-lg p-4" onClick={() =>
                   onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentQuestion.answer.toString(),
                     currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses, sfx,
                     setQuestionsCompleted, setCurrentQuestionId, setLastEndlessQuestions, setUserResponses, resetCurrentQuestionState)}>
@@ -153,24 +163,21 @@ export function QuestionContent({
               className="max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 rounded shadow-lg"
             />
           </div>
-          {
-            questionResult && <div className="flex flex-col items-center">
-              <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">Actual Card</p>
-              <img
-                src={getSWUDBImageLink(currentQuestion.actualCard)}
-                alt="SWU card that is correct"
-                className="max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 rounded shadow-lg"
-              />
-            </div>
-          }
+          <div className="flex flex-col items-center">
+            <p className={questionResult ? "" : "mb-8"}>{questionResult ? "Actual Card" : ""}</p>
+            <img
+              src={questionResult ? getSWUDBImageLink(currentQuestion.actualCard) : "/assets/SWUniversity_Cardback.png"}
+              alt={questionResult ? "Actual Card" : "SWUniversity Cardback"}
+              className={`max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 rounded shadow-lg transition-all duration-500 ${revealCard ? "wipe-enter" : ""}`}
+            />
+          </div>
         </div>
-        {/* Relevant rule */}
+        {/* Explanation */}
         {
           questionResult && currentQuestion.explanation != " " && <div className="md:col-span-2">
             <p className={`${currentQuestion.answer === selectedAnswer ? "text-green-500" : "text-red-500"} text-xl font-bold mb-4`}>
               {currentQuestion.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
             </p>
-            <p className="text-xl mb-2.5 font-bold">Relevant Rules:</p>
             <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentQuestion.explanation)}</p>
           </div>
         }
@@ -239,8 +246,6 @@ function onNextQuestion(
     updatedResponses.push({ modeId: currentQuestionId, selected: selectedAnswer, correct: currentQuestionAnswer });
     setUserResponses(updatedResponses);
     if (updatedCompleted.length < standardQuestionLength) {
-      console.log(currentQuestionSet);
-      console.log(currentQuestionId, updatedCompleted.length, currentQuestionSet[updatedCompleted.length]);
       setCurrentQuestionId(currentQuestionSet[updatedCompleted.length].id);
       resetCurrentQuestionState();
     }

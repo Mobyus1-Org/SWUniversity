@@ -253,8 +253,6 @@ function onNextQuestion(
     updatedResponses.push({modeId: currentQuizId, selected: selectedAnswer, correct: currentQuizAnswer});
     setUserResponses(updatedResponses);
     if(updatedCompleted.length < standardQuizLength) {
-      console.log(currentQuizSet);
-      console.log(currentQuizId, updatedCompleted.length, currentQuizSet[updatedCompleted.length]);
       setCurrentQuizId(currentQuizSet[updatedCompleted.length].id);
       resetCurrentQuizState();
     }
