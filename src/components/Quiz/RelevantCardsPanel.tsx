@@ -1,4 +1,4 @@
-import type { Quiz } from "../../util/func";
+import { isHorizontalCard, type Quiz } from "../../util/func";
 
 interface IProps {
   currentQuiz: Quiz;
@@ -36,29 +36,6 @@ export function RelevantCardsPanel({ currentQuiz, setShowModal }: IProps) {
     </div>
   }
   </div>
-}
-
-function isHorizontalCard(cardName: string): boolean {
-  const setsMap = {
-    "SOR": 30,
-    "SHD": 26,
-    "TWI": 30,
-    "JTL": 30,
-    "LOF": 30,
-    "SEC": 26,
-  };
-
-  const parts = cardName.split("/");
-  if (parts.length !== 2) throw new Error(`Invalid card name format: ${cardName}`);
-  const setCode = parts[0];
-  if (!(setCode in setsMap)) return false;//unknown set or tokens or special set, assume vertical
-  const setNumber = parts[1];
-  if(setNumber.startsWith("T")) return false;//tokens are vertical
-  if(setNumber.includes("-")) return false;//-back or -portrait cards are vertical
-  const setNum = parseInt(setNumber, 10);
-  if (isNaN(setNum)) throw new Error(`Invalid card number: ${setNumber}`);
-
-  return setNum <= setsMap[setCode as keyof typeof setsMap];
 }
 
 const getScaleForCards = (count: number): number => {

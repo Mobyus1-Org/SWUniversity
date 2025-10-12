@@ -1,15 +1,15 @@
 import React from "react";
-import { globalBackgroundStyle, type QuizModes, type SfxType } from "../../util/const";
-import { renderItalicsAndBold, isMarathonVariant, type Quiz, type UserResponse } from "../../util/func";
-import { StandardModeEndScreen } from "./StandardModeEndScreen";
-import { MarathonModeEndScreen } from "./MarathonModeEndScreen";
+import { globalBackgroundStyle, type AppModes, type SfxType } from "../../util/const";
+import { renderItalicsAndBold, isMarathonVariant, type Quiz, type UserResponse, getSWUDBImageLink } from "../../util/func";
+import { StandardModeEndScreen } from "../Shared/StandardModeEndScreen";
+import { MarathonModeEndScreen } from "../Shared/MarathonModeEndScreen";
 import { AudioContext, ModalContext } from "../../util/context";
 import { RelevantCardsPanel } from "./RelevantCardsPanel";
 
 interface IProps {
   currentQuizSet: Quiz[];
   currentQuizId: number;
-  quizMode: QuizModes;
+  quizMode: AppModes;
   quizzesCompleted: number[];
   lastEndlessQuizzes: number[];
   quizResult: boolean;
@@ -23,7 +23,7 @@ interface IProps {
   setQuizzesCompleted: (completed: number[]) => void;
   setLastEndlessQuizzes: (list: number[]) => void;
   setCurrentQuizKeys: (keys: string[]) => void;
-  setQuizMode: (mode: QuizModes) => void;
+  setQuizMode: (mode: AppModes) => void;
   setStandardQuizLength: (length: number) => void;
   setUserResponses: (responses: UserResponse[]) => void;
   resetCurrentQuizState: () => void;
@@ -123,15 +123,16 @@ export function QuizContent({
   {
     isMarathonVariant(quizMode)
       && quizzesCompleted.length === currentQuizSet.length
-      && <MarathonModeEndScreen resetQuizMode={resetQuizMode} />
+      && <MarathonModeEndScreen app="quiz" resetQuizMode={resetQuizMode} />
   }
   {
     quizMode === "standard"
       && quizzesCompleted.length === standardQuizLength
       && <StandardModeEndScreen
+        app="quiz"
         userResponses={userResponses}
-        currentQuizSet={currentQuizSet}
-        standardQuizLength={standardQuizLength}
+        currentModeSet={currentQuizSet}
+        standardModeLength={standardQuizLength}
         resetQuizMode={resetQuizMode}
       />
   }
@@ -180,7 +181,7 @@ export function QuizContent({
           <div className="flex flex-wrap justify-center py-8 md:px-24">
           {
             currentQuiz.relevantCards.map((cardName: string, index: number) => <div key={index} className="w-fit h-100 md:h-120 m-2.5">
-              <img src={`https://swudb.com/cdn-cgi/image/quality=40/images/cards/${cardName}.png`} alt={`card ${cardName}`} className="max-h-full object-contain" />
+              <img src={getSWUDBImageLink(cardName)} alt={`card ${cardName}`} className="max-h-full object-contain" />
             </div>)
           }
           </div>
@@ -199,7 +200,7 @@ function onSubmitAnswer(selectedIndex: string, setQuizResult: (result: boolean) 
 }
 
 function onNextQuestion(
-  quizMode: QuizModes,
+  quizMode: AppModes,
   selectedAnswer: string,
   currentQuizId: number,
   currentQuizAnswer: string,
@@ -249,7 +250,7 @@ function onNextQuestion(
     updatedCompleted.push(currentQuizId);
     setQuizzesCompleted(updatedCompleted);
     const updatedResponses = [...userResponses];
-    updatedResponses.push({quizId: currentQuizId, selected: selectedAnswer, correct: currentQuizAnswer});
+    updatedResponses.push({modeId: currentQuizId, selected: selectedAnswer, correct: currentQuizAnswer});
     setUserResponses(updatedResponses);
     if(updatedCompleted.length < standardQuizLength) {
       console.log(currentQuizSet);

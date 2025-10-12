@@ -1,20 +1,23 @@
-import type { QuizModes } from "./const";
+import type { AppModes, SWUniversityApp } from "./const";
 
-export type Quiz = {
+export type AppModeSetEntry = {
   id: number;
+  difficulty: number; //0 = Padawan, 1 = Knight, 2 = Master
+  answer: string;
+  tags: string[];
+}
+
+export type Quiz = AppModeSetEntry & {
   question: string;
   choices: {
     [key: string]: string
   };
-  answer: string;
   relevantCards: string[];
   relevantRule: string;
-  tags: string[];
-  difficulty: number;
 }
 
 export type UserResponse = {
-  quizId: number;
+  modeId: number;
   selected: string;
   correct: string;
 }
@@ -28,11 +31,86 @@ export async function getQuizDataAsync() : Promise<Quiz[]> {
   const response = await fetch('/quiz-database.json');
   const data = await response.json();
 
-  return data.filter((quiz: Quiz) => quiz.id >= notBeforeId && !excludedIds.includes(quiz.id));
+  return data.filter((quiz: Quiz) => quiz.id && quiz.id >= notBeforeId && !excludedIds.includes(quiz.id));
 }
 
-export function isMarathonVariant(mode: QuizModes): boolean {
+export type DoYouKnowSWUQuestion = AppModeSetEntry & {
+  img: string;
+  actualCard: string;
+  explanation: string;
+}
+
+export async function getDoYouKnowSWUDataAsync() : Promise<DoYouKnowSWUQuestion[]> {
+  const response = await fetch('/dykswu-database.json');
+  const data = await response.json();
+
+  return data.filter((question: DoYouKnowSWUQuestion) => question.id);
+}
+
+const setsMap = {
+  "SOR": 30,
+  "SHD": 26,
+  "TWI": 30,
+  "JTL": 30,
+  "LOF": 30,
+  "SEC": 26,
+};
+
+export function isHorizontalCard(cardName: string): boolean {
+  const parts = cardName.split("/");
+  if (parts.length !== 2) throw new Error(`Invalid card name format: ${cardName}`);
+  const setCode = parts[0];
+  if (!(setCode in setsMap)) return false;//unknown set or tokens or special set, assume vertical
+  const setNumber = parts[1];
+  if(setNumber.startsWith("T")) return false;//tokens are vertical
+  if(setNumber.includes("-")) return false;//-back or -portrait cards are vertical
+  const setNum = parseInt(setNumber, 10);
+  if (isNaN(setNum)) throw new Error(`Invalid card number: ${setNumber}`);
+
+  return setNum <= setsMap[setCode as keyof typeof setsMap];
+}
+
+export function getSWUDBImageLink(cardPattern: string): string {
+  const parts = cardPattern.split('/');
+  if (parts.length !== 2) throw new Error(`Invalid card name format: ${cardPattern}`);
+
+  return `https://swudb.com/cdn-cgi/image/quality=40/images/cards/${cardPattern}.png`;
+}
+
+export function getDYKSWUImageLink(fileName: string): string {
+  return `/assets/dykswu/${fileName}.png`;
+}
+
+export function isMarathonVariant(mode: AppModes): boolean {
   return mode === "marathon" || mode === "padawan" || mode === "knight" || mode === "master";
+}
+
+export function getModeTitle(app: SWUniversityApp, mode: AppModes): string {
+  switch (mode) {
+    case "marathon":
+      return "Marathon Mode";
+    case "endless":
+      return "Endless Mode";
+    case "standard":
+      return "Standard Mode";
+    case "padawan":
+      return "Padawan Mode";
+    case "knight":
+      return "Jedi Knight Mode";
+    case "master":
+      return "Jedi Master Mode";
+    case "":
+      switch (app) {
+        case "quiz":
+          return "Quiz";
+        case "dykswu":
+          return "Do You Know SWU?";
+        default:
+          return "";
+      }
+    default:
+      return "";
+  }
 }
 
 export function renderItalicsAndBold(text: string): React.JSX.Element {

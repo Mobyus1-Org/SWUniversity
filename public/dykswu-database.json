@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "img": "001",
+    "difficulty": 0,
+    "answer": "cost",
+    "actualCard": "SOR/221",
+    "explanation": "Outmaneuver costs 3 resources to play and not 4.",
+    "tags": ["outmaneuver", "resources", "cost"]
+  }
+]

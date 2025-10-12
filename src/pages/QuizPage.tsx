@@ -1,14 +1,14 @@
 import React from "react";
-import { getQuizDataAsync } from "../util/func";
-import type { Quiz, UserResponse } from "../util/func";
-import { QuizModeButtons } from "../components/Quiz/QuizModeButtons";
+import { getModeTitle, getQuizDataAsync } from "../util/func";
+import type { AppModeSetEntry, Quiz, UserResponse } from "../util/func";
+import { ModeButtons } from "../components/Shared/ModeButtons";
 import { QuizContent } from "../components/Quiz/QuizContent";
-import type { QuizModes } from "../util/const";
+import type { AppModes } from "../util/const";
 
 function QuizPage() {
   const [allQuizzes, setAllQuizzes] = React.useState<Quiz[]>([]);
   const [currentQuizSet, setCurrentQuizSet] = React.useState<Quiz[]>(allQuizzes);
-  const [quizMode, setQuizMode] = React.useState<QuizModes>("");
+  const [quizMode, setQuizMode] = React.useState<AppModes>("");
   const [currentQuizId, setCurrentQuizId] = React.useState<number>(0);
   const [currentQuizKeys, setCurrentQuizKeys] = React.useState<string[]>([]);
   const [quizzesCompleted, setQuizzesCompleted] = React.useState<number[]>([]);
@@ -27,28 +27,28 @@ function QuizPage() {
   const renderQuizContent = () => currentQuizSet.length === 0
     ? <p className="text-lg uwd:text-3xl 4k:text-5xl">Loading quizzes...</p>
     : <QuizContent
-        currentQuizSet={currentQuizSet}
-        currentQuizId={currentQuizId}
-        quizMode={quizMode}
-        quizzesCompleted={quizzesCompleted}
-        lastEndlessQuizzes={lastEndlessQuizzes}
-        quizResult={quizResult}
-        selectedAnswer={selectedAnswer}
-        currentQuizKeys={currentQuizKeys}
-        standardQuizLength={standardQuizLength}
-        userResponses={userResponses}
-        setCurrentQuizId={setCurrentQuizId}
-        setQuizResult={setQuizResult}
-        setSelectedAnswer={setSelectedAnswer}
-        setQuizzesCompleted={setQuizzesCompleted}
-        setCurrentQuizKeys={setCurrentQuizKeys}
-        setLastEndlessQuizzes={setLastEndlessQuizzes}
-        setQuizMode={setQuizMode}
-        setStandardQuizLength={setStandardQuizLength}
-        setUserResponses={setUserResponses}
-        resetCurrentQuizState={resetCurrentQuizState}
-        resetQuizMode={resetQuizMode}
-      />;
+      currentQuizSet={currentQuizSet}
+      currentQuizId={currentQuizId}
+      quizMode={quizMode}
+      quizzesCompleted={quizzesCompleted}
+      lastEndlessQuizzes={lastEndlessQuizzes}
+      quizResult={quizResult}
+      selectedAnswer={selectedAnswer}
+      currentQuizKeys={currentQuizKeys}
+      standardQuizLength={standardQuizLength}
+      userResponses={userResponses}
+      setCurrentQuizId={setCurrentQuizId}
+      setQuizResult={setQuizResult}
+      setSelectedAnswer={setSelectedAnswer}
+      setQuizzesCompleted={setQuizzesCompleted}
+      setCurrentQuizKeys={setCurrentQuizKeys}
+      setLastEndlessQuizzes={setLastEndlessQuizzes}
+      setQuizMode={setQuizMode}
+      setStandardQuizLength={setStandardQuizLength}
+      setUserResponses={setUserResponses}
+      resetCurrentQuizState={resetCurrentQuizState}
+      resetQuizMode={resetQuizMode}
+    />;
 
   const resetCurrentQuizState = () => {
     setSelectedAnswer("");
@@ -66,40 +66,21 @@ function QuizPage() {
   }
 
   return <div>
-    <h1 className="text-2xl md:text-4xl uwd:!text-5xl 4k:!text-7xl font-bold mb-4">{getQuizModeTitle(quizMode)}</h1>
+    <h1 className="text-2xl md:text-4xl uwd:!text-5xl 4k:!text-7xl font-bold mb-4">{getModeTitle("quiz", quizMode)}</h1>
     {
       quizMode === "" || (quizMode === "standard" && standardQuizLength === 0)
-        ? <QuizModeButtons
-          quizMode={quizMode}
-          allQuizzes={allQuizzes}
-          standardQuizLength={standardQuizLength}
-          setQuizMode={setQuizMode}
-          setCurrentQuizSet={setCurrentQuizSet}
-          setCurrentQuizId={setCurrentQuizId}
-          setStandardQuizLength={setStandardQuizLength}
+        ? <ModeButtons
+          mode={quizMode}
+          allModeSet={allQuizzes}
+          standardModeLength={standardQuizLength}
+          setMode={setQuizMode}
+          setCurrentModeSet={setCurrentQuizSet as React.Dispatch<React.SetStateAction<AppModeSetEntry[]>>}
+          setCurrentModeId={setCurrentQuizId}
+          setStandardModeLength={setStandardQuizLength}
         />
         : renderQuizContent()
     }
   </div>;
-}
-
-function getQuizModeTitle(mode: QuizModes): string {
-  switch(mode) {
-    case "marathon":
-      return "Marathon Mode";
-    case "endless":
-      return "Endless Mode";
-    case "standard":
-      return "Standard Mode";
-    case "padawan":
-      return "Padawan Mode";
-    case "knight":
-      return "Jedi Knight Mode";
-    case "master":
-      return "Jedi Master Mode";
-    default:
-      return "";
-  }
 }
 
 export default QuizPage;

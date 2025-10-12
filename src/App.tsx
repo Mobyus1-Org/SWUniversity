@@ -6,6 +6,7 @@ import type { SfxType } from './util/const';
 import Layout from './Layout';
 import HomePage from './pages/HomePage';
 import QuizPage from './pages/QuizPage';
+import DoYouKnowSWUPage from './pages/DoYouKnowSWUPage';
 //import PuzzlesPage from './pages/PuzzlesPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -49,6 +50,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/quiz" element={<QuizPage />} />
+            <Route path="/do-you-know-swu" element={<DoYouKnowSWUPage />} />
             {/* <Route path="/puzzles" element={<PuzzlesPage />} /> */}
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
