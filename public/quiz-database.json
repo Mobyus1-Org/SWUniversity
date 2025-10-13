@@ -439,15 +439,15 @@
       "question": "Player A just defeated Player B's **_Guavian Antagonizer_**, but is afraid their deck is running low on cards and doesn't want to draw a card from the **Bounty**. Do they need to draw and why?",
       "choices": {
          "a": "Yes. It does not say \"You may\", so it's required.",
-         "b": "No. Collecting a **Bounty** is optional.",
+         "b": "Yes, but only if Player B has the initiative.",
          "c": "No. A **Bounty** is only collected when the unit is captured.",
-         "d": "Yes, but only if Player B has the initiative."
+         "d": "No. Collecting a **Bounty** is optional."
       },
-      "answer": "b",
+      "answer": "d",
       "relevantCards": ["SHD/134"],
       "relevantRule": "Players do not need to collect the **Bounty** on units they capture or defeat. It's always optional.\n\n**7.5.13.E** - Resolving a Bounty ability is optional. If a player chooses not to resolve a Bounty ability, they are not considered to have collected that Bounty.",
       "tags": ["guavian antagonizer", "bounty", "keyword", "trigger"],
-      "difficulty": 0
+      "difficulty": 1
    },
    {
       "id": 31,
@@ -633,16 +633,16 @@
       "id": 43,
       "question": "Player A controls **_General Grievous, General of the Droid Armies_**, deployed as a unit. Player B controls **_Rose Tico, Saving What We Love_**, also deployed as a unit. No other units are in play. Player A plays **_Merciless Contest_**. What best describes what happens?",
       "choices": {
-         "a": "**_Rose Tico_** is defeated.",
+         "a": "No units are defeated.",
          "b": "**_General Grievous_** is defeated.",
          "c": "Both units are defeated.",
-         "d": "No units are defeated."
+         "d": "**_Rose Tico_** is defeated."
       },
-      "answer": "d",
+      "answer": "a",
       "relevantCards": ["TWI/015-portrait", "JTL/004-portrait", "TWI/238"],
       "relevantRule": "**_Merciless Contest_** specifies that each player chooses a non-leader unit to defeat. Since neither player has a non-leader unit, no units are defeated.",
       "tags": ["general grievous", "rose tico", "merciless contest", "event", "target", "removal", "leader"],
-      "difficulty": 1
+      "difficulty": 0
    },
    {
       "id": 44,
