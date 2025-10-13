@@ -50,6 +50,8 @@ export function QuestionContent({
   const currentQuestion = currentQuestionSet.find(q => q.id === currentQuestionId);
   const { sfx } = React.useContext(AudioContext) ?? { sfx: () => { } };
   const [revealCard, setRevealCard] = React.useState(false);
+  const [followUpAnswer, setFollowUpAnswer] = React.useState<string>("");
+  const [followUpSubmitted, setFollowUpSubmitted] = React.useState(false);
 
   React.useEffect(() => {
     if (questionResult) {
@@ -60,6 +62,18 @@ export function QuestionContent({
   }, [questionResult])
 
   if (!currentQuestion) return <p className="text-lg">Loading question...</p>;
+
+  const showFirstChoices = !currentQuestion.followUp
+    || (currentQuestion.followUp && !questionResult)
+    || (currentQuestion.followUp && !followUpSubmitted && selectedAnswer !== currentQuestion.answer);
+  const showFollowUpChoices = questionResult && currentQuestion.followUp && !followUpSubmitted && selectedAnswer === currentQuestion.answer;
+  const showAnswer = questionResult && (
+    !currentQuestion.followUp
+    || currentQuestion.followUp && !followUpSubmitted && selectedAnswer !== currentQuestion.answer
+  );
+  const showFollowUpAnswer = questionResult && currentQuestion.followUp && followUpSubmitted;
+  const showExplanation = !currentQuestion.followUp
+    || (currentQuestion.followUp && !followUpSubmitted && currentQuestion.answer !== selectedAnswer);
 
   const renderChoices = () => {
     if (currentQuestionSet.length === 0) return null;
@@ -73,11 +87,11 @@ export function QuestionContent({
     };
 
     const renderChoiceTitle = (choice: string) =>
-      choice == "hp" ? "HP" : choice.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+      choice === "hp" ? "HP" : choice.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 
     const divs = <div className="grid grid-cols-2 gap-2.5 uwd:gap-3.8 4k:gap-5">
       {
-        DYKSWUChoices.map((_, index) => (
+        showFirstChoices && DYKSWUChoices.map((_, index) => (
           <div key={index} className={`${highlighted(index)}`}>
             <button
               type="button"
@@ -106,83 +120,142 @@ export function QuestionContent({
           </div>
         ))
       }
+      {
+        currentQuestion.followUp && showFollowUpChoices && <div className="col-span-2">
+          <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{renderItalicsAndBold(currentQuestion.followUp.question)}</p>
+          <div className="grid grid-cols-2 gap-2.5 uwd:gap-3.8 4k:gap-5">
+            {
+              Object.entries(currentQuestion.followUp.choices).map(([key, value]) => (
+                <div key={key} className={`${followUpAnswer === key ? "bg-slate-600/50 border-white rounded" : ""}`}>
+                  <button
+                    type="button"
+                    className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 transition-colors
+                ${followUpAnswer === key
+                        ? 'border-white bg-slate-600/50'
+                        : 'border-slate-600'
+                      }
+                `}
+                    onClick={() => {
+                      sfx("click");
+                      setFollowUpAnswer(key);
+                    }}
+                  >
+                    <div className="text-md md:text-lg uwd:!text-3xl 4k:!text-5xl">
+                      {value}
+                    </div>
+                  </button>
+                </div>
+              ))
+            }
+          </div>
+          <button
+            type="button"
+            className={`btn btn-primary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${followUpAnswer === "" ? "opacity-50 cursor-not-allowed" : ""}`}
+            onClick={() => {
+                setFollowUpSubmitted(true);
+                sfx("confirm");
+            }}
+            disabled={followUpAnswer === ""}
+          >
+            Submit Follow-Up Answer
+          </button>
+        </div>
+      }
+      {
+        currentQuestion.followUp && showFollowUpAnswer && <div className="col-span-2">
+          <p className={`text-xl font-bold mb-4 ${followUpAnswer === currentQuestion.followUp.answer ? "text-green-500" : "text-red-500"} `}>
+            {followUpAnswer === currentQuestion.followUp.answer ? "Correct!" : "Incorrect!"}
+          </p>
+          <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentQuestion.explanation)}</p>
+          <button className="btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12" onClick={() =>
+            onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentQuestion.answer.toString(),
+              currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses,
+              followUpSubmitted, followUpAnswer,
+              sfx,
+              setQuestionsCompleted, setCurrentQuestionId, setLastEndlessQuestions, setUserResponses, resetCurrentQuestionState, setFollowUpSubmitted, setFollowUpAnswer)}>
+            Next Question
+          </button>
+        </div>
+      }
     </div>;
 
     return divs;
   }
 
   return <div className={`border rounded p-2 ${globalBackgroundStyle}`}>
-    {
-      isMarathonVariant(questionMode)
-      && questionsCompleted.length === currentQuestionSet.length
-      && <MarathonModeEndScreen app="dykswu" resetDykSWUMode={resetDoYouKnowSWUMode} />
-    }
-    {
-      questionMode === "standard"
-      && questionsCompleted.length === standardQuestionLength
-      && <StandardModeEndScreen
-        app="dykswu"
-        userResponses={userResponses}
-        currentModeSet={currentQuestionSet}
-        standardModeLength={standardQuestionLength}
-        resetDoYouKnowSWUMode={resetDoYouKnowSWUMode}
-      />
-    }
-    {
-      questionsCompleted.length < currentQuestionSet.length && <div className={`grid ${globalBackgroundStyle} shadow-md md:grid-cols-[40%_60%] border p-8 rounded gap-4`}>
-        {/* Question and choices */}
-        <div>
-          <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">What's been changed?</p>
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            if (selectedAnswer !== "") {
-              onSubmitAnswer(selectedAnswer, setQuestionResult, sfx);
-            }
-          }}>
-            {renderChoices()}
-            {!questionResult && <button type="submit" className="btn btn-primary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12">Submit Answer</button>}
-            {
-              questionResult && questionsCompleted.length < currentQuestionSet.length
-                ? <button className="btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12" onClick={() =>
-                  onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentQuestion.answer.toString(),
-                    currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses, sfx,
-                    setQuestionsCompleted, setCurrentQuestionId, setLastEndlessQuestions, setUserResponses, resetCurrentQuestionState)}>
-                  Next Question
-                </button>
-                : null
-            }
-          </form>
-        </div>
-        {/* Images */}
-        <div className="flex flex-wrap justify-center items-center gap-4">
-          <div className="flex flex-col items-center">
-            <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">Real?</p>
-            <img
-              src={getDYKSWUImageLink(currentQuestion.img)}
-              alt="Potentially changed SWU card"
-              className="max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 rounded shadow-lg"
-            />
-          </div>
-          <div className="flex flex-col items-center">
-            <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{questionResult ? "Real Card" : ""}</p>
-            <img
-              src={questionResult ? getSWUDBImageLink(currentQuestion.actualCard) : "/assets/SWUniversity_Cardback.png"}
-              alt={questionResult ? "Real Card" : "SWUniversity Cardback"}
-              className={`max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 4k:ml-16 rounded shadow-lg transition-all duration-500 ${revealCard ? "wipe-enter" : ""}`}
-            />
-          </div>
-        </div>
-        {/* Explanation */}
-        {
-          questionResult && currentQuestion.explanation != " " && <div className="md:col-span-2">
-            <p className={`${currentQuestion.answer === selectedAnswer ? "text-green-500" : "text-red-500"} text-xl font-bold mb-4`}>
-              {currentQuestion.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
-            </p>
-            <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentQuestion.explanation)}</p>
-          </div>
-        }
+  {
+    isMarathonVariant(questionMode)
+    && questionsCompleted.length === currentQuestionSet.length
+    && <MarathonModeEndScreen app="dykswu" resetDykSWUMode={resetDoYouKnowSWUMode} />
+  }
+  {
+    questionMode === "standard"
+    && questionsCompleted.length === standardQuestionLength
+    && <StandardModeEndScreen
+      app="dykswu"
+      userResponses={userResponses}
+      currentModeSet={currentQuestionSet}
+      standardModeLength={standardQuestionLength}
+      resetDoYouKnowSWUMode={resetDoYouKnowSWUMode}
+    />
+  }
+  {
+    questionsCompleted.length < currentQuestionSet.length && <div className={`grid ${globalBackgroundStyle} shadow-md md:grid-cols-[40%_60%] border p-8 rounded gap-4`}>
+      {/* Question and choices */}
+      <div>
+        {!showFollowUpChoices && <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">What's been changed?</p>}
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (selectedAnswer !== "") {
+            onSubmitAnswer(selectedAnswer, setQuestionResult, sfx);
+          }
+        }}>
+          {renderChoices()}
+          {!questionResult && <button type="submit" className="btn btn-primary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12">Submit Answer</button>}
+          {
+            showAnswer && questionsCompleted.length < currentQuestionSet.length
+              ? <button className="btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12" onClick={() =>
+                onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentQuestion.answer.toString(),
+                  currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses,
+                  followUpSubmitted, followUpAnswer,
+                  sfx,
+                  setQuestionsCompleted, setCurrentQuestionId, setLastEndlessQuestions, setUserResponses, resetCurrentQuestionState, setFollowUpSubmitted, setFollowUpAnswer)}>
+                Next Question
+              </button>
+              : null
+          }
+        </form>
       </div>
-    }
+      {/* Images */}
+      <div className="flex flex-wrap justify-center items-center gap-4">
+        <div className="flex flex-col items-center">
+          <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">Real?</p>
+          <img
+            src={getDYKSWUImageLink(currentQuestion.img)}
+            alt="Potentially changed SWU card"
+            className="max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 rounded shadow-lg"
+          />
+        </div>
+        <div className="flex flex-col items-center">
+          <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{questionResult ? "Real Card" : ""}</p>
+          <img
+            src={(showAnswer || showFollowUpAnswer) ? getSWUDBImageLink(currentQuestion.actualCard) : "/assets/SWUniversity_Cardback.png"}
+            alt={(showAnswer || showFollowUpAnswer) ? "Real Card" : "SWUniversity Cardback"}
+            className={`max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 4k:ml-16 rounded shadow-lg transition-all duration-500 ${(revealCard && (showAnswer || showFollowUpAnswer)) ? "wipe-enter" : ""}`}
+          />
+        </div>
+      </div>
+      {/* Explanation */}
+      {
+        questionResult && showExplanation && <div className="md:col-span-2">
+          <p className={`${currentQuestion.answer === selectedAnswer ? "text-green-500" : "text-red-500"} text-xl font-bold mb-4`}>
+            {currentQuestion.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
+          </p>
+          <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentQuestion.explanation)}</p>
+        </div>
+      }
+    </div>
+  }
   </div>
 }
 
@@ -203,18 +276,26 @@ function onNextQuestion(
   lastEndlessQuizzes: number[],
   standardQuestionLength: number,
   userResponses: UserResponse[],
+  followUpSubmitted: boolean,
+  followUpAnswer: string,
   sfx: (type: SfxType) => void,
   setQuestionsCompleted: (completed: number[]) => void,
   setCurrentQuestionId: (id: number) => void,
   setLastEndlessQuizzes: (list: number[]) => void,
   setUserResponses: (responses: UserResponse[]) => void,
-  resetCurrentQuestionState: () => void
+  resetCurrentQuestionState: () => void,
+  setFollowUpSubmitted: (submitted: boolean) => void,
+  setFollowUpAnswer: (answer: string) => void,
 ) {
-  const endlessThreshold = 5; // Number of recent DYKSWU questions to track in endless mode
-
+  const endlessThreshold = 10; // Number of recent DYKSWU questions to track in endless mode
+  const currentQuestion = currentQuestionSet.find(q => q.id === currentQuestionId)!;
   if (isMarathonVariant(questionMode)) {
     const updatedCompleted = [...questionsCompleted];
-    if (selectedAnswer === currentQuestionAnswer) {
+    if (selectedAnswer === currentQuestionAnswer && !currentQuestion.followUp) {
+      updatedCompleted.push(currentQuestionId);
+      setQuestionsCompleted(updatedCompleted);
+    } else if (selectedAnswer === currentQuestionAnswer && currentQuestion.followUp
+        && followUpSubmitted && followUpAnswer === currentQuestion.followUp.answer) {
       updatedCompleted.push(currentQuestionId);
       setQuestionsCompleted(updatedCompleted);
     }
@@ -251,6 +332,8 @@ function onNextQuestion(
     }
   }
 
-  sfx("click");
+  setFollowUpSubmitted(false);
+  setFollowUpAnswer("");
+  sfx("transition");
 }
 

@@ -49,6 +49,16 @@
     "img": "jedilightsaber",
     "difficulty": 2,
     "answer": "ability-text",
+    "followUp": {
+      "question": "What is the actual ability text of **_Jedi Lightsaber_**?",
+      "choices": {
+        "a": "Attach to a Force unit.",
+        "b": "If attached unit is a Jedi...",
+        "c": "Give the defender -2/-2 for this phase.",
+        "d": "Give the defender -1/-1 for this attack."
+      },
+      "answer": "c"
+    },
     "actualCard": "SOR/054",
     "explanation": "**_Jedi Lightsaber_** gives the defender -2/-2 for the rest of the entire phase, not just for the attack.",
     "tags": ["jedi lightsaber", "ability-text"]

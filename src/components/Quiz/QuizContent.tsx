@@ -165,7 +165,7 @@ export function QuizContent({
       <RelevantCardsPanel currentQuiz={currentQuiz} setShowModal={setShowModal} />
       {/* Relevant rule */}
       {
-        quizResult && currentQuiz.relevantRule != " " && <div className="md:col-span-2 text-xl uwd:text-3xl 4k:text-5xl">
+        quizResult && currentQuiz.relevantRule !== " " && <div className="md:col-span-2 text-xl uwd:text-3xl 4k:text-5xl">
           <p className={`${currentQuiz.answer === selectedAnswer ? "text-green-500" : "text-red-500"} font-bold mb-4`}>
             {currentQuiz.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
           </p>

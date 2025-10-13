@@ -38,6 +38,13 @@ export type DoYouKnowSWUQuestion = AppModeSetEntry & {
   img: string;
   actualCard: string;
   explanation: string;
+  followUp?: {
+    question: string;
+    choices: {
+      [key: string]: string
+    };
+    answer: string;
+  };
 }
 
 export async function getDoYouKnowSWUDataAsync() : Promise<DoYouKnowSWUQuestion[]> {
