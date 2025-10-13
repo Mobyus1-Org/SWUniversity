@@ -3,7 +3,7 @@ import { getModeTitle, getQuizDataAsync } from "../util/func";
 import type { AppModeSetEntry, Quiz, UserResponse } from "../util/func";
 import { ModeButtons } from "../components/Shared/ModeButtons";
 import { QuizContent } from "../components/Quiz/QuizContent";
-import type { AppModes } from "../util/const";
+import type { AppModes, ModeDescriptions } from "../util/const";
 
 function QuizPage() {
   const [allQuizzes, setAllQuizzes] = React.useState<Quiz[]>([]);
@@ -23,7 +23,7 @@ function QuizPage() {
       setAllQuizzes(data);
     });
   }, []);
- 
+
   const renderQuizContent = () => currentQuizSet.length === 0
     ? <p className="text-lg uwd:text-3xl 4k:text-5xl">Loading quizzes...</p>
     : <QuizContent
@@ -65,14 +65,25 @@ function QuizPage() {
     setCurrentQuizId(0);
   };
 
+  const modeDescriptions: ModeDescriptions = {
+    "": "",
+    "standard": "Choose a set number of questions to be pulled from our databank and see how many you can answer correctly!",
+    "marathon": `Correctly answer every question in the databank once to complete the marathon!\n\nTotal Questions: ${allQuizzes.length}`,
+    "endless": "Answer random questions with no end in sight!",
+    "padawan": `A perfect place for new players to test their knowledge of the basics of SWU!\n\nTotal Questions: ${allQuizzes.filter(quiz => quiz.difficulty === 0).length}`,
+    "knight": `A challenging mode for those who have a solid understanding of SWU and want to test their skills further!\n\nTotal Questions: ${allQuizzes.filter(quiz => quiz.difficulty === 1).length}`,
+    "master": `The ultimate test for SWU experts! Only the most knowledgeable players will be able to conquer this mode!\n\nTotal Questions: ${allQuizzes.filter(quiz => quiz.difficulty === 2).length}`
+  }
+
   return <div>
-    <h1 className="text-4xl font-bold md:text-4xl uwd:!text-5xl 4k:!text-7xl mb-4 uwd:ml-2 4k:ml-4">{getModeTitle("quiz", quizMode)}</h1>
+    <h1 className="text-center text-4xl font-bold md:text-4xl uwd:!text-5xl 4k:!text-7xl mb-4">{getModeTitle("quiz", quizMode)}</h1>
     {
       quizMode === "" || (quizMode === "standard" && standardQuizLength === 0)
         ? <ModeButtons
           mode={quizMode}
           allModeSet={allQuizzes}
           standardModeLength={standardQuizLength}
+          modeDescriptions={modeDescriptions}
           setMode={setQuizMode}
           setCurrentModeSet={setCurrentQuizSet as React.Dispatch<React.SetStateAction<AppModeSetEntry[]>>}
           setCurrentModeId={setCurrentQuizId}

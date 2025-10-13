@@ -2,6 +2,7 @@ import React from "react";
 import { getDoYouKnowSWUDataAsync, getModeTitle, type AppModeSetEntry, type DoYouKnowSWUQuestion, type UserResponse } from "../util/func";
 import { ModeButtons } from "../components/Shared/ModeButtons";
 import { QuestionContent } from "../components/DoYouKnowSWU/QuestionContent";
+import type { ModeDescriptions } from "../util/const";
 
 function DoYouKnowSWUPage() {
   const [allQuestions, setAllQuestions] = React.useState<DoYouKnowSWUQuestion[]>([]);
@@ -59,14 +60,25 @@ function DoYouKnowSWUPage() {
       setCurrentQuestionId(0);
     };
 
+    const modeDescriptions: ModeDescriptions = {
+      "": "",
+      "marathon": `All Cards\n\nTotal Questions: ${allQuestions.length}`,
+      "endless": "Endless Cards",
+      "standard": "Choose cards mixed",
+      "padawan": `Easy Cards\n\nTotal Questions: ${allQuestions.filter(q => q.difficulty === 0).length}`,
+      "knight": `Medium Cards\n\nTotal Questions: ${allQuestions.filter(q => q.difficulty === 1).length}`,
+      "master": `Hard Cards\n\nTotal Questions: ${allQuestions.filter(q => q.difficulty === 2).length}`,
+    };
+
     return <div>
-      <h1 className="w-auto mx-auto text-center text-4xl font-bold md:text-4xl uwd:!text-5xl 4k:!text-7xl mb-4 uwd:ml-2 4k:ml-4">{getModeTitle("dykswu", dykswuMode)}</h1>
+      <h1 className="text-center text-4xl font-bold md:text-4xl uwd:!text-5xl 4k:!text-7xl mb-4">{getModeTitle("dykswu", dykswuMode)}</h1>
       {
         dykswuMode === "" || (dykswuMode === "standard" && standardQuestionLength === 0)
           ? <ModeButtons
             mode={dykswuMode}
             allModeSet={allQuestions}
             standardModeLength={standardQuestionLength}
+            modeDescriptions={modeDescriptions}
             setMode={setDykswuMode}
             setCurrentModeSet={setCurrentQuestionSet as React.Dispatch<React.SetStateAction<AppModeSetEntry[]>>}
             setCurrentModeId={setCurrentQuestionId}

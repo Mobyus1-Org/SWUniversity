@@ -1,5 +1,5 @@
 import type { AppModeSetEntry } from "../../util/func";
-import { globalBackgroundStyle, type AppModes } from "../../util/const";
+import { globalBackgroundStyle, type AppModes, type ModeDescriptions } from "../../util/const";
 import React from "react";
 import { AudioContext } from "../../util/context";
 import { ModeButtonItem } from "./ModeButtonItem";
@@ -8,13 +8,14 @@ interface IProps {
   mode: AppModes;
   allModeSet: AppModeSetEntry[];
   standardModeLength: number;
+  modeDescriptions: ModeDescriptions;
   setMode: (mode: AppModes) => void;
   setCurrentModeSet: (set: AppModeSetEntry[]) => void;
   setCurrentModeId: (id: number) => void;
   setStandardModeLength: (length: number) => void;
 }
 
-export function ModeButtons({mode, allModeSet, standardModeLength, setMode, setCurrentModeSet, setCurrentModeId, setStandardModeLength}: IProps) {
+export function ModeButtons({mode, allModeSet, standardModeLength, modeDescriptions, setMode, setCurrentModeSet, setCurrentModeId, setStandardModeLength}: IProps) {
   const padawanModeSet = allModeSet.filter(quiz => quiz.difficulty === 0);
   const knightModeSet = allModeSet.filter(quiz => quiz.difficulty === 1);
   const masterModeSet = allModeSet.filter(quiz => quiz.difficulty === 2);
@@ -22,7 +23,7 @@ export function ModeButtons({mode, allModeSet, standardModeLength, setMode, setC
     <ModeButtonItem
       mode="standard"
       title="Standard Mode"
-      description="Choose a set number of questions to be pulled from our databank and see how many you can answer correctly!"
+      description={modeDescriptions["standard"]}
       modeSet={[]}
       initModeId={false}
       setMode={setMode}
@@ -32,7 +33,7 @@ export function ModeButtons({mode, allModeSet, standardModeLength, setMode, setC
     <ModeButtonItem
       mode="marathon"
       title="Marathon Mode"
-      description={`Correctly answer every question in the databank once to complete the marathon!\n\nTotal Questions: ${allModeSet.length}`}
+      description={modeDescriptions["marathon"]}
       modeSet={allModeSet}
       initModeId={true}
       setMode={setMode}
@@ -42,7 +43,7 @@ export function ModeButtons({mode, allModeSet, standardModeLength, setMode, setC
     <ModeButtonItem
       mode="endless"
       title="Endless Mode"
-      description="Answer random questions with no end in sight!"
+      description={modeDescriptions["endless"]}
       modeSet={allModeSet}
       initModeId={true}
       setMode={setMode}
@@ -52,7 +53,7 @@ export function ModeButtons({mode, allModeSet, standardModeLength, setMode, setC
     <ModeButtonItem
       mode="padawan"
       title="Padawan Mode"
-      description={`A perfect place for new players to test their knowledge of the basics of SWU!\n\nTotal Questions: ${padawanModeSet.length}`}
+      description={modeDescriptions["padawan"]}
       modeSet={padawanModeSet}
       initModeId={true}
       setMode={setMode}
@@ -62,7 +63,7 @@ export function ModeButtons({mode, allModeSet, standardModeLength, setMode, setC
     <ModeButtonItem
       mode="knight"
       title="Jedi Knight Mode"
-      description={`The majority of our questions fall under this category.\nSee how many you know!\n\nTotal Questions: ${knightModeSet.length}`}
+      description={modeDescriptions["knight"]}
       modeSet={knightModeSet}
       initModeId={true}
       setMode={setMode}
@@ -72,7 +73,7 @@ export function ModeButtons({mode, allModeSet, standardModeLength, setMode, setC
     <ModeButtonItem
       mode="master"
       title="Jedi Master Mode"
-      description={`Only the SWU players strongest in the Force understand these obscure interactions. And now you will too!\n\nTotal Questions: ${masterModeSet.length}`}
+      description={modeDescriptions["master"]}
       modeSet={masterModeSet}
       initModeId={true}
       setMode={setMode}
