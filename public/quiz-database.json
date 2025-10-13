@@ -1051,7 +1051,7 @@
    },
    {
       "id": 71,
-      "question": "Player A controls an **_Unlicensed Headhunter_** with **_Kazuda Xiono, Best Pilot in the Galaxy_**, attached to it as a _Pilot_. Player B controls **_The Client, Dictated by Discretion_**. Earlier in the phase, Player A attacked with their **_Unlicensed_Headhunter_** and targeted it with **_Kazuda's_** **On Attack** ability. Player B then uses **_The Client's_** Action ability on the **_Unlicensed Headhunter_**. If Player A then claims initiative, and Player B defeats the **_Unlicensed Headhunter_**, what best describes happens?",
+      "question": "Player A controls an **_Unlicensed Headhunter_** with **_Kazuda Xiono, Best Pilot in the Galaxy_**, attached to it as a _Pilot_. Player B controls **_The Client, Dictated by Discretion_**. Earlier in the phase, Player A attacked with their **_Unlicensed Headhunter_** and targeted it with **_Kazuda's_** **On Attack** ability. Player B then uses **_The Client's_** Action ability on the **_Unlicensed Headhunter_**. If Player A then claims initiative, and Player B defeats the **_Unlicensed Headhunter_**, what best describes happens?",
       "choices": {
          "a": "Player B's base is healed for 5 from **_Unlicensed Headhunter's_** own **Bounty**.",
          "b": "Player B's base is healed for 0.", 
