@@ -1,5 +1,5 @@
 import React from "react";
-import { renderItalicsAndBold, type DoYouKnowSWUQuestion, type Quiz, type UserResponse } from "../../util/func";
+import { renderDYKSWUChoiceTitle, renderItalicsAndBold, type DoYouKnowSWUQuestion, type Quiz, type UserResponse } from "../../util/func";
 import { AudioContext } from "../../util/context";
 import { globalBackgroundStyle, type SWUniversityApp } from "../../util/const";
 
@@ -21,8 +21,29 @@ export function StandardModeEndScreen({
   resetDoYouKnowSWUMode
 }: IProps) {
   const { sfx } = React.useContext(AudioContext) ?? { sfx: () => {} };
+
+  const renderPoints = (responses: UserResponse[], total: number) => {
+    const points = Object.values(responses).reduce((acc, response) => {
+      if (!response.followUp && response.correct === response.selected) {
+        acc += 1;
+      }
+      else if (response.followUp) {
+        if(response.correct === response.selected) {
+          acc += 0.5;
+        }
+        if (response.followUp.followUpCorrect === response.followUp.followUpSelected) {
+          acc += 0.5;
+        }
+      }
+
+      return acc;
+    }, 0);
+
+    return `Game Complete! You answered ${points} out of ${total} questions correctly.`;
+  }
+
   return <div className="text-center m-[10%_10%] lg:m-[1%_10%]">
-    <p className="text-2xl md:text-4xl font-bold mb-4 h-16">Quiz Complete! You answered {Object.values(userResponses).filter(response => response.selected === response.correct).length} out of {standardModeLength} questions correctly.</p>
+    <p className="text-2xl md:text-4xl font-bold mb-4 h-16">{renderPoints(userResponses, standardModeLength)}</p>
     <button className="btn btn-primary text-lg p-4" onClick={() => {
       sfx("confirm");
       switch (app) {
@@ -61,8 +82,16 @@ export function StandardModeEndScreen({
                     const question = modeEntry as DoYouKnowSWUQuestion;
                     return <>
                       <p className="font-bold">Card: {renderItalicsAndBold(question.actualCard)}</p>
-                      <p>Your answer: <span className={response.selected === response.correct ? "text-green-500 font-bold" : "text-red-500 font-bold"}>{renderItalicsAndBold(response.selected)}</span></p>
-                      {response.selected !== response.correct && <p>Correct answer: <span className="text-green-500 font-bold">{renderItalicsAndBold(response.correct)}</span></p>}
+                      <p>Your answer: <span className={response.selected === response.correct ? "text-green-500 font-bold" : "text-red-500 font-bold"}>{renderDYKSWUChoiceTitle(response.selected)}</span></p>
+                      {response.selected !== response.correct && <p>Correct answer: <span className="text-green-500 font-bold">{renderDYKSWUChoiceTitle(response.correct)}</span></p>}
+                      {
+                        response.followUp && <>
+                          <p className="mt-2.5 font-bold">Follow-up Question: {renderItalicsAndBold(question.followUp!.question)}</p>
+                          <p>Your answer: <span className={response.followUp.followUpCorrect === response.followUp.followUpSelected ? "text-green-500 font-bold" : "text-red-500 font-bold"}>{renderItalicsAndBold(question.followUp!.choices[response.followUp.followUpSelected])}</span></p>
+                          {response.followUp.followUpCorrect !== response.followUp.followUpSelected && <p>Correct answer: <span className="text-green-500 font-bold">{renderItalicsAndBold(question.followUp!.choices[response.followUp.followUpCorrect])}</span></p>}
+                        </>
+                      }
+
                     </>
                   })()
                 }

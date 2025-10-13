@@ -20,6 +20,10 @@ export type UserResponse = {
   modeId: number;
   selected: string;
   correct: string;
+  followUp?: {
+    followUpSelected: string;
+    followUpCorrect: string;
+  }
 }
 
 const notBeforeId = 1;
@@ -52,6 +56,10 @@ export async function getDoYouKnowSWUDataAsync() : Promise<DoYouKnowSWUQuestion[
   const data = await response.json();
 
   return data.filter((question: DoYouKnowSWUQuestion) => question.id);
+}
+
+export function renderDYKSWUChoiceTitle(choice: string) {
+  return choice === "hp" ? "HP" : choice.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 }
 
 const setsMap = {

@@ -1,7 +1,7 @@
 import React from "react";
 
 import { DYKSWUChoices, globalBackgroundStyle, type AppModes, type SfxType } from "../../util/const";
-import { renderItalicsAndBold, isMarathonVariant, type UserResponse, type DoYouKnowSWUQuestion, getSWUDBImageLink, getDYKSWUImageLink } from "../../util/func";
+import { renderItalicsAndBold, isMarathonVariant, type UserResponse, type DoYouKnowSWUQuestion, getSWUDBImageLink, getDYKSWUImageLink, renderDYKSWUChoiceTitle } from "../../util/func";
 import { StandardModeEndScreen } from "../Shared/StandardModeEndScreen";
 import { MarathonModeEndScreen } from "../Shared/MarathonModeEndScreen";
 import { AudioContext } from "../../util/context";
@@ -86,9 +86,6 @@ export function QuestionContent({
       return "";
     };
 
-    const renderChoiceTitle = (choice: string) =>
-      choice === "hp" ? "HP" : choice.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
-
     const divs = <div className="grid grid-cols-2 gap-2.5 uwd:gap-3.8 4k:gap-5">
       {
         showFirstChoices && DYKSWUChoices.map((_, index) => (
@@ -96,15 +93,9 @@ export function QuestionContent({
             <button
               type="button"
               className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 transition-colors
-            ${selectedAnswer === DYKSWUChoices[index]
-                  ? 'border-white bg-slate-600/50'
-                  : 'border-slate-600'
-                }
-            ${questionResult
-                  ? 'cursor-not-allowed'
-                  : 'cursor-pointer'
-                }
-          `}
+                ${selectedAnswer === DYKSWUChoices[index] ? 'border-white bg-slate-600/50' : 'border-slate-600'}
+                ${questionResult ? 'cursor-not-allowed' : 'cursor-pointer'}
+              `}
               onClick={() => {
                 if (!questionResult) {
                   sfx("click");
@@ -114,7 +105,7 @@ export function QuestionContent({
               disabled={questionResult}
             >
               <div className="text-md md:text-lg uwd:!text-3xl 4k:!text-5xl">
-                {renderChoiceTitle(DYKSWUChoices[index])}
+                {renderDYKSWUChoiceTitle(DYKSWUChoices[index])}
               </div>
             </button>
           </div>
@@ -130,18 +121,16 @@ export function QuestionContent({
                   <button
                     type="button"
                     className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 transition-colors
-                ${followUpAnswer === key
-                        ? 'border-white bg-slate-600/50'
-                        : 'border-slate-600'
-                      }
-                `}
+                      ${followUpAnswer === key ? 'border-white bg-slate-600/50' : 'border-slate-600'}
+                      ${followUpSubmitted ? 'cursor-not-allowed' : 'cursor-pointer'}
+                    `}
                     onClick={() => {
                       sfx("click");
                       setFollowUpAnswer(key);
                     }}
                   >
                     <div className="text-md md:text-lg uwd:!text-3xl 4k:!text-5xl">
-                      {value}
+                      {renderItalicsAndBold(value)}
                     </div>
                   </button>
                 </div>
@@ -324,7 +313,14 @@ function onNextQuestion(
     updatedCompleted.push(currentQuestionId);
     setQuestionsCompleted(updatedCompleted);
     const updatedResponses = [...userResponses];
-    updatedResponses.push({ modeId: currentQuestionId, selected: selectedAnswer, correct: currentQuestionAnswer });
+    const newResponse: UserResponse = { modeId: currentQuestionId, selected: selectedAnswer, correct: currentQuestionAnswer };
+    if (currentQuestion.followUp) {
+      newResponse.followUp = {
+        followUpSelected: followUpAnswer,
+        followUpCorrect: currentQuestion.followUp.answer
+      };
+    }
+    updatedResponses.push(newResponse);
     setUserResponses(updatedResponses);
     if (updatedCompleted.length < standardQuestionLength) {
       setCurrentQuestionId(currentQuestionSet[updatedCompleted.length].id);
