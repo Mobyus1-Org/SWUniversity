@@ -766,7 +766,7 @@
    },
    {
       "id": 52,
-      "question": "Player A has 6 ready resources and the initiative. They control a **_Seasoned Shoretrooper_**, a **_First Order TIE Fighter_**, a **_Battle Droid_** token, and a **_Warbird Stowaway_** with **_Perilous Position_** attached to it. Each of those units has attacked already this phase. They then play **_Consolodation of Power_**, choosing all four of those units. Which of the following is the largest unit Player A can play for free?",
+      "question": "Player A has 6 ready resources and the initiative. They control a **_Seasoned Shoretrooper_**, a **_First Order TIE Fighter_**, a **_Battle Droid_** token, and a **_Warbird Stowaway_** with **_Perilous Position_** attached to it. Each of those units has attacked already this phase. They then play **_Consolidation of Power_**, choosing all four of those units. Which of the following is the most expensive unit Player A can play for free?",
       "choices": {
          "a": "**_Devastator, Inescapable_**",
          "b": "**_Relentless, Konstantine's Folly_**",
@@ -776,7 +776,7 @@
       "answer": "b",
       "relevantCards": ["SOR/081", "JTL/081", "TTWI/T01", "SHD/086", "TWI/070", "TWI/089", "SOR/090", "SOR/089", "SOR/088", "SHD/090"],
       "relevantRule": "This one is all about math. Since Player A has 6 resources, **_Seasoned Shoretrooper_** has 4 power _(4 total)_. The **_First Order TIE_** may have **Raid 1**, but that doesn't add to its power unless it's attacking, so it has 2 power _(6 total)_. The **_Battle Droid_** is a simple 1 more _(7 total)_. The **_Warbird Stowaway_** starts with 2, goes to 4 due to Player A having the initiative, then is reduced back to 2 from **_Perilous Position_** _(9 total)_. That means Player A can play a unit from their hand for free with a total cost 9 or less.",
-      "tags": ["seasoned shoretrooper", "first order tie fighter", "battle droid", "warbird stowaway", "perilous position", "consolodation of power", "devastator", "blizzard assault at-at", "maul", "relentless", "token", "event", "cost", "power"],
+      "tags": ["seasoned shoretrooper", "first order tie fighter", "battle droid", "warbird stowaway", "perilous position", "consolidation of power", "devastator", "blizzard assault at-at", "maul", "relentless", "token", "event", "cost", "power"],
       "difficulty": 2
    },
    {
@@ -1092,6 +1092,36 @@
       "relevantCards": ["JTL/190", "JTL/217", "SOR/210", "JTL/220", "SOR/244"],
       "relevantRule": "Since **_Snowspeeder's_** **On Attack** ability specifies \"enemy _Vehicle_ ground unit,\" only the **_Skyway Cloud Car_** is a valid target.",
       "tags": ["techno union transport", "death space skirmisher", "swoop racer", "skyway cloud car", "snowspeeder", "target", "on attack", "traits", "vehicle"],
+      "difficulty": 1
+   },
+   {
+      "id": 74,
+      "question": "Player A controls a ready **_Poe Dameron, I Can Fly Anything_** deployed as a unit, a ready **_Black One, Straight at Them_**, with no upgrades attached to it, and one ready resource. Can Player A use **_Poe's_** ability to attach him to **_Black One_**? Why or why not?",
+      "choices": {
+         "a": "No. **_Poe's_** Action can only be used while he's an upgrade, not a unit.",
+         "b": "No. Player A would need 5 ready resources.", 
+         "c": "Yes. **_Poe_** is ready and Player A has the resource to spend.",
+         "d": "No. **_Black One_** requires any _Pilots_ that attach to it to be non-leaders."
+      },
+      "answer": "a",
+      "relevantCards": ["JTL/013-back", "JTL/147"],
+      "relevantRule": "Any abilities in the bottom portion of _Pilot's_ text box only apply when they are attached to a unit as an upgrade. Similarly, any abilities in the top portion only apply when they are a unit. In **_Poe's_** case, he has no abilities he can use while deployed as a ground unit.\n\n**2.13.3** - Some units (like those with the PILOT trait) have split text boxes to account for the fact that they can be in play either as a unit or as an upgrade. This split text box has no rules meaning and is purely a visual cue to indicate which abilities apply when the card is an upgrade and which apply when it is a unit. A card with a split text box still has all of the text in its text box, regardless of how it is in play.",
+      "tags": ["poe dameron", "black one", "leader", "ability", "pilot", "upgrade"],
+      "difficulty": 1
+   },
+   {
+      "id": 75,
+      "question": "Player A controls **_Saw Gerrera, Resistance is Not Terrorism_**,  upgraded with **_Vambrace Flamethrower_** and has 13 damage on their base. Player B controls an **_OOM-Series Officer_**, 8 **_Battle Droid_** tokens, and 8 **_TIE Fighter_** tokens. Player A attacks Player B's base with **_Saw Gerrera_**, and uses **_Vambrace Flamethrower_** to defeat the **_OOM-Series Officer_** and 2 **_Battle Droids_**. What best descibes what happens next?",
+      "choices": {
+         "a": "Player A's base takes 2 damage and **_Saw's_** ability may defeat the rest of the **_Battle Droids_**.",
+         "b": "Player A's base takes 2 damage and that's it.", 
+         "c": "Player A's base takes 2 damage and **_Saw's_** ability may defeat the rest of the **_Battle Droids_** and all of the **_TIE Fighters_**.",
+         "d": "Player A's base takes 2 damage and **_Saw's_** ability may defeat 3 more **_Battle Droids_**."
+      },
+      "answer": "b",
+      "relevantCards": ["TWI/150", "SHD/177", "TWI/131", "TTWI/T01", "TJTL/T01"],
+      "relevantRule": "**On Attack** abilities trigger during the \"Declare the Attack\" step when attacking with a unit. Once combat has proceded beyond that step, it's too late for other **On Attack** abilities to trigger, even if combat results in their requirements being met. In this case, since Player A's base didn't have 15 damage on it when **_Saw_** began his attack, that ability does not trigger.\n\n**6.3.1.G** - After declaring the attack, resolve any \"On Attack\" abilities on the attacker and any other abilities triggered during this step, including Restore, Saboteur, and \"When this unit is attacked\" abilities on the defender. See 7.6. Triggered Abilities",
+      "tags": ["saw gerrera", "vambrace flamethrower", "oom-series officer", "battle droid", "tie fighter", "token", "upgrade", "on attack", "timing", "when defeated"],
       "difficulty": 1
    }
 ]
