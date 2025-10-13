@@ -919,7 +919,7 @@
       "question": "Player A controls a **_Crafty Smuggler_** with a shield token. Player B controls a **_Seventh Fleet Defender_** with a shield token and a **_Trench Defender_**. Player A plays **_Moment of Peace_**. What units are legal targets?",
       "choices": {
          "a": "Only the **_Crafty Smuggler_**.",
-         "b": "Only the **_Trench Defender_**.", 
+         "b": "Only the **_Trench Defender_**.",
          "c": "None of them.",
          "d": "All of them."
       },
@@ -964,7 +964,7 @@
       "question": "Player A controls **_Snowtrooper Vanguard_** and has 1 damage on their base. They then play **_General Veers, Leading the Assault_**. What best describes what happens next?",
       "choices": {
          "a": "Player B's base takes 2 damage and Player A's base heals 0 damage.",
-         "b": "Player B's base takes 2 damage and Player A's base heals 1 damage.", 
+         "b": "Player B's base takes 2 damage and Player A's base heals 1 damage.",
          "c": "Player B's base takes 1 damage and Player A's base heals 1 damage.",
          "d": "Nothing happens since Player A does not have 2 damage on their base to heal."
       },
@@ -979,7 +979,7 @@
       "question": "Player A only has 6 cards remaining in their deck. They play **_U-Wing Reinforcement_** and find a **_Kelleran Beq, The Sabered Hand_**, a **_Mon Mothma, Voice of the Rebellion_**, and an **_Admiral Ackbar, Brilliant Strategist_**. If they choose to play **_Kelleran_**, what best describes what happens?",
       "choices": {
          "a": "Since there are no cards left in the deck, **_Kelleran's_** ability will do nothing.",
-         "b": "Since there are no cards left in the deck, Player A will take 3 damage for each card they attempt to search with **_Kelleran's_** ability.", 
+         "b": "Since there are no cards left in the deck, Player A will take 3 damage for each card they attempt to search with **_Kelleran's_** ability.",
          "c": "The remaining 5 cards will be immediately searched again as a result of **_Kelleran's_** ability, allowing **_Mon Mothma_** to be played, who will then be able to draw **_Admiral Ackbar_**.",
          "d": "**_Kelleran's_** ability will allow Player A to play **_Mon Mothma_**, but **_Mon's_** ability will search an empty deck."
       },
@@ -994,7 +994,7 @@
       "question": "Player A plays **_C-3PO, Oh Dear, Oh Dear_**. Which of the follow cards would player A need to control to draw a card from **_C-3PO's_** **When Played** ability?",
       "choices": {
          "a": "**_C-3PO, Human-Cyborg Relations_** (not deployed).",
-         "b": "**_C-3PO, Protocol Droid_**.", 
+         "b": "**_C-3PO, Protocol Droid_**.",
          "c": "**_R2-D2, Full of Solutions_**.",
          "d": "**_C-3PO, Anything I Might Do?_**."
       },
@@ -1009,7 +1009,7 @@
       "question": "At the start of a new round, Player A plays **_Gungi, Finding Himself_**. Player B, who already has two other units in play, plays **_Ki-Adi-Mundi, Composed and Confident_**. Then, Player A plays **_General's Blade_**, attaching it to **_Gungi_**. What best describes what happens?",
       "choices": {
          "a": "**_Ki-Adi-Mundi_** does not trigger because Player A has only played one card since he entered play.",
-         "b": "**_Ki-Adi-Mundi_** does not trigger because **_General's Blade_** is not a unit.", 
+         "b": "**_Ki-Adi-Mundi_** does not trigger because **_General's Blade_** is not a unit.",
          "c": "**_Ki-Adi-Mundi_** does not trigger because Player B hasn't played their second card.",
          "d": "**_Ki-Adi-Mundi_** triggers and Player B may draw 2 cards."
       },
@@ -1024,7 +1024,7 @@
       "question": "Player A controls a **_Luke Skywalker, Jedi Knight_**. They play an **_Echo, Restored_**, and choose to discard a **_Luke Skywalker, A Hero's Beginning_**, from their hand. What best describes what happens?",
       "choices": {
          "a": "Nothing happens.",
-         "b": "Player A's base heals 2 damage.", 
+         "b": "Player A's base heals 2 damage.",
          "c": "**_Luke Skywalker, A Hero's Beginning_**, cannot be discarded this way.",
          "d": "**_Luke Skywalker, Jedi Knight_**, gets 2 Experience tokens."
       },
@@ -1039,7 +1039,7 @@
       "question": "At the start of a new round, Player A controls **_Inferno Four, Unforgetting_**, with 1 damage on it. Player B controls a **_Cartel Turncoat_** with 1 damage on it and **_Bossk, Hunting His Prey_**, deployed as a unit. Player A attacks the **_Cartel Turncoat_** with **_Inferno Four_**. What best describes what happens?",
       "choices": {
          "a": "Player A gets to resolve **_Inferno Four's_** **When Defeated** and Player B may resolve **_Cartel Turncoat's_** **Bounty** twice.",
-         "b": "**_Cartel Turncoat's_** **Bounty** must be resolved first.", 
+         "b": "**_Cartel Turncoat's_** **Bounty** must be resolved first.",
          "c": "**_Inferno Four's_** **When Defeated** must be resolved first.",
          "d": "Player A gets to decide whether to resolve **_Inferno Four's_** **When Defeated** first or **_Cartel Turncoat's_** **Bounty**."
       },
@@ -1054,13 +1054,13 @@
       "question": "Player A controls an **_Unlicensed Headhunter_** with **_Kazuda Xiono, Best Pilot in the Galaxy_**, attached to it as a _Pilot_. Player B controls **_The Client, Dictated by Discretion_**. Earlier in the phase, Player A attacked with their **_Unlicensed Headhunter_** and targeted it with **_Kazuda's_** **On Attack** ability. Player B then uses **_The Client's_** Action ability on the **_Unlicensed Headhunter_**. If Player A then claims initiative, and Player B defeats the **_Unlicensed Headhunter_**, what best describes happens?",
       "choices": {
          "a": "Player B's base is healed for 5 from **_Unlicensed Headhunter's_** own **Bounty**.",
-         "b": "Player B's base is healed for 0.", 
+         "b": "Player B's base is healed for 0.",
          "c": "Player B's base is healed for 5 from the **Bounty** placed on it by **_The Client_**.",
          "d": "Player B's base is healed for 10."
       },
       "answer": "b",
       "relevantCards": ["SHD/165", "JTL/018-back", "SHD/031"],
-      "relevantRule": "When an effect causes a unit to lose an ability, it cannot regain that ability for the duration of the effect. Since **_Kazuda's_** ability causes a unit to lose _all_ abilities until the end of the phase, and **Bounty** is a type of ability, **_The Client_** is not able to give **_Unlicensed Headhunter_** a new **Bounty** for the rest of the phase.\n\n**8.15.2** - If an ability causes a card to "lose all abilities,\" the card ceases to have any abilities, including abilities given to it by other cards, for the duration of the \"lose\" effect. The card cannot gain abilities for the duration of the effect.",
+      "relevantRule": "When an effect causes a unit to lose an ability, it cannot regain that ability for the duration of the effect. Since **_Kazuda's_** ability causes a unit to lose _all_ abilities until the end of the phase, and **Bounty** is a type of ability, **_The Client_** is not able to give **_Unlicensed Headhunter_** a new **Bounty** for the rest of the phase.\n\n**8.15.2** - If an ability causes a card to \"lose all abilities,\" the card ceases to have any abilities, including abilities given to it by other cards, for the duration of the \"lose\" effect. The card cannot gain abilities for the duration of the effect.",
       "tags": ["unlicensed headhunter", "kazuda xiono", "the client", "bounty", "keyword", "when defeated", "losing abilities", "leader", "ability"],
       "difficulty": 2
    }
