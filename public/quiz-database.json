@@ -1078,5 +1078,20 @@
       "relevantRule": "Since **_Entrenched_** doesn't actually give the attached unit an ability, **_Kazuda's_** ability has no effect here. If **_Entrenched_** instead read \"Attached unit gains: This unit can't attack,\" then **_Kazuda's_** ability would work.\n\n**3.6.8** - Some upgrades give abilities to the unit they’re attached to. If an upgrade’s text box uses the phrase \"attached unit gains _,\" the text following \"gains\" is considered an ability that the attached unit has while the upgrade is attached to it, and such an ability can be lost, ignored, or affected by other abilities.\n\n**3.6.10** - Some upgrades have abilities that affect the unit they’re attached to, but do not give the attached unit an ability. Such abilities refer to the attached unit but do not use the phrase \"attached unit gains.\"",
       "tags": ["hotshot v-wing", "entrenched", "kazuda xiono", "upgrade", "can't attack", "leader"],
       "difficulty": 1
+   },
+   {
+      "id": 73,
+      "question": "Player A controls a **_Techno Union Transport_**, a **_Death Space Skirmisher_**, a **_Swoop Racer_**, and a **_Skyway Cloud Car_**, all ready. Player B attacks Player A's base with a **_Snowspeeder_**. What units can Player B exhaust with the **_Snowspeeder's_** **On Attack** ability?",
+      "choices": {
+         "a": "All of them.",
+         "b": "The **_Techno Union Transport_**, the **_Death Space Skirmisher_**, and the **_Skyway Cloud Car_**",
+         "c": "Only the **_Skyway Cloud Car_**.",
+         "d": "The **_Swoop Racer_** and the **_Skyway Cloud Car_**."
+      },
+      "answer": "c",
+      "relevantCards": ["JTL/190", "JTL/217", "SOR/210", "JTL/220", "SOR/244"],
+      "relevantRule": "Since **_Snowspeeder's_** **On Attack** ability specifies \"enemy _Vehicle_ ground unit,\" only the **_Skyway Cloud Car_** is a valid target.",
+      "tags": ["techno union transport", "death space skirmisher", "swoop racer", "skyway cloud car", "snowspeeder", "target", "on attack", "traits", "vehicle"],
+      "difficulty": 1
    }
 ]
