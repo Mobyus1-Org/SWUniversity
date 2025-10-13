@@ -23,16 +23,16 @@ export function StandardModeEndScreen({
   const { sfx } = React.useContext(AudioContext) ?? { sfx: () => {} };
 
   const renderPoints = (responses: UserResponse[], total: number) => {
-    const points = Object.values(responses).reduce((acc, response) => {
+    const points = responses.reduce((acc, response) => {
       if (!response.followUp && response.correct === response.selected) {
         acc += 1;
       }
       else if (response.followUp) {
         if(response.correct === response.selected) {
           acc += 0.5;
-        }
-        if (response.followUp.followUpCorrect === response.followUp.followUpSelected) {
-          acc += 0.5;
+          if (response.followUp.followUpCorrect === response.followUp.followUpSelected) {
+            acc += 0.5;
+          }
         }
       }
 
@@ -85,7 +85,14 @@ export function StandardModeEndScreen({
                       <p>Your answer: <span className={response.selected === response.correct ? "text-green-500 font-bold" : "text-red-500 font-bold"}>{renderDYKSWUChoiceTitle(response.selected)}</span></p>
                       {response.selected !== response.correct && <p>Correct answer: <span className="text-green-500 font-bold">{renderDYKSWUChoiceTitle(response.correct)}</span></p>}
                       {
-                        response.followUp && <>
+                        response.followUp && !response.followUp.followUpSelected && <>
+                          <p className="mt-2.5 font-bold">Follow-up Question: {renderItalicsAndBold(question.followUp!.question)}</p>
+                          <p>Your answer: <span className="text-gray-500 font-bold">Not reached</span></p>
+                          <p>Correct answer: <span className="text-green-500 font-bold">{renderItalicsAndBold(question.followUp!.choices[response.followUp.followUpCorrect])}</span></p>
+                        </>
+                      }
+                      {
+                        response.followUp && response.followUp.followUpSelected && <>
                           <p className="mt-2.5 font-bold">Follow-up Question: {renderItalicsAndBold(question.followUp!.question)}</p>
                           <p>Your answer: <span className={response.followUp.followUpCorrect === response.followUp.followUpSelected ? "text-green-500 font-bold" : "text-red-500 font-bold"}>{renderItalicsAndBold(question.followUp!.choices[response.followUp.followUpSelected])}</span></p>
                           {response.followUp.followUpCorrect !== response.followUp.followUpSelected && <p>Correct answer: <span className="text-green-500 font-bold">{renderItalicsAndBold(question.followUp!.choices[response.followUp.followUpCorrect])}</span></p>}
