@@ -1063,5 +1063,20 @@
       "relevantRule": "When an effect causes a unit to lose an ability, it cannot regain that ability for the duration of the effect. Since **_Kazuda's_** ability causes a unit to lose _all_ abilities until the end of the phase, and **Bounty** is a type of ability, **_The Client_** is not able to give **_Unlicensed Headhunter_** a new **Bounty** for the rest of the phase.\n\n**8.15.2** - If an ability causes a card to \"lose all abilities,\" the card ceases to have any abilities, including abilities given to it by other cards, for the duration of the \"lose\" effect. The card cannot gain abilities for the duration of the effect.",
       "tags": ["unlicensed headhunter", "kazuda xiono", "the client", "bounty", "keyword", "when defeated", "losing abilities", "leader", "ability"],
       "difficulty": 2
+   },
+   {
+      "id": 72,
+      "question": "Player A controls a ready **_Hotshot V-Wing_**. Player B plays an **_Entrenched_**, attaching it to the **_V-Wing_**. Player A then uses their leader, **_Kazuda Xiono, The Best Pilot in the Galaxy's_**, ability to remove all abilities from their **_Hotshot V-Wing_**. Can the **_V-Wing_** attack and why or why not?",
+      "choices": {
+         "a": "No. The **_Hotshot V-Wing_** was exhausted by **_Entrenched_**.",
+         "b": "No. **_Entrenched_** doesn't give the attached unit an ability.", 
+         "c": "Yes. **_Kazuda's_** ability removed the effect of **_Entrenched_**.",
+         "d": "Yes. **_Entrenched_** has no affect on **_Hotshot V-Wing_**."
+      },
+      "answer": "b",
+      "relevantCards": ["TWI/209", "SOR/072", "JTL/018"],
+      "relevantRule": "Since **_Entrenched_** doesn't actually give the attached unit an ability, **_Kazuda's_** ability has no effect here. If **_Entrenched_** instead read \"Attached unit gains: This unit can't attack,\" then **_Kazuda's_** ability would work.\n\n**3.6.8** - Some upgrades give abilities to the unit they’re attached to. If an upgrade’s text box uses the phrase \"attached unit gains _,\" the text following \"gains\" is considered an ability that the attached unit has while the upgrade is attached to it, and such an ability can be lost, ignored, or affected by other abilities.\n\n**3.6.10** - Some upgrades have abilities that affect the unit they’re attached to, but do not give the attached unit an ability. Such abilities refer to the attached unit but do not use the phrase \"attached unit gains.\"",
+      "tags": ["hotshot v-wing", "entrenched", "kazuda xiono", "upgrade", "can't attack", "leader"],
+      "difficulty": 1
    }
 ]
