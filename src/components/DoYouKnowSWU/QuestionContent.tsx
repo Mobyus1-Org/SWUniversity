@@ -114,7 +114,7 @@ export function QuestionContent({
       {
         currentQuestion.followUp && showFollowUpChoices && <div className="col-span-2">
           <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{renderItalicsAndBold(currentQuestion.followUp.question)}</p>
-          <div className="grid grid-cols-2 gap-2.5 uwd:gap-3.8 4k:gap-5">
+          <div className="grid grid-cols-1 gap-2.5 uwd:gap-3.8 4k:gap-5">
             {
               Object.entries(currentQuestion.followUp.choices).map(([key, value]) => (
                 <div key={key} className={`${followUpAnswer === key ? "bg-slate-600/50 border-white rounded" : ""}`}>
