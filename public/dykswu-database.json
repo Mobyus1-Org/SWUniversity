@@ -1,7 +1,7 @@
 [
   {
     "id": 1,
-    "img": "001",
+    "img": "outmaneuver1",
     "difficulty": 0,
     "answer": "cost",
     "actualCard": "SOR/221",
@@ -169,5 +169,87 @@
     "actualCard": "SOR/244",
     "explanation": "A second snowspeeder was removed from the background of the art.",
     "tags": ["snowspeeder", "art"]
+  },
+  {
+    "id": 20,
+    "img": "yoda1",
+    "difficulty": 0,
+    "answer": "ability-text",
+    "actualCard": "SOR/045",
+    "explanation": "**_Yoda_** lets you choose any number of players to draw when he is defeated.",
+    "tags": ["yoda", "ability-text"]
+  },
+  {
+    "id": 21,
+    "img": "openfire1",
+    "difficulty": 2,
+    "answer": "art",
+    "actualCard": "SOR/172",
+    "explanation": "The art has been mirrored.",
+    "tags": ["open fire", "art"]
+  },
+  {
+    "id": 22,
+    "img": "outlandtievanguard1",
+    "difficulty": 1,
+    "answer": "ability-text",
+    "actualCard": "SHD/082",
+    "explanation": "**_Outland TIE Vanguard_** can only give Experience tokens to units that cost 3 or less.",
+    "tags": ["outland tie vanguard", "ability-text"]
+  },
+  {
+    "id": 23,
+    "img": "ketsuonyo1",
+    "difficulty": 1,
+    "answer": "trigger-condition",
+    "actualCard": "SHD/147",
+    "explanation": "**_Ketsu's_** ability only triggers when she deals combat damage to a base.",
+    "tags": ["ketsu onyo", "trigger-condition"]
+  },
+  {
+    "id": 24,
+    "img": "jabbathehutt1",
+    "difficulty": 2,
+    "answer": "no-change",
+    "actualCard": "SOR/181",
+    "explanation": "No change has been made.",
+    "tags": ["jabba the hutt", "no-change"]
+  },
+  {
+    "id": 25,
+    "img": "itbindsallthings1",
+    "difficulty": 2,
+    "answer": "ability-text",
+    "actualCard": "SOR/075",
+    "explanation": "**_It Binds All Things_** only requires you to _control_ a _Force_ unit, not use the Event on one.",
+    "tags": ["it binds all things", "ability-text"]
+  },
+  {
+    "id": 26,
+    "img": "chimaera1",
+    "difficulty": 1,
+    "answer": "hp",
+    "actualCard": "SOR/185",
+    "explanation": "**_Chimaera, Flagship of the Seventh Fleet_**, has 7 HP.",
+    "tags": ["chimaera", "hp"]
+  },
+  {
+    "id": 27,
+    "img": "maul1",
+    "difficulty": 1,
+    "answer": "traits",
+    "actualCard": "SHD/090",
+    "explanation": "**_Maul, Shadow Collective Visionary_**, is not a _Sith_.",
+    "tags": ["maul", "traits"]
+  },
+  {
+    "id": 28,
+    "img": "aggression1",
+    "difficulty": 1,
+    "answer": "ability-text",
+    "actualCard": "SOR/155",
+    "explanation": "**_Aggression's_** second option allows you to defeat \"up to 2\" upgrades.",
+    "tags": ["aggression", "ability-text"]
   }
+
 ]
