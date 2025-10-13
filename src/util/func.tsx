@@ -210,3 +210,17 @@ export function renderItalicsAndBold(text: string): React.JSX.Element {
     </span>;
   })}</>;
 }
+
+export function preloadImagesAsync(urls: string[]): Promise<void> {
+  const promises = urls.map((url) => {
+    return new Promise<void>((resolve, reject) => {
+      const img = new Image();
+      img.src = url;
+      img.onload = () => resolve();
+      img.onerror = () => reject();
+    });
+  });
+
+  return Promise.allSettled(promises).then(() => undefined);
+}
+

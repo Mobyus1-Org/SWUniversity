@@ -1,10 +1,11 @@
 import React from "react";
-import { getDoYouKnowSWUDataAsync, getModeTitle, type AppModeSetEntry, type DoYouKnowSWUQuestion, type UserResponse } from "../util/func";
+import { getDoYouKnowSWUDataAsync, getModeTitle, preloadImagesAsync, type AppModeSetEntry, type DoYouKnowSWUQuestion, type UserResponse } from "../util/func";
 import { ModeButtons } from "../components/Shared/ModeButtons";
 import { QuestionContent } from "../components/DoYouKnowSWU/QuestionContent";
 import type { ModeDescriptions } from "../util/const";
 
 function DoYouKnowSWUPage() {
+  const [loading, setLoading] = React.useState(true);
   const [allQuestions, setAllQuestions] = React.useState<DoYouKnowSWUQuestion[]>([]);
   const [currentQuestionSet, setCurrentQuestionSet] = React.useState<DoYouKnowSWUQuestion[]>(allQuestions);
   const [dykswuMode, setDykswuMode] = React.useState<"" | "standard" | "marathon" | "endless" | "padawan" | "knight" | "master">("");
@@ -19,10 +20,19 @@ function DoYouKnowSWUPage() {
   React.useEffect(() => {
     getDoYouKnowSWUDataAsync().then(data => {
       setAllQuestions(data);
+      if(sessionStorage.getItem("loadedDYKSWUData") === "true") {
+        setLoading(false);
+        return;
+      }
+
+      preloadImagesAsync(data.map((question) => question.actualCard)).then(() => {
+        setLoading(false);
+        sessionStorage.setItem("loadedDYKSWUData", "true");
+      });
     });
   }, []);
 
-  const renderQuestionContent = () => currentQuestionSet.length === 0
+  const renderQuestionContent = () => loading
       ? <p className="text-lg uwd:text-3xl 4k:text-5xl">Loading questions...</p>
       : <QuestionContent
         currentQuestionSet={currentQuestionSet}

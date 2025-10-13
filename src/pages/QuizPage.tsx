@@ -1,11 +1,12 @@
 import React from "react";
-import { getModeTitle, getQuizDataAsync } from "../util/func";
+import { getModeTitle, getQuizDataAsync, preloadImagesAsync } from "../util/func";
 import type { AppModeSetEntry, Quiz, UserResponse } from "../util/func";
 import { ModeButtons } from "../components/Shared/ModeButtons";
 import { QuizContent } from "../components/Quiz/QuizContent";
 import type { AppModes, ModeDescriptions } from "../util/const";
 
 function QuizPage() {
+  const [loading, setLoading] = React.useState(true);
   const [allQuizzes, setAllQuizzes] = React.useState<Quiz[]>([]);
   const [currentQuizSet, setCurrentQuizSet] = React.useState<Quiz[]>(allQuizzes);
   const [quizMode, setQuizMode] = React.useState<AppModes>("");
@@ -21,10 +22,19 @@ function QuizPage() {
   React.useEffect(() => {
     getQuizDataAsync().then(data => {
       setAllQuizzes(data);
+      if(sessionStorage.getItem("loadedQuizData") === "true") {
+        setLoading(false);
+        return;
+      }
+
+      preloadImagesAsync(data.flatMap((quiz) => quiz.relevantCards)).then(() => {
+        setLoading(false);
+        sessionStorage.setItem("loadedQuizData", "true");
+      });
     });
   }, []);
 
-  const renderQuizContent = () => currentQuizSet.length === 0
+  const renderQuizContent = () => loading
     ? <p className="text-lg uwd:text-3xl 4k:text-5xl">Loading quizzes...</p>
     : <QuizContent
       currentQuizSet={currentQuizSet}
