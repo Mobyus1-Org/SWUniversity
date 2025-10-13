@@ -1123,5 +1123,20 @@
       "relevantRule": "**On Attack** abilities trigger during the \"Declare the Attack\" step when attacking with a unit. Once combat has proceded beyond that step, it's too late for other **On Attack** abilities to trigger, even if combat results in their requirements being met. In this case, since Player A's base didn't have 15 damage on it when **_Saw_** began his attack, that ability does not trigger.\n\n**6.3.1.G** - After declaring the attack, resolve any \"On Attack\" abilities on the attacker and any other abilities triggered during this step, including Restore, Saboteur, and \"When this unit is attacked\" abilities on the defender. See 7.6. Triggered Abilities",
       "tags": ["saw gerrera", "vambrace flamethrower", "oom-series officer", "battle droid", "tie fighter", "token", "upgrade", "on attack", "timing", "when defeated"],
       "difficulty": 1
+   },
+   {
+      "id": 76,
+      "question": "Player A controls a **_DRK-1 Probe Droid_**, **_Red Three, Unstopable_**, and **_Babu Frik, Heyyy!_** all with no damage on them. Earlier in this phase, Player A attacked with **_Benthic \"Two Tubes\", Partisan Lieutenant_**, and chose their **_DRK-1 Probe Droid_** as the target for his **On Attack** ability. Player A uses **_Babu Frik's_** Action ability and attacks with the **_DRK-1 Probe Droid_**. How much damage does it deal?",
+      "choices": {
+         "a": "3",
+         "b": "4", 
+         "c": "5",
+         "d": "6"
+      },
+      "answer": "a",
+      "relevantCards": ["LOF/155", "SOR/144", "LOF/206", "SOR/156"],
+      "relevantRule": "**_Babu Frik's_** ability specifies that the _Droid_ that attacks \"deals damage equal to its remaining HP\", which means that any buffs to its power are irrelevant. For extra credit, how much damage would the **_DRK-1_** do if it simply attacked in this situation? ...4. It's 4. **_Red Three_** wouldn't buff its power anyway.",
+      "tags": ["drk-1 probe droid", "red three", "babu frik", "benthic two tubes", "action ability", "raid", "droid"],
+      "difficulty": 2
    }
 ]
