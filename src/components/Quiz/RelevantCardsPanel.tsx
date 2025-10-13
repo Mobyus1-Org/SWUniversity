@@ -26,8 +26,8 @@ export function RelevantCardsPanel({ currentQuiz, setShowModal }: IProps) {
         }
       </div>
     </div>
-    : <div className={`w-fit h-${getScaleForCards(1)}vh m-2.5`}>
-      <img src="/assets/SWUniversity_Cardback.png" alt="card back" className="max-h-full object-contain" />
+    : <div className={`w-fit h-full uwd:h-[150%] 4k:h-[200%] m-2.5`}>
+      <img src="/assets/SWUniversity_Cardback.png" alt="card back" className="object-contain" />
     </div>
   }
   </div>

@@ -149,7 +149,32 @@ export function renderItalicsAndBold(text: string): React.JSX.Element {
     "Plot",
   ];
 
+  const buffPattern = new RegExp('[+-]\\d+\\/[+-]\\d+', 'g');
+
+  const processBuffText = (text: string): React.JSX.Element => {
+    const parts = text.split('/');
+    if (parts.length === 2) {
+      return <span>
+        <span className="text-red-300">{parts[0]}</span>
+        <span>/</span>
+        <span className="text-blue-300">{parts[1]}</span>
+      </span>;
+    }
+    return <>{text}</>;
+  };
+
   const processText = (text: string): React.JSX.Element => {
+    const parts = text.split(' ');
+    if (parts.length > 1 && parts.some(part => buffPattern.test(part))) {
+      return <>{parts.map((part, index) => (
+        <span key={index}>
+          {processBuffText(part)}
+          {index < parts.length - 1 ? ' ' : ''}
+        </span>
+      ))}</>;
+    } else if (buffPattern.test(text)) {
+      return processBuffText(text);
+    }
     if (highlightWords.includes(text)) {
       return <span className="text-red-400">{text}</span>;
     }
