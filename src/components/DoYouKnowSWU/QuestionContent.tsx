@@ -132,7 +132,7 @@ export function QuestionContent({
       questionsCompleted.length < currentQuestionSet.length && <div className={`grid ${globalBackgroundStyle} shadow-md md:grid-cols-[40%_60%] border p-8 rounded gap-4`}>
         {/* Question and choices */}
         <div>
-          <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">Find The Mistake:</p>
+          <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">What's been changed?</p>
           <form onSubmit={(e) => {
             e.preventDefault();
             if (selectedAnswer !== "") {
@@ -156,18 +156,18 @@ export function QuestionContent({
         {/* Images */}
         <div className="flex flex-wrap justify-center items-center gap-4">
           <div className="flex flex-col items-center">
-            <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">Mistaken Card</p>
+            <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">Real?</p>
             <img
               src={getDYKSWUImageLink(currentQuestion.img)}
-              alt="SWU card to identify mistake on"
+              alt="Potentially changed SWU card"
               className="max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 rounded shadow-lg"
             />
           </div>
           <div className="flex flex-col items-center">
-            <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{questionResult ? "Actual Card" : ""}</p>
+            <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{questionResult ? "Real Card" : ""}</p>
             <img
               src={questionResult ? getSWUDBImageLink(currentQuestion.actualCard) : "/assets/SWUniversity_Cardback.png"}
-              alt={questionResult ? "Actual Card" : "SWUniversity Cardback"}
+              alt={questionResult ? "Real Card" : "SWUniversity Cardback"}
               className={`max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 4k:ml-16 rounded shadow-lg transition-all duration-500 ${revealCard ? "wipe-enter" : ""}`}
             />
           </div>
