@@ -16,6 +16,7 @@ interface IProps {
   selectedAnswer: string;
   standardQuestionLength: number;
   userResponses: UserResponse[];
+  currentFollowUpKeys: string[];
   setCurrentQuestionId: (id: number) => void;
   setQuestionResult: (result: boolean) => void;
   setSelectedAnswer: (answer: string) => void;
@@ -26,6 +27,7 @@ interface IProps {
   setUserResponses: (responses: UserResponse[]) => void;
   resetCurrentQuestionState: () => void;
   resetDoYouKnowSWUMode: () => void;
+  setCurrentFollowUpKeys: (keys: string[]) => void;
 }
 
 export function QuestionContent({
@@ -38,6 +40,7 @@ export function QuestionContent({
   selectedAnswer,
   standardQuestionLength,
   userResponses,
+  currentFollowUpKeys,
   setCurrentQuestionId,
   setQuestionResult,
   setSelectedAnswer,
@@ -45,7 +48,8 @@ export function QuestionContent({
   setLastEndlessQuestions,
   setUserResponses,
   resetCurrentQuestionState,
-  resetDoYouKnowSWUMode
+  resetDoYouKnowSWUMode,
+  setCurrentFollowUpKeys
 }: IProps) {
   const currentQuestion = currentQuestionSet.find(q => q.id === currentQuestionId);
   const { sfx } = React.useContext(AudioContext) ?? { sfx: () => { } };
@@ -60,6 +64,21 @@ export function QuestionContent({
       setRevealCard(false);
     }
   }, [questionResult])
+
+  React.useEffect(() => {
+      setCurrentFollowUpKeys([]);
+    }, [currentQuestionId, setCurrentFollowUpKeys]);
+
+    React.useEffect(() => {
+      if(currentQuestion && currentQuestion.followUp && currentFollowUpKeys.length === 0) {
+        const choiceKeys = Object.keys(currentQuestion.followUp.choices);
+        for (let i = choiceKeys.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [choiceKeys[i], choiceKeys[j]] = [choiceKeys[j], choiceKeys[i]];
+        }
+        setCurrentFollowUpKeys(choiceKeys);
+      }
+    }, [currentQuestion, currentFollowUpKeys.length, setCurrentFollowUpKeys]);
 
   if (!currentQuestion) return <p className="text-lg">Loading question...</p>;
 
@@ -115,27 +134,25 @@ export function QuestionContent({
         currentQuestion.followUp && showFollowUpChoices && <div className="col-span-2">
           <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{renderItalicsAndBold(currentQuestion.followUp.question)}</p>
           <div className="grid grid-cols-1 gap-2.5 uwd:gap-3.8 4k:gap-5">
-            {
-              Object.entries(currentQuestion.followUp.choices).map(([key, value]) => (
-                <div key={key} className={`${followUpAnswer === key ? "bg-slate-600/50 border-white rounded" : ""}`}>
-                  <button
-                    type="button"
-                    className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 transition-colors
-                      ${followUpAnswer === key ? 'border-white bg-slate-600/50' : 'border-slate-600'}
-                      ${followUpSubmitted ? 'cursor-not-allowed' : 'cursor-pointer'}
-                    `}
-                    onClick={() => {
-                      sfx("click");
-                      setFollowUpAnswer(key);
-                    }}
-                  >
-                    <div className="text-md md:text-lg uwd:!text-3xl 4k:!text-5xl">
-                      {renderItalicsAndBold(value)}
-                    </div>
-                  </button>
+          {
+            currentFollowUpKeys.length > 0 && currentFollowUpKeys.map((key, index) => <div key={index} className={`${followUpAnswer === key ? "bg-slate-600/50 border-white rounded" : ""}`}>
+              <button
+                type="button"
+                className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 transition-colors
+                  ${followUpAnswer === key ? 'border-white bg-slate-600/50' : 'border-slate-600'}
+                  ${followUpSubmitted ? 'cursor-not-allowed' : 'cursor-pointer'}
+                `}
+                onClick={() => {
+                  sfx("click");
+                  setFollowUpAnswer(key);
+                }}
+              >
+                <div className="text-md md:text-lg uwd:!text-3xl 4k:!text-5xl">
+                  {renderItalicsAndBold(currentQuestion.followUp!.choices[key])}
                 </div>
-              ))
-            }
+              </button>
+            </div>)
+          }
           </div>
           <button
             type="button"

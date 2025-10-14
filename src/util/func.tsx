@@ -26,8 +26,8 @@ export type UserResponse = {
   }
 }
 
-const notBeforeId = 1;
-const excludedIds: number[] = [
+const notBeforeQuizId = 1;
+const excludedQuizIds: number[] = [
 
 ];
 
@@ -35,7 +35,7 @@ export async function getQuizDataAsync() : Promise<Quiz[]> {
   const response = await fetch('/quiz-database.json');
   const data = await response.json();
 
-  return data.filter((quiz: Quiz) => quiz.id && quiz.id >= notBeforeId && !excludedIds.includes(quiz.id));
+  return data.filter((quiz: Quiz) => quiz.id && quiz.id >= notBeforeQuizId && !excludedQuizIds.includes(quiz.id));
 }
 
 export type DoYouKnowSWUQuestion = AppModeSetEntry & {
@@ -51,11 +51,16 @@ export type DoYouKnowSWUQuestion = AppModeSetEntry & {
   };
 }
 
+const notBeforeDYKSWUId = 1;
+const excludedDYKSWUIds: number[] = [
+
+];
+
 export async function getDoYouKnowSWUDataAsync() : Promise<DoYouKnowSWUQuestion[]> {
   const response = await fetch('/dykswu-database.json');
   const data = await response.json();
 
-  return data.filter((question: DoYouKnowSWUQuestion) => question.id);
+  return data.filter((question: DoYouKnowSWUQuestion) => question.id && question.id >= notBeforeDYKSWUId && !excludedDYKSWUIds.includes(question.id));
 }
 
 export function renderDYKSWUChoiceTitle(choice: string) {
@@ -223,4 +228,3 @@ export function preloadImagesAsync(urls: string[]): Promise<void> {
 
   return Promise.allSettled(promises).then(() => undefined);
 }
-
