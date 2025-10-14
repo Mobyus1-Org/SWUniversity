@@ -226,7 +226,7 @@ export function QuestionContent({
           />
         </div>
         <div className="flex flex-col items-center">
-          <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{questionResult ? "Real Card" : ""}</p>
+          <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">Real Card</p>
           <img
             src={(showAnswer || showFollowUpAnswer) ? getSWUDBImageLink(currentQuestion.actualCard) : "/assets/SWUniversity_Cardback.png"}
             alt={(showAnswer || showFollowUpAnswer) ? "Real Card" : "SWUniversity Cardback"}
