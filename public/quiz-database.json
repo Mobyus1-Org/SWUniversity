@@ -1138,5 +1138,20 @@
       "relevantRule": "**_Babu Frik's_** ability specifies that the _Droid_ that attacks \"deals damage equal to its remaining HP\", which means that any buffs to its power are irrelevant. For extra credit, how much damage would the **_DRK-1_** do if it simply attacked in this situation? ...4. It's 4. **_Red Three_** wouldn't buff its power anyway.",
       "tags": ["drk-1 probe droid", "red three", "babu frik", "benthic two tubes", "action ability", "raid", "droid"],
       "difficulty": 2
+   },
+   {
+      "id": 77,
+      "question": "Player A controls a **_TIE Fighter_** token, a **_Secretive Sage_** with a shield token, and Player B's **_Lurking TIE Phantom_** that they took control of with **_Traitorous_**. Player A wants to play **_First Light, _**, from their Resource zone with 7 ready resources. When Player A plays **_First Light_**, which units can be chosen to take 4 damage to pay for part of its **Smuggle** cost?",
+      "choices": {
+         "a": "Only the **_Secretive Sage_** or the **_Lurking TIE Phantom_**.",
+         "b": "Only the **_TIE Fighter_** token.", 
+         "c": "The **_TIE Fighter_** token or the **_Secretive Sage_**.",
+         "d": "Any of them."
+      },
+      "answer": "d",
+      "relevantCards": ["TJTL/T01", "LOF/061", "TSOR/T02", "SHD/187", "SOR/122", "SHD/036"],
+      "relevantRule": "Any of the mentioned units are valid targets. In the case of the **_TIE Fighter_** token, just because it has 1 HP doesn't mean you can't deal 4 damage to it. While the **_Secretive Sage's_** shield token would prevent the damage, that prevention is considered a \"repalcement effect\" and still satisfies **_First Light's_** requirement. Since the **_Lurking TIE_** is now considered \"friendly\", it will be damaged and defeated if chosen.\n\n**1.8.10** - If a replacement effect replaces part or all of a cost with another effect, the cost is still considered paid as long as that other effect can be resolved. If a replacement effect can’t be resolved, the original cost must be paid in full.",
+      "tags": ["tie fighter", "token", "secretive sage", "shield", "lurking tie phantom", "traitorous", "first light", "smuggle", "target", "keyword", "friendly"],
+      "difficulty": 2
    }
 ]
