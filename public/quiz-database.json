@@ -980,7 +980,7 @@
       "choices": {
          "a": "Since there are no cards left in the deck, **_Kelleran's_** ability will do nothing.",
          "b": "Since there are no cards left in the deck, Player A will take 3 damage for each card they attempt to search with **_Kelleran's_** ability.",
-         "c": "The remaining 5 cards will be immediately searched again as a result of **_Kelleran's_** ability, allowing **_Mon Mothma_** to be played, who will then be able to draw **_Admiral Ackbar_**.",
+         "c": "The non-selected cards are shuffled to re-form the deck, allowing **_Kelleran's_** ability to play **_Mon Mothma_**. The non-selected cards from his ability will re-form the deck again, allowing **_Mon's_** ability to draw **_Ackbar_**.",
          "d": "**_Kelleran's_** ability will allow Player A to play **_Mon Mothma_**, but **_Mon's_** ability will search an empty deck."
       },
       "answer": "c",
