@@ -1,7 +1,7 @@
 import React from "react";
 
 import { DYKSWUChoices, globalBackgroundStyle, type AppModes, type SfxType } from "../../util/const";
-import { renderItalicsAndBold, isMarathonVariant, type UserResponse, type DoYouKnowSWUQuestion, getSWUDBImageLink, getDYKSWUImageLink, renderDYKSWUChoiceTitle } from "../../util/func";
+import { renderItalicsAndBold, isMarathonVariant, type UserResponse, type DoYouKnowSWUQuestion, getSWUDBImageLink, getDYKSWUImageLink, renderDYKSWUChoiceTitle, type DoYouKnowSWUVariant } from "../../util/func";
 import { StandardModeEndScreen } from "../Shared/StandardModeEndScreen";
 import { MarathonModeEndScreen } from "../Shared/MarathonModeEndScreen";
 import { AudioContext } from "../../util/context";
@@ -17,6 +17,7 @@ interface IProps {
   standardQuestionLength: number;
   userResponses: UserResponse[];
   currentFollowUpKeys: string[];
+  currentVariant: number;
   setCurrentQuestionId: (id: number) => void;
   setQuestionResult: (result: boolean) => void;
   setSelectedAnswer: (answer: string) => void;
@@ -28,6 +29,7 @@ interface IProps {
   resetCurrentQuestionState: () => void;
   resetDoYouKnowSWUMode: () => void;
   setCurrentFollowUpKeys: (keys: string[]) => void;
+  setCurrentVariant: (variant: number) => void;
 }
 
 export function QuestionContent({
@@ -41,6 +43,7 @@ export function QuestionContent({
   standardQuestionLength,
   userResponses,
   currentFollowUpKeys,
+  currentVariant,
   setCurrentQuestionId,
   setQuestionResult,
   setSelectedAnswer,
@@ -49,9 +52,11 @@ export function QuestionContent({
   setUserResponses,
   resetCurrentQuestionState,
   resetDoYouKnowSWUMode,
-  setCurrentFollowUpKeys
+  setCurrentFollowUpKeys,
+  setCurrentVariant
 }: IProps) {
-  const currentQuestion = currentQuestionSet.find(q => q.id === currentQuestionId);
+  const currentQuestion = currentQuestionSet.find(q => q.id === currentQuestionId)!;
+  const currentVariantQuestion = currentQuestion.variants[currentVariant];
   const { sfx } = React.useContext(AudioContext) ?? { sfx: () => { } };
   const [revealCard, setRevealCard] = React.useState(false);
   const [followUpAnswer, setFollowUpAnswer] = React.useState<string>("");
@@ -70,36 +75,36 @@ export function QuestionContent({
     }, [currentQuestionId, setCurrentFollowUpKeys]);
 
     React.useEffect(() => {
-      if(currentQuestion && currentQuestion.followUp && currentFollowUpKeys.length === 0) {
-        const choiceKeys = Object.keys(currentQuestion.followUp.choices);
+      if(currentQuestion && currentVariantQuestion.followUp && currentFollowUpKeys.length === 0) {
+        const choiceKeys = Object.keys(currentVariantQuestion.followUp.choices);
         for (let i = choiceKeys.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [choiceKeys[i], choiceKeys[j]] = [choiceKeys[j], choiceKeys[i]];
         }
         setCurrentFollowUpKeys(choiceKeys);
       }
-    }, [currentQuestion, currentFollowUpKeys.length, setCurrentFollowUpKeys]);
+    }, [currentQuestion, currentVariantQuestion.followUp, currentFollowUpKeys.length, setCurrentFollowUpKeys]);
 
   if (!currentQuestion) return <p className="text-lg">Loading question...</p>;
 
-  const showFirstChoices = !currentQuestion.followUp
-    || (currentQuestion.followUp && !questionResult)
-    || (currentQuestion.followUp && !followUpSubmitted && selectedAnswer !== currentQuestion.answer);
-  const showFollowUpChoices = questionResult && currentQuestion.followUp && !followUpSubmitted && selectedAnswer === currentQuestion.answer;
+  const showFirstChoices = !currentVariantQuestion.followUp
+    || (currentVariantQuestion.followUp && !questionResult)
+    || (currentVariantQuestion.followUp && !followUpSubmitted && selectedAnswer !== currentVariantQuestion.answer);
+  const showFollowUpChoices = questionResult && currentVariantQuestion.followUp && !followUpSubmitted && selectedAnswer === currentVariantQuestion.answer;
   const showAnswer = questionResult && (
-    !currentQuestion.followUp
-    || currentQuestion.followUp && !followUpSubmitted && selectedAnswer !== currentQuestion.answer
+    !currentVariantQuestion.followUp
+    || currentVariantQuestion.followUp && !followUpSubmitted && selectedAnswer !== currentVariantQuestion.answer
   );
-  const showFollowUpAnswer = questionResult && currentQuestion.followUp && followUpSubmitted;
-  const showExplanation = !currentQuestion.followUp
-    || (currentQuestion.followUp && !followUpSubmitted && currentQuestion.answer !== selectedAnswer);
+  const showFollowUpAnswer = questionResult && currentVariantQuestion.followUp && followUpSubmitted;
+  const showExplanation = !currentVariantQuestion.followUp
+    || (currentVariantQuestion.followUp && !followUpSubmitted && currentVariantQuestion.answer !== selectedAnswer);
 
   const renderChoices = () => {
     if (currentQuestionSet.length === 0) return null;
 
     const highlighted = (index: number) => {
       if (!questionResult) return "";
-      if (currentQuestion.answer === DYKSWUChoices[index]) return "bg-green-800/50 rounded";
+      if (currentVariantQuestion.answer === DYKSWUChoices[index]) return "bg-green-800/50 rounded";
       if (selectedAnswer === DYKSWUChoices[index]) return "bg-red-800/50 rounded";
 
       return "";
@@ -131,8 +136,8 @@ export function QuestionContent({
         ))
       }
       {
-        currentQuestion.followUp && showFollowUpChoices && <div className="col-span-2">
-          <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{renderItalicsAndBold(currentQuestion.followUp.question)}</p>
+        currentVariantQuestion.followUp && showFollowUpChoices && <div className="col-span-2">
+          <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{renderItalicsAndBold(currentVariantQuestion.followUp.question)}</p>
           <div className="grid grid-cols-1 gap-2.5 uwd:gap-3.8 4k:gap-5">
           {
             currentFollowUpKeys.length > 0 && currentFollowUpKeys.map((key, index) => <div key={index} className={`${followUpAnswer === key ? "bg-slate-600/50 border-white rounded" : ""}`}>
@@ -148,7 +153,7 @@ export function QuestionContent({
                 }}
               >
                 <div className="text-md md:text-lg uwd:!text-3xl 4k:!text-5xl">
-                  {renderItalicsAndBold(currentQuestion.followUp!.choices[key])}
+                  {renderItalicsAndBold(currentVariantQuestion.followUp!.choices[key])}
                 </div>
               </button>
             </div>)
@@ -168,17 +173,18 @@ export function QuestionContent({
         </div>
       }
       {
-        currentQuestion.followUp && showFollowUpAnswer && <div className="col-span-2">
-          <p className={`text-xl font-bold mb-4 ${followUpAnswer === currentQuestion.followUp.answer ? "text-green-500" : "text-red-500"} `}>
-            {followUpAnswer === currentQuestion.followUp.answer ? "Correct!" : "Incorrect!"}
+        currentVariantQuestion.followUp && showFollowUpAnswer && <div className="col-span-2">
+          <p className={`text-xl font-bold mb-4 ${followUpAnswer === currentVariantQuestion.followUp.answer ? "text-green-500" : "text-red-500"} `}>
+            {followUpAnswer === currentVariantQuestion.followUp.answer ? "Correct!" : "Incorrect!"}
           </p>
-          <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentQuestion.explanation)}</p>
+          <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentVariantQuestion.explanation)}</p>
           <button className="btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12" onClick={() =>
-            onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentQuestion.answer.toString(),
+            onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentVariantQuestion,
               currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses,
               followUpSubmitted, followUpAnswer,
               sfx,
-              setQuestionsCompleted, setCurrentQuestionId, setLastEndlessQuestions, setUserResponses, resetCurrentQuestionState, setFollowUpSubmitted, setFollowUpAnswer)}>
+              setQuestionsCompleted, setCurrentQuestionId, setLastEndlessQuestions, setUserResponses,
+              resetCurrentQuestionState, setFollowUpSubmitted, setFollowUpAnswer, setCurrentVariant)}>
             Next Question
           </button>
         </div>
@@ -221,11 +227,12 @@ export function QuestionContent({
           {
             showAnswer && questionsCompleted.length < currentQuestionSet.length
               ? <button className="btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12" onClick={() =>
-                onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentQuestion.answer.toString(),
+                onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentVariantQuestion,
                   currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses,
                   followUpSubmitted, followUpAnswer,
                   sfx,
-                  setQuestionsCompleted, setCurrentQuestionId, setLastEndlessQuestions, setUserResponses, resetCurrentQuestionState, setFollowUpSubmitted, setFollowUpAnswer)}>
+                  setQuestionsCompleted, setCurrentQuestionId, setLastEndlessQuestions, setUserResponses,
+                  resetCurrentQuestionState, setFollowUpSubmitted, setFollowUpAnswer, setCurrentVariant)}>
                 Next Question
               </button>
               : null
@@ -237,7 +244,7 @@ export function QuestionContent({
         <div className="flex flex-col items-center">
           <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">Real?</p>
           <img
-            src={getDYKSWUImageLink(currentQuestion.img)}
+            src={getDYKSWUImageLink(currentVariantQuestion.img)}
             alt="Potentially changed SWU card"
             className="max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 rounded shadow-lg"
           />
@@ -254,10 +261,10 @@ export function QuestionContent({
       {/* Explanation */}
       {
         questionResult && showExplanation && <div className="md:col-span-2">
-          <p className={`${currentQuestion.answer === selectedAnswer ? "text-green-500" : "text-red-500"} text-xl font-bold mb-4`}>
-            {currentQuestion.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
+          <p className={`${currentVariantQuestion.answer === selectedAnswer ? "text-green-500" : "text-red-500"} text-xl font-bold mb-4`}>
+            {currentVariantQuestion.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
           </p>
-          <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentQuestion.explanation)}</p>
+          <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentVariantQuestion.explanation)}</p>
         </div>
       }
     </div>
@@ -276,7 +283,7 @@ function onNextQuestion(
   questionMode: AppModes,
   selectedAnswer: string,
   currentQuestionId: number,
-  currentQuestionAnswer: string,
+  currentVariantQuestion: DoYouKnowSWUVariant,
   currentQuestionSet: DoYouKnowSWUQuestion[],
   questionsCompleted: number[],
   lastEndlessQuizzes: number[],
@@ -292,24 +299,25 @@ function onNextQuestion(
   resetCurrentQuestionState: () => void,
   setFollowUpSubmitted: (submitted: boolean) => void,
   setFollowUpAnswer: (answer: string) => void,
+  setCurrentVariant: (variant: number) => void
 ) {
   const endlessThreshold = 10; // Number of recent DYKSWU questions to track in endless mode
-  const currentQuestion = currentQuestionSet.find(q => q.id === currentQuestionId)!;
   if (isMarathonVariant(questionMode)) {
     const updatedCompleted = [...questionsCompleted];
-    if (selectedAnswer === currentQuestionAnswer && !currentQuestion.followUp) {
+    if (selectedAnswer === currentVariantQuestion.answer && !currentVariantQuestion.followUp) {
       updatedCompleted.push(currentQuestionId);
       setQuestionsCompleted(updatedCompleted);
-    } else if (selectedAnswer === currentQuestionAnswer && currentQuestion.followUp
-        && followUpSubmitted && followUpAnswer === currentQuestion.followUp.answer) {
+    } else if (selectedAnswer === currentVariantQuestion.answer && currentVariantQuestion.followUp
+        && followUpSubmitted && followUpAnswer === currentVariantQuestion.followUp.answer) {
       updatedCompleted.push(currentQuestionId);
       setQuestionsCompleted(updatedCompleted);
     }
     if (updatedCompleted.length !== currentQuestionSet.length) {
-      const availableQuizzes = currentQuestionSet.filter(q => !updatedCompleted.includes(q.id));
-      if (availableQuizzes.length > 0) {
-        const nextQuestion = availableQuizzes[Math.floor(Math.random() * availableQuizzes.length)];
+      const availableQuestions = currentQuestionSet.filter(q => !updatedCompleted.includes(q.id));
+      if (availableQuestions.length > 0) {
+        const nextQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
         setCurrentQuestionId(nextQuestion.id);
+        setCurrentVariant(Math.floor(Math.random() * nextQuestion.variants.length));
         resetCurrentQuestionState();
       }
     }
@@ -323,6 +331,7 @@ function onNextQuestion(
     if (availableQuestions.length > 0) {
       const nextQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
       setCurrentQuestionId(nextQuestion.id);
+      setCurrentVariant(Math.floor(Math.random() * nextQuestion.variants.length));
       resetCurrentQuestionState();
     }
   } else if (questionMode === "standard") {
@@ -330,17 +339,18 @@ function onNextQuestion(
     updatedCompleted.push(currentQuestionId);
     setQuestionsCompleted(updatedCompleted);
     const updatedResponses = [...userResponses];
-    const newResponse: UserResponse = { modeId: currentQuestionId, selected: selectedAnswer, correct: currentQuestionAnswer };
-    if (currentQuestion.followUp) {
+    const newResponse: UserResponse = { modeId: currentQuestionId, selected: selectedAnswer, correct: currentVariantQuestion.answer };
+    if (currentVariantQuestion.followUp) {
       newResponse.followUp = {
         followUpSelected: followUpAnswer,
-        followUpCorrect: currentQuestion.followUp.answer
+        followUpCorrect: currentVariantQuestion.followUp.answer
       };
     }
     updatedResponses.push(newResponse);
     setUserResponses(updatedResponses);
     if (updatedCompleted.length < standardQuestionLength) {
       setCurrentQuestionId(currentQuestionSet[updatedCompleted.length].id);
+      setCurrentVariant(Math.floor(Math.random() * currentQuestionSet[updatedCompleted.length].variants.length));
       resetCurrentQuestionState();
     }
   }

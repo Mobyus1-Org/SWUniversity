@@ -1,485 +1,584 @@
 [
   {
     "id": 1,
-    "img": "outmaneuver1",
-    "difficulty": 0,
-    "answer": "cost",
-    "followUp": {
-      "question": "What is the actual cost of **_Outmaneuver_**?",
-      "choices": {
-        "a": "3",
-        "b": "2",
-        "c": "5",
-        "d": "6"
-      },
-      "answer": "a"
-    },
     "actualCard": "SOR/221",
-    "explanation": "**_Outmaneuver_** costs 3 resources to play, not 4.",
-    "tags": ["outmaneuver", "cost"]
+    "variants": [
+      {
+        "img": "outmaneuver1",
+        "answer": "cost",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What is the actual cost of **_Outmaneuver_**?",
+          "choices": {
+            "a": "3",
+            "b": "2",
+            "c": "5",
+            "d": "6"
+          },
+          "answer": "a"
+        },
+        "explanation": "**_Outmaneuver_** costs 3 resources to play, not 4."
+      },
+      {
+        "img": "outmaneuver2",
+        "answer": "traits",
+        "difficulty": 1,
+        "followUp": {
+          "question": "Which of **_Outmaneuver's_** traits is the right one?",
+          "choices": {
+            "a": "_Innate_.",
+            "b": "_Tactic_.",
+            "c": "_Plan_.",
+            "d": "_Trick_."
+          },
+          "answer": "b"
+        },
+        "explanation": "**_Outmaneuver_** has the _Tactic_ trait, not the _Maneuver_ trait."
+      }
+    ]
   },
   {
     "id": 2,
-    "img": "redthree",
-    "difficulty": 1,
-    "answer": "ability-text",
-    "followUp": {
-      "question": "What does **_Red Three, Unstoppable_**, actually do?",
-      "choices": {
-        "a": "Gives other friendly _Aggression_ units **Raid 2**.",
-        "b": "Gives other friendly _Heroism_ units **Raid 1**.",
-        "c": "Has **Raid 2** itself.",
-        "d": "Gives other friendly _Aggression_ units +1/+0."
-      },
-      "answer": "b"
-    },
     "actualCard": "SOR/144",
-    "explanation": "**_Red Three, Unstoppable_** gives friendly _Heroism_ units **Raid 1**, not _Aggression_ units.",
-    "tags": ["red three", "ability-text"]
+    "variants": [
+      {
+        "img": "redthree",
+        "answer": "ability-text",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What does **_Red Three, Unstoppable_**, actually do?",
+          "choices": {
+            "a": "Gives other friendly _Aggression_ units **Raid 2**.",
+            "b": "Gives other friendly _Heroism_ units **Raid 1**.",
+            "c": "Has **Raid 2** itself.",
+            "d": "Gives other friendly _Aggression_ units +1/+0."
+          },
+          "answer": "b"
+        },
+        "explanation": "**_Red Three, Unstoppable_** gives friendly _Heroism_ units **Raid 1**, not _Aggression_ units."
+      }
+    ]
   },
   {
     "id": 3,
-    "img": "roguesquadronskirmisher",
-    "difficulty": 0,
-    "answer": "arena",
     "actualCard": "SOR/101",
-    "explanation": "**_Rogue Squadron Skirmisher_** is a Ground unit, not a Space unit.",
-    "tags": ["rogue squadron skirmisher", "arena"]
+    "variants": [
+      {
+        "img": "roguesquadronskirmisher",
+        "answer": "arena",
+        "difficulty": 0,
+        "explanation": "**_Rogue Squadron Skirmisher_** is a Ground unit, not a Space unit."
+      }
+    ]
   },
   {
     "id": 4,
-    "img": "precisionfire",
-    "difficulty": 2,
-    "answer": "ability-text",
-    "followUp": {
-      "question": "What does **_Precision Fire_** actually do?",
-      "choices": {
-        "a": "The attacking unit has to be a _Trooper_ to gain **Saboteur** as well.",
-        "b": "If the attacking unit is a _Trooper_, it gives it **Raid 1** for the attack.",
-        "c": "If the attacking unit is a _Trooper_, it gives it +2/+0 for the attack.",
-        "d": "If the attacking unit is a _Trooper_, it gives it +1/+0 for the attack."
-      },
-      "answer": "c"
-    },
     "actualCard": "SOR/168",
-    "explanation": "If the chosen unit is a _Trooper_, **_Precision Fire_** gives +2/+0, not **Raid 2**.",
-    "tags": ["precision fire", "ability-text"]
+    "variants": [
+      {
+        "img": "precisionfire",
+        "answer": "ability-text",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What does **_Precision Fire_** actually do?",
+          "choices": {
+            "a": "The attacking unit has to be a _Trooper_ to gain **Saboteur** as well.",
+            "b": "If the attacking unit is a _Trooper_, it gives it **Raid 1** for the attack.",
+            "c": "If the attacking unit is a _Trooper_, it gives it +2/+0 for the attack.",
+            "d": "If the attacking unit is a _Trooper_, it gives it +1/+0 for the attack."
+          },
+          "answer": "c"
+        },
+        "explanation": "If the chosen unit is a _Trooper_, **_Precision Fire_** gives +2/+0, not **Raid 2**."
+      }
+    ]
   },
   {
     "id": 5,
-    "img": "blackone1",
-    "difficulty": 2,
-    "answer": "trigger-condition",
-    "followUp": {
-      "question": "When does **_Black One, Scourge of Starkiller Base_**, actually trigger?",
-      "choices": {
-        "a": "**On Attack** only.",
-        "b": "**When Played** only.",
-        "c": "**On Attack/When Defeated**.",
-        "d": "**When Played/When Defeated**."
-      },
-      "answer": "d"
-    },
     "actualCard": "SOR/147",
-    "explanation": "**_Black One, Scourge of Starkiller Base's_** ability triggers **When Defeated**, not **On Attack**.",
-    "tags": ["black one", "trigger-condition"]
+    "variants": [
+      {
+        "img": "blackone1",
+        "answer": "trigger-condition",
+        "difficulty": 2,
+        "followUp": {
+          "question": "When does **_Black One, Scourge of Starkiller Base_**, actually trigger?",
+          "choices": {
+            "a": "**On Attack** only.",
+            "b": "**When Played** only.",
+            "c": "**On Attack/When Defeated**.",
+            "d": "**When Played/When Defeated**."
+          },
+          "answer": "d"
+        },
+        "explanation": "**_Black One, Scourge of Starkiller Base's_** ability triggers **When Defeated**, not **On Attack**."
+      }
+    ]
   },
   {
     "id": 6,
-    "img": "jedilightsaber",
-    "difficulty": 2,
-    "answer": "ability-text",
-    "followUp": {
-      "question": "What is the actual ability text of **_Jedi Lightsaber_**?",
-      "choices": {
-        "a": "Attach to a _Force_ unit.",
-        "b": "If attached unit is a _Jedi_...",
-        "c": "Give the defender -2/-2 for this phase.",
-        "d": "Give the defender -1/-1 for this attack."
-      },
-      "answer": "c"
-    },
     "actualCard": "SOR/054",
-    "explanation": "**_Jedi Lightsaber_** gives the defender -2/-2 for the rest of the entire phase, not just for the attack.",
-    "tags": ["jedi lightsaber", "ability-text"]
+    "variants": [
+      {
+        "img": "jedilightsaber",
+        "answer": "ability-text",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What is the actual ability text of **_Jedi Lightsaber_**?",
+          "choices": {
+            "a": "Attach to a _Force_ unit.",
+            "b": "If attached unit is a _Jedi_...",
+            "c": "Give the defender -2/-2 for this phase.",
+            "d": "Give the defender -1/-1 for this attack."
+          },
+          "answer": "c"
+        },
+        "explanation": "**_Jedi Lightsaber_** gives the defender -2/-2 for the rest of the entire phase, not just for the attack."
+      }
+    ]
   },
   {
     "id": 7,
-    "img": "vigilance",
-    "difficulty": 2,
-    "answer": "ability-text",
-    "followUp": {
-      "question": "Which line of **_Vigilance_** was changed?",
-      "choices": {
-        "a": "The line about the shield token.",
-        "b": "The line about healing a base.",
-        "c": "The line about defeating a unit.",
-        "d": "The line about discarding cards."
-      },
-      "answer": "a"
-    },
     "actualCard": "SOR/058",
-    "explanation": "When choosing to give a shield token with **_Vigilance_**, you can choose to give it to an enemy unit as well, not just friendly.",
-    "tags": ["vigilance", "ability-text"]
+    "variants": [
+      {
+        "img": "vigilance",
+        "answer": "ability-text",
+        "difficulty": 2,
+        "followUp": {
+          "question": "Which line of **_Vigilance_** was changed?",
+          "choices": {
+            "a": "The line about the shield token.",
+            "b": "The line about healing a base.",
+            "c": "The line about defeating a unit.",
+            "d": "The line about discarding cards."
+          },
+          "answer": "a"
+        },
+        "explanation": "When choosing to give a shield token with **_Vigilance_**, you can choose to give it to an enemy unit as well, not just friendly."
+      }
+    ]
   },
   {
     "id": 8,
-    "img": "darthvader1",
-    "difficulty": 1,
-    "answer": "something-else",
     "actualCard": "SOR/087",
-    "explanation": "The unique symbol is missing from **_Darth Vader's_** name.",
-    "tags": ["darth vader", "something-else"]
+    "variants": [
+      {
+        "img": "darthvader1",
+        "answer": "something-else",
+        "difficulty": 1,
+        "explanation": "The unique symbol is missing from **_Darth Vader's_** name."
+      }
+    ]
   },
   {
     "id": 9,
-    "img": "atatsuppressor",
-    "difficulty": 2,
-    "answer": "traits",
-    "followUp": {
-      "question": "Which of **_AT-AT Suppressor's_** traits is missing/wrong",
-      "choices": {
-        "a": "_Walker_.",
-        "b": "_Imperial_.",
-        "c": "_Transport_.",
-        "d": "_Republic_."
-      },
-      "answer": "a"
-    },
     "actualCard": "SOR/039",
-    "explanation": "**_AT-AT Suppressor_** is missing the _Walker_ trait.",
-    "tags": ["at-at suppressor", "traits"]
+    "variants": [
+      {
+        "img": "atatsuppressor",
+        "answer": "traits",
+        "difficulty": 2,
+        "followUp": {
+          "question": "Which of **_AT-AT Suppressor's_** traits is missing/wrong",
+          "choices": {
+            "a": "_Walker_.",
+            "b": "_Imperial_.",
+            "c": "_Transport_.",
+            "d": "_Republic_."
+          },
+          "answer": "a"
+        },
+        "explanation": "**_AT-AT Suppressor_** is missing the _Walker_ trait."
+      }
+    ]
   },
   {
     "id": 10,
-    "img": "theemperorslegion",
-    "difficulty": 2,
-    "answer": "no-change",
     "actualCard": "SOR/091",
-    "explanation": "No changes were made.",
-    "tags": ["the emperor's legion", "no-change"]
+    "variants": [
+      {
+        "img": "theemperorslegion",
+        "answer": "no-change",
+        "difficulty": 2,
+        "explanation": "No changes were made."
+      }
+    ]
   },
   {
     "id": 11,
-    "img": "superlasertech1",
-    "difficulty": 0,
-    "answer": "ability-text",
-    "followUp": {
-      "question": "What does **_Superlaser Technician_** actually do?",
-      "choices": {
-        "a": "Returns one of your resources to your hand.",
-        "b": "Readies one of your exhausted resources.",
-        "c": "Puts the top card of your deck into play as a resource.",
-        "d": "Can be put into play as a ready resource."
-      },
-      "answer": "d"
-    },
     "actualCard": "SOR/083",
-    "explanation": "When **_Superlaser Technician_** is defeated, it becomes a ready resource.",
-    "tags": ["superlaser technician", "ability-text"]
+    "variants": [
+      {
+        "img": "superlasertech1",
+        "answer": "ability-text",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What does **_Superlaser Technician_** actually do?",
+          "choices": {
+            "a": "Returns one of your resources to your hand.",
+            "b": "Readies one of your exhausted resources.",
+            "c": "Puts the top card of your deck into play as a resource.",
+            "d": "Can be put into play as a ready resource."
+          },
+          "answer": "d"
+        },
+        "explanation": "When **_Superlaser Technician_** is defeated, it becomes a ready resource."
+      }
+    ]
   },
   {
     "id": 12,
-    "img": "bobafett1",
-    "difficulty": 2,
-    "answer": "subtitle",
-    "followUp": {
-      "question": "Do you know what this **_Boba Fett's_** subtitle actually is?",
-      "choices": {
-        "a": "Any Methods Necessary.",
-        "b": "Disintigrator.",
-        "c": "Feared Bounty Hunter.",
-        "d": "Daimyo."
-      },
-      "answer": "b"
-    },
     "actualCard": "SOR/179",
-    "explanation": "This is **_Boba Fett, Disintigrator_**, not **_Boba Fett, Collecting the Bounty_**.",
-    "tags": ["boba fett", "subtitle"]
+    "variants": [
+      {
+        "img": "bobafett1",
+        "answer": "subtitle",
+        "difficulty": 2,
+        "followUp": {
+          "question": "Do you know what this **_Boba Fett's_** subtitle actually is?",
+          "choices": {
+            "a": "Any Methods Necessary.",
+            "b": "Disintigrator.",
+            "c": "Feared Bounty Hunter.",
+            "d": "Daimyo."
+          },
+          "answer": "b"
+        },
+        "explanation": "This is **_Boba Fett, Disintigrator_**, not **_Boba Fett, Collecting the Bounty_**."
+      }
+    ]
   },
   {
     "id": 13,
-    "img": "stormtrooperlieutenant1",
-    "difficulty": 0,
-    "answer": "name",
-    "followUp": {
-      "question": "What is the actual name of this card?",
-      "choices": {
-        "a": "**_First Order Stormtrooper_**.",
-        "b": "**_Snowtrooper Vanguard_**.",
-        "c": "**_Snowtrooper Lieutenant_**.",
-        "d": "**_First Legion Snowtrooper_**."
-      },
-      "answer": "c"
-    },
     "actualCard": "SOR/227",
-    "explanation": "This unit's name is actually **_Snowtrooper Liuetenant_**.",
-    "tags": ["snowtrooper lieutenant", "name"]
+    "variants": [
+      {
+        "img": "stormtrooperlieutenant1",
+        "answer": "name",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What is the actual name of this card?",
+          "choices": {
+            "a": "**_First Order Stormtrooper_**.",
+            "b": "**_Snowtrooper Vanguard_**.",
+            "c": "**_Snowtrooper Lieutenant_**.",
+            "d": "**_First Legion Snowtrooper_**."
+          },
+          "answer": "c"
+        },
+        "explanation": "This unit's name is actually **_Snowtrooper Liuetenant_**."
+      }
+    ]
   },
   {
     "id": 14,
-    "img": "97thlegion1",
-    "difficulty": 2,
-    "answer": "aspects",
-    "followUp": {
-      "question": "What should **_97th Legion's_** aspects actually be?",
-      "choices": {
-        "a": "Single _Vigilance_.",
-        "b": "Single _Aggression_.",
-        "c": "Double _Command_.",
-        "d": "Single _Command_."
-      },
-      "answer": "d"
-    },
     "actualCard": "SOR/118",
-    "explanation": "While **_97th Legion_** does, in fact, have the _Imperial_ trait, it does not have the _Villainy_ aspect.",
-    "tags": ["97th legion", "aspects"]
+    "variants": [
+      {
+        "img": "97thlegion1",
+        "answer": "aspects",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What should **_97th Legion's_** aspects actually be?",
+          "choices": {
+            "a": "Single _Vigilance_.",
+            "b": "Single _Aggression_.",
+            "c": "Double _Command_.",
+            "d": "Single _Command_."
+          },
+          "answer": "d"
+        },
+        "explanation": "While **_97th Legion_** does, in fact, have the _Imperial_ trait, it does not have the _Villainy_ aspect."
+      }
+    ]
   },
   {
     "id": 15,
-    "img": "galacticambition1",
-    "difficulty": 1,
-    "answer": "no-change",
     "actualCard": "SOR/235",
-    "explanation": "No changes were made.",
-    "tags": ["galactic ambition", "no-change"]
+    "variants": [
+      {
+        "img": "galacticambition1",
+        "answer": "no-change",
+        "difficulty": 1,
+        "explanation": "No changes were made."
+      }
+    ]
   },
   {
     "id": 16,
-    "img": "bendu1",
-    "difficulty": 2,
-    "answer": "ability-text",
-    "followUp": {
-      "question": "What does **_Bendu, The One in the Middle_**, actually do?",
-      "choices": {
-        "a": "Makes the next non-_Heroism_/non-_Villainy_ card you play cost 2 less.",
-        "b": "Makes the next non-_Heroism_/non-_Villainy_ card you play free.",
-        "c": "Makes the first non-_Heroism_/non-_Villainy_ card you play each phase cost 1 less.",
-        "d": "Makes the first non-_Heroism_/non-_Villainy_ card you play each phase cost 2 less."
-      },
-      "answer": "a"
-    },
     "actualCard": "SOR/056",
-    "explanation": "**_Bendu's_** ability discounts the next non-_Heroism_/non-_Villainy_ card you play by 2.",
-    "tags": ["bendu", "ability-text"]
+    "variants": [
+      {
+        "img": "bendu1",
+        "answer": "ability-text",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What does **_Bendu, The One in the Middle_**, actually do?",
+          "choices": {
+            "a": "Makes the next non-_Heroism_/non-_Villainy_ card you play cost 2 less.",
+            "b": "Makes the next non-_Heroism_/non-_Villainy_ card you play free.",
+            "c": "Makes the first non-_Heroism_/non-_Villainy_ card you play each phase cost 1 less.",
+            "d": "Makes the first non-_Heroism_/non-_Villainy_ card you play each phase cost 2 less."
+          },
+          "answer": "a"
+        },
+        "explanation": "**_Bendu's_** ability discounts the next non-_Heroism_/non-_Villainy_ card you play by 2."
+      }
+    ]
   },
   {
     "id": 17,
-    "img": "vanguardace1",
-    "difficulty": 1,
-    "answer": "traits",
-    "followUp": {
-      "question": "Which of **_Vanguard Ace's_** traits is missing/wrong?",
-      "choices": {
-        "a": "_Fighter_.",
-        "b": "_Rebel_.",
-        "c": "_Resistance_.",
-        "d": "_Vehicle_."
-      },
-      "answer": "b"
-    },
     "actualCard": "SOR/191",
-    "explanation": "**_Vanguard Ace_** is a _New Republic_ unit, not a _Rebel_ unit.",
-    "tags": ["vanguard ace", "traits"]
+    "variants": [
+      {
+        "img": "vanguardace1",
+        "answer": "traits",
+        "difficulty": 1,
+        "followUp": {
+          "question": "Which of **_Vanguard Ace's_** traits is missing/wrong?",
+          "choices": {
+            "a": "_Fighter_.",
+            "b": "_Rebel_.",
+            "c": "_Resistance_.",
+            "d": "_Vehicle_."
+          },
+          "answer": "b"
+        },
+        "explanation": "**_Vanguard Ace_** is a _New Republic_ unit, not a _Rebel_ unit."
+      }
+    ]
   },
   {
     "id": 18,
-    "img": "homeone1",
-    "difficulty": 2,
-    "answer": "ability-text",
-    "followUp": {
-      "question": "What does **_Home One, Alliance Flagship_**, actually do?",
-      "choices": {
-        "a": "It gives other friendly units **Restore 2**.",
-        "b": "It should have **Restore 1**.",
-        "c": "The unit you play from your discard pile costs 3 less.",
-        "d": "The unit you play from your discard pile does not have to be a _Heroism_ unit."
-      },
-      "answer": "c"
-    },
     "actualCard": "SOR/102",
-    "explanation": "**_Home One's_** ability does not let you play a unit that costs 3 or less for free, it actually reduces the cost of the unit you play by 3.",
-    "tags": ["home one", "ability-text"]
+    "variants": [
+      {
+        "img": "homeone1",
+        "answer": "ability-text",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What does **_Home One, Alliance Flagship_**, actually do?",
+          "choices": {
+            "a": "It gives other friendly units **Restore 2**.",
+            "b": "It should have **Restore 1**.",
+            "c": "The unit you play from your discard pile costs 3 less.",
+            "d": "The unit you play from your discard pile does not have to be a _Heroism_ unit."
+          },
+          "answer": "c"
+        },
+        "explanation": "**_Home One's_** ability does not let you play a unit that costs 3 or less for free, it actually reduces the cost of the unit you play by 3."
+      }
+    ]
   },
   {
     "id": 19,
-    "img": "snowspeeder1",
-    "difficulty": 2,
-    "answer": "art",
-    "followUp": {
-      "question": "What's wrong with the art?",
-      "choices": {
-        "a": "A color was changed.",
-        "b": "The art is mirrored.",
-        "c": "This art is from a different card.",
-        "d": "Something was added/removed."
-      },
-      "answer": "d"
-    },
     "actualCard": "SOR/244",
-    "explanation": "A second snowspeeder was removed from the background of the art.",
-    "tags": ["snowspeeder", "art"]
+    "variants": [
+      {
+        "img": "snowspeeder1",
+        "answer": "art",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What's wrong with the art?",
+          "choices": {
+            "a": "A color was changed.",
+            "b": "The art is mirrored.",
+            "c": "This art is from a different card.",
+            "d": "Something was added/removed."
+          },
+          "answer": "d"
+        },
+        "explanation": "A second snowspeeder was removed from the background of the art."
+      }
+    ]
   },
   {
     "id": 20,
-    "img": "yoda1",
-    "difficulty": 0,
-    "answer": "ability-text",
-    "followUp": {
-      "question": "What does **_Yoda, Old Master_**, actually do?",
-      "choices": {
-        "a": "He gives you the choice to let any player draw a card.",
-        "b": "He should have **Restore 1**.",
-        "c": "He should have **Restore 3**",
-        "d": "He should let you draw 2 cards."
-      },
-      "answer": "a"
-    },
     "actualCard": "SOR/045",
-    "explanation": "**_Yoda_** lets you choose any number of players to draw when he is defeated.",
-    "tags": ["yoda", "ability-text"]
+    "variants": [
+      {
+        "img": "yoda1",
+        "answer": "ability-text",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What does **_Yoda, Old Master_**, actually do?",
+          "choices": {
+            "a": "He gives you the choice to let any player draw a card.",
+            "b": "He should have **Restore 1**.",
+            "c": "He should have **Restore 3**",
+            "d": "He should let you draw 2 cards."
+          },
+          "answer": "a"
+        },
+        "explanation": "**_Yoda_** lets you choose any number of players to draw when he is defeated."
+      }
+    ]
   },
   {
     "id": 21,
-    "img": "openfire1",
-    "difficulty": 2,
-    "answer": "art",
-    "followUp": {
-      "question": "What's wrong with the art?",
-      "choices": {
-        "a": "A color was changed.",
-        "b": "The art is mirrored.",
-        "c": "This art is from a different card.",
-        "d": "Something was added/removed."
-      },
-      "answer": "b"
-    },
     "actualCard": "SOR/172",
-    "explanation": "The art has been mirrored.",
-    "tags": ["open fire", "art"]
+    "variants": [
+      {
+        "img": "openfire1",
+        "answer": "art",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What's wrong with the art?",
+          "choices": {
+            "a": "A color was changed.",
+            "b": "The art is mirrored.",
+            "c": "This art is from a different card.",
+            "d": "Something was added/removed."
+          },
+          "answer": "b"
+        },
+        "explanation": "The art has been mirrored."
+      }
+    ]
   },
   {
     "id": 22,
-    "img": "outlandtievanguard1",
-    "difficulty": 1,
-    "answer": "ability-text",
-    "followUp": {
-      "question": "What does **_Outland TIE Vanguard_** actually do?",
-      "choices": {
-        "a": "It can only give an Experience token to an _Imperial_ unit.",
-        "b": "It can only give an Experience token to a unit that costs 2 or less.",
-        "c": "It can only give an Experience token to a unit that costs 3 or less.",
-        "d": "It gives a shield token."
-      },
-      "answer": "c"
-    },
     "actualCard": "SHD/082",
-    "explanation": "**_Outland TIE Vanguard_** can only give Experience tokens to units that cost 3 or less.",
-    "tags": ["outland tie vanguard", "ability-text"]
+    "variants": [
+      {
+        "img": "outlandtievanguard1",
+        "answer": "ability-text",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What does **_Outland TIE Vanguard_** actually do?",
+          "choices": {
+            "a": "It can only give an Experience token to an _Imperial_ unit.",
+            "b": "It can only give an Experience token to a unit that costs 2 or less.",
+            "c": "It can only give an Experience token to a unit that costs 3 or less.",
+            "d": "It gives a shield token."
+          },
+          "answer": "c"
+        },
+        "explanation": "**_Outland TIE Vanguard_** can only give Experience tokens to units that cost 3 or less."
+      }
+    ]
   },
   {
     "id": 23,
-    "img": "ketsuonyo1",
-    "difficulty": 1,
-    "answer": "trigger-condition",
-    "followUp": {
-      "question": "When does **_Ketsu Onyo, Old Friend_**, actually trigger?",
-      "choices": {
-        "a": "When attacking and defeating a unit.",
-        "b": "When played.",
-        "c": "When completing an attack.",
-        "d": "When dealing combat damage to a base."
-      },
-      "answer": "d"
-    },
     "actualCard": "SHD/147",
-    "explanation": "**_Ketsu's_** ability only triggers when she deals combat damage to a base.",
-    "tags": ["ketsu onyo", "trigger-condition"]
+    "variants": [
+      {
+        "img": "ketsuonyo1",
+        "answer": "trigger-condition",
+        "difficulty": 1,
+        "followUp": {
+          "question": "When does **_Ketsu Onyo, Old Friend_**, actually trigger?",
+          "choices": {
+            "a": "When attacking and defeating a unit.",
+            "b": "When played.",
+            "c": "When completing an attack.",
+            "d": "When dealing combat damage to a base."
+          },
+          "answer": "d"
+        },
+        "explanation": "**_Ketsu's_** ability only triggers when she deals combat damage to a base."
+      }
+    ]
   },
   {
     "id": 24,
-    "img": "jabbathehutt1",
-    "difficulty": 2,
-    "answer": "no-change",
     "actualCard": "SOR/181",
-    "explanation": "No change has been made.",
-    "tags": ["jabba the hutt", "no-change"]
+    "variants": [
+      {
+        "img": "jabbathehutt1",
+        "answer": "no-change",
+        "difficulty": 2,
+        "explanation": "No change has been made."
+      }
+    ]
   },
   {
     "id": 25,
-    "img": "itbindsallthings1",
-    "difficulty": 2,
-    "answer": "ability-text",
-    "followUp": {
-      "question": "What's does **_It Binds All Things_** actually do?",
-      "choices": {
-        "a": "You only need to control a _Force_ unit.",
-        "b": "It can only heal/damage up to 2.",
-        "c": "It can heal/damage up to 4.",
-        "d": "It can only deal the damage to an enemy unit."
-      },
-      "answer": "a"
-    },
     "actualCard": "SOR/075",
-    "explanation": "**_It Binds All Things_** only requires you to _control_ a _Force_ unit, not use the Event on one.",
-    "tags": ["it binds all things", "ability-text"]
+    "variants": [
+      {
+        "img": "itbindsallthings1",
+        "answer": "ability-text",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What's does **_It Binds All Things_** actually do?",
+          "choices": {
+            "a": "You only need to control a _Force_ unit.",
+            "b": "It can only heal/damage up to 2.",
+            "c": "It can heal/damage up to 4.",
+            "d": "It can only deal the damage to an enemy unit."
+          },
+          "answer": "a"
+        },
+        "explanation": "**_It Binds All Things_** only requires you to _control_ a _Force_ unit, not use the Event on one."
+      }
+    ]
   },
   {
     "id": 26,
-    "img": "chimaera1",
-    "difficulty": 1,
-    "answer": "hp",
-    "followUp": {
-      "question": "What is **_Chimaera, Flagship of the Seventh Fleet's_** actual HP?",
-      "choices": {
-        "a": "9.",
-        "b": "7.",
-        "c": "6.",
-        "d": "10."
-      },
-      "answer": "b"
-    },
     "actualCard": "SOR/185",
-    "explanation": "**_Chimaera, Flagship of the Seventh Fleet_**, has 7 HP.",
-    "tags": ["chimaera", "hp"]
+    "variants": [
+      {
+        "img": "chimaera1",
+        "answer": "hp",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What is **_Chimaera, Flagship of the Seventh Fleet's_** actual HP?",
+          "choices": {
+            "a": "9.",
+            "b": "7.",
+            "c": "6.",
+            "d": "10."
+          },
+          "answer": "b"
+        },
+        "explanation": "**_Chimaera, Flagship of the Seventh Fleet_**, has 7 HP."
+      }
+    ]
   },
   {
     "id": 27,
-    "img": "maul1",
-    "difficulty": 1,
-    "answer": "traits",
-    "followUp": {
-      "question": "Which of **_Maul, Shadow Collective Visionary's_** traits is missing/wrong?",
-      "choices": {
-        "a": "_Night_.",
-        "b": "_Underworld_.",
-        "c": "_Sith_.",
-        "d": "_Force_."
-      },
-      "answer": "c"
-    },
     "actualCard": "SHD/090",
-    "explanation": "**_Maul, Shadow Collective Visionary_**, is not a _Sith_.",
-    "tags": ["maul", "traits"]
+    "variants": [
+      {
+        "img": "maul1",
+        "answer": "traits",
+        "difficulty": 1,
+        "followUp": {
+          "question": "Which of **_Maul, Shadow Collective Visionary's_** traits is missing/wrong?",
+          "choices": {
+            "a": "_Night_.",
+            "b": "_Underworld_.",
+            "c": "_Sith_.",
+            "d": "_Force_."
+          },
+          "answer": "c"
+        },
+        "explanation": "**_Maul, Shadow Collective Visionary_**, is not a _Sith_."
+      }
+    ]
   },
   {
     "id": 28,
-    "img": "aggression1",
-    "difficulty": 1,
-    "answer": "ability-text",
-    "followUp": {
-      "question": "Which line of **_Aggression_** was changed?",
-      "choices": {
-        "a": "The line about readying a unit.",
-        "b": "The line about drawing a card.",
-        "c": "The line about damaging a unit.",
-        "d": "The line about defeating an upgrade."
-      },
-      "answer": "d"
-    },
     "actualCard": "SOR/155",
-    "explanation": "**_Aggression's_** second option allows you to defeat \"up to 2\" upgrades.",
-    "tags": ["aggression", "ability-text"]
+    "variants": [
+      {
+        "img": "aggression1",
+        "answer": "ability-text",
+        "difficulty": 1,
+        "followUp": {
+          "question": "Which line of **_Aggression_** was changed?",
+          "choices": {
+            "a": "The line about readying a unit.",
+            "b": "The line about drawing a card.",
+            "c": "The line about damaging a unit.",
+            "d": "The line about defeating an upgrade."
+          },
+          "answer": "d"
+        },
+        "explanation": "**_Aggression's_** second option allows you to defeat \"up to 2\" upgrades."
+      }
+    ]
   }
-
 ]

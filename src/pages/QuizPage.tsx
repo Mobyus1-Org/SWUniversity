@@ -73,16 +73,24 @@ function QuizPage() {
     setUserResponses([]);
     setStandardQuizLength(0);
     setCurrentQuizId(0);
+    setLastEndlessQuizzes([]);
   };
+
+  const quizModeSets = {
+    all: allQuizzes,
+    padawan: allQuizzes.filter(quiz => quiz.difficulty === 0),
+    knight: allQuizzes.filter(quiz => quiz.difficulty === 1),
+    master: allQuizzes.filter(quiz => quiz.difficulty === 2),
+  }
 
   const modeDescriptions: ModeDescriptions = {
     "": "",
     "standard": "Choose a set number of questions to be pulled from our databank and see how many you can answer correctly!",
-    "marathon": `Correctly answer every question in the databank once to complete the marathon!\n\nTotal Questions: ${allQuizzes.length}`,
+    "marathon": `Correctly answer every question in the databank once to complete the marathon!\n\nTotal Questions: ${quizModeSets.all.length}`,
     "endless": "Answer random questions with no end in sight!",
-    "padawan": `A perfect place for new players to test their knowledge of the basics of SWU!\n\nTotal Questions: ${allQuizzes.filter(quiz => quiz.difficulty === 0).length}`,
-    "knight": `A challenging mode for those who have a solid understanding of SWU and want to test their skills further!\n\nTotal Questions: ${allQuizzes.filter(quiz => quiz.difficulty === 1).length}`,
-    "master": `The ultimate test for SWU experts! Only the most knowledgeable players will be able to conquer this mode!\n\nTotal Questions: ${allQuizzes.filter(quiz => quiz.difficulty === 2).length}`
+    "padawan": `A perfect place for new players to test their knowledge of the basics of SWU!\n\nTotal Questions: ${quizModeSets.padawan.length}`,
+    "knight": `A challenging mode for those who have a solid understanding of SWU and want to test their skills further!\n\nTotal Questions: ${quizModeSets.knight.length}`,
+    "master": `The ultimate test for SWU experts! Only the most knowledgeable players will be able to conquer this mode!\n\nTotal Questions: ${quizModeSets.master.length}`
   }
 
   return <div>
@@ -91,7 +99,7 @@ function QuizPage() {
       quizMode === "" || (quizMode === "standard" && standardQuizLength === 0)
         ? <ModeButtons
           mode={quizMode}
-          allModeSet={allQuizzes}
+          appModeSets={quizModeSets}
           standardModeLength={standardQuizLength}
           modeDescriptions={modeDescriptions}
           setMode={setQuizMode}

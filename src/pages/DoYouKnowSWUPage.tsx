@@ -10,6 +10,7 @@ function DoYouKnowSWUPage() {
   const [currentQuestionSet, setCurrentQuestionSet] = React.useState<DoYouKnowSWUQuestion[]>(allQuestions);
   const [dykswuMode, setDykswuMode] = React.useState<AppModes>("");
   const [currentQuestionId, setCurrentQuestionId] = React.useState<number>(0);
+  const [currentVariant, setCurrentVariant] = React.useState<number>(0);
   const [currentFollowUpKeys, setCurrentFollowUpKeys] = React.useState<string[]>([]);
   const [standardQuestionLength, setStandardQuestionLength] = React.useState<number>(0);
   const [questionResult, setQuestionResult] = React.useState<boolean>(false);
@@ -46,6 +47,7 @@ function DoYouKnowSWUPage() {
       standardQuestionLength={standardQuestionLength}
       userResponses={userResponses}
       currentFollowUpKeys={currentFollowUpKeys}
+      currentVariant={currentVariant}
       setCurrentQuestionId={setCurrentQuestionId}
       setQuestionResult={setQuestionResult}
       setSelectedAnswer={setSelectedAnswer}
@@ -57,6 +59,7 @@ function DoYouKnowSWUPage() {
       resetCurrentQuestionState={resetCurrentQuestionState}
       resetDoYouKnowSWUMode={resetDoYouKnowSWUMode}
       setCurrentFollowUpKeys={setCurrentFollowUpKeys}
+      setCurrentVariant={setCurrentVariant}
     />;
 
   const resetCurrentQuestionState = () => {
@@ -72,16 +75,34 @@ function DoYouKnowSWUPage() {
     setUserResponses([]);
     setStandardQuestionLength(0);
     setCurrentQuestionId(0);
+    setCurrentVariant(0);
+    setLastEndlessQuestions([]);
   };
+
+  const dykswuSets = {
+    all: allQuestions,
+    padawan: allQuestions.filter(q => q.variants.some(v => v.difficulty === 0)).map(q => ({
+      ...q,
+      variants: q.variants.filter(v => v.difficulty === 0)
+    })),
+    knight: allQuestions.filter(q => q.variants.some(v => v.difficulty === 1)).map(q => ({
+      ...q,
+      variants: q.variants.filter(v => v.difficulty === 1)
+    })),
+    master: allQuestions.filter(q => q.variants.some(v => v.difficulty === 2)).map(q => ({
+      ...q,
+      variants: q.variants.filter(v => v.difficulty === 2)
+    })),
+  }
 
   const modeDescriptions: ModeDescriptions = {
     "": "",
-    "marathon": `All Cards\n\nTotal Questions: ${allQuestions.length}`,
+    "marathon": `All Cards\n\nTotal Questions: ${dykswuSets.all.length}`,
     "endless": "Endless Cards",
     "standard": "Choose cards mixed",
-    "padawan": `Easy Cards\n\nTotal Questions: ${allQuestions.filter(q => q.difficulty === 0).length}`,
-    "knight": `Medium Cards\n\nTotal Questions: ${allQuestions.filter(q => q.difficulty === 1).length}`,
-    "master": `Hard Cards\n\nTotal Questions: ${allQuestions.filter(q => q.difficulty === 2).length}`,
+    "padawan": `Easy Cards\n\nTotal Questions: ${dykswuSets.padawan.length}`,
+    "knight": `Medium Cards\n\nTotal Questions: ${dykswuSets.knight.length}`,
+    "master": `Hard Cards\n\nTotal Questions: ${dykswuSets.master.length}`,
   };
 
   return <div>
@@ -90,13 +111,15 @@ function DoYouKnowSWUPage() {
       dykswuMode === "" || (dykswuMode === "standard" && standardQuestionLength === 0)
         ? <ModeButtons
           mode={dykswuMode}
-          allModeSet={allQuestions}
+          appModeSets={dykswuSets}
           standardModeLength={standardQuestionLength}
           modeDescriptions={modeDescriptions}
           setMode={setDykswuMode}
+          initVariant={true}
           setCurrentModeSet={setCurrentQuestionSet as React.Dispatch<React.SetStateAction<AppModeSetEntry[]>>}
           setCurrentModeId={setCurrentQuestionId}
           setStandardModeLength={setStandardQuestionLength}
+          setVariant={setCurrentVariant}
         />
         : renderQuestionContent()
     }

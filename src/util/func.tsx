@@ -2,22 +2,23 @@ import type { AppModes, SWUniversityApp } from "./const";
 
 export type AppModeSetEntry = {
   id: number;
-  difficulty: number; //0 = Padawan, 1 = Knight, 2 = Master
-  answer: string;
-  tags: string[];
 }
 
 export type Quiz = AppModeSetEntry & {
   question: string;
+  answer: string;
+  difficulty: number;
   choices: {
     [key: string]: string
   };
   relevantCards: string[];
   relevantRule: string;
+  tags: string[];
 }
 
 export type UserResponse = {
   modeId: number;
+  variant?: number;
   selected: string;
   correct: string;
   followUp?: {
@@ -38,10 +39,10 @@ export async function getQuizDataAsync() : Promise<Quiz[]> {
   return data.filter((quiz: Quiz) => quiz.id && quiz.id >= notBeforeQuizId && !excludedQuizIds.includes(quiz.id));
 }
 
-export type DoYouKnowSWUQuestion = AppModeSetEntry & {
+export type DoYouKnowSWUVariant = {
   img: string;
-  actualCard: string;
-  explanation: string;
+  answer: string;
+  difficulty: number;
   followUp?: {
     question: string;
     choices: {
@@ -49,6 +50,12 @@ export type DoYouKnowSWUQuestion = AppModeSetEntry & {
     };
     answer: string;
   };
+  explanation: string;
+}
+
+export type DoYouKnowSWUQuestion = AppModeSetEntry & {
+  actualCard: string;
+  variants: DoYouKnowSWUVariant[];
 }
 
 const notBeforeDYKSWUId = 1;

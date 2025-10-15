@@ -6,19 +6,24 @@ import { ModeButtonItem } from "./ModeButtonItem";
 
 interface IProps {
   mode: AppModes;
-  allModeSet: AppModeSetEntry[];
+  appModeSets: {
+    all: AppModeSetEntry[];
+    padawan: AppModeSetEntry[];
+    knight: AppModeSetEntry[];
+    master: AppModeSetEntry[];
+  };
   standardModeLength: number;
   modeDescriptions: ModeDescriptions;
+  initVariant?: boolean;
   setMode: (mode: AppModes) => void;
   setCurrentModeSet: (set: AppModeSetEntry[]) => void;
   setCurrentModeId: (id: number) => void;
   setStandardModeLength: (length: number) => void;
+  setVariant?: (variant: number) => void;
 }
 
-export function ModeButtons({mode, allModeSet, standardModeLength, modeDescriptions, setMode, setCurrentModeSet, setCurrentModeId, setStandardModeLength}: IProps) {
-  const padawanModeSet = allModeSet.filter(quiz => quiz.difficulty === 0);
-  const knightModeSet = allModeSet.filter(quiz => quiz.difficulty === 1);
-  const masterModeSet = allModeSet.filter(quiz => quiz.difficulty === 2);
+export function ModeButtons({mode, appModeSets, standardModeLength, modeDescriptions, initVariant,
+    setMode, setCurrentModeSet, setCurrentModeId, setStandardModeLength, setVariant}: IProps) {
   const renderButtons = () => <div className="grid md:grid-cols-3 gap-4 uwd:gap-5 mb-8 h-full" style={{ textAlign: 'center' }}>
     <ModeButtonItem
       mode="standard"
@@ -26,59 +31,71 @@ export function ModeButtons({mode, allModeSet, standardModeLength, modeDescripti
       description={modeDescriptions["standard"]}
       modeSet={[]}
       initModeId={false}
+      initVariant={initVariant}
       setMode={setMode}
       setCurrentModeSet={setCurrentModeSet}
       setCurrentModeId={setCurrentModeId}
+      setVariant={setVariant}
     />
     <ModeButtonItem
       mode="marathon"
       title="Marathon Mode"
       description={modeDescriptions["marathon"]}
-      modeSet={allModeSet}
+      modeSet={appModeSets.all}
       initModeId={true}
+      initVariant={initVariant}
       setMode={setMode}
       setCurrentModeSet={setCurrentModeSet}
       setCurrentModeId={setCurrentModeId}
+      setVariant={setVariant}
     />
     <ModeButtonItem
       mode="endless"
       title="Endless Mode"
       description={modeDescriptions["endless"]}
-      modeSet={allModeSet}
+      modeSet={appModeSets.all}
       initModeId={true}
+      initVariant={initVariant}
       setMode={setMode}
       setCurrentModeSet={setCurrentModeSet}
       setCurrentModeId={setCurrentModeId}
+      setVariant={setVariant}
     />
     <ModeButtonItem
       mode="padawan"
       title="Padawan Mode"
       description={modeDescriptions["padawan"]}
-      modeSet={padawanModeSet}
+      modeSet={appModeSets.padawan}
       initModeId={true}
+      initVariant={initVariant}
       setMode={setMode}
       setCurrentModeSet={setCurrentModeSet}
       setCurrentModeId={setCurrentModeId}
+      setVariant={setVariant}
     />
     <ModeButtonItem
       mode="knight"
       title="Jedi Knight Mode"
       description={modeDescriptions["knight"]}
-      modeSet={knightModeSet}
+      modeSet={appModeSets.knight}
       initModeId={true}
+      initVariant={initVariant}
       setMode={setMode}
       setCurrentModeSet={setCurrentModeSet}
       setCurrentModeId={setCurrentModeId}
+      setVariant={setVariant}
     />
     <ModeButtonItem
       mode="master"
       title="Jedi Master Mode"
       description={modeDescriptions["master"]}
-      modeSet={masterModeSet}
+      modeSet={appModeSets.master}
       initModeId={true}
+      initVariant={initVariant}
       setMode={setMode}
       setCurrentModeSet={setCurrentModeSet}
       setCurrentModeId={setCurrentModeId}
+      setVariant={setVariant}
     />
   </div>
 
@@ -95,7 +112,7 @@ export function ModeButtons({mode, allModeSet, standardModeLength, modeDescripti
           onChange={(e) => {
             sfx("click");
             setStandardModeLength(parseInt(e.target.value));
-            const filteredSet = ([...allModeSet].sort(() => 0.5 - Math.random())).slice(0, parseInt(e.target.value));
+            const filteredSet = ([...appModeSets.all].sort(() => 0.5 - Math.random())).slice(0, parseInt(e.target.value));
             setCurrentModeSet(filteredSet);
             setCurrentModeId(filteredSet[0].id);
           }}
