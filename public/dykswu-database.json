@@ -580,5 +580,27 @@
         "explanation": "**_Aggression's_** second option allows you to defeat \"up to 2\" upgrades."
       }
     ]
+  },
+  {
+    "id": 29,
+    "actualCard": "TWI/057",
+    "variants": [
+      {
+        "img": "warriordrone1",
+        "answer": "aspects",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What should **_Warrior Drone's_** aspects actually be?",
+          "choices": {
+            "a": "_Aggression_ and _Heroism_.",
+            "b": "Single _Aggression_.",
+            "c": "_Vigilance_ and _Heroism_.",
+            "d": "Single _Vigilance_."
+          },
+          "answer": "d"
+        },
+        "explanation": " "
+      }
+    ]
   }
 ]
