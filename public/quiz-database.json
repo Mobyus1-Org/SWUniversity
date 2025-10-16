@@ -1228,5 +1228,20 @@
       "relevantRule": "The key here is that after **_Planetary Bombardment_** is finished resolving, there will be two pending triggers: **_Boba's_** and the **_Krayt's_**. Since Player A is the active player, they get to decide which player resolves their triggers first, meaning Player A literally holds their own fate in their hands.\n\n**7.6.10** - If both players must resolve triggered abilities on cards they control at the same time, the active player chooses one player at a time to resolve abilities. When chosen, that player resolves all abilities triggered on cards they control in the order of their choice, and once they finish, the other player does the same on cards they control.",
       "tags": ["boba fett", "devastator", "krayt dragon", "planetary bombardment", "timing", "indirect damage", "leader", "event"],
       "difficulty": 2
+   },
+   {
+      "id": 83,
+      "question": "Players A and B are playing _Premier_ (not _Twin Suns_). Player A controls 3 **_Clone Trooper_** tokens and 3 **_X-Wing_** tokens. Player B controls 2 **_Battle Droid_** tokens and 1 **_TIE Fighter_** token. If Player A wants to play a **_Republic Defense Carrier_**, how much would it cost?",
+      "choices": {
+         "a": "11",
+         "b": "8", 
+         "c": "5",
+         "d": "6"
+      },
+      "answer": "b",
+      "relevantCards": ["TTWI/T02", "TJTL/T02", "TTWI/T01", "TJTL/T01", "TWI/098"],
+      "relevantRule": "It doesn't matter how many units Player A has, **_Republic Defense Carrier's_** cost is reduced by the number of units controlled by the _opponent_ with the most units. In this case, Player A's only opponent is Player B, so the cost is reduced by 3.",
+      "tags": ["clone trooper", "x-wing", "battle droid", "tie fighet", "republic defense carrier", "cost", "discount", "token"],
+      "difficulty": 1
    }
 ]
