@@ -39,7 +39,7 @@ const getScaleForCards = (count: number): number => {
       1: 24,
       2: 24,
       3: 24,
-      4: 22,
+      4: 20,
     };
 
     return count < 5
