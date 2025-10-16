@@ -165,7 +165,7 @@
     "variants": [
       {
         "img": "darthvader1",
-        "answer": "something-else",
+        "answer": "name",
         "difficulty": 1,
         "explanation": "The unique symbol is missing from **_Darth Vader's_** name."
       }
@@ -670,6 +670,50 @@
           "answer": "d"
         },
         "explanation": "**_Rugged Survivors_** really triggers **On Attack**."
+      }
+    ]
+  },
+  {
+    "id": 31,
+    "actualCard": "SOR/114",
+    "variants": [
+      {
+        "img": "EscortSkiff1",
+        "answer": "traits",
+        "difficulty": 1,
+        "followUp": {
+          "question": "Which of **_Escort Skiff's_** traits is missing/incorrect?",
+          "choices": {
+            "a": "_Speeder_.",
+            "b": "_Underworld_.",
+            "c": "_Hutt_.",
+            "d": "_Bounty Hunter_."
+          },
+          "answer": "b"
+        },
+        "explanation": "**_Escort Skiff_** is an _Underworld_ unit."
+      },
+      {
+        "img": "EscortSkiff2",
+        "answer": "ability-text",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What does **_Escort Skiff's_** ability actually say?",
+          "choices": {
+            "a": "While you control another _Underworld_ unit...",
+            "b": "While you have the initiative...",
+            "c": "While you control another _Command_ unit...",
+            "d": "...this unit gains **Shielded**."
+          },
+          "answer": "c"
+        },
+        "explanation": "You need to control another _Command_ unit in order for **_Escort Skiff_** to gain **Ambush**."
+      },
+      {
+        "img": "EscortSkiff3",
+        "answer": "arena",
+        "difficulty": 0,
+        "explanation": "**_Escort Skiff_** is a Ground unit, not a Space unit."
       }
     ]
   }
