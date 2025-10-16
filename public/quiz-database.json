@@ -1198,5 +1198,35 @@
       "relevantRule": "**_Skyway Cloud Car_** specifies \"non-leader,\" so **_Chewbacca_** can't be chosen. Only units in play can be chosen as targets for abilities unless specifically stated, so the **_Vanguard Infantry_** is out. While the **_X-Wing_** is a token unit and cannot be returned to Player A's hand, it _can_ still be chosen. It will simply be set aside, out of play, instead.\n\n**3.7.3** - Tokens cannot enter out-of-play zones such as a player’s hand or discard pile. If a token would leave play for any reason, set it aside. It is still considered to have left play.\n\n**4.9.2** - There are three types of \"out-of-play\" zones: each player’s deck, each player’s hand, and each player’s discard pile. Cards in these zones are considered \"out of play,\" which means that by default they cannot affect the game through use of their abilities, power, or HP. For an ability to resolve from an out-of-play zone or to affect a card in an out-of-play zone, the ability must either explicitly state the out-of-play zone it resolves from or affects, or it must be a type of ability that by default resolves from an out-of-play zone.",
       "tags": ["chewbacca", "wilderness fighter", "x-wing", "vanguard infantry", "skyway cloud car", "token", "target", "bounce", "when defeated", "leader", "power"],
       "difficulty": 1
+   },
+   {
+      "id": 81,
+      "question": "Player A controls **_Migs Mayfeld_, Triggerman**, which has attacked Player B's base for 2 damage and has not used his triggered ability yet this phase. Player A's base has 6 HP remaining while Player B's base has 2 HP remaining and 1 card in hand. Player A plays **_Forced Surrender_**. What best describes what happens?",
+      "choices": {
+         "a": "Player B discards the only card in their hand. Player A may deal 2 damage to their base to win the game.",
+         "b": "Player B discards the only card in their hand. **_Migs_** does not trigger.",
+         "c": "Player B does not discard any cards since they don't have 2 cards to discard.",
+         "d": "Nothing happens."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/163", "SOR/175"],
+      "relevantRule": "Even though Player B doesn't have 2 cards in hand to discard, they must still discard the one they have. Also, **_Migs_** does not care who caused a player to discard a card. The action of any player discarding a card triggers his ability.\n\n**1.14.1** - To \"discard\" a card means to move it to its owner’s discard pile from another zone, usually from a player’s hand or deck. Certain abilities can cause a player to discard a card.",
+      "tags": ["migs mayfeld", "forced surrender", "discard", "ability"],
+      "difficulty": 1
+   },
+   {
+      "id": 82,
+      "question": "Player A controls a ready **_Boba Fett, Any Methods Necessary_**, a **_Devastator, Hunting the Rebellion_**, and has 6 HP remaining on their base. Player B controls a **_Krayt Dragon_** and has 13 HP remaining on their base. Player A plays **_Planetary Bombardment_** and chooses to deal all of its indirect damage to Player B's base. Which of the following is a possible outcome of the game?",
+      "choices": {
+         "a": "**_Planetary Bombardment_** deals 12 damage to Player B's base. **_Krayt Dragon_** _must_ resolve next, dealing 6 damage to Player A's base. Player B wins.",
+         "b": "**_Planetary Bombardment_** deals 12 damage to Player B's base. Player A _chooses_ to resolve their pending triggers first, exhausting **_Boba_** to deal 1 additional indirect damage to Player B's base. Player A wins.",
+         "c": "**_Planetary Bombardment_** deals 8 damage to Player B's base. Player A _chooses_ to resolve their pending triggers first, exhausting **_Boba_** to deal 1 additional indirect damage to Player B's base. **_Krayt Dragon_** resolves, dealing 6 damage to Player A's base. Player B wins.",
+         "d": "**_Planetary Bombardment_** deals 12 damage to Player B's base. **_Boba_** _must_ resolve next, so Player A exhausts him to deal 1 additional indirect damage to Player B's base. Player A wins."
+      },
+      "answer": "b",
+      "relevantCards": ["JTL/009", "JTL/143", "SHD/172", "JTL/181"],
+      "relevantRule": "The key here is that after **_Planetary Bombardment_** is finished resolving, there will be two pending triggers: **_Boba's_** and the **_Krayt's_**. Since Player A is the active player, they get to decide which player resolves their triggers first, meaning Player A literally holds their own fate in their hands.\n\n**7.6.10** - If both players must resolve triggered abilities on cards they control at the same time, the active player chooses one player at a time to resolve abilities. When chosen, that player resolves all abilities triggered on cards they control in the order of their choice, and once they finish, the other player does the same on cards they control.",
+      "tags": ["boba fett", "devastator", "krayt dragon", "planetary bombardment", "timing", "indirect damage", "leader", "event"],
+      "difficulty": 2
    }
 ]
