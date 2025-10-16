@@ -602,5 +602,75 @@
         "explanation": " "
       }
     ]
+  },
+  {
+    "id": 30,
+    "actualCard": "SOR/067",
+    "variants": [
+      {
+        "img": "Rugged Survivors1",
+        "answer": "traits",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What trait is missing/incorrect?",
+          "choices": {
+            "a": "_Fringe_.",
+            "b": "_Rebel_.",
+            "c": "_Bounty Hunter_.",
+            "d": "_Trooper_."
+          },
+          "answer": "a"
+        },
+        "explanation": "**_Rugged Survivors_** is actually _Fringe_, not _Underworld_."
+      },
+      {
+        "img": "Rugged Survivors2",
+        "answer": "power",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What is **_Rugged Survivors_**' actual power?",
+          "choices": {
+            "a": "2",
+            "b": "3",
+            "c": "5",
+            "d": "1"
+          },
+          "answer": "b"
+        },
+        "explanation": "**_Rugged Survivors_**' power is actually 3."
+      },
+      {
+        "img": "Rugged Survivors3",
+        "answer": "aspects",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What should **_Rugged Survivors_**' aspects actually be?",
+          "choices": {
+            "a": "_Command_ and _Heroism_.",
+            "b": "Single _Command_.",
+            "c": "Single _Vigilance_.",
+            "d": "_Vigilance_ and _Heroism_."
+          },
+          "answer": "c"
+        },
+        "explanation": "**_Outmaneuver_** has the _Tactic_ trait, not the _Maneuver_ trait."
+      },
+      {
+        "img": "Rugged Survivors4",
+        "answer": "trigger-condition",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What is **_Rugged Survivors_**' actual trigger condition?",
+          "choices": {
+            "a": "**When Defeated**.",
+            "b": "**When this unit completes an attack**.",
+            "c": "**When Played**/**On Attack**.",
+            "d": "**On Attack**."
+          },
+          "answer": "d"
+        },
+        "explanation": "**_Rugged Survivors_** really triggers **On Attack**."
+      }
+    ]
   }
 ]
