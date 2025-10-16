@@ -1153,5 +1153,50 @@
       "relevantRule": "Any of the mentioned units are valid targets. In the case of the **_TIE Fighter_** token, just because it has 1 HP doesn't mean you can't deal 4 damage to it. While the **_Secretive Sage's_** shield token would prevent the damage, that prevention is considered a \"repalcement effect\" and still satisfies **_First Light's_** requirement. Since the **_Lurking TIE_** is now considered \"friendly\", it will be damaged and defeated if chosen.\n\n**1.8.10** - If a replacement effect replaces part or all of a cost with another effect, the cost is still considered paid as long as that other effect can be resolved. If a replacement effect can’t be resolved, the original cost must be paid in full.",
       "tags": ["tie fighter", "token", "secretive sage", "shield", "lurking tie phantom", "traitorous", "first light", "smuggle", "target", "keyword", "friendly"],
       "difficulty": 2
+   },
+   {
+      "id": 78,
+      "question": "Player A controls a **_Mercenary Gunship_** with their leader, **_Poe Dameron, I Can Fly Anything_**, attached to it as a _Pilot_. Player B pays the 4 resources to take control of **_Mercenary Gunship_**. Which of the following statements is true?",
+      "choices": {
+         "a": "Player A can still use **_Poe's_** ability to move him to a different _Vehicle_ they control so long as it does not already have a _Pilot_ attached to it.",
+         "b": "**_Poe_** is defeated upon **_Mercenary Gunship_** changing control.",
+         "c": "Player B can now use **_Poe's_** ability to move him to a different _Vehicle_ they control so long as it does not already have a _Pilot_ attached to it.",
+         "d": "This play is not legal since **_Mercenary Gunship_** is a leader unit."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/256", "JTL/013-back"],
+      "relevantRule": "Interestingly, **_Poe Dameron, I Can Fly Anything_**, is the one _Pilot_ leader that does not make the _Vehicle_ he attached to into a leader unit. This means if his attached _Vehicle_ changes control, he goes with it. However, changing control of a unit does not change control of the upgrades attached to it. This means that not only does the unit survive the transfer of control (it would be immediately defeated otherwise), it also means that Player A is still the one who can use **_Poe's_** leader ability.\n\n**8.28.1.A** - If the card is a unit, it maintains its ready or exhausted status and keeps all damage counters on it. All upgrades attached to it remain attached and keep their original controllers. Its new controller orients it in its arena to face them.",
+      "tags": ["mercenary gunship", "poe dameron", "control", "pilot", "leader", "ability", "upgrade"],
+      "difficulty": 2
+   },
+   {
+      "id": 79,
+      "question": "Player A controls a **_Poe Dameron, Quick to Improvise_**. Player B controls a **_Concord Dawn Interceptors_** and no other units. Player B plays **_Entrenched_**, attaching it to **_Poe_**. Which of the following statements is true?",
+      "choices": {
+         "a": "**_Poe_** can attack Player B's base if Player A chooses to use his **On Attack** ability to discard a card and defeat the **_Entrenched_** upgrade.",
+         "b": "If **_Poe_** attacks, he must attack into **_Concord Dawn Interceptors_**.",
+         "c": "**_Poe_** can't attack at all.",
+         "d": "**_Entrenched_** can't be attached to **_Poe_** so this play is not legal."
+      },
+      "answer": "c",
+      "relevantCards": ["SHD/153", "SOR/072", "SHD/042"],
+      "relevantRule": "Since the first step of an attack is to \"Declare the attack\", **_Poe_** needs a valid target to attack before his **On Attack** ability can trigger, meaning in this situation, he cannot attack at all.\n\n**6.3.1** - Declare the attack. The active player chooses and exhausts a ready unit they control and then chooses what to attack: either an enemy unit in the same arena as it or the opponent’s base. Any abilities that are active \"while attacking\" become active.",
+      "tags": ["poe dameron", "entrenched", "concord dawn interceptors", "upgrade", "can't attack", "discard", "target", "sentinel", "on attack"],
+      "difficulty": 1
+   },
+   {
+      "id": 80,
+      "question": "Player A controls **_Chewbacca, Walking Carpet_**, with no damage on him, deployed as a unit, a **_Wilderness Fighter_** with a shield token, an **_X-Wing_** token, and a **_Vanguard Infantry_** in their discard pile that was defeated earlier this phase. Player B controls a **_Skyway Cloud Car_**. Player A defeats Player B's **_Skyway Cloud Car_**. What units, if chosen by Player B, will be returned to Player A's hand?",
+      "choices": {
+         "a": "**_Chewbacca_**, the **_Wilderness Fighter_**, and the **_X-Wing_** token.",
+         "b": "The **_Wilderness Fighter_** and the **_Vanguard Infantry_**",
+         "c": "The **_Wilderness Fighter_** and the **_X-Wing_** token.",
+         "d": "Only the **_Wilderness Fighter_**."
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/003-portrait", "SOR/064", "TJTL/T02", "SOR/108", "JTL/220"],
+      "relevantRule": "**_Skyway Cloud Car_** specifies \"non-leader,\" so **_Chewbacca_** can't be chosen. Only units in play can be chosen as targets for abilities unless specifically stated, so the **_Vanguard Infantry_** is out. While the **_X-Wing_** token _can_ be chosen, since it's a token unit, instead of being returned to Player A's hand, will be set aside, out of play. This leaves only the **_Wilderness Fighter_**.\n\n**3.7.3** - Tokens cannot enter out-of-play zones such as a player’s hand or discard pile. If a token would leave play for any reason, set it aside. It is still considered to have left play.\n\n**4.9.2** - There are three types of \"out-of-play\" zones: each player’s deck, each player’s hand, and each player’s discard pile. Cards in these zones are considered \"out of play,\" which means that by default they cannot affect the game through use of their abilities, power, or HP. For an ability to resolve from an out-of-play zone or to affect a card in an out-of-play zone, the ability must either explicitly state the out-of-play zone it resolves from or affects, or it must be a type of ability that by default resolves from an out-of-play zone.",
+      "tags": ["chewbacca", "wilderness fighter", "x-wing", "vanguard infantry", "skyway cloud car", "token", "target", "bounce", "when defeated", "leader", "power"],
+      "difficulty": 1
    }
 ]
