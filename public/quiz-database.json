@@ -1113,16 +1113,16 @@
       "id": 75,
       "question": "Player A controls **_Saw Gerrera, Resistance is Not Terrorism_**,  upgraded with **_Vambrace Flamethrower_** and has 13 damage on their base. Player B controls an **_OOM-Series Officer_**, 8 **_Battle Droid_** tokens, and 8 **_TIE Fighter_** tokens. Player A attacks Player B's base with **_Saw Gerrera_**, and uses **_Vambrace Flamethrower_** to defeat the **_OOM-Series Officer_** and 2 **_Battle Droids_**. What best descibes what happens next?",
       "choices": {
-         "a": "Player A's base takes 2 damage and **_Saw's_** ability may defeat the rest of the **_Battle Droids_**.",
+         "a": "Player A's base takes 2 damage and **_Saw's_** ability defeats the rest of the **_Battle Droids_**.",
          "b": "Player A's base takes 2 damage and that's it.", 
-         "c": "Player A's base takes 2 damage and **_Saw's_** ability may defeat the rest of the **_Battle Droids_** and all of the **_TIE Fighters_**.",
-         "d": "Player A's base takes 2 damage and **_Saw's_** ability may defeat 3 more **_Battle Droids_**."
+         "c": "Player A's base takes 2 damage and **_Saw's_** ability defeats the rest of the **_Battle Droids_** and all of the **_TIE Fighters_**.",
+         "d": "Player A's base takes 2 damage and **_Saw's_** ability defeats 3 more **_Battle Droids_**."
       },
-      "answer": "b",
+      "answer": "a",
       "relevantCards": ["TWI/150", "SHD/177", "TWI/131", "TTWI/T01", "TJTL/T01"],
-      "relevantRule": "**On Attack** abilities trigger during the \"Declare the Attack\" step when attacking with a unit. Once combat has proceded beyond that step, it's too late for other **On Attack** abilities to trigger, even if combat results in their requirements being met. In this case, since Player A's base didn't have 15 damage on it when **_Saw_** began his attack, that ability does not trigger.\n\n**6.3.1.G** - After declaring the attack, resolve any \"On Attack\" abilities on the attacker and any other abilities triggered during this step, including Restore, Saboteur, and \"When this unit is attacked\" abilities on the defender. See 7.6. Triggered Abilities",
+      "relevantRule": "While Player A's base did not have 15 damage on it when **_Saw_** attacked, his **On Attack** ability would still trigger since the amount of damage on his base is not checked until the ability resolves. This means that the 2 damage done by the **_OOM-Series Officer's_** **When Defeated** arrives just in time for **_Saw's_** **On Attack** to deal 1 damage to each other ground unit.\n\n**6.3.1.G** - After declaring the attack, resolve any \"On Attack\" abilities on the attacker and any other abilities triggered during this step, including Restore, Saboteur, and \"When this unit is attacked\" abilities on the defender. See 7.6. Triggered Abilities",
       "tags": ["saw gerrera", "vambrace flamethrower", "oom-series officer", "battle droid", "tie fighter", "token", "upgrade", "on attack", "timing", "when defeated"],
-      "difficulty": 1
+      "difficulty": 2
    },
    {
       "id": 76,
@@ -1318,5 +1318,35 @@
       "relevantRule": "Since **_Cham's_** ability does not specify \"ready\" or \"exhausted\" resources, the state of Player A's resources is irrelevant. The fact that both players control a total of 7 resources at the time he is played means nothing happens.",
       "tags": ["cham syndulla", "when played", "resources"],
       "difficulty": 0
+   },
+   {
+      "id": 89,
+      "question": "Player A controls **_Tech, Source of Insight_**, and **_Bright Hope, The Last Transport_**. How much would they have to pay to **Smuggle** a **_Luke Skywalker, You Still With Me?_** into play as a _Pilot_ and attach him to **_Bright Hope_**?",
+      "choices": {
+         "a": "3",
+         "b": "This play is illegal.",
+         "c": "4",
+         "d": "5"
+      },
+      "answer": "b",
+      "relevantCards": ["SHD/248", "SOR/099", "JTL/094"],
+      "relevantRule": "Unfortunately **Smuggle** and **Piloting** are both considered \"alternate costs\" for cards and therefore only one can be chosen. In this case, if Player A wants to **Smuggle** **_Luke_** into play, he'd have to enter play as a ground unit for 4 resources.\n\nOfficial clarification Tweeted by Tyler Parrott on Dec 4, 2024.",
+      "tags": ["tech", "bright hope", "luke skywalker", "pilot", "upgrade", "smuggle", "resources", "cost"],
+      "difficulty": 1
+   },
+   {
+      "id": 90,
+      "question": "Player A is playing **_Cassian Andor, Dedicated to the Rebellion_**, as their leader and **_Echo Base_** as their base. They also control **_Tech, Source of Insight_**. Player A reveals that they intend to play **_Tobias Beckett, I Tust No One_**, from resources using **Smuggle**. What is the fewest number of resources needed to pay for him?",
+      "choices": {
+         "a": "6",
+         "b": "8",
+         "c": "7",
+         "d": "5"
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/013", "SOR/024", "SHD/248", "SHD/217"],
+      "relevantRule": "Having **_Tech_** in play gives **_Tobias_** a second **Smuggle** option which Player A can choose from. Unfortunately, this option would be **_Tobias's_** regular cost, including aspects, plus 2. Since neither Player A's leader nor their base provide the _Cunning_ aspect, that means paying for **_Tobias_** using **_Tech_** would actually cost 8 resources. It'd be cheaper to pay for him using his own **Smuggle** cost, resulting in only having to pay 7.\n\n**7.5.14.A** - \"Smuggle\" is a keyword whose effect is the same as the constant ability: \"You may play this card from your resource zone by paying cost Y instead of its printed cost, replacing it with the top card of your deck. This ability is active while this card is a resource,\" where Y is the cost in brackets following \"Smuggle.\" Paying this cost follows all normal rules for paying costs, including accounting for any aspect penalties that modify this cost",
+      "tags": ["cassian andor", "echo base", "tech", "tobias backett", "smuggle", "keyword", "cost", "aspects", "leader"],
+      "difficulty": 2
    }
 ]
