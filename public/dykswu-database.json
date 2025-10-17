@@ -282,10 +282,10 @@
         "followUp": {
           "question": "What should **_97th Legion's_** aspects actually be?",
           "choices": {
-            "a": "Single _Vigilance_.",
-            "b": "Single _Aggression_.",
-            "c": "Double _Command_.",
-            "d": "Single _Command_."
+            "a": "_Vigilance_",
+            "b": "_Aggression_",
+            "c": "_Command_ _Command_",
+            "d": "_Command_"
           },
           "answer": "d"
         },
@@ -592,10 +592,10 @@
         "followUp": {
           "question": "What should **_Warrior Drone's_** aspects actually be?",
           "choices": {
-            "a": "_Aggression_ and _Heroism_.",
-            "b": "Single _Aggression_.",
-            "c": "_Vigilance_ and _Heroism_.",
-            "d": "Single _Vigilance_."
+            "a": "_Aggression_ _Heroism_",
+            "b": "_Aggression_",
+            "c": "_Vigilance_ _Heroism_",
+            "d": "_Vigilance_"
           },
           "answer": "d"
         },
@@ -646,10 +646,10 @@
         "followUp": {
           "question": "What should **_Rugged Survivors_**' aspects actually be?",
           "choices": {
-            "a": "_Command_ and _Heroism_.",
-            "b": "Single _Command_.",
-            "c": "Single _Vigilance_.",
-            "d": "_Vigilance_ and _Heroism_."
+            "a": "_Command_ _Heroism_",
+            "b": "_Command_",
+            "c": "_Vigilance_",
+            "d": "_Vigilance_ _Heroism_"
           },
           "answer": "c"
         },

@@ -213,6 +213,18 @@ export function renderItalicsAndBold(text: string): React.JSX.Element {
           </strong>;
         } else if (part.startsWith('_') && part.endsWith('_')) {
           const emphText = part.slice(1, -1);
+          const aspects = ["Heroism", "Villainy", "Command", "Aggression", "Vigilance", "Cunning"];
+          if (aspects.includes(emphText)) {
+            const iconMap: { [key: string]: string } = {
+              "Heroism": "/assets/SWH_Aspects_Heroism.png",
+              "Villainy": "/assets/SWH_Aspects_Villainy.png",
+              "Command": "/assets/SWH_Aspects_Command.png",
+              "Aggression": "/assets/SWH_Aspects_Aggression.png",
+              "Vigilance": "/assets/SWH_Aspects_Vigilance.png",
+              "Cunning": "/assets/SWH_Aspects_Cunning.png",
+            };
+            return <img key={partIndex} src={iconMap[emphText]} alt={emphText} className="inline h-8 uwd:h-14 4k:h-20 w-8 uwd:w-14 4k:w-20 mx-1" />;
+          }
           return <em key={partIndex}>{processText(emphText)}</em>;
         } else {
           return processText(part);
