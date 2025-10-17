@@ -89,7 +89,7 @@ function QuizPage() {
 
   const modeDescriptions: ModeDescriptions = {
     "": "",
-    "standard": "Your standard quiz-like experience.\nSelect a set number of questions to be pulled randomly from our entire databank and see how many you can answer correctly!\nReceive a score at the end!",
+    "standard": "Your standard quiz-like experience.\nSelect a quiz length and see how many you can answer correctly!\nReceive a score at the end!",
     "marathon": `Correctly answer every question in the databank to complete the marathon!\n\nTotal Questions: ${quizModeSets.all.length}`,
     "endless": "Answer random questions with no end in sight!",
     "padawan": `A perfect place for new players to test their knowledge of the basics of SWU!\n\nTotal Questions: ${quizModeSets.padawan.length}`,
@@ -109,7 +109,7 @@ function QuizPage() {
           <p className="text-sm uwd:text-lg uwd:my-2 4k:text-3xl 4k:my-4 text-left">
             Choose a quiz mode below that suits your style.
             <br/>Incorrect responses will keep the question in the pool to ask again later (except in Standard).
-            <br/>Standard, Marathon, and Endless pull questions randomly from our entire collection of questions.
+            <br/>Standard, Marathon, and Endless pull questions randomly from our entire databank (no filtering).
             <br/>Padawan (easy), Knight (medium), or Master (hard) modes will filter selected questions to those difficulties.
             <br/>If you spot any issues or have any questions about the content on this site, please let us know on our Discord!
           </p>
