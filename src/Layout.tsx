@@ -26,17 +26,27 @@ function Layout({ children }: { children: React.ReactNode }) {
             {/* <a className="btn btn-ghost text-xl md:text-3xl uwd:!text-4xl 4k:!text-7xl" href="#/puzzles">Puzzles</a> */}
           </div>
           {/* Right side tray */}
-          <div className="gap-4 bg-opacity-50 py-2 px-10 4k:px-14 bg-[rgba(255,255,255,0.25)] rounded-full absolute -right-8 top-1/2 transform -translate-y-1/2">
+            <div className="flex items-center gap-4 uwd:gap-6 4k:gap-8 bg-opacity-50 py-1 px-5 4k:px-8 4k:py-4 uwd:px-6
+              bg-[rgba(255,255,255,0.25)] rounded-full absolute right-2 uwd:right-4 4k:right-8 top-1/2 transform -translate-y-1/2">
             <a
               href="https://discord.gg/dbQXnVkjFV"
               target="_blank"
               rel="noopener noreferrer"
-              className="relative right-4"
+              className="relative"
               aria-label="Join our Discord"
             >
-              <img src="/assets/Discord-logo2.png" alt="Discord" className="w-8 lg:w-10 uwd:!w-14 4k:!w-24" />
+              <img src="/assets/Discord-logo2.png" alt="Discord" className="w-8 lg:w-10 uwd:!w-14 4k:!w-20" />
             </a>
-          </div>
+            <a
+              href="https://www.patreon.com/mobyus1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative"
+              aria-label="Support us on Patreon"
+            >
+              <img src="/assets/PatreonIcon.png" alt="Patreon" className="w-6 lg:w-8 uwd:!w-11 4k:!w-15" />
+            </a>
+            </div>
         </div>
       </div>
       <div className="relative p-4 z-10 min-h-[75vh]">
