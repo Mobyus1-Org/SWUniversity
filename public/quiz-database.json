@@ -1288,5 +1288,35 @@
       "relevantRule": "When Player A's second **_Toro_** enters play, the first **_Toro's_** ability triggers, but waits to resolve until after one has been defeated due to uniquness. This means the only two options are to either defeat the new **_Toro_**, meaning you can no longer deal 1 damage to it, or to defeat the original **_Toro_**, in which case it could not ready... it'd be in the discard pile.\n\n**8.30.4** - A player can only control one copy of each unique card at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
       "tags": ["toro calican", "uniqueness", "ability", "timing"],
       "difficulty": 1
+   },
+   {
+      "id": 87,
+      "question": "Player A controls a **_Seasoned Fleet Admiral_**. Player B plays **_I Am Your Father_**, targeting one of Player A's units. Player A says, \"no,\" with great passion. How many Experience tokens does Player A give to their units?",
+      "choices": {
+         "a": "3",
+         "b": "1",
+         "c": "7",
+         "d": "0"
+      },
+      "answer": "b",
+      "relevantCards": ["JTL/111", "SOR/233"],
+      "relevantRule": "Since **_Seasoned Fleet Admiral_** specifies \"1 or more cards,\" it doesn't matter how many cards Player B draws, its ability only allows Player A to give one Experience token for each instance of drawing cards.",
+      "tags": ["seasoned fleet admiral", "i am your father", "ability", "removal", "experience", "token", "trigger"],
+      "difficulty": 0
+   },
+   {
+      "id": 88,
+      "question": "Player A has 7 resources, 4 of which are readied. Player B also has 7 resources, 4 of which are readied. Player B plays **_Cham Syndulla, Rallying Ryloth_**. What best describes what happens?",
+      "choices": {
+         "a": "Nothing.",
+         "b": "Player B places the top card of their deck into play as a ready resource.",
+         "c": "Player B places the top card of their deck into play as an exhausted resource.",
+         "d": "Player B readies 4 of their resources."
+      },
+      "answer": "a",
+      "relevantCards": ["JTL/164"],
+      "relevantRule": "Since **_Cham's_** ability does not specify \"ready\" or \"exhausted\" resources, the state of Player A's resources is irrelevant. The fact that both players control a total of 7 resources at the time he is played means nothing happens.",
+      "tags": ["cham syndulla", "when played", "resources"],
+      "difficulty": 0
    }
 ]
