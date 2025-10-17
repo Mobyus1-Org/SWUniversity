@@ -4,6 +4,7 @@ import type { AppModeSetEntry, Quiz, UserResponse } from "../util/func";
 import { ModeButtons } from "../components/Shared/ModeButtons";
 import { QuizContent } from "../components/Quiz/QuizContent";
 import type { AppModes, ModeDescriptions } from "../util/const";
+import { useSearchParams } from "react-router-dom";
 
 function QuizPage() {
   const [loading, setLoading] = React.useState(true);
@@ -18,10 +19,13 @@ function QuizPage() {
   const [quizResult, setQuizResult] = React.useState<boolean>(false);
   const [standardQuizLength, setStandardQuizLength] = React.useState<number>(0);
   const [userResponses, setUserResponses] = React.useState<UserResponse[]>([]);
+  //TODO: remove this once we go live
+  const [searchParams] = useSearchParams();
+  const testId = searchParams.get("Mobyus1hereisatestid");
 
   React.useEffect(() => {
     getQuizDataAsync().then(data => {
-      setAllQuizzes(data);
+      setAllQuizzes(testId ? data.filter(q => q.id === Number(testId)) : data);
       if(sessionStorage.getItem("loadedQuizData") === "true") {
         setLoading(false);
         return;
@@ -32,7 +36,7 @@ function QuizPage() {
         sessionStorage.setItem("loadedQuizData", "true");
       });
     });
-  }, []);
+  }, [testId]);
 
   const renderQuizContent = () => loading
     ? <p className="text-lg uwd:text-3xl 4k:text-5xl">Loading quizzes...</p>

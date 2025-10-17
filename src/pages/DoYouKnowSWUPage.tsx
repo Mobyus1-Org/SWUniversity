@@ -3,6 +3,7 @@ import { getDoYouKnowSWUDataAsync, getModeTitle, preloadImagesAsync, type AppMod
 import { ModeButtons } from "../components/Shared/ModeButtons";
 import { QuestionContent } from "../components/DoYouKnowSWU/QuestionContent";
 import type { AppModes, ModeDescriptions } from "../util/const";
+import { useSearchParams } from "react-router-dom";
 
 function DoYouKnowSWUPage() {
   const [loading, setLoading] = React.useState(true);
@@ -18,10 +19,13 @@ function DoYouKnowSWUPage() {
   const [questionsCompleted, setQuestionsCompleted] = React.useState<number[]>([]);
   const [userResponses, setUserResponses] = React.useState<UserResponse[]>([]);
   const [lastEndlessQuestions, setLastEndlessQuestions] = React.useState<number[]>([]);
+  //TODO: remove this once we go live
+  const [searchParams] = useSearchParams();
+  const testId = searchParams.get("Mobyus1hereisatestid");
 
   React.useEffect(() => {
     getDoYouKnowSWUDataAsync().then(data => {
-      setAllQuestions(data);
+      setAllQuestions(testId ? data.filter(q => q.id === Number(testId)) : data);
       if(sessionStorage.getItem("loadedDYKSWUData") === "true") {
         setLoading(false);
         return;
@@ -32,7 +36,7 @@ function DoYouKnowSWUPage() {
         sessionStorage.setItem("loadedDYKSWUData", "true");
       });
     });
-  }, []);
+  }, [testId]);
 
   const renderQuestionContent = () => loading
     ? <p className="text-lg uwd:text-3xl 4k:text-5xl">Loading questions...</p>
