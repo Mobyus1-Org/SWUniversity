@@ -18,10 +18,9 @@ function Layout({ children }: { children: React.ReactNode }) {
       <div className={`relative navbar z-10 border-b ${globalBackgroundStyle}`}>
         <div className="flex justify-between items-center w-full px-4">
           {/* Left side links */}
-          <div className="flex gap-4 uwd:py-4 4k:py-10">
+          <div className="flex w-11/16 gap-1 md:gap-8 uwd:!gap-24 4k:!gap-30 uwd:py-4 4k:py-10 overflow-x-scroll">
             <a className="btn btn-ghost text-xl md:text-3xl uwd:!text-4xl 4k:!text-7xl" href="#/" onClick={handleNavClick}>Home</a>
             <a className="btn btn-ghost text-xl md:text-3xl uwd:!text-4xl 4k:!text-7xl" href="#/quiz" onClick={handleNavClick}>Quiz</a>
-
             <a className="btn btn-ghost text-xl md:text-3xl uwd:!text-4xl 4k:!text-7xl flex-col" href="#/do-you-know-swu" onClick={handleNavClick}>DYKSWU?</a>
             {/* <a className="btn btn-ghost text-xl md:text-3xl uwd:!text-4xl 4k:!text-7xl" href="#/puzzles">Puzzles</a> */}
           </div>
