@@ -3,7 +3,7 @@ import { getModeTitle, getQuizDataAsync, preloadImagesAsync } from "../util/func
 import type { AppModeSetEntry, Quiz, UserResponse } from "../util/func";
 import { ModeButtons } from "../components/Shared/ModeButtons";
 import { QuizContent } from "../components/Quiz/QuizContent";
-import type { AppModes, ModeDescriptions } from "../util/const";
+import { globalBackgroundStyle, type AppModes, type ModeDescriptions } from "../util/const";
 import { useSearchParams } from "react-router-dom";
 
 function QuizPage() {
@@ -99,6 +99,21 @@ function QuizPage() {
 
   return <div>
     <h1 className="text-center text-4xl font-bold md:text-4xl uwd:!text-5xl 4k:!text-7xl mb-4">{getModeTitle("quiz", quizMode)}</h1>
+    <div className={`${globalBackgroundStyle} w-1/2 m-auto text-xl text-center p-2 mb-4 4k:p-4 4k:mb-8 border`}>
+      <p>
+        Welcome to the SWUniversity Quiz Game!
+        <br/>Test your knowledge of the SWU TCG with a variety of quiz modes:
+        <div className="w-3/4 uwd:w-1/2 4k:w-1/4 m-auto">
+          <p className="text-sm text-left">
+            Standard Mode: Choose a set number of questions to answer.
+            <br/>Marathon Mode: Answer all questions in the databank correctly to complete the marathon.
+            <br/>Endless Mode: Answer random questions with no end in sight.
+            <br/>Difficulty Modes: Choose from Padawan (easy), Knight (medium), or Master (hard) question sets.
+            <br/>Select a mode to get started and see how well you know the SWU TCG!
+          </p>
+        </div>
+      </p>
+    </div>
     {
       quizMode === "" || (quizMode === "standard" && standardQuizLength === 0)
         ? <ModeButtons
