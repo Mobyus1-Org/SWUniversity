@@ -89,8 +89,8 @@ function QuizPage() {
 
   const modeDescriptions: ModeDescriptions = {
     "": "",
-    "standard": "Choose a set number of questions to be pulled from our databank and see how many you can answer correctly!",
-    "marathon": `Correctly answer every question in the databank once to complete the marathon!\n\nTotal Questions: ${quizModeSets.all.length}`,
+    "standard": "Your standard quiz-like experience.\nSelect a set number of questions to be pulled randomly from our entire databank and see how many you can answer correctly!\nReceive a score at the end!",
+    "marathon": `Correctly answer every question in the databank to complete the marathon!\n\nTotal Questions: ${quizModeSets.all.length}`,
     "endless": "Answer random questions with no end in sight!",
     "padawan": `A perfect place for new players to test their knowledge of the basics of SWU!\n\nTotal Questions: ${quizModeSets.padawan.length}`,
     "knight": `A challenging mode for those who have a solid understanding of SWU and want to test their skills further!\n\nTotal Questions: ${quizModeSets.knight.length}`,
@@ -102,16 +102,16 @@ function QuizPage() {
     {
       quizMode === "" && <div className={`${globalBackgroundStyle} lg:w-3/4 xl:w-1/2 m-auto text-xl uwd:text-3xl 4k:text-5xl text-center p-2 mb-4 4k:p-4 4k:mb-8 border`}>
         <p>
-          Welcome to the SWUniversity Quiz Game!
-          <br/>Test your knowledge of the SWU TCG with a variety of quiz modes:
+          Welcome to the SWUniversity Quiz Mode!
+          <br/>Whether you're here to test your knowledge, challenge your friends, or just have some fun, you've come to the right place!
         </p>
         <div className="w-3/4 uwd:w-1/2 4k:w-5/8 m-auto">
           <p className="text-sm uwd:text-lg uwd:my-2 4k:text-3xl 4k:my-4 text-left">
-            Standard Mode: Choose a set number of questions to answer.
-            <br/>Marathon Mode: Answer all questions in the databank correctly to complete the marathon.
-            <br/>Endless Mode: Answer random questions with no end in sight.
-            <br/>Difficulty Modes: Choose from Padawan (easy), Knight (medium), or Master (hard) question sets.
-            <br/>Select a mode to get started and see how well you know the SWU TCG!
+            Choose a quiz mode below that suits your style.
+            <br/>Incorrect responses will keep the question in the pool to ask again later (except in Standard).
+            <br/>Standard, Marathon, and Endless pull questions randomly from our entire collection of questions.
+            <br/>Padawan (easy), Knight (medium), or Master (hard) modes will filter selected questions to those difficulties.
+            <br/>If you spot any issues or have any questions about the content on this site, please let us know on our Discord!
           </p>
         </div>
       </div>
