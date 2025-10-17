@@ -19,7 +19,7 @@ export function RelevantCardsPanel({ currentQuiz, setShowModal }: IProps) {
           currentQuiz.relevantCards.map((cardName: string, index: number) => {
             const scaleClass = isHorizontalCard(cardName) ? "w-fit" : "h-fit";
             const scaleStyle = isHorizontalCard(cardName) ? { height: `${scale}vh`, } : { width: `${scale}vh`, };
-            return <div key={index} className={`${scaleClass} m-2.5 align`} style={scaleStyle}>
+            return <div key={"relevant-card-" + index} className={`${scaleClass} m-2.5 align`} style={scaleStyle}>
               <img src={getSWUDBImageLink(cardName)} alt={`card ${cardName}`} className="max-h-full object-contain" />
             </div>
           })

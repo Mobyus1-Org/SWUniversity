@@ -86,7 +86,7 @@ export function QuizContent({
       return "";
     };
 
-    const divs = currentQuizKeys.map((_, index) => <div key={index} className={`mb-2.5 uwd:mb-4 4k:mb-8 ${highlighted(index)}`}>
+    const divs = currentQuizKeys.map((_, index) => <div key={"choice-" + index} className={`mb-2.5 uwd:mb-4 4k:mb-8 ${highlighted(index)}`}>
         <button
           type="button"
           className={`w-full text-left px-4 uwd:px-8 4k:px-16 py-2 uwd:py-4 4k:py-8 border rounded-lg hover:bg-slate-700/50 transition-colors
@@ -180,7 +180,7 @@ export function QuizContent({
           <p className="absolute top-2 md:top-4 right-4 md:right-8 text-gray-400 md:text-4xl 4k:!text-7xl" onClick={() => setShowModal(false)}>X</p>
           <div className="flex flex-wrap justify-center py-8 md:px-24">
           {
-            currentQuiz.relevantCards.map((cardName: string, index: number) => <div key={index}
+            currentQuiz.relevantCards.map((cardName: string, index: number) => <div key={"relevant-card-" + index}
                 className="w-fit h-100 lg:h-120 uwd:!h-190 4k:!h-280 m-2.5">
               <img src={getSWUDBImageLink(cardName)} alt={`card ${cardName}`} className="max-h-full object-contain" />
             </div>)

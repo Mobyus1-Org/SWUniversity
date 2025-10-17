@@ -120,7 +120,7 @@ export function ModeButtons({mode, appModeSets, standardModeLength, modeDescript
         >
           <option value={0} disabled></option>
           {
-            [5, 10, 25].map(length => <option key={length} value={length}>{length}</option>)
+            [5, 10, 25].map(length => <option key={"q-length-" + length} value={length}>{length}</option>)
           }
         </select>
       </div>

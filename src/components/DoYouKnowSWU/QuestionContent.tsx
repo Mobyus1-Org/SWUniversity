@@ -113,7 +113,7 @@ export function QuestionContent({
     const divs = <div className="grid grid-cols-2 gap-2.5 uwd:gap-3.8 4k:gap-5">
       {
         showFirstChoices && DYKSWUChoices.map((_, index) => (
-          <div key={index} className={`${highlighted(index)}`}>
+          <div key={"choice-" + index} className={`${highlighted(index)}`}>
             <button
               type="button"
               className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 transition-colors
@@ -148,7 +148,7 @@ export function QuestionContent({
                 return "";
               }
 
-              return <div key={index} className={`${highlighted()}`}>
+              return <div key={"follow-up-" + index} className={`${highlighted()}`}>
               <button
                 type="button"
                 className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 transition-colors

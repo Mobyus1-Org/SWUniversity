@@ -175,11 +175,11 @@ export function renderItalicsAndBold(text: string): React.JSX.Element {
     return <>{text}</>;
   };
 
-  const processText = (text: string): React.JSX.Element => {
+  const processText = (text: string, key: number): React.JSX.Element => {
     const parts = text.split(' ');
     if (parts.length > 1 && parts.some(part => buffPattern.test(part))) {
       return <>{parts.map((part, index) => (
-        <span key={index}>
+        <span key={"proc-text-" + index}>
           {processBuffText(part)}
           {index < parts.length - 1 ? ' ' : ''}
         </span>
@@ -188,28 +188,31 @@ export function renderItalicsAndBold(text: string): React.JSX.Element {
       return processBuffText(text);
     }
     if (highlightWords.includes(text)) {
-      return <span className="text-red-400">{text}</span>;
+      return <span key={"highlight-word-" + key} className="text-red-400">{text}</span>;
     }
-    return <>{text}</>;
+    return <span key={"proc-text-" + key}>{text}</span>;
   };
 
   return <>{lines.map((line, index) => {
     const parts = line.split(/(\*\*.*?\*\*|_.*?_)/g); //split by **text** or _text_
-    return <span key={index}>
-      {parts.map((part, partIndex) => {
+    return <span key={"line-" + index}>
+    {
+      parts.map((part, partIndex) => {
         if (part.startsWith('**') && part.endsWith('**')) {
           const innerText = part.slice(2, -2);
           //check if innerText has _text_ within it
           const innerParts = innerText.split(/(_.*?_)/g);
-          return <strong key={partIndex}>
-            {innerParts.map((innerPart, innerPartIndex) => {
+          return <strong key={"part-" + partIndex}>
+          {
+            innerParts.map((innerPart, innerPartIndex) => {
               if (innerPart.startsWith('_') && innerPart.endsWith('_')) {
                 const emphText = innerPart.slice(1, -1);
-                return <em key={innerPartIndex}>{processText(emphText)}</em>;
+                return <em key={"inner-part-" + innerPartIndex}>{processText(emphText, innerPartIndex)}</em>;
               } else {
-                return processText(innerPart);
+                return processText(innerPart, innerPartIndex);
               }
-            })}
+            })
+          }
           </strong>;
         } else if (part.startsWith('_') && part.endsWith('_')) {
           const emphText = part.slice(1, -1);
@@ -223,14 +226,15 @@ export function renderItalicsAndBold(text: string): React.JSX.Element {
               "Vigilance": "/assets/SWH_Aspects_Vigilance.png",
               "Cunning": "/assets/SWH_Aspects_Cunning.png",
             };
-            return <img key={partIndex} src={iconMap[emphText]} alt={emphText} className="inline h-8 uwd:h-14 4k:h-20 w-8 uwd:w-14 4k:w-20 mx-1" />;
+            return <img key={"part-" + partIndex} src={iconMap[emphText]} alt={emphText} className="inline h-8 uwd:h-14 4k:h-20 w-8 uwd:w-14 4k:w-20 mx-1" />;
           }
-          return <em key={partIndex}>{processText(emphText)}</em>;
+          return <em key={"part-" + partIndex}>{processText(emphText, partIndex)}</em>;
         } else {
-          return processText(part);
+          return processText(part, partIndex);
         }
-      })}
-      <br />
+      })
+    }
+    <br />
     </span>;
   })}</>;
 }
