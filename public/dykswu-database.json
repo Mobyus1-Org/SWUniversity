@@ -56,6 +56,22 @@
           "answer": "b"
         },
         "explanation": "**_Red Three, Unstoppable_** gives friendly _Heroism_ units **Raid 1**, not _Aggression_ units."
+      },
+      {
+        "img": "RedThree2",
+        "answer": "art",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What is wrong with the art?",
+          "choices": {
+            "a": "A color was changed.",
+            "b": "The art is mirrored.",
+            "c": "This art is from a different card.",
+            "d": "Something was added/removed."
+          },
+          "answer": "b"
+        },
+        "explanation": "This art is actually from the card **_Red Five, Running the Trench_**."
       }
     ]
   },
