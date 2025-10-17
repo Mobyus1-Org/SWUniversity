@@ -1243,5 +1243,35 @@
       "relevantRule": "It doesn't matter how many units Player A has, **_Republic Defense Carrier's_** cost is reduced by the number of units controlled by the _opponent_ with the most units. In this case, Player A's only opponent is Player B, so the cost is reduced by 3.",
       "tags": ["clone trooper", "x-wing", "battle droid", "tie fighet", "republic defense carrier", "cost", "discount", "token"],
       "difficulty": 1
+   },
+   {
+      "id": 84,
+      "question": "Player A controls a ready **_Count Dooku, Face of the Confederacy_**, and 4 **_Battle Droid_** tokens. Player A wants to use **_Count Dooku's_** leader ability to play **_Vuutun Palaa, Droid Control Ship_**, from their hand. How many resources would they need to pay?",
+      "choices": {
+         "a": "7",
+         "b": "0",
+         "c": "3",
+         "d": "5"
+      },
+      "answer": "c",
+      "relevantCards": ["TWI/005", "TTWI/T01", "SEC/122"],
+      "relevantRule": "Since **_Battle Droid_** tokens have the _Droid_ trait, Player A's 4 **_Battle Droids_** discount **_Vuutun Palaa_** from 9 down to 5. Then, by using **_Count Dooku's_** leader ability, they may defeat one of the **_Battle Droids_** using **Exploit**, further reducing the cost to 3. Unfortunately, **_Vuutun Palaa's_** second ability cannot be used to exhaust _Droids_ to pay for itself since that ability is not active until after **_Vuutun Palaa_** is in play.\n\n**7.3.2** - A constant ability immediately comes into effect when the card it is on enters play and remains in effect while the card is in play.\n\n**7.5.16.C** - Exploit is used during Step 3 of the \"Play a Card\" action: Determine cost(s).",
+      "tags": ["count dooku", "battle droid", "vuutun palaa", "token", "exploit", "keyword", "cost", "discount", "droid", "separatist", "leader", "ability"],
+      "difficulty": 1
+   },
+   {
+      "id": 85,
+      "question": "Player A controls **_Tech, Source of Insight_**. Player B plays **_Scanning Officer_** and chooses 3 of Player A's resources. The revealed resources are a **_Vigilant Pursuit Craft_**, a **_Smuggler's Aid_**, and a **_Clan Wren Rescuer_**. Which resources are defeated?",
+      "choices": {
+         "a": "The **_Vigilant Pursuit Craft_** and the **_Smuggler's Aid_**.",
+         "b": "None of them.",
+         "c": "Only the **_Smuggler's Aid_**.",
+         "d": "All of them."
+      },
+      "answer": "d",
+      "relevantCards": ["SHD/248", "SHD/114", "SHD/065", "SHD/252", "SHD/040"],
+      "relevantRule": "Player A's **_Tech_** grants each of their resources the **Smuggle** keyword, meaning when Player B reveals them with **_Scanning Officer_**, it doesn't matter what is on the card, it's going to be defeated.",
+      "tags": ["tech", "scanning officer", "vigilant pursuit craft", "smuggler's aid", "clan wren rescuer", "smuggle", "resources", "keyword", "target"],
+      "difficulty": 1
    }
 ]
