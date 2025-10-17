@@ -90,7 +90,7 @@ export function QuestionContent({
   const showFirstChoices = !currentVariantQuestion.followUp
     || (currentVariantQuestion.followUp && !questionResult)
     || (currentVariantQuestion.followUp && !followUpSubmitted && selectedAnswer !== currentVariantQuestion.answer);
-  const showFollowUpChoices = questionResult && currentVariantQuestion.followUp && !followUpSubmitted && selectedAnswer === currentVariantQuestion.answer;
+  const showFollowUpChoices = questionResult && currentVariantQuestion.followUp && selectedAnswer === currentVariantQuestion.answer;
   const showAnswer = questionResult && (
     !currentVariantQuestion.followUp
     || currentVariantQuestion.followUp && !followUpSubmitted && selectedAnswer !== currentVariantQuestion.answer
@@ -140,7 +140,15 @@ export function QuestionContent({
           <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{renderItalicsAndBold(currentVariantQuestion.followUp.question)}</p>
           <div className="grid grid-cols-1 gap-2.5 uwd:gap-3.8 4k:gap-5">
           {
-            currentFollowUpKeys.length > 0 && currentFollowUpKeys.map((key, index) => <div key={index} className={`${followUpAnswer === key ? "bg-slate-600/50 border-white rounded" : ""}`}>
+            currentFollowUpKeys.length > 0 && currentFollowUpKeys.map((key, index) => {
+              const highlighted = () => {
+                if (!followUpSubmitted) return "";
+                if (currentVariantQuestion.followUp!.answer === key) return "bg-green-800/50 rounded";
+                if (followUpAnswer === key) return "bg-red-800/50 rounded";
+                return "";
+              }
+
+              return <div key={index} className={`${highlighted()}`}>
               <button
                 type="button"
                 className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 transition-colors
@@ -156,29 +164,29 @@ export function QuestionContent({
                   {renderItalicsAndBold(currentVariantQuestion.followUp!.choices[key])}
                 </div>
               </button>
-            </div>)
+            </div>})
           }
           </div>
-          <button
-            type="button"
-            className={`btn btn-primary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${followUpAnswer === "" ? "opacity-50 cursor-not-allowed" : ""}`}
-            onClick={() => {
-                setFollowUpSubmitted(true);
-                sfx("confirm");
-            }}
-            disabled={followUpAnswer === ""}
-          >
-            Submit Follow-Up Answer
-          </button>
+          {
+            !followUpSubmitted &&<button
+              type="button"
+              className={`btn btn-primary mt-20 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12
+                ${followUpAnswer === "" ? "opacity-50 cursor-not-allowed" : ""}
+              `}
+              onClick={() => {
+                  setFollowUpSubmitted(true);
+                  sfx("confirm");
+              }}
+              disabled={followUpAnswer === ""}
+            >
+              Submit Follow-Up Answer
+            </button>
+          }
         </div>
       }
       {
         currentVariantQuestion.followUp && showFollowUpAnswer && <div className="col-span-2">
-          <p className={`text-xl font-bold mb-4 ${followUpAnswer === currentVariantQuestion.followUp.answer ? "text-green-500" : "text-red-500"} `}>
-            {followUpAnswer === currentVariantQuestion.followUp.answer ? "Correct!" : "Incorrect!"}
-          </p>
-          <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentVariantQuestion.explanation)}</p>
-          <button className="btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12" onClick={() =>
+          <button className={"btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12"} onClick={() =>
             onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentVariantQuestion,
               currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses,
               followUpSubmitted, followUpAnswer,
@@ -187,6 +195,10 @@ export function QuestionContent({
               resetCurrentQuestionState, setFollowUpSubmitted, setFollowUpAnswer, setCurrentVariant)}>
             Next Question
           </button>
+          <p className={`text-xl font-bold mt-4 uwd:mt-8 4k:mt-10 ${followUpAnswer === currentVariantQuestion.followUp.answer ? "text-green-500" : "text-red-500"} `}>
+            {followUpAnswer === currentVariantQuestion.followUp.answer ? "Correct!" : "Incorrect!"}
+          </p>
+          <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentVariantQuestion.explanation)}</p>
         </div>
       }
     </div>;
@@ -215,7 +227,7 @@ export function QuestionContent({
     questionsCompleted.length < currentQuestionSet.length && <div className={`grid ${globalBackgroundStyle} shadow-md md:grid-cols-[40%_60%] border p-8 rounded gap-4`}>
       {/* Question and choices */}
       <div>
-        {!showFollowUpChoices && <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">What's been changed?</p>}
+        {!showFollowUpChoices && !followUpSubmitted && <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">What's been changed?</p>}
         <form onSubmit={(e) => {
           e.preventDefault();
           if (selectedAnswer !== "") {
@@ -258,7 +270,7 @@ export function QuestionContent({
           />
         </div>
       </div>
-      {/* Explanation */}
+      {/* Explanation for non-follow-up questions */}
       {
         questionResult && showExplanation && <div className="md:col-span-2">
           <p className={`${currentVariantQuestion.answer === selectedAnswer ? "text-green-500" : "text-red-500"} text-xl font-bold mb-4`}>
