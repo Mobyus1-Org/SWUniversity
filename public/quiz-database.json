@@ -1273,5 +1273,20 @@
       "relevantRule": "Player A's **_Tech_** grants each of their resources the **Smuggle** keyword, meaning when Player B reveals them with **_Scanning Officer_**, it doesn't matter what is on the card, it's going to be defeated.",
       "tags": ["tech", "scanning officer", "vigilant pursuit craft", "smuggler's aid", "clan wren rescuer", "smuggle", "resources", "keyword", "target"],
       "difficulty": 1
+   },
+   {
+      "id": 86,
+      "question": "Player A controls an exhausted **_Toro Calican, Ambitious Upstart_**. They play a second **_Toro Calican_**, dealing 1 damage to it to ready their original **_Toro_**, then choosing to defeat the new one due to uniqueness. Is this play legal? Why or why not?",
+      "choices": {
+         "a": "No. One would need to be chosen to be defeated before **_Toro's_** ability resolves.",
+         "b": "No. Player A would need to deal the 1 damage to their original **_Toro_**.",
+         "c": "No. **_Toro's_** ability specifies \"another _Bounty Hunter_ unit,\" so a second **_Toro_** would not work.",
+         "d": "Yes. **_Toro's_** ability resolves immediately when you play a _Bounty Hunter_ unit."
+      },
+      "answer": "a",
+      "relevantCards": ["SHD/239"],
+      "relevantRule": "When Player A's second **_Toro_** enters play, the first **_Toro's_** ability triggers, but waits to resolve until after one has been defeated due to uniquness. This means the only two options are to either defeat the new **_Toro_**, meaning you can no longer deal 1 damage to it, or to defeat the original **_Toro_**, in which case it could not ready... it'd be in the discard pile.\n\n**8.30.4** - A player can only control one copy of each unique card at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
+      "tags": ["toro calican", "uniqueness", "ability", "timing"],
+      "difficulty": 1
    }
 ]
