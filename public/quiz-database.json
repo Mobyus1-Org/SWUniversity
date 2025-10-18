@@ -1453,5 +1453,20 @@
       "relevantRule": "The first step in attacking with a unit is to \"declare the attack,\" so when Player A chooses to attack into Player B's **_Redemption_**, the target for that attack does not change. If Player B then chooses to defeat their **_Redemption_** as a result of **_Avenger's_** **On Attack** ability, the combat damage step is simply skipped and no damage is done.\n\n**6.3.1** - Declare the attack. The active player chooses and exhausts a ready unit they control and then chooses what to attack: either an enemy unit in the same arena as it or the opponent’s base. Any abilities that are active \"while attacking\" become active.\n\n**6.3.2.A** - If the attacker is no longer in-play, no combat damage is dealt. Proceed directly to the next step of this attack.",
       "tags": ["avenger", "redemption", "yoda", "on attack", "sentinel", "target"],
       "difficulty": 1
+   },
+   {
+      "id": 98,
+      "question": "Player A is playing **_Yoda, Sensing Darkness_** as their leader with the **_Strangled Cliffs_** base. After a unit has left play during a phase, they use **_Yoda's_** leader ability and draw **_Rey, With Palpatine's Power_**. If Player A wishes to use **_Rey's_** ability to deal 2 damage to a unit and 2 damage to a base, what is required of them?",
+      "choices": {
+         "a": "Player A must keep the drawn **_Rey_** separate from their hand as they place a different card from their hand on either the top or bottom of their deck. They then reveal to their opponent that the drawn card was **_Rey_**.",
+         "b": "Player A must immediately reveal **_Rey_** to their opponent, resolve her ability, then may return any card, including her, to either the top or bottom of their deck.",
+         "c": "Player A must immediately reveal **_Rey_** to their opponent, resolve her ability, then must return a card other than **_Rey_** to either the top or bottom of their deck.",
+         "d": "Player A may add **_Rey_** to their hand, place a card from their hand other than **_Rey_** either on the top or bottom of their deck, then reveal **_Rey_** to their opponent."
+      },
+      "answer": "a",
+      "relevantCards": ["TWI/004", "LOF/027", "LOF/148"],
+      "relevantRule": "Firstly, in order to prove that **_Rey_** was, in fact, the card drawn using **_Yoda's_** ability, she must be kept separate from the other cards that were already in Player A's hand. Secondly, since **_Rey's_** ability requires Player A to specifically \"reveal this card from your hand,\" she must not be the card they return to their deck, otherwise, while her ability will technically still resolve, it will be impossible for Player A to fulfill the requirement.",
+      "tags": ["yoda", "rey", "timing", "draw", "leader", "ability", "reveal"],
+      "difficulty": 2
    }
 ]
