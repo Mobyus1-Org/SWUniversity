@@ -1458,14 +1458,14 @@
       "id": 98,
       "question": "Player A is playing **_Yoda, Sensing Darkness_** as their leader with the **_Strangled Cliffs_** base. After a unit has left play during a phase, they use **_Yoda's_** leader ability and draw **_Rey, With Palpatine's Power_**. If Player A wishes to use **_Rey's_** ability to deal 2 damage to a unit and 2 damage to a base, what is required of them?",
       "choices": {
-         "a": "Player A must keep the drawn **_Rey_** separate from their hand as they place a different card from their hand on either the top or bottom of their deck. They then reveal to their opponent that the drawn card was **_Rey_**.",
+         "a": "Player A must reveal and keep the drawn **_Rey_** separate from their hand as they place a different card from their hand on either the top or bottom of their deck. They then may resolve **_Rey's_** ability.",
          "b": "Player A must immediately reveal **_Rey_** to their opponent, resolve her ability, then may return any card, including her, to either the top or bottom of their deck.",
          "c": "Player A must immediately reveal **_Rey_** to their opponent, resolve her ability, then must return a card other than **_Rey_** to either the top or bottom of their deck.",
          "d": "Player A may add **_Rey_** to their hand, place a card from their hand other than **_Rey_** either on the top or bottom of their deck, then reveal **_Rey_** to their opponent."
       },
       "answer": "a",
       "relevantCards": ["TWI/004", "LOF/027", "LOF/148"],
-      "relevantRule": "Firstly, in order to prove that **_Rey_** was, in fact, the card drawn using **_Yoda's_** ability, she must be kept separate from the other cards that were already in Player A's hand. Secondly, since **_Rey's_** ability requires Player A to specifically \"reveal this card from your hand,\" she must not be the card they return to their deck, otherwise, while her ability will technically still resolve, it will be impossible for Player A to fulfill the requirement.",
+      "relevantRule": "Firstly, in order to prove that **_Rey_** was, in fact, the card drawn using **_Yoda's_** ability, she must be kept separate from the other cards that were already in Player A's hand. Secondly, since **_Rey's_** ability requires Player A to specifically \"reveal this card from your hand,\" she must not be the card they return to their deck, otherwise, while her ability will technically still resolve, it will be impossible for Player A to fulfill the requirement.\n\n**1.13.3** - If a card’s ability triggers when that card is drawn, the drawn card must be revealed before being added to the other cards in a player’s hand",
       "tags": ["yoda", "rey", "timing", "draw", "leader", "ability", "reveal"],
       "difficulty": 2
    }
