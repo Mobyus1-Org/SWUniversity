@@ -1378,5 +1378,35 @@
       "relevantRule": "When **_Unity of Purpose_** is played, Player A controls 5 units with different names, so each of their units gets a +5/+5 buff for the phase. That +5/+5 does not change when Player A's number of uniquely-named units changes over the course of the phase, so **_Shaak Ti's_** presence does not result in an additional +1/+1. It _does_, however, give Player A's token units +1/+0, meaning the **_Clone Trooper_** token would now attack for 2+5+1, or 8 damage.",
       "tags": ["battlefield marine", "warzone lieutenant", "sundari peacekeeper", "clone deserter", "clone trooper", "token", "unity of purpose", "shaak ti", "math", "lasting effect", "buff", "event"],
       "difficulty": 2
+   },
+   {
+      "id": 93,
+      "question": "Player A controls a **_Red Squadron Y-Wing_** and a **_Hunting Aggressor_**. Player B controls a **_Lurking TIE Phantom_** with a shield token. Player A attacks Player B's base with their **_Red Squadron Y-Wing_**. What is the most indirect damage Player B can assign to their **_Lurking TIE Phantom_**?",
+      "choices": {
+         "a": "0 because of the shield token.",
+         "b": "2",
+         "c": "4",
+         "d": "3"
+      },
+      "answer": "b",
+      "relevantCards": ["JTL/149", "JTL/165", "SHD/187", "TSOR/T02"],
+      "relevantRule": "When **_Red Squadron Y-Wing_** attacks, it normally deals 3 indirect damage. **_Hunting Aggressor's_** ability does not increase each point of damage by 1. Instead, it simply adds 1 to the total indirect damage dealt. This means the **_Y-Wing_** deals 4 indirect damage total. Since a player can only assign as much indirect damage to a unit as it has remaining HP, the **_Lurking TIE_** can only be assigned, at most, 2 indirect damage.\n\n**8.36.2** - Indirect damage is unpreventable, which means it ignores any effects that would prevent the chosen unit from being dealt damage, including Shield tokens and abilities such as \"This unit can’t be damaged.\"\n\n**8.36.3** - A player cannot assign more indirect damage to a unit than it has remaining HP.",
+      "tags": ["red squadron y-wing", "hunting aggressor", "lurking tie phantom", "indirect damage", "ability", "on attack", "shield", "token"],
+      "difficulty": 2
+   },
+   {
+      "id": 94,
+      "question": "Player A controls **_L3-37, Get Out of My Seat_**, and a **_Black Squadron Scout Wing_** without a _Pilot_ on it. Player B defeats **_L3-37_** and Player A chooses to attach her to the **_Black Squadron Scout Wing_** instead. Does this trigger **_Black Squadron Scout Wing's_** ability? Why or why not?",
+      "choices": {
+         "a": "No. **_L3-37_** is not have the _Resistance_ trait.",
+         "b": "No. **_L3-37_** is not an upgrade.",
+         "c": "No. Player A did not play an upgrade on **_Black Squadron Scout Wing_**.",
+         "d": "Yes. An upgrade was played on **_Black Squadron Scout Wing_**."
+      },
+      "answer": "c",
+      "relevantCards": ["JTL/049", "JTL/202"],
+      "relevantRule": "Even though **_L3-37_** becomes an upgrade when she attaches to **_Black Squadron Scout Wing_**, her ability is simply moving her from one zone to another, not actually \"playing\" her. The fact that she was not specifically \"played\" means **_Black Squadron Scout Wing_** does not trigger.\n\n**6.2.0.B** - In order to play a card, a player must have a card in their hand or must be resolving an ability that allows them to play a card from another zone. The player must be able to pay resources equal to the card’s cost, unless otherwise specified.",
+      "tags": ["l3-37", "black squadron scout wing", "ability", "pilot", "trigger", "replacement effect"],
+      "difficulty": 2
    }
 ]
