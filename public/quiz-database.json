@@ -1348,5 +1348,35 @@
       "relevantRule": "Having **_Tech_** in play gives **_Tobias_** a second **Smuggle** option which Player A can choose from. Unfortunately, this option would be **_Tobias's_** regular cost, including aspects, plus 2. Since neither Player A's leader nor their base provide the _Cunning_ aspect, that means paying for **_Tobias_** using **_Tech_** would actually cost 8 resources. It'd be cheaper to pay for him using his own **Smuggle** cost, resulting in only having to pay 7.\n\n**7.5.14.A** - \"Smuggle\" is a keyword whose effect is the same as the constant ability: \"You may play this card from your resource zone by paying cost Y instead of its printed cost, replacing it with the top card of your deck. This ability is active while this card is a resource,\" where Y is the cost in brackets following \"Smuggle.\" Paying this cost follows all normal rules for paying costs, including accounting for any aspect penalties that modify this cost",
       "tags": ["cassian andor", "echo base", "tech", "tobias backett", "smuggle", "keyword", "cost", "aspects", "leader"],
       "difficulty": 2
+   },
+   {
+      "id": 91,
+      "question": "Player A controls a ready **_Cad Bane, He Who Needs No Introduction_**, a **_Lady Proxima, White Worm Matriarch_**, and has a **_Ma Klounkee_** in their discard pile. They then play **_Bounty Hunter Crew_**. What best describes what happens?",
+      "choices": {
+         "a": "Player A must resolve **_Bounty Hunter Crew's_** trigger first, but can then order **_Cad Bane's_** and **_Lady Proxima's_** how they want.",
+         "b": "Player A can resolve **_Cad Bane's_**, **_Lady Proxima's_**, and **_Bounty Hunter Crew's_** triggers in any order.",
+         "c": "Player A must resolve **_Cad Bane's_** trigger first, but then can order **_Lady Proxima's_** and **_Bounty Hunter Crew's_** how they want.",
+         "d": "Player A must resolve **_Bounty Hunter Crew's_** trigger first, **_Lady Proxima's_** second, and **_Cad Bane's_** last."
+      },
+      "answer": "b",
+      "relevantCards": ["SHD/014", "SHD/255", "SHD/229", "SOR/183"],
+      "relevantRule": "Since all 3 cards trigger at the same time, Player A has the freedom to resolve them in any order they wish.\n\n**7.6.9** - If a player must resolve multiple triggered abilities on cards they control at the same time, that player chooses the order in which to resolve those abilities.",
+      "tags": ["cad bane", "lady proxima", "bounty hunter crew", "ma klounkee", "when played", "underworld", "timing", "leader"],
+      "difficulty": 1
+   },
+   {
+      "id": 92,
+      "question": "Player A controls a **_Battlefield Marine_**, a **_Warzone Lieutenant_**, a **_Sundari Peacekeeper_**, a **_Clone Deserter_**, and two **_Clone Trooper_** tokens. Player A then plays **_Unity of Purpose_**. Player B takes the initiative. Player A then plays **_Shaak Ti, Unity Wins Wars_**. How much damage would one of Player A's **_Clone Trooper_** tokens do if it were to attack?",
+      "choices": {
+         "a": "10",
+         "b": "7",
+         "c": "9",
+         "d": "8"
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/095", "SHD/110", "SHD/098", "SHD/095", "TTWI/T02", "JTL/106", "TWI/094"],
+      "relevantRule": "When **_Unity of Purpose_** is played, Player A controls 5 units with different names, so each of their units gets a +5/+5 buff for the phase. That +5/+5 does not change when Player A's number of uniquely-named units changes over the course of the phase, so **_Shaak Ti's_** presence does not result in an additional +1/+1. It _does_, however, give Player A's token units +1/+0, meaning the **_Clone Trooper_** token would now attack for 2+5+1, or 8 damage.",
+      "tags": ["battlefield marine", "warzone lieutenant", "sundari peacekeeper", "clone deserter", "clone trooper", "token", "unity of purpose", "shaak ti", "math", "lasting effect", "buff", "event"],
+      "difficulty": 2
    }
 ]
