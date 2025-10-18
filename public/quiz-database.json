@@ -1483,5 +1483,20 @@
       "relevantRule": "Since **_Jedi Consular's_** ability requires Player A to use their Force token as part of the cost of the ability, **_Yoda_** was not yet in play when Player A used the Force. This means that neither of **_Yoda's_** abilities would trigger.\n\n**6.4.3.A** - If an action ability has a cost, it is found in brackets following the word \"Action.\"\n\n**8.38.4** -  If an ability instructs a player to \"Use the Force,\" they may defeat their Force token. If they do, they are considered to have Used the Force. A player may not Use the Force if they do not control their Force token.",
       "tags": ["jedi consular", "yoda", "force token", "ability", "discount", "when played", "timing"],
       "difficulty": 1
+   },
+   {
+      "id": 100,
+      "question": "Player A controls **_Millennium Falcon, Piece of Junk_** with no damage on it. Player B plays **_Timely Intervention_** to play **_Poe Dameron, One Hell of a Pilot_**, from hand. They resolve his **When Played** ability to create an **_X-Wing_** token and choose to attach **_Poe_** to it as a _Pilot_. They then resolve **Ambush** from **_Timely Intervention_** to defeat Player A's **_Millennium Falcon_**. Was this a legal sequence of events? If not, why?",
+      "choices": {
+         "a": "No. **_Poe_** cannot immediately attach to the **_X-Wing_** token created by his ability.",
+         "b": "No. **_Timely Intervention_** gave **Ambush** to **_Poe_**, not the **_X-Wing_** token.",
+         "c": "Yes. This sequence was legal.",
+         "d": "No. The **_Millennium Falcon_** would not be defeated by this attack."
+      },
+      "answer": "b",
+      "relevantCards": ["SOR/193", "SHD/129", "JTL/100", "TJTL/T02"],
+      "relevantRule": "When a unit is played using **_Timely Intervention_**, that unit is given the **Ambush** keyword. While it is legal to resolve **_Poe's_** **When Played** ability before resolving **Ambush**, if Player B chooses to attach **_Poe_** to a _Vehicle_ as a _Pilot_, **_Poe_** becomes an upgrade and is no longer a unit. Since upgrades cannot attack, the **Ambush** is wasted in this case.",
+      "tags": ["millennium falcon", "timely intervention", "poe dameron", "x-wing", "token", "ambush", "event", "timing", "pilot", "upgrade", "when played"],
+      "difficulty": 1
    }
 ]
