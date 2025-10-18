@@ -114,16 +114,16 @@ function DoYouKnowSWUPage() {
     {
       dykswuMode === "" && <div className={`${globalBackgroundStyle} w-1/2 m-auto text-xl text-center p-2 mb-4 4k:p-4 4k:mb-8 border`}>
       <p>
-        Welcome to Do You Know SWU!
-        <br/>Test your knowledge of the SWU TCG with a variety of question modes:
+        Welcome to "Do You Know SWU?"!
+        <br/>How well do you know the details of SWU cards? Find out!
       </p>
       <div className="md:w-3/4 uwd:w-1/2 4k:w-1/4 m-auto">
         <p className="text-sm text-left">
-          Standard Mode: Choose a set number of questions to answer.
-          <br/>Marathon Mode: Answer all questions in the databank correctly to complete the marathon.
+          Choose a quiz mode below that suits your style.
+          <br/>Incorrect responses will keep the card in the pool to ask again later (except in Standard).
+          <br/>Standard, Marathon, and Endless pull cards randomly from our entire databank (no filtering).
           <br/>Endless Mode: Answer random questions with no end in sight.
-          <br/>Difficulty Modes: Choose from Padawan (easy), Knight (medium), or Master (hard) question sets.
-          <br/>Select a mode to get started and see how well you know the SWU TCG!
+          <br/>Padawan (easy), Knight (medium), or Master (hard) modes will filter selected cards to those difficulties.
         </p>
       </div>
     </div>
