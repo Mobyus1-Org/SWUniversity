@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { UserSettingsLocalStorageKey, type SfxType, type UserSettings } from './util/const';
 
@@ -54,7 +54,7 @@ function App() {
     }
   };
 
-  return <HashRouter>
+  return <BrowserRouter>
     <AudioContextProvider value={{ sfx }}>
       <ModalContextProvider value={{ showModal, modalKey, setShowModal, setModalKey }}>
         <Layout userSettings={userSettings} setUserSettings={setUserSettings}>
@@ -69,7 +69,7 @@ function App() {
         </Layout>
       </ModalContextProvider>
     </AudioContextProvider>
-  </HashRouter>;
+  </BrowserRouter>;
 }
 
 export default App;

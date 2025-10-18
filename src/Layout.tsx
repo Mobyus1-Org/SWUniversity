@@ -38,10 +38,10 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
           {/* Left side links */}
           <div className="md:hidden" onClick={() => setMobileNav((p) => !p)}><MenuButton /></div>
           <div className="hidden md:block flex w-11/16 gap-1 md:gap-8 uwd:!gap-24 4k:!gap-30 uwd:py-4 4k:py-10 overflow-x-scroll">
-            <a className="btn btn-ghost text-xl md:text-3xl uwd:!text-4xl 4k:!text-7xl" href="#/" onClick={handleNavClick}>Home</a>
-            <a className="btn btn-ghost text-xl md:text-3xl uwd:!text-4xl 4k:!text-7xl" href="#/quiz" onClick={handleNavClick}>Quiz</a>
-            <a className="btn btn-ghost text-xl md:text-3xl uwd:!text-4xl 4k:!text-7xl flex-col" href="#/do-you-know-swu" onClick={handleNavClick}>DYKSWU?</a>
-            {/* <a className="btn btn-ghost text-xl md:text-3xl uwd:!text-4xl 4k:!text-7xl" href="#/puzzles">Puzzles</a> */}
+            <a className="btn btn-ghost text-xl md:text-3xl uwd:!text-4xl 4k:!text-7xl" href="/" onClick={handleNavClick}>Home</a>
+            <a className="btn btn-ghost text-xl md:text-3xl uwd:!text-4xl 4k:!text-7xl" href="/quiz" onClick={handleNavClick}>Quiz</a>
+            <a className="btn btn-ghost text-xl md:text-3xl uwd:!text-4xl 4k:!text-7xl flex-col" href="/do-you-know-swu" onClick={handleNavClick}>DYKSWU?</a>
+            {/* <a className="btn btn-ghost text-xl md:text-3xl uwd:!text-4xl 4k:!text-7xl" href="/puzzles">Puzzles</a> */}
           </div>
           {/* Right side tray */}
           <div className="text-md md:text-xl uwd:!text-2xl 4k:!text-3xl btn btn-ghost relative right-32 uwd:right-48 4k:right-64"
