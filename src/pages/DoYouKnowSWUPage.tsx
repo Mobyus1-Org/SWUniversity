@@ -105,8 +105,8 @@ function DoYouKnowSWUPage() {
     "endless": "Correctly identify cards with no end in sight!",
     "standard": "Select a number of cards and see how many you know!\nReceive a score at the end!",
     "padawan": `Cards in this mode have fairly obvious changes made.\n\nTotal Cards: ${dykswuSets.padawan.length}`,
-    "knight": `Cards in this mode have decently tricky changes made.\n\nTotal Cardss: ${dykswuSets.knight.length}`,
-    "master": `Cards in this mode have very challenging changes made.\n\nTotal Cardss: ${dykswuSets.master.length}`,
+    "knight": `Cards in this mode have decently tricky changes made.\n\nTotal Cards: ${dykswuSets.knight.length}`,
+    "master": `Cards in this mode have very challenging changes made.\n\nTotal Cards: ${dykswuSets.master.length}`,
   };
 
   return <div>
