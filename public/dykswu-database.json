@@ -732,5 +732,27 @@
         "explanation": "**_Escort Skiff_** is a Ground unit, not a Space unit."
       }
     ]
+  },
+  {
+    "id": 32,
+    "actualCard": "LOF/037",
+    "variants": [
+      {
+        "img": "darthvader-lof1",
+        "answer": "art",
+        "difficulty": 0,
+         "followUp": {
+          "question": "What is wrong with the art?",
+          "choices": {
+            "a": "This art is from a different card.",
+            "b": "A color was changed.",
+            "c": "The art is mirrored.",
+            "d": "Something was added/removed."
+          },
+          "answer": "a"
+        },
+        "explanation": "This art is actually from the card **_Force Throw_**."
+      }
+    ]
   }
 ]
