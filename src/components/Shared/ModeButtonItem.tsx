@@ -18,8 +18,7 @@ interface IProps {
 
 export function ModeButtonItem({mode, title, description, modeSet, initModeId, initVariant, setMode, setCurrentModeSet, setCurrentModeId, setVariant }: IProps) {
   const { sfx } = React.useContext(AudioContext) ?? { sfx: () => {} };
-  return <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1 4k:p-8 4k:m-4`}>
-    <h3 className="text-xl xl:text-2xl uwd:!text-3xl 4k:!text-5xl 4k:!p-5 mb-4">{description.split("\n").map((line, index) => <span key={"desc-line-" + index}>{line}<br /></span>)}</h3>
+  return <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1 4k:p-8 4k:m-4`}> 
     {
       title !== "" && <button
       className="btn btn-primary text-lg xl:text-2xl uwd:!text-3xl 4k:!text-5xl py-8 lg:py-6 xl:py-8 uwd:!py-10 4k:!py-20 w-1/2"
@@ -37,5 +36,6 @@ export function ModeButtonItem({mode, title, description, modeSet, initModeId, i
         {title}
       </button>
     }
+    <h3 className="text-xl xl:text-2xl uwd:!text-3xl 4k:!text-5xl 4k:!p-5 mb-4">{description.split("\n").map((line, index) => <span key={"desc-line-" + index}>{line}<br /></span>)}</h3>
   </div>
 }
