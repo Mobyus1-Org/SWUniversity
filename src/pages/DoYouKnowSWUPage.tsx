@@ -119,7 +119,7 @@ function DoYouKnowSWUPage() {
       </p>
       <div className="md:w-3/4 uwd:w-1/2 4k:w-1/4 m-auto">
         <p className="text-sm text-left">
-          Choose a quiz mode below that suits your style.
+          <br/>Choose a quiz mode below that suits your style.
           <br/>Incorrect responses will keep the card in the pool to ask again later (except in Standard).
           <br/>Standard, Marathon, and Endless pull cards randomly from our entire databank (no filtering).
           <br/>Endless Mode: Answer random questions with no end in sight.
