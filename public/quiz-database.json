@@ -1408,5 +1408,20 @@
       "relevantRule": "Even though **_L3-37_** becomes an upgrade when she attaches to **_Black Squadron Scout Wing_**, her ability is simply moving her from one zone to another, not actually \"playing\" her. The fact that she was not specifically \"played\" means **_Black Squadron Scout Wing_** does not trigger.\n\n**6.2.0.B** - In order to play a card, a player must have a card in their hand or must be resolving an ability that allows them to play a card from another zone. The player must be able to pay resources equal to the card’s cost, unless otherwise specified.",
       "tags": ["l3-37", "black squadron scout wing", "ability", "pilot", "trigger", "replacement effect"],
       "difficulty": 2
+   },
+   {
+      "id": 95,
+      "question": "Player A controls **_Hound's Tooth, Reliable and Deadly_**, upgraded with **_Superheavy Ion Cannon_**. Player B controls an exhausted **_Niima Outpost Constables_** and a ready **_System Patrol Craft_**, both of which were played in a previous round. Player A attacks the **_System Patrol Craft_** with **_Hound's Tooth_**. Which of the following is a legal outcome of the attack?",
+      "choices": {
+         "a": "Player A may exhaust the **_Niima Outpost Constables_**, dealing 2 indirect damage to Player B. Then **_Hound's Tooth_** deals 4 combat damage to the **_System Patrol Craft_**, defeating it and taking 3 damage in return.",
+         "b": "Player A may exhaust the **_System Patrol Craft_**, dealing 3 indirect damage to Player B. **_Hound's Tooth_** deals 4 combat damage to the **_System Patrol Craft_**, defeating it and taking 3 damage in return.",
+         "c": "**_Hound's Tooth_** deals 4 combat damage to the **_System Patrol Craft_**, defeating it and taking 3 damage in return. Player A may then choose to exhaust the **_Niima Outpost Constables_**, dealing 2 indirect damage to Player B.",
+         "d": "Player A may exhaust the **_System Patrol Craft_**, dealing 3 indirect damage to Player B. **_Hound's Tooth_** will deal 4 damage to it, defeating it, and take no damage in return."
+      },
+      "answer": "d",
+      "relevantCards": ["JTL/185", "JTL/227", "SHD/062"],
+      "relevantRule": "When a unit attacks, any **On Attack** abilities that trigger must resolve before combat damage, so **_Superheavy Ion Cannon's_** ability must resolve first. While Player A _can_ choose either of Player B's units for this, since **_Niima Outpost Constables_** is already exhausted, it would not satisfy **_Superheavy Ion Cannon's_** \"If you do\" condition and would result in no indirect damage being dealt. If **_System Patrol Craft_** is chosen, since it is now an exhausted unit that did not enter play this phase, **_Hound's Tooth_** will deal combat damage first, defeating the **_System Patrol Craft_** before it can deal combat damage back.\n\n**1.5.4.E** - A ready card can be chosen for a readying effect, but the chosen card does not change orientation and is not considered to have been readied for the purpose of \"If you do\" effects. An exhausted card can be chosen for an exhausting effect, but the chosen card does not change orientation and is not considered to have been exhausted for the purpose of \"If you do\" effects.\n\n**8.10.1** - Some abilities use the phrase \"If you do\" to make part of the ability conditional on another part of the ability resolving. If a player fulfills the \"If you do" condition, they must resolve the conditional text following \"If you do.\" \"If you do\" only makes the rest of its sentence conditional.",
+      "tags": ["hound's tooth", "superheavy ion cannon", "system patrol craft", "niima outpost constables", "upgrade", "on attack", "trigger", "sentinel", "indirect damage", "keyword", "timing"],
+      "difficulty": 2
    }
 ]
