@@ -12,6 +12,7 @@ import NotFoundPage from './pages/NotFoundPage';
 
 import './App.css';
 import { AudioContextProvider, ModalContextProvider } from './util/context';
+import InternalPage from './pages/api/InternalPage';
 
 function App() {
   const [showModal, setShowModal] = React.useState(false);
@@ -52,6 +53,7 @@ function App() {
             <Route path="/quiz" element={<QuizPage />} />
             <Route path="/do-you-know-swu" element={<DoYouKnowSWUPage />} />
             {/* <Route path="/puzzles" element={<PuzzlesPage />} /> */}
+            <Route path="/rpc/internal" element={<InternalPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Layout>
