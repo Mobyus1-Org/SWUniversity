@@ -103,12 +103,11 @@ function QuizPage() {
       quizMode === "" && <div className={`${globalBackgroundStyle} lg:w-3/4 xl:w-1/2 m-auto text-xl uwd:text-3xl 4k:text-5xl text-center p-2 mb-4 4k:p-4 4k:mb-8 border`}>
         <p>
           Welcome to the SWUniversity Quiz Mode!
-          <br/>Whether you're here to test your knowledge, challenge your friends, or just have some fun,
-          <br/>you've come to the right place!
+          <br/>Test your knowledge, challenge your friends, or just have some fun!
         </p>
         <div className="w-3/4 uwd:w-1/2 4k:w-5/8 m-auto">
           <p className="text-sm uwd:text-lg uwd:my-2 4k:text-3xl 4k:my-4 text-left">
-            Choose a quiz mode below that suits your style.
+            <br/>Choose a quiz mode below that suits your style.
             <br/>Incorrect responses will keep the question in the pool to ask again later (except in Standard).
             <br/>Standard, Marathon, and Endless pull questions randomly from our entire databank (no filtering).
             <br/>Padawan (easy), Knight (medium), or Master (hard) modes will filter selected questions to those difficulties.
