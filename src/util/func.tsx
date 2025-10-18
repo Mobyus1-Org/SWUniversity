@@ -1,4 +1,4 @@
-import type { AppModes, SWUniversityApp } from "./const";
+import { UserSettingsLocalStorageKey, type AppModes, type SWUniversityApp, type UserSettings } from "./const";
 
 export type AppModeSetEntry = {
   id: number;
@@ -250,4 +250,14 @@ export function preloadImagesAsync(urls: string[]): Promise<void> {
   });
 
   return Promise.allSettled(promises).then(() => undefined);
+}
+
+export function updateUserSettings(setter: React.Dispatch<React.SetStateAction<UserSettings>>, newSettings: Partial<UserSettings>) {
+  setter((prevSettings) => ({
+    ...prevSettings,
+    ...newSettings
+  }));
+  localStorage.setItem(UserSettingsLocalStorageKey, JSON.stringify({
+    ...newSettings
+  }));
 }

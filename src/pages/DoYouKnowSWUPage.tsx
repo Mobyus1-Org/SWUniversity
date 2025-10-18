@@ -112,7 +112,7 @@ function DoYouKnowSWUPage() {
   return <div>
     <h1 className="text-center text-4xl font-bold md:text-4xl uwd:!text-5xl 4k:!text-7xl mb-4">{getModeTitle("dykswu", dykswuMode)}</h1>
     {
-      dykswuMode === "" && <div className={`${globalBackgroundStyle} w-1/2 m-auto text-xl text-center p-2 mb-4 4k:p-4 4k:mb-8 border`}>
+      dykswuMode === "" && <div className={`${globalBackgroundStyle} lg:w-3/4 xl:w-1/2 m-auto text-xl uwd:text-3xl 4k:text-5xl text-center p-2 mb-4 4k:p-4 4k:mb-8 border`}>
       <p>
         Welcome to "Do You Know SWU?"!
         <br/>How well do you know the details of SWU cards? Find out!

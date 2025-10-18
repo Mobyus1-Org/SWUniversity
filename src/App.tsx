@@ -1,7 +1,7 @@
 import React from 'react';
 import { HashRouter, Route, Routes } from 'react-router-dom';
 
-import type { SfxType } from './util/const';
+import { UserSettingsLocalStorageKey, type SfxType, type UserSettings } from './util/const';
 
 import Layout from './Layout';
 import HomePage from './pages/HomePage';
@@ -11,11 +11,19 @@ import DoYouKnowSWUPage from './pages/DoYouKnowSWUPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 import './App.css';
-import { AudioContextProvider, ModalContextProvider } from './util/context';
+import { AudioContextProvider, ModalContextProvider, type ModalKey } from './util/context';
 import InternalPage from './pages/api/InternalPage';
 
 function App() {
   const [showModal, setShowModal] = React.useState(false);
+  const [modalKey, setModalKey] = React.useState<ModalKey>("");
+  const [userSettings, setUserSettings] = React.useState<UserSettings>(() => {
+    const defaultUserSettings: UserSettings = {
+      soundEnabled: true
+    };
+    const savedSettings = localStorage.getItem(UserSettingsLocalStorageKey);
+    return savedSettings ? JSON.parse(savedSettings) : defaultUserSettings;
+  });
   const clickSound = React.useMemo(() => new Audio('/assets/sfx/click.mp3'), []);
   clickSound.volume = 0.04;
   const confirmSound = React.useMemo(() => new Audio('/assets/sfx/confirm.mp3'), []);
@@ -39,15 +47,17 @@ function App() {
         return;
     }
     sound.currentTime = 0;
-    sound.play().catch((error) => {
-      console.error("Error playing sound:", error);
-    });
+    if (userSettings.soundEnabled) {
+      sound.play().catch((error) => {
+        console.error("Error playing sound:", error);
+      });
+    }
   };
 
   return <HashRouter>
     <AudioContextProvider value={{ sfx }}>
-      <ModalContextProvider value={{ showModal, setShowModal }}>
-        <Layout>
+      <ModalContextProvider value={{ showModal, modalKey, setShowModal, setModalKey }}>
+        <Layout userSettings={userSettings} setUserSettings={setUserSettings}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/quiz" element={<QuizPage />} />

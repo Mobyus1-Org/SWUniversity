@@ -17,15 +17,15 @@ interface IProps {
   currentQuizKeys: string[];
   standardQuizLength: number;
   userResponses: UserResponse[];
-  setCurrentQuizId: (id: number) => void;
-  setQuizResult: (result: boolean) => void;
-  setSelectedAnswer: (answer: string) => void;
-  setQuizzesCompleted: (completed: number[]) => void;
-  setLastEndlessQuizzes: (list: number[]) => void;
-  setCurrentQuizKeys: (keys: string[]) => void;
-  setQuizMode: (mode: AppModes) => void;
-  setStandardQuizLength: (length: number) => void;
-  setUserResponses: (responses: UserResponse[]) => void;
+  setCurrentQuizId: React.Dispatch<React.SetStateAction<number>>;
+  setQuizResult: React.Dispatch<React.SetStateAction<boolean>>;
+  setSelectedAnswer: React.Dispatch<React.SetStateAction<string>>;
+  setQuizzesCompleted: React.Dispatch<React.SetStateAction<number[]>>;
+  setLastEndlessQuizzes: React.Dispatch<React.SetStateAction<number[]>>;
+  setCurrentQuizKeys: React.Dispatch<React.SetStateAction<string[]>>;
+  setQuizMode: React.Dispatch<React.SetStateAction<AppModes>>;
+  setStandardQuizLength: React.Dispatch<React.SetStateAction<number>>;
+  setUserResponses: React.Dispatch<React.SetStateAction<UserResponse[]>>;
   resetCurrentQuizState: () => void;
   resetQuizMode: () => void;
 }
@@ -51,7 +51,12 @@ export function QuizContent({
   resetCurrentQuizState,
   resetQuizMode
 }: IProps) {
-  const { showModal, setShowModal } = React.useContext(ModalContext) ?? { showModal: false, setShowModal: () => {} };
+  const defaultModalContext = { showModal: false,
+    setShowModal: () => {},
+    modalKey: "",
+    setModalKey: () => {}
+  };
+  const { showModal, setShowModal, modalKey, setModalKey } = React.useContext(ModalContext) ?? defaultModalContext;
   const currentQuiz = currentQuizSet.find(quiz => quiz.id === currentQuizId);
 
   React.useEffect(() => {
@@ -162,7 +167,7 @@ export function QuizContent({
         </form>
       </div>
       {/* Images */}
-      <RelevantCardsPanel currentQuiz={currentQuiz} setShowModal={setShowModal} />
+      <RelevantCardsPanel currentQuiz={currentQuiz} setShowModal={setShowModal} setModalKey={setModalKey} />
       {/* Relevant rule */}
       {
         quizResult && currentQuiz.relevantRule !== " " && <div className="md:col-span-2 text-xl uwd:text-3xl 4k:text-5xl">
@@ -176,7 +181,7 @@ export function QuizContent({
       {/*Relevant Cards Modal*/}
       {
         currentQuiz.relevantCards.length > 0 &&
-        showModal && <div role="dialog" aria-modal="true" className="z-50 overflow-y-auto fixed inset-0 bg-black bg-opacity-70 flex flex-wrap" onClick={() => setShowModal(false)}>
+          showModal && modalKey == "relevant-cards" && <div role="dialog" aria-modal="true" className="z-50 overflow-y-auto fixed inset-0 bg-black bg-opacity-70 flex flex-wrap" onClick={() => setShowModal(false)}>
           <p className="absolute top-2 md:top-4 right-4 md:right-8 text-gray-400 md:text-4xl 4k:!text-7xl" onClick={() => setShowModal(false)}>X</p>
           <div className="flex flex-wrap justify-center py-8 md:px-24">
           {
