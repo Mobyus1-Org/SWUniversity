@@ -101,7 +101,7 @@ function DoYouKnowSWUPage() {
 
   const modeDescriptions: ModeDescriptions = {
     "": "",
-    "marathon": "Correctly identify every card in the databank to complete the marathon!\n\nTotal Cards: ${dykswuSets.all.length}`,
+    "marathon": `Correctly identify every card in the databank to complete the marathon!\n\nTotal Cards: ${dykswuSets.all.length}`,
     "endless": "Correctly identify cards with no end in sight!",
     "standard": "Select a number of cards and see how many you know!\nReceive a score at the end!",
     "padawan": `Cards in this mode have fairly obvious changes made.\n\nTotal Cards: ${dykswuSets.padawan.length}`,
