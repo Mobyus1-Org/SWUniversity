@@ -1438,5 +1438,20 @@
       "relevantRule": "**_Superlaser Blast_** cannot defeat Player A's **_Millennium Falcon_** due to **_Chewbacca's_** ability, so it and the attached _Pilots_ are safe. **_L3-37_**, however, is not so lucky. Not only is she defeated by **_Superlaser Blast_**, but since her ability is not considered \"playing\" or \"deploying\" her as a _Pilot_, she cannot be attached to the **_Millennium Falcon_** because it already has a _Pilot_ attached to it, despite what the **_Falcon_** and **_R2-D2's_** abilities say.",
       "tags": ["l3-37", "millennium falcon", "r2-d2", "chewbacca", "superlaser blast", "upgrade", "pilot", "removal", "restriction", "wording"],
       "difficulty": 2
+   },
+   {
+      "id": 97,
+      "question": "Player A controls an **_Avenger, Hunting Star Destroyer_**. Player B controls a **_Redemption, Medical Frigate_**, a **_Concord Dawn Interceptors_**, and a **_Yoda, Old Master_**. Player A attacks with **_Avenger_** into Player B's **_Redemption_**. Which of the following is a possible outcome of the attack?",
+      "choices": {
+         "a": "Player B chooses to defeat **_Redemption_**. **_Avenger_** deals 8 damage to **_Concord Dawn Interceptors_** which deals 3 damage back to **_Avenger_**.",
+         "b": "Player B chooses to defeat **_Concord Dawn Interceptors_**. **_Avenger_** deals 8 damage to Player B's base.",
+         "c": "Player B chooses to defeat **_Redemption_**. **_Avenger_** deals 8 damage to Player B's base.",
+         "d": "Player B chooses to defeat **_Redemption_**. **_Avenger_** does no damage to anything."
+      },
+      "answer": "d",
+      "relevantCards": ["SOR/040", "SOR/052", "SOR/045"],
+      "relevantRule": "The first step in attacking with a unit is to \"declare the attack,\" so when Player A chooses to attack into Player B's **_Redemption_**, the target for that attack does not change. If Player B then chooses to defeat their **_Redemption_** as a result of **_Avenger's_** **On Attack** ability, the combat damage step is simply skipped and no damage is done.\n\n**6.3.1** - Declare the attack. The active player chooses and exhausts a ready unit they control and then chooses what to attack: either an enemy unit in the same arena as it or the opponent’s base. Any abilities that are active \"while attacking\" become active.\n\n**6.3.2.A** - If the attacker is no longer in-play, no combat damage is dealt. Proceed directly to the next step of this attack.",
+      "tags": ["avenger", "redemption", "yoda", "on attack", "sentinel", "target"],
+      "difficulty": 1
    }
 ]
