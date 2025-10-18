@@ -56,7 +56,7 @@ export function StandardModeEndScreen({
         default:
           break;
       }
-    }}>Go Back to Quiz Menu</button>
+    }}>Go Back to the Menu</button>
     <div className={`mt-8 text-left p-8 ${globalBackgroundStyle}`}>
       <h1 className="text-xl font-bold mb-4 cursor">Your Answers:</h1>
         <div className="mt-4 max-h-140 overflow-y-scroll">
