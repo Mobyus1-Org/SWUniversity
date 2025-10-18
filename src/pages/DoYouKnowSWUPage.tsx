@@ -124,7 +124,8 @@ function DoYouKnowSWUPage() {
           <br/>Standard, Marathon, and Endless pull cards randomly from our entire databank (no filtering).
           <br/>Endless Mode: Answer random questions with no end in sight.
           <br/>Padawan (easy), Knight (medium), or Master (hard) modes will filter selected cards to those difficulties.
-          <br/><br/>Be careful! Some cards have multiple variants!
+          <br/>
+          <br/>Be careful! Some cards have multiple variants!
           <br/>Just because you may see the same card twice doesn't mean the answer will be the same!
         </p>
       </div>
