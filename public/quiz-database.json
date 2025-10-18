@@ -1468,5 +1468,20 @@
       "relevantRule": "Firstly, in order to prove that **_Rey_** was, in fact, the card drawn using **_Yoda's_** ability, she must be kept separate from the other cards that were already in Player A's hand. Secondly, since **_Rey's_** ability requires Player A to specifically \"reveal this card from your hand,\" she must not be the card they return to their deck, otherwise, while her ability will technically still resolve, it will be impossible for Player A to fulfill the requirement.\n\n**1.13.3** - If a card’s ability triggers when that card is drawn, the drawn card must be revealed before being added to the other cards in a player’s hand",
       "tags": ["yoda", "rey", "timing", "draw", "leader", "ability", "reveal"],
       "difficulty": 2
+   },
+   {
+      "id": 99,
+      "question": "Player A has their Force token and their only unit is a ready **_Jedi Consular_**. They exhaust him, using his ability to play a **_Yoda, My Ally is the Force_**, for 6 resources. They resolve **_Yoda's_** first ability, healing 5 damage from their base. They then resolve **_Yoda's_** other ability and deal 4 damage to one of Player B's units. Was this a legal sequence of events? If not, why?",
+      "choices": {
+         "a": "No. Neither of Yoda's abilities should not have triggered.",
+         "b": "No. Yoda's first ability should not have triggered.",
+         "c": "No. Yoda's second ability should not have triggered.",
+         "d": "Yes. This sequence was legal."
+      },
+      "answer": "a",
+      "relevantCards": ["LOF/094", "LOF/101"],
+      "relevantRule": "Since **_Jedi Consular's_** ability requires Player A to use their Force token as part of the cost of the ability, **_Yoda_** was not yet in play when Player A used the Force. This means that neither of **_Yoda's_** abilities would trigger.\n\n**6.4.3.A** - If an action ability has a cost, it is found in brackets following the word \"Action.\"\n\n**8.38.4** -  If an ability instructs a player to \"Use the Force,\" they may defeat their Force token. If they do, they are considered to have Used the Force. A player may not Use the Force if they do not control their Force token.",
+      "tags": ["jedi consular", "yoda", "force token", "ability", "discount", "when played", "timing"],
+      "difficulty": 1
    }
 ]
