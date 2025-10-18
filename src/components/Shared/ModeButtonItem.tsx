@@ -36,6 +36,6 @@ export function ModeButtonItem({mode, title, description, modeSet, initModeId, i
         {title}
       </button>
     }
-    <h3 className="text-xl xl:text-2xl uwd:!text-3xl 4k:!text-5xl 4k:!p-5 mb-4">{description.split("\n").map((line, index) => <span key={"desc-line-" + index}>{line}<br /></span>)}</h3>
+    <h3 className="text-xl xl:text-2xl uwd:!text-3xl 4k:!text-5xl 4k:!p-5 mt-4">{description.split("\n").map((line, index) => <span key={"desc-line-" + index}>{line}<br /></span>)}</h3>
   </div>
 }
