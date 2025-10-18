@@ -3,27 +3,11 @@ import React from "react";
 import { apiQuizCountsAsync } from "./quiz-counts";
 import { globalBackgroundStyle } from "../../util/const";
 import { apiDYKSWUCountsAsync } from "./dykswu-counts";
-
-type QuizCounts = {
-  [difficulty: number]: {
-    [answer: string]: number;
-  };
-};
-
-type DYKSWUCounts = {
-  [difficulty: number]: {
-    [answer: string]: number;
-  };
-  followUpCounts: {
-    [difficulty: number]: {
-      [answer: string]: number;
-    };
-  };
-}
+import type { DYKSWUCounts, QuizCounts } from "./api-const";
 
 function InternalPage() {
-  const [quizCounts, setQuizCounts] = React.useState<QuizCounts>({});
-  const [dykSWUCounts, setDYKSWUCounts] = React.useState<DYKSWUCounts>({ followUpCounts: {} });
+  const [quizCounts, setQuizCounts] = React.useState<QuizCounts>();
+  const [dykSWUCounts, setDYKSWUCounts] = React.useState<DYKSWUCounts>();
 
   React.useEffect(() => {
     const fetchData = async () => {

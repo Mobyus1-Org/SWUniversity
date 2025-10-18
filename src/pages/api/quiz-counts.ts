@@ -1,16 +1,14 @@
 import { getQuizDataAsync } from "../../util/func";
+import type { QuizCountEntry, QuizCounts } from "./api-const";
 
-export async function apiQuizCountsAsync() {
+export async function apiQuizCountsAsync(): Promise<QuizCounts> {
   const data = await getQuizDataAsync();
-  const counts: Record<number, Record<string, number>> = {};
+  const counts: QuizCountEntry = {};
   let totalCount = 0;
 
   data.forEach(quiz => {
     const { difficulty, answer } = quiz;
-
-    // Initialize difficulty object if needed
     counts[difficulty] = counts[difficulty] || {};
-    // Initialize answer count if needed
     counts[difficulty][answer] = (counts[difficulty][answer] || 0) + 1;
 
     totalCount++;
