@@ -104,9 +104,9 @@ function DoYouKnowSWUPage() {
     "marathon": "Correctly identify every card in the databank to complete the marathon!\n\nTotal Cards: ${dykswuSets.all.length}`,
     "endless": "Correctly identify cards with no end in sight!",
     "standard": "Select a number of cards and see how many you know!\nReceive a score at the end!",
-    "padawan": "Cards in this mode have fairly obvious changes made.\n\nTotal Cards: ${dykswuSets.padawan.length}`,
-    "knight": "Cards in this mode have decently tricky changes made.\n\nTotal Cardss: ${dykswuSets.knight.length}`,
-    "master": "Cards in this mode have very challenging changes made.\n\nTotal Cardss: ${dykswuSets.master.length}`,
+    "padawan": `Cards in this mode have fairly obvious changes made.\n\nTotal Cards: ${dykswuSets.padawan.length}`,
+    "knight": `Cards in this mode have decently tricky changes made.\n\nTotal Cardss: ${dykswuSets.knight.length}`,
+    "master": `Cards in this mode have very challenging changes made.\n\nTotal Cardss: ${dykswuSets.master.length}`,
   };
 
   return <div>
@@ -114,7 +114,7 @@ function DoYouKnowSWUPage() {
     {
       dykswuMode === "" && <div className={`${globalBackgroundStyle} w-1/2 m-auto text-xl text-center p-2 mb-4 4k:p-4 4k:mb-8 border`}>
       <p>
-        Welcome to Do You Know SWU?
+        Welcome to "Do You Know SWU?"!
         <br/>How well do you know the details of SWU cards? Find out!
       </p>
       <div className="md:w-3/4 uwd:w-1/2 4k:w-1/4 m-auto">
@@ -124,7 +124,7 @@ function DoYouKnowSWUPage() {
           <br/>Standard, Marathon, and Endless pull cards randomly from our entire databank (no filtering).
           <br/>Endless Mode: Answer random questions with no end in sight.
           <br/>Padawan (easy), Knight (medium), or Master (hard) modes will filter selected cards to those difficulties.
-          <br/>Be careful! Some cards have multiple variants!
+          <br/><br/>Be careful! Some cards have multiple variants!
           <br/>Just because you may see the same card twice doesn't mean the answer will be the same!
         </p>
       </div>
