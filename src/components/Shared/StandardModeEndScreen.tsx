@@ -39,7 +39,7 @@ export function StandardModeEndScreen({
       return acc;
     }, 0);
 
-    return `Game Complete! You answered ${points} out of ${total} questions correctly.`;
+    return `Quiz Complete! You answered ${points} out of ${total} questions correctly.`;
   }
 
   return <div className="text-center m-[10%_10%] lg:m-[1%_10%]">
