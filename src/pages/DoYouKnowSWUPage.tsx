@@ -101,12 +101,12 @@ function DoYouKnowSWUPage() {
 
   const modeDescriptions: ModeDescriptions = {
     "": "",
-    "marathon": `All Cards\n\nTotal Questions: ${dykswuSets.all.length}`,
-    "endless": "Endless Cards",
-    "standard": "Choose cards mixed",
-    "padawan": `Easy Cards\n\nTotal Questions: ${dykswuSets.padawan.length}`,
-    "knight": `Medium Cards\n\nTotal Questions: ${dykswuSets.knight.length}`,
-    "master": `Hard Cards\n\nTotal Questions: ${dykswuSets.master.length}`,
+    "marathon": "Correctly identify every card in the databank to complete the marathon!\n\nTotal Cards: ${dykswuSets.all.length}`,
+    "endless": "Correctly identify cards with no end in sight!",
+    "standard": "Select a number of cards and see how many you know!\nReceive a score at the end!",
+    "padawan": "Cards in this mode have fairly obvious changes made.\n\nTotal Cards: ${dykswuSets.padawan.length}`,
+    "knight": "Cards in this mode have decently tricky changes made.\n\nTotal Cardss: ${dykswuSets.knight.length}`,
+    "master": "Cards in this mode have very challenging changes made.\n\nTotal Cardss: ${dykswuSets.master.length}`,
   };
 
   return <div>
@@ -124,6 +124,8 @@ function DoYouKnowSWUPage() {
           <br/>Standard, Marathon, and Endless pull cards randomly from our entire databank (no filtering).
           <br/>Endless Mode: Answer random questions with no end in sight.
           <br/>Padawan (easy), Knight (medium), or Master (hard) modes will filter selected cards to those difficulties.
+          <br/><br/>Be careful! Some cards have multiple variants!
+          <br/>Just because you may see the same card twice doesn't mean the answer will be the same!
         </p>
       </div>
     </div>
