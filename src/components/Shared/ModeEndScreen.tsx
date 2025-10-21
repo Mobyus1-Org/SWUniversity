@@ -2,24 +2,26 @@ import React from "react";
 import { renderDYKSWUChoiceTitle, renderItalicsAndBold, type DoYouKnowSWUQuestion, type Quiz, type UserResponse } from "../../util/func";
 import { AudioContext } from "../../util/context";
 import {  globalBackgroundStyleNoShadow } from "../../util/style-const";
-import { type SWUniversityApp } from "../../util/const";
+import { type AppModes, type SWUniversityApp } from "../../util/const";
 
 interface IProps {
   app: SWUniversityApp;
+  appMode: AppModes;
   userResponses: UserResponse[];
   currentModeSet: Quiz[] | DoYouKnowSWUQuestion[];
   standardModeLength: number;
-  ignoreScore: boolean;
+  ironManFailed: boolean;
   resetQuizMode?: () => void;
   resetDoYouKnowSWUMode?: () => void;
 }
 
-export function StandardModeEndScreen({
+export function ModeEndScreen({
   app,
+  appMode,
   userResponses,
   currentModeSet,
   standardModeLength,
-  ignoreScore,
+  ironManFailed,
   resetQuizMode,
   resetDoYouKnowSWUMode
 }: IProps) {
@@ -42,11 +44,17 @@ export function StandardModeEndScreen({
       return acc;
     }, 0);
 
-    return "You've Reached the End!" + (ignoreScore ? "" : ` You answered ${points} out of ${standardModeLength} questions correctly.`);
+    return <div>You've Reached the End!
+      <br />
+      <br />
+      {appMode === "standard" && `You scored ${points} out of ${standardModeLength} points.`}
+      {appMode === "iron-man" && ironManFailed && `Iron Man failed. You got only ${points} correct.`}
+      {appMode === "iron-man" && !ironManFailed && <div>Congratulations, you completed Iron Man Challenge!<br />You got all {points} questions correct!</div>}
+    </div>;
   }
 
   return <div className="text-center m-[10%_10%] lg:m-[1%_10%]">
-    <p className="text-lg md:text-4xl font-bold w-3/4 mx-auto my-4 uwd:my-8">{renderPoints()}</p>
+    <p className="text-lg md:text-4xl font-bold w-3/4 mx-auto my-8 uwd:my-12">{renderPoints()}</p>
     <button className="btn btn-primary text-lg p-4" onClick={() => {
       sfx("confirm");
       switch (app) {
@@ -61,7 +69,7 @@ export function StandardModeEndScreen({
       }
     }}>Go Back to the Menu</button>
     {
-      !ignoreScore && <div className={`mt-8 text-left p-8 ${globalBackgroundStyleNoShadow}`}>
+      appMode === "standard" && <div className={`mt-8 text-left p-8 ${globalBackgroundStyleNoShadow}`}>
         <h1 className="text-xl font-bold mb-4 cursor">Your Answers:</h1>
           <div className="mt-4 max-h-140 overflow-y-scroll">
             {

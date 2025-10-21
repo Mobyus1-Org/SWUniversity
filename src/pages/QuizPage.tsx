@@ -20,6 +20,7 @@ function QuizPage() {
   const [quizResult, setQuizResult] = React.useState<boolean>(false);
   const [standardQuizLength, setStandardQuizLength] = React.useState<number>(0);
   const [userResponses, setUserResponses] = React.useState<UserResponse[]>([]);
+  const [quizEnded, setQuizEnded] = React.useState<boolean>(false);
   //TODO: remove this once we go live
   const [searchParams] = useSearchParams();
   const testId = searchParams.get("Mobyus1hereisatestid");
@@ -39,6 +40,10 @@ function QuizPage() {
     });
   }, [testId]);
 
+  React.useEffect(() => {
+    setQuizEnded(false);
+  }, [quizMode])
+
   const renderQuizContent = () => loading
     ? <p className="text-lg uwd:text-3xl 4k:text-5xl">Loading quizzes...</p>
     : <QuizContent
@@ -52,6 +57,7 @@ function QuizPage() {
       currentQuizKeys={currentQuizKeys}
       standardQuizLength={standardQuizLength}
       userResponses={userResponses}
+      quizEnded={quizEnded}
       setCurrentQuizId={setCurrentQuizId}
       setQuizResult={setQuizResult}
       setSelectedAnswer={setSelectedAnswer}
@@ -63,6 +69,7 @@ function QuizPage() {
       setUserResponses={setUserResponses}
       resetCurrentQuizState={resetCurrentQuizState}
       resetQuizMode={resetQuizMode}
+      setQuizEnded={setQuizEnded}
     />;
 
   const resetCurrentQuizState = () => {
@@ -91,7 +98,7 @@ function QuizPage() {
   const modeDescriptions: ModeDescriptions = {
     "": "",
     "standard": "Your standard quiz-like experience.\nSelect a quiz length and see how many you can answer correctly!\nReceive a score at the end!",
-    "marathon": `Attempt to answer every question in the databank to complete the marathon!\n\nTotal Questions: ${quizModeSets.all.length}`,
+    "iron-man": `Attempt to answer every question in the databank to complete the Iron Man challenge!\n\nTotal Questions: ${quizModeSets.all.length}`,
     "endless": "Continue to answer random questions with no end in sight!",
     "padawan": `A perfect place for new players to test their knowledge of the basics of SWU!\n\nTotal Questions: ${quizModeSets.padawan.length}`,
     "knight": `A mode for those who have a solid understanding of SWU and want to test their skills further!\n\nTotal Questions: ${quizModeSets.knight.length}`,

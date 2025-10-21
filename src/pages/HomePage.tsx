@@ -15,10 +15,11 @@ function HomePage() {
     <div className={`p-4 border md:col-span-1 ${globalBackgroundStyle}`}>
       <h1 className="text-3xl uwd:text-4xl 4k:text-5xl mb-4 font-bold">News</h1>
       <div>
-        <h3 className="text-2xl uwd:text-3xl 4k:text-4xl">Some Good News!</h3>
-        <img src="https://static0.cbrimages.com/wordpress/wp-content/uploads/2020/11/death-star-in-rogue-one.jpg" alt="Some Good News" />
+        <h3 className="text-2xl uwd:text-3xl 4k:text-4xl">Iron Man Challenge Is Here!</h3>
+        <img src="/assets/rivals-fall-splash.png" alt="Iron Man Challenge" />
+        <br />
         <p className="text-lg uwd:text-2xl 4k:text-4xl mb-4">
-          Our team has been working hard to improve the SWUniversity experience, and we are thrilled to unveil some new features and updates that we believe will enhance your enjoyment of the site. Stay tuned for more details in the coming weeks!
+          We're excited to announce the launch of the Iron Man Challenge! Test your skills and see how many questions you can complete in a row without any mistakes.
         </p>
       </div>
     </div>

@@ -2,9 +2,8 @@ import React from "react";
 
 import { globalBackgroundStyle, globalBackgroundStyleBigShadow, getLightsaberGlowHover } from "../../util/style-const";
 import { DYKSWUChoices, type AppModes, type SfxType } from "../../util/const";
-import { renderItalicsAndBold, type UserResponse, type DoYouKnowSWUQuestion, getSWUDBImageLink, getDYKSWUImageLink, renderDYKSWUChoiceTitle, type DoYouKnowSWUVariant, isDifficultyMode } from "../../util/func";
-import { StandardModeEndScreen } from "../Shared/StandardModeEndScreen";
-import { MarathonModeEndScreen } from "../Shared/MarathonModeEndScreen";
+import { renderItalicsAndBold, type UserResponse, type DoYouKnowSWUQuestion, getSWUDBImageLink, getDYKSWUImageLink, renderDYKSWUChoiceTitle, type DoYouKnowSWUVariant } from "../../util/func";
+import { ModeEndScreen } from "../Shared/ModeEndScreen";
 import { AudioContext, UserSettingsContext } from "../../util/context";
 
 interface IProps {
@@ -19,18 +18,20 @@ interface IProps {
   userResponses: UserResponse[];
   currentFollowUpKeys: string[];
   currentVariant: number;
-  setCurrentQuestionId: (id: number) => void;
-  setQuestionResult: (result: boolean) => void;
-  setSelectedAnswer: (answer: string) => void;
-  setQuestionsCompleted: (completed: number[]) => void;
-  setLastEndlessQuestions: (list: number[]) => void;
-  setQuestionMode: (mode: AppModes) => void;
-  setStandardQuestionLength: (length: number) => void;
-  setUserResponses: (responses: UserResponse[]) => void;
+  questionsEnded: boolean;
+  setCurrentQuestionId: React.Dispatch<React.SetStateAction<number>>;
+  setQuestionResult: React.Dispatch<React.SetStateAction<boolean>>;
+  setSelectedAnswer: React.Dispatch<React.SetStateAction<string>>;
+  setQuestionsCompleted: React.Dispatch<React.SetStateAction<number[]>>;
+  setLastEndlessQuestions: React.Dispatch<React.SetStateAction<number[]>>;
+  setQuestionMode: React.Dispatch<React.SetStateAction<AppModes>>;
+  setStandardQuestionLength: React.Dispatch<React.SetStateAction<number>>;
+  setUserResponses: React.Dispatch<React.SetStateAction<UserResponse[]>>;
   resetCurrentQuestionState: () => void;
   resetDoYouKnowSWUMode: () => void;
-  setCurrentFollowUpKeys: (keys: string[]) => void;
-  setCurrentVariant: (variant: number) => void;
+  setCurrentFollowUpKeys: React.Dispatch<React.SetStateAction<string[]>>;
+  setCurrentVariant: React.Dispatch<React.SetStateAction<number>>;
+  setQuestionsEnded: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export function QuestionContent({
@@ -45,6 +46,7 @@ export function QuestionContent({
   userResponses,
   currentFollowUpKeys,
   currentVariant,
+  questionsEnded,
   setCurrentQuestionId,
   setQuestionResult,
   setSelectedAnswer,
@@ -54,7 +56,8 @@ export function QuestionContent({
   resetCurrentQuestionState,
   resetDoYouKnowSWUMode,
   setCurrentFollowUpKeys,
-  setCurrentVariant
+  setCurrentVariant,
+  setQuestionsEnded
 }: IProps) {
   const currentQuestion = currentQuestionSet.find(q => q.id === currentQuestionId)!;
   const currentVariantQuestion = currentQuestion.variants[currentVariant];
@@ -193,7 +196,7 @@ export function QuestionContent({
               followUpSubmitted, followUpAnswer,
               sfx,
               setQuestionsCompleted, setCurrentQuestionId, setLastEndlessQuestions, setUserResponses,
-              resetCurrentQuestionState, setFollowUpSubmitted, setFollowUpAnswer, setCurrentVariant)}>
+              resetCurrentQuestionState, setFollowUpSubmitted, setFollowUpAnswer, setCurrentVariant, setQuestionsEnded)}>
             Next Question
           </button>
           <p className={`text-xl font-bold mt-4 uwd:mt-8 4k:mt-10 ${followUpAnswer === currentVariantQuestion.followUp.answer ? "text-green-500" : "text-red-500"} `}>
@@ -209,24 +212,20 @@ export function QuestionContent({
 
   return <div className={`p-2 border rounded ${globalBackgroundStyleBigShadow}`}>
   {
-    questionMode === "marathon"
-    && questionsCompleted.length === currentQuestionSet.length
-    && <MarathonModeEndScreen app="dykswu" resetDykSWUMode={resetDoYouKnowSWUMode} />
-  }
-  {
-    (questionMode === "standard" && questionsCompleted.length === standardQuestionLength
-      || isDifficultyMode(questionMode) && questionsCompleted.length === currentQuestionSet.length)
-    && <StandardModeEndScreen
+    (questionMode !== "" && questionsCompleted.length === currentQuestionSet.length
+      || questionMode === "iron-man" && questionsEnded)
+    && <ModeEndScreen
       app="dykswu"
+      appMode={questionMode}
       userResponses={userResponses}
       currentModeSet={currentQuestionSet}
-      ignoreScore={questionMode !== "standard"}
       standardModeLength={standardQuestionLength}
+      ironManFailed={questionsEnded}
       resetDoYouKnowSWUMode={resetDoYouKnowSWUMode}
     />
   }
   {
-    questionsCompleted.length < currentQuestionSet.length && <div className={`grid ${globalBackgroundStyle} shadow-md md:grid-cols-[40%_60%] border p-8 rounded gap-4`}>
+     !questionsEnded && questionsCompleted.length < currentQuestionSet.length && <div className={`grid ${globalBackgroundStyle} shadow-md md:grid-cols-[40%_60%] border p-8 rounded gap-4`}>
       {/* Question and choices */}
       <div>
         {!showFollowUpChoices && !followUpSubmitted && <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">What's been changed?</p>}
@@ -246,7 +245,7 @@ export function QuestionContent({
                   followUpSubmitted, followUpAnswer,
                   sfx,
                   setQuestionsCompleted, setCurrentQuestionId, setLastEndlessQuestions, setUserResponses,
-                  resetCurrentQuestionState, setFollowUpSubmitted, setFollowUpAnswer, setCurrentVariant)}>
+                  resetCurrentQuestionState, setFollowUpSubmitted, setFollowUpAnswer, setCurrentVariant, setQuestionsEnded)}>
                 Next Question
               </button>
               : null
@@ -306,34 +305,49 @@ function onNextQuestion(
   followUpSubmitted: boolean,
   followUpAnswer: string,
   sfx: (type: SfxType) => void,
-  setQuestionsCompleted: (completed: number[]) => void,
-  setCurrentQuestionId: (id: number) => void,
-  setLastEndlessQuizzes: (list: number[]) => void,
-  setUserResponses: (responses: UserResponse[]) => void,
+  setQuestionsCompleted: React.Dispatch<React.SetStateAction<number[]>>,
+  setCurrentQuestionId: React.Dispatch<React.SetStateAction<number>>,
+  setLastEndlessQuizzes: React.Dispatch<React.SetStateAction<number[]>>,
+  setUserResponses: React.Dispatch<React.SetStateAction<UserResponse[]>>,
   resetCurrentQuestionState: () => void,
-  setFollowUpSubmitted: (submitted: boolean) => void,
-  setFollowUpAnswer: (answer: string) => void,
-  setCurrentVariant: (variant: number) => void
+  setFollowUpSubmitted: React.Dispatch<React.SetStateAction<boolean>>,
+  setFollowUpAnswer: React.Dispatch<React.SetStateAction<string>>,
+  setCurrentVariant: React.Dispatch<React.SetStateAction<number>>,
+  setQuestionsEnded: React.Dispatch<React.SetStateAction<boolean>>
 ) {
   const endlessThreshold = 10; // Number of recent DYKSWU questions to track in endless mode
-  if (questionMode === "marathon") {
+
+  if (questionMode === "iron-man") {
     const updatedCompleted = [...questionsCompleted];
-    if (selectedAnswer === currentVariantQuestion.answer && !currentVariantQuestion.followUp) {
+    const isCorrectAnswer = selectedAnswer === currentVariantQuestion.answer &&
+      (!currentVariantQuestion.followUp ||
+       (currentVariantQuestion.followUp && followUpSubmitted && followUpAnswer === currentVariantQuestion.followUp.answer));
+
+    if (isCorrectAnswer) {
       updatedCompleted.push(currentQuestionId);
       setQuestionsCompleted(updatedCompleted);
-    } else if (selectedAnswer === currentVariantQuestion.answer && currentVariantQuestion.followUp
-        && followUpSubmitted && followUpAnswer === currentVariantQuestion.followUp.answer) {
-      updatedCompleted.push(currentQuestionId);
-      setQuestionsCompleted(updatedCompleted);
-    }
-    if (updatedCompleted.length !== currentQuestionSet.length) {
-      const availableQuestions = currentQuestionSet.filter(q => !updatedCompleted.includes(q.id));
-      if (availableQuestions.length > 0) {
-        const nextQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
-        setCurrentQuestionId(nextQuestion.id);
-        setCurrentVariant(Math.floor(Math.random() * nextQuestion.variants.length));
-        resetCurrentQuestionState();
+      const updatedResponses = [...userResponses];
+      const newResponse: UserResponse = { modeId: currentQuestionId, selected: selectedAnswer, correct: currentVariantQuestion.answer };
+      if (currentVariantQuestion.followUp) {
+        newResponse.followUp = {
+          followUpSelected: followUpAnswer,
+          followUpCorrect: currentVariantQuestion.followUp.answer
+        };
       }
+      updatedResponses.push(newResponse);
+      setUserResponses(updatedResponses);
+
+      if (updatedCompleted.length !== currentQuestionSet.length) {
+        const availableQuestions = currentQuestionSet.filter(q => !updatedCompleted.includes(q.id));
+        if (availableQuestions.length > 0) {
+          const nextQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+          setCurrentQuestionId(nextQuestion.id);
+          setCurrentVariant(Math.floor(Math.random() * nextQuestion.variants.length));
+          resetCurrentQuestionState();
+        }
+      }
+    } else {
+      setQuestionsEnded(true);
     }
   } else if (questionMode === "endless") {
     const updatedLastEndless = [...lastEndlessQuizzes, currentQuestionId];

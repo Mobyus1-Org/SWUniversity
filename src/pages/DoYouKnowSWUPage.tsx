@@ -20,6 +20,7 @@ function DoYouKnowSWUPage() {
   const [questionsCompleted, setQuestionsCompleted] = React.useState<number[]>([]);
   const [userResponses, setUserResponses] = React.useState<UserResponse[]>([]);
   const [lastEndlessQuestions, setLastEndlessQuestions] = React.useState<number[]>([]);
+  const [questionsEnded, setQuestionsEnded] = React.useState<boolean>(false);
   //TODO: remove this once we go live
   const [searchParams] = useSearchParams();
   const testId = searchParams.get("Mobyus1hereisatestid");
@@ -39,6 +40,10 @@ function DoYouKnowSWUPage() {
     });
   }, [testId]);
 
+  React.useEffect(() => {
+    setQuestionsEnded(false);
+  }, [dykswuMode])
+
   const renderQuestionContent = () => loading
     ? <p className="text-lg uwd:text-3xl 4k:text-5xl">Loading questions...</p>
     : <QuestionContent
@@ -53,6 +58,7 @@ function DoYouKnowSWUPage() {
       userResponses={userResponses}
       currentFollowUpKeys={currentFollowUpKeys}
       currentVariant={currentVariant}
+      questionsEnded={questionsEnded}
       setCurrentQuestionId={setCurrentQuestionId}
       setQuestionResult={setQuestionResult}
       setSelectedAnswer={setSelectedAnswer}
@@ -65,6 +71,7 @@ function DoYouKnowSWUPage() {
       resetDoYouKnowSWUMode={resetDoYouKnowSWUMode}
       setCurrentFollowUpKeys={setCurrentFollowUpKeys}
       setCurrentVariant={setCurrentVariant}
+      setQuestionsEnded={setQuestionsEnded}
     />;
 
   const resetCurrentQuestionState = () => {
@@ -102,7 +109,7 @@ function DoYouKnowSWUPage() {
 
   const modeDescriptions: ModeDescriptions = {
     "": "",
-    "marathon": `Attempt to identify every card in the databank to complete the marathon!\n\nTotal Cards: ${dykswuSets.all.length}`,
+    "iron-man": `Attempt to identify every card in the databank to complete the Iron Man challenge!\n\nTotal Cards: ${dykswuSets.all.length}`,
     "endless": "Continue to be shown random cards with no end in sight!",
     "standard": "Select a number of cards and see how many you know!\nReceive a score at the end!",
     "padawan": `Cards in this mode are fairly easy!\n\nTotal Cards: ${dykswuSets.padawan.length}`,

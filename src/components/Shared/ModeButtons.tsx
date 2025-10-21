@@ -39,9 +39,9 @@ export function ModeButtons({mode, appModeSets, standardModeLength, modeDescript
       setVariant={setVariant}
     />
     <ModeButtonItem
-      mode="marathon"
-      title="Marathon Mode"
-      description={modeDescriptions["marathon"]}
+      mode="iron-man"
+      title="Iron Man Challenge"
+      description={modeDescriptions["iron-man"]}
       modeSet={appModeSets.all}
       initModeId={true}
       initVariant={initVariant}

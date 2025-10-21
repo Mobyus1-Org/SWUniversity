@@ -118,8 +118,8 @@ export function isDifficultyMode(mode: AppModes): boolean {
 
 export function getModeTitle(app: SWUniversityApp, mode: AppModes): string {
   switch (mode) {
-    case "marathon":
-      return "Marathon Mode";
+    case "iron-man":
+      return "Iron Man Challenge";
     case "endless":
       return "Endless Mode";
     case "standard":
