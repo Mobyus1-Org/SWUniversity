@@ -56,6 +56,14 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
     <img src="/assets/menu_icon.png" alt="Menu" className="w-8" />
   </label>;
 
+  const getRGB = (color: keyof typeof LightsaberColors) => {
+    if(color === "none") {
+      return "none";
+    }
+    const colorArray = LightsaberColors[color];
+    return `rgb(${colorArray[0]}, ${colorArray[1]}, ${colorArray[2]})`;
+  };
+
   const renderModal = () => {
     if (!showModal) return null;
 
@@ -105,7 +113,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
                   y="2"
                   width="4"
                   height="20"
-                  fill={userSettings.lightsaberColor}
+                  fill={getRGB(userSettings.lightsaberColor)}
                   filter="drop-shadow(0 0 4px currentColor)"
                 />
               </svg>

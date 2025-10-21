@@ -1534,5 +1534,27 @@
         "explanation": "**_Rebellion Y-Wing_** triggers **On Attack**."
       }
     ]
+  },
+  {
+    "id": 66,
+    "actualCard": "TWI/195",
+    "variants": [
+      {
+        "img": "sabine-twi1",
+        "answer": "aspects",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What should **_Sabine Wren, You Can Count On Me_**'s aspects actually be?",
+          "choices": {
+            "a": "_Vigilance_ _Heroism_",
+            "b": "_Aggression_",
+            "c": "_Cunning_",
+            "d": "_Cunning_ _Heroism_"
+          },
+          "answer": "d"
+        },
+        "explanation": "**_Sabine Wren, You Can Count On Me_** has the aspects _Cunning_ _Heroism_."
+      }
+    ]
   }
 ]

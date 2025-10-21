@@ -6,13 +6,12 @@ export const setLightsaberColor = (color: keyof typeof LightsaberColors) => {
 };
 
 export const LightsaberColors = {
-  lightBlue: [0, 160, 255],
-  blue: [46, 103, 248],
-  green: [0, 255, 100],
-  orange: [255, 140, 0],
+  blue: [50, 140, 255],
+  green: [90, 170, 90],
   red: [255, 50, 50],
-  purple: [138, 43, 226],
-  yellow: [255, 255, 0],
+  purple: [180, 70, 225],
+  yellow: [255, 255, 115],
+  orange: [255, 180, 0],
   white: [255, 255, 255],
   none: [0, 0, 0],
 } as const;

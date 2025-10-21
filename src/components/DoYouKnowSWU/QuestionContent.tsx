@@ -89,7 +89,7 @@ export function QuestionContent({
 
   if (!currentQuestion) return <p className="text-lg">Loading question...</p>;
 
-  const currentHover = getLightsaberGlowHover(userSettings?.lightsaberColor || 'lightBlue');
+  const currentHover = getLightsaberGlowHover(userSettings?.lightsaberColor || 'blue');
   const showFirstChoices = !currentVariantQuestion.followUp
     || (currentVariantQuestion.followUp && !questionResult)
     || (currentVariantQuestion.followUp && !followUpSubmitted && selectedAnswer !== currentVariantQuestion.answer);

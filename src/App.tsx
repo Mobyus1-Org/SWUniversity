@@ -21,7 +21,7 @@ function App() {
   const [userSettings, setUserSettings] = React.useState<UserSettings>(() => {
     const defaultUserSettings: UserSettings = {
       soundEnabled: true,
-      lightsaberColor: 'lightBlue',
+      lightsaberColor: 'blue',
     };
     const savedSettings = localStorage.getItem(UserSettingsLocalStorageKey);
     const parsedSettings = savedSettings ? JSON.parse(savedSettings) : defaultUserSettings;

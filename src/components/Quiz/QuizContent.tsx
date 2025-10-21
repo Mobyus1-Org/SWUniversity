@@ -129,7 +129,7 @@ export function QuizContent({
     return divs;
   }
 
-  const currentHover = getLightsaberGlowHover(userSettings?.lightsaberColor || 'lightBlue');
+  const currentHover = getLightsaberGlowHover(userSettings?.lightsaberColor || 'blue');
 
   return <div className={`p-2 border rounded ${globalBackgroundStyleBigShadow}`}>
   {
