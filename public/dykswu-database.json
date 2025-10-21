@@ -1509,7 +1509,7 @@
           "question": "What's wrong with the ability text?",
           "choices": {
             "a": "It should deal 1 damage to a unit.",
-            "b": "It should deal 2 damage to base.",
+            "b": "It should deal 1 damage to base.",
             "c": "It should deal 1 damage to a unit or base.",
             "d": "It should deal 1 damage to an exhausted unit."
           },
