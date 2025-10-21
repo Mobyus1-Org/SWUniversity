@@ -1,11 +1,11 @@
 import React from "react";
 
-import { globalBackgroundStyle, globalBackgroundStyleBigShadow, lightsaberGlowHover } from "../../util/style-const";
+import { globalBackgroundStyle, globalBackgroundStyleBigShadow, getLightsaberGlowHover } from "../../util/style-const";
 import { DYKSWUChoices, type AppModes, type SfxType } from "../../util/const";
 import { renderItalicsAndBold, type UserResponse, type DoYouKnowSWUQuestion, getSWUDBImageLink, getDYKSWUImageLink, renderDYKSWUChoiceTitle, type DoYouKnowSWUVariant, isDifficultyMode } from "../../util/func";
 import { StandardModeEndScreen } from "../Shared/StandardModeEndScreen";
 import { MarathonModeEndScreen } from "../Shared/MarathonModeEndScreen";
-import { AudioContext } from "../../util/context";
+import { AudioContext, UserSettingsContext } from "../../util/context";
 
 interface IProps {
   currentQuestionSet: DoYouKnowSWUQuestion[];
@@ -59,6 +59,7 @@ export function QuestionContent({
   const currentQuestion = currentQuestionSet.find(q => q.id === currentQuestionId)!;
   const currentVariantQuestion = currentQuestion.variants[currentVariant];
   const { sfx } = React.useContext(AudioContext) ?? { sfx: () => { } };
+  const userSettings = React.useContext(UserSettingsContext);
   const [revealCard, setRevealCard] = React.useState(false);
   const [followUpAnswer, setFollowUpAnswer] = React.useState<string>("");
   const [followUpSubmitted, setFollowUpSubmitted] = React.useState(false);
@@ -88,6 +89,7 @@ export function QuestionContent({
 
   if (!currentQuestion) return <p className="text-lg">Loading question...</p>;
 
+  const currentHover = getLightsaberGlowHover(userSettings?.lightsaberColor || 'lightBlue');
   const showFirstChoices = !currentVariantQuestion.followUp
     || (currentVariantQuestion.followUp && !questionResult)
     || (currentVariantQuestion.followUp && !followUpSubmitted && selectedAnswer !== currentVariantQuestion.answer);
@@ -116,7 +118,7 @@ export function QuestionContent({
         showFirstChoices && DYKSWUChoices.map((_, index) => <div key={"choice-" + index} className={`${highlighted(index)}`}>
           <button
             type="button"
-            className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 ${lightsaberGlowHover}
+            className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 ${currentHover}
               ${selectedAnswer === DYKSWUChoices[index] ? 'border-white bg-slate-600/50' : 'border-slate-600'}
               ${questionResult ? 'cursor-not-allowed' : 'cursor-pointer'}
             `}
@@ -150,7 +152,7 @@ export function QuestionContent({
               return <div key={"follow-up-" + index} className={`${highlighted()}`}>
               <button
                 type="button"
-                className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 ${lightsaberGlowHover}
+                className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 ${currentHover}
                   ${followUpAnswer === key ? 'border-white bg-slate-600/50' : 'border-slate-600'}
                   ${followUpSubmitted ? 'cursor-not-allowed' : 'cursor-pointer'}
                 `}
@@ -169,7 +171,7 @@ export function QuestionContent({
           {
             !followUpSubmitted &&<button
               type="button"
-              className={`btn btn-primary mt-20 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${lightsaberGlowHover}
+              className={`btn btn-primary mt-20 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${currentHover}
                 ${followUpAnswer === "" ? "opacity-50 cursor-not-allowed" : ""}
               `}
               onClick={() => {
@@ -185,7 +187,7 @@ export function QuestionContent({
       }
       {
         currentVariantQuestion.followUp && showFollowUpAnswer && <div className="col-span-2">
-          <button className={`btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${lightsaberGlowHover}`} onClick={() =>
+          <button className={`btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${currentHover}`} onClick={() =>
             onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentVariantQuestion,
               currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses,
               followUpSubmitted, followUpAnswer,
@@ -235,10 +237,10 @@ export function QuestionContent({
           }
         }}>
           {renderChoices()}
-          {!questionResult && <button type="submit" className={`btn btn-primary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${lightsaberGlowHover}`}>Submit Answer</button>}
+          {!questionResult && <button type="submit" className={`btn btn-primary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${currentHover}`}>Submit Answer</button>}
           {
             showAnswer && questionsCompleted.length < currentQuestionSet.length
-              ? <button className={`btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${lightsaberGlowHover}`} onClick={() =>
+              ? <button className={`btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${currentHover}`} onClick={() =>
                 onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentVariantQuestion,
                   currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses,
                   followUpSubmitted, followUpAnswer,
@@ -360,7 +362,7 @@ function onNextQuestion(
     }
     updatedResponses.push(newResponse);
     setUserResponses(updatedResponses);
-    if (questionMode == "standard" && updatedCompleted.length < standardQuestionLength) {
+    if (questionMode === "standard" && updatedCompleted.length < standardQuestionLength) {
       setCurrentQuestionId(currentQuestionSet[updatedCompleted.length].id);
       setCurrentVariant(Math.floor(Math.random() * currentQuestionSet[updatedCompleted.length].variants.length));
       resetCurrentQuestionState();

@@ -4,7 +4,7 @@ import {
   globalBackgroundStyleNoShadow,
   globalBackgroundStyleOpaque,
   LightsaberColors,
-  lightsaberGlowHover,
+  getLightsaberGlowHover,
   setLightsaberColor,
 } from "./util/style-const";
 import { UserSettingsLocalStorageKey, type UserSettings } from "./util/const";
@@ -118,13 +118,19 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
                 const newColor = e.target.value as keyof typeof LightsaberColors;
                 updateUserSettings(setUserSettings, { lightsaberColor: newColor });
                 setLightsaberColor(newColor);
-                sfx("transition");
+                if(newColor === "none") {
+                  sfx("confirm");
+                } else {
+                  sfx("transition");
+                }
               }}
               className="select select-bordered w-full max-w-xs text-lg lg:text-xl uwd:text-2xl 4k:text-4xl bg-slate-800 border-gray-600"
             >
               {Object.keys(LightsaberColors).map((colorKey) => (
                 <option key={colorKey} value={colorKey}>
-                  {colorKey.charAt(0).toUpperCase() + colorKey.slice(1).replace(/([A-Z])/g, ' $1')}
+                  {colorKey === 'none'
+                    ? 'Turn Off'
+                    : colorKey.charAt(0).toUpperCase() + colorKey.slice(1).replace(/([A-Z])/g, ' $1')}
                 </option>
               ))}
             </select>
@@ -154,6 +160,8 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
     }
   };
 
+  const currentHover = getLightsaberGlowHover(userSettings.lightsaberColor);
+
   return <div className="layout">
     <main>
       <div
@@ -171,7 +179,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
             <Link
               to="/"
               className={`btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl
-                border-gray-400 bg-blue-500/20 rounded mx-4 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${lightsaberGlowHover}`}
+                border-gray-400 bg-blue-500/20 rounded mx-4 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`}
               onClick={(e) => handleNavClick(e, "/")}
             >
               Home
@@ -179,7 +187,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
             <Link
               to="/quiz"
               className={`btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl
-                border-gray-400 bg-blue-500/20 rounded mx-4 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${lightsaberGlowHover}`}
+                border-gray-400 bg-blue-500/20 rounded mx-4 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`}
               onClick={(e) => handleNavClick(e, "/quiz")}
             >
               Quiz
@@ -187,7 +195,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
             <Link
               to="/do-you-know-swu"
               className={`btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl
-                border-gray-400 bg-blue-500/20 rounded mx-6 py-5 uwd:py-8 4k:py-15 4k:px-8 ${lightsaberGlowHover}`}
+                border-gray-400 bg-blue-500/20 rounded mx-6 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`}
               onClick={(e) => handleNavClick(e, "/do-you-know-swu")}
             >
               DYKSWU?
@@ -289,7 +297,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
           <Link
             to="/"
             className={`btn btn-outline text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl w-full
-              border-gray-400 bg-blue-500/20 rounded py-5 mx-2 ${lightsaberGlowHover}`}
+              border-gray-400 bg-blue-500/20 rounded py-5 mx-2 ${currentHover}`}
             onClick={(e) => handleNavClick(e, "/")}
           >
             Home
@@ -297,7 +305,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
           <Link
             to="/quiz"
             className={`btn btn-outline text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl w-full
-              border-gray-400 bg-blue-500/20 rounded py-5 mx-2 ${lightsaberGlowHover}`}
+              border-gray-400 bg-blue-500/20 rounded py-5 mx-2 ${currentHover}`}
             onClick={(e) => handleNavClick(e, "/quiz")}
           >
             Quiz
@@ -305,7 +313,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
           <Link
             to="/do-you-know-swu"
             className={`btn btn-outline text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl flex-col w-full
-              border-gray-400 bg-blue-500/20 rounded py-5 mx-2 ${lightsaberGlowHover}`}
+              border-gray-400 bg-blue-500/20 rounded py-5 mx-2 ${currentHover}`}
             onClick={(e) => handleNavClick(e, "/do-you-know-swu")}
           >
             DYKSWU?

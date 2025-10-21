@@ -1,10 +1,10 @@
 import React from "react";
-import { globalBackgroundStyle, globalBackgroundStyleBigShadow, lightsaberGlowHover } from "../../util/style-const";
+import { globalBackgroundStyle, globalBackgroundStyleBigShadow, getLightsaberGlowHover } from "../../util/style-const";
 import { type AppModes, type SfxType } from "../../util/const";
 import { renderItalicsAndBold, type Quiz, type UserResponse, getSWUDBImageLink, isDifficultyMode } from "../../util/func";
 import { StandardModeEndScreen } from "../Shared/StandardModeEndScreen";
 import { MarathonModeEndScreen } from "../Shared/MarathonModeEndScreen";
-import { AudioContext, ModalContext, type ModalContextProps } from "../../util/context";
+import { AudioContext, ModalContext, UserSettingsContext, type ModalContextProps } from "../../util/context";
 import { RelevantCardsPanel } from "./RelevantCardsPanel";
 
 interface IProps {
@@ -60,6 +60,7 @@ export function QuizContent({
     setModalData: () => {}
   };
   const { showModal, setShowModal, modalKey, setModalKey, setModalData } = React.useContext(ModalContext) ?? defaultModalContext;
+  const userSettings = React.useContext(UserSettingsContext);
   const currentQuiz = currentQuizSet.find(quiz => quiz.id === currentQuizId);
 
   React.useEffect(() => {
@@ -98,7 +99,7 @@ export function QuizContent({
     const divs = currentQuizKeys.map((_, index) => <div key={"choice-" + index} className={`mb-2.5 uwd:mb-4 4k:mb-8 ${highlighted(index)}`}>
         <button
           type="button"
-          className={`w-full text-left px-4 uwd:px-8 4k:px-16 py-2 uwd:py-4 4k:py-8 border rounded-lg hover:bg-slate-700/50 ${lightsaberGlowHover}
+          className={`w-full text-left px-4 uwd:px-8 4k:px-16 py-2 uwd:py-4 4k:py-8 border rounded-lg hover:bg-slate-700/50 ${currentHover}
             ${
               selectedAnswer === currentQuizKeys[index]
                 ? 'border-white bg-slate-600/50'
@@ -127,6 +128,8 @@ export function QuizContent({
 
     return divs;
   }
+
+  const currentHover = getLightsaberGlowHover(userSettings?.lightsaberColor || 'lightBlue');
 
   return <div className={`p-2 border rounded ${globalBackgroundStyleBigShadow}`}>
   {
@@ -158,10 +161,10 @@ export function QuizContent({
           }
         }}>
         {renderChoices()}
-        {!quizResult && <button type="submit" className={`btn btn-primary mt-4 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${lightsaberGlowHover}`}>Submit Answer</button>}
+        {!quizResult && <button type="submit" className={`btn btn-primary mt-4 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${currentHover}`}>Submit Answer</button>}
         {
           quizResult && quizzesCompleted.length < currentQuizSet.length
-            ? <button className={`btn btn-secondary mt-4 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${lightsaberGlowHover}`} onClick={() =>
+            ? <button className={`btn btn-secondary mt-4 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${currentHover}`} onClick={() =>
                   onNextQuestion(quizMode, selectedAnswer, currentQuizId, currentQuiz.answer.toString(),
                     currentQuizSet, quizzesCompleted, lastEndlessQuizzes, standardQuizLength, userResponses, sfx,
                     setQuizzesCompleted, setCurrentQuizId, setLastEndlessQuizzes, setUserResponses, resetCurrentQuizState)}>
@@ -186,7 +189,7 @@ export function QuizContent({
       {/*Relevant Cards Modal*/}
       {
         currentQuiz.relevantCards.length > 0 &&
-          showModal && modalKey == "relevant-cards" && <div role="dialog" aria-modal="true" className="z-50 fixed inset-0 -top-20 h-screen bg-black flex flex-wrap" onClick={() => setShowModal(false)}>
+          showModal && modalKey === "relevant-cards" && <div role="dialog" aria-modal="true" className="z-50 fixed inset-0 -top-20 h-screen bg-black flex flex-wrap" onClick={() => setShowModal(false)}>
           <p className="absolute top-2 md:top-4 right-4 md:right-8 text-gray-400 md:text-4xl 4k:!text-7xl" onClick={() => setShowModal(false)}>X</p>
           <div className="flex flex-wrap justify-center py-8 md:px-24">
           {

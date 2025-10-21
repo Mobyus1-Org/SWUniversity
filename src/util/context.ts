@@ -1,9 +1,13 @@
 import React from "react";
-import type { SfxType } from "./const";
+import type { SfxType, UserSettings } from "./const";
 import type { Quiz } from "./func";
 
 export const AudioContext = React.createContext<{ sfx: (type: SfxType, forcePlay?: boolean) => void } | null>(null);
 export const AudioContextProvider = AudioContext.Provider;
+
+export const UserSettingsContext = React.createContext<UserSettings | null>(null);
+export const UserSettingsContextProvider = UserSettingsContext.Provider;
+
 export type ModalKey = "" | "settings" | "relevant-cards";
 export type ModalData = {
   currentQuiz?: Quiz;

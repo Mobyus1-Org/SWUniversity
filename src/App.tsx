@@ -11,7 +11,7 @@ import DoYouKnowSWUPage from './pages/DoYouKnowSWUPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 import './App.css';
-import { AudioContextProvider, ModalContextProvider, type ModalData, type ModalKey } from './util/context';
+import { AudioContextProvider, ModalContextProvider, UserSettingsContextProvider, type ModalData, type ModalKey } from './util/context';
 import InternalPage from './pages/api/InternalPage';
 import { LightsaberColors, setLightsaberColor } from './util/style-const';
 
@@ -68,18 +68,20 @@ function App() {
 
   return <BrowserRouter>
     <AudioContextProvider value={{ sfx }}>
-      <ModalContextProvider value={{ showModal, modalKey, setShowModal, setModalKey, modalData, setModalData }}>
-        <Layout userSettings={userSettings} setUserSettings={setUserSettings}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/quiz" element={<QuizPage />} />
-            <Route path="/do-you-know-swu" element={<DoYouKnowSWUPage />} />
-            {/* <Route path="/puzzles" element={<PuzzlesPage />} /> */}
-            <Route path="/rpc/internal" element={<InternalPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Layout>
-      </ModalContextProvider>
+      <UserSettingsContextProvider value={userSettings}>
+        <ModalContextProvider value={{ showModal, modalKey, setShowModal, setModalKey, modalData, setModalData }}>
+          <Layout userSettings={userSettings} setUserSettings={setUserSettings}>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/quiz" element={<QuizPage />} />
+              <Route path="/do-you-know-swu" element={<DoYouKnowSWUPage />} />
+              {/* <Route path="/puzzles" element={<PuzzlesPage />} /> */}
+              <Route path="/rpc/internal" element={<InternalPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Layout>
+        </ModalContextProvider>
+      </UserSettingsContextProvider>
     </AudioContextProvider>
   </BrowserRouter>;
 }
