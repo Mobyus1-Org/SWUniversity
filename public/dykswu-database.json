@@ -1688,5 +1688,170 @@
         "explanation": ""
       }
     ]
+  },
+  {
+    "id": 72,
+    "actualCard": "JTL/189",
+    "variants": [
+      {
+        "img": "bobafett-jtlunit1",
+        "answer": "hp",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What is **_Boba Fett, Feared Bounty Hunter's_** actual HP?",
+          "choices": {
+            "a": "3.",
+            "b": "6.",
+            "c": "4.",
+            "d": "7."
+          },
+          "answer": "c"
+        },
+        "explanation": "**_Boba Fett, Feared Bounty Hunter_**, has 7 HP."
+      }
+    ]
+  },
+  {
+    "id": 73,
+    "actualCard": "JTL/184",
+    "variants": [
+      {
+        "img": "contractedjumpmaster1",
+        "answer": "ability-text",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What is wrong with the ability text?",
+          "choices": {
+            "a": "**_Contracted Jumpmaster_** should have **\"When Played:** Give a shield token to this unit.\"",
+            "b": "**_Contracted Jumpmaster_** should have **Sentinel**.",
+            "c": "**_Contracted Jumpmaster_** should have **Ambush**.",
+            "d": "**_Contracted Jumpmaster_** should have **Hidden**."
+          },
+          "answer": "b"
+        },
+        "explanation": ""
+      }
+    ]
+  },
+  {
+    "id": 74,
+    "actualCard": "JTL/198",
+    "variants": [
+      {
+        "img": "fireball-jtl1",
+        "answer": "ability-text",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What is wrong with the ability text?",
+          "choices": {
+            "a": "**_Fireball_**'s second ability should read: **\"When the regroup phase starts:** You may deal 1 damage to this unit.\"",
+            "b": "**_Fireball_**'s second ability should read: **\"When the regroup phase starts:** You may deal 1 damage to an enemy unit.\"",
+            "c": "**_Fireball_**'s second ability should read: **\"When the regroup phase starts:** Deal 1 damage to this unit.\"",
+            "d": "**_Fireball_**'s second ability should read: **\"When the regroup phase starts:** Deal 1 damage to an enemy unit.\""
+          },
+          "answer": "c"
+        },
+        "explanation": "**_Fireball_** must deal 1 damage to itself at the start of the regroup phase; it is not optional."
+      }
+    ]
+  },
+  {
+    "id": 75,
+    "actualCard": "JTL/203",
+    "variants": [
+      {
+        "img": "hansolo-jtlunit1",
+        "answer": "subtitle",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What is **_Han Solo_**'s subtitle?",
+          "choices": {
+            "a": "Audacious Smuggler.",
+            "b": "Never Tell Me The Odds.",
+            "c": "Crafty Smuggler.",
+            "d": "Has His Moments."
+          },
+          "answer": "d"
+        },
+        "explanation": "The subtitle \"Charismatic Smuggler\" actually belongs to **_Boshek_** of the same set."
+      }
+    ]
+  },
+  {
+    "id": 76,
+    "actualCard": "JTL/140",
+    "variants": [
+      {
+        "img": "ig2000-jtl1",
+        "answer": "ability-text",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What is wrong with the ability text?",
+          "choices": {
+            "a": "Deal 1 damage to each of up to 3 units.",
+            "b": "Deal 1 damage to each enemy unit.",
+            "c": "Deal 1 damage to each unit.",
+            "d": "Deal 1 damage to each damaged enemy unit."
+          },
+          "answer": "a"
+        },
+        "explanation": ""
+      }
+    ]
+  },
+  {
+    "id": 77,
+    "actualCard": "JTL/251",
+    "variants": [
+      {
+        "img": "jedilightcruiser1",
+        "answer": "traits",
+        "difficulty": 1,
+        "followUp": {
+          "question": "Which of **_Jedi Light Cruiser_**'s traits is missing/wrong?",
+          "choices": {
+            "a": "_Capital Ship_",
+            "b": "_Jedi_",
+            "c": "_Traansport_",
+            "d": "_Republic_"
+          },
+          "answer": "b"
+        },
+        "explanation": "**_Jedi Light Cruiser_** is a _Jedi_."
+      }
+    ]
+  },
+  {
+    "id": 78,
+    "actualCard": "JTL/176",
+    "variants": [
+      {
+        "img": "shootdown1",
+        "answer": "rarity",
+        "difficulty": 1,
+        "explanation": "**_Shoot Down_** is actually a Common card."
+      }
+    ]
+  },
+  {
+    "id": 79,
+    "actualCard": "JTL/238",
+    "variants": [
+      {
+        "img": "sithtrooper2",
+        "answer": "traits",
+        "difficulty": 0,
+        "followUp": {
+          "question": "Which of **_Sith Trooper's_** traits is wrong?",
+          "choices": {
+            "a": "_Sith_",
+            "b": "_Trooper_",
+            "c": "_Imperial_"
+          },
+          "answer": "c"
+        },
+        "explanation": "**_Sith Trooper_** is not _Imperial_. It is in fact a _First Order_ unit."
+      }
+    ]
   }
 ]
