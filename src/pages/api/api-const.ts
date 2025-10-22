@@ -18,6 +18,15 @@ export type DYKSWUCountEntry = {
       [answer: string]: number;
     };
   };
+  set: {
+    "SOR": number;
+    "SHD": number;
+    "TWI": number;
+    "JTL": number;
+    "LOF": number;
+    "IBH": number;
+    "SEC": number;
+  };
 }
 
 export type DYKSWUCounts = {

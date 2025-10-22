@@ -211,7 +211,7 @@
             "a": "_Official_",
             "b": "_Sith_",
             "c": "_Imperial_",
-            "d": "_Underworld_."
+            "d": "_Underworld_"
           },
           "answer": "b"
         },
@@ -1554,6 +1554,138 @@
           "answer": "d"
         },
         "explanation": "**_Sabine Wren, You Can Count On Me_** has the aspects _Cunning_ _Heroism_."
+      }
+    ]
+  },
+  {
+    "id": 67,
+    "actualCard": "JTL/003-portrait",
+    "variants": [
+      {
+        "img": "lando-jtl1",
+        "answer": "traits",
+        "difficulty": 1,
+        "followUp": {
+          "question": "Which of **_Lando Calrissian's_** traits is missing/wrong?",
+          "choices": {
+            "a": "_Official_",
+            "b": "_Fringe_",
+            "c": "_Imperial_",
+            "d": "_Underworld_"
+          },
+          "answer": "a"
+        },
+        "explanation": "**_Lando Calrissian, Buying Time_** is an _Official_."
+      }
+    ]
+  },
+  {
+    "id": 68,
+    "actualCard": "JTL/048",
+    "variants": [
+      {
+        "img": "cassian-jtl1",
+        "answer": "traits",
+        "difficulty": 1,
+        "followUp": {
+          "question": "Which of **_Cassian Andor's_** traits is missing/wrong?",
+          "choices": {
+            "a": "_Underworld_",
+            "b": "_Rebel_",
+            "c": "_Imperial_",
+            "d": "_Spectre_"
+          },
+          "answer": "b"
+        },
+        "explanation": "**_Cassian Andor, Threading the Eye_** is a _Rebel_."
+      }
+    ]
+  },
+  {
+    "id": 69,
+    "actualCard": "JTL/049",
+    "variants": [
+      {
+        "img": "l337-jtl1",
+        "answer": "traits",
+        "difficulty": 1,
+        "followUp": {
+          "question": "Which of **_L3-37's_** traits is missing/wrong?",
+          "choices": {
+            "a": "_Bounty Hunter_",
+            "b": "_Fringe_",
+            "c": "_Underworld_",
+            "d": "_Resistance_"
+          },
+          "answer": "c"
+        },
+        "explanation": "**_L3-37, Get Out Of My Seat_** is _Underworld_."
+      }
+    ]
+  },
+  {
+    "id": 70,
+    "actualCard": "JTL/081",
+    "variants": [
+      {
+        "img": "firstordertie1",
+        "answer": "cost",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What is the cost of **_First Order TIE Fighter_**?",
+          "choices": {
+            "a": "3",
+            "b": "0",
+            "c": "4",
+            "d": "1"
+          },
+          "answer": "d"
+        },
+        "explanation": "**_First Order TIE Fighter_** costs 1."
+      }
+    ]
+  },
+  {
+    "id": 70,
+    "actualCard": "JTL/096",
+    "variants": [
+      {
+        "img": "blueleader-jtl1",
+        "answer": "art",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What is wrong with the art?",
+          "choices": {
+            "a": "A color was changed.",
+            "b": "The art is mirrored.",
+            "c": "This art is from a different card.",
+            "d": "Something was added/removed."
+          },
+          "answer": "a"
+        },
+        "explanation": "**_Blue Leader_** has blue paint, not red."
+      }
+    ]
+  },
+  {
+    "id": 71,
+    "actualCard": "JTL/103",
+    "variants": [
+      {
+        "img": "chewbacca-jtl1",
+        "answer": "ability-text",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What is wrong with the ability text?",
+          "choices": {
+            "a": "Pilot ability should say _Attached unit gains: \"This unit can't be captured, damaged, or defeated by enemy card abilities.\"_",
+            "b": "Unit ability should say _This unit can't be captured, damaged, or defeated by enemy card abilities._",
+            "c": "Pilot ability should say _Attached unit gains: \"This unit can't be defeated or returned to hand by enemy card abilities.\"_",
+            "d": "Unit ability should say _This unit can't be defeated or returned to hand by enemy card abilities._"
+          },
+          "answer": "d"
+        },
+        "explanation": ""
       }
     ]
   }
