@@ -1544,7 +1544,7 @@
         "answer": "aspects",
         "difficulty": 1,
         "followUp": {
-          "question": "What should **_Sabine Wren, You Can Count On Me_**'s aspects actually be?",
+          "question": "What should **_Sabine Wren_**'s aspects actually be?",
           "choices": {
             "a": "_Vigilance_ _Heroism_",
             "b": "_Aggression_",
@@ -1553,7 +1553,7 @@
           },
           "answer": "d"
         },
-        "explanation": "**_Sabine Wren, You Can Count On Me_** has the aspects _Cunning_ _Heroism_."
+        "explanation": "**_Sabine Wren, You Can Count On Me_**, has the aspects _Cunning_ _Heroism_."
       }
     ]
   },
@@ -1575,7 +1575,7 @@
           },
           "answer": "a"
         },
-        "explanation": "**_Lando Calrissian, Buying Time_** is an _Official_."
+        "explanation": "**_Lando Calrissian, Buying Time_**, is an _Official_."
       }
     ]
   },
@@ -1597,7 +1597,7 @@
           },
           "answer": "b"
         },
-        "explanation": "**_Cassian Andor, Threading the Eye_** is a _Rebel_."
+        "explanation": "**_Cassian Andor, Threading the Eye_**, is a _Rebel_."
       }
     ]
   },
@@ -1619,7 +1619,7 @@
           },
           "answer": "c"
         },
-        "explanation": "**_L3-37, Get Out Of My Seat_** is _Underworld_."
+        "explanation": "**_L3-37, Get Out Of My Seat_**, is _Underworld_."
       }
     ]
   },
@@ -1698,7 +1698,7 @@
         "answer": "hp",
         "difficulty": 0,
         "followUp": {
-          "question": "What is **_Boba Fett, Feared Bounty Hunter's_** actual HP?",
+          "question": "What is **_Boba Fett, Feared Bounty Hunter's_**, actual HP?",
           "choices": {
             "a": "3.",
             "b": "6.",
@@ -1707,7 +1707,7 @@
           },
           "answer": "c"
         },
-        "explanation": "**_Boba Fett, Feared Bounty Hunter_**, has 7 HP."
+        "explanation": "**_Boba Fett, Feared Bounty Hunter_**, has 4 HP."
       }
     ]
   },
@@ -1795,7 +1795,7 @@
           },
           "answer": "a"
         },
-        "explanation": ""
+        "explanation": "**_IG-2000_** deals 1 damage to each of up to 3 units."
       }
     ]
   },
@@ -1812,7 +1812,7 @@
           "choices": {
             "a": "_Capital Ship_",
             "b": "_Jedi_",
-            "c": "_Traansport_",
+            "c": "_Transport_",
             "d": "_Republic_"
           },
           "answer": "b"
@@ -1829,6 +1829,16 @@
         "img": "shootdown1",
         "answer": "rarity",
         "difficulty": 1,
+        "followUp": {
+          "question": "What should **_Shoot Down's_** rarity actually be?",
+          "choices": {
+            "a": "Rare",
+            "b": "Common",
+            "c": "Legendary",
+            "d": "Starter/Special"
+          },
+          "answer": "b"
+        },
         "explanation": "**_Shoot Down_** is actually a Common card."
       }
     ]
@@ -1842,11 +1852,12 @@
         "answer": "traits",
         "difficulty": 0,
         "followUp": {
-          "question": "Which of **_Sith Trooper's_** traits is wrong?",
+          "question": "Which of **_Sith Trooper's_** traits is missing/wrong?",
           "choices": {
             "a": "_Sith_",
             "b": "_Trooper_",
-            "c": "_Imperial_"
+            "c": "_Imperial_",
+            "d": "_Nihil_"
           },
           "answer": "c"
         },
