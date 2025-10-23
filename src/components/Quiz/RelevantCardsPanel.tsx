@@ -33,9 +33,8 @@ export function RelevantCardsPanel({ currentQuiz, setShowModal, setModalKey }: I
         }
       </div>
     </div>
-    : <div className={`w-fit h-full uwd:h-[150%] 4k:h-[200%] m-2.5`}>
-      <img src="/assets/SWUniversity_Cardback.png" alt="card back" className="object-contain" />
-    </div>
+    : <img src="/assets/SWUniversity_Cardback.png" alt="card back" className="w-fit md:w-1/2 lg:w-1/3 xl:w-1/4" />
+
   }
   </div>
 }
