@@ -34,25 +34,33 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
   const [showLightsaberColorDropdown, setShowLightsaberColorDropdown] = React.useState(false);
   const [hoveredLightsaberColor, setHoveredLightsaberColor] = React.useState<keyof typeof LightsaberColors | null>(null);
   const lightsaberColorRef = React.useRef<HTMLDivElement>(null);
+  const settingsModalRef = React.useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Close lightsaber color dropdown when clicking outside
+  // Close dropdowns when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Close lightsaber color dropdown
       if (lightsaberColorRef.current && !lightsaberColorRef.current.contains(event.target as Node)) {
         setShowLightsaberColorDropdown(false);
       }
+
+      // Close settings modal
+      if (settingsModalRef.current && !settingsModalRef.current.contains(event.target as Node) && showModal && modalKey === "settings") {
+        setShowModal(false);
+        setModalKey("");
+      }
     };
 
-    if (showLightsaberColorDropdown) {
+    if (showLightsaberColorDropdown || (showModal && modalKey === "settings")) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showLightsaberColorDropdown]);
+  }, [showLightsaberColorDropdown, showModal, modalKey, setShowModal, setModalKey]);
 
   const handleNavClick = (e: React.MouseEvent, path: string) => {
     e.preventDefault();
@@ -90,6 +98,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
     switch (modalKey) {
       case "settings":
         return <div
+          ref={settingsModalRef}
           role="dialog"
           aria-modal="true"
           className={`z-25 text-sm md:text-lg uwd:!text-xl 4k:!text-2xl
