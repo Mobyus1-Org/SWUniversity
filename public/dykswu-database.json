@@ -1908,5 +1908,27 @@
         "explanation": "**_Unlimited Power_** is actually a Legendary card."
       }
     ]
+  },
+  {
+    "id": 82,
+    "actualCard": "SHD/153",
+    "variants": [
+      {
+        "img": "poe-shd1",
+        "answer": "ability-text",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What is wrong with the ability text?",
+          "choices": {
+            "a": "The first part of the ability text (not the options).",
+            "b": "The line about dealing damage.",
+            "c": "The line about defeating an upgrade.",
+            "d": "The line about making an opponent discard."
+          },
+          "answer": "d"
+        },
+        "explanation": "It should say \"An opponent discards a card from **their hand**.\" Without this detail, it is unclear what zone the card is discarded from."
+      }
+    ]
   }
 ]
