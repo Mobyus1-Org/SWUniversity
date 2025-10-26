@@ -1874,7 +1874,7 @@
         "answer": "cost",
         "difficulty": 2,
         "followUp": {
-          "question": "What is the actual cost of **_The Invasion of Christophis_**?",
+          "question": "What should the cost of **_The Invasion of Christophis_** actually be?",
           "choices": {
             "a": "13",
             "b": "10",
@@ -1896,7 +1896,7 @@
         "answer": "rarity",
         "difficulty": 2,
         "followUp": {
-          "question": "What is the actual rarity of **_Unlimited Power_**?",
+          "question": "What should the rarity of **_Unlimited Power_** actually be?",
           "choices": {
             "a": "Legendary.",
             "b": "Common.",
