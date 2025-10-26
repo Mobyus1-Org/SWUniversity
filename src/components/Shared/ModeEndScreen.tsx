@@ -48,8 +48,8 @@ export function ModeEndScreen({
       <br />
       <br />
       {appMode === "standard" && `You scored ${points} out of ${standardModeLength} points.`}
-      {appMode === "iron-man" && ironManFailed && `Iron Man failed. You got only ${points} correct.`}
-      {appMode === "iron-man" && !ironManFailed && <div>Congratulations, you completed Iron Man Challenge!<br />You got all {points} questions correct!</div>}
+      {appMode === "iron-man" && ironManFailed && `Iron Man concluded. You answered ${points} questions correctly.`}
+      {appMode === "iron-man" && !ironManFailed && <div>Congratulations, you completed Iron Man Challenge!<br />You answered all {points} questions correctly!</div>}
     </div>;
   }
 
