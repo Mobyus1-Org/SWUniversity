@@ -143,6 +143,15 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
               ))}
             </select>
           </div>
+          <div className="mt-8">
+            <Link
+              to="/about"
+              className="btn btn-outline w-full text-lg lg:text-xl uwd:!text-2xl 4k:!text-4xl"
+              onClick={(e) => handleNavClick(e, "/about")}
+            >
+              Go to About Page
+            </Link>
+          </div>
         </div>;
 
       case "relevant-cards":
