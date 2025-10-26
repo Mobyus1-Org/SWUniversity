@@ -22,13 +22,15 @@ export type DYKSWUCountEntry = {
     };
   };
   set: {
-    "SOR": number;
-    "SHD": number;
-    "TWI": number;
-    "JTL": number;
-    "LOF": number;
-    "IBH": number;
-    "SEC": number;
+    [difficulty: number]: {
+      "SOR": number;
+      "SHD": number;
+      "TWI": number;
+      "JTL": number;
+      "LOF": number;
+      "IBH": number;
+      "SEC": number;
+    };
   };
 }
 

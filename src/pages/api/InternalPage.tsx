@@ -223,23 +223,53 @@ function InternalPage() {
 
       {/* Set Counts Section */}
       <div className="space-y-4">
-        <h2 className="text-xl xl:text-2xl uwd:!text-3xl 4k:!text-4xl font-semibold">Set Distribution</h2>
+        <h2 className="text-xl xl:text-2xl uwd:!text-3xl 4k:!text-4xl font-semibold">Set Distribution by Difficulty</h2>
         <div className="border border-gray-400 rounded-lg overflow-hidden bg-gray-200">
           <table className="w-full">
             <thead className="bg-gray-600">
               <tr>
                 <th className="px-4 py-3 text-left text-md font-medium text-gray-200">Set</th>
-                <th className="px-4 py-3 text-right text-md font-medium text-gray-200">Count</th>
+                <th className="px-4 py-3 text-center text-md font-medium text-cyan-400">Padawan</th>
+                <th className="px-4 py-3 text-center text-md font-medium text-green-400">Knight</th>
+                <th className="px-4 py-3 text-center text-md font-medium text-purple-400">Master</th>
+                <th className="px-4 py-3 text-center text-md font-medium text-gray-200">Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-400">
-              {dykSWUCounts && Object.entries(dykSWUCounts.counts.set).map(([set, count]) => (
-                <tr key={set} className="hover:bg-gray-300">
-                  <td className="px-4 py-2 text-sm font-medium text-gray-800">{set}</td>
-                  <td className="px-4 py-2 text-right text-sm text-blue-700 font-semibold">{count}</td>
-                </tr>
-              ))}
+              {dykSWUCounts && Object.keys(dykSWUCounts.counts.set[0] || {}).map(set => {
+                const padawanCount = dykSWUCounts.counts.set[0]?.[set as keyof typeof dykSWUCounts.counts.set[0]] || 0;
+                const knightCount = dykSWUCounts.counts.set[1]?.[set as keyof typeof dykSWUCounts.counts.set[1]] || 0;
+                const masterCount = dykSWUCounts.counts.set[2]?.[set as keyof typeof dykSWUCounts.counts.set[2]] || 0;
+                const total = padawanCount + knightCount + masterCount;
+
+                return (
+                  <tr key={set} className="hover:bg-gray-300">
+                    <td className="px-4 py-2 text-sm font-medium text-gray-800">{set}</td>
+                    <td className="px-4 py-2 text-center text-sm text-cyan-700 font-semibold">{padawanCount}</td>
+                    <td className="px-4 py-2 text-center text-sm text-green-700 font-semibold">{knightCount}</td>
+                    <td className="px-4 py-2 text-center text-sm text-purple-700 font-semibold">{masterCount}</td>
+                    <td className="px-4 py-2 text-center text-sm text-gray-800 font-bold">{total}</td>
+                  </tr>
+                );
+              })}
             </tbody>
+            <tfoot className="bg-gray-600">
+              <tr>
+                <td className="px-4 py-3 font-bold text-gray-200">Total</td>
+                <td className="px-4 py-3 text-center font-bold text-cyan-300">
+                  {dykSWUCounts && Object.values(dykSWUCounts.counts.set[0] || {}).reduce((sum, count) => sum + count, 0)}
+                </td>
+                <td className="px-4 py-3 text-center font-bold text-green-300">
+                  {dykSWUCounts && Object.values(dykSWUCounts.counts.set[1] || {}).reduce((sum, count) => sum + count, 0)}
+                </td>
+                <td className="px-4 py-3 text-center font-bold text-purple-300">
+                  {dykSWUCounts && Object.values(dykSWUCounts.counts.set[2] || {}).reduce((sum, count) => sum + count, 0)}
+                </td>
+                <td className="px-4 py-3 text-center font-bold text-gray-200">
+                  {dykSWUCounts?.totalCount || 0}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
