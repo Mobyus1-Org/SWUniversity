@@ -1864,5 +1864,49 @@
         "explanation": "**_Sith Trooper_** is not _Imperial_. It is in fact a _First Order_ unit."
       }
     ]
+  },
+  {
+    "id": 80,
+    "actualCard": "TWI/078",
+    "variants": [
+      {
+        "img": "invasionofchristophsis1",
+        "answer": "cost",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What is the actual cost of **_The Invasion of Christophis_**?",
+          "choices": {
+            "a": "13",
+            "b": "10",
+            "c": "15",
+            "d": "12"
+          },
+          "answer": "c"
+        },
+        "explanation": "**_The Invasion of Christophis_** costs 15 resources to play, not 14."
+      }
+    ]
+  },
+  {
+    "id": 81,
+    "actualCard": "TWI/156",
+    "variants": [
+      {
+        "img": "unlimitedpower1",
+        "answer": "rarity",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What is the actual rarity of **_Unlimited Power_**?",
+          "choices": {
+            "a": "Legendary.",
+            "b": "Common.",
+            "c": "Starter/Special.",
+            "d": "Uncommon."
+          },
+          "answer": "a"
+        },
+        "explanation": "**_Unlimited Power_** is actually a Legendary card."
+      }
+    ]
   }
 ]
