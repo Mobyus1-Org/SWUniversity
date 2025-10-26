@@ -7,6 +7,9 @@ export type QuizCountEntry = {
 export type QuizCounts = {
   counts: QuizCountEntry;
   totalCount: number;
+  tagCounts: {
+    [tag: string]: number;
+  };
 };
 
 export type DYKSWUCountEntry = {
