@@ -31,8 +31,28 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
   const { sfx } = React.useContext(AudioContext) ?? { sfx: () => {} };
   const [mobileNav, setMobileNav] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
+  const [showLightsaberColorDropdown, setShowLightsaberColorDropdown] = React.useState(false);
+  const [hoveredLightsaberColor, setHoveredLightsaberColor] = React.useState<keyof typeof LightsaberColors | null>(null);
+  const lightsaberColorRef = React.useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Close lightsaber color dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (lightsaberColorRef.current && !lightsaberColorRef.current.contains(event.target as Node)) {
+        setShowLightsaberColorDropdown(false);
+      }
+    };
+
+    if (showLightsaberColorDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLightsaberColorDropdown]);
 
   const handleNavClick = (e: React.MouseEvent, path: string) => {
     e.preventDefault();
@@ -104,8 +124,14 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
             )}
             <label className="cursor-pointer">Enable Sound Effects</label>
           </div>
-          <div className="mt-4">
-            <div className="flex items-center gap-4 uwd:gap-6 4k:gap-8 mb-2">
+          <div className="mt-4 relative" ref={lightsaberColorRef}>
+            <div
+              className="flex items-center gap-4 uwd:gap-6 4k:gap-8 mb-2 cursor-pointer hover:bg-white/10 p-2 rounded"
+              onClick={() => {
+                setShowLightsaberColorDropdown((p) => !p);
+                sfx("transition");
+              }}
+            >
               <svg width="32" height="32" viewBox="0 0 32 32" className="lg:w-8 uwd:!w-11 4k:!w-15">
                 <rect x="14" y="22" width="4" height="8" fill="#888888" />
                 <rect
@@ -113,35 +139,60 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
                   y="2"
                   width="4"
                   height="20"
-                  fill={getRGB(userSettings.lightsaberColor)}
+                  fill={getRGB(hoveredLightsaberColor || userSettings.lightsaberColor)}
                   filter="drop-shadow(0 0 4px currentColor)"
                 />
               </svg>
-              <label className="text-lg lg:text-xl uwd:text-2xl 4k:text-4xl">Lightsaber Color</label>
+              <label className="text-lg lg:text-xl uwd:text-2xl 4k:text-4xl cursor-pointer">Lightsaber Color</label>
             </div>
-            <select
-              value={userSettings.lightsaberColor}
-              onClick={() => sfx("transition")}
-              onChange={(e) => {
-                const newColor = e.target.value as keyof typeof LightsaberColors;
-                updateUserSettings(setUserSettings, { lightsaberColor: newColor });
-                setLightsaberColor(newColor);
-                if(newColor === "none") {
-                  sfx("confirm");
-                } else {
-                  sfx("transition");
-                }
-              }}
-              className="select select-bordered w-full max-w-xs text-lg lg:text-xl uwd:text-2xl 4k:text-4xl bg-slate-800 border-gray-600"
-            >
-              {Object.keys(LightsaberColors).map((colorKey) => (
-                <option key={colorKey} value={colorKey}>
-                  {colorKey === 'none'
-                    ? 'Turn Off'
-                    : colorKey.charAt(0).toUpperCase() + colorKey.slice(1).replace(/([A-Z])/g, ' $1')}
-                </option>
-              ))}
-            </select>
+            {/* Lightsaber Color Dropdown */}
+            {showLightsaberColorDropdown && (
+              <div
+                className={`z-40 absolute right-full mr-4 -top-3 w-64 p-4 border rounded-lg ${globalBackgroundStyleOpaque}`}
+                onMouseLeave={() => setHoveredLightsaberColor(null)}
+              >
+                <div className="space-y-1">
+                  {Object.keys(LightsaberColors).map((colorKey) => {
+                    const isSelected = colorKey === userSettings.lightsaberColor;
+                    return (
+                      <div
+                        key={colorKey}
+                        className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-white/10 transition-colors ${
+                          isSelected ? 'bg-white/20' : ''
+                        }`}
+                        onMouseEnter={() => setHoveredLightsaberColor(colorKey as keyof typeof LightsaberColors)}
+                        onClick={() => {
+                          const newColor = colorKey as keyof typeof LightsaberColors;
+                          updateUserSettings(setUserSettings, { lightsaberColor: newColor });
+                          setLightsaberColor(newColor);
+                          if(newColor === "none") {
+                            sfx("confirm");
+                          } else {
+                            sfx("transition");
+                          }
+                          setHoveredLightsaberColor(null);
+                          setShowLightsaberColorDropdown(false);
+                        }}
+                      >
+                        <div className="w-4 h-4 rounded-full border border-gray-400" style={{
+                          backgroundColor: colorKey === 'none' ? 'transparent' : getRGB(colorKey as keyof typeof LightsaberColors),
+                          boxShadow: colorKey === 'none' ? 'none' : `0 0 8px ${getRGB(colorKey as keyof typeof LightsaberColors)}`
+                        }}>
+                        </div>
+                        <span className="text-sm lg:text-base uwd:text-lg 4k:text-2xl">
+                          {colorKey === 'none'
+                            ? 'Turn Off'
+                            : colorKey.charAt(0).toUpperCase() + colorKey.slice(1).replace(/([A-Z])/g, ' $1')}
+                        </span>
+                        {isSelected && (
+                          <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
           <div className="mt-8">
             <Link
