@@ -1752,6 +1752,38 @@
           "answer": "c"
         },
         "explanation": "**_Fireball_** must deal 1 damage to itself at the start of the regroup phase; it is not optional."
+      },
+      {
+        "img": "fireball-jtl2",
+        "answer": "cost",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What does **_Fireball, An Explosion with Wings_** actually cost?",
+          "choices": {
+            "a": "5",
+            "b": "4",
+            "c": "1",
+            "d": "2"
+          },
+          "answer": "d"
+        },
+        "explanation": "**_Fireball, An Explosion with Wings_** actually costs 2."
+      },
+      {
+        "img": "fireball-jtl3",
+        "answer": "rarity",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What should **_Fireball, An Explosion with Wings'_** rarity actually be?",
+          "choices": {
+            "a": "Uncommon.",
+            "b": "Common.",
+            "c": "Starter/Special.",
+            "d": "Legendary."
+          },
+          "answer": "a"
+        },
+        "explanation": "**_Fireball, An Explosion with Wings'_** rarity is actually Uncommon."
       }
     ]
   },
@@ -1906,6 +1938,38 @@
           "answer": "a"
         },
         "explanation": "**_Unlimited Power_** is actually a Legendary card."
+      },
+      {
+        "img": "unlimitedpower2",
+        "answer": "aspects",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What should **_Unlimited Power's_** aspects actually be?",
+          "choices": {
+            "a": "_Villainy_",
+            "b": "_Aggression_ _Heroism_",
+            "c": "_Aggression_ _Aggression_",
+            "d": "_Aggression_ _Villainy_"
+          },
+          "answer": "c"
+        },
+        "explanation": "**_Unlimited Power's_** aspects are _Aggression_ _Aggression_."
+      },
+      {
+        "img": "unlimitedpower3",
+        "answer": "art",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What's wrong with the art?",
+          "choices": {
+            "a": "A color was changed.",
+            "b": "The art is mirrored.",
+            "c": "This art is from a different card.",
+            "d": "Something was added/removed."
+          },
+          "answer": "c"
+        },
+        "explanation": "This art is actually from **_Force Lightning_**."
       }
     ]
   },
@@ -1928,6 +1992,38 @@
           "answer": "d"
         },
         "explanation": "It should say \"An opponent discards a card from **their hand**.\" Without this detail, it is unclear what zone the card is discarded from."
+      },
+      {
+        "img": "poe-shd2",
+        "answer": "cost",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What should **_Poe Dameron, Quick to Improvise's_** cost actually be?",
+          "choices": {
+            "a": "5.",
+            "b": "4.",
+            "c": "7.",
+            "d": "8."
+          },
+          "answer": "a"
+        },
+        "explanation": "**_Poe Dameron, Quick to Improvise's_** cost should actually be 5."
+      },
+      {
+        "img": "poe-shd3",
+        "answer": "traits",
+        "difficulty": 0,
+        "followUp": {
+          "question": "Which of **_Poe Dameron, Quick to Improvise's_** traits is missing/wrong?",
+          "choices": {
+            "a": "_Underworld_.",
+            "b": "_Resistance_.",
+            "c": "_Fringe_.",
+            "d": "_Pilot_."
+          },
+          "answer": "b"
+        },
+        "explanation": "**_Poe Dameron, Quick to Improvise's_** is actually a _Resistance_ unit."
       }
     ]
   }
