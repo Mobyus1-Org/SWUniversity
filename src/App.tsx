@@ -15,6 +15,7 @@ import { AudioContextProvider, ModalContextProvider, UserSettingsContextProvider
 import InternalPage from './pages/api/InternalPage';
 import { LightsaberColors, setLightsaberColor } from './util/style-const';
 import AboutPage from './pages/AboutPage';
+import ResourcesPage from './pages/ResourcesPage';
 
 function App() {
   const [showModal, setShowModal] = React.useState(false);
@@ -77,6 +78,7 @@ function App() {
               <Route path="/quiz" element={<QuizPage />} />
               <Route path="/do-you-know-swu" element={<DoYouKnowSWUPage />} />
               {/* <Route path="/puzzles" element={<PuzzlesPage />} /> */}
+              <Route path="/resources" element={<ResourcesPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/rpc/internal" element={<InternalPage />} />
               <Route path="*" element={<NotFoundPage />} />

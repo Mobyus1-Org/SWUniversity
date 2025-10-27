@@ -121,7 +121,12 @@ function QuizPage() {
             <p className="text-sm uwd:text-lg uwd:my-2 4k:text-3xl 4k:my-4 text-left">
               <br/>-Standard, Marathon, and Endless pull questions randomly from our entire databank (no filtering).
               <br/><br/>-Padawan (easy), Knight (medium), or Master (hard) modes will filter selected questions to those difficulties.
-              <br/><br/>If you spot any issues or have any questions about the content on this site, please let us know on our <a href={DiscordLink} target="_blank" rel="noopener noreferrer">Discord!</a>
+              <br/><br/>If you spot any issues or have any questions about the content on this site, please let us know on our <a href={DiscordLink}
+                className="underline text-blue-500"
+                target="_blank"
+                rel="noopener noreferrer">
+                  Discord
+                </a>!
             </p>
           </div>
         </div>

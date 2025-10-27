@@ -203,15 +203,6 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
               </div>
             )}
           </div>
-          <div className="mt-8">
-            <Link
-              to="/about"
-              className="btn btn-outline w-full text-lg lg:text-xl uwd:!text-2xl 4k:!text-4xl"
-              onClick={(e) => handleNavClick(e, "/about")}
-            >
-              Go to About Page
-            </Link>
-          </div>
         </div>;
 
       case "relevant-cards":
@@ -278,6 +269,22 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
               DYKSWU?
             </Link>
             {/* <Link to="/puzzles" className="btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl">Puzzles</Link> */}
+            <Link
+              to="/resources"
+              className={`btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl
+                border-gray-400 bg-blue-500/20 rounded mx-4 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`}
+              onClick={(e) => handleNavClick(e, "/resources")}
+            >
+              Resources
+            </Link>
+            <Link
+              to="/about"
+              className={`btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl
+                border-gray-400 bg-blue-500/20 rounded mx-4 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`}
+              onClick={(e) => handleNavClick(e, "/about")}
+            >
+              About
+            </Link>
           </div>
           {/* Right side tray */}
             <div className="flex items-center justify-center gap-4 uwd:!gap-6 4k:!gap-8">
@@ -339,12 +346,11 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
     {modalKey !== "relevant-cards" && (
       <footer className="text-center text-sm uwd:text-lg 4k:text-2xl mt-8 border-t pt-4 space-y-2 text-gray-400 z-10 relative">
         <p className="p-2">
-          For educational purposes only. Check out our&nbsp;
-          <a
+          For educational purposes only. Check out our <a
             href={DiscordLink}
+            className="text-blue-500 underline"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-500 underline"
           >
             Discord server here
           </a>
@@ -398,6 +404,22 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
             DYKSWU?
           </Link>
           {/* <Link to="/puzzles" className="btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl">Puzzles</Link> */}
+          <Link
+            to="/resources"
+            className={`btn btn-outline text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl w-full
+              border-gray-400 bg-blue-500/20 rounded py-5 mx-2 ${currentHover}`}
+            onClick={(e) => handleNavClick(e, "/resources")}
+          >
+            Resources
+          </Link>
+          <Link
+            to="/about"
+            className={`btn btn-outline text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl w-full
+              border-gray-400 bg-blue-500/20 rounded py-5 mx-2 ${currentHover}`}
+            onClick={(e) => handleNavClick(e, "/about")}
+          >
+            About
+          </Link>
         </div>
       </div>
     )}
