@@ -7,7 +7,7 @@ function AboutPage() {
     <p>SWUniversity is a passion project operated by a small group of players interested in helping others learn STAR WARS: Unlimited, and have fun doing so!</p>
     <p>Project Lead: Mobyus1</p>
     <p>Programming: ninin</p>
-    <p>Quizmaster: Chanter</p>
+    <p>Quiz QA: Chanter</p>
     <p> </p>
     <p>For questions/feedback, please visit our Discord!</p>
   </div>;
