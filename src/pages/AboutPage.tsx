@@ -8,6 +8,8 @@ function AboutPage() {
     <p>Project Lead: Mobyus1</p>
     <p>Programming: ninin</p>
     <p>Quizmaster: Chanter</p>
+    <p> </p>
+    <p>For questions/feedback, please visit our Discord!</p>
   </div>;
 }
 
