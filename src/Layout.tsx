@@ -7,7 +7,7 @@ import {
   getLightsaberGlowHover,
   setLightsaberColor,
 } from "./util/style-const";
-import { UserSettingsLocalStorageKey, type UserSettings } from "./util/const";
+import { DiscordLink, UserSettingsLocalStorageKey, type UserSettings } from "./util/const";
 import { AudioContext, ModalContext, type ModalContextProps } from "./util/context";
 import { getSWUDBImageLink, updateUserSettings } from "./util/func";
 import { Modal } from "./components/Shared/Modal";
@@ -302,7 +302,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
                 <img src="/assets/divider.png" alt="divider" className="h-8 uwd:!h-10 4k:!h-16" />
                 <div className="flex items-center justify-center gap-4 uwd:!gap-6 4k:!gap-8 px-2 uwd:!px-3 4k:!px-4">
                 <a
-                  href="https://discord.gg/dbQXnVkjFV"
+                  href={DiscordLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Join our Discord"
@@ -339,9 +339,11 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
     {modalKey !== "relevant-cards" && (
       <footer className="text-center text-sm uwd:text-lg 4k:text-2xl mt-8 border-t pt-4 space-y-2 text-gray-400 z-10 relative">
         <p className="p-2">
-          For educational purposes only. Check out our{" "}
+          For educational purposes only. Check out our&nbsp;
           <a
-            href="https://discord.gg/dbQXnVkjFV"
+            href={DiscordLink}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-blue-500 underline"
           >
             Discord server here

@@ -1,3 +1,4 @@
+import { DiscordLink } from "../util/const";
 import { globalBackgroundStyle } from "../util/style-const";
 
 function AboutPage() {
@@ -9,7 +10,7 @@ function AboutPage() {
     <p>Programming: ninin</p>
     <p>Quiz QA: Chanter</p>
     <p> </p>
-    <p>For questions/feedback, please visit our Discord!</p>
+    <p>For questions/feedback, please visit our <a href={DiscordLink} target="_blank" rel="noopener noreferrer">Discord!</a></p>
   </div>;
 }
 

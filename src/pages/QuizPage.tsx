@@ -4,7 +4,7 @@ import type { AppModeSetEntry, Quiz, UserResponse } from "../util/func";
 import { ModeButtons } from "../components/Shared/ModeButtons";
 import { QuizContent } from "../components/Quiz/QuizContent";
 import { globalBackgroundStyle } from "../util/style-const";
-import { type AppModes, type ModeDescriptions } from "../util/const";
+import { DiscordLink, type AppModes, type ModeDescriptions } from "../util/const";
 import { useSearchParams } from "react-router-dom";
 
 function QuizPage() {
@@ -121,7 +121,7 @@ function QuizPage() {
             <p className="text-sm uwd:text-lg uwd:my-2 4k:text-3xl 4k:my-4 text-left">
               <br/>-Standard, Marathon, and Endless pull questions randomly from our entire databank (no filtering).
               <br/><br/>-Padawan (easy), Knight (medium), or Master (hard) modes will filter selected questions to those difficulties.
-              <br/><br/>If you spot any issues or have any questions about the content on this site, please let us know on our Discord!
+              <br/><br/>If you spot any issues or have any questions about the content on this site, please let us know on our <a href={DiscordLink} target="_blank" rel="noopener noreferrer">Discord!</a>
             </p>
           </div>
         </div>
