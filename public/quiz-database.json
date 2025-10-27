@@ -655,7 +655,7 @@
       },
       "answer": "c",
       "relevantCards": ["SOR/051", "SOR/054"],
-      "relevantRule": "Since the uniqueness rule is resolved before the pending **When Played** ability, it doesn't matter which copy of **_Luke_** is chosen to be defeated, by the time the pending trigger resolves, there will have been a friendly unit that was defeated, meaning Player A will give an enemy unit -6/-6.\n\n**8.30.4** - A player can only control one copy of each unique card at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
+      "relevantRule": "Since the uniqueness rule is resolved before the pending **When Played** ability, it doesn't matter which copy of **_Luke_** is chosen to be defeated, by the time the pending trigger resolves, there will have been a friendly unit that was defeated, meaning Player A will give an enemy unit -6/-6.\n\n**8.30.3** - A player can only control one copy of each unique card at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
       "tags": ["luke skywalker", "jedi lightsaber", "upgrade", "when played", "target", "unique"],
       "difficulty": 1
    },
@@ -1285,7 +1285,7 @@
       },
       "answer": "a",
       "relevantCards": ["SHD/239"],
-      "relevantRule": "When Player A's second **_Toro_** enters play, the first **_Toro's_** ability triggers, but waits to resolve until after one has been defeated due to uniquness. This means the only two options are to either defeat the new **_Toro_**, meaning you can no longer deal 1 damage to it, or to defeat the original **_Toro_**, in which case it could not ready... it'd be in the discard pile.\n\n**8.30.4** - A player can only control one copy of each unique card at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
+      "relevantRule": "When Player A's second **_Toro_** enters play, the first **_Toro's_** ability triggers, but waits to resolve until after one has been defeated due to uniquness. This means the only two options are to either defeat the new **_Toro_**, meaning you can no longer deal 1 damage to it, or to defeat the original **_Toro_**, in which case it could not ready... it'd be in the discard pile.\n\n**8.30.3** - A player can only control one copy of each unique card at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
       "tags": ["toro calican", "uniqueness", "ability", "timing"],
       "difficulty": 1
    },
