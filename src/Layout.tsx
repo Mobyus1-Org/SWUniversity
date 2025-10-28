@@ -33,8 +33,12 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [showLightsaberColorDropdown, setShowLightsaberColorDropdown] = React.useState(false);
   const [hoveredLightsaberColor, setHoveredLightsaberColor] = React.useState<keyof typeof LightsaberColors | null>(null);
+  const [showPlayModesDropdown, setShowPlayModesDropdown] = React.useState(false);
+  const [showMobilePlayModesDropdown, setShowMobilePlayModesDropdown] = React.useState(false);
   const lightsaberColorRef = React.useRef<HTMLDivElement>(null);
   const settingsModalRef = React.useRef<HTMLDivElement>(null);
+  const playModesRef = React.useRef<HTMLDivElement>(null);
+  const mobilePlayModesRef = React.useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -51,16 +55,26 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
         setShowModal(false);
         setModalKey("");
       }
+
+      // Close play modes dropdown
+      if (playModesRef.current && !playModesRef.current.contains(event.target as Node)) {
+        setShowPlayModesDropdown(false);
+      }
+
+      // Close mobile play modes dropdown
+      if (mobilePlayModesRef.current && !mobilePlayModesRef.current.contains(event.target as Node)) {
+        setShowMobilePlayModesDropdown(false);
+      }
     };
 
-    if (showLightsaberColorDropdown || (showModal && modalKey === "settings")) {
+    if (showLightsaberColorDropdown || (showModal && modalKey === "settings") || showPlayModesDropdown || showMobilePlayModesDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showLightsaberColorDropdown, showModal, modalKey, setShowModal, setModalKey]);
+  }, [showLightsaberColorDropdown, showModal, modalKey, setShowModal, setModalKey, showPlayModesDropdown, showMobilePlayModesDropdown]);
 
   const handleNavClick = (e: React.MouseEvent, path: string) => {
     e.preventDefault();
@@ -68,6 +82,8 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
     setMobileNav(false);
     setModalKey("");
     setShowModal(false);
+    setShowPlayModesDropdown(false);
+    setShowMobilePlayModesDropdown(false);
 
     const isCurrentPage = location.pathname === path;
 
@@ -101,7 +117,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
           ref={settingsModalRef}
           role="dialog"
           aria-modal="true"
-          className={`z-25 text-sm md:text-lg uwd:!text-xl 4k:!text-2xl
+          className={`z-[100] text-sm md:text-lg uwd:!text-xl 4k:!text-2xl
           ${globalBackgroundStyleOpaque} border p-4 fixed top-20 uwd:!top-28 4k:!top-40 right-32 uwd:right-48 4k:right-80`}
         >
           <div
@@ -116,7 +132,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
                 soundEnabled: !userSettings.soundEnabled,
               });
             }}
-            className="flex items-center gap-4 uwd:gap-6 4k:gap-8 cursor-pointer"
+            className="flex items-center gap-4 uwd:gap-6 4k:gap-8 cursor-pointer hover:bg-white/10 p-2 rounded transition-colors"
           >
             {userSettings.soundEnabled ? (
               <img
@@ -230,12 +246,18 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
 
   const currentHover = getLightsaberGlowHover(userSettings.lightsaberColor);
 
+  const styles = {
+    desktopNavLink: `btn btn-ghost text-md lg:text-2xl uwd:!text-4xl 4k:!text-7xl
+      border-gray-400 bg-blue-500/20 rounded mx-4 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`,
+    mobileNavLink: `btn btn-ghost w-full text-md lg:text-2xl uwd:!text-4xl 4k:!text-7xl
+      border-gray-400 bg-blue-500/20 rounded mx-auto 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`,
+  }
+
   return <div className="layout">
-    <main>
-      <div
-        className={`relative navbar z-10 border-b ${globalBackgroundStyleNoShadow}`}
-      >
-        <div className="flex justify-between items-center w-full px-4">
+    <div
+      className={`relative navbar z-50 border-b ${globalBackgroundStyleNoShadow}`}
+    >
+      <div className="flex justify-between items-center w-full px-4">
           {/* Left side links */}
           <div
             className="md:hidden"
@@ -243,44 +265,78 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
           >
             <MenuButton />
           </div>
-          <div className="hidden md:block flex gap-4 md:gap-8 uwd:!gap-24 4k:!gap-30 uwd:py-4 4k:py-10 overflow-visible px-2">
+          <div className="hidden md:flex flex-row flex-nowrap gap-4 md:gap-8 uwd:!gap-24 4k:!gap-30 uwd:py-4 4k:py-10 overflow-visible px-2 w-full items-center">
             <Link
               to="/"
-              className={`btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl
-                border-gray-400 bg-blue-500/20 rounded mx-4 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`}
+              className={styles.desktopNavLink}
               onClick={(e) => handleNavClick(e, "/")}
             >
               Home
             </Link>
-            <Link
-              to="/quiz"
-              className={`btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl
-                border-gray-400 bg-blue-500/20 rounded mx-4 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`}
-              onClick={(e) => handleNavClick(e, "/quiz")}
-            >
-              Quiz
-            </Link>
-            <Link
-              to="/do-you-know-swu"
-              className={`btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl
-                border-gray-400 bg-blue-500/20 rounded mx-6 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`}
-              onClick={(e) => handleNavClick(e, "/do-you-know-swu")}
-            >
-              DYKSWU?
-            </Link>
-            {/* <Link to="/puzzles" className="btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl">Puzzles</Link> */}
+
+            {/* Play Modes Dropdown */}
+            <div className="relative" ref={playModesRef}>
+              <button
+                className={`${styles.desktopNavLink} flex items-center justify-center gap-2`}
+                onClick={() => {
+                  setShowPlayModesDropdown((p) => !p);
+                  sfx("transition");
+                }}
+              >
+                Play Modes
+                <svg
+                  className={`w-4 h-4 lg:w-5 lg:h-5 uwd:!w-6 uwd:!h-6 4k:!w-8 4k:!h-8 transition-transform ${
+                    showPlayModesDropdown ? 'rotate-180' : ''
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {showPlayModesDropdown && (
+                <div
+                  className={`z-50 absolute left-0 top-full mt-2 w-48 lg:w-64 p-2 border rounded-lg ${globalBackgroundStyleOpaque}`}
+                >
+                  <Link
+                    to="/quiz"
+                    className={`block w-full text-left px-4 py-3 text-lg lg:text-xl uwd:!text-2xl 4k:!text-3xl
+                      hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
+                    onClick={(e) => handleNavClick(e, "/quiz")}
+                  >
+                    Quiz
+                  </Link>
+                  <Link
+                    to="/do-you-know-swu"
+                    className={`block w-full text-left px-4 py-3 text-lg lg:text-xl uwd:!text-2xl 4k:!text-3xl
+                      hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
+                    onClick={(e) => handleNavClick(e, "/do-you-know-swu")}
+                  >
+                    DYKSWU?
+                  </Link>
+                  {/* <Link
+                    to="/puzzles"
+                    className={`block w-full text-left px-4 py-3 text-lg lg:text-xl uwd:!text-2xl 4k:!text-3xl
+                      hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
+                    onClick={(e) => handleNavClick(e, "/puzzles")}
+                  >
+                    Puzzles
+                  </Link> */}
+                </div>
+              )}
+            </div>
             <Link
               to="/resources"
-              className={`btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl
-                border-gray-400 bg-blue-500/20 rounded mx-4 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`}
+              className={styles.desktopNavLink}
               onClick={(e) => handleNavClick(e, "/resources")}
             >
               Resources
             </Link>
             <Link
               to="/about"
-              className={`btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl
-                border-gray-400 bg-blue-500/20 rounded mx-4 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`}
+              className={styles.desktopNavLink}
               onClick={(e) => handleNavClick(e, "/about")}
             >
               About
@@ -339,6 +395,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
             </div>
         </div>
       </div>
+    <main>
       <div className="relative p-4 z-10 min-h-[75vh]">
         <div key={refreshKey}>{children}</div>
       </div>
@@ -381,41 +438,69 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
         <div className="flex flex-col gap-6 p-4 overflow-visible">
           <Link
             to="/"
-            className={`btn btn-outline text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl w-full
-              border-gray-400 bg-blue-500/20 rounded py-5 mx-2 ${currentHover}`}
+            className={styles.mobileNavLink}
             onClick={(e) => handleNavClick(e, "/")}
           >
             Home
           </Link>
-          <Link
-            to="/quiz"
-            className={`btn btn-outline text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl w-full
-              border-gray-400 bg-blue-500/20 rounded py-5 mx-2 ${currentHover}`}
-            onClick={(e) => handleNavClick(e, "/quiz")}
-          >
-            Quiz
-          </Link>
-          <Link
-            to="/do-you-know-swu"
-            className={`btn btn-outline text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl flex-col w-full
-              border-gray-400 bg-blue-500/20 rounded py-5 mx-2 ${currentHover}`}
-            onClick={(e) => handleNavClick(e, "/do-you-know-swu")}
-          >
-            DYKSWU?
-          </Link>
+
+          {/* Play Modes Dropdown */}
+          <div className="relative" ref={mobilePlayModesRef}>
+            <button
+              className={`${styles.mobileNavLink} flex items-center justify-center gap-2`}
+              onClick={() => {
+                setShowMobilePlayModesDropdown((p) => !p);
+                sfx("transition");
+              }}
+            >
+              Play Modes
+              <svg
+                className={`w-4 h-4 lg:w-5 lg:h-5 transition-transform ${
+                  showMobilePlayModesDropdown ? 'rotate-180' : ''
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showMobilePlayModesDropdown && (
+              <div
+                className={`z-50 absolute left-full top-0 ml-2 w-64 p-2 border rounded-lg ${globalBackgroundStyleOpaque}`}
+              >
+                <Link
+                  to="/quiz"
+                  className={`block w-full text-left px-4 py-3 text-xl lg:text-2xl
+                    hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
+                  onClick={(e) => handleNavClick(e, "/quiz")}
+                >
+                  Quiz
+                </Link>
+                <Link
+                  to="/do-you-know-swu"
+                  className={`block w-full text-left px-4 py-3 text-xl lg:text-2xl
+                    hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
+                  onClick={(e) => handleNavClick(e, "/do-you-know-swu")}
+                >
+                  DYKSWU?
+                </Link>
+              </div>
+            )}
+          </div>
+
           {/* <Link to="/puzzles" className="btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl">Puzzles</Link> */}
           <Link
             to="/resources"
-            className={`btn btn-outline text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl w-full
-              border-gray-400 bg-blue-500/20 rounded py-5 mx-2 ${currentHover}`}
+            className={`${styles.mobileNavLink} flex items-center justify-center gap-2`}
             onClick={(e) => handleNavClick(e, "/resources")}
           >
             Resources
           </Link>
           <Link
             to="/about"
-            className={`btn btn-outline text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl w-full
-              border-gray-400 bg-blue-500/20 rounded py-5 mx-2 ${currentHover}`}
+            className={`${styles.mobileNavLink} flex items-center justify-center gap-2`}
             onClick={(e) => handleNavClick(e, "/about")}
           >
             About
@@ -423,7 +508,9 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
         </div>
       </div>
     )}
-  </div>;
+    {/* Render modals via function */}
+    {renderModal()}
+  </div>
 }
 
 export default Layout;
