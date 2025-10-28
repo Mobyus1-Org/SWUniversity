@@ -5,12 +5,14 @@ import {
   globalBackgroundStyleOpaque,
   LightsaberColors,
   getLightsaberGlowHover,
-  setLightsaberColor,
 } from "./util/style-const";
-import { DiscordLink, UserSettingsLocalStorageKey, type UserSettings } from "./util/const";
+import { DiscordLink, type UserSettings } from "./util/const";
 import { AudioContext, ModalContext, type ModalContextProps } from "./util/context";
-import { getSWUDBImageLink, updateUserSettings } from "./util/func";
+import { getSWUDBImageLink } from "./util/func";
 import { Modal } from "./components/Shared/Modal";
+import { Settings } from "./components/Nav/Settings";
+import { RightSideTray } from "./components/Nav/RightSideTray";
+import { LeftSideNavTray } from "./components/Nav/LeftSideNavTray";
 
 interface IProps {
   userSettings: UserSettings;
@@ -100,126 +102,22 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
     <img src="/assets/menu_icon.png" alt="Menu" className="w-8" />
   </label>;
 
-  const getRGB = (color: keyof typeof LightsaberColors) => {
-    if(color === "none") {
-      return "none";
-    }
-    const colorArray = LightsaberColors[color];
-    return `rgb(${colorArray[0]}, ${colorArray[1]}, ${colorArray[2]})`;
-  };
-
   const renderModal = () => {
     if (!showModal) return null;
 
     switch (modalKey) {
       case "settings":
-        return <div
-          ref={settingsModalRef}
-          role="dialog"
-          aria-modal="true"
-          className={`z-[100] text-sm md:text-lg uwd:!text-xl 4k:!text-2xl
-          ${globalBackgroundStyleOpaque} border p-4 fixed top-20 uwd:!top-28 4k:!top-40 right-32 uwd:right-48 4k:right-80`}
-        >
-          <div
-            onClick={() => {
-              const storedSettings: UserSettings = JSON.parse(localStorage.getItem(UserSettingsLocalStorageKey) || '{}');
-              if(!storedSettings.soundEnabled) {
-                setTimeout(() => {
-                  sfx("transition", true);
-                }, 150);
-              }
-              updateUserSettings(setUserSettings, {
-                soundEnabled: !userSettings.soundEnabled,
-              });
-            }}
-            className="flex items-center gap-4 uwd:gap-6 4k:gap-8 cursor-pointer hover:bg-white/10 p-2 rounded transition-colors"
-          >
-            {userSettings.soundEnabled ? (
-              <img
-                src="/assets/speaker1.png"
-                alt="Sound On"
-                className="w-6 lg:w-8 uwd:!w-11 4k:!w-15"
-              />
-            ) : (
-              <img
-                src="/assets/speaker2.png"
-                alt="Sound Off"
-                className="w-6 lg:w-8 uwd:!w-11 4k:!w-15"
-              />
-            )}
-            <label className="cursor-pointer">Enable Sound Effects</label>
-          </div>
-          <div className="mt-4 relative" ref={lightsaberColorRef}>
-            <div
-              className="flex items-center gap-4 uwd:gap-6 4k:gap-8 mb-2 cursor-pointer hover:bg-white/10 p-2 rounded"
-              onClick={() => {
-                setShowLightsaberColorDropdown((p) => !p);
-                sfx("transition");
-              }}
-            >
-              <svg width="32" height="32" viewBox="0 0 32 32" className="lg:w-8 uwd:!w-11 4k:!w-15">
-                <rect x="14" y="22" width="4" height="8" fill="#888888" />
-                <rect
-                  x="14"
-                  y="2"
-                  width="4"
-                  height="20"
-                  fill={getRGB(hoveredLightsaberColor || userSettings.lightsaberColor)}
-                  filter="drop-shadow(0 0 4px currentColor)"
-                />
-              </svg>
-              <label className="text-lg lg:text-xl uwd:text-2xl 4k:text-4xl cursor-pointer">Lightsaber Color</label>
-            </div>
-            {/* Lightsaber Color Dropdown */}
-            {showLightsaberColorDropdown && (
-              <div
-                className={`z-40 absolute right-full mr-4 -top-3 w-64 p-4 border rounded-lg ${globalBackgroundStyleOpaque}`}
-                onMouseLeave={() => setHoveredLightsaberColor(null)}
-              >
-                <div className="space-y-1">
-                  {Object.keys(LightsaberColors).map((colorKey) => {
-                    const isSelected = colorKey === userSettings.lightsaberColor;
-                    return (
-                      <div
-                        key={colorKey}
-                        className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-white/10 transition-colors ${
-                          isSelected ? 'bg-white/20' : ''
-                        }`}
-                        onMouseEnter={() => setHoveredLightsaberColor(colorKey as keyof typeof LightsaberColors)}
-                        onClick={() => {
-                          const newColor = colorKey as keyof typeof LightsaberColors;
-                          updateUserSettings(setUserSettings, { lightsaberColor: newColor });
-                          setLightsaberColor(newColor);
-                          if(newColor === "none") {
-                            sfx("confirm");
-                          } else {
-                            sfx("transition");
-                          }
-                          setHoveredLightsaberColor(null);
-                          setShowLightsaberColorDropdown(false);
-                        }}
-                      >
-                        <div className="w-4 h-4 rounded-full border border-gray-400" style={{
-                          backgroundColor: colorKey === 'none' ? 'transparent' : getRGB(colorKey as keyof typeof LightsaberColors),
-                          boxShadow: colorKey === 'none' ? 'none' : `0 0 8px ${getRGB(colorKey as keyof typeof LightsaberColors)}`
-                        }}>
-                        </div>
-                        <span className="text-sm lg:text-base uwd:text-lg 4k:text-2xl">
-                          {colorKey === 'none'
-                            ? 'Turn Off'
-                            : colorKey.charAt(0).toUpperCase() + colorKey.slice(1).replace(/([A-Z])/g, ' $1')}
-                        </span>
-                        {isSelected && (
-                          <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>;
+        return <Settings
+          userSettings={userSettings}
+          setUserSettings={setUserSettings}
+          sfx={sfx}
+          settingsModalRef={settingsModalRef}
+          lightsaberColorRef={lightsaberColorRef}
+          showLightsaberColorDropdown={showLightsaberColorDropdown}
+          setShowLightsaberColorDropdown={setShowLightsaberColorDropdown}
+          hoveredLightsaberColor={hoveredLightsaberColor}
+          setHoveredLightsaberColor={setHoveredLightsaberColor}
+        />;
 
       case "relevant-cards":
         return <Modal isOpen={true} onClose={() => setShowModal(false)}>
@@ -265,134 +163,8 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
           >
             <MenuButton />
           </div>
-          <div className="hidden md:flex flex-row flex-nowrap gap-4 md:gap-8 uwd:!gap-24 4k:!gap-30 uwd:py-4 4k:py-10 overflow-visible px-2 w-full items-center">
-            <Link
-              to="/"
-              className={styles.desktopNavLink}
-              onClick={(e) => handleNavClick(e, "/")}
-            >
-              Home
-            </Link>
-
-            {/* Play Modes Dropdown */}
-            <div className="relative" ref={playModesRef}>
-              <button
-                className={`${styles.desktopNavLink} flex items-center justify-center gap-2`}
-                onClick={() => {
-                  setShowPlayModesDropdown((p) => !p);
-                  sfx("transition");
-                }}
-              >
-                Play Modes
-                <svg
-                  className={`w-4 h-4 lg:w-5 lg:h-5 uwd:!w-6 uwd:!h-6 4k:!w-8 4k:!h-8 transition-transform ${
-                    showPlayModesDropdown ? 'rotate-180' : ''
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {showPlayModesDropdown && (
-                <div
-                  className={`z-50 absolute left-0 top-full mt-2 w-48 lg:w-64 p-2 border rounded-lg ${globalBackgroundStyleOpaque}`}
-                >
-                  <Link
-                    to="/quiz"
-                    className={`block w-full text-left px-4 py-3 text-lg lg:text-xl uwd:!text-2xl 4k:!text-3xl
-                      hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
-                    onClick={(e) => handleNavClick(e, "/quiz")}
-                  >
-                    Quiz
-                  </Link>
-                  <Link
-                    to="/do-you-know-swu"
-                    className={`block w-full text-left px-4 py-3 text-lg lg:text-xl uwd:!text-2xl 4k:!text-3xl
-                      hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
-                    onClick={(e) => handleNavClick(e, "/do-you-know-swu")}
-                  >
-                    DYKSWU?
-                  </Link>
-                  {/* <Link
-                    to="/puzzles"
-                    className={`block w-full text-left px-4 py-3 text-lg lg:text-xl uwd:!text-2xl 4k:!text-3xl
-                      hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
-                    onClick={(e) => handleNavClick(e, "/puzzles")}
-                  >
-                    Puzzles
-                  </Link> */}
-                </div>
-              )}
-            </div>
-            <Link
-              to="/resources"
-              className={styles.desktopNavLink}
-              onClick={(e) => handleNavClick(e, "/resources")}
-            >
-              Resources
-            </Link>
-            <Link
-              to="/about"
-              className={styles.desktopNavLink}
-              onClick={(e) => handleNavClick(e, "/about")}
-            >
-              About
-            </Link>
-          </div>
-          {/* Right side tray */}
-            <div className="flex items-center justify-center gap-4 uwd:!gap-6 4k:!gap-8">
-              <div
-                className="flex items-center gap-2 uwd:!gap-4 4k:!gap-6
-                  bg-[rgba(255,255,255,0.25)] rounded-full px-4 py-2 uwd:!px-6 4k:!px-8 4k:!py-3"
-              >
-                <div
-                className="flex items-center justify-center text-md md:text-xl uwd:!text-2xl 4k:!text-3xl btn btn-ghost p-2 uwd:!p-3 4k:!p-4"
-                onClick={() => {
-                  setShowModal((p) => !p);
-                  setModalKey("settings");
-                  sfx("transition")
-                }}
-                >
-                <img
-                  src="/assets/GearIcon.png"
-                  alt="Settings"
-                  className="w-8 lg:w-10 uwd:!w-12 4k:!w-16"
-                />
-                </div>
-                <img src="/assets/divider.png" alt="divider" className="h-8 uwd:!h-10 4k:!h-16" />
-                <div className="flex items-center justify-center gap-4 uwd:!gap-6 4k:!gap-8 px-2 uwd:!px-3 4k:!px-4">
-                <a
-                  href={DiscordLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Join our Discord"
-                  className="flex items-center justify-center"
-                >
-                  <img
-                  src="/assets/Discord-logo2.png"
-                  alt="Discord"
-                  className="w-11 lg:w-14 uwd:!w-16 4k:!w-22"
-                  />
-                </a>
-                <a
-                  href="https://www.patreon.com/mobyus1"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Support us on Patreon"
-                  className="flex items-center justify-center"
-                >
-                  <img
-                  src="/assets/PatreonIcon.png"
-                  alt="Patreon"
-                  className="w-8 lg:w-10 uwd:!w-12 4k:!w-16"
-                  />
-                </a>
-                </div>
-              </div>
-            </div>
+          <LeftSideNavTray sfx={sfx} playModesRef={playModesRef} styles={styles} handleNavClick={handleNavClick} showPlayModesDropdown={showPlayModesDropdown} setShowPlayModesDropdown={setShowPlayModesDropdown} currentHover={currentHover} />
+          <RightSideTray setShowModal={setShowModal} setModalKey={setModalKey} sfx={sfx} />
         </div>
       </div>
     <main>
