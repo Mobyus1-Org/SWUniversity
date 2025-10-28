@@ -17,18 +17,14 @@ export default function NewsCarousel() {
 				<div className="relative w-full h-full flex flex-col justify-between items-center overflow-hidden">
 					<div className="flex-1 flex justify-center w-full items-stretch overflow-auto">
 						{slides[current].type === "paragraph"
-							? <CarouselParagraphItem src={slides[current].src}>
-								{slides[current].content}
-							</CarouselParagraphItem>
+							? <CarouselParagraphItem data={slides[current]} />
 							: null}
 						{slides[current].type === "image"
-							? <CarouselImageItem src={slides[current].src}>
-								{slides[current].content}
-							</CarouselImageItem>
+							? <CarouselImageItem data={slides[current]} />
 							: null}
-              {slides[current].type === "embed"
-              ? <CarouselEmbedItem src={slides[current].src} description={slides[current].description} />
-              : null}
+            {slides[current].type === "embed"
+            ? <CarouselEmbedItem data={slides[current]} />
+            : null}
 					</div>
 					<div className="absolute left-1/4 bottom-0 w-1/2 flex items-center justify-between z-1">
 						<button

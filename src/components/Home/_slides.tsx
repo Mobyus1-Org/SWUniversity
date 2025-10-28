@@ -1,37 +1,30 @@
-export interface ICarouselItemProps {
+type SlideType = "paragraph" | "image" | "embed";
+
+export interface ICarouselData {
+    type: SlideType;
+    title: string;
     src: string;
-    alt?: string;
     description?: string;
-    children?: React.ReactNode;
+    alt?: string;
 }
 
-export const slides = [
+export interface ICarouselItemProps {
+    data: ICarouselData;
+}
+
+export const slides: ICarouselData[] = [
   {
     type: "paragraph",
     title: "Iron Man Challenge Is Here!",
     src: "/assets/rivals-fall-splash.png",
-    content: <p className="text-lg uwd:text-2xl 4k:text-4xl mb-4">
-      We're excited to announce the launch of the Iron Man Challenge! Test your
-      skills and see how many questions you can complete in a row without any
-      mistakes. This new mode is designed to push your knowledge and endurance
-      to the limit.
-      <br />
-      <br />
-      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, urna
-      eu tincidunt consectetur, nisi nisl aliquam nunc, eget aliquam massa nisl
-      quis neque. Pellentesque habitant morbi tristique senectus et netus et
-      malesuada fames ac turpis egestas. Suspendisse potenti. Etiam euismod,
-      urna eu tincidunt consectetur, nisi nisl aliquam nunc, eget aliquam massa
-      nisl quis neque.
-    </p>,
+    description: "We're excited to announce the launch of the Iron Man Challenge! Test your skills and see how many questions you can complete in a row without any mistakes. This new mode is designed to push your knowledge and endurance to the limit.\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, urna eu tincidunt consectetur, nisi nisl aliquam nunc, eget aliquam massa nisl quis neque. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Suspendisse potenti. Etiam euismod, urna eu tincidunt consectetur, nisi nisl aliquam nunc, eget aliquam massa nisl quis neque.",
   },
   {
     type: "image",
+    alt: "image of rule of the week, from rule book",
     title: "Rule of the Week: The Hand Zone",
     src: "https://gcdnb.pbrd.co/images/XNKjp7GUJN0N.png?o=1",
-    content: <p className="text-lg uwd:text-2xl 4k:text-4xl mb-4">
-      The hand is a special zone where cards are kept before they are played. Players can only play cards from their hand during their turn.
-    </p>,
+    description: "The hand is a special zone where cards are kept before they are played. Players can only play cards from their hand during their turn.",
   },
   {
     type: "embed",

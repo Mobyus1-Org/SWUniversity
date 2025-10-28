@@ -1,6 +1,7 @@
 import type { ICarouselItemProps } from "./_slides";
 
-export function CarouselEmbedItem({ src, description }: ICarouselItemProps) {
+export function CarouselEmbedItem({ data }: ICarouselItemProps) {
+  const { src, description } = data;
   const isPortrait = window.innerWidth < window.innerHeight;
   return <div className="flex flex-col items-center justify-start h-full w-full text-center overflow-hidden p-2">
       <iframe
