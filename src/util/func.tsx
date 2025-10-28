@@ -101,7 +101,7 @@ export function getSWUDBImageLink(cardPattern: string): string {
   const parts = cardPattern.split('/');
   if (parts.length !== 2) throw new Error(`Invalid card name format: ${cardPattern}`);
 
-  return `https://swudb.com/cdn-cgi/image/quality=40/images/cards/${cardPattern}.png`;
+  return `https://swudb.com/cdn-cgi/image/quality=1/images/cards/${cardPattern}.png`;
 }
 
 export function getDYKSWUImageLink(fileName: string): string {
