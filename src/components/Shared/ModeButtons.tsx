@@ -27,42 +27,6 @@ export function ModeButtons({mode, appModeSets, standardModeLength, modeDescript
     setMode, setCurrentModeSet, setCurrentModeId, setStandardModeLength, setVariant}: IProps) {
   const renderButtons = () => <div className="grid md:grid-cols-3 gap-4 uwd:gap-5 mb-8 h-full text-center">
     <ModeButtonItem
-      mode="standard"
-      title="Standard Mode"
-      description={modeDescriptions["standard"]}
-      modeSet={[]}
-      initModeId={false}
-      initVariant={initVariant}
-      setMode={setMode}
-      setCurrentModeSet={setCurrentModeSet}
-      setCurrentModeId={setCurrentModeId}
-      setVariant={setVariant}
-    />
-    <ModeButtonItem
-      mode="iron-man"
-      title="Iron Man Challenge"
-      description={modeDescriptions["iron-man"]}
-      modeSet={appModeSets.all}
-      initModeId={true}
-      initVariant={initVariant}
-      setMode={setMode}
-      setCurrentModeSet={setCurrentModeSet}
-      setCurrentModeId={setCurrentModeId}
-      setVariant={setVariant}
-    />
-    <ModeButtonItem
-      mode="endless"
-      title="Endless Mode"
-      description={modeDescriptions["endless"]}
-      modeSet={appModeSets.all}
-      initModeId={true}
-      initVariant={initVariant}
-      setMode={setMode}
-      setCurrentModeSet={setCurrentModeSet}
-      setCurrentModeId={setCurrentModeId}
-      setVariant={setVariant}
-    />
-    <ModeButtonItem
       mode="padawan"
       title="Padawan Mode"
       description={modeDescriptions["padawan"]}
@@ -91,6 +55,42 @@ export function ModeButtons({mode, appModeSets, standardModeLength, modeDescript
       title="Jedi Master Mode"
       description={modeDescriptions["master"]}
       modeSet={appModeSets.master}
+      initModeId={true}
+      initVariant={initVariant}
+      setMode={setMode}
+      setCurrentModeSet={setCurrentModeSet}
+      setCurrentModeId={setCurrentModeId}
+      setVariant={setVariant}
+    />
+    <ModeButtonItem
+      mode="standard"
+      title="Standard Mode"
+      description={modeDescriptions["standard"]}
+      modeSet={[]}
+      initModeId={false}
+      initVariant={initVariant}
+      setMode={setMode}
+      setCurrentModeSet={setCurrentModeSet}
+      setCurrentModeId={setCurrentModeId}
+      setVariant={setVariant}
+    />
+    <ModeButtonItem
+      mode="iron-man"
+      title="Iron Man Challenge"
+      description={modeDescriptions["iron-man"]}
+      modeSet={appModeSets.all}
+      initModeId={true}
+      initVariant={initVariant}
+      setMode={setMode}
+      setCurrentModeSet={setCurrentModeSet}
+      setCurrentModeId={setCurrentModeId}
+      setVariant={setVariant}
+    />
+    <ModeButtonItem
+      mode="endless"
+      title="Endless Mode"
+      description={modeDescriptions["endless"]}
+      modeSet={appModeSets.all}
       initModeId={true}
       initVariant={initVariant}
       setMode={setMode}
