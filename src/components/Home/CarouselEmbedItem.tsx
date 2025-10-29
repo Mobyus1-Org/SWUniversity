@@ -14,7 +14,7 @@ export function CarouselEmbedItem({ data }: ICarouselItemProps) {
           allowFullScreen
         />
       </div>
-      <p className="mt-8">{description}</p>
+      <p className="mt-8 mb-8">{description}</p>
     </div>
   );
 }
