@@ -1533,15 +1533,30 @@
       "id": 103,
       "question": "Player A controls **_97th Legion, Keeping the Peace on Sullust_**, with 6 damage on it and has 7 ready resources. Player A then plays a **_Privateer Crew_** from their resources zone using **Smuggle**. What best describes what happens?",
       "choices": {
-         "a": "**_97th Legion_** is defeated and **_Privateer Crew_** enters play as a 5/5.",
+         "a": "**_97th Legion_** is defeated.",
          "b": "**_97th Legion_** only survives if **_Privateer Crew_** is used to pay for its own **Smuggle** cost, leaving one of Player A's resources ready.", 
-         "c": "**_97th Legion_** survives as a 7/7 with 6 damage on it and **_Privateer Crew_** enters play as a 5/5.",
-         "d": "**_97th Legion_** survives as a 7/7 with 6 damage on it and **_Privateer Crew_** enters play as a 2/2."
+         "c": "**_97th Legion_** survives as a 7/7 with 6 damage on it.",
+         "d": "**_97th Legion_** survives as a 6/6 with 5 damage on it."
       },
       "answer": "c",
       "relevantCards": ["SOR/118", "SHD/113"],
       "relevantRule": "When a card is played using **Smuggle**, both it and the card replacing it enter play at the same time, so Player A's total number of resources never changes.\n\n**7.5.14.G** - As it enters play, a card played using Smuggle is replaced in the resource zone by the top card of a player’s deck. The two cards are considered to enter play simultaneously. The new resource enters play exhausted.",
       "tags": ["97th legion", "privateer crew", "sor", "shd", "smuggle", "keyword", "resources", "timing"],
       "difficulty": 1
+   },
+   {
+      "id": 104,
+      "question": "Player A controls **_Cad Bane, Hostage Taker_**, which has captured two of Player B's units: **_Home One, Alliance Flagship_**, and **_Greedo, Slow on the Draw_**. Player B then plays **_Timely Intervention_** to play an **_L3-37, Droid Revolutionary_**, from their hand. Which of the following is a legal outcome?",
+      "choices": {
+         "a": "Player A rescues **_Home One_**, which returns to play exhausted. They then attack with **_L3-37_** into **_Cad Bane_**, healing their base for 1 HP and defeating **_L3-37's_** shield token.",
+         "b": "Player A attacks with **_L3-37_** into **_Cad Bane_**, defeating **_L3-37's_** shield token. They then rescue **_Home One_**, which returns to play exhausted.", 
+         "c": "Player A rescues **_Home One_**, which returns to play exhausted, and lets them draw 2 cards. They then attack with **_L3-37_** into **_Cad Bane_**, healing their base for 1 HP and defeating **_L3-37_** in the process.",
+         "d": "Player A rescues **_Home One_**, which returns to play exhausted. They then attack with **_L3-37_** into **_Cad Bane_**, healing their base for 1 HP and defeating **_L3-37_** in the process."
+      },
+      "answer": "d",
+      "relevantCards": ["TWI/187", "SOR/102", "SOR/204", "SHD/129", "SHD/197"],
+      "relevantRule": "Since **Ambush** and **When Played** abilities trigger at the same time, Player A can choose which to resolve first. The only way for **_L3-37_** to ever receive a shield token would be to resolve her **When Played** ability and choose _not_ to rescue a unit. If **_Home One_** is rescued prior to **_L3's_** attack, she will absolutely gain **Restore 1** for her attack. No matter what order Player A chooses to resolve these triggers, they will never result in drawing 2 cards from **_Cad Bane's_** ability since that only applies when **_Cad_** himself is attacking.\n\n**7.5.5.D** - Ambush resolves during the same window as any \"When Played\" abilities on the unit.",
+      "tags": ["cad bane", "home one", "greedo", "timely intervention", "l3-37", "shd", "twi", "capture", "rescue", "ambush", "timing", "restore", "when played"],
+      "difficulty": 2
    }
 ]
