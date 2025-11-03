@@ -1528,5 +1528,20 @@
       "relevantRule": "Even though **_Cunning_** has two **Cunning** aspect icons and **_Duchess's Investigators_** only requires one, the cards you reveal when disclosing only need to contain the necessary aspect icons, not match exactly.\n\n**8.39.1** - If an ability instructs a player to \"disclose\" some number of aspect icons, that player reveals any number of cards from their hand. If the revealed cards collectively have at least the aspect icons specified by the ability, then the condition is fulfilled and the rest of the ability is resolved.",
       "tags": ["duchess's investigators", "cunning", "sec", "disclose", "reveal", "discard", "random"],
       "difficulty": 0
+   },
+   {
+      "id": 103,
+      "question": "Player A controls **_97th Legion, Keeping the Peace on Sullust_**, with 6 damage on it and has 7 ready resources. Player A then plays a **_Privateer Crew_** from their resources zone using **Smuggle**. What best describes what happens?",
+      "choices": {
+         "a": "**_97th Legion_** is defeated and **_Privateer Crew_** enters play as a 5/5.",
+         "b": "**_97th Legion_** only survives if **_Privateer Crew_** is used to pay for its own **Smuggle** cost, leaving one of Player A's resources ready.", 
+         "c": "**_97th Legion_** survives as a 7/7 with 6 damage on it and **_Privateer Crew_** enters play as a 5/5.",
+         "d": "**_97th Legion_** survives as a 7/7 with 6 damage on it and **_Privateer Crew_** enters play as a 2/2."
+      },
+      "answer": "c",
+      "relevantCards": ["SOR/118", "SHD/113"],
+      "relevantRule": "When a card is played using **Smuggle**, both it and the card replacing it enter play at the same time, so Player A's total number of resources never changes.\n\n**7.5.14.G** - As it enters play, a card played using Smuggle is replaced in the resource zone by the top card of a player’s deck. The two cards are considered to enter play simultaneously. The new resource enters play exhausted.",
+      "tags": ["97th legion", "privateer crew", "sor", "shd", "smuggle", "keyword", "resources", "timing"],
+      "difficulty": 1
    }
 ]
