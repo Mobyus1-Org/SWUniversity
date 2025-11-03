@@ -1513,5 +1513,20 @@
       "relevantRule": "Since the damage that would have been dealt to **_Umbaran Mobile Cannon_** is prevented, no damage was actually dealt, meaning **_Jabba's_** ability does not trigger at all.\n\n**1.9.9** - If an ability prevents some amount of damage from being dealt to a unit or base, that damage is not considered dealt to that unit or base, and any abilities that would have triggered if that damage was dealt don’t trigger. If an ability says a unit \"can’t be damaged,\" prevent all damage that would be dealt to that unit.",
       "tags": ["umbaran mobile cannon", "jabba the hutt", "chandrilan sponsor", "sec", "ambush", "leader", "ability", "trigger", "prevent"],
       "difficulty": 2
+   },
+   {
+      "id": 102,
+      "question": "Player A plays a **_Duchess's Investigators_** and reveals **_Cunning_** from their hand. What best describes what happens?",
+      "choices": {
+         "a": "Each opponent discards 2 random cards from their hand.",
+         "b": "Each opponent discards a random card from their hand.", 
+         "c": "Each opponent chooses a card from their hand to discard.",
+         "d": "Nothing."
+      },
+      "answer": "b",
+      "relevantCards": ["SEC/223", "SOR/203"],
+      "relevantRule": "Even though **_Cunning_** has two **Cunning** aspect icons and **_Duchess's Investigators_** only requires one, the cards you reveal when disclosing only need to contain the necessary aspect icons, not match exactly.\n\n**8.39.1** - If an ability instructs a player to \"disclose\" some number of aspect icons, that player reveals any number of cards from their hand. If the revealed cards collectively have at least the aspect icons specified by the ability, then the condition is fulfilled and the rest of the ability is resolved.",
+      "tags": ["duchess's investigators", "cunning", "sec", "disclose", "reveal", "discard", "random"],
+      "difficulty": 0
    }
 ]
