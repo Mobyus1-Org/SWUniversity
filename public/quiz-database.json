@@ -1570,7 +1570,7 @@
       },
       "answer": "d",
       "relevantCards": ["LOF/095", "SEC/094", "SEC/095"],
-      "relevantRule": "When a player controls a second copy of a unique unit, they immediately choose one copy to defeat. Any **When Defeated** abilities on the chosen unit still trigger and resolve normally.\n\n**8.30.3** - A player can only control one copy of each unique card with the same name and subtitle at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
+      "relevantRule": "When a player controls a second copy of a unique unit, they immediately choose one copy to defeat. Any **When Defeated** abilities on the chosen unit still trigger and resolve normally. Unfortunately, since **_Theed Security_** is not a unique unit, it cannot be selected as the target of **_Lor San Tekka's_** **When Defeated** ability regardless of which one is chosen to be defeated.\n\n**8.30.3** - A player can only control one copy of each unique card with the same name and subtitle at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
       "tags": ["lor san tekka", "mina bonteri", "theed security", "uniqueness", "when defeated", "timing", "experience"],
       "difficulty": 1
    }
