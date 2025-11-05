@@ -1573,5 +1573,35 @@
       "relevantRule": "When a player controls a second copy of a unique unit, they immediately choose one copy to defeat. Any **When Defeated** abilities on the chosen unit still trigger and resolve normally. Unfortunately, since **_Theed Security_** is not a unique unit, it cannot be selected as the target of **_Lor San Tekka's_** **When Defeated** ability regardless of which one is chosen to be defeated.\n\n**8.30.3** - A player can only control one copy of each unique card with the same name and subtitle at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.",
       "tags": ["lor san tekka", "mina bonteri", "theed security", "uniqueness", "when defeated", "timing", "experience"],
       "difficulty": 1
+   },
+   {
+      "id": 106,
+      "question": "Player A controls a **_Battle Droid Legion_** and has 1 ready resource. They then play **_Malevolence, Grievous's Secreat Weapon_**, **Exploit**ing the **_Battle Droid Legion_** as well as the 3 **_Battle Droid_** tokens it creates when it's defeated. Is this a legal play? Why or why not?",
+      "choices": {
+         "a": "No. The **_Battle Droid_** tokens are not yet in play and therefore cannot be **Exploit**ed.",
+         "b": "Yes. Since 4 units are being defeated via **Exploit**, **_Malevolence's_** cost is reduced to 1.", 
+         "c": "No. **_Malevolence_** would still cost 5 resources.",
+         "d": "No. Token units are not valid targets for **Exploit**."
+      },
+      "answer": "a",
+      "relevantCards": ["TWI/235", "TWI/039", "TTWI/T01"],
+      "relevantRule": "While **Exploit** _does_ reduce the cost of a unit by 2 for each friendly unit defeated, any **When Defeated** abilities on units that are **Exploit**ed wait to resolve until after the unit being played via **Exploit** is in play. This means the 3 **_Battle Droid_** tokens would not be created until after **_Malevolence's_** cost has been paid (which it can't be in this scenario).\n\n**7.5.16.D** - Abilities that trigger while defeating units using Exploit (e.g. \"When Defeated\" abilities) resolve only after the \"Play a Card\" action has finished resolving, at the same time that a unit’s \"When Played\" abilities resolve.",
+      "tags": ["battle droid legion", "malevolence", "battle droid", "twi", "token", "exploit", "keyword", "timing", "when defeated"],
+      "difficulty": 1
+   },
+   {
+      "id": 107,
+      "question": "Player A controls 3 exhausted **_Rotunda Senate Guards_**. Player B plays **_The Eye of Aldhani_**. Player A then plays a **_Lambda Shuttle_**. Player B plays another **_The Eye of Aldhani_**. Player A then claims the Initiative and Player B then passes. How many total resources must Player A pay at the start of the next Action Phase to ready all 4 of their units?",
+      "choices": {
+         "a": "4",
+         "b": "8", 
+         "c": "6",
+         "d": "7"
+      },
+      "answer": "b",
+      "relevantCards": ["SEC/063", "SEC/073", "IBH/058"],
+      "relevantRule": "Even though Player A only had 3 units in play during Player B's first **_The Eye of Aldhani_**, since the card is creating a \"delayed effect,\" the number of units isn't actually checked until the specified timing point. This means that both instances of **_The Eye of Aldhani_** will see all 4 of Player A's units.\n\n**7.7.4.A** - A delayed effect is created when a card ability indicates a future timing point or a future condition that may arise and an effect that will happen at that time.\n\n**7.7.4.C** - Once created, a delayed effect will resolve at the specified timing point or condition, even if the ability that created it was on a card that left play.",
+      "tags": ["rotunda senate guards", "the eye of aldhani", "lambda shuttle", "sec", "event", "exhaust", "timing", "readying"],
+      "difficulty": 1
    }
 ]
