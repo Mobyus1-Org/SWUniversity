@@ -169,7 +169,9 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
       </div>
     <main>
       <div className="relative p-4 z-10 min-h-[75vh]">
-        <div key={refreshKey}>{children}</div>
+        <div key={refreshKey}>
+          {children}
+        </div>
       </div>
     </main>
     {modalKey !== "relevant-cards" && (
