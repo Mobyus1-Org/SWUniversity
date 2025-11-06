@@ -160,7 +160,7 @@
       },
       "answer": "d",
       "relevantCards": ["SHD/135", "SOR/203"],
-      "relevantRule": "Since **_Kylo's TIE Silencer's_** ability is an Action Ability and not a Triggered Ability, Player A would need to use an action to play it from their discard pile. Unfortunately, once a player claims the initiative, they are forced to pass for the remainder of the phase, meaning although Player A has the resources to play **_Kylo's TIE_**, they will not be able to.\n\n**1.15.5.B** - After taking the initiative, a player cannot use their turn to take any further actions for the rest of that round’s action phase. They are considered to have \"passed,\" and they automatically \"pass\" for all remaining turns they would take that phase. However, they still resolve any triggered abilities they control during that phase.",
+      "relevantRule": "Since **_Kylo's TIE Silencer's_** ability is an Action ability and not a Triggered ability, Player A would need to use an action to play it from their discard pile. Unfortunately, once a player claims the initiative, they are forced to pass for the remainder of the phase, meaning although Player A has the resources to play **_Kylo's TIE_**, they will not be able to.\n\n**1.15.5.B** - After taking the initiative, a player cannot use their turn to take any further actions for the rest of that round’s action phase. They are considered to have \"passed,\" and they automatically \"pass\" for all remaining turns they would take that phase. However, they still resolve any triggered abilities they control during that phase.",
       "tags": ["kylo's tie silencer", "cunning", "random", "discard", "discard pile", "play a card", "initiative", "for this phase"],
       "difficulty": 1
    },
@@ -1603,5 +1603,35 @@
       "relevantRule": "Even though Player A only had 3 units in play during Player B's first **_The Eye of Aldhani_**, since the card is creating a \"delayed effect,\" the number of units isn't actually checked until the specified timing point. This means that both instances of **_The Eye of Aldhani_** will see all 4 of Player A's units.\n\n**7.7.4.A** - A delayed effect is created when a card ability indicates a future timing point or a future condition that may arise and an effect that will happen at that time.\n\n**7.7.4.C** - Once created, a delayed effect will resolve at the specified timing point or condition, even if the ability that created it was on a card that left play.",
       "tags": ["rotunda senate guards", "the eye of aldhani", "lambda shuttle", "sec", "event", "exhaust", "timing", "readying"],
       "difficulty": 1
+   },
+   {
+      "id": 108,
+      "question": "Player A controls **_Ziton Moj, Black Sun Bully_**, and plays **_Premonition of Doom_**. Player B controls a ready **_Secretive Sage_** with a shield token on it and plays **_Mythosaur, Folklore Awakened_**. Player A then claims the initiative. What best describes what happens?",
+      "choices": {
+         "a": "Nothing happens.",
+         "b": "**_Secretive Sage_** becomes exhausted.", 
+         "c": "Player A deals 2 damage to a base and nothing else.",
+         "d": "Player A deals 2 damage to a base and **_Secretive Sage_** becomes exhausted."
+      },
+      "answer": "c",
+      "relevantCards": ["SEC/168", "LOF/203", "LOF/061", "TSOR/T02", "LOF/073"],
+      "relevantRule": "Since shield tokens are considered upgrades, Player B's **_Secretive Sage_** will not become exhausted thanks to **_Mythosaur's_** ability. **_Ziton Moj_** will still trigger, allowing Player A to deal 2 damage to a base.",
+      "tags": ["ziton moj", "premonition of doom", "secretive sage", "mythosaur", "sec", "lof", "initiative", "event", "exhaust", "shield", "token", "upgrade", "ability"],
+      "difficulty": 1
+   },
+   {
+      "id": 109,
+      "question": "Player A controls a ready **_Leia Organa, Of a Secret Bloodline_**, and **_Cassian Andor, Lay Low_**. Player A uses **_Leia's_** Action ability and discloses a **_Rebellious Functionary_**. Can Player A give an Experience token to **_Cassian_**? Why or why not?",
+      "choices": {
+         "a": "Yes. **_Cassian_** has the _Vigilance_ aspect and **_Rebellious Functionary_** has the _Aggression_ aspect.",
+         "b": "No. Both **_Cassian_** and **_Leia Organa_** share the _Vigilance_ aspect.", 
+         "c": "No. Both **_Cassian_** and **_Rebellious Functionary_** share the _Heroism_ aspect.",
+         "d": "No. Both **_Cassian_** and **_Rebellious Functionary_** share the _Rebel_ trait."
+      },
+      "answer": "c",
+      "relevantCards": ["SEC/004", "SEC/042", "SEC/146"],
+      "relevantRule": "**_Leia's_** ability specifies that you must give an Experience token to a unit that does not share an aspect with the card you disclose. Since **_Cassian_** and **_Rebellious Functionary_** both have the white _Heroism_ aspect, Player A would not be able to give **_Cassian_** an Experience token this way.",
+      "tags": ["leia organa", "cassian andor", "rebellious functionary", "sec", "leader", "ability", "disclose", "experience", "aspects"],
+      "difficulty": 0
    }
 ]
