@@ -1544,7 +1544,7 @@
         "answer": "aspects",
         "difficulty": 1,
         "followUp": {
-          "question": "What should **_Sabine Wren_**'s aspects actually be?",
+          "question": "What should **_Sabine Wren's_** aspects actually be?",
           "choices": {
             "a": "_Vigilance_ _Heroism_",
             "b": "_Aggression_",
@@ -1796,7 +1796,7 @@
         "answer": "subtitle",
         "difficulty": 1,
         "followUp": {
-          "question": "What is **_Han Solo_**'s subtitle?",
+          "question": "What should **_Han Solo_'s** subtitle actually be?",
           "choices": {
             "a": "Audacious Smuggler.",
             "b": "Never Tell Me The Odds.",
@@ -2024,6 +2024,216 @@
           "answer": "b"
         },
         "explanation": "**_Poe Dameron, Quick to Improvise's_** is actually a _Resistance_ unit."
+      }
+    ]
+  },
+  {
+    "id": 83,
+    "actualCard": "LOF/109",
+    "variants": [
+      {
+        "img": "mynock1",
+        "answer": "arena",
+        "difficulty": 0,
+        "explanation": "**_Mynock_** is actually a space unit."
+      }
+    ]
+  },
+  {
+    "id": 84,
+    "actualCard": "LOF/061",
+    "variants": [
+      {
+        "img": "secretivesage1",
+        "answer": "aspects",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What should **_Secretive Sage's_** aspects actually be?",
+          "choices": {
+            "a": "_Cunning_",
+            "b": "_Vigilance_ _Vigilance_",
+            "c": "_Vigilance_ _Villainy_",
+            "d": "_Vigilance_"
+          },
+          "answer": "d"
+        },
+        "explanation": "**_Secretive Sage_** has the _Vigilance_ aspect only."
+      }
+    ]
+  },
+  {
+    "id": 85,
+    "actualCard": "LOF/182",
+    "variants": [
+      {
+        "img": "nihilmarauder1",
+        "answer": "ability-text",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What's wrong with the ability text?",
+          "choices": {
+            "a": "It should have **Hidden** instead.",
+            "b": "It should have **Ambush** instead.",
+            "c": "It should have **Raid 1** instead.",
+            "d": "It should have **Raid 3** instead."
+          },
+          "answer": "d"
+        },
+        "explanation": "**_Nihil Marauder_** actually has **Raid 3**."
+      }
+    ]
+  },
+  {
+    "id": 86,
+    "actualCard": "LOF/145",
+    "variants": [
+      {
+        "img": "jediknight1",
+        "answer": "ability-text",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What's wrong with the ability text?",
+          "choices": {
+            "a": "It deals 2 damage to an enemy _Force_ unit.",
+            "b": "It deals 3 damage to an enemy ground unit.",
+            "c": "It deals 2 damage to any enemy unit.",
+            "d": "Instead of using the Force, you need the initiative."
+          },
+          "answer": "d"
+        },
+        "explanation": "**_Jedi Knight's_** ability actually requires you to have the initiative."
+      }
+    ]
+  },
+  {
+    "id": 87,
+    "actualCard": "LOF/261",
+    "variants": [
+      {
+        "img": "constructedlightsaber1",
+        "answer": "play-restriction",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What's wrong with the play restriction?",
+          "choices": {
+            "a": "Must attach to a _Sith_ unit.",
+            "b": "Must attach to a _Jedi_ unit.",
+            "c": "Must attach to a friendly non-_Vehicle_ unit.",
+            "d": "Must attach to a _Force_ unit."
+          },
+          "answer": "d"
+        },
+        "explanation": "**_Constructed Lightsaber_** can only be attached to a _Force_ unit."
+      }
+    ]
+  },
+  {
+    "id": 88,
+    "actualCard": "LOF/140",
+    "variants": [
+      {
+        "img": "darthmaulslightsaber1",
+        "answer": "ability-text",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What's wrong with the ability text?",
+          "choices": {
+            "a": "Can attack two units for this attack.",
+            "b": "If attached unit has **_Maul_** in its name.",
+            "c": "If attached unit is **_Darth Maul_**, he can attack even if exhausted.",
+            "d": "Also can't attack bases for this attack."
+          },
+          "answer": "d"
+        },
+        "explanation": "When **_Darth Maul's Lightsaber_** is played on **_Darth Maul_**, he does attack with **Overwhelm**, but he cannot attack bases for that attack."
+      }
+    ]
+  },
+  {
+    "id": 89,
+    "actualCard": "LOF/089",
+    "variants": [
+      {
+        "img": "supremacy1",
+        "answer": "ability-text",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What's wrong with the ability text?",
+          "choices": {
+            "a": "Should have **Overwhelm** instead of **Ambush**.",
+            "b": "Other friendly _First Order_ units get +6/+6.",
+            "c": "Other friendly space units get +5/+5.",
+            "d": "Other friendly _Vehicle_ units get +6/+6."
+          },
+          "answer": "d"
+        },
+        "explanation": "**_Supremacy_** gives other friendly _Vehicle_ units +6/+6 regardless of which arena they're in."
+      }
+    ]
+  },
+  {
+    "id": 90,
+    "actualCard": "LOF/204",
+    "variants": [
+      {
+        "img": "zuckuss1",
+        "answer": "traits",
+        "difficulty": 1,
+        "followUp": {
+          "question": "Which of **_Zuckuss, The Findsman's_**, traits is missing/wrong?",
+          "choices": {
+            "a": "_Nihil_",
+            "b": "_Fringe_",
+            "c": "_Bounty Hunter_",
+            "d": "_Force_"
+          },
+          "answer": "d"
+        },
+        "explanation": "**_Zuckuss, The Findsman_** is actually a _Force_ unit."
+      }
+    ]
+  },
+  {
+    "id": 91,
+    "actualCard": "LOF/068",
+    "variants": [
+      {
+        "img": "lof_luthen1",
+        "answer": "ability-text",
+        "difficulty": 2,
+        "followUp": {
+          "question": "What's wrong with the ability text?",
+          "choices": {
+            "a": "Searches the top 8 cards of your deck.",
+            "b": "Searches for _Item_ upgrades specifically.",
+            "c": "Searches the top 7 cards of your deck.",
+            "d": "Searches for _Force_ upgrades specifically."
+          },
+          "answer": "b"
+        },
+        "explanation": "**_Luthen Rael, Masquerading Antiquarian_**, searches for _Item_ upgrades."
+      }
+    ]
+  },
+  {
+    "id": 91,
+    "actualCard": "LOF/175",
+    "variants": [
+      {
+        "img": "doordonot1",
+        "answer": "name",
+        "difficulty": 1,
+        "followUp": {
+          "question": "What is the actual name of this card?",
+          "choices": {
+            "a": "**_Do or Do Not_**",
+            "b": "**_Search Your Feelings_**",
+            "c": "**_Jedi Trials_**",
+            "d": "**_It Binds All Things_**"
+          },
+          "answer": "a"
+        },
+        "explanation": "This card is actually called **_Do or Do Not_**."
       }
     ]
   }
