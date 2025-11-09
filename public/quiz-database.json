@@ -1633,5 +1633,20 @@
       "relevantRule": "**_Leia's_** ability specifies that you must give an Experience token to a unit that does not share an aspect with the card you disclose. Since **_Cassian_** and **_Rebellious Functionary_** both have the white _Heroism_ aspect, Player A would not be able to give **_Cassian_** an Experience token this way.",
       "tags": ["leia organa", "cassian andor", "rebellious functionary", "sec", "leader", "ability", "disclose", "experience", "aspects"],
       "difficulty": 0
+   },
+   {
+      "id": 110,
+      "question": "Player A controls **_Babu Frik, Heyyyy!_**, and an **_Unruly Astromech_** with no damage on it. Player B plays **_Emissaries From Ryloth_** and chooses Player A's **_Unruly Astromech_** as the target for its **When Played** ability. Player A then uses **_Babu Frik's_** action ability on the **_Unruly Astromech_** and attacks Player B's base. How much damage is dealt?",
+      "choices": {
+         "a": "This play is illegal.",
+         "b": "3",
+         "c": "0",
+         "d": "2"
+      },
+      "answer": "d",
+      "relevantCards": ["LOF/206", "SEC/221", ""],
+      "relevantRule": "**_Babu Frik's_** ability specifies that the _Droid_ that attacks \"deals damage equal to its remaining HP,\" which means that any changes to the _Droid's_ Power are irrelevant. Since the **_Unruly Astromech_** has 2 HP, it deals 2 damage.",
+      "tags": ["babu frik", "unruly astromech", "emissaries from ryloth", "lof", "sec", "ability", "debuff", "when played"],
+      "difficulty": 1
    }
 ]
