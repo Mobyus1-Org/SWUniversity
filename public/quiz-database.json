@@ -1644,7 +1644,7 @@
          "d": "2"
       },
       "answer": "d",
-      "relevantCards": ["LOF/206", "SEC/221", ""],
+      "relevantCards": ["LOF/206", "SEC/221", "SEC/206"],
       "relevantRule": "**_Babu Frik's_** ability specifies that the _Droid_ that attacks \"deals damage equal to its remaining HP,\" which means that any changes to the _Droid's_ Power are irrelevant. Since the **_Unruly Astromech_** has 2 HP, it deals 2 damage.",
       "tags": ["babu frik", "unruly astromech", "emissaries from ryloth", "lof", "sec", "ability", "debuff", "when played"],
       "difficulty": 1
