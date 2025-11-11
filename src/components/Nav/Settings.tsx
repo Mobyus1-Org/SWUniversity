@@ -105,10 +105,10 @@ export function Settings({ userSettings, setUserSettings, sfx, settingsModalRef,
                     setLightsaberColor(newColor);
                     if(newColor === "none") {
                       //turning lightsaber off
-                      sfx("confirm");
+                      sfx("lightsaberoff");
                     } else {
                       //changing lightsaber color
-                      sfx("transition");
+                      sfx("lightsaber1");
                     }
                     setHoveredLightsaberColor(null);
                     setShowLightsaberColorDropdown(false);
