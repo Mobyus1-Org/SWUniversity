@@ -36,7 +36,7 @@ export function Settings({ userSettings, setUserSettings, sfx, settingsModalRef,
         const storedSettings: UserSettings = JSON.parse(localStorage.getItem(UserSettingsLocalStorageKey) || '{}');
         if(!storedSettings.soundEnabled) {
           setTimeout(() => {
-            sfx("transition", true);
+            sfx("lightsaber1", true);
           }, 150);
         }
         updateUserSettings(setUserSettings, {
