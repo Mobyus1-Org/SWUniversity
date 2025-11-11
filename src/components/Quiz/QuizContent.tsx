@@ -181,7 +181,11 @@ export function QuizContent({
       {
         quizResult && currentQuiz.relevantRule !== " " && <div className="md:col-span-2 text-xl uwd:text-3xl 4k:text-5xl">
           <p className={`${currentQuiz.answer === selectedAnswer ? "text-green-500" : "text-red-500"} font-bold mb-4`}>
-            {currentQuiz.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
+            {currentQuiz.answer === selectedAnswer
+              ? (quizMode === "iron-man"
+                  ? `Correct! (${quizzesCompleted.length + 1}/${currentQuizSet.length} total)`
+                  : "Correct!")
+              : "Incorrect!"}
           </p>
           <p className="mb-2.5 font-bold">Relevant Rules:</p>
           <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentQuiz.relevantRule)}</p>

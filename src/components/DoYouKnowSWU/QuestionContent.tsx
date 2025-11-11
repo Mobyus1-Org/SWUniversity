@@ -200,7 +200,11 @@ export function QuestionContent({
             Next Question
           </button>
           <p className={`text-xl font-bold mt-4 uwd:mt-8 4k:mt-10 ${followUpAnswer === currentVariantQuestion.followUp.answer ? "text-green-500" : "text-red-500"} `}>
-            {followUpAnswer === currentVariantQuestion.followUp.answer ? "Correct!" : "Incorrect!"}
+            {followUpAnswer === currentVariantQuestion.followUp.answer
+              ? (questionMode === "iron-man"
+                  ? `Correct! (${questionsCompleted.length + 1}/${currentQuestionSet.length} total)`
+                  : "Correct!")
+              : "Incorrect!"}
           </p>
           <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentVariantQuestion.explanation)}</p>
         </div>
@@ -275,7 +279,11 @@ export function QuestionContent({
       {
         questionResult && showExplanation && <div className="md:col-span-2">
           <p className={`${currentVariantQuestion.answer === selectedAnswer ? "text-green-500" : "text-red-500"} text-xl font-bold mb-4`}>
-            {currentVariantQuestion.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
+            {currentVariantQuestion.answer === selectedAnswer
+              ? (questionMode === "iron-man"
+                  ? `Correct! (${questionsCompleted.length + 1}/${currentQuestionSet.length} total)`
+                  : "Correct!")
+              : "Incorrect!"}
           </p>
           <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentVariantQuestion.explanation)}</p>
         </div>
