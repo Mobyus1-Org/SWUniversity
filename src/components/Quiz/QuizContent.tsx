@@ -181,11 +181,12 @@ export function QuizContent({
       {
         quizResult && currentQuiz.relevantRule !== " " && <div className="md:col-span-2 text-xl uwd:text-3xl 4k:text-5xl">
           <p className={`${currentQuiz.answer === selectedAnswer ? "text-green-500" : "text-red-500"} font-bold mb-4`}>
-            {currentQuiz.answer === selectedAnswer
-              ? (quizMode === "iron-man"
-                  ? `Correct! (${quizzesCompleted.length + 1}/${currentQuizSet.length} total)`
-                  : "Correct!")
-              : "Incorrect!"}
+            {currentQuiz.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
+            {quizMode === "iron-man" && currentQuiz.answer === selectedAnswer && (
+              <span className="block text-sm md:text-base uwd:!text-xl 4k:!text-2xl text-green-600 mt-2">
+                ({quizzesCompleted.length + 1}/{currentQuizSet.length} total)
+              </span>
+            )}
             {quizMode === "standard" && (
               <span className="block text-sm md:text-base uwd:!text-xl 4k:!text-2xl text-gray-400 mt-2">
                 Question {quizzesCompleted.length + 1} of {standardQuizLength} ({userResponses.filter(r => r.selected === r.correct).length + (currentQuiz.answer === selectedAnswer ? 1 : 0)} correct)

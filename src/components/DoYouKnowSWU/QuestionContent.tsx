@@ -200,11 +200,12 @@ export function QuestionContent({
             Next Question
           </button>
           <p className={`text-xl font-bold mt-4 uwd:mt-8 4k:mt-10 ${followUpAnswer === currentVariantQuestion.followUp.answer ? "text-green-500" : "text-red-500"} `}>
-            {followUpAnswer === currentVariantQuestion.followUp.answer
-              ? (questionMode === "iron-man"
-                  ? `Correct! (${questionsCompleted.length + 1}/${currentQuestionSet.length} total)`
-                  : "Correct!")
-              : "Incorrect!"}
+            {followUpAnswer === currentVariantQuestion.followUp.answer ? "Correct!" : "Incorrect!"}
+            {questionMode === "iron-man" && followUpAnswer === currentVariantQuestion.followUp.answer && (
+              <span className="block text-sm md:text-base uwd:!text-xl 4k:!text-2xl text-green-600 mt-2">
+                ({questionsCompleted.length + 1}/{currentQuestionSet.length} total)
+              </span>
+            )}
             {questionMode === "standard" && (
               <span className="block text-sm md:text-base uwd:!text-xl 4k:!text-2xl text-gray-400 mt-2">
                 Question {questionsCompleted.length + 1} of {standardQuestionLength} ({userResponses.filter(r => r.selected === r.correct && (!r.followUp || r.followUp.followUpSelected === r.followUp.followUpCorrect)).length + (selectedAnswer === currentVariantQuestion.answer && followUpAnswer === currentVariantQuestion.followUp.answer ? 1 : 0)} correct)
@@ -284,11 +285,12 @@ export function QuestionContent({
       {
         questionResult && showExplanation && <div className="md:col-span-2">
           <p className={`${currentVariantQuestion.answer === selectedAnswer ? "text-green-500" : "text-red-500"} text-xl font-bold mb-4`}>
-            {currentVariantQuestion.answer === selectedAnswer
-              ? (questionMode === "iron-man"
-                  ? `Correct! (${questionsCompleted.length + 1}/${currentQuestionSet.length} total)`
-                  : "Correct!")
-              : "Incorrect!"}
+            {currentVariantQuestion.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
+            {questionMode === "iron-man" && currentVariantQuestion.answer === selectedAnswer && (
+              <span className="block text-sm md:text-base uwd:!text-xl 4k:!text-2xl text-green-600 mt-2">
+                ({questionsCompleted.length + 1}/{currentQuestionSet.length} total)
+              </span>
+            )}
             {questionMode === "standard" && (
               <span className="block text-sm md:text-base uwd:!text-xl 4k:!text-2xl text-gray-400 mt-2">
                 Question {questionsCompleted.length + 1} of {standardQuestionLength} ({userResponses.filter(r => r.selected === r.correct && (!r.followUp || r.followUp.followUpSelected === r.followUp.followUpCorrect)).length + (currentVariantQuestion.answer === selectedAnswer ? 1 : 0)} correct)
