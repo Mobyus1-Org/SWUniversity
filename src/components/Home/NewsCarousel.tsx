@@ -9,10 +9,24 @@ export default function NewsCarousel() {
 	const [current, setCurrent] = React.useState(0);
 	const [maxHeight, setMaxHeight] = React.useState<number | undefined>(undefined);
 	const [autoScrollDisabled, setAutoScrollDisabled] = React.useState(false);
+	const [direction, setDirection] = React.useState<'left' | 'right' | null>(null);
+	const [isTransitioning, setIsTransitioning] = React.useState(false);
 	const slideRefs = React.useRef<(HTMLDivElement | null)[]>([]);
 	const intervalRef = React.useRef<number | null>(null);
 
-	const goTo = (idx: number) => setCurrent((idx + slides.length) % slides.length);
+	const goTo = React.useCallback((idx: number) => {
+		const nextIdx = (idx + slides.length) % slides.length;
+		const isForward = (idx > current) || (current === slides.length - 1 && idx === 0);
+		setDirection(isForward ? 'left' : 'right');
+		setIsTransitioning(true);
+		setCurrent(nextIdx);
+
+		// Reset transition state after animation completes
+		setTimeout(() => {
+			setIsTransitioning(false);
+			setDirection(null);
+		}, 500);
+	}, [current]);
 
 	const handleManualInteraction = (idx: number) => {
 		// Clear interval and disable auto-scroll permanently
@@ -40,7 +54,7 @@ export default function NewsCarousel() {
     const intervalMS = 5000;
 		if (!autoScrollDisabled) {
 			intervalRef.current = setInterval(() => {
-				setCurrent(prev => (prev + 1) % slides.length);
+				goTo(current + 1);
 			}, intervalMS);
 		}
 
@@ -49,7 +63,7 @@ export default function NewsCarousel() {
 				clearInterval(intervalRef.current);
 			}
 		};
-	}, [autoScrollDisabled]);
+	}, [autoScrollDisabled, current, goTo]);
 
 	// Render all slides offscreen for measurement, but only show the current one
 		return (
@@ -79,7 +93,14 @@ export default function NewsCarousel() {
 						</div>
 						{/* Visible slide */}
 						<div
-							className="flex-1 flex justify-center w-full items-stretch p-8"
+							key={current}
+							className={`flex-1 flex justify-center w-full items-stretch p-8 transition-all duration-500 ease-in-out ${
+								isTransitioning
+									? direction === 'left'
+										? 'animate-slide-in-left'
+										: 'animate-slide-in-right'
+									: ''
+							}`}
 							style={maxHeight ? { minHeight: maxHeight, boxSizing: 'border-box' } : { boxSizing: 'border-box' }}
 						>
 							{slides[current].type === "paragraph" && <CarouselParagraphItem data={slides[current]} />}
