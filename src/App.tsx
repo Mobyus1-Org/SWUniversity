@@ -44,6 +44,10 @@ function App() {
   confirmSound.volume = 0.03;
   const transitionSound = React.useMemo(() => new Audio('/assets/sfx/transition.mp3'), []);
   transitionSound.volume = 0.05;
+  const lightsaber1Sound = React.useMemo(() => new Audio('/assets/sfx/lightsaber1.mp3'), []);
+  lightsaber1Sound.volume = 0.05;
+  const lightsaberOffSound = React.useMemo(() => new Audio('/assets/sfx/lightsaberoff.mp3'), []);
+  lightsaberOffSound.volume = 0.05;
 
   const sfx = (type: SfxType, forcePlay = false) => {
     let sound: HTMLAudioElement;
@@ -56,6 +60,12 @@ function App() {
         break;
       case "transition":
         sound = transitionSound;
+        break;
+      case "lightsaber1":
+        sound = lightsaber1Sound;
+        break;
+      case "lightsaberoff":
+        sound = lightsaberOffSound;
         break;
       default:
         return;
