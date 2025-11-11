@@ -8,8 +8,21 @@ import { CarouselBannerTextItem } from "./CarouselBannerTextItem";
 export default function NewsCarousel() {
 	const [current, setCurrent] = React.useState(0);
 	const [maxHeight, setMaxHeight] = React.useState<number | undefined>(undefined);
+	const [autoScrollDisabled, setAutoScrollDisabled] = React.useState(false);
 	const slideRefs = React.useRef<(HTMLDivElement | null)[]>([]);
+	const intervalRef = React.useRef<number | null>(null);
+
 	const goTo = (idx: number) => setCurrent((idx + slides.length) % slides.length);
+
+	const handleManualInteraction = (idx: number) => {
+		// Clear interval and disable auto-scroll permanently
+		if (intervalRef.current) {
+			clearInterval(intervalRef.current);
+			intervalRef.current = null;
+		}
+		setAutoScrollDisabled(true);
+		goTo(idx);
+	};
 
 	// Measure all slides after mount and on window resize
 	React.useEffect(() => {
@@ -21,6 +34,21 @@ export default function NewsCarousel() {
 		window.addEventListener('resize', measureHeights);
 		return () => window.removeEventListener('resize', measureHeights);
 	}, []);
+
+	// Auto-scroll effect
+	React.useEffect(() => {
+		if (!autoScrollDisabled) {
+			intervalRef.current = setInterval(() => {
+				setCurrent(prev => (prev + 1) % slides.length);
+			}, 5000);
+		}
+
+		return () => {
+			if (intervalRef.current) {
+				clearInterval(intervalRef.current);
+			}
+		};
+	}, [autoScrollDisabled]);
 
 	// Render all slides offscreen for measurement, but only show the current one
 		return (
@@ -62,7 +90,7 @@ export default function NewsCarousel() {
 							<button
 								aria-label="Previous slide"
 								className="text-gray-400 hover:text-white text-3xl px-4 py-2 focus:outline-none"
-								onClick={() => goTo(current - 1)}
+								onClick={() => handleManualInteraction(current - 1)}
 							>
 								<span>&#60;</span>
 							</button>
@@ -79,7 +107,7 @@ export default function NewsCarousel() {
 							<button
 								aria-label="Next slide"
 								className="text-gray-400 hover:text-white text-3xl px-4 py-2 focus:outline-none"
-								onClick={() => goTo(current + 1)}
+								onClick={() => handleManualInteraction(current + 1)}
 							>
 								<span>&#62;</span>
 							</button>
