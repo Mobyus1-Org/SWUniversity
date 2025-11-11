@@ -7,7 +7,7 @@ export const DiscordLink = "https://discord.gg/dbQXnVkjFV";
 export type SWUniversityApp = "quiz" | "dykswu";
 export type AppModes = "" | "iron-man" | "endless" | "standard" | "padawan" | "knight" | "master";
 export type ModeDescriptions = { [key in AppModes]: string };
-export type SfxType = "click" | "confirm" | "transition";
+export type SfxType = "click" | "confirm" | "transition" | "lightsaber1" | "lightsaberoff";
 export type DYKSWUChoice = "name" | "card-type" | "arena" | "subtitle" | "cost" | "aspects" | "power" | "hp" | "traits" | "trigger-condition" | "play-restriction" | "ability-text" | "rarity" | "art" | "something-else" | "no-change";
 export interface IPageProps {
   userSettings: UserSettings;
