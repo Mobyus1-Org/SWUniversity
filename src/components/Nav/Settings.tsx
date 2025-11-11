@@ -36,7 +36,8 @@ export function Settings({ userSettings, setUserSettings, sfx, settingsModalRef,
         const storedSettings: UserSettings = JSON.parse(localStorage.getItem(UserSettingsLocalStorageKey) || '{}');
         if(!storedSettings.soundEnabled) {
           setTimeout(() => {
-            sfx("lightsaber1", true);
+            //for sound back on
+            sfx("transition", true);
           }, 150);
         }
         updateUserSettings(setUserSettings, {
@@ -65,6 +66,7 @@ export function Settings({ userSettings, setUserSettings, sfx, settingsModalRef,
         className="flex items-center gap-4 uwd:gap-6 4k:gap-8 mb-2 cursor-pointer hover:bg-white/10 p-2 rounded"
         onClick={() => {
           setShowLightsaberColorDropdown((p) => !p);
+          //open lightsaber color menu
           sfx("transition");
         }}
       >
@@ -102,8 +104,10 @@ export function Settings({ userSettings, setUserSettings, sfx, settingsModalRef,
                     updateUserSettings(setUserSettings, { lightsaberColor: newColor });
                     setLightsaberColor(newColor);
                     if(newColor === "none") {
+                      //turning lightsaber off
                       sfx("confirm");
                     } else {
+                      //changing lightsaber color
                       sfx("transition");
                     }
                     setHoveredLightsaberColor(null);
