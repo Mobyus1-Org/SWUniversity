@@ -186,6 +186,11 @@ export function QuizContent({
                   ? `Correct! (${quizzesCompleted.length + 1}/${currentQuizSet.length} total)`
                   : "Correct!")
               : "Incorrect!"}
+            {quizMode === "standard" && (
+              <span className="block text-sm md:text-base uwd:!text-xl 4k:!text-2xl text-gray-400 mt-2">
+                Question {quizzesCompleted.length + 1} of {standardQuizLength} ({userResponses.filter(r => r.selected === r.correct).length + (currentQuiz.answer === selectedAnswer ? 1 : 0)} correct)
+              </span>
+            )}
           </p>
           <p className="mb-2.5 font-bold">Relevant Rules:</p>
           <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentQuiz.relevantRule)}</p>

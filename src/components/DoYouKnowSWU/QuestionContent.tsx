@@ -205,6 +205,11 @@ export function QuestionContent({
                   ? `Correct! (${questionsCompleted.length + 1}/${currentQuestionSet.length} total)`
                   : "Correct!")
               : "Incorrect!"}
+            {questionMode === "standard" && (
+              <span className="block text-sm md:text-base uwd:!text-xl 4k:!text-2xl text-gray-400 mt-2">
+                Question {questionsCompleted.length + 1} of {standardQuestionLength} ({userResponses.filter(r => r.selected === r.correct && (!r.followUp || r.followUp.followUpSelected === r.followUp.followUpCorrect)).length + (selectedAnswer === currentVariantQuestion.answer && followUpAnswer === currentVariantQuestion.followUp.answer ? 1 : 0)} correct)
+              </span>
+            )}
           </p>
           <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentVariantQuestion.explanation)}</p>
         </div>
@@ -284,6 +289,11 @@ export function QuestionContent({
                   ? `Correct! (${questionsCompleted.length + 1}/${currentQuestionSet.length} total)`
                   : "Correct!")
               : "Incorrect!"}
+            {questionMode === "standard" && (
+              <span className="block text-sm md:text-base uwd:!text-xl 4k:!text-2xl text-gray-400 mt-2">
+                Question {questionsCompleted.length + 1} of {standardQuestionLength} ({userResponses.filter(r => r.selected === r.correct && (!r.followUp || r.followUp.followUpSelected === r.followUp.followUpCorrect)).length + (currentVariantQuestion.answer === selectedAnswer ? 1 : 0)} correct)
+              </span>
+            )}
           </p>
           <p className="whitespace-pre-wrap">{renderItalicsAndBold(currentVariantQuestion.explanation)}</p>
         </div>
