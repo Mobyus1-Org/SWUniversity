@@ -1473,7 +1473,7 @@
       "id": 99,
       "question": "Player A has their Force token and their only unit is a ready **_Jedi Consular_**. They exhaust him, using his ability to play a **_Yoda, My Ally is the Force_**, for 6 resources. They resolve **_Yoda's_** first ability, healing 5 damage from their base. They then resolve **_Yoda's_** other ability and deal 4 damage to one of Player B's units. Was this a legal sequence of events? If not, why?",
       "choices": {
-         "a": "No. Neither of Yoda's abilities should not have triggered.",
+         "a": "No. Neither of Yoda's abilities should have triggered.",
          "b": "No. Yoda's first ability should not have triggered.",
          "c": "No. Yoda's second ability should not have triggered.",
          "d": "Yes. This sequence was legal."
