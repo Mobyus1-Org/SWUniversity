@@ -37,10 +37,11 @@ export default function NewsCarousel() {
 
 	// Auto-scroll effect
 	React.useEffect(() => {
+    const intervalMS = 5000;
 		if (!autoScrollDisabled) {
 			intervalRef.current = setInterval(() => {
 				setCurrent(prev => (prev + 1) % slides.length);
-			}, 5000);
+			}, intervalMS);
 		}
 
 		return () => {
