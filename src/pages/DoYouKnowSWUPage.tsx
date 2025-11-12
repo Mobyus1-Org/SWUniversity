@@ -135,7 +135,7 @@ function DoYouKnowSWUPage() {
             <br/><br/>-Padawan (easy), Knight (medium), or Master (hard) modes will filter selected cards to those difficulties.
             <br/><br/>-Be careful! Some cards have multiple variants!
             <br/>Just because you may see the same card twice doesn't mean the answer will be the same!
-            <br/><br/>-Inspired by 
+            <br/><br/>-Inspired by{' '}
             <a
               href="https://www.youtube.com/playlist?list=PLfkaDjFSp79oNkbxhtkOujzWE59dfADQs"
               className="text-blue-500 underline"
