@@ -888,7 +888,7 @@
         "answer": "rarity",
         "difficulty": 1,
         "followUp": {
-          "question": "What should this card's rarity actually be?",
+          "question": "What should **_Ahsoka's Padawan Lightsaber's_** rarity actually be?",
           "choices": {
             "a": "Uncommon.",
             "b": "Legendary.",
@@ -1928,12 +1928,12 @@
         "answer": "rarity",
         "difficulty": 2,
         "followUp": {
-          "question": "What should the rarity of **_Unlimited Power_** actually be?",
+          "question": "What should **_Unlimited Power's_** rarity actually be?",
           "choices": {
-            "a": "Legendary.",
-            "b": "Common.",
-            "c": "Starter/Special.",
-            "d": "Uncommon."
+            "a": "Legendary",
+            "b": "Common",
+            "c": "Starter/Special",
+            "d": "Uncommon"
           },
           "answer": "a"
         },
@@ -2000,10 +2000,10 @@
         "followUp": {
           "question": "What should **_Poe Dameron, Quick to Improvise's_** cost actually be?",
           "choices": {
-            "a": "5.",
-            "b": "4.",
-            "c": "7.",
-            "d": "8."
+            "a": "5",
+            "b": "4",
+            "c": "7",
+            "d": "8"
           },
           "answer": "a"
         },
@@ -2234,6 +2234,60 @@
           "answer": "a"
         },
         "explanation": "This card is actually called **_Do or Do Not_**."
+      }
+    ]
+  },
+  {
+    "id": 92,
+    "actualCard": "LOF/254",
+    "variants": [
+      {
+        "img": "porg1",
+        "answer": "rarity",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What should **_Porg's_** rarity actually be?",
+          "choices": {
+            "a": "Common",
+            "b": "Uncommon",
+            "c": "Rare",
+            "d": "Starter/Special"
+          },
+          "answer": "a"
+        },
+        "explanation": "**_Porg_** is actually a Common card."
+      },
+      {
+        "img": "porg2",
+        "answer": "cost",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What should **_Porg_** actually cost?",
+          "choices": {
+            "a": "2",
+            "b": "0",
+            "c": "3",
+            "d": "-1"
+          },
+          "answer": "b"
+        },
+        "explanation": "**_Porg_** actually costs 0."
+      },
+      {
+        "img": "porg3",
+        "answer": "ability-text",
+        "difficulty": 0,
+        "followUp": {
+          "question": "What's wrong with the ability text?",
+          "choices": {
+            "a": "It should have **Restore 1** instead of **Hidden**.",
+            "b": "It should have **Ambush** instead of **Hidden**.",
+            "c": "The text box should be blank.",
+            "d": "It should have **Shielded** instead of **Hidden**."
+          },
+          "answer": "c"
+        },
+        "explanation": "As cute as it is, **_Porg_** has no ability text."
       }
     ]
   }
