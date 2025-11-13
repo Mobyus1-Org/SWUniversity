@@ -39,6 +39,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
   const [showMobilePlayModesDropdown, setShowMobilePlayModesDropdown] = React.useState(false);
   const lightsaberColorRef = React.useRef<HTMLDivElement>(null);
   const settingsModalRef = React.useRef<HTMLDivElement>(null);
+  const settingsButtonRef = React.useRef<HTMLDivElement>(null);
   const playModesRef = React.useRef<HTMLDivElement>(null);
   const mobilePlayModesRef = React.useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -53,7 +54,9 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
       }
 
       // Close settings modal
-      if (settingsModalRef.current && !settingsModalRef.current.contains(event.target as Node) && showModal && modalKey === "settings") {
+      if (settingsModalRef.current && !settingsModalRef.current.contains(event.target as Node) &&
+          settingsButtonRef.current && !settingsButtonRef.current.contains(event.target as Node) &&
+          showModal && modalKey === "settings") {
         setShowModal(false);
         setModalKey("");
       }
@@ -164,7 +167,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
             <MenuButton />
           </div>
           <LeftSideNavTray sfx={sfx} playModesRef={playModesRef} styles={styles} handleNavClick={handleNavClick} showPlayModesDropdown={showPlayModesDropdown} setShowPlayModesDropdown={setShowPlayModesDropdown} currentHover={currentHover} />
-          <RightSideTray setShowModal={setShowModal} setModalKey={setModalKey} sfx={sfx} />
+          <RightSideTray setShowModal={setShowModal} setModalKey={setModalKey} sfx={sfx} settingsButtonRef={settingsButtonRef} />
         </div>
       </div>
     <main>

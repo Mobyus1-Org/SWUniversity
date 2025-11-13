@@ -5,15 +5,17 @@ interface IProps {
   setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
   setModalKey: React.Dispatch<React.SetStateAction<ModalKey>>;
   sfx: (type: SfxType, forcePlay?: boolean) => void;
+  settingsButtonRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export function RightSideTray({ setShowModal, setModalKey, sfx }: IProps) {
+export function RightSideTray({ setShowModal, setModalKey, sfx, settingsButtonRef }: IProps) {
   return <div className="flex items-center justify-center gap-4 uwd:!gap-6 4k:!gap-8">
     <div
       className="flex items-center gap-2 uwd:!gap-4 4k:!gap-6
         bg-[rgba(255,255,255,0.25)] rounded-full px-4 py-2 uwd:!px-6 4k:!px-8 4k:!py-3"
     >
       <div
+      ref={settingsButtonRef}
       className="flex items-center justify-center text-md md:text-xl uwd:!text-2xl 4k:!text-3xl btn btn-ghost p-2 uwd:!p-3 4k:!p-4"
       onClick={() => {
         setShowModal((p) => !p);
