@@ -86,7 +86,7 @@ export function Settings({ userSettings, setUserSettings, sfx, settingsModalRef,
       {/* Lightsaber Color Dropdown */}
       {showLightsaberColorDropdown && (
         <div
-          className={`z-40 absolute right-full mr-4 -top-3 w-64 p-4 border rounded-lg ${globalBackgroundStyleOpaque}`}
+          className={`z-40 absolute md:right-full md:mr-4 md:-top-3 top-full mt-2 md:mt-0 left-0 md:left-auto w-64 p-4 border rounded-lg ${globalBackgroundStyleOpaque}`}
           onMouseLeave={() => setHoveredLightsaberColor(null)}
         >
           <div className="space-y-1">
