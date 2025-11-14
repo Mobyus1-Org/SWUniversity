@@ -262,15 +262,26 @@ export function renderItalicsAndBold(text: string): React.JSX.Element {
 
 export function preloadImagesAsync(urls: string[]): Promise<void> {
   const promises = urls.map((url) => {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       const img = new Image();
       img.src = url;
       img.onload = () => resolve();
-      img.onerror = () => reject();
+      // On error, try to load anyway - browser will handle fallback via onError handlers
+      img.onerror = () => resolve(); // Changed from reject to resolve
     });
   });
 
   return Promise.allSettled(promises).then(() => undefined);
+}
+
+export function preloadSWUDBImagesAsync(cardPatterns: string[]): Promise<void> {
+  const urls = cardPatterns.map(pattern => getSWUDBImageLink(pattern));
+  return preloadImagesAsync(urls);
+}
+
+export function preloadDYKSWUImagesAsync(fileNames: string[]): Promise<void> {
+  const urls = fileNames.map(fileName => getDYKSWUImageLink(fileName));
+  return preloadImagesAsync(urls);
 }
 
 export function updateUserSettings(setter: React.Dispatch<React.SetStateAction<UserSettings>>, newSettings: Partial<UserSettings>) {

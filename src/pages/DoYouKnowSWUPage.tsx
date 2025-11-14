@@ -1,5 +1,5 @@
 import React from "react";
-import { getDoYouKnowSWUDataAsync, getModeTitle, preloadImagesAsync, type AppModeSetEntry, type DoYouKnowSWUQuestion, type UserResponse } from "../util/func";
+import { getDoYouKnowSWUDataAsync, getModeTitle, preloadSWUDBImagesAsync, preloadDYKSWUImagesAsync, type AppModeSetEntry, type DoYouKnowSWUQuestion, type UserResponse } from "../util/func";
 import { ModeButtons } from "../components/Shared/ModeButtons";
 import { QuestionContent } from "../components/DoYouKnowSWU/QuestionContent";
 import { globalBackgroundStyle } from "../util/style-const";
@@ -33,7 +33,16 @@ function DoYouKnowSWUPage() {
         return;
       }
 
-      preloadImagesAsync(data.map((question) => question.actualCard)).then(() => {
+      // Preload both actual cards (SWUDB) and variant images (DYKSWU)
+      const actualCards = data.map((question) => question.actualCard);
+      const variantImages = data.flatMap((question) =>
+        question.variants.map(variant => variant.img)
+      );
+
+      Promise.all([
+        preloadSWUDBImagesAsync(actualCards),
+        preloadDYKSWUImagesAsync(variantImages)
+      ]).then(() => {
         setLoading(false);
         sessionStorage.setItem("loadedDYKSWUData", "true");
       });

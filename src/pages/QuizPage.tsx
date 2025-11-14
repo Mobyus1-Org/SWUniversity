@@ -1,5 +1,5 @@
 import React from "react";
-import { getModeTitle, getQuizDataAsync, preloadImagesAsync } from "../util/func";
+import { getModeTitle, getQuizDataAsync, preloadSWUDBImagesAsync } from "../util/func";
 import type { AppModeSetEntry, Quiz, UserResponse } from "../util/func";
 import { ModeButtons } from "../components/Shared/ModeButtons";
 import { QuizContent } from "../components/Quiz/QuizContent";
@@ -33,7 +33,7 @@ function QuizPage() {
         return;
       }
 
-      preloadImagesAsync(data.flatMap((quiz) => quiz.relevantCards)).then(() => {
+      preloadSWUDBImagesAsync(data.flatMap((quiz) => quiz.relevantCards)).then(() => {
         setLoading(false);
         sessionStorage.setItem("loadedQuizData", "true");
       });
