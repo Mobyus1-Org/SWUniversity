@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "download-images": "node scripts/download-images.js",
+    "convert-images": "node scripts/convert-to-webp.js"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.13",
@@ -30,6 +32,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "gh-pages": "^6.3.0",
     "globals": "^16.4.0",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.1.13",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.44.0",

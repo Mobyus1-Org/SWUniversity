@@ -1,7 +1,7 @@
 import React from "react";
 import { globalBackgroundStyle, globalBackgroundStyleBigShadow, getLightsaberGlowHover } from "../../util/style-const";
 import { type AppModes, type SfxType } from "../../util/const";
-import { renderItalicsAndBold, type Quiz, type UserResponse, getSWUDBImageLink } from "../../util/func";
+import { renderItalicsAndBold, type Quiz, type UserResponse, getSWUDBImageLink, getSWUDBImageLinkFallback } from "../../util/func";
 import { ModeEndScreen } from "../Shared/ModeEndScreen";
 import { AudioContext, ModalContext, UserSettingsContext, type ModalContextProps } from "../../util/context";
 import { RelevantCardsPanel } from "./RelevantCardsPanel";
@@ -206,7 +206,16 @@ export function QuizContent({
           {
             currentQuiz.relevantCards.map((cardName: string, index: number) => <div key={"relevant-card-" + index}
                 className="w-fit h-100 lg:h-120 uwd:!h-190 4k:!h-280 m-2.5">
-              <img src={getSWUDBImageLink(cardName)} alt={`card ${cardName}`} className="max-h-full object-contain" />
+              <img
+                src={getSWUDBImageLink(cardName)}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null; // Prevent infinite loop
+                  target.src = getSWUDBImageLinkFallback(cardName);
+                }}
+                alt={`card ${cardName}`}
+                className="max-h-full object-contain"
+              />
             </div>)
           }
           </div>

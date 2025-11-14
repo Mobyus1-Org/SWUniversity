@@ -10,7 +10,6 @@ import DoYouKnowSWUPage from './pages/DoYouKnowSWUPage';
 //import PuzzlesPage from './pages/PuzzlesPage';
 import NotFoundPage from './pages/NotFoundPage';
 import QuizStatsPage from './pages/InternalPage';
-import InternalToolsPage from './pages/InternalToolsPage';
 
 import './App.css';
 import { AudioContextProvider, ModalContextProvider, UserSettingsContextProvider, type ModalData, type ModalKey } from './util/context';
@@ -93,9 +92,6 @@ function App() {
               <Route path="/about" element={<AboutPage />} />
               <Route path="/rpc/internal" element={<QuizStatsPage />} />{/*To be phased out soon*/}
               <Route path="/internal/quiz-stats" element={<QuizStatsPage />} />
-              {
-                import.meta.env.DEV && <Route path="/internal/tools" element={<InternalToolsPage />} />
-              }
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Layout>

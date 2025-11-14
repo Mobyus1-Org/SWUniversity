@@ -101,10 +101,25 @@ export function getSWUDBImageLink(cardPattern: string): string {
   const parts = cardPattern.split('/');
   if (parts.length !== 2) throw new Error(`Invalid card name format: ${cardPattern}`);
 
-  return `https://swudb.com/cdn-cgi/image/quality=1/images/cards/${cardPattern}.png`;
+  // Convert pattern "SOR/123" to "SOR_123.webp" format
+  const fileName = cardPattern.replace('/', '_');
+
+  // Return local WEBP path - browser will use CDN fallback if image doesn't exist
+  return `/assets/swudb-import/${fileName}.webp`;
+}
+
+export function getSWUDBImageLinkFallback(cardPattern: string): string {
+  // Fallback to SWUDB CDN
+  return `https://swudb.com/cdn-cgi/image/quality=10/images/cards/${cardPattern}.png`;
 }
 
 export function getDYKSWUImageLink(fileName: string): string {
+  // Try WEBP first, will fallback to PNG if not found
+  return `/assets/dykswu/${fileName}.webp`;
+}
+
+export function getDYKSWUImageLinkFallback(fileName: string): string {
+  // Fallback to PNG (uploaded by data team)
   return `/assets/dykswu/${fileName}.png`;
 }
 

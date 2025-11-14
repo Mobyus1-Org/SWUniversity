@@ -8,7 +8,7 @@ import {
 } from "./util/style-const";
 import { DiscordLink, type UserSettings } from "./util/const";
 import { AudioContext, ModalContext, type ModalContextProps } from "./util/context";
-import { getSWUDBImageLink } from "./util/func";
+import { getSWUDBImageLink, getSWUDBImageLinkFallback } from "./util/func";
 import { Modal } from "./components/Shared/Modal";
 import { Settings } from "./components/Nav/Settings";
 import { RightSideTray } from "./components/Nav/RightSideTray";
@@ -132,6 +132,11 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
             >
               <img
                 src={getSWUDBImageLink(cardName)}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null; // Prevent infinite loop
+                  target.src = getSWUDBImageLinkFallback(cardName);
+                }}
                 alt={`card ${cardName}`}
                 className="max-h-full object-contain"
               />
