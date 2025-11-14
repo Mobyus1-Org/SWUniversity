@@ -1,11 +1,11 @@
 import React from "react";
 
-import { apiQuizCountsAsync } from "./quiz-counts";
-import { globalBackgroundStyle } from "../../util/style-const";
-import { apiDYKSWUCountsAsync } from "./dykswu-counts";
-import type { DYKSWUCounts, QuizCounts } from "./api-const";
+import { apiQuizCountsAsync } from "./api/quiz-counts";
+import { globalBackgroundStyle } from "../util/style-const";
+import { apiDYKSWUCountsAsync } from "./api/dykswu-counts";
+import type { DYKSWUCounts, QuizCounts } from "./api/api-const";
 
-function InternalPage() {
+function QuizStatsPage() {
   const [quizCounts, setQuizCounts] = React.useState<QuizCounts>();
   const [dykSWUCounts, setDYKSWUCounts] = React.useState<DYKSWUCounts>();
   const [tagSearchFilter, setTagSearchFilter] = React.useState("");
@@ -277,4 +277,4 @@ function InternalPage() {
   </div>;
 }
 
-export default InternalPage;
+export default QuizStatsPage;

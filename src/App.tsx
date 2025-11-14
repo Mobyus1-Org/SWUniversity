@@ -9,10 +9,11 @@ import QuizPage from './pages/QuizPage';
 import DoYouKnowSWUPage from './pages/DoYouKnowSWUPage';
 //import PuzzlesPage from './pages/PuzzlesPage';
 import NotFoundPage from './pages/NotFoundPage';
+import QuizStatsPage from './pages/InternalPage';
+import InternalToolsPage from './pages/InternalToolsPage';
 
 import './App.css';
 import { AudioContextProvider, ModalContextProvider, UserSettingsContextProvider, type ModalData, type ModalKey } from './util/context';
-import InternalPage from './pages/api/InternalPage';
 import { LightsaberColors, setLightsaberColor } from './util/style-const';
 import AboutPage from './pages/AboutPage';
 import ResourcesPage from './pages/ResourcesPage';
@@ -90,7 +91,11 @@ function App() {
               {/* <Route path="/puzzles" element={<PuzzlesPage />} /> */}
               <Route path="/resources" element={<ResourcesPage />} />
               <Route path="/about" element={<AboutPage />} />
-              <Route path="/rpc/internal" element={<InternalPage />} />
+              <Route path="/rpc/internal" element={<QuizStatsPage />} />{/*To be phased out soon*/}
+              <Route path="/internal/quiz-stats" element={<QuizStatsPage />} />
+              {
+                import.meta.env.DEV && <Route path="/internal/tools" element={<InternalToolsPage />} />
+              }
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Layout>
