@@ -863,15 +863,15 @@
     "variants": [
       {
         "img": "doctorpershing1",
-        "answer": "ability-text",
+        "answer": "trigger-condition",
         "difficulty": 1,
         "followUp": {
-          "question": "What is wrong with this card's ability text?",
+          "question": "What is wrong with this card's trigger condition?",
           "choices": {
-            "a": "**_Doctor Pershing_** deals 2 damage to a friendly unit when using his ability.",
+            "a": "**_Doctor Pershing_** triggers **On Attack**.",
             "b": "**_Doctor Pershing_** must exhaust when using his ability.",
             "c": "**_Doctor Pershing_** must damage himself to use his ability.",
-            "d": "**_Doctor Pershing_** draws two cards."
+            "d": "**_Doctor Pershing_** triggers **When Played**."
           },
           "answer": "b"
         },
