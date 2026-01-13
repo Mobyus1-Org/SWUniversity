@@ -526,7 +526,7 @@
    },
    {
    "id": 36,
-      "question": "Player A is playing a red _Aggression_ leader and the **_Energy Conversion Lab_** base. Which of the following units is a valid option when using **_Energy Conversion Lab's_** **Epic Action**?",
+      "question": "Player A is playing a red/black _Aggression_ _Villainy_ leader and the **_Energy Conversion Lab_** base. Which of the following units is a valid option when using **_Energy Conversion Lab's_** **Epic Action**?",
       "choices": {
          "a": "**_Warbird Stowaway_** from resources using **Smuggle**.",
          "b": "**_Separatist Super Tank_** using **Exploit** to discount its cost to 5.",
@@ -1186,17 +1186,17 @@
    },
    {
       "id": 80,
-      "question": "Player A controls **_Chewbacca, Walking Carpet_**, with no damage on him, deployed as a unit, a **_Wilderness Fighter_** with a shield token, an **_X-Wing_** token, and a **_Vanguard Infantry_** in their discard pile that was defeated earlier this phase. Player B controls a **_Skyway Cloud Car_**. Player A defeats Player B's **_Skyway Cloud Car_**. What units can Player B choose to be returned to Player A's hand?",
+      "question": "Player A controls **_Chewbacca, Walking Carpet_**, with no damage on him, deployed as a unit, a **_Wilderness Fighter_** with a shield token, an **_X-Wing_** token, and a **_Patrolling V-Wing_** in their discard pile that was defeated earlier this phase. Player B controls a **_Skyway Cloud Car_**. Player A defeats Player B's **_Skyway Cloud Car_**. What units can Player B choose to be returned to Player A's hand?",
       "choices": {
          "a": "**_Chewbacca_**, the **_Wilderness Fighter_**, and the **_X-Wing_** token.",
-         "b": "The **_Wilderness Fighter_** and the **_Vanguard Infantry_**.",
+         "b": "The **_Wilderness Fighter_** and the **_Patrolling V-Wing_**.",
          "c": "Only the **_Wilderness Fighter_**.",
          "d": "The **_Wilderness Fighter_** and the **_X-Wing_** token."
       },
       "answer": "d",
-      "relevantCards": ["SOR/003-portrait", "SOR/064", "TJTL/T02", "SOR/108", "JTL/220"],
-      "relevantRule": "**_Skyway Cloud Car_** specifies \"non-leader,\" so **_Chewbacca_** can't be chosen. Only units in play can be chosen as targets for abilities unless specifically stated, so the **_Vanguard Infantry_** is out. While the **_X-Wing_** is a token unit and cannot be returned to Player A's hand, it _can_ still be chosen. It will simply be set aside, out of play, instead.\n\n**3.7.3** - Tokens cannot enter out-of-play zones such as a player’s hand or discard pile. If a token would leave play for any reason, set it aside. It is still considered to have left play.\n\n**4.9.2** - There are three types of \"out-of-play\" zones: each player’s deck, each player’s hand, and each player’s discard pile. Cards in these zones are considered \"out of play,\" which means that by default they cannot affect the game through use of their abilities, power, or HP. For an ability to resolve from an out-of-play zone or to affect a card in an out-of-play zone, the ability must either explicitly state the out-of-play zone it resolves from or affects, or it must be a type of ability that by default resolves from an out-of-play zone.",
-      "tags": ["chewbacca", "wilderness fighter", "x-wing", "vanguard infantry", "skyway cloud car", "token", "target", "bounce", "when defeated", "leader", "power"],
+      "relevantCards": ["SOR/003-portrait", "SOR/064", "TJTL/T02", "TWI/107", "JTL/220"],
+      "relevantRule": "**_Skyway Cloud Car_** specifies \"non-leader,\" so **_Chewbacca_** can't be chosen. Only units in play can be chosen as targets for abilities unless specifically stated, so the **_Patrolling V-Wing_** is out. While the **_X-Wing_** is a token unit and cannot be returned to Player A's hand, it _can_ still be chosen. It will simply be set aside, out of play, instead.\n\n**3.7.3** - Tokens cannot enter out-of-play zones such as a player’s hand or discard pile. If a token would leave play for any reason, set it aside. It is still considered to have left play.\n\n**4.9.2** - There are three types of \"out-of-play\" zones: each player’s deck, each player’s hand, and each player’s discard pile. Cards in these zones are considered \"out of play,\" which means that by default they cannot affect the game through use of their abilities, power, or HP. For an ability to resolve from an out-of-play zone or to affect a card in an out-of-play zone, the ability must either explicitly state the out-of-play zone it resolves from or affects, or it must be a type of ability that by default resolves from an out-of-play zone.",
+      "tags": ["chewbacca", "wilderness fighter", "x-wing", "patrolling v-wing", "skyway cloud car", "token", "target", "bounce", "when defeated", "leader", "power"],
       "difficulty": 1
    },
    {
