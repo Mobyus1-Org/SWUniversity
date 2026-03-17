@@ -1648,5 +1648,20 @@
       "relevantRule": "**_Babu Frik's_** ability specifies that the _Droid_ that attacks \"deals damage equal to its remaining HP,\" which means that any changes to the _Droid's_ Power are irrelevant. Since the **_Unruly Astromech_** has 2 HP, it deals 2 damage.",
       "tags": ["babu frik", "unruly astromech", "emissaries from ryloth", "lof", "sec", "ability", "debuff", "when played"],
       "difficulty": 1
+   },
+   {
+      "id": 111,
+      "question": "Player A controls **_Eighth Brother, Hunt Together_**, and has the Force. Player A then plays **_Darth Tyranus, Servant of Sidious_**, and chooses to resolve **_Eighth Brother's_** **When you play another unit** ability first. Which of the following is true?",
+      "choices": {
+         "a": "**_Darth Tyranus_** may be chosen by **_Eigth Brother's_** ability then **Ambush** for 6 damage.",
+         "b": "**_Darth Tyranus_** may not **Ambush** because Player A lost the Force.", 
+         "c": "**_Darth Tyranus_** may **Ambush**, but only if a different unit is chosen for **_Eighth Brother's_** ability.",
+         "d": "Both **_Darth Tyranus_** and **_Eighth Brother_** get to **Ambush**."
+      },
+      "answer": "a",
+      "relevantCards": ["LOF/087", "LOF/231"],
+      "relevantRule": "Since **Ambush** is a keyword ability that resolves like a triggered ability, as long as Player A has the Force when **_Darth Tyranus_** is played, his conditional **Ambush** will trigger, even if Player A loses the Force before **Ambush** resolves.\n\n**7.5.5.A** - \"Ambush\" is a keyword that resolves like the triggered ability: \"When Played/When Deployed/When Created: If there is an enemy unit that this unit can attack, this unit may attack that enemy unit, even if this unit is exhausted.\"",
+      "tags": ["eighth brother", "darth tyranus", "force token", "ambush", "when played", "timing"],
+      "difficulty": 1
    }
 ]
