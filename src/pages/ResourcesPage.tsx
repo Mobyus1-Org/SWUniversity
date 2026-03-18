@@ -1,5 +1,5 @@
-import ResourcesList from "../components/Resources/ResourcesList";
-import { globalBackgroundStyle } from "../util/style-const";
+import ResourcesList from "@/components/Resources/ResourcesList";
+import { globalBackgroundStyle } from "@/util/style-const";
 
 function ResourcesPage() {
   return <div className={`p-20 border h-[85vh] ${globalBackgroundStyle}

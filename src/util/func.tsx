@@ -1,4 +1,4 @@
-import { UserSettingsLocalStorageKey, type AppModes, type SWUniversityApp, type UserSettings } from "./const";
+import { UserSettingsLocalStorageKey, type AppModes, type SWUniversityApp, type UserSettings } from "@/util/const";
 
 export type AppModeSetEntry = {
   id: number;

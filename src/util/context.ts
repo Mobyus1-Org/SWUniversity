@@ -1,6 +1,6 @@
 import React from "react";
-import type { SfxType, UserSettings } from "./const";
-import type { Quiz } from "./func";
+import type { SfxType, UserSettings } from "@/util/const";
+import type { Quiz } from "@/util/func";
 
 export const AudioContext = React.createContext<{ sfx: (type: SfxType, forcePlay?: boolean) => void } | null>(null);
 export const AudioContextProvider = AudioContext.Provider;

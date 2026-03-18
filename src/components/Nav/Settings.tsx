@@ -1,13 +1,13 @@
-import { UserSettingsLocalStorageKey, type SfxType, type UserSettings } from "../../util/const";
-import { updateUserSettings } from "../../util/func";
-import { globalBackgroundStyleOpaque, LightsaberColors, setLightsaberColor } from "../../util/style-const";
+import { UserSettingsLocalStorageKey, type SfxType, type UserSettings } from "@/util/const";
+import { updateUserSettings } from "@/util/func";
+import { globalBackgroundStyleOpaque, LightsaberColors, setLightsaberColor } from "@/util/style-const";
 
 interface IProps {
   userSettings: UserSettings;
   setUserSettings: React.Dispatch<React.SetStateAction<UserSettings>>;
   sfx: (type: SfxType, forcePlay?: boolean) => void;
-  settingsModalRef: React.RefObject<HTMLDivElement | null>;
-  lightsaberColorRef: React.RefObject<HTMLDivElement | null>;
+  settingsModalRef: React.RefObject<HTMLDivElement>;
+  lightsaberColorRef: React.RefObject<HTMLDivElement>;
   showLightsaberColorDropdown: boolean;
   setShowLightsaberColorDropdown: React.Dispatch<React.SetStateAction<boolean>>;
   hoveredLightsaberColor: keyof typeof LightsaberColors | null;

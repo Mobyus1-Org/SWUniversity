@@ -1,9 +1,9 @@
 import React from "react";
 
-import { apiQuizCountsAsync } from "./api/quiz-counts";
-import { globalBackgroundStyle } from "../util/style-const";
-import { apiDYKSWUCountsAsync } from "./api/dykswu-counts";
-import type { DYKSWUCounts, QuizCounts } from "./api/api-const";
+import { apiQuizCountsAsync } from "@/util/quiz-counts";
+import { globalBackgroundStyle } from "@/util/style-const";
+import { apiDYKSWUCountsAsync } from "@/util/dykswu-counts";
+import type { DYKSWUCounts, QuizCounts } from "@/util/stats-types";
 
 function QuizStatsPage() {
   const [quizCounts, setQuizCounts] = React.useState<QuizCounts>();

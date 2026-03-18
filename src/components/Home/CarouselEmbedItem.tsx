@@ -1,4 +1,4 @@
-import type { ICarouselItemProps } from "./_slides";
+import type { ICarouselItemProps } from "@/components/Home/_slides";
 
 export function CarouselEmbedItem({ data }: ICarouselItemProps) {
   const { src, description } = data;

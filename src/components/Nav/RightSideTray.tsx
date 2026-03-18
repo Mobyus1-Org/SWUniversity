@@ -1,11 +1,11 @@
-import { DiscordLink, type SfxType } from "../../util/const";
-import type { ModalKey } from "../../util/context";
+import { DiscordLink, type SfxType } from "@/util/const";
+import type { ModalKey } from "@/util/context";
 
 interface IProps {
   setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
   setModalKey: React.Dispatch<React.SetStateAction<ModalKey>>;
   sfx: (type: SfxType, forcePlay?: boolean) => void;
-  settingsButtonRef: React.RefObject<HTMLDivElement | null>;
+  settingsButtonRef: React.RefObject<HTMLDivElement>;
 }
 
 export function RightSideTray({ setShowModal, setModalKey, sfx, settingsButtonRef }: IProps) {

@@ -1,10 +1,10 @@
 import React from "react";
 
-import { globalBackgroundStyle, globalBackgroundStyleBigShadow, getLightsaberGlowHover } from "../../util/style-const";
-import { DYKSWUChoices, type AppModes, type SfxType } from "../../util/const";
-import { renderItalicsAndBold, type UserResponse, type DoYouKnowSWUQuestion, getSWUDBImageLink, getSWUDBImageLinkFallback, getDYKSWUImageLink, getDYKSWUImageLinkFallback, renderDYKSWUChoiceTitle, type DoYouKnowSWUVariant } from "../../util/func";
-import { ModeEndScreen } from "../Shared/ModeEndScreen";
-import { AudioContext, UserSettingsContext } from "../../util/context";
+import { globalBackgroundStyle, globalBackgroundStyleBigShadow, getLightsaberGlowHover } from "@/util/style-const";
+import { DYKSWUChoices, type AppModes, type SfxType } from "@/util/const";
+import { renderItalicsAndBold, type UserResponse, type DoYouKnowSWUQuestion, getSWUDBImageLink, getSWUDBImageLinkFallback, getDYKSWUImageLink, getDYKSWUImageLinkFallback, renderDYKSWUChoiceTitle, type DoYouKnowSWUVariant } from "@/util/func";
+import { ModeEndScreen } from "@/components/Shared/ModeEndScreen";
+import { AudioContext, UserSettingsContext } from "@/util/context";
 
 interface IProps {
   currentQuestionSet: DoYouKnowSWUQuestion[];

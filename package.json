@@ -4,38 +4,34 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist",
     "download-images": "node scripts/download-images.js",
     "convert-images": "node scripts/convert-to-webp.js"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.13",
     "@vercel/analytics": "^1.5.0",
     "daisyui": "^5.1.25",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "react-router-dom": "^7.9.3"
+    "next": "14.2.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "tailwindcss": "^4.1.13"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
-    "@types/react": "^19.1.13",
-    "@types/react-dom": "^19.1.9",
-    "@vitejs/plugin-react": "^5.0.3",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.41",
+    "@types/react-dom": "^18.2.17",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
-    "gh-pages": "^6.3.0",
     "globals": "^16.4.0",
     "sharp": "^0.34.5",
-    "tailwindcss": "^4.1.13",
     "typescript": "~5.8.3",
-    "typescript-eslint": "^8.44.0",
-    "vite": "^7.1.7"
+    "typescript-eslint": "^8.57.1"
   }
 }

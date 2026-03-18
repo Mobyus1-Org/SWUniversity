@@ -1,5 +1,5 @@
-import { getQuizDataAsync } from "../../util/func";
-import type { QuizCountEntry, QuizCounts } from "./api-const";
+import { getQuizDataAsync } from "@/util/func";
+import type { QuizCountEntry, QuizCounts } from "@/util/stats-types";
 
 export async function apiQuizCountsAsync(): Promise<QuizCounts> {
   const data = await getQuizDataAsync();

@@ -1,4 +1,4 @@
-import type { LightsaberColors } from "./style-const";
+import type { LightsaberColors } from "@/util/style-const";
 
 export const DYKSWUChoices: DYKSWUChoice[] = ["name", "card-type", "arena", "subtitle", "cost", "aspects", "power", "hp", "traits", "trigger-condition", "play-restriction", "ability-text", "rarity", "art", "something-else", "no-change"];
 export const UserSettingsLocalStorageKey = "swuniversity-user-settings";

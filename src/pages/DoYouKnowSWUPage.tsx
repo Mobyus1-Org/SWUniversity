@@ -1,10 +1,10 @@
 import React from "react";
-import { getDoYouKnowSWUDataAsync, getModeTitle, preloadSWUDBImagesAsync, preloadDYKSWUImagesAsync, type AppModeSetEntry, type DoYouKnowSWUQuestion, type UserResponse } from "../util/func";
-import { ModeButtons } from "../components/Shared/ModeButtons";
-import { QuestionContent } from "../components/DoYouKnowSWU/QuestionContent";
-import { globalBackgroundStyle } from "../util/style-const";
-import { type AppModes, type ModeDescriptions } from "../util/const";
-import { useSearchParams } from "react-router-dom";
+import { getDoYouKnowSWUDataAsync, getModeTitle, preloadSWUDBImagesAsync, preloadDYKSWUImagesAsync, type AppModeSetEntry, type DoYouKnowSWUQuestion, type UserResponse } from "@/util/func";
+import { ModeButtons } from "@/components/Shared/ModeButtons";
+import { QuestionContent } from "@/components/DoYouKnowSWU/QuestionContent";
+import { globalBackgroundStyle } from "@/util/style-const";
+import { type AppModes, type ModeDescriptions } from "@/util/const";
+import { useRouter } from "next/router";
 
 function DoYouKnowSWUPage() {
   const [loading, setLoading] = React.useState(true);
@@ -22,8 +22,8 @@ function DoYouKnowSWUPage() {
   const [lastEndlessQuestions, setLastEndlessQuestions] = React.useState<number[]>([]);
   const [questionsEnded, setQuestionsEnded] = React.useState<boolean>(false);
   //TODO: remove this once we go live
-  const [searchParams] = useSearchParams();
-  const testId = searchParams.get("Mobyus1hereisatestid");
+  const router = useRouter();
+  const testId = router.query.Mobyus1hereisatestid as string | undefined;
 
   React.useEffect(() => {
     getDoYouKnowSWUDataAsync().then(data => {

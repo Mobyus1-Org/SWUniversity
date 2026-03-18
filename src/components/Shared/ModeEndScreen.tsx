@@ -1,8 +1,8 @@
 import React from "react";
-import { renderDYKSWUChoiceTitle, renderItalicsAndBold, type DoYouKnowSWUQuestion, type Quiz, type UserResponse } from "../../util/func";
-import { AudioContext } from "../../util/context";
-import {  globalBackgroundStyleNoShadow } from "../../util/style-const";
-import { type AppModes, type SWUniversityApp } from "../../util/const";
+import { renderDYKSWUChoiceTitle, renderItalicsAndBold, type DoYouKnowSWUQuestion, type Quiz, type UserResponse } from "@/util/func";
+import { AudioContext } from "@/util/context";
+import {  globalBackgroundStyleNoShadow } from "@/util/style-const";
+import { type AppModes, type SWUniversityApp } from "@/util/const";
 
 interface IProps {
   app: SWUniversityApp;

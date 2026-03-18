@@ -1,8 +1,8 @@
 import React from "react";
-import { globalBackgroundStyle } from "../../util/style-const";
-import { type AppModes } from "../../util/const";
-import type { AppModeSetEntry, DoYouKnowSWUQuestion } from "../../util/func";
-import { AudioContext } from "../../util/context";
+import { globalBackgroundStyle } from "@/util/style-const";
+import { type AppModes } from "@/util/const";
+import type { AppModeSetEntry, DoYouKnowSWUQuestion } from "@/util/func";
+import { AudioContext } from "@/util/context";
 
 interface IProps {
   mode: AppModes;

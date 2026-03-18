@@ -1,5 +1,5 @@
-import type { ModalKey } from "../../util/context";
-import { getSWUDBImageLink, getSWUDBImageLinkFallback, isHorizontalCard, type Quiz } from "../../util/func";
+import type { ModalKey } from "@/util/context";
+import { getSWUDBImageLink, getSWUDBImageLinkFallback, isHorizontalCard, type Quiz } from "@/util/func";
 
 interface IProps {
   currentQuiz: Quiz;

@@ -1,5 +1,5 @@
-import { getDoYouKnowSWUDataAsync } from "../../util/func";
-import type { DYKSWUCountEntry, DYKSWUCounts } from "./api-const";
+import { getDoYouKnowSWUDataAsync } from "@/util/func";
+import type { DYKSWUCountEntry, DYKSWUCounts } from "@/util/stats-types";
 
 export async function apiDYKSWUCountsAsync(): Promise<DYKSWUCounts> {
   const data = await getDoYouKnowSWUDataAsync();

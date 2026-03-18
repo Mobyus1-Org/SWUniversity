@@ -1,9 +1,9 @@
-import type { AppModeSetEntry } from "../../util/func";
-import { globalBackgroundStyle } from "../../util/style-const";
-import { type AppModes, type ModeDescriptions } from "../../util/const";
+import type { AppModeSetEntry } from "@/util/func";
+import { globalBackgroundStyle } from "@/util/style-const";
+import { type AppModes, type ModeDescriptions } from "@/util/const";
 import React from "react";
-import { AudioContext } from "../../util/context";
-import { ModeButtonItem } from "./ModeButtonItem";
+import { AudioContext } from "@/util/context";
+import { ModeButtonItem } from "@/components/Shared/ModeButtonItem";
 
 interface IProps {
   mode: AppModes;

@@ -1,11 +1,11 @@
 import React from "react";
-import { getModeTitle, getQuizDataAsync, preloadSWUDBImagesAsync } from "../util/func";
-import type { AppModeSetEntry, Quiz, UserResponse } from "../util/func";
-import { ModeButtons } from "../components/Shared/ModeButtons";
-import { QuizContent } from "../components/Quiz/QuizContent";
-import { globalBackgroundStyle } from "../util/style-const";
-import { DiscordLink, type AppModes, type ModeDescriptions } from "../util/const";
-import { useSearchParams } from "react-router-dom";
+import { getModeTitle, getQuizDataAsync, preloadSWUDBImagesAsync } from "@/util/func";
+import type { AppModeSetEntry, Quiz, UserResponse } from "@/util/func";
+import { ModeButtons } from "@/components/Shared/ModeButtons";
+import { QuizContent } from "@/components/Quiz/QuizContent";
+import { globalBackgroundStyle } from "@/util/style-const";
+import { DiscordLink, type AppModes, type ModeDescriptions } from "@/util/const";
+import { useRouter } from "next/router";
 
 function QuizPage() {
   const [loading, setLoading] = React.useState(true);
@@ -22,8 +22,8 @@ function QuizPage() {
   const [userResponses, setUserResponses] = React.useState<UserResponse[]>([]);
   const [quizEnded, setQuizEnded] = React.useState<boolean>(false);
   //TODO: remove this once we go live
-  const [searchParams] = useSearchParams();
-  const testId = searchParams.get("Mobyus1hereisatestid");
+  const router = useRouter();
+  const testId = router.query.Mobyus1hereisatestid as string | undefined;
 
   React.useEffect(() => {
     getQuizDataAsync().then(data => {

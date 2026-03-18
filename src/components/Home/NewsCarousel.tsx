@@ -1,9 +1,9 @@
 import React from "react";
-import { CarouselParagraphItem } from "./CarouseParagraphltem";
-import { CarouselImageItem } from "./CarouselImageItem";
-import { slides } from "./_slides";
-import { CarouselEmbedItem } from "./CarouselEmbedItem";
-import { CarouselBannerTextItem } from "./CarouselBannerTextItem";
+import { CarouselParagraphItem } from "@/components/Home/CarouseParagraphltem";
+import { CarouselImageItem } from "@/components/Home/CarouselImageItem";
+import { slides } from "@/components/Home/_slides";
+import { CarouselEmbedItem } from "@/components/Home/CarouselEmbedItem";
+import { CarouselBannerTextItem } from "@/components/Home/CarouselBannerTextItem";
 
 export default function NewsCarousel() {
 	const [current, setCurrent] = React.useState(0);
@@ -12,7 +12,7 @@ export default function NewsCarousel() {
 	const [direction, setDirection] = React.useState<'left' | 'right' | null>(null);
 	const [isTransitioning, setIsTransitioning] = React.useState(false);
 	const slideRefs = React.useRef<(HTMLDivElement | null)[]>([]);
-	const intervalRef = React.useRef<number | null>(null);
+	const intervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
 	const goTo = React.useCallback((idx: number) => {
 		const nextIdx = (idx + slides.length) % slides.length;

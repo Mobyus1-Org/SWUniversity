@@ -1,18 +1,19 @@
 import React from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import Link from "next/link";
+import { useRouter } from "next/router";
 import {
   globalBackgroundStyleNoShadow,
   globalBackgroundStyleOpaque,
   LightsaberColors,
   getLightsaberGlowHover,
-} from "./util/style-const";
-import { DiscordLink, type UserSettings } from "./util/const";
-import { AudioContext, ModalContext, type ModalContextProps } from "./util/context";
-import { getSWUDBImageLink, getSWUDBImageLinkFallback } from "./util/func";
-import { Modal } from "./components/Shared/Modal";
-import { Settings } from "./components/Nav/Settings";
-import { RightSideTray } from "./components/Nav/RightSideTray";
-import { LeftSideNavTray } from "./components/Nav/LeftSideNavTray";
+} from "@/util/style-const";
+import { DiscordLink, type UserSettings } from "@/util/const";
+import { AudioContext, ModalContext, type ModalContextProps } from "@/util/context";
+import { getSWUDBImageLink, getSWUDBImageLinkFallback } from "@/util/func";
+import { Modal } from "@/components/Shared/Modal";
+import { Settings } from "@/components/Nav/Settings";
+import { RightSideTray } from "@/components/Nav/RightSideTray";
+import { LeftSideNavTray } from "@/components/Nav/LeftSideNavTray";
 
 interface IProps {
   userSettings: UserSettings;
@@ -42,8 +43,8 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
   const settingsButtonRef = React.useRef<HTMLDivElement>(null);
   const playModesRef = React.useRef<HTMLDivElement>(null);
   const mobilePlayModesRef = React.useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const location = { pathname: router.pathname };
 
   // Close dropdowns when clicking outside
   React.useEffect(() => {
@@ -81,7 +82,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
     };
   }, [showLightsaberColorDropdown, showModal, modalKey, setShowModal, setModalKey, showPlayModesDropdown, showMobilePlayModesDropdown]);
 
-  const handleNavClick = (e: React.MouseEvent, path: string) => {
+  const handleNavClick = (e: React.MouseEvent<HTMLElement>, path: string) => {
     e.preventDefault();
     sfx("transition");
     setMobileNav(false);
@@ -96,7 +97,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
       if (isCurrentPage) {
         setRefreshKey((prev) => prev + 1);
       } else {
-        navigate(path);
+        router.push(path);
       }
     }, 50);
   };
@@ -219,7 +220,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
         </div>
         <div className="flex flex-col gap-6 p-4 overflow-visible">
           <Link
-            to="/"
+            href="/"
             className={styles.mobileNavLink}
             onClick={(e) => handleNavClick(e, "/")}
           >
@@ -253,7 +254,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
                 className={`z-50 absolute left-full top-0 ml-2 w-64 p-2 border rounded-lg ${globalBackgroundStyleOpaque}`}
               >
                 <Link
-                  to="/quiz"
+                  href="/quiz"
                   className={`block w-full text-left px-4 py-3 text-xl lg:text-2xl
                     hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
                   onClick={(e) => handleNavClick(e, "/quiz")}
@@ -261,7 +262,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
                   Quiz
                 </Link>
                 <Link
-                  to="/do-you-know-swu"
+                  href="/do-you-know-swu"
                   className={`block w-full text-left px-4 py-3 text-xl lg:text-2xl
                     hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
                   onClick={(e) => handleNavClick(e, "/do-you-know-swu")}
@@ -274,14 +275,14 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
 
           {/* <Link to="/puzzles" className="btn btn-ghost text-xl lg:text-3xl uwd:!text-4xl 4k:!text-7xl">Puzzles</Link> */}
           <Link
-            to="/resources"
+            href="/resources"
             className={`${styles.mobileNavLink} flex items-center justify-center gap-2`}
             onClick={(e) => handleNavClick(e, "/resources")}
           >
             Resources
           </Link>
           <Link
-            to="/about"
+            href="/about"
             className={`${styles.mobileNavLink} flex items-center justify-center gap-2`}
             onClick={(e) => handleNavClick(e, "/about")}
           >
@@ -290,8 +291,6 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
         </div>
       </div>
     )}
-    {/* Render modals via function */}
-    {renderModal()}
   </div>
 }
 

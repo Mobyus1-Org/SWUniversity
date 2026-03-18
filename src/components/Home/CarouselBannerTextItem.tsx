@@ -1,4 +1,4 @@
-import type { ICarouselItemProps } from "./_slides";
+import type { ICarouselItemProps } from "@/components/Home/_slides";
 
 export function CarouselBannerTextItem({ data }: ICarouselItemProps) {
   const { src, alt, description } = data;

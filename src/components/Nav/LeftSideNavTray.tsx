@@ -1,16 +1,16 @@
-import { Link } from "react-router-dom";
-import type { SfxType } from "../../util/const";
-import { globalBackgroundStyleOpaque } from "../../util/style-const";
+import Link from "next/link";
+import type { SfxType } from "@/util/const";
+import { globalBackgroundStyleOpaque } from "@/util/style-const";
 
 interface IProps {
   sfx: (type: SfxType, forcePlay?: boolean) => void;
-  playModesRef: React.RefObject<HTMLDivElement | null>;
+  playModesRef: React.RefObject<HTMLDivElement>;
   styles: {
     desktopNavLink: string;
     mobileNavLink: string;
   };
   currentHover: string;
-  handleNavClick: (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>, path: string) => void;
+  handleNavClick: (e: React.MouseEvent<HTMLElement>, path: string) => void;
   showPlayModesDropdown: boolean;
   setShowPlayModesDropdown: React.Dispatch<React.SetStateAction<boolean>>;
 
@@ -19,7 +19,7 @@ interface IProps {
 export function LeftSideNavTray({ sfx, playModesRef, styles, handleNavClick, showPlayModesDropdown, setShowPlayModesDropdown, currentHover }: IProps) {
   return <div className="hidden md:flex flex-row flex-nowrap gap-4 md:gap-8 uwd:!gap-24 4k:!gap-30 uwd:py-4 4k:py-10 overflow-visible px-2 w-full items-center">
     <Link
-      to="/"
+      href="/"
       className={styles.desktopNavLink}
       onClick={(e) => handleNavClick(e, "/")}
     >
@@ -53,7 +53,7 @@ export function LeftSideNavTray({ sfx, playModesRef, styles, handleNavClick, sho
           className={`z-50 absolute left-0 top-full mt-2 w-48 lg:w-64 p-2 border rounded-lg ${globalBackgroundStyleOpaque}`}
         >
           <Link
-            to="/quiz"
+            href="/quiz"
             className={`block w-full text-left px-4 py-3 text-lg lg:text-xl uwd:!text-2xl 4k:!text-3xl
               hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
             onClick={(e) => handleNavClick(e, "/quiz")}
@@ -61,7 +61,7 @@ export function LeftSideNavTray({ sfx, playModesRef, styles, handleNavClick, sho
             Quiz
           </Link>
           <Link
-            to="/do-you-know-swu"
+            href="/do-you-know-swu"
             className={`block w-full text-left px-4 py-3 text-lg lg:text-xl uwd:!text-2xl 4k:!text-3xl
               hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
             onClick={(e) => handleNavClick(e, "/do-you-know-swu")}
@@ -80,14 +80,14 @@ export function LeftSideNavTray({ sfx, playModesRef, styles, handleNavClick, sho
       )}
     </div>
     <Link
-      to="/resources"
+      href="/resources"
       className={styles.desktopNavLink}
       onClick={(e) => handleNavClick(e, "/resources")}
     >
       Resources
     </Link>
     <Link
-      to="/about"
+      href="/about"
       className={styles.desktopNavLink}
       onClick={(e) => handleNavClick(e, "/about")}
     >

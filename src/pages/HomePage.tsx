@@ -1,6 +1,6 @@
-import { globalBackgroundStyle } from "../util/style-const";
-import NewsCarousel from "../components/Home/NewsCarousel";
-import { WelcomeSection } from "../components/Home/WelcomeSection";
+import { globalBackgroundStyle } from "@/util/style-const";
+import NewsCarousel from "@/components/Home/NewsCarousel";
+import { WelcomeSection } from "@/components/Home/WelcomeSection";
 
 function HomePage() {
   return (

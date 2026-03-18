@@ -27,7 +27,7 @@ This will be a set of scripts for internal tools for the SWUnivesity app. The tw
 ## Constraints
 ### Technical Constraints
 applies to both tools
-- TECH-1: ViteJS/nodeJS
+- TECH-1: NextJS/nodeJS
 - TECH-2: deployed through Vercel
 
 ## Validation Criteria

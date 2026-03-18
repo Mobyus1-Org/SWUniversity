@@ -1,10 +1,10 @@
 import React from "react";
-import { globalBackgroundStyle, globalBackgroundStyleBigShadow, getLightsaberGlowHover } from "../../util/style-const";
-import { type AppModes, type SfxType } from "../../util/const";
-import { renderItalicsAndBold, type Quiz, type UserResponse, getSWUDBImageLink, getSWUDBImageLinkFallback } from "../../util/func";
-import { ModeEndScreen } from "../Shared/ModeEndScreen";
-import { AudioContext, ModalContext, UserSettingsContext, type ModalContextProps } from "../../util/context";
-import { RelevantCardsPanel } from "./RelevantCardsPanel";
+import { globalBackgroundStyle, globalBackgroundStyleBigShadow, getLightsaberGlowHover } from "@/util/style-const";
+import { type AppModes, type SfxType } from "@/util/const";
+import { renderItalicsAndBold, type Quiz, type UserResponse, getSWUDBImageLink, getSWUDBImageLinkFallback } from "@/util/func";
+import { ModeEndScreen } from "@/components/Shared/ModeEndScreen";
+import { AudioContext, ModalContext, UserSettingsContext, type ModalContextProps } from "@/util/context";
+import { RelevantCardsPanel } from "@/components/Quiz/RelevantCardsPanel";
 
 interface IProps {
   currentQuizSet: Quiz[];

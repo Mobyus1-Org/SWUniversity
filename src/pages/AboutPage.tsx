@@ -1,5 +1,5 @@
-import { DiscordLink } from "../util/const";
-import { globalBackgroundStyle } from "../util/style-const";
+import { DiscordLink } from "@/util/const";
+import { globalBackgroundStyle } from "@/util/style-const";
 
 function AboutPage() {
   return <div className={`p-8 lg:p-20 border h-[85vh] ${globalBackgroundStyle}
