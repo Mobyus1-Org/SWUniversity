@@ -38,6 +38,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
   const [hoveredLightsaberColor, setHoveredLightsaberColor] = React.useState<keyof typeof LightsaberColors | null>(null);
   const [showPlayModesDropdown, setShowPlayModesDropdown] = React.useState(false);
   const [showMobilePlayModesDropdown, setShowMobilePlayModesDropdown] = React.useState(false);
+  const [authState, setAuthState] = React.useState<"loading" | "authed" | "anon">("loading");
   const lightsaberColorRef = React.useRef<HTMLDivElement>(null);
   const settingsModalRef = React.useRef<HTMLDivElement>(null);
   const settingsButtonRef = React.useRef<HTMLDivElement>(null);
@@ -45,6 +46,42 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
   const mobilePlayModesRef = React.useRef<HTMLDivElement>(null);
   const router = useRouter();
   const location = { pathname: router.pathname };
+
+  const loadAuthState = React.useCallback(async () => {
+    try {
+      const response = await fetch("/api/auth/me", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      const data = (await response.json()) as {
+        user: {
+          id: string;
+        } | null;
+      };
+
+      setAuthState(data.user ? "authed" : "anon");
+    } catch {
+      setAuthState("anon");
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadAuthState();
+  }, [loadAuthState, router.asPath]);
+
+  const handleLogout = React.useCallback(async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } finally {
+      setAuthState("anon");
+      setMobileNav(false);
+      await router.push("/");
+    }
+  }, [router]);
 
   // Close dropdowns when clicking outside
   React.useEffect(() => {
@@ -167,13 +204,20 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
       <div className="flex justify-between items-center w-full px-4">
           {/* Left side links */}
           <div
-            className="md:hidden"
+            className="xl:hidden"
             onClick={() => setMobileNav((p) => !p)}
           >
             <MenuButton />
           </div>
           <LeftSideNavTray sfx={sfx} playModesRef={playModesRef} styles={styles} handleNavClick={handleNavClick} showPlayModesDropdown={showPlayModesDropdown} setShowPlayModesDropdown={setShowPlayModesDropdown} currentHover={currentHover} />
-          <RightSideTray setShowModal={setShowModal} setModalKey={setModalKey} sfx={sfx} settingsButtonRef={settingsButtonRef} />
+          <RightSideTray
+            authState={authState}
+            onLogout={handleLogout}
+            setShowModal={setShowModal}
+            setModalKey={setModalKey}
+            sfx={sfx}
+            settingsButtonRef={settingsButtonRef}
+          />
         </div>
       </div>
     <main>
@@ -207,7 +251,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
     {renderModal()}
     {mobileNav && (
       <div
-        className={`fixed top-0 left-0 z-20 h-1/2 w-1/2 md:w-1/4 z-20 border-r border-b p-4 ${globalBackgroundStyleOpaque}`}
+        className={`fixed top-0 left-0 z-20 h-1/2 w-2/3 sm:w-1/2 lg:w-[24rem] border-r border-b p-4 flex flex-col ${globalBackgroundStyleOpaque}`}
       >
         <div
           className="w-1/4 mx-auto mb-8"
@@ -218,7 +262,8 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
         >
           <MenuButton />
         </div>
-        <div className="flex flex-col gap-6 p-4 overflow-visible">
+        <div className="flex flex-col justify-between flex-1 min-h-0">
+          <div className="flex flex-col gap-6 p-4 overflow-visible">
           <Link
             href="/"
             className={styles.mobileNavLink}
@@ -288,6 +333,41 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
           >
             About
           </Link>
+          </div>
+
+          <div className="p-4 pt-2 mt-auto">
+            <div className="flex flex-col gap-4">
+              {authState === "authed" ? (
+              <div className="flex flex-col gap-4">
+                <Link
+                  href="/profile"
+                  className={`${styles.mobileNavLink} flex items-center justify-center gap-2`}
+                  onClick={(e) => handleNavClick(e, "/profile")}
+                >
+                  Profile
+                </Link>
+                <button
+                  type="button"
+                  className={`${styles.mobileNavLink} flex items-center justify-center gap-2`}
+                  onClick={() => {
+                    sfx("transition");
+                    void handleLogout();
+                  }}
+                >
+                  Logout
+                </button>
+              </div>
+              ) : (
+              <Link
+                href="/login"
+                className={`${styles.mobileNavLink} flex items-center justify-center gap-2`}
+                onClick={(e) => handleNavClick(e, "/login")}
+              >
+                Login/Signup
+              </Link>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     )}

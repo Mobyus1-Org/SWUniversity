@@ -1,8 +1,6 @@
 import React from "react";
 
-import { apiQuizCountsAsync } from "@/util/quiz-counts";
 import { globalBackgroundStyle } from "@/util/style-const";
-import { apiDYKSWUCountsAsync } from "@/util/dykswu-counts";
 import type { DYKSWUCounts, QuizCounts } from "@/util/stats-types";
 
 function QuizStatsPage() {
@@ -12,10 +10,24 @@ function QuizStatsPage() {
 
   React.useEffect(() => {
     const fetchData = async () => {
-      const qd = await apiQuizCountsAsync();
-      const dyk = await apiDYKSWUCountsAsync();
-      setQuizCounts(qd);
-      setDYKSWUCounts(dyk);
+      const response = await fetch("/api/internal/quiz-stats", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        setQuizCounts(undefined);
+        setDYKSWUCounts(undefined);
+        return;
+      }
+
+      const data = (await response.json()) as {
+        quizCounts: QuizCounts;
+        dykSWUCounts: DYKSWUCounts;
+      };
+
+      setQuizCounts(data.quizCounts);
+      setDYKSWUCounts(data.dykSWUCounts);
     };
     fetchData();
   }, []);

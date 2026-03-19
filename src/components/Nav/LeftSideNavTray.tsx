@@ -17,7 +17,7 @@ interface IProps {
 }
 
 export function LeftSideNavTray({ sfx, playModesRef, styles, handleNavClick, showPlayModesDropdown, setShowPlayModesDropdown, currentHover }: IProps) {
-  return <div className="hidden md:flex flex-row flex-nowrap gap-4 md:gap-8 uwd:!gap-24 4k:!gap-30 uwd:py-4 4k:py-10 overflow-visible px-2 w-full items-center">
+  return <div className="hidden xl:flex flex-row flex-nowrap gap-4 xl:gap-8 uwd:!gap-24 4k:!gap-30 uwd:py-4 4k:py-10 overflow-visible px-2 w-full items-center">
     <Link
       href="/"
       className={styles.desktopNavLink}
