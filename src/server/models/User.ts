@@ -6,6 +6,7 @@ export type UserDocument = {
   username: string;
   email: string;
   passwordHash: string;
+  passwordPepperVersion?: string;
   role: UserRole;
   createdAt: Date;
   updatedAt: Date;
@@ -30,6 +31,11 @@ const userSchema = new Schema<UserDocument>(
     passwordHash: {
       type: String,
       required: true,
+    },
+    passwordPepperVersion: {
+      type: String,
+      required: false,
+      trim: true,
     },
     role: {
       type: String,

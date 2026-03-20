@@ -1,11 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
-import { methodNotAllowed } from "@/server/auth/http";
+import { getClientIp, methodNotAllowed } from "@/server/auth/http";
 import { hashPassword, validatePasswordStrength } from "@/server/auth/password";
+import { isSignupBlocked, recordSignupAttempt } from "@/server/auth/rate-limit";
 import { createSession, setSessionCookie } from "@/server/auth/session";
 import { connectToDatabase } from "@/server/db";
-import { assertRequiredEnv } from "@/server/env";
+import { assertRequiredEnv, getRequiredEnv } from "@/server/env";
 import { UserModel } from "@/server/models/User";
+import { UserProfileModel } from "@/server/models/UserProfile";
 
 type SignupBody = {
   username?: string;
@@ -22,6 +24,11 @@ export default async function handler(request: NextApiRequest, response: NextApi
     assertRequiredEnv();
     await connectToDatabase();
 
+    const ip = getClientIp(request);
+    if (isSignupBlocked(ip)) {
+      return response.status(429).json({ error: "Too many signup attempts. Please try again later." });
+    }
+
     const body = request.body as SignupBody;
     const username = body.username?.trim();
     const email = body.email?.trim().toLowerCase();
@@ -29,6 +36,11 @@ export default async function handler(request: NextApiRequest, response: NextApi
 
     if (!username || !email || !password) {
       return response.status(400).json({ error: "username, email, and password are required." });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!emailRegex.test(email)) {
+      return response.status(400).json({ error: "Invalid email address." });
     }
 
     const passwordError = validatePasswordStrength(password);
@@ -41,12 +53,42 @@ export default async function handler(request: NextApiRequest, response: NextApi
       return response.status(409).json({ error: "Username is already in use." });
     }
 
+    recordSignupAttempt(ip);
     const passwordHash = await hashPassword(password);
+    const pepperVersion = getRequiredEnv("PEPPER_VERSION");
     const user = await UserModel.create({
       username,
       email,
       passwordHash,
+      passwordPepperVersion: pepperVersion,
       role: "user",
+    });
+
+    // Create UserProfile for the new user
+    await UserProfileModel.create({
+      userId: user._id,
+      gamesCompleted: [],
+      endlessModeStats: {
+        quiz: {
+          correct: 0,
+          total: 0,
+          difficultyBreakdown: {
+            padawan: { correct: 0, total: 0 },
+            knight: { correct: 0, total: 0 },
+            master: { correct: 0, total: 0 },
+          },
+        },
+        dykswu: {
+          correct: 0,
+          total: 0,
+          difficultyBreakdown: {
+            padawan: { correct: 0, total: 0 },
+            knight: { correct: 0, total: 0 },
+            master: { correct: 0, total: 0 },
+          },
+        },
+      },
+      badges: [],
     });
 
     const sessionId = await createSession(user._id.toString(), false);

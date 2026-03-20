@@ -5,6 +5,8 @@ import { DYKSWUChoices, type AppModes, type SfxType } from "@/util/const";
 import { renderItalicsAndBold, type UserResponse, type DoYouKnowSWUQuestion, getSWUDBImageLink, getSWUDBImageLinkFallback, getDYKSWUImageLink, getDYKSWUImageLinkFallback, renderDYKSWUChoiceTitle, type DoYouKnowSWUVariant } from "@/util/func";
 import { ModeEndScreen } from "@/components/Shared/ModeEndScreen";
 import { AudioContext, UserSettingsContext } from "@/util/context";
+import { updateEndlessModeStats } from "@/util/profile-api";
+import { difficultyIndexToKey } from "@/util/profile-data";
 
 interface IProps {
   currentQuestionSet: DoYouKnowSWUQuestion[];
@@ -191,7 +193,7 @@ export function QuestionContent({
       {
         currentVariantQuestion.followUp && showFollowUpAnswer && <div className="col-span-2">
           <button className={`btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${currentHover}`} onClick={() =>
-            onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentVariantQuestion,
+            void onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentVariant, currentVariantQuestion,
               currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses,
               followUpSubmitted, followUpAnswer,
               sfx,
@@ -250,7 +252,7 @@ export function QuestionContent({
           {
             showAnswer && questionsCompleted.length < currentQuestionSet.length
               ? <button className={`btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${currentHover}`} onClick={() =>
-                onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentVariantQuestion,
+                void onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentVariant, currentVariantQuestion,
                   currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses,
                   followUpSubmitted, followUpAnswer,
                   sfx,
@@ -322,10 +324,11 @@ function onSubmitAnswer(selectedIndex: string, setQuizResult: (result: boolean) 
   }
 }
 
-function onNextQuestion(
+async function onNextQuestion(
   questionMode: AppModes,
   selectedAnswer: string,
   currentQuestionId: number,
+  currentVariant: number,
   currentVariantQuestion: DoYouKnowSWUVariant,
   currentQuestionSet: DoYouKnowSWUQuestion[],
   questionsCompleted: number[],
@@ -346,18 +349,17 @@ function onNextQuestion(
   setQuestionsEnded: React.Dispatch<React.SetStateAction<boolean>>
 ) {
   const endlessThreshold = 10; // Number of recent DYKSWU questions to track in endless mode
+  const isCorrectAnswer = selectedAnswer === currentVariantQuestion.answer &&
+    (!currentVariantQuestion.followUp ||
+      (followUpSubmitted && followUpAnswer === currentVariantQuestion.followUp.answer));
 
   if (questionMode === "iron-man") {
     const updatedCompleted = [...questionsCompleted];
-    const isCorrectAnswer = selectedAnswer === currentVariantQuestion.answer &&
-      (!currentVariantQuestion.followUp ||
-       (currentVariantQuestion.followUp && followUpSubmitted && followUpAnswer === currentVariantQuestion.followUp.answer));
-
     if (isCorrectAnswer) {
       updatedCompleted.push(currentQuestionId);
       setQuestionsCompleted(updatedCompleted);
       const updatedResponses = [...userResponses];
-      const newResponse: UserResponse = { modeId: currentQuestionId, selected: selectedAnswer, correct: currentVariantQuestion.answer };
+      const newResponse: UserResponse = { modeId: currentQuestionId, variant: currentVariant, selected: selectedAnswer, correct: currentVariantQuestion.answer };
       if (currentVariantQuestion.followUp) {
         newResponse.followUp = {
           followUpSelected: followUpAnswer,
@@ -377,9 +379,20 @@ function onNextQuestion(
         }
       }
     } else {
+      const updatedResponses = [...userResponses];
+      const failedResponse: UserResponse = { modeId: currentQuestionId, variant: currentVariant, selected: selectedAnswer, correct: currentVariantQuestion.answer };
+      if (currentVariantQuestion.followUp) {
+        failedResponse.followUp = {
+          followUpSelected: followUpAnswer,
+          followUpCorrect: currentVariantQuestion.followUp.answer,
+        };
+      }
+      updatedResponses.push(failedResponse);
+      setUserResponses(updatedResponses);
       setQuestionsEnded(true);
     }
   } else if (questionMode === "endless") {
+    void updateEndlessModeStats("dykswu", isCorrectAnswer, difficultyIndexToKey(currentVariantQuestion.difficulty));
     const updatedLastEndless = [...lastEndlessQuizzes, currentQuestionId];
     if (updatedLastEndless.length > endlessThreshold) {
       updatedLastEndless.shift();
@@ -397,7 +410,7 @@ function onNextQuestion(
     updatedCompleted.push(currentQuestionId);
     setQuestionsCompleted(updatedCompleted);
     const updatedResponses = [...userResponses];
-    const newResponse: UserResponse = { modeId: currentQuestionId, selected: selectedAnswer, correct: currentVariantQuestion.answer };
+    const newResponse: UserResponse = { modeId: currentQuestionId, variant: currentVariant, selected: selectedAnswer, correct: currentVariantQuestion.answer };
     if (currentVariantQuestion.followUp) {
       newResponse.followUp = {
         followUpSelected: followUpAnswer,

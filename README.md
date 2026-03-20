@@ -4,10 +4,14 @@ SWUniversity is a Next.js + React + TypeScript app for learning and practicing S
 
 ## Tech Stack
 
-- Next.js 14 (`pages` router)
+- Next.js 16 (`pages` router)
 - React 18
 - TypeScript
 - Tailwind CSS v4 + daisyUI v5
+
+## Runtime Requirements
+
+- Node.js 20.9+ (required by Next.js 16)
 
 ## Scripts
 

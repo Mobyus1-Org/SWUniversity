@@ -1,11 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
 import { getClientIp, methodNotAllowed } from "@/server/auth/http";
-import { verifyPassword } from "@/server/auth/password";
+import { hashPassword, verifyPasswordWithPepperRotation } from "@/server/auth/password";
 import { clearLoginFailures, isLoginBlocked, recordLoginFailure } from "@/server/auth/rate-limit";
 import { createSession, setSessionCookie } from "@/server/auth/session";
 import { connectToDatabase } from "@/server/db";
-import { assertRequiredEnv } from "@/server/env";
+import { assertRequiredEnv, getRequiredEnv } from "@/server/env";
 import { UserModel } from "@/server/models/User";
 
 type LoginBody = {
@@ -24,6 +24,7 @@ export default async function handler(request: NextApiRequest, response: NextApi
     await connectToDatabase();
 
     const body = request.body as LoginBody;
+    const pepperVersion = getRequiredEnv("PEPPER_VERSION");
     const username = body.username?.trim() || "";
     const password = body.password || "";
     const rememberMe = Boolean(body.rememberMe);
@@ -37,12 +38,24 @@ export default async function handler(request: NextApiRequest, response: NextApi
       return response.status(429).json({ error: "Too many login attempts. Please try again later." });
     }
 
-    const user = await UserModel.findOne({ username }).lean();
-    const isValid = user ? await verifyPassword(password, user.passwordHash) : false;
+    const user = await UserModel.findOne({ username });
+    const verification = user
+      ? await verifyPasswordWithPepperRotation(password, user.passwordHash)
+      : { isValid: false, needsRehash: false };
 
-    if (!user || !isValid) {
+    if (!user || !verification.isValid) {
       recordLoginFailure(ip, username);
       return response.status(401).json({ error: "Invalid username or password." });
+    }
+
+    if (verification.needsRehash) {
+      user.passwordHash = await hashPassword(password);
+      user.passwordPepperVersion = pepperVersion;
+      await user.save();
+    } else if (user.passwordPepperVersion !== pepperVersion) {
+      // Backfill metadata for users that already verified against current pepper.
+      user.passwordPepperVersion = pepperVersion;
+      await user.save();
     }
 
     clearLoginFailures(ip, username);

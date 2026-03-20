@@ -5,6 +5,8 @@ import { renderItalicsAndBold, type Quiz, type UserResponse, getSWUDBImageLink, 
 import { ModeEndScreen } from "@/components/Shared/ModeEndScreen";
 import { AudioContext, ModalContext, UserSettingsContext, type ModalContextProps } from "@/util/context";
 import { RelevantCardsPanel } from "@/components/Quiz/RelevantCardsPanel";
+import { updateEndlessModeStats } from "@/util/profile-api";
+import { difficultyIndexToKey } from "@/util/profile-data";
 
 interface IProps {
   currentQuizSet: Quiz[];
@@ -164,7 +166,7 @@ export function QuizContent({
         {
           quizResult && quizzesCompleted.length < currentQuizSet.length
             ? <button className={`btn btn-secondary mt-4 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${currentHover}`} onClick={() =>
-                  onNextQuestion(quizMode, selectedAnswer, currentQuizId, currentQuiz.answer.toString(),
+              void onNextQuestion(quizMode, selectedAnswer, currentQuizId, currentQuiz.answer.toString(), currentQuiz.difficulty,
                     currentQuizSet, quizzesCompleted, lastEndlessQuizzes, standardQuizLength, userResponses,
                     sfx,
                     setQuizzesCompleted, setCurrentQuizId, setLastEndlessQuizzes,
@@ -233,11 +235,12 @@ function onSubmitAnswer(selectedIndex: string, setQuizResult: (result: boolean) 
   }
 }
 
-function onNextQuestion(
+async function onNextQuestion(
   quizMode: AppModes,
   selectedAnswer: string,
   currentQuizId: number,
   currentQuizAnswer: string,
+  currentQuizDifficulty: number,
   currentQuizSet: Quiz[],
   quizzesCompleted: number[],
   lastEndlessQuizzes: number[],
@@ -250,13 +253,13 @@ function onNextQuestion(
   setUserResponses: (responses: UserResponse[]) => void,
   resetCurrentQuizState: () => void,
   setQuizEnded: (ended: boolean) => void
-)
-{
+) {
   const endlessThreshold = 35; // Number of recent quizzes to track in endless mode
+  const isCorrectAnswer = selectedAnswer === currentQuizAnswer;
 
   if(quizMode === "iron-man") {
     const updatedCompleted = [...quizzesCompleted];
-    if(selectedAnswer === currentQuizAnswer) {
+    if(isCorrectAnswer) {
       updatedCompleted.push(currentQuizId);
       setQuizzesCompleted(updatedCompleted);
       const updatedResponses = [...userResponses];
@@ -271,9 +274,13 @@ function onNextQuestion(
         }
       }
     } else {
+      const updatedResponses = [...userResponses];
+      updatedResponses.push({ modeId: currentQuizId, selected: selectedAnswer, correct: currentQuizAnswer });
+      setUserResponses(updatedResponses);
       setQuizEnded(true);
     }
   } else if(quizMode === "endless") {
+    void updateEndlessModeStats("quiz", isCorrectAnswer, difficultyIndexToKey(currentQuizDifficulty));
     const updatedLastEndless = [...lastEndlessQuizzes, currentQuizId];
     if(updatedLastEndless.length > endlessThreshold) {
       updatedLastEndless.shift();

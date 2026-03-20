@@ -5,7 +5,7 @@ import { hashPassword, validatePasswordStrength, verifyPassword } from "@/server
 import { requireAuthApi } from "@/server/auth/guards";
 import { clearSessionCookie, revokeAllUserSessions } from "@/server/auth/session";
 import { connectToDatabase } from "@/server/db";
-import { assertRequiredEnv } from "@/server/env";
+import { assertRequiredEnv, getRequiredEnv } from "@/server/env";
 import { UserModel } from "@/server/models/User";
 
 type ChangePasswordBody = {
@@ -52,6 +52,7 @@ export default async function handler(request: NextApiRequest, response: NextApi
     }
 
     user.passwordHash = await hashPassword(newPassword);
+    user.passwordPepperVersion = getRequiredEnv("PEPPER_VERSION");
     await user.save();
 
     await revokeAllUserSessions(user._id.toString());

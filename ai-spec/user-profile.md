@@ -1,53 +1,95 @@
 # Overview
-To add more pieces to a user not related to auth
+To add user profile data that is separate from auth and can power profile stats UI.
 
 # Requirements
-REQ-1: Collection of games completed. These will be used later to display stats for a user
-REQ-2: When a non-endless mode game is completed, its stats get logged to the gamesCompleted collection
-REQ-3: Object with counters for Endless Mode questions answered.
-REQ-4: When a question is answered in Endless Mode for either SWUniversity App, the appropriate count is updated in the DB.
-REQ-5: Badges, a collection of achievements acquired based on criteria.
-REQ-6: When a user completes the Iron Man challenge for the Quiz app, then they will get the iron_man_quiz_2026 badge added to their collection in the DB.
-REQ-7: When a user completes the Iron Man challenge for the Do You Know SWU app, then they will get the iron_man_dykswu_2026 badge added to their collection in the DB.
-REQ-8: Hold constants so that these badges can be manually updated every year for each SWUniveristy App.
-REQ-9: User profile data lives in a separate UserProfile collection, one profile per user, created at signup with defaults or empty values.
-REQ-10: Profile tracking only applies to authenticated users. Guest play is not persisted.
-REQ-11: gamesCompleted logs every non-endless run for quiz and dykswu: standard, iron-man, padawan, knight, and master.
-REQ-12: Badges are unique. Re-earning the same badge must not create duplicates.
-REQ-13: Badge constants should be simple exported values for the current year, with 2026 starting values for quiz and dykswu.
-REQ-14: endlessModeQuestionsAnswered is updated after every answered endless question, not batched. This is due to the UI not having a good way to "end" a game of endless. so if we batch, we might lose a mid-batch run.
-REQ-15: Iron Man attempts are logged whether the user succeeds or fails.
-REQ-16: For DYKSWU, stored score values should support fractional correctness because the UI awards 0.5 increments. That means correct should be typed as number, not assumed integer.
+REQ-1: Add a separate `UserProfile` collection with one profile per user.
+REQ-2: A `UserProfile` is created during signup with default empty values.
+REQ-3: Profile tracking only applies to authenticated users. Guest play is not persisted.
+REQ-4: `gamesCompleted` stores one entry for each completed non-endless run.
+REQ-5: `gamesCompleted` includes runs for `standard`, `iron-man`, `padawan`, `knight`, and `master`.
+REQ-6: Iron Man attempts are logged whether the user succeeds or fails.
+REQ-7: Iron Man success is inferred from the run entry when `correct === total`.
+REQ-8: Each `gamesCompleted` entry includes a `difficultyBreakdown` for `padawan`, `knight`, and `master` based on the actual underlying difficulty of the questions/cards answered during that run.
+REQ-9: The `difficultyBreakdown` is stored even for runs whose selected mode is already a single difficulty. Redundancy is acceptable.
+REQ-10: DYKSWU score values support fractional correctness because the UI awards 0.5 increments.
+REQ-11: `endlessModeStats` is updated after every answered endless question and is not batched.
+REQ-12: `endlessModeStats` includes both overall app totals and per-difficulty breakdowns for `padawan`, `knight`, and `master`.
+REQ-13: Endless writes include the underlying difficulty of the answered question/card so difficulty buckets remain accurate.
+REQ-14: Badges are unique. Re-earning the same badge must not create duplicates.
+REQ-15: When a user completes the Iron Man challenge for Quiz, add `iron_man_quiz_2026` to their badges.
+REQ-16: When a user completes the Iron Man challenge for Do You Know SWU, add `iron_man_dykswu_2026` to their badges.
+REQ-17: Badge constants should be simple exported values for the current year, with 2026 starting values for Quiz and Do You Know SWU.
+REQ-18: The UI badge model includes `displayName` and `img` so badges can be rendered on the profile page.
+REQ-19: The Profile page includes a second panel for user stats.
+REQ-20: The stats panel shows total questions answered, including endless.
+REQ-21: The stats panel shows total questions correct, including endless.
+REQ-22: Total correct continues to use fractional DYKSWU scoring.
+REQ-23: The stats panel has two collapsible sections: one for Quiz and one for Do You Know SWU.
+REQ-24: Each app section shows `correct / total` for Padawan difficulty.
+REQ-25: Each app section shows `correct / total` for Knight difficulty.
+REQ-26: Each app section shows `correct / total` for Master difficulty.
+REQ-27: Quiz stats show the number of Standard runs completed.
+REQ-28: Do You Know SWU stats show the number of Standard runs completed.
+REQ-29: Each app section shows the number of successful Iron Man completions.
+REQ-30: REQ-19 through REQ-29 are derived from existing profile data in the UI and do not require a separately persisted aggregate stats object.
 
 # Data
-## DATA-1: UserProfiles
+## DATA-1: DifficultyBreakdown
+```typescript
+interface DifficultyBreakdown {
+  padawan: {
+    correct: number;
+    total: number;
+  };
+  knight: {
+    correct: number;
+    total: number;
+  };
+  master: {
+    correct: number;
+    total: number;
+  };
+}
+```
+
+## DATA-2: GameCompletedEntry
+```typescript
+interface GameCompletedEntry {
+  date: DateTime;
+  app: SWUniversityApp;
+  mode: "standard" | "iron-man" | "padawan" | "knight" | "master";
+  correct: number;
+  total: number;
+  difficultyBreakdown: DifficultyBreakdown;
+}
+```
+
+## DATA-3: EndlessAppStats
+```typescript
+interface EndlessAppStats {
+  correct: number;
+  total: number;
+  difficultyBreakdown: DifficultyBreakdown;
+}
+```
+
+## DATA-4: UserProfile
 ```typescript
 interface UserProfile {
   _id: MongoDBUserId;
   userId: MongoDBUserId;
-  gamesCompleted: [
-    {
-      date: DateTime;
-      app: SWUniversityApp;
-      mode: AppModes;
-      correct: number;
-      total: number;
-    }
-  ];
-  endlessModeQuestionsAnswered: {
-    quizCorrect: number;
-    quizTotal: number;
-    dykswuCorrect: number;
-    dykswuTotal: number;
+  gamesCompleted: GameCompletedEntry[];
+  endlessModeStats: {
+    quiz: EndlessAppStats;
+    dykswu: EndlessAppStats;
   };
-  badges: [
-    BadgeType
-  ];
+  badges: BadgeType[];
 }
 ```
-## DATA-2: BadgeType
-BadgeType will grow. but for now, start with these:
-- iron_man_quiz_2026
-- iron_man_dykswu_2026
 
-the descriptions for these badges will live as constants. for now give them filler text.
+## DATA-5: BadgeType
+BadgeType will grow, but for now start with these:
+- `iron_man_quiz_2026`
+- `iron_man_dykswu_2026`
+
+Badge descriptions, display names, and image paths live as constants. Filler descriptions are acceptable for now.

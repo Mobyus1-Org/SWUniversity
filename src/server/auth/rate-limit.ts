@@ -64,15 +64,87 @@ export function clearLoginFailures(ip: string, accountIdentifier: string): void 
   loginAttempts.delete(key);
 }
 
+// --- Signup rate limiting (per IP) ---
+
+type CountBucket = {
+  count: number;
+  windowStart: number;
+};
+
+const SIGNUP_WINDOW_MS = 15 * 60 * 1000;
+const SIGNUP_MAX_PER_WINDOW = 5;
+
+const signupAttempts = new Map<string, CountBucket>();
+
+export function isSignupBlocked(ip: string): boolean {
+  const existing = signupAttempts.get(ip);
+  if (!existing) return false;
+  if (Date.now() - existing.windowStart > SIGNUP_WINDOW_MS) {
+    signupAttempts.delete(ip);
+    return false;
+  }
+  return existing.count >= SIGNUP_MAX_PER_WINDOW;
+}
+
+export function recordSignupAttempt(ip: string): void {
+  const now = Date.now();
+  const existing = signupAttempts.get(ip);
+  if (!existing || now - existing.windowStart > SIGNUP_WINDOW_MS) {
+    signupAttempts.set(ip, { count: 1, windowStart: now });
+    return;
+  }
+  signupAttempts.set(ip, { count: existing.count + 1, windowStart: existing.windowStart });
+}
+
+// --- Game-completed rate limiting (per userId) ---
+
+const GAME_COMPLETED_WINDOW_MS = 5 * 60 * 1000;
+const GAME_COMPLETED_MAX_PER_WINDOW = 20;
+
+const gameCompletedAttempts = new Map<string, CountBucket>();
+
+export function isGameCompletedBlocked(userId: string): boolean {
+  const existing = gameCompletedAttempts.get(userId);
+  if (!existing) return false;
+  if (Date.now() - existing.windowStart > GAME_COMPLETED_WINDOW_MS) {
+    gameCompletedAttempts.delete(userId);
+    return false;
+  }
+  return existing.count >= GAME_COMPLETED_MAX_PER_WINDOW;
+}
+
+export function recordGameCompleted(userId: string): void {
+  const now = Date.now();
+  const existing = gameCompletedAttempts.get(userId);
+  if (!existing || now - existing.windowStart > GAME_COMPLETED_WINDOW_MS) {
+    gameCompletedAttempts.set(userId, { count: 1, windowStart: now });
+    return;
+  }
+  gameCompletedAttempts.set(userId, { count: existing.count + 1, windowStart: existing.windowStart });
+}
+
 // Prevent unbounded growth when the process is long-lived.
 setInterval(() => {
-  const threshold = Date.now() - WINDOW_MS;
+  const now = Date.now();
+
   for (const [key, value] of loginAttempts.entries()) {
-    if (value.lockUntil === 0 && threshold > 0) {
+    if (value.lockUntil === 0 && now - WINDOW_MS > 0) {
       loginAttempts.delete(key);
     }
-    if (value.lockUntil !== 0 && value.lockUntil < Date.now() - WINDOW_MS) {
+    if (value.lockUntil !== 0 && value.lockUntil < now - WINDOW_MS) {
       loginAttempts.delete(key);
+    }
+  }
+
+  for (const [key, value] of signupAttempts.entries()) {
+    if (now - value.windowStart > SIGNUP_WINDOW_MS) {
+      signupAttempts.delete(key);
+    }
+  }
+
+  for (const [key, value] of gameCompletedAttempts.entries()) {
+    if (now - value.windowStart > GAME_COMPLETED_WINDOW_MS) {
+      gameCompletedAttempts.delete(key);
     }
   }
 }, WINDOW_MS).unref();

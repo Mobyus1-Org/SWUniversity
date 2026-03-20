@@ -25,7 +25,7 @@ A server side system to create, read, and update users via MongoDB Atlas. The UI
 }
 ```
 - DATA-2: roles as one of `["user", "admin"]`
-- DATA-3: use `bcrypt.hash(password + process.env.CRYPTO_PEPPER, 12)` for hashing passwords before storing them.
+- DATA-3: use `bcrypt.hash(password + process.env.CRYPTO_PEPPER_CURRENT, 12)` for hashing passwords before storing them.
 - DATA-4: use Mongoose for ORM between app and DB
 - DATA-5: `email` is required. trimmed, lowercased. does not have to be unique.
 - DATA-6: `username` is required. trimmed and unique.
@@ -39,7 +39,7 @@ A server side system to create, read, and update users via MongoDB Atlas. The UI
 - SEC-5: Session cookie must be `httpOnly`, `secure` (in prod), `sameSite=lax` or stricter.
 - SEC-6: Changing password requires valid current password.
 - SEC-7: On password change, invalidate existing sessions.
-- SEC-8: Require env vars `MONGO_CONNECTION_STRING`, `CRYPTO_PEPPER`, `SESSION_SECRET`; app fails fast if missing.
+- SEC-8: Require env vars `MONGO_CONNECTION_STRING`, `CRYPTO_PEPPER_CURRENT`, `SESSION_SECRET`; optionally allow `CRYPTO_PEPPER_PREVIOUS` during pepper rotation.
 
 ## Authoriztion
 - AUTHZ-1: Enforce admin checks server-side for `/internal/*` page requests.

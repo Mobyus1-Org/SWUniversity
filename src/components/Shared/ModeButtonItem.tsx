@@ -29,8 +29,11 @@ export function ModeButtonItem({mode, title, description, modeSet, initModeId, i
           setCurrentModeSet(modeSet);
           setCurrentModeId(initModeId ? modeSet[Math.floor(Math.random() * modeSet.length)].id : 0);
           if(initVariant && setVariant) {
-            const q = modeSet[initModeId ? Math.floor(Math.random() * modeSet.length) : 0] as DoYouKnowSWUQuestion;
-            setVariant(Math.floor(Math.random() * q.variants.length));
+            const item = modeSet[initModeId ? Math.floor(Math.random() * modeSet.length) : 0];
+            if (item && "variants" in item) {
+              const q = item as DoYouKnowSWUQuestion;
+              setVariant(Math.floor(Math.random() * q.variants.length));
+            }
           }
         }}
       >
