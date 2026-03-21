@@ -3,6 +3,8 @@ const REQUIRED_ENV_KEYS = [
   "CRYPTO_PEPPER_CURRENT",
   "PEPPER_VERSION",
   "SESSION_SECRET",
+  "RESEND_API_KEY",
+  "RESEND_FROM_EMAIL",
 ] as const;
 
 type RequiredEnvKey = (typeof REQUIRED_ENV_KEYS)[number];

@@ -97,6 +97,9 @@ export default function LoginPage() {
       <p className="mt-4 text-sm">
         Need an account? <Link href="/signup" className="underline">Sign up</Link>
       </p>
+      <p className="mt-2 text-sm">
+        Forgot your password? <Link href="/forgot-password" className="underline">Request a reset code</Link>
+      </p>
     </div>
   );
 }

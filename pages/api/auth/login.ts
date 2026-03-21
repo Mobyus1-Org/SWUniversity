@@ -2,7 +2,11 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 import { getClientIp, methodNotAllowed } from "@/server/auth/http";
 import { hashPassword, verifyPasswordWithPepperRotation } from "@/server/auth/password";
-import { clearLoginFailures, isLoginBlocked, recordLoginFailure } from "@/server/auth/rate-limit";
+import {
+  clearPersistentRateLimit,
+  consumePersistentRateLimit,
+  getPersistentRateLimitStatus,
+} from "@/server/auth/persistent-rate-limit";
 import { createSession, setSessionCookie } from "@/server/auth/session";
 import { connectToDatabase } from "@/server/db";
 import { assertRequiredEnv, getRequiredEnv } from "@/server/env";
@@ -13,6 +17,10 @@ type LoginBody = {
   password?: string;
   rememberMe?: boolean;
 };
+
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_FAILURES = 10;
+const LOGIN_BLOCK_DURATION_MS = 10 * 60 * 1000;
 
 export default async function handler(request: NextApiRequest, response: NextApiResponse) {
   if (request.method !== "POST") {
@@ -29,12 +37,17 @@ export default async function handler(request: NextApiRequest, response: NextApi
     const password = body.password || "";
     const rememberMe = Boolean(body.rememberMe);
     const ip = getClientIp(request);
+    const loginRateLimitKey = `${ip}::${username.toLowerCase()}`;
 
     if (!username || !password) {
       return response.status(400).json({ error: "Username and password are required." });
     }
 
-    if (isLoginBlocked(ip, username)) {
+    const rateLimitStatus = await getPersistentRateLimitStatus({
+      scope: "login",
+      key: loginRateLimitKey,
+    });
+    if (!rateLimitStatus.allowed) {
       return response.status(429).json({ error: "Too many login attempts. Please try again later." });
     }
 
@@ -44,7 +57,13 @@ export default async function handler(request: NextApiRequest, response: NextApi
       : { isValid: false, needsRehash: false };
 
     if (!user || !verification.isValid) {
-      recordLoginFailure(ip, username);
+      await consumePersistentRateLimit({
+        scope: "login",
+        key: loginRateLimitKey,
+        maxAttempts: LOGIN_MAX_FAILURES,
+        windowMs: LOGIN_WINDOW_MS,
+        blockDurationMs: LOGIN_BLOCK_DURATION_MS,
+      });
       return response.status(401).json({ error: "Invalid username or password." });
     }
 
@@ -58,7 +77,10 @@ export default async function handler(request: NextApiRequest, response: NextApi
       await user.save();
     }
 
-    clearLoginFailures(ip, username);
+    await clearPersistentRateLimit({
+      scope: "login",
+      key: loginRateLimitKey,
+    });
 
     const sessionId = await createSession(user._id.toString(), rememberMe);
     setSessionCookie(response, sessionId, rememberMe);
