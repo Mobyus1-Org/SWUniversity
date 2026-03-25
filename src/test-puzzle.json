@@ -1,0 +1,155 @@
+{
+  "activePlayer": 1,
+  "gamePhase": 0,
+  "nextPlayId": 13,
+  "player1": {
+    "base": {
+      "cardId": "SOR_022",
+      "epicActionUsed": false,
+      "damage": 23
+    },
+    "leader": {
+      "cardId": "SOR_014",
+      "epicActionUsed": false,
+      "ready": true,
+      "deployed": false
+    },
+    "spaceArena": [],
+    "groundArena": [
+      {
+        "cardId": "SOR_145",
+        "playId": "@",
+        "owner": 1,
+        "controller": 1,
+        "ready": true,
+        "damage": 0,
+        "upgrades": [],
+        "captives": []
+      },
+      {
+        "cardId": "SHD_160",
+        "playId": "@",
+        "owner": 1,
+        "controller": 1,
+        "ready": true,
+        "damage": 0,
+        "upgrades": [],
+        "captives": []
+      }
+    ],
+    "resources": [
+      {
+        "cardId": "SHD_160",
+        "playId": "@",
+        "owner": 1,
+        "controller": 1,
+        "ready": true
+      },
+      {
+        "cardId": "SHD_160",
+        "playId": "@",
+        "owner": 1,
+        "controller": 1,
+        "ready": true
+      },
+      {
+        "cardId": "SHD_160",
+        "playId": "@",
+        "owner": 1,
+        "controller": 1,
+        "ready": true
+      },
+      {
+        "cardId": "SHD_160",
+        "playId": "@",
+        "owner": 1,
+        "controller": 1,
+        "ready": true
+      },
+      {
+        "cardId": "SHD_160",
+        "playId": "@",
+        "owner": 1,
+        "controller": 1,
+        "ready": true
+      },
+      {
+        "cardId": "SHD_160",
+        "playId": "@",
+        "owner": 1,
+        "controller": 1,
+        "ready": true
+      },
+      {
+        "cardId": "SHD_160",
+        "playId": "@",
+        "owner": 1,
+        "controller": 1,
+        "ready": true
+      },
+      {
+        "cardId": "SHD_160",
+        "playId": "@",
+        "owner": 1,
+        "controller": 1,
+        "ready": true
+      }
+    ],
+    "discard": [],
+    "deck": [],
+    "hand": [
+      { "cardId": "JTL_153" },
+      { "cardId": "SOR_168" },
+      { "cardId": "SOR_103" },
+      { "cardId": "SOR_141" },
+      { "cardId": "SOR_150" }
+    ],
+    "supplemental": {}
+  },
+  "player2": {
+    "base": {
+      "cardId": "SOR_025",
+      "epicActionUsed": false,
+      "damage": 11
+    },
+    "leader": {
+      "cardId": "SHD_014",
+      "epicActionUsed": true,
+      "ready": true,
+      "deployed": false
+    },
+    "spaceArena": [],
+    "groundArena": [
+      {
+        "cardId": "SOR_211",
+        "playId": "@",
+        "owner": 2,
+        "controller": 2,
+        "ready": false,
+        "damage": 0,
+        "upgrades": [],
+        "captives": []
+      },
+      {
+        "cardId": "TWI_187",
+        "playId": "@",
+        "owner": 2,
+        "controller": 2,
+        "ready": false,
+        "damage": 0,
+        "upgrades": [],
+        "captives": []
+      }
+    ],
+    "resources": [],
+    "discard": [],
+    "deck": [],
+    "hand": [],
+    "supplemental": {}
+  },
+  "currentEffects": [],
+  "currentRound": 7,
+  "initiativePlayer": 2,
+  "initiativeClaimed": true,
+  "triggerBag": []
+}

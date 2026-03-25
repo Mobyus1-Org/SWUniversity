@@ -1,3 +1,3 @@
-import DoYouKnowSWUPage from "@/pages/DoYouKnowSWUPage";
+import DoYouKnowSWUPage from "@/containers/DoYouKnowSWUPage";
 
 export default DoYouKnowSWUPage;

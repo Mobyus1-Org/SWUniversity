@@ -1,3 +1,3 @@
-import AboutPage from "@/pages/AboutPage";
+import AboutPage from "@/containers/AboutPage";
 
 export default AboutPage;

@@ -1,3 +1,3 @@
-import QuizPage from "@/pages/QuizPage";
+import QuizPage from "@/containers/QuizPage";
 
 export default QuizPage;

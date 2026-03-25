@@ -1,7 +1,7 @@
 [
   {
     "id": 1,
-    "actualCard": "SOR/221",
+    "actualCard": "SOR_221",
     "variants": [
       {
         "img": "outmaneuver1",
@@ -39,7 +39,7 @@
   },
   {
     "id": 2,
-    "actualCard": "SOR/144",
+    "actualCard": "SOR_144",
     "variants": [
       {
         "img": "redthree",
@@ -77,7 +77,7 @@
   },
   {
     "id": 3,
-    "actualCard": "SOR/101",
+    "actualCard": "SOR_101",
     "variants": [
       {
         "img": "roguesquadronskirmisher",
@@ -89,7 +89,7 @@
   },
   {
     "id": 4,
-    "actualCard": "SOR/168",
+    "actualCard": "SOR_168",
     "variants": [
       {
         "img": "precisionfire",
@@ -111,7 +111,7 @@
   },
   {
     "id": 5,
-    "actualCard": "SOR/147",
+    "actualCard": "SOR_147",
     "variants": [
       {
         "img": "blackone1",
@@ -133,7 +133,7 @@
   },
   {
     "id": 6,
-    "actualCard": "SOR/054",
+    "actualCard": "SOR_054",
     "variants": [
       {
         "img": "jedilightsaber",
@@ -155,7 +155,7 @@
   },
   {
     "id": 7,
-    "actualCard": "SOR/058",
+    "actualCard": "SOR_058",
     "variants": [
       {
         "img": "vigilance",
@@ -177,7 +177,7 @@
   },
   {
     "id": 8,
-    "actualCard": "SOR/087",
+    "actualCard": "SOR_087",
     "variants": [
       {
         "img": "darthvader1",
@@ -221,7 +221,7 @@
   },
   {
     "id": 9,
-    "actualCard": "SOR/039",
+    "actualCard": "SOR_039",
     "variants": [
       {
         "img": "atatsuppressor",
@@ -243,7 +243,7 @@
   },
   {
     "id": 10,
-    "actualCard": "SOR/091",
+    "actualCard": "SOR_091",
     "variants": [
       {
         "img": "theemperorslegion",
@@ -255,7 +255,7 @@
   },
   {
     "id": 11,
-    "actualCard": "SOR/083",
+    "actualCard": "SOR_083",
     "variants": [
       {
         "img": "superlasertech1",
@@ -277,7 +277,7 @@
   },
   {
     "id": 12,
-    "actualCard": "SOR/179",
+    "actualCard": "SOR_179",
     "variants": [
       {
         "img": "bobafett1",
@@ -299,7 +299,7 @@
   },
   {
     "id": 13,
-    "actualCard": "SOR/227",
+    "actualCard": "SOR_227",
     "variants": [
       {
         "img": "stormtrooperlieutenant1",
@@ -321,7 +321,7 @@
   },
   {
     "id": 14,
-    "actualCard": "SOR/118",
+    "actualCard": "SOR_118",
     "variants": [
       {
         "img": "97thLegion",
@@ -343,7 +343,7 @@
   },
   {
     "id": 15,
-    "actualCard": "SOR/235",
+    "actualCard": "SOR_235",
     "variants": [
       {
         "img": "galacticambition1",
@@ -355,7 +355,7 @@
   },
   {
     "id": 16,
-    "actualCard": "SOR/056",
+    "actualCard": "SOR_056",
     "variants": [
       {
         "img": "bendu1",
@@ -377,7 +377,7 @@
   },
   {
     "id": 17,
-    "actualCard": "SOR/191",
+    "actualCard": "SOR_191",
     "variants": [
       {
         "img": "vanguardace1",
@@ -399,7 +399,7 @@
   },
   {
     "id": 18,
-    "actualCard": "SOR/102",
+    "actualCard": "SOR_102",
     "variants": [
       {
         "img": "homeone1",
@@ -421,7 +421,7 @@
   },
   {
     "id": 19,
-    "actualCard": "SOR/244",
+    "actualCard": "SOR_244",
     "variants": [
       {
         "img": "snowspeeder1",
@@ -491,7 +491,7 @@
   },
   {
     "id": 20,
-    "actualCard": "SOR/045",
+    "actualCard": "SOR_045",
     "variants": [
       {
         "img": "yoda1",
@@ -513,7 +513,7 @@
   },
   {
     "id": 21,
-    "actualCard": "SOR/172",
+    "actualCard": "SOR_172",
     "variants": [
       {
         "img": "openfire1",
@@ -535,7 +535,7 @@
   },
   {
     "id": 22,
-    "actualCard": "SHD/082",
+    "actualCard": "SHD_082",
     "variants": [
       {
         "img": "outlandtievanguard1",
@@ -557,7 +557,7 @@
   },
   {
     "id": 23,
-    "actualCard": "SHD/147",
+    "actualCard": "SHD_147",
     "variants": [
       {
         "img": "ketsuonyo1",
@@ -579,7 +579,7 @@
   },
   {
     "id": 24,
-    "actualCard": "SOR/181",
+    "actualCard": "SOR_181",
     "variants": [
       {
         "img": "jabbathehutt1",
@@ -591,7 +591,7 @@
   },
   {
     "id": 25,
-    "actualCard": "SOR/075",
+    "actualCard": "SOR_075",
     "variants": [
       {
         "img": "itbindsallthings1",
@@ -613,7 +613,7 @@
   },
   {
     "id": 26,
-    "actualCard": "SOR/185",
+    "actualCard": "SOR_185",
     "variants": [
       {
         "img": "chimaera1",
@@ -635,7 +635,7 @@
   },
   {
     "id": 27,
-    "actualCard": "SHD/090",
+    "actualCard": "SHD_090",
     "variants": [
       {
         "img": "maul1",
@@ -657,7 +657,7 @@
   },
   {
     "id": 28,
-    "actualCard": "SOR/155",
+    "actualCard": "SOR_155",
     "variants": [
       {
         "img": "aggression1",
@@ -679,7 +679,7 @@
   },
   {
     "id": 29,
-    "actualCard": "TWI/057",
+    "actualCard": "TWI_057",
     "variants": [
       {
         "img": "warriordrone1",
@@ -701,7 +701,7 @@
   },
   {
     "id": 30,
-    "actualCard": "SOR/067",
+    "actualCard": "SOR_067",
     "variants": [
       {
         "img": "Rugged Survivors1",
@@ -771,7 +771,7 @@
   },
   {
     "id": 31,
-    "actualCard": "SOR/114",
+    "actualCard": "SOR_114",
     "variants": [
       {
         "img": "EscortSkiff1",
@@ -815,13 +815,13 @@
   },
   {
     "id": 32,
-    "actualCard": "LOF/037",
+    "actualCard": "LOF_037",
     "variants": [
       {
         "img": "darthvader-lof1",
         "answer": "art",
         "difficulty": 0,
-         "followUp": {
+        "followUp": {
           "question": "What is wrong with the art?",
           "choices": {
             "a": "This art is from a different card.",
@@ -837,7 +837,7 @@
   },
   {
     "id": 33,
-    "actualCard": "SOR/141",
+    "actualCard": "SOR_141",
     "variants": [
       {
         "img": "redsquadronawing1",
@@ -859,7 +859,7 @@
   },
   {
     "id": 34,
-    "actualCard": "SHD/028",
+    "actualCard": "SHD_028",
     "variants": [
       {
         "img": "doctorpershing1",
@@ -881,7 +881,7 @@
   },
   {
     "id": 35,
-    "actualCard": "TWI/248",
+    "actualCard": "TWI_248",
     "variants": [
       {
         "img": "ahsokaspadawanlightsaber1",
@@ -903,7 +903,7 @@
   },
   {
     "id": 36,
-    "actualCard": "SHD/067",
+    "actualCard": "SHD_067",
     "variants": [
       {
         "img": "fennrau1",
@@ -915,7 +915,7 @@
   },
   {
     "id": 37,
-    "actualCard": "SOR/139",
+    "actualCard": "SOR_139",
     "variants": [
       {
         "img": "forcechoke1",
@@ -937,7 +937,7 @@
   },
   {
     "id": 38,
-    "actualCard": "SHD/071",
+    "actualCard": "SHD_071",
     "variants": [
       {
         "img": "toptarget1",
@@ -959,7 +959,7 @@
   },
   {
     "id": 39,
-    "actualCard": "TWI/201",
+    "actualCard": "TWI_201",
     "variants": [
       {
         "img": "aidfromtheinnocent1",
@@ -971,7 +971,7 @@
   },
   {
     "id": 40,
-    "actualCard": "SOR/187",
+    "actualCard": "SOR_187",
     "variants": [
       {
         "img": "ihadnochoice1",
@@ -993,7 +993,7 @@
   },
   {
     "id": 41,
-    "actualCard": "SOR/107",
+    "actualCard": "SOR_107",
     "variants": [
       {
         "img": "command1",
@@ -1015,7 +1015,7 @@
   },
   {
     "id": 42,
-    "actualCard": "SOR/177",
+    "actualCard": "SOR_177",
     "variants": [
       {
         "img": "bibfortuna1",
@@ -1059,7 +1059,7 @@
   },
   {
     "id": 43,
-    "actualCard": "SOR/105",
+    "actualCard": "SOR_105",
     "variants": [
       {
         "img": "generalkrell1",
@@ -1081,7 +1081,7 @@
   },
   {
     "id": 44,
-    "actualCard": "TWI/202",
+    "actualCard": "TWI_202",
     "variants": [
       {
         "img": "jarjarbinks1",
@@ -1103,7 +1103,7 @@
   },
   {
     "id": 45,
-    "actualCard": "JTL/250",
+    "actualCard": "JTL_250",
     "variants": [
       {
         "img": "sabinesmasterpiece1",
@@ -1125,7 +1125,7 @@
   },
   {
     "id": 46,
-    "actualCard": "SOR/119",
+    "actualCard": "SOR_119",
     "variants": [
       {
         "img": "reinforcementwalker1",
@@ -1147,7 +1147,7 @@
   },
   {
     "id": 47,
-    "actualCard": "SHD/151",
+    "actualCard": "SHD_151",
     "variants": [
       {
         "img": "valiantassaultship1",
@@ -1159,7 +1159,7 @@
   },
   {
     "id": 48,
-    "actualCard": "SHD/075",
+    "actualCard": "SHD_075",
     "variants": [
       {
         "img": "covertstrength1",
@@ -1181,7 +1181,7 @@
   },
   {
     "id": 49,
-    "actualCard": "SHD/140",
+    "actualCard": "SHD_140",
     "variants": [
       {
         "img": "trandoshanhunters1",
@@ -1203,7 +1203,7 @@
   },
   {
     "id": 50,
-    "actualCard": "TWI/036",
+    "actualCard": "TWI_036",
     "variants": [
       {
         "img": "devastatinggunship1",
@@ -1225,7 +1225,7 @@
   },
   {
     "id": 51,
-    "actualCard": "JTL/156",
+    "actualCard": "JTL_156",
     "variants": [
       {
         "img": "trenchrun1",
@@ -1247,7 +1247,7 @@
   },
   {
     "id": 52,
-    "actualCard": "TWI/256",
+    "actualCard": "TWI_256",
     "variants": [
       {
         "img": "holdoutblaster1",
@@ -1259,7 +1259,7 @@
   },
   {
     "id": 53,
-    "actualCard": "SOR/190",
+    "actualCard": "SOR_190",
     "variants": [
       {
         "img": "lothalinsurgent1",
@@ -1281,7 +1281,7 @@
   },
   {
     "id": 54,
-    "actualCard": "JTL/150",
+    "actualCard": "JTL_150",
     "variants": [
       {
         "img": "biggsdarklighter1",
@@ -1293,7 +1293,7 @@
   },
   {
     "id": 55,
-    "actualCard": "LOF/048",
+    "actualCard": "LOF_048",
     "variants": [
       {
         "img": "itinerantwarrior1",
@@ -1305,7 +1305,7 @@
   },
   {
     "id": 56,
-    "actualCard": "SOR/151",
+    "actualCard": "SOR_151",
     "variants": [
       {
         "img": "karabast1",
@@ -1327,7 +1327,7 @@
   },
   {
     "id": 57,
-    "actualCard": "JTL/056",
+    "actualCard": "JTL_056",
     "variants": [
       {
         "img": "hondoohnaka1",
@@ -1349,7 +1349,7 @@
   },
   {
     "id": 58,
-    "actualCard": "SHD/093",
+    "actualCard": "SHD_093",
     "variants": [
       {
         "img": "remnantreserves1",
@@ -1371,7 +1371,7 @@
   },
   {
     "id": 59,
-    "actualCard": "TWI/185",
+    "actualCard": "TWI_185",
     "variants": [
       {
         "img": "zirothehutt1",
@@ -1383,7 +1383,7 @@
   },
   {
     "id": 60,
-    "actualCard": "JTL/238",
+    "actualCard": "JTL_238",
     "variants": [
       {
         "img": "sithtrooper1",
@@ -1405,7 +1405,7 @@
   },
   {
     "id": 61,
-    "actualCard": "LOF/081",
+    "actualCard": "LOF_081",
     "variants": [
       {
         "img": "sithlegionnaire1",
@@ -1417,7 +1417,7 @@
   },
   {
     "id": 62,
-    "actualCard": "TWI/055",
+    "actualCard": "TWI_055",
     "variants": [
       {
         "img": "equalize1",
@@ -1439,7 +1439,7 @@
   },
   {
     "id": 63,
-    "actualCard": "JTL/098",
+    "actualCard": "JTL_098",
     "variants": [
       {
         "img": "snapwexley1",
@@ -1461,7 +1461,7 @@
   },
   {
     "id": 64,
-    "actualCard": "SOR/131",
+    "actualCard": "SOR_131",
     "variants": [
       {
         "img": "fifthbrother1",
@@ -1483,7 +1483,7 @@
   },
   {
     "id": 65,
-    "actualCard": "IBH/006",
+    "actualCard": "IBH_006",
     "variants": [
       {
         "img": "rebellionywing1",
@@ -1537,7 +1537,7 @@
   },
   {
     "id": 66,
-    "actualCard": "TWI/195",
+    "actualCard": "TWI_195",
     "variants": [
       {
         "img": "sabine-twi1",
@@ -1559,7 +1559,7 @@
   },
   {
     "id": 67,
-    "actualCard": "JTL/003-portrait",
+    "actualCard": "JTL_003_BACK",
     "variants": [
       {
         "img": "lando-jtl1",
@@ -1581,7 +1581,7 @@
   },
   {
     "id": 68,
-    "actualCard": "JTL/048",
+    "actualCard": "JTL_048",
     "variants": [
       {
         "img": "cassian-jtl1",
@@ -1603,7 +1603,7 @@
   },
   {
     "id": 69,
-    "actualCard": "JTL/049",
+    "actualCard": "JTL_049",
     "variants": [
       {
         "img": "l337-jtl1",
@@ -1625,7 +1625,7 @@
   },
   {
     "id": 70,
-    "actualCard": "JTL/081",
+    "actualCard": "JTL_081",
     "variants": [
       {
         "img": "firstordertie1",
@@ -1647,7 +1647,7 @@
   },
   {
     "id": 70,
-    "actualCard": "JTL/096",
+    "actualCard": "JTL_096",
     "variants": [
       {
         "img": "blueleader-jtl1",
@@ -1669,7 +1669,7 @@
   },
   {
     "id": 71,
-    "actualCard": "JTL/103",
+    "actualCard": "JTL_103",
     "variants": [
       {
         "img": "chewbacca-jtl1",
@@ -1691,7 +1691,7 @@
   },
   {
     "id": 72,
-    "actualCard": "JTL/189",
+    "actualCard": "JTL_189",
     "variants": [
       {
         "img": "bobafett-jtlunit1",
@@ -1713,7 +1713,7 @@
   },
   {
     "id": 73,
-    "actualCard": "JTL/184",
+    "actualCard": "JTL_184",
     "variants": [
       {
         "img": "contractedjumpmaster1",
@@ -1735,7 +1735,7 @@
   },
   {
     "id": 74,
-    "actualCard": "JTL/198",
+    "actualCard": "JTL_198",
     "variants": [
       {
         "img": "fireball-jtl1",
@@ -1789,7 +1789,7 @@
   },
   {
     "id": 75,
-    "actualCard": "JTL/203",
+    "actualCard": "JTL_203",
     "variants": [
       {
         "img": "hansolo-jtlunit1",
@@ -1811,7 +1811,7 @@
   },
   {
     "id": 76,
-    "actualCard": "JTL/140",
+    "actualCard": "JTL_140",
     "variants": [
       {
         "img": "ig2000-jtl1",
@@ -1833,7 +1833,7 @@
   },
   {
     "id": 77,
-    "actualCard": "JTL/251",
+    "actualCard": "JTL_251",
     "variants": [
       {
         "img": "jedilightcruiser1",
@@ -1855,7 +1855,7 @@
   },
   {
     "id": 78,
-    "actualCard": "JTL/176",
+    "actualCard": "JTL_176",
     "variants": [
       {
         "img": "shootdown1",
@@ -1877,7 +1877,7 @@
   },
   {
     "id": 79,
-    "actualCard": "JTL/238",
+    "actualCard": "JTL_238",
     "variants": [
       {
         "img": "sithtrooper2",
@@ -1899,7 +1899,7 @@
   },
   {
     "id": 80,
-    "actualCard": "TWI/078",
+    "actualCard": "TWI_078",
     "variants": [
       {
         "img": "invasionofchristophsis1",
@@ -1921,7 +1921,7 @@
   },
   {
     "id": 81,
-    "actualCard": "TWI/156",
+    "actualCard": "TWI_156",
     "variants": [
       {
         "img": "unlimitedpower1",
@@ -1975,7 +1975,7 @@
   },
   {
     "id": 82,
-    "actualCard": "SHD/153",
+    "actualCard": "SHD_153",
     "variants": [
       {
         "img": "poe-shd1",
@@ -2029,7 +2029,7 @@
   },
   {
     "id": 83,
-    "actualCard": "LOF/109",
+    "actualCard": "LOF_109",
     "variants": [
       {
         "img": "mynock1",
@@ -2041,7 +2041,7 @@
   },
   {
     "id": 84,
-    "actualCard": "LOF/061",
+    "actualCard": "LOF_061",
     "variants": [
       {
         "img": "secretivesage1",
@@ -2063,7 +2063,7 @@
   },
   {
     "id": 85,
-    "actualCard": "LOF/182",
+    "actualCard": "LOF_182",
     "variants": [
       {
         "img": "nihilmarauder1",
@@ -2085,7 +2085,7 @@
   },
   {
     "id": 86,
-    "actualCard": "LOF/145",
+    "actualCard": "LOF_145",
     "variants": [
       {
         "img": "jediknight1",
@@ -2107,7 +2107,7 @@
   },
   {
     "id": 87,
-    "actualCard": "LOF/261",
+    "actualCard": "LOF_261",
     "variants": [
       {
         "img": "constructedlightsaber1",
@@ -2129,7 +2129,7 @@
   },
   {
     "id": 88,
-    "actualCard": "LOF/140",
+    "actualCard": "LOF_140",
     "variants": [
       {
         "img": "darthmaulslightsaber1",
@@ -2151,7 +2151,7 @@
   },
   {
     "id": 89,
-    "actualCard": "LOF/089",
+    "actualCard": "LOF_089",
     "variants": [
       {
         "img": "supremacy1",
@@ -2173,7 +2173,7 @@
   },
   {
     "id": 90,
-    "actualCard": "LOF/204",
+    "actualCard": "LOF_204",
     "variants": [
       {
         "img": "zuckuss1",
@@ -2195,7 +2195,7 @@
   },
   {
     "id": 91,
-    "actualCard": "LOF/068",
+    "actualCard": "LOF_068",
     "variants": [
       {
         "img": "lof_luthen1",
@@ -2217,7 +2217,7 @@
   },
   {
     "id": 91,
-    "actualCard": "LOF/175",
+    "actualCard": "LOF_175",
     "variants": [
       {
         "img": "doordonot1",
@@ -2239,7 +2239,7 @@
   },
   {
     "id": 92,
-    "actualCard": "LOF/254",
+    "actualCard": "LOF_254",
     "variants": [
       {
         "img": "porg1",

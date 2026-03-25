@@ -1,5 +1,5 @@
 import type { ModalKey } from "@/util/context";
-import { getSWUDBImageLink, getSWUDBImageLinkFallback, isHorizontalCard, type Quiz } from "@/util/func";
+import { getCardImageLink, getSWUDBImageLink, isHorizontalCard, type Quiz } from "@/util/func";
 
 interface IProps {
   currentQuiz: Quiz;
@@ -28,11 +28,11 @@ export function RelevantCardsPanel({ currentQuiz, setShowModal, setModalKey }: I
             const scaleStyle = isHorizontalCard(cardName) ? { height: `${scale}vh`, } : { width: `${scale}vh`, };
             return <div key={"relevant-card-" + index} className={`${scaleClass} m-2.5 align`} style={scaleStyle}>
               <img
-                src={getSWUDBImageLink(cardName)}
+                src={getCardImageLink(cardName)}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.onerror = null; // Prevent infinite loop
-                  target.src = getSWUDBImageLinkFallback(cardName);
+                  target.src = getSWUDBImageLink(cardName);
                 }}
                 alt={`card ${cardName}`}
                 className="max-h-full object-contain"

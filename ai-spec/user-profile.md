@@ -35,7 +35,7 @@ REQ-30: REQ-19 through REQ-29 are derived from existing profile data in the UI a
 
 # Data
 ## DATA-1: DifficultyBreakdown
-```typescript
+```ts
 interface DifficultyBreakdown {
   padawan: {
     correct: number;
@@ -53,7 +53,7 @@ interface DifficultyBreakdown {
 ```
 
 ## DATA-2: GameCompletedEntry
-```typescript
+```ts
 interface GameCompletedEntry {
   date: DateTime;
   app: SWUniversityApp;
@@ -65,7 +65,7 @@ interface GameCompletedEntry {
 ```
 
 ## DATA-3: EndlessAppStats
-```typescript
+```ts
 interface EndlessAppStats {
   correct: number;
   total: number;
@@ -74,7 +74,7 @@ interface EndlessAppStats {
 ```
 
 ## DATA-4: UserProfile
-```typescript
+```ts
 interface UserProfile {
   _id: MongoDBUserId;
   userId: MongoDBUserId;

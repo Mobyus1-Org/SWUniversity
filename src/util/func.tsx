@@ -84,33 +84,35 @@ const setsMap = {
 };
 
 export function isHorizontalCard(cardName: string): boolean {
-  const parts = cardName.split("/");
-  if (parts.length !== 2) throw new Error(`Invalid card name format: ${cardName}`);
+  const parts = cardName.split("_");
+  if (parts.length < 2) throw new Error(`Invalid card name format: ${cardName}`);
   const setCode = parts[0];
   if (!(setCode in setsMap)) return false;//unknown set or tokens or special set, assume vertical
   const setNumber = parts[1];
   if(setNumber.startsWith("T")) return false;//tokens are vertical
-  if(setNumber.includes("-")) return false;//-back or -portrait cards are vertical
+  if(parts.length > 2) return false;//_BACK cards are vertical
   const setNum = parseInt(setNumber, 10);
   if (isNaN(setNum)) throw new Error(`Invalid card number: ${setNumber}`);
 
   return setNum <= setsMap[setCode as keyof typeof setsMap];
 }
 
+export function getCardImageLink(cardPattern: string): string {
+  if (cardPattern.endsWith("_BACK")) {
+    return `/assets/cards/full/${cardPattern}.webp`;
+  }
+
+  return `/assets/swudb-import/${cardPattern}.webp`;
+}
+
 export function getSWUDBImageLink(cardPattern: string): string {
-  const parts = cardPattern.split('/');
-  if (parts.length !== 2) throw new Error(`Invalid card name format: ${cardPattern}`);
-
-  // Convert pattern "SOR/123" to "SOR_123.webp" format
-  const fileName = cardPattern.replace('/', '_');
-
-  // Return local WEBP path - browser will use CDN fallback if image doesn't exist
-  return `/assets/swudb-import/${fileName}.webp`;
+  return `/assets/swudb-import/${cardPattern}.webp`;
 }
 
 export function getSWUDBImageLinkFallback(cardPattern: string): string {
-  // Fallback to SWUDB CDN
-  return `https://swudb.com/cdn-cgi/image/quality=10/images/cards/${cardPattern}.png`;
+  // Fallback to SWUDB CDN — convert SET_NNN back to SET/NNN for the CDN path
+  const cdnPattern = cardPattern.replace('_', '/');
+  return `https://swudb.com/cdn-cgi/image/quality=10/images/cards/${cdnPattern}.png`;
 }
 
 export function getDYKSWUImageLink(fileName: string): string {
@@ -272,6 +274,11 @@ export function preloadImagesAsync(urls: string[]): Promise<void> {
   });
 
   return Promise.allSettled(promises).then(() => undefined);
+}
+
+export function preloadCardImagesAsync(cardPatterns: string[]): Promise<void> {
+  const urls = cardPatterns.map(pattern => getCardImageLink(pattern));
+  return preloadImagesAsync(urls);
 }
 
 export function preloadSWUDBImagesAsync(cardPatterns: string[]): Promise<void> {

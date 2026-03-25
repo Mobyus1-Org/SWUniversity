@@ -2,7 +2,7 @@ import React from "react";
 
 import { globalBackgroundStyle, globalBackgroundStyleBigShadow, getLightsaberGlowHover } from "@/util/style-const";
 import { DYKSWUChoices, type AppModes, type SfxType } from "@/util/const";
-import { renderItalicsAndBold, type UserResponse, type DoYouKnowSWUQuestion, getSWUDBImageLink, getSWUDBImageLinkFallback, getDYKSWUImageLink, getDYKSWUImageLinkFallback, renderDYKSWUChoiceTitle, type DoYouKnowSWUVariant } from "@/util/func";
+import { renderItalicsAndBold, type UserResponse, type DoYouKnowSWUQuestion, getCardImageLink, getSWUDBImageLink, getDYKSWUImageLink, getDYKSWUImageLinkFallback, renderDYKSWUChoiceTitle, type DoYouKnowSWUVariant } from "@/util/func";
 import { ModeEndScreen } from "@/components/Shared/ModeEndScreen";
 import { AudioContext, UserSettingsContext } from "@/util/context";
 import { updateEndlessModeStats } from "@/util/profile-api";
@@ -276,20 +276,20 @@ export function QuestionContent({
               target.src = getDYKSWUImageLinkFallback(currentVariantQuestion.img);
             }}
             alt="Potentially changed SWU card"
-            className="max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 rounded shadow-lg"
+            className="h-48 md:h-64 lg:h-120 uwd:!h-180 4k:!h-240 w-auto object-contain rounded shadow-lg"
           />
         </div>
         <div className="flex flex-col items-center">
           <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">Real Card</p>
           <img
-            src={(showAnswer || showFollowUpAnswer) ? getSWUDBImageLink(currentQuestion.actualCard) : "/assets/SWUniversity_Cardback.png"}
+            src={(showAnswer || showFollowUpAnswer) ? getCardImageLink(currentQuestion.actualCard) : "/assets/SWUniversity_Cardback.png"}
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.onerror = null; // Prevent infinite loop
-              target.src = getSWUDBImageLinkFallback(currentQuestion.actualCard);
+              target.src = getSWUDBImageLink(currentQuestion.actualCard);
             }}
             alt={(showAnswer || showFollowUpAnswer) ? "Real Card" : "SWUniversity Cardback"}
-            className={`max-h-48 md:max-h-64 lg:max-h-120 uwd:!max-h-180 4k:!max-h-240 4k:ml-16 rounded shadow-lg transition-all duration-500 ${(revealCard && (showAnswer || showFollowUpAnswer)) ? "wipe-enter" : ""}`}
+            className={`h-48 md:h-64 lg:h-120 uwd:!h-180 4k:!h-240 w-auto object-contain 4k:ml-16 rounded shadow-lg transition-all duration-500 ${(revealCard && (showAnswer || showFollowUpAnswer)) ? "wipe-enter" : ""}`}
           />
         </div>
       </div>

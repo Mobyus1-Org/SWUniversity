@@ -1,3 +1,3 @@
-import PuzzlesPage from "@/pages/PuzzlesPage";
+import PuzzlesPage from "@/containers/PuzzlesPage";
 
 export default PuzzlesPage;
