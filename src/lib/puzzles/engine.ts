@@ -11,9 +11,10 @@ import {
   CardTraits,
   CardType,
 } from "@/server/engine/card-db/generated";
+import type { GameState as EngineGameState } from "@/server/engine/game";
 
 export type PlayerId = 1 | 2;
-export type PuzzleStatus = "playing" | "won" | "lost";
+export type PuzzleStatus = "playing" | "won" | "lost" | "draw";
 
 type RawCard = {
   cardId: string;
@@ -57,6 +58,7 @@ type RawDiscard = RawCardInPlay & {
 
 type RawGameState = {
   activePlayer: PlayerId;
+  defeatedPlayers?: PlayerId[];
   gamePhase: number;
   nextPlayId: number;
   player1: RawPlayerState;
@@ -106,8 +108,10 @@ export type PuzzleDiscard = RawDiscard & {
   discardEffect: "TTFREE" | "OTTFREE";
 };
 
-export type PuzzlePlayerState = {
-  base: PuzzleBase;
+type EnginePlayerState = EngineGameState["player1"];
+type EngineSharedGameFields = Pick<EngineGameState, "activePlayer" | "defeatedPlayers" | "gamePhase" | "currentRound" | "initiativePlayer" | "initiativeClaimed">;
+
+export type PuzzlePlayerState = Omit<EnginePlayerState, "leader" | "spaceArena" | "groundArena" | "resources" | "discard" | "deck" | "hand"> & {
   leader: PuzzleLeader;
   spaceArena: PuzzleUnit[];
   groundArena: PuzzleUnit[];
@@ -115,23 +119,14 @@ export type PuzzlePlayerState = {
   discard: PuzzleDiscard[];
   deck: RawCard[];
   hand: RawCard[];
-  supplemental: {
-    forceToken?: boolean;
-    creditTokens?: number;
-  };
   lastActionWasPass?: boolean;
 };
 
-export type PuzzleGameState = {
-  activePlayer: PlayerId;
-  gamePhase: number;
+export type PuzzleGameState = EngineSharedGameFields & {
   nextPlayId: number;
   player1: PuzzlePlayerState;
   player2: PuzzlePlayerState;
   currentEffects: Array<{ cardId: string; duration?: number; affectedPlayer?: PlayerId; targetPlayId?: string }>;
-  currentRound: number;
-  initiativePlayer: PlayerId;
-  initiativeClaimed: boolean;
   triggerBag: unknown[];
 };
 
@@ -300,6 +295,7 @@ function hydrateGame(rawGame: RawGameState): PuzzleGameState {
 
   return {
     activePlayer: rawGame.activePlayer,
+    defeatedPlayers: rawGame.defeatedPlayers ? cloneGame(rawGame.defeatedPlayers) : [],
     gamePhase: rawGame.gamePhase,
     nextPlayId: nextPlayIdRef.value,
     player1,
@@ -654,17 +650,43 @@ function resolveAttack(
 }
 
 function checkGameEnd(runtime: PuzzleRuntime): void {
+  if (runtime.status !== "playing") {
+    return;
+  }
+
   const player1BaseHp = CardHp(runtime.game.player1.base.cardId) ?? 30;
   const player2BaseHp = CardHp(runtime.game.player2.base.cardId) ?? 30;
+  const defeatedPlayers: PlayerId[] = [];
+
+  if (runtime.game.player1.base.damage >= player1BaseHp) {
+    defeatedPlayers.push(1);
+  }
 
   if (runtime.game.player2.base.damage >= player2BaseHp) {
+    defeatedPlayers.push(2);
+  }
+
+  runtime.game.defeatedPlayers = defeatedPlayers;
+
+  if (defeatedPlayers.length === 0) {
+    return;
+  }
+
+  if (defeatedPlayers.length === 2) {
+    runtime.status = "draw";
+    runtime.prompt = null;
+    logMessage(runtime, "Puzzle ended in a draw. Both bases were defeated.");
+    return;
+  }
+
+  if (defeatedPlayers[0] === 2) {
     runtime.status = "won";
     runtime.prompt = null;
     logMessage(runtime, "Puzzle complete. You destroyed the opponent base.");
     return;
   }
 
-  if (runtime.game.player1.base.damage >= player1BaseHp) {
+  if (defeatedPlayers[0] === 1) {
     runtime.status = "lost";
     runtime.prompt = null;
     logMessage(runtime, "Puzzle failed. Your base was defeated.");

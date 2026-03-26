@@ -3,6 +3,7 @@ import { Unit } from "./unit";
 
 export interface GameState {
   activePlayer: PlayerId;
+  defeatedPlayers: PlayerId[];
   gamePhase: GamePhase;
   player1: {
     base: Base;

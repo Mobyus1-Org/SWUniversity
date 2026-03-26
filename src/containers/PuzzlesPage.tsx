@@ -33,6 +33,9 @@ function formatPrompt(runtime: PuzzleRuntime): string {
   if (runtime.status === "lost") {
     return "Puzzle failed.";
   }
+  if (runtime.status === "draw") {
+    return "Puzzle ended in a draw.";
+  }
   return runtime.prompt?.title ?? "Choose an action by clicking a hand card, your leader, or a ready friendly unit.";
 }
 
@@ -275,6 +278,8 @@ function PuzzlesPage() {
     ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
     : runtime.status === "lost"
       ? "border-rose-400/40 bg-rose-500/15 text-rose-100"
+      : runtime.status === "draw"
+        ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
       : "border-white/10 bg-white/5 text-white";
 
   return <div className="relative z-10 mx-auto w-full max-w-[1920px] px-3 py-4 text-white sm:px-4 lg:px-6">
