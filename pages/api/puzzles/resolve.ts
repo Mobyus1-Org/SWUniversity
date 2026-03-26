@@ -1,15 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
-import { reducePuzzle, type PuzzleIntent, type PuzzleRuntime } from "@/lib/puzzles/engine";
 import { methodNotAllowed } from "@/server/auth/http";
-
-type ResolveRequestBody = {
-  runtime?: PuzzleRuntime;
-  intent?: PuzzleIntent;
-};
+import { resolveEngineAction, type EngineState, type PuzzleUiHints } from "@/server/puzzle/adapters/resolve-action";
 
 type ResolveResponseBody = {
-  runtime: PuzzleRuntime;
+  state: EngineState;
+  ui: PuzzleUiHints;
   serverDurationMs: number;
 };
 
@@ -21,16 +17,17 @@ export default function handler(request: NextApiRequest, response: NextApiRespon
   const start = performance.now();
 
   try {
-    const body = request.body as ResolveRequestBody;
-    if (!body?.runtime || !body?.intent) {
-      return response.status(400).json({ error: "Missing runtime or intent." });
+    const { state, action } = request.body;
+    if (!action) {
+      return response.status(400).json({ error: "Missing action." });
     }
 
-    const nextRuntime = reducePuzzle(body.runtime, body.intent);
+    const result = resolveEngineAction(state ?? undefined, action);
     const serverDurationMs = Math.round(performance.now() - start);
 
     return response.status(200).json({
-      runtime: nextRuntime,
+      state: result.state,
+      ui: result.ui,
       serverDurationMs,
     });
   } catch (error) {

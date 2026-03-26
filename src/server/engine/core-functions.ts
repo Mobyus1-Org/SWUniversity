@@ -311,16 +311,14 @@ export function LeaderAbilitiesIgnored(): boolean {
   return UnitIsInPlay("TWI_255"); //Brain Invaders
 }
 
-export function NumberOfResources(player: PlayerId, availableOnly = false): number {
+export function GetResources(player: PlayerId, availableOnly = false): CardInPlay[] {
   const game = GetGame();
   if (!game) {
-    return 0;
+    return [];
   }
 
   const playerObj = player === PlayerId.Player1 ? game.currentGameState.player1 : game.currentGameState.player2;
-  const resources = availableOnly ? playerObj.resources.filter(resource => resource.ready) : playerObj.resources;
-
-  return resources.length;
+  return availableOnly ? playerObj.resources.filter(resource => resource.ready) : playerObj.resources;
 }
 
 export function HasTheForce(player: PlayerId) {
@@ -364,7 +362,7 @@ export function UnitAttackedThisPhase(player: PlayerId, trait?: string): boolean
     return false;
   }
 
-  const attackedUnits = game.currentGameState.roundState.unitsAttachedThisPhase.filter(attached => attached.fromPlayer === player);
+  const attackedUnits = game.currentGameState.roundState.unitsAttackedThisPhase.filter(attached => attached.fromPlayer === player);
   if (trait) {
     /*
       not relevant now, but keep in mind that if a unit loses the Force trait during an attack,

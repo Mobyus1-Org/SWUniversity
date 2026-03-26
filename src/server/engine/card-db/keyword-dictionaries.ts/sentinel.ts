@@ -1,4 +1,4 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, InitiativePlayer, IsCoordinateActive, NumberOfResources, NumberOfUnitsInArena, PlayerControlsCardWithTrait, PlayerHasUnitInPlayWithMinimumPower, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "../../core-functions";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, InitiativePlayer, IsCoordinateActive, GetResources, NumberOfUnitsInArena, PlayerControlsCardWithTrait, PlayerHasUnitInPlayWithMinimumPower, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "../../core-functions";
 import { PlayerId } from "../../core-models";
 import { CardAspects } from "../generated";
 
@@ -73,7 +73,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
       case "SOR_211"://Gamorrean Guards
         return PlayerHasUnitWithAspectInPlay(player, "Cunning", true, playId);
       case "JTL_113"://Homestead Militia
-        return NumberOfResources(player) >= 6;
+        return GetResources(player).length >= 6;
       case "SOR_048"://Vigilant Honor Guards
         return !unit.IsDamaged();
       case "SOR_065"://Baze Melbus

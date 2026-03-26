@@ -1,20 +1,9 @@
 import React from "react";
-
 import { CardSubtitle, CardTitle } from "@/server/engine/card-db/generated";
 import { getCardImageLink, getSWUDBImageLink } from "@/util/func";
 import { globalBackgroundStyle, lightsaberGlow } from "@/util/style-const";
-import {
-  canClickBase,
-  canClickHandCard,
-  canClickLeader,
-  canClickUnit,
-  createPuzzleRuntime,
-  getCardName,
-  getPromptOptions,
-  hasSentinel as runtimeHasSentinel,
-  type PuzzleIntent,
-  type PuzzleRuntime,
-} from "@/lib/puzzles/engine";
+import { type PuzzleIntent, type PuzzleRuntime } from "@/lib/puzzles/types";
+import type { PuzzleUiHints } from "@/server/puzzle/adapters/puzzle-bridge";
 
 type PreviewState = {
   imageId: string;
@@ -191,51 +180,53 @@ function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 function PuzzlesPage() {
-  const [runtime, setRuntime] = React.useState<PuzzleRuntime>(() => createPuzzleRuntime());
+  // All hooks must be called unconditionally at the top
+
+  // Show all legal actions as clickable buttons for power users and discoverability
+  // (legalActions is now only used in renderLegalActions)
+  // All hooks must be called unconditionally at the top
+  const [runtime, setRuntime] = React.useState<PuzzleRuntime | null>(null);
+  const [ui, setUi] = React.useState<PuzzleUiHints | null>(null);
   const [isResolving, setIsResolving] = React.useState(false);
   const [lastActionMs, setLastActionMs] = React.useState<number | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [preview, setPreview] = React.useState<PreviewState | null>(null);
   const previewTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewPrimarySrc = preview ? getCardImageLink(preview.imageId) : "";
+  const previewFallbackSrc = preview ? getSWUDBImageLink(preview.imageId) : "";
+  const [previewImageSrc, setPreviewImageSrc] = React.useState(previewPrimarySrc);
 
+  // Clear preview timer
   const clearPreviewTimer = React.useCallback(() => {
     if (previewTimerRef.current) {
       clearTimeout(previewTimerRef.current);
       previewTimerRef.current = null;
     }
-  }, []);
+  }, [previewTimerRef]);
 
+  // Preview handlers
   const handlePreviewStart = React.useCallback((nextPreview: PreviewState) => {
     clearPreviewTimer();
     setPreview(null);
     previewTimerRef.current = setTimeout(() => {
       setPreview(nextPreview);
     }, 1200);
-  }, [clearPreviewTimer]);
-
+  }, [clearPreviewTimer, setPreview]);
   const handlePreviewEnd = React.useCallback(() => {
     clearPreviewTimer();
     setPreview(null);
-  }, [clearPreviewTimer]);
+  }, [clearPreviewTimer, setPreview]);
+  React.useEffect(() => () => { clearPreviewTimer(); }, [clearPreviewTimer]);
 
-  React.useEffect(() => () => {
-    clearPreviewTimer();
-  }, [clearPreviewTimer]);
-
+  // Always send intent to server, never mutate local game state
   const dispatch = React.useCallback((intent: PuzzleIntent) => {
-    if (isResolving) {
-      return;
-    }
-
+    if (isResolving || !runtime) return;
     setIsResolving(true);
     setActionError(null);
     const clientStart = performance.now();
-
-    void fetch("/api/engine/resolve-action", {
+    fetch("/api/engine/resolve-action", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ state: runtime, action: intent }),
     })
       .then(async (response) => {
@@ -243,37 +234,89 @@ function PuzzlesPage() {
           const payload = await response.json().catch(() => ({ error: "Unable to resolve action." }));
           throw new Error(payload.error ?? "Unable to resolve action.");
         }
-
-        return response.json() as Promise<{ state: PuzzleRuntime; serverDurationMs: number }>;
+        return response.json() as Promise<{ state: PuzzleRuntime; ui: PuzzleUiHints; serverDurationMs: number }>;
       })
       .then((payload) => {
         setRuntime(payload.state);
+        setUi(payload.ui);
         const endToEndMs = Math.round(performance.now() - clientStart);
         setLastActionMs(endToEndMs);
       })
       .catch((error) => {
-        console.error("engine action resolve failed", error);
         setActionError(error instanceof Error ? error.message : "Unable to resolve action.");
       })
-      .finally(() => {
-        setIsResolving(false);
-      });
-  }, [isResolving, runtime]);
+      .finally(() => setIsResolving(false));
+  }, [isResolving, runtime, setIsResolving, setActionError, setRuntime, setLastActionMs, setUi]);
+
+  const actionLabels: Record<string, string> = {
+    "click-hand": "Play Card",
+    "click-unit": "Attack with Unit",
+    "click-leader": "Use Leader Ability/Deploy",
+    "take-initiative": "Take Initiative",
+    "pass": "Pass",
+    "undo": "Undo",
+    "reset": "Reset Puzzle",
+  };
+
+  const renderLegalActions = () => {
+    const legalActions = ui?.legalActions ?? [];
+    return (
+      <div className="mb-4 flex flex-wrap gap-2">
+        {legalActions.map((action, i) => {
+          let label = actionLabels[action.type] || action.type;
+          if (action.type === "click-hand" && action.cardId) label += ` (${CardTitle(action.cardId)})`;
+          if (action.type === "click-unit" && action.cardId) label += ` (${CardTitle(action.cardId)})`;
+          return (
+            <button
+              key={i}
+              type="button"
+              className="rounded border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20"
+              onClick={() => dispatch(action as PuzzleIntent)}
+              disabled={isResolving}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // On mount, fetch initial state from server
+  React.useEffect(() => {
+    fetch("/api/engine/resolve-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state: null, action: { type: "reset" } }),
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed to load puzzle state");
+        return response.json() as Promise<{ state: PuzzleRuntime; ui: PuzzleUiHints }>;
+      })
+      .then((payload) => { setRuntime(payload.state); setUi(payload.ui); })
+      .catch(() => setActionError("Failed to load puzzle state"));
+  }, [setRuntime, setActionError]);
+
+  // Always call hooks before any return
+  React.useEffect(() => {
+    setPreviewImageSrc(previewPrimarySrc);
+  }, [previewPrimarySrc, setPreviewImageSrc]);
+
+  if (!runtime) {
+    return <div className="p-8 text-center text-white/80">Loading puzzle…</div>;
+  }
 
   const player = runtime.game.player1;
   const opponent = runtime.game.player2;
+  const selectablePlayIds = ui?.selectablePlayIds ?? [];
+  const selectableBaseForPlayer = ui?.selectableBaseForPlayer ?? [];
+  const uiCanClickLeader = ui?.canClickLeader ?? false;
+  const sentinelPlayIds = ui?.sentinelPlayIds ?? [];
+  const selectableHandIndices = ui?.selectableHandIndices ?? [];
   const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[opponent.discard.length - 1] : null;
   const latestPlayerDiscard = player.discard.length > 0 ? player.discard[player.discard.length - 1] : null;
-  const promptOptions = getPromptOptions(runtime);
   const hasPrompt = Boolean(runtime.prompt);
-  const previewPrimarySrc = preview ? getCardImageLink(preview.imageId) : "";
-  const previewFallbackSrc = preview ? getSWUDBImageLink(preview.imageId) : "";
-  const [previewImageSrc, setPreviewImageSrc] = React.useState(previewPrimarySrc);
-
-  React.useEffect(() => {
-    setPreviewImageSrc(previewPrimarySrc);
-  }, [previewPrimarySrc]);
-
+  const promptOptions = ui?.promptOptions ?? [];
   const statusTone = runtime.status === "won"
     ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
     : runtime.status === "lost"
@@ -283,6 +326,7 @@ function PuzzlesPage() {
       : "border-white/10 bg-white/5 text-white";
 
   return <div className="relative z-10 mx-auto w-full max-w-[1920px] px-3 py-4 text-white sm:px-4 lg:px-6">
+    {renderLegalActions()}
     <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-black/35 px-4 py-3 backdrop-blur-sm">
       <div>
         <h1 className="text-2xl font-black uppercase tracking-[0.24em] text-white sm:text-3xl">Puzzle Mode</h1>
@@ -377,15 +421,15 @@ function PuzzlesPage() {
                   {opponent.spaceArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
-                      selectable={canClickUnit(runtime, unit.playId)}
-                      onClick={() => dispatch({ type: "click-unit", playId: unit.playId })}
+                      selectable={selectablePlayIds.includes(unit.playId)}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
                       damage={unit.damage}
                       compact
                       arenaScale60
-                      sentinel={runtimeHasSentinel(runtime.game, unit)}
+                      sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
                   </div>)}
@@ -399,15 +443,15 @@ function PuzzlesPage() {
                   {opponent.groundArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
-                      selectable={canClickUnit(runtime, unit.playId)}
-                      onClick={() => dispatch({ type: "click-unit", playId: unit.playId })}
+                      selectable={selectablePlayIds.includes(unit.playId)}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
                       damage={unit.damage}
                       compact
                       arenaScale60
-                      sentinel={runtimeHasSentinel(runtime.game, unit)}
+                      sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
                   </div>)}
@@ -430,8 +474,8 @@ function PuzzlesPage() {
                   </div>}
                   <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={opponent.base.cardId}
-                    selectable={canClickBase(runtime, 2)}
-                    onClick={() => dispatch({ type: "click-base", player: 2 })}
+                    selectable={selectableBaseForPlayer.includes(2)}
+                    onClick={selectableBaseForPlayer.includes(2) ? () => dispatch({ type: "click-base", player: 2 }) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
@@ -450,15 +494,15 @@ function PuzzlesPage() {
                   {opponent.spaceArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
-                      selectable={canClickUnit(runtime, unit.playId)}
-                      onClick={() => dispatch({ type: "click-unit", playId: unit.playId })}
+                      selectable={selectablePlayIds.includes(unit.playId)}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
                       damage={unit.damage}
                       compact
                       arenaScale60
-                      sentinel={runtimeHasSentinel(runtime.game, unit)}
+                      sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
                   </div>)}
@@ -481,8 +525,8 @@ function PuzzlesPage() {
                   </div>}
                   <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={opponent.base.cardId}
-                    selectable={canClickBase(runtime, 2)}
-                    onClick={() => dispatch({ type: "click-base", player: 2 })}
+                    selectable={selectableBaseForPlayer.includes(2)}
+                    onClick={selectableBaseForPlayer.includes(2) ? () => dispatch({ type: "click-base", player: 2 }) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
@@ -505,8 +549,8 @@ function PuzzlesPage() {
                   </div>}
                   <CardVisual
                     cardId={opponent.base.cardId}
-                    selectable={canClickBase(runtime, 2)}
-                    onClick={() => dispatch({ type: "click-base", player: 2 })}
+                    selectable={selectableBaseForPlayer.includes(2)}
+                    onClick={selectableBaseForPlayer.includes(2) ? () => dispatch({ type: "click-base", player: 2 }) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
@@ -523,15 +567,15 @@ function PuzzlesPage() {
                   {opponent.groundArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
-                      selectable={canClickUnit(runtime, unit.playId)}
-                      onClick={() => dispatch({ type: "click-unit", playId: unit.playId })}
+                      selectable={selectablePlayIds.includes(unit.playId)}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
                       damage={unit.damage}
                       compact
                       arenaScale60
-                      sentinel={runtimeHasSentinel(runtime.game, unit)}
+                      sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
                   </div>)}
@@ -546,8 +590,8 @@ function PuzzlesPage() {
                 <div className="grid grid-cols-2 gap-2">
                   {!player.leader.deployed ? <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={player.leader.cardId}
-                    selectable={canClickLeader(runtime, 1)}
-                    onClick={() => dispatch({ type: "click-leader", player: 1 })}
+                    selectable={uiCanClickLeader}
+                    onClick={uiCanClickLeader ? () => dispatch({ type: "click-leader", player: 1 }) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     exhausted={!player.leader.ready}
@@ -560,7 +604,8 @@ function PuzzlesPage() {
                   </div>}
                   <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={player.base.cardId}
-                    selectable={false}
+                    selectable={selectableBaseForPlayer.includes(1)}
+                    onClick={selectableBaseForPlayer.includes(1) ? () => dispatch({ type: "click-base", player: 1 }) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
@@ -578,15 +623,15 @@ function PuzzlesPage() {
                     <CardVisual
                       cardId={unit.cardId}
                       imageId={unit.linkedLeader ? getPreviewImageId(unit.cardId, true) : unit.cardId}
-                      selectable={canClickUnit(runtime, unit.playId)}
-                      onClick={() => dispatch({ type: "click-unit", playId: unit.playId })}
+                      selectable={selectablePlayIds.includes(unit.playId)}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
                       damage={unit.damage}
                       compact
                       arenaScale60
-                      sentinel={runtimeHasSentinel(runtime.game, unit)}
+                      sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
                   </div>)}
@@ -601,15 +646,15 @@ function PuzzlesPage() {
                     <CardVisual
                       cardId={unit.cardId}
                       imageId={unit.linkedLeader ? getPreviewImageId(unit.cardId, true) : unit.cardId}
-                      selectable={canClickUnit(runtime, unit.playId)}
-                      onClick={() => dispatch({ type: "click-unit", playId: unit.playId })}
+                      selectable={selectablePlayIds.includes(unit.playId)}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
                       damage={unit.damage}
                       compact
                       arenaScale60
-                      sentinel={runtimeHasSentinel(runtime.game, unit)}
+                      sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
                   </div>)}
@@ -619,22 +664,22 @@ function PuzzlesPage() {
 
             <div className="hidden gap-2 xl:grid xl:grid-cols-[minmax(0,1fr)_165px_minmax(0,1fr)]">
               <div className="relative rounded-lg bg-black/20 p-2">
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Space</div>
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibond uppercase tracking-[0.2em] text-white/30">Space</div>
                 <div className="relative z-10 flex flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {player.spaceArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
                   {player.spaceArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
                       imageId={unit.linkedLeader ? getPreviewImageId(unit.cardId, true) : unit.cardId}
-                      selectable={canClickUnit(runtime, unit.playId)}
-                      onClick={() => dispatch({ type: "click-unit", playId: unit.playId })}
+                      selectable={selectablePlayIds.includes(unit.playId)}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
                       damage={unit.damage}
                       compact
                       arenaScale60
-                      sentinel={runtimeHasSentinel(runtime.game, unit)}
+                      sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
                   </div>)}
@@ -645,8 +690,8 @@ function PuzzlesPage() {
                 <div className="grid grid-cols-2 gap-2 xl:hidden">
                   {!player.leader.deployed ? <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={player.leader.cardId}
-                    selectable={canClickLeader(runtime, 1)}
-                    onClick={() => dispatch({ type: "click-leader", player: 1 })}
+                    selectable={uiCanClickLeader}
+                    onClick={uiCanClickLeader ? () => dispatch({ type: "click-leader", player: 1 }) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     exhausted={!player.leader.ready}
@@ -659,7 +704,8 @@ function PuzzlesPage() {
                   </div>}
                   <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={player.base.cardId}
-                    selectable={false}
+                    selectable={selectableBaseForPlayer.includes(1)}
+                    onClick={selectableBaseForPlayer.includes(1) ? () => dispatch({ type: "click-base", player: 1 }) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
@@ -670,7 +716,8 @@ function PuzzlesPage() {
                 <div className="hidden xl:space-y-2 xl:block">
                   <CardVisual
                     cardId={player.base.cardId}
-                    selectable={false}
+                    selectable={selectableBaseForPlayer.includes(1)}
+                    onClick={selectableBaseForPlayer.includes(1) ? () => dispatch({ type: "click-base", player: 1 }) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
@@ -679,8 +726,8 @@ function PuzzlesPage() {
                   />
                   {!player.leader.deployed ? <CardVisual
                     cardId={player.leader.cardId}
-                    selectable={canClickLeader(runtime, 1)}
-                    onClick={() => dispatch({ type: "click-leader", player: 1 })}
+                    selectable={uiCanClickLeader}
+                    onClick={uiCanClickLeader ? () => dispatch({ type: "click-leader", player: 1 }) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     exhausted={!player.leader.ready}
@@ -702,15 +749,15 @@ function PuzzlesPage() {
                     <CardVisual
                       cardId={unit.cardId}
                       imageId={unit.linkedLeader ? getPreviewImageId(unit.cardId, true) : unit.cardId}
-                      selectable={canClickUnit(runtime, unit.playId)}
-                      onClick={() => dispatch({ type: "click-unit", playId: unit.playId })}
+                      selectable={selectablePlayIds.includes(unit.playId)}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
                       damage={unit.damage}
                       compact
                       arenaScale60
-                      sentinel={runtimeHasSentinel(runtime.game, unit)}
+                      sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
                   </div>)}
@@ -765,30 +812,33 @@ function PuzzlesPage() {
             <div className="relative overflow-visible pb-2">
               <div className="overflow-x-auto overflow-y-visible xl:overflow-visible">
                 <div className="mx-auto flex w-max gap-2">
-              {player.hand.map((card, index) => <div key={`${card.cardId}-${index}`} className="relative w-[5rem] shrink-0 origin-bottom transition-transform duration-150 hover:z-30 hover:-translate-y-1 hover:scale-[1.3]">
-                <div className="xl:hidden">
-                  <CardVisual
-                    cardId={card.cardId}
-                    selectable={canClickHandCard(runtime, index)}
-                    onClick={() => dispatch({ type: "click-hand", handIndex: index })}
-                    onPreviewStart={handlePreviewStart}
-                    onPreviewEnd={handlePreviewEnd}
-                    square
-                    customGlowClass="shadow-[0_0_10px_rgba(var(--lightsaber-r),var(--lightsaber-g),var(--lightsaber-b),0.55)]"
-                  />
-                </div>
-                <div className="hidden xl:block">
-                  <CardVisual
-                    cardId={card.cardId}
-                    selectable={canClickHandCard(runtime, index)}
-                    onClick={() => dispatch({ type: "click-hand", handIndex: index })}
-                    onPreviewStart={handlePreviewStart}
-                    onPreviewEnd={handlePreviewEnd}
-                    handScaleHalf
-                    customGlowClass="shadow-[0_0_10px_rgba(var(--lightsaber-r),var(--lightsaber-g),var(--lightsaber-b),0.55)]"
-                  />
-                </div>
-              </div>)}
+              {player.hand.map((card, index) => {
+                const selectable = selectableHandIndices.includes(index);
+                return <div key={`${card.cardId}-${index}`} className="relative w-[5rem] shrink-0 origin-bottom transition-transform duration-150 hover:z-30 hover:-translate-y-1 hover:scale-[1.3]">
+                  <div className="xl:hidden">
+                    <CardVisual
+                      cardId={card.cardId}
+                      selectable={selectable}
+                      onClick={selectable ? () => dispatch({ type: "click-hand", handIndex: index }) : undefined}
+                      onPreviewStart={handlePreviewStart}
+                      onPreviewEnd={handlePreviewEnd}
+                      square
+                      customGlowClass="shadow-[0_0_10px_rgba(var(--lightsaber-r),var(--lightsaber-g),var(--lightsaber-b),0.55)]"
+                    />
+                  </div>
+                  <div className="hidden xl:block">
+                    <CardVisual
+                      cardId={card.cardId}
+                      selectable={selectable}
+                      onClick={selectable ? () => dispatch({ type: "click-hand", handIndex: index }) : undefined}
+                      onPreviewStart={handlePreviewStart}
+                      onPreviewEnd={handlePreviewEnd}
+                      handScaleHalf
+                      customGlowClass="shadow-[0_0_10px_rgba(var(--lightsaber-r),var(--lightsaber-g),var(--lightsaber-b),0.55)]"
+                    />
+                  </div>
+                </div>;
+              })}
                 </div>
               </div>
             </div>
@@ -809,12 +859,12 @@ function PuzzlesPage() {
           }
         }}
       />
-      <div className="mt-2 px-1 text-xs text-white/80">{preview.label ?? getCardName(preview.cardId)}</div>
+      <div className="mt-2 px-1 text-xs text-white/80">{preview.label ?? CardTitle(preview.cardId)}</div>
     </div> : null}
 
     {hasPrompt ? <div className="fixed bottom-3 left-1/2 z-40 w-[min(1100px,calc(100vw-1.5rem))] -translate-x-1/2 rounded-lg border border-white/20 bg-[rgba(8,12,26,0.94)] px-4 py-3 shadow-2xl backdrop-blur-sm">
       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">Prompt</div>
-      <p className="mt-1 text-sm text-white/90">{formatPrompt(runtime)}</p>
+      <p className="mt-1 text-sm text-white/90">{ui?.promptTitle ?? formatPrompt(runtime)}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {promptOptions.map((option) => <button
           key={option.id}

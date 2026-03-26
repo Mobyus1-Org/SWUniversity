@@ -13,6 +13,7 @@ export interface CardInPlay extends Card {
 
 export interface Base extends EpicActionCard {
   damage: number;
+  numUses: number;
 }
 
 export interface Leader extends EpicActionCard {

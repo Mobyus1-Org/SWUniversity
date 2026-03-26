@@ -6,7 +6,8 @@
     "base": {
       "cardId": "SOR_022",
       "epicActionUsed": false,
-      "damage": 23
+      "damage": 23,
+      "numUses": 0
     },
     "leader": {
       "cardId": "SOR_014",
@@ -110,7 +111,8 @@
     "base": {
       "cardId": "SOR_025",
       "epicActionUsed": false,
-      "damage": 11
+      "damage": 11,
+      "numUses": 0
     },
     "leader": {
       "cardId": "SHD_014",

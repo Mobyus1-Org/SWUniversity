@@ -1,5 +1,5 @@
 import { CardHp, CardPower, CardType } from "./card-db/generated";
-import { HasBounty } from "./card-db/keyword-dictionaries.ts/bounty";
+import { CountBounties } from "./card-db/keyword-dictionaries.ts/bounty";
 import { GetCurrentEffectsForPlayer, LeaderAbilitiesIgnored } from "./core-functions";
 import { CardInPlay, PlayerId } from "./core-models";
 
@@ -13,6 +13,7 @@ export class Unit implements CardInPlay {
   upgrades: CardInPlay[];
   captives: Unit[];
   isClone?: boolean;
+  numUses: number;
 
   constructor(cardId: string, playId: string, player: PlayerId) {
     this.cardId = cardId;
@@ -23,6 +24,7 @@ export class Unit implements CardInPlay {
     this.damage = 0;
     this.upgrades = [];
     this.captives = [];
+    this.numUses = 1;
   }
 
   IsLeader(): boolean {
@@ -106,8 +108,8 @@ export class Unit implements CardInPlay {
   }
 
   HasBounty(): boolean {
-    if (HasBounty(this.cardId)) return true;
-    if (this.upgrades.some(u => HasBounty(u.cardId))) return true;
+    if (CountBounties(this.cardId) > 0) return true;
+    if (this.upgrades.some(u => CountBounties(u.cardId) > 0)) return true;
     for (const effect of GetCurrentEffectsForPlayer(this.controller)) {
       if (effect.targetPlayId && effect.targetPlayId !== this.playId) continue;
 
@@ -119,5 +121,9 @@ export class Unit implements CardInPlay {
     }
 
     return false;
+  }
+
+  CanUseLimitedAbility(): boolean {
+    return this.numUses > 0;
   }
 }

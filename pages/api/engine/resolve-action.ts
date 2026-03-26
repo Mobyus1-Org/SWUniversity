@@ -1,15 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
 import { methodNotAllowed } from "@/server/auth/http";
-import { resolveEngineAction, type EngineAction, type EngineState } from "@/server/engine/adapters/resolve-action";
-
-type ResolveActionRequestBody = {
-  state?: EngineState;
-  action?: EngineAction;
-};
+import { resolveEngineAction, type EngineState, type PuzzleUiHints } from "@/server/puzzle/adapters/resolve-action";
 
 type ResolveActionResponseBody = {
   state: EngineState;
+  ui: PuzzleUiHints;
   serverDurationMs: number;
 };
 
@@ -24,16 +20,18 @@ export default function handler(
   const start = performance.now();
 
   try {
-    const body = request.body as ResolveActionRequestBody;
-    if (!body?.state || !body?.action) {
-      return response.status(400).json({ error: "Missing state or action." });
+    const { state, action } = request.body;
+    if (!action) {
+      return response.status(400).json({ error: "Missing action." });
     }
 
-    const nextState = resolveEngineAction(body.state, body.action);
+    // If state is null, treat as new game
+    const result = resolveEngineAction(state ?? undefined, action);
     const serverDurationMs = Math.round(performance.now() - start);
 
     return response.status(200).json({
-      state: nextState,
+      state: result.state,
+      ui: result.ui,
       serverDurationMs,
     });
   } catch (error) {
