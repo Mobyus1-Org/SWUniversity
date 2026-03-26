@@ -4,6 +4,8 @@ import { getCardImageLink, getSWUDBImageLink } from "@/util/func";
 import { globalBackgroundStyle, lightsaberGlow } from "@/util/style-const";
 import { type PuzzleIntent, type PuzzleRuntime } from "@/lib/puzzles/types";
 import type { PuzzleUiHints } from "@/server/puzzle/adapters/puzzle-bridge";
+import { LoadPuzzlePanel } from "@/components/Shared/LoadPuzzlePanel";
+import { PuzzleBuilderPanel } from "@/components/Shared/PuzzleBuilderPanel";
 
 type PreviewState = {
   imageId: string;
@@ -71,7 +73,7 @@ function CardVisual({
   const primarySrc = square ? `/assets/cards/square/${pattern}.webp` : getCardImageLink(pattern);
   const fallbackSrc = square ? getCardImageLink(pattern) : getSWUDBImageLink(pattern);
   const [imageSrc, setImageSrc] = React.useState(primarySrc);
-  const title = CardTitle(cardId) ?? cardId;
+  const title = CardTitle(cardId);
   const subtitle = CardSubtitle(cardId);
 
   React.useEffect(() => {
@@ -146,7 +148,7 @@ function FaceDownResource({
 }) {
   return <div
     className={`overflow-hidden rounded-xl border border-white/10 bg-black/40 transition-transform duration-200 ${exhausted ? "rotate-90" : ""} ${selectable ? lightsaberGlow : ""}`}
-    onMouseEnter={() => onPreviewStart({ imageId: cardId, cardId, label: CardTitle(cardId) ?? cardId })}
+    onMouseEnter={() => onPreviewStart({ imageId: cardId, cardId, label: CardTitle(cardId) })}
     onMouseLeave={onPreviewEnd}
   >
     <img src="/assets/SWUniversity_Cardback.png" alt="Resource card back" className="h-12 w-12 object-cover object-center" />
@@ -179,11 +181,7 @@ function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
   </div>;
 }
 
-function PuzzlesPage() {
-  // All hooks must be called unconditionally at the top
-
-  // Show all legal actions as clickable buttons for power users and discoverability
-  // (legalActions is now only used in renderLegalActions)
+function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean }) {
   // All hooks must be called unconditionally at the top
   const [runtime, setRuntime] = React.useState<PuzzleRuntime | null>(null);
   const [ui, setUi] = React.useState<PuzzleUiHints | null>(null);
@@ -191,6 +189,9 @@ function PuzzlesPage() {
   const [lastActionMs, setLastActionMs] = React.useState<number | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [preview, setPreview] = React.useState<PreviewState | null>(null);
+  const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
+  const [showClosePuzzleConfirm, setShowClosePuzzleConfirm] = React.useState(false);
+  const [selectedPuzzleN, setSelectedPuzzleN] = React.useState<number | null>(null);
   const previewTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewPrimarySrc = preview ? getCardImageLink(preview.imageId) : "";
   const previewFallbackSrc = preview ? getSWUDBImageLink(preview.imageId) : "";
@@ -248,54 +249,23 @@ function PuzzlesPage() {
       .finally(() => setIsResolving(false));
   }, [isResolving, runtime, setIsResolving, setActionError, setRuntime, setLastActionMs, setUi]);
 
-  const actionLabels: Record<string, string> = {
-    "click-hand": "Play Card",
-    "click-unit": "Attack with Unit",
-    "click-leader": "Use Leader Ability/Deploy",
-    "take-initiative": "Take Initiative",
-    "pass": "Pass",
-    "undo": "Undo",
-    "reset": "Reset Puzzle",
-  };
-
-  const renderLegalActions = () => {
-    const legalActions = ui?.legalActions ?? [];
-    return (
-      <div className="mb-4 flex flex-wrap gap-2">
-        {legalActions.map((action, i) => {
-          let label = actionLabels[action.type] || action.type;
-          if (action.type === "click-hand" && action.cardId) label += ` (${CardTitle(action.cardId)})`;
-          if (action.type === "click-unit" && action.cardId) label += ` (${CardTitle(action.cardId)})`;
-          return (
-            <button
-              key={i}
-              type="button"
-              className="rounded border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20"
-              onClick={() => dispatch(action as PuzzleIntent)}
-              disabled={isResolving}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-    );
-  };
-
-  // On mount, fetch initial state from server
-  React.useEffect(() => {
-    fetch("/api/engine/resolve-action", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ state: null, action: { type: "reset" } }),
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Failed to load puzzle state");
-        return response.json() as Promise<{ state: PuzzleRuntime; ui: PuzzleUiHints }>;
+  const loadPuzzle = React.useCallback((n: number) => {
+    setIsResolving(true);
+    setActionError(null);
+    fetch(`/api/internal/test-puzzles?n=${n}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error((await r.json()).error ?? "Load failed");
+        return r.json() as Promise<{ state: PuzzleRuntime; ui: PuzzleUiHints }>;
       })
-      .then((payload) => { setRuntime(payload.state); setUi(payload.ui); })
-      .catch(() => setActionError("Failed to load puzzle state"));
-  }, [setRuntime, setActionError]);
+      .then(({ state, ui }) => {
+        setRuntime(state);
+        setUi(ui);
+      })
+      .catch((err: unknown) => {
+        setActionError(err instanceof Error ? err.message : "Load failed.");
+      })
+      .finally(() => setIsResolving(false));
+  }, [setIsResolving, setActionError, setRuntime, setUi]);
 
   // Always call hooks before any return
   React.useEffect(() => {
@@ -303,7 +273,35 @@ function PuzzlesPage() {
   }, [previewPrimarySrc, setPreviewImageSrc]);
 
   if (!runtime) {
-    return <div className="p-8 text-center text-white/80">Loading puzzle…</div>;
+    return <div className="relative z-10 mx-auto w-full max-w-[1920px] px-3 py-4 text-white sm:px-4 lg:px-6">
+      {showBuilderPanelOpen && showBuilderTools ? (
+        <PuzzleBuilderPanel
+          onClose={() => setShowBuilderPanelOpen(false)}
+          onSaved={(n) => {
+            setShowBuilderPanelOpen(false);
+          }}
+        />
+      ) : null}
+      {showBuilderTools ? (
+        <div className="mb-3 flex items-start gap-4 rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+          <LoadPuzzlePanel
+            onPuzzleLoaded={(n, state, loadedUi) => {
+              setSelectedPuzzleN(n);
+              setRuntime(state);
+              setUi(loadedUi);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowBuilderPanelOpen(true)}
+            className="shrink-0 self-start rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500/25"
+          >
+            Build New Puzzle
+          </button>
+        </div>
+      ) : null}
+      <p className="mt-4 text-center text-sm text-white/60">Select a puzzle to get started.</p>
+    </div>;
   }
 
   const player = runtime.game.player1;
@@ -326,12 +324,60 @@ function PuzzlesPage() {
       : "border-white/10 bg-white/5 text-white";
 
   return <div className="relative z-10 mx-auto w-full max-w-[1920px] px-3 py-4 text-white sm:px-4 lg:px-6">
-    {renderLegalActions()}
-    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-black/35 px-4 py-3 backdrop-blur-sm">
+    {showBuilderPanelOpen && showBuilderTools ? (
+      <PuzzleBuilderPanel
+        onClose={() => setShowBuilderPanelOpen(false)}
+        onSaved={(n) => {
+          setShowBuilderPanelOpen(false);
+          setActionError(`Puzzle ${n} saved.`);
+        }}
+      />
+    ) : null}
+    {showBuilderTools && !runtime ? (
+      <div className="mb-3 flex items-start gap-4 rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+        <LoadPuzzlePanel
+          onPuzzleLoaded={(n, state, loadedUi) => {
+            setSelectedPuzzleN(n);
+            setRuntime(state);
+            setUi(loadedUi);
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setShowBuilderPanelOpen(true)}
+          className="shrink-0 self-start rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500/25"
+        >
+          Build New Puzzle
+        </button>
+      </div>
+    ) : null}
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/35 px-4 py-3 backdrop-blur-sm">
       <div>
         <h1 className="text-2xl font-black uppercase tracking-[0.24em] text-white sm:text-3xl">Puzzle Mode</h1>
         <p className="mt-1 text-xs text-white/65 sm:text-sm">Board-first tactical sandbox. Opponent already has initiative.</p>
       </div>
+      {showClosePuzzleConfirm ? (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-white/70">Close puzzle?</span>
+          <button
+            type="button"
+            onClick={() => { setRuntime(null); setUi(null); setShowClosePuzzleConfirm(false); setActionError(null); }}
+            className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-500/35"
+          >OK</button>
+          <button
+            type="button"
+            onClick={() => setShowClosePuzzleConfirm(false)}
+            className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
+          >Cancel</button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          aria-label="Close puzzle"
+          onClick={() => setShowClosePuzzleConfirm(true)}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/10 text-lg font-bold text-white/60 transition hover:bg-white/20 hover:text-white"
+        >✕</button>
+      )}
     </div>
 
     <div className="relative">
@@ -351,7 +397,7 @@ function PuzzlesPage() {
             <button type="button" onClick={() => dispatch({ type: "pass" })} disabled={isResolving || runtime.status !== "playing" || !!runtime.prompt} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass</button>
             <button type="button" onClick={() => dispatch({ type: "take-initiative" })} disabled={isResolving || runtime.game.initiativeClaimed || runtime.status !== "playing" || !!runtime.prompt} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Initiative</button>
             <div className="h-3" />
-            <button type="button" onClick={() => dispatch({ type: "reset" })} disabled={isResolving} className="rounded-lg border border-white/15 bg-rose-500/20 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-rose-500/30">Reset</button>
+            <button type="button" onClick={() => { if (selectedPuzzleN !== null) loadPuzzle(selectedPuzzleN); }} disabled={isResolving || selectedPuzzleN === null} className="rounded-lg border border-white/15 bg-rose-500/20 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40">Reset</button>
           </div>
           <div className={`mt-1 text-[10px] ${lastActionMs !== null && lastActionMs > 600 ? "text-amber-200" : "text-white/55"}`}>
             {isResolving ? "Resolving..." : lastActionMs !== null ? `Last action ${lastActionMs} ms` : "Last action --"}
@@ -885,7 +931,7 @@ function PuzzlesPage() {
           <button type="button" onClick={() => dispatch({ type: "pass" })} disabled={isResolving || runtime.status !== "playing" || !!runtime.prompt} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass to Regroup Draw</button>
           <button type="button" onClick={() => dispatch({ type: "take-initiative" })} disabled={isResolving || runtime.game.initiativeClaimed || runtime.status !== "playing" || !!runtime.prompt} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Take Initiative</button>
           <div className="hidden sm:block h-3" />
-          <button type="button" onClick={() => dispatch({ type: "reset" })} disabled={isResolving} className="rounded-xl border border-white/15 bg-rose-500/20 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40">Reset Puzzle</button>
+          <button type="button" onClick={() => { if (selectedPuzzleN !== null) loadPuzzle(selectedPuzzleN); }} disabled={isResolving || selectedPuzzleN === null} className="rounded-xl border border-white/15 bg-rose-500/20 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40">Reset Puzzle</button>
         </div>
         <div className={`mt-1 text-xs ${lastActionMs !== null && lastActionMs > 600 ? "text-amber-200" : "text-white/55"}`}>
           {isResolving ? "Resolving..." : lastActionMs !== null ? `Last action ${lastActionMs} ms` : "Last action --"}

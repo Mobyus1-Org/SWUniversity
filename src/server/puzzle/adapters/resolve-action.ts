@@ -10,13 +10,11 @@ export function resolveEngineAction(
   state: EngineState | undefined,
   action: EngineAction,
 ): { state: EngineState; ui: PuzzleUiHints } {
-  let nextState: EngineState;
-  if (state?.game) {
-    // Run dispatch with the singleton active so HasSentinel (and other
-    // keyword functions) work correctly during action processing.
-    nextState = withPuzzleGame(state.game, () => dispatchPuzzleAction(state, action));
-  } else {
-    nextState = dispatchPuzzleAction(state, action);
+  if (!state?.game) {
+    throw new Error("No active puzzle state.");
   }
+  // Run dispatch with the singleton active so HasSentinel (and other
+  // keyword functions) work correctly during action processing.
+  const nextState: EngineState = withPuzzleGame(state.game, () => dispatchPuzzleAction(state, action));
   return { state: nextState, ui: computePuzzleUiHints(nextState) };
 }

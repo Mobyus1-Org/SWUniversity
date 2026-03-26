@@ -176,4 +176,5 @@ export type GameEffect =
   | { type: "give-experience"; targetPlayId: string }
   | { type: "capture-unit"; captorPlayId: string; targetPlayId: string }
   | { type: "grant-sentinel"; targetPlayId: string; duration: "phase" | "round" | "permanent" }
+  | { type: "grant-shield"; targetPlayId: string }
   | { type: "no-op" };

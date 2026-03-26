@@ -23468,48 +23468,48 @@ const cardArena: Record<string, string> = {
   "TWI_T02": "Ground",
 };
 
-export function CardTitle(cardId: string): string | undefined {
-  return cardTitle[cardId];
+export function CardTitle(cardId: string): string {
+  return cardTitle[cardId] ?? "";
 }
 
-export function CardSubtitle(cardId: string): string | undefined {
-  return cardSubtitle[cardId];
+export function CardSubtitle(cardId: string): string {
+  return cardSubtitle[cardId] ?? "";
 }
 
-export function CardCost(cardId: string): number | undefined {
-  return cardCost[cardId];
+export function CardCost(cardId: string): number {
+  return cardCost[cardId] ?? 0;
 }
 
-export function CardHp(cardId: string): number | undefined {
-  return cardHp[cardId];
+export function CardHp(cardId: string): number {
+  return cardHp[cardId] ?? 0;
 }
 
-export function CardPower(cardId: string): number | undefined {
-  return cardPower[cardId];
+export function CardPower(cardId: string): number {
+  return cardPower[cardId] ?? 0;
 }
 
-export function CardUpgradeHp(cardId: string): number | undefined {
-  return cardUpgradeHp[cardId];
+export function CardUpgradeHp(cardId: string): number {
+  return cardUpgradeHp[cardId] ?? 0;
 }
 
-export function CardUpgradePower(cardId: string): number | undefined {
-  return cardUpgradePower[cardId];
+export function CardUpgradePower(cardId: string): number {
+  return cardUpgradePower[cardId] ?? 0;
 }
 
-export function CardType(cardId: string): string | undefined {
-  return cardType[cardId];
+export function CardType(cardId: string): string {
+  return cardType[cardId] ?? "";
 }
 
-export function CardType2(cardId: string): string | undefined {
-  return cardType2[cardId];
+export function CardType2(cardId: string): string {
+  return cardType2[cardId] ?? "";
 }
 
-export function CardSet(cardId: string): string | undefined {
-  return cardSet[cardId];
+export function CardSet(cardId: string): string {
+  return cardSet[cardId] ?? "";
 }
 
-export function CardRarity(cardId: string): string | undefined {
-  return cardRarity[cardId];
+export function CardRarity(cardId: string): string {
+  return cardRarity[cardId] ?? "";
 }
 
 export function CardIsUnique(cardId: string): boolean {
@@ -23524,16 +23524,20 @@ export function CardHasWhenDefeated(cardId: string): boolean {
   return cardHasWhenDefeated[cardId] === true;
 }
 
-export function CardAspects(cardId: string): string | undefined {
-  return cardAspects[cardId];
+export function CardAspects(cardId: string): string[] {
+  return cardAspects[cardId]?.split(",").map((item) => item.trim()).filter(Boolean) ?? [];
 }
 
-export function CardTraits(cardId: string): string | undefined {
-  return cardTraits[cardId];
+export function CardTraits(cardId: string): string[] {
+  return cardTraits[cardId].split(",").map((item) => item.trim()).filter(Boolean) ?? [];
 }
 
-export function CardArena(cardId: string): string | undefined {
-  return cardArena[cardId];
+export function CardArena(cardId: string): string {
+  return cardArena[cardId] ?? "";
+}
+
+export function GetAllCardIds(): string[] {
+  return Object.keys(cardTitle);
 }
 
 export const cardDbGenerationMetadata = {

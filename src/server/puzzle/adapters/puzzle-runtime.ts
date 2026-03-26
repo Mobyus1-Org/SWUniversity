@@ -7,7 +7,7 @@
  * API request/response cycle.
  */
 
-import rawTestPuzzle from "@/test-puzzle.json";
+import rawTestPuzzle from "@/server/_test-puzzles/test-puzzle.1.json";
 import type {
   PlayerId,
   PuzzleDiscard,
@@ -75,7 +75,7 @@ type RawPlayerState = {
   };
 };
 
-type RawGameState = {
+export type RawGameState = {
   activePlayer: PlayerId;
   defeatedPlayers?: PlayerId[];
   gamePhase: number;
@@ -164,7 +164,7 @@ function hydratePlayer(
   };
 }
 
-function hydrateGame(rawGame: RawGameState): PuzzleGameState {
+export function hydrateGame(rawGame: RawGameState): PuzzleGameState {
   const nextPlayIdRef = { value: rawGame.nextPlayId };
   const player1 = hydratePlayer(rawGame.player1, nextPlayIdRef);
   const player2 = hydratePlayer(rawGame.player2, nextPlayIdRef);

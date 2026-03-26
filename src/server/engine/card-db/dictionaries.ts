@@ -12,7 +12,7 @@ import { HasSaboteur } from "./keyword-dictionaries.ts/saboteur";
 import { HasSentinel } from "./keyword-dictionaries.ts/sentinel";
 import { HasShielded } from "./keyword-dictionaries.ts/shielded";
 import { ExploitAmount } from "./keyword-dictionaries.ts/TODO_exploit";
-import { HasOverwhelm } from "./keyword-dictionaries.ts/TODO_overwhelm";
+import { HasOverwhelm } from "./keyword-dictionaries.ts/overwhelm";
 import { RaidAmount } from "./keyword-dictionaries.ts/TODO_raid";
 import { SmuggleCost } from "./keyword-dictionaries.ts/TODO_smuggle";
 

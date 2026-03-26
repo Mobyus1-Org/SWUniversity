@@ -120,9 +120,11 @@ function bridgeGameState(ps: PuzzleGameState): GameState {
     initiativeClaimed: ps.initiativeClaimed,
     roundState: {
       cardsPlayedThisPhase: [],
-      cardsDefeatedThisPhase: [],
+      cardsEnteredPlayThisPhase: [],
+      cardsLeftPlayThisPhase: [],
       unitsAttackedThisPhase: [],
     },
+    triggerBag: [],
   };
 }
 
@@ -147,23 +149,18 @@ export function withPuzzleGame<T>(ps: PuzzleGameState, fn: () => T): T {
 // ---------------------------------------------------------------------------
 // Pure helpers (no singleton needed)
 // ---------------------------------------------------------------------------
-
-function splitCsv(value: string | undefined): string[] {
-  return value ? value.split(",").map((s) => s.trim()).filter(Boolean) : [];
-}
-
 function cardAspectPenalty(ps: PuzzleGameState, player: 1 | 2, cardId: string): number {
   const p = player === 1 ? ps.player1 : ps.player2;
   const provided = [
-    ...splitCsv(CardAspects(p.base.cardId)),
-    ...splitCsv(CardAspects(p.leader.cardId)),
+    ...CardAspects(p.base.cardId),
+    ...CardAspects(p.leader.cardId),
   ];
   const remaining = new Map<string, number>();
   for (const a of provided) {
     remaining.set(a, (remaining.get(a) ?? 0) + 1);
   }
   let penalty = 0;
-  for (const a of splitCsv(CardAspects(cardId))) {
+  for (const a of CardAspects(cardId)) {
     const count = remaining.get(a) ?? 0;
     if (count > 0) {
       remaining.set(a, count - 1);
@@ -238,7 +235,9 @@ function computeSelectables(runtime: PuzzleRuntime): {
     const leader = p1.leader;
     const canUseAbility = !leader.deployed && leader.ready;
     const leaderDeployCost = effectiveCardCost(game, 1, leader.cardId);
-    const canDeploy = !leader.deployed && !leader.epicActionUsed && readyRsrc >= leaderDeployCost;
+    // Deploy cost uses total resources (ready + exhausted) — SWU Epic Action rule.
+    const totalRsrc = (game.player1).resources.length;
+    const canDeploy = !leader.deployed && !leader.epicActionUsed && totalRsrc >= leaderDeployCost;
 
     return {
       selectablePlayIds: readyUnits.map((u) => u.playId),

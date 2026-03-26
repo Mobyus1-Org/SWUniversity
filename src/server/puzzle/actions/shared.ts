@@ -21,6 +21,7 @@ import {
   CardType,
 } from "@/server/engine/card-db/generated";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
+import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { PlayerId as ServerPlayerId } from "@/server/engine/core-models";
 import type {
   AttackSource,
@@ -63,11 +64,6 @@ export type {
 
 export function cloneGame<T>(value: T): T {
   return structuredClone(value);
-}
-
-export function splitCsv(value: string | undefined): string[] {
-  if (!value) return [];
-  return value.split(",").map((item) => item.trim()).filter(Boolean);
 }
 
 export function otherPlayer(player: PlayerId): PlayerId {
@@ -202,12 +198,24 @@ function getRaidValue(cardId: string): number {
   return cardId === "SOR_141" ? 2 : 0;
 }
 
-export function hasOverwhelm(cardId: string): boolean {
-  return cardId === "SOR_145";
+// Delegates to the engine's HasOverwhelm (requires the game singleton to be
+// active — always true when called from resolveAttack inside withPuzzleGame).
+export function hasOverwhelm(attacker: PuzzleUnit, defender?: PuzzleUnit): boolean {
+  try {
+    return !!HasOverwhelm(
+      attacker.cardId,
+      attacker.playId,
+      toServerId(attacker.controller),
+      defender?.playId,
+      defender ? toServerId(defender.controller) : undefined,
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function hasTrait(cardId: string, trait: string): boolean {
-  return splitCsv(CardTraits(cardId)).includes(trait);
+  return CardTraits(cardId).includes(trait);
 }
 
 export function getUnitCurrentHp(
@@ -244,15 +252,15 @@ export function getCardAspectPenalty(
 ): number {
   const ps = getPlayerState(game, player);
   const provided = [
-    ...splitCsv(CardAspects(ps.base.cardId)),
-    ...splitCsv(CardAspects(ps.leader.cardId)),
+    ...CardAspects(ps.base.cardId),
+    ...CardAspects(ps.leader.cardId),
   ];
   const counts = new Map<string, number>();
   for (const aspect of provided) {
     counts.set(aspect, (counts.get(aspect) ?? 0) + 1);
   }
   let missing = 0;
-  for (const aspect of splitCsv(CardAspects(cardId))) {
+  for (const aspect of CardAspects(cardId)) {
     const remaining = counts.get(aspect) ?? 0;
     if (remaining > 0) {
       counts.set(aspect, remaining - 1);
@@ -303,8 +311,7 @@ export function canLeaderUseAbility(
 }
 
 /**
- * Phase 2 fix: uses actual card cost + ready resources rather than the
- * stub `resources.length >= 4` from engine.ts.
+ * Deploy cost uses total resources (ready + exhausted) — SWU Epic Action rule.
  */
 export function canLeaderDeploy(
   game: PuzzleGameState,
@@ -314,7 +321,7 @@ export function canLeaderDeploy(
   return (
     !leader.deployed &&
     !leader.epicActionUsed &&
-    getReadyResources(game, player).length >= getCardPlayCost(game, player, leader.cardId)
+    getPlayerState(game, player).resources.length >= getCardPlayCost(game, player, leader.cardId)
   );
 }
 
@@ -580,7 +587,7 @@ export function resolveAttack(
       `${CardTitle(attacker.cardId) ?? attacker.cardId} attacked ${CardTitle(defender.cardId) ?? defender.cardId}.`,
     );
 
-    if (hasOverwhelm(attacker.cardId)) {
+    if (hasOverwhelm(attacker, defender)) {
       const excess = Math.max(attackerPower - defenderHpBefore, 0);
       if (excess > 0) {
         dealBaseDamage(runtime.game, otherPlayer(attacker.controller), excess);

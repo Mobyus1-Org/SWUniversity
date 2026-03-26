@@ -286,7 +286,7 @@ export function TraitContains(cardId: string, trait: string, player?: PlayerId, 
     }
   }
 
-  return CardTraits(cardId)?.includes(trait) ?? false;
+  return CardTraits(cardId).includes(trait) ?? false;
 }
 
 export function IsCoordinateActive(player: PlayerId): boolean {
@@ -348,7 +348,7 @@ export function UnitWasDefeatedThisPhase(player: PlayerId, trait?: string): bool
     return false;
   }
 
-  const defeatedUnits = game.currentGameState.roundState.cardsDefeatedThisPhase.filter(defeated => defeated.fromPlayer === player);
+  const defeatedUnits = game.currentGameState.roundState.cardsLeftPlayThisPhase.filter(defeated => defeated.fromPlayer === player && (defeated.reason === "defeated" || defeated.reason === "token-defeated"));
   if (trait) {
     return defeatedUnits.some(defeated => TraitContains(defeated.cardId, trait));
   }

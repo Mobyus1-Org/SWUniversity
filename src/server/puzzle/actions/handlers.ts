@@ -8,7 +8,6 @@
  */
 
 import { CardTitle } from "@/server/engine/card-db/generated";
-import { createPuzzleRuntime } from "@/server/puzzle/adapters/puzzle-runtime";
 import type { PuzzleIntent, PuzzleRuntime, PlayerId } from "@/lib/puzzles/types";
 
 import {
@@ -454,14 +453,10 @@ export function handleTakeInitiative(runtime: PuzzleRuntime): PuzzleRuntime {
 // ---------------------------------------------------------------------------
 
 export function dispatchPuzzleAction(
-  runtime: PuzzleRuntime | undefined,
+  runtime: PuzzleRuntime,
   intent: PuzzleIntent,
 ): PuzzleRuntime {
-  if (intent.type === "reset") {
-    return createPuzzleRuntime();
-  }
-
-  const rt = runtime ?? createPuzzleRuntime();
+  const rt = runtime;
 
   if (intent.type === "undo") {
     const previous = rt.history[rt.history.length - 1];

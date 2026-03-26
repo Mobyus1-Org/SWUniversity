@@ -10,6 +10,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "vitest run",
     "lint": "eslint .",
     "download-images": "node scripts/download-images.js",
     "convert-images": "node scripts/convert-to-webp.js"
@@ -40,6 +41,7 @@
     "globals": "^16.4.0",
     "sharp": "^0.34.5",
     "typescript": "~5.8.3",
-    "typescript-eslint": "^8.57.1"
+    "typescript-eslint": "^8.57.1",
+    "vitest": "^4.1.2"
   }
 }

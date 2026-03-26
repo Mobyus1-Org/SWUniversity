@@ -31,6 +31,7 @@ export type PuzzleBase = {
   cardId: string;
   epicActionUsed: boolean;
   damage: number;
+  numUses: number;
 };
 
 export type PuzzleLeader = {
