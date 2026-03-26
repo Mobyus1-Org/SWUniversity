@@ -98,11 +98,7 @@ export function isHorizontalCard(cardName: string): boolean {
 }
 
 export function getCardImageLink(cardPattern: string): string {
-  if (cardPattern.endsWith("_BACK")) {
-    return `/assets/cards/full/${cardPattern}.webp`;
-  }
-
-  return `/assets/swudb-import/${cardPattern}.webp`;
+  return `/assets/cards/full/${cardPattern}.webp`;
 }
 
 export function getSWUDBImageLink(cardPattern: string): string {
