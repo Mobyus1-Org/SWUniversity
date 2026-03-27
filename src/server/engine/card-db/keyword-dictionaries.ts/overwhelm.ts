@@ -1,5 +1,5 @@
 import { GetUnitInPlay, LeaderAbilitiesIgnored, GetUnitsForPlayer, IsCoordinateActive, TraitContains, GetCurrentEffectsForPlayer, PlayerHasUnitWithTraitInPlay, HasTheForce, GetPlayIdForUniqueUnitInPlay } from "../../core-functions";
-import { PlayerId } from "../../core-models";
+import { PlayerId } from "@/lib/engine/core-models";
 import { CardCost } from "../generated";
 
 /**

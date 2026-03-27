@@ -1,8 +1,9 @@
-import { GameStateBuilder } from "@/server/puzzle/game-state-builder";
+import type { GameState } from "@/lib/engine/game";
+import { GameStateBuilder } from "@/server/engine/game-state-builder";
 
-export const sabineWrenCadBaneSimplePuzzleState = new GameStateBuilder()
+export const sabineWrenCadBaneSimplePuzzleState: GameState = new GameStateBuilder()
   .WithActivePlayer(1)
-  .WithGamePhase(0)
+  .WithGamePhase("ActionPhase")
   .MyBase("SOR_022", 23)
   .MyLeader("SOR_014")
   .TheirBase("SOR_025", 11)

@@ -50,13 +50,25 @@ export const Cards = {
       sabineWren: "SOR_014",
   },
   units: {
+    token: {
+      battleDroid: "TWI_T01",
+      cloneTrooper: "TWI_T02",
+      tieFighter: "JTL_T01",
+      xWing: "JTL_T02",
+      spy: "SEC_T01",
+    },
     sor: {
       battlefiieldMarine: "SOR_095",
+      echoBaseDefender: "SOR_098",
+      fightersForFreedom: "SOR_143",
       wampa: "SOR_164",
     }
   },
   upgrades: {
-
+    token: {
+      experience: "SOR_T01",
+      shield: "SOR_T02",
+    }
   },
   events: {
 

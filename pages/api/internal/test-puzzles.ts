@@ -4,7 +4,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 import { methodNotAllowed } from "@/server/auth/http";
 import { requireAdminApi } from "@/server/auth/guards";
-import { hydrateGame, type RawGameState } from "@/server/puzzle/adapters/puzzle-runtime";
+import { hydratePuzzleGame, type RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
 import { computePuzzleUiHints, withPuzzleGame } from "@/server/puzzle/adapters/puzzle-bridge";
 import type { PuzzleRuntime } from "@/lib/puzzles/types";
 
@@ -57,8 +57,8 @@ export default async function handler(
       try {
         const filename = `${FILE_PREFIX}${num}${FILE_SUFFIX}`;
         const filePath = path.join(TEST_PUZZLES_DIR, filename);
-        const raw = JSON.parse(await readFile(filePath, "utf8")) as RawGameState;
-        const game = hydrateGame(raw);
+        const raw = JSON.parse(await readFile(filePath, "utf8")) as RawPuzzleGameState;
+        const game = hydratePuzzleGame(raw);
         const state: PuzzleRuntime = {
           game,
           history: [],
@@ -85,7 +85,7 @@ export default async function handler(
   // POST — save a new puzzle (body is the RawGameState)
   if (request.method === "POST") {
     try {
-      const raw = request.body as RawGameState;
+      const raw = request.body as RawPuzzleGameState;
       if (!raw || typeof raw !== "object") {
         return response.status(400).json({ error: "Missing puzzle state in request body." });
       }

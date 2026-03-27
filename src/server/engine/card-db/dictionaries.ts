@@ -1,5 +1,5 @@
 import { GetCardInPlay } from "../core-functions";
-import { PlayerId } from "../core-models";
+import { PlayerId } from "../../../lib/engine/core-models";
 import { HasAmbush } from "./keyword-dictionaries.ts/ambush";
 import { CountBounties } from "./keyword-dictionaries.ts/bounty";
 import { HasCoordinate } from "./keyword-dictionaries.ts/coordinate";
@@ -11,10 +11,10 @@ import { RestoreAmount } from "./keyword-dictionaries.ts/restore";
 import { HasSaboteur } from "./keyword-dictionaries.ts/saboteur";
 import { HasSentinel } from "./keyword-dictionaries.ts/sentinel";
 import { HasShielded } from "./keyword-dictionaries.ts/shielded";
-import { ExploitAmount } from "./keyword-dictionaries.ts/TODO_exploit";
+import { ExploitAmount } from "./keyword-dictionaries.ts/exploit";
 import { HasOverwhelm } from "./keyword-dictionaries.ts/overwhelm";
-import { RaidAmount } from "./keyword-dictionaries.ts/TODO_raid";
-import { SmuggleCost } from "./keyword-dictionaries.ts/TODO_smuggle";
+import { RaidAmount } from "./keyword-dictionaries.ts/raid";
+import { SmuggleCost } from "./keyword-dictionaries.ts/smuggle";
 
 export function HasKeyword(cardId: string, keyword: string, playId?: string, player?: PlayerId)
 {
@@ -54,7 +54,7 @@ export function HasKeyword(cardId: string, keyword: string, playId?: string, pla
     case "Restore":
       return RestoreAmount(cardId, playId, player) > 0;
     case "Smuggle":
-      return SmuggleCost(cardId, playId, player) > -1;
+      return SmuggleCost(cardId, player, playId) > -1;
     case "Exploit":
       return ExploitAmount(cardId, playId, player) > 0;
     case "Piloting":
@@ -72,7 +72,7 @@ export function HasKeyword(cardId: string, keyword: string, playId?: string, pla
         HasPlot(cardId, playId, player) ||
         RaidAmount(cardId, playId, player) > 0 ||
         RestoreAmount(cardId, playId, player) > 0 ||
-        SmuggleCost(cardId, playId, player) > -1 ||
+        SmuggleCost(cardId, player, playId) > -1 ||
         ExploitAmount(cardId, playId, player) > 0 ||
         PilotingCost(cardId) >= 0;
     default:

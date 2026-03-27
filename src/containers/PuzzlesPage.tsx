@@ -1,5 +1,5 @@
 import React from "react";
-import { CardSubtitle, CardTitle } from "@/server/engine/card-db/generated";
+import { CardSubtitle, CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { getCardImageLink, getSWUDBImageLink } from "@/util/func";
 import { globalBackgroundStyle, lightsaberGlow } from "@/util/style-const";
 import { type PuzzleIntent, type PuzzleRuntime } from "@/lib/puzzles/types";
@@ -668,7 +668,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   {player.groundArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
-                      imageId={unit.linkedLeader ? getPreviewImageId(unit.cardId, true) : unit.cardId}
+                      imageId={getPreviewImageId(unit.cardId, CardType(unit.cardId) === "Leader")}
                       selectable={selectablePlayIds.includes(unit.playId)}
                       onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
                       onPreviewStart={handlePreviewStart}
@@ -688,22 +688,25 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Space</div>
                 <div className="relative z-10 flex flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {player.spaceArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
-                  {player.spaceArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
-                    <CardVisual
-                      cardId={unit.cardId}
-                      imageId={unit.linkedLeader ? getPreviewImageId(unit.cardId, true) : unit.cardId}
-                      selectable={selectablePlayIds.includes(unit.playId)}
-                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
-                      onPreviewStart={handlePreviewStart}
-                      onPreviewEnd={handlePreviewEnd}
-                      exhausted={!unit.ready}
-                      damage={unit.damage}
-                      compact
-                      arenaScale60
-                      sentinel={sentinelPlayIds.includes(unit.playId)}
-                      square
-                    />
-                  </div>)}
+                  {player.spaceArena.map((unit) => {
+                    const isLeader = CardType(unit.cardId) === "Leader";
+                    return <div key={unit.playId} className="w-24 shrink-0">
+                      <CardVisual
+                        cardId={unit.cardId}
+                        imageId={getPreviewImageId(unit.cardId, isLeader)}
+                        selectable={selectablePlayIds.includes(unit.playId)}
+                        onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
+                        onPreviewStart={handlePreviewStart}
+                        onPreviewEnd={handlePreviewEnd}
+                        exhausted={!unit.ready}
+                        damage={unit.damage}
+                        compact
+                        arenaScale60
+                        sentinel={sentinelPlayIds.includes(unit.playId)}
+                        square
+                      />
+                    </div>})
+                  }
                 </div>
               </div>
             </div>
@@ -716,7 +719,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   {player.spaceArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
-                      imageId={unit.linkedLeader ? getPreviewImageId(unit.cardId, true) : unit.cardId}
+                      imageId={getPreviewImageId(unit.cardId)}
                       selectable={selectablePlayIds.includes(unit.playId)}
                       onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
                       onPreviewStart={handlePreviewStart}
@@ -791,22 +794,25 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Ground</div>
                 <div className="relative z-10 flex flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {player.groundArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
-                  {player.groundArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
-                    <CardVisual
-                      cardId={unit.cardId}
-                      imageId={unit.linkedLeader ? getPreviewImageId(unit.cardId, true) : unit.cardId}
-                      selectable={selectablePlayIds.includes(unit.playId)}
-                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
-                      onPreviewStart={handlePreviewStart}
-                      onPreviewEnd={handlePreviewEnd}
-                      exhausted={!unit.ready}
-                      damage={unit.damage}
-                      compact
-                      arenaScale60
-                      sentinel={sentinelPlayIds.includes(unit.playId)}
-                      square
-                    />
-                  </div>)}
+                  {player.groundArena.map((unit) => {
+                    const isLeader = CardType(unit.cardId) === "Leader";
+                    return <div key={unit.playId} className="w-24 shrink-0">
+                      <CardVisual
+                        cardId={unit.cardId}
+                        imageId={getPreviewImageId(unit.cardId, isLeader)}
+                        selectable={selectablePlayIds.includes(unit.playId)}
+                        onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
+                        onPreviewStart={handlePreviewStart}
+                        onPreviewEnd={handlePreviewEnd}
+                        exhausted={!unit.ready}
+                        damage={unit.damage}
+                        compact
+                        arenaScale60
+                        sentinel={sentinelPlayIds.includes(unit.playId)}
+                        square
+                      />
+                    </div>})
+                  }
                 </div>
               </div>
             </div>

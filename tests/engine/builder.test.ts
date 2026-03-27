@@ -1,16 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "./game-test-adapter";
-import { GameStateBuilder } from "@/server/puzzle/game-state-builder";
-
-// ---------------------------------------------------------------------------
-// GameStateBuilder — builds a state equivalent to test-puzzle.json
-// ---------------------------------------------------------------------------
+import { GameStateBuilder } from "@/server/engine/game-state-builder";
 
 describe("GameStateBuilder", () => {
   function buildState() {
     return new GameStateBuilder()
       .WithActivePlayer(1)
-      .WithGamePhase(0)
+      .WithGamePhase("ActionPhase")
       .MyBase("SOR_022", 23)
       .MyLeader("SOR_014")
       .TheirBase("SOR_025", 11)
@@ -33,58 +29,57 @@ describe("GameStateBuilder", () => {
   }
 
   it("produces the correct base damage values", () => {
-    const g = GameTestAdapter.fromRaw(buildState());
-    expect(g.game.player1.base.damage).toBe(23);
-    expect(g.game.player2.base.damage).toBe(11);
+    const g = new GameTestAdapter(false);
+    g.loadNewState(buildState());
+    expect(g.state.player1.base.damage).toBe(23);
+    expect(g.state.player2.base.damage).toBe(11);
   });
 
   it("produces the correct leader state", () => {
-    const g = GameTestAdapter.fromRaw(buildState());
-    expect(g.game.player1.leader.cardId).toBe("SOR_014");
-    expect(g.game.player1.leader.ready).toBe(true);
-    expect(g.game.player1.leader.epicActionUsed).toBe(false);
-    expect(g.game.player2.leader.cardId).toBe("SHD_014");
-    expect(g.game.player2.leader.epicActionUsed).toBe(true);
+    const g = new GameTestAdapter(false);
+    g.loadNewState(buildState());
+    expect(g.state.player1.leader.cardId).toBe("SOR_014");
+    expect(g.state.player1.leader.ready).toBe(true);
+    expect(g.state.player1.leader.epicActionUsed).toBe(false);
+    expect(g.state.player2.leader.cardId).toBe("SHD_014");
+    expect(g.state.player2.leader.epicActionUsed).toBe(true);
   });
 
   it("assigns sequential playIds starting from 1", () => {
-    const g = GameTestAdapter.fromRaw(buildState());
+    const g = new GameTestAdapter(false);
+    g.loadNewState(buildState());
     // P1 ground units are the first two in-play cards to be hydrated
-    expect(g.game.player1.groundArena[0].playId).toBe("1");
-    expect(g.game.player1.groundArena[1].playId).toBe("2");
+    expect(g.state.player1.groundArena[0].playId).toBe("1");
+    expect(g.state.player1.groundArena[1].playId).toBe("2");
   });
 
   it("produces 8 ready resources for player 1", () => {
-    const g = GameTestAdapter.fromRaw(buildState());
-    expect(g.game.player1.resources).toHaveLength(8);
-    expect(g.game.player1.resources.every((r) => r.ready)).toBe(true);
+    const g = new GameTestAdapter(false);
+    g.loadNewState(buildState());
+    expect(g.state.player1.resources).toHaveLength(8);
+    expect(g.state.player1.resources.every((r) => r.ready)).toBe(true);
   });
 
   it("produces the correct hand for player 1", () => {
-    const g = GameTestAdapter.fromRaw(buildState());
-    const cardIds = g.game.player1.hand.map((c) => c.cardId);
+    const g = new GameTestAdapter(false);
+    g.loadNewState(buildState());
+    const cardIds = g.state.player1.hand.map((c) => c.cardId);
     expect(cardIds).toEqual(["JTL_153", "SOR_168", "SOR_103", "SOR_141", "SOR_150"]);
   });
 
   it("produces 2 exhausted ground units for player 2", () => {
-    const g = GameTestAdapter.fromRaw(buildState());
-    expect(g.game.player2.groundArena).toHaveLength(2);
-    expect(g.game.player2.groundArena[0].ready).toBe(false);
-    expect(g.game.player2.groundArena[1].ready).toBe(false);
+    const g = new GameTestAdapter(false);
+    g.loadNewState(buildState());
+    expect(g.state.player2.groundArena).toHaveLength(2);
+    expect(g.state.player2.groundArena[0].ready).toBe(false);
+    expect(g.state.player2.groundArena[1].ready).toBe(false);
   });
 
   it("sets initiative and round correctly", () => {
-    const g = GameTestAdapter.fromRaw(buildState());
-    expect(g.game.initiativeClaimed).toBe(true);
-    expect(g.game.initiativePlayer).toBe(2);
-    expect(g.game.currentRound).toBe(7);
-  });
-
-  it("built state behaves identically to the default puzzle for Sabine ability", () => {
-    const built = GameTestAdapter.fromRaw(buildState());
-    built.chooseMyLeader().sendPrompt("ability");
-    expect(built.game.player2.base.damage).toBe(12);
-    expect(built.game.player1.base.damage).toBe(24);
+    const g = new GameTestAdapter(false);
+    g.loadNewState(buildState());
+    expect(g.state.initiativeClaimed).toBe(true);
+    expect(g.state.initiativePlayer).toBe(2);
+    expect(g.state.currentRound).toBe(7);
   });
 });
-

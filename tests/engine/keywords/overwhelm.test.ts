@@ -1,11 +1,10 @@
-import { describe } from "node:test";
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { GameTestAdapter } from "../game-test-adapter";
-import { GameStateBuilder } from "@/server/puzzle/game-state-builder";
+import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { Cards } from "../../card-helpers";
 
 describe("Overwhelm", () => {
-  it("deals excess damage to the opponent's base", () => {
+  it("deals excess damage to the opponent's base", async () => {
     // arrange
     const s = new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)
@@ -16,15 +15,15 @@ describe("Overwhelm", () => {
       .WithGroundUnitForPlayer(2, Cards.units.sor.battlefiieldMarine)
       .Build()
     ;
-    const g = GameTestAdapter.fromRaw(s);
+    const g = new GameTestAdapter();
+    g.loadNewState(s);
     // act
-    g
-      .chooseGroundUnit(0).chooseGroundUnit(0, 2);
-      ;
+    await g.attackWithGroundUnitAsync(1, 0);
+    await g.chooseGroundUnitAsync(2, 0);
     // assert
-    expect(g.game.player2.groundArena.length).toBe(0);
-    expect(g.game.player1.groundArena[0].damage).toBe(3);
-    expect(g.game.player1.base.damage).toBe(0);
-    expect(g.game.player2.base.damage).toBe(1);
+    expect(g.state.player2.groundArena.length).toBe(0);
+    expect(g.state.player1.groundArena[0].damage).toBe(3);
+    expect(g.state.player1.base.damage).toBe(0);
+    expect(g.state.player2.base.damage).toBe(1);
   });
 });

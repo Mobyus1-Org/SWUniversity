@@ -1,6 +1,7 @@
 import React from "react";
 import { globalBackgroundStyle } from "@/util/style-const";
-import type { RawGameState } from "@/server/puzzle/adapters/puzzle-runtime";
+import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
+import type { GamePhase } from "@/lib/engine/core-models";
 
 export type CardCatalogEntry = {
   cardId: string;
@@ -176,7 +177,7 @@ type PlayerBuilderState = {
 
 type BuilderState = {
   activePlayer: 1 | 2;
-  gamePhase: number;
+  gamePhase: GamePhase;
   currentRound: number;
   initiativePlayer: 1 | 2;
   initiativeClaimed: boolean;
@@ -195,7 +196,7 @@ function emptyPlayer(): PlayerBuilderState {
 function initialBuilderState(): BuilderState {
   return {
     activePlayer: 1,
-    gamePhase: 0,
+    gamePhase: "ActionPhase" as GamePhase,
     currentRound: 1,
     initiativePlayer: 2,
     initiativeClaimed: true,
@@ -208,7 +209,7 @@ function initialBuilderState(): BuilderState {
 // Convert builder state → RawGameState
 // ---------------------------------------------------------------------------
 
-function toRaw(s: BuilderState): RawGameState {
+function toRaw(s: BuilderState): RawPuzzleGameState {
   function mapPlayer(p: PlayerBuilderState, playerId: 1 | 2) {
     return {
       base: { cardId: p.baseCardId, damage: p.baseDamage, epicActionUsed: p.baseEpicActionUsed },
@@ -242,7 +243,7 @@ function toRaw(s: BuilderState): RawGameState {
     player2: mapPlayer(s.player2, 2),
     currentEffects: [],
     triggerBag: [],
-  } as unknown as RawGameState;
+  } as unknown as RawPuzzleGameState;
 }
 
 // ---------------------------------------------------------------------------
@@ -632,7 +633,16 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
                     <NumberInput value={state.currentRound} onChange={(v) => patchGlobal({ currentRound: v })} min={1} />
                   </FieldRow>
                   <FieldRow label="Phase">
-                    <NumberInput value={state.gamePhase} onChange={(v) => patchGlobal({ gamePhase: v })} min={0} max={2} />
+                    <select
+                      value={state.gamePhase}
+                      onChange={(e) => patchGlobal({ gamePhase: e.target.value as GamePhase })}
+                      className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none"
+                    >
+                      <option value="ActionPhase">Action</option>
+                      <option value="RegroupDraw">Regroup Draw</option>
+                      <option value="RegroupResource">Regroup Resource</option>
+                      <option value="RegroupReady">Regroup Ready</option>
+                    </select>
                   </FieldRow>
                   <FieldRow label="Active P.">
                     <select

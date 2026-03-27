@@ -1,1 +1,0 @@
-export { dispatchPuzzleAction } from "./handlers";

@@ -49,7 +49,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
       case "SOR_249"://Frontier AT-RT
         return PlayerHasUnitWithTraitInPlay(player, "Vehicle", true, playId);
       case "JTL_249"://Millennium Falcon
-        return playedFrom === Zones.Hand;
+        return playedFrom === "Hand";
       case "TWI_106"://Coruscant Guard
         return IsCoordinateActive(player);
       case "TWI_081"://Droid Commando

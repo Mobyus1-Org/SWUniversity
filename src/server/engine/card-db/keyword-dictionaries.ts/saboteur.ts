@@ -1,6 +1,6 @@
+import { PlayerId } from "@/lib/engine/core-models";
 import { GetCurrentEffectsForPlayer, GetHand, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, PlayerHasUnitWithTraitInPlay, TraitContains, UnitWasDefeatedThisPhase } from "../../core-functions";
-import { PlayerId } from "../../core-models";
-import { CardTitle } from "../cards";
+import { CardTitle } from "../generated";
 
 export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, isRecursion = false)
 {

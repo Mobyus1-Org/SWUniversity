@@ -1,7 +1,8 @@
-import { CardAspects, CardIsUnique, CardTitle, CardTraits, CardType } from "./card-db/generated";
-import { Card, CardInPlay, CardTypes, CurrentEffect, Leader, PlayerId } from "./core-models";
-import { Game } from "./game";
+import { CardAspects, CardCost, CardIsUnique, CardTitle, CardTraits, CardType } from "./card-db/generated";
+import { Card, CardInPlay, CardTypes, CurrentEffect, Leader, PlayerId } from "../../lib/engine/core-models";
+import { Game } from "../../lib/engine/game";
 import { Unit } from "./unit";
+import { SmuggleCost } from "./card-db/keyword-dictionaries.ts/smuggle";
 
 let activeGame: Game | null = null;
 
@@ -24,7 +25,7 @@ export function GetCardInPlay(playId: string, player?: PlayerId): CardInPlay | n
   }
 
   if (player) {
-    const playerObj = player === PlayerId.Player1 ? game.currentGameState.player1 : game.currentGameState.player2;
+    const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
     const allCardsInPlay = [...playerObj.spaceArena, ...playerObj.groundArena, ...playerObj.resources, ...playerObj.discard];
 
     return allCardsInPlay.find(card => card.playId === playId) || null;
@@ -50,8 +51,8 @@ export function PlayerControlsCardWithTitle(player: PlayerId, title: string): bo
     return false;
   }
 
-  const leader = player === PlayerId.Player1 ? game.currentGameState.player1.leader : game.currentGameState.player2.leader;
-  const units = player === PlayerId.Player1 ? [...game.currentGameState.player1.spaceArena, ...game.currentGameState.player1.groundArena] : [...game.currentGameState.player2.spaceArena, ...game.currentGameState.player2.groundArena];
+  const leader = player === 1 ? game.currentGameState.player1.leader : game.currentGameState.player2.leader;
+  const units = player === 1 ? [...game.currentGameState.player1.spaceArena, ...game.currentGameState.player1.groundArena] : [...game.currentGameState.player2.spaceArena, ...game.currentGameState.player2.groundArena];
   const upgrades = units.flatMap(unit => unit.upgrades || []);
 
   return CardTitle(leader.cardId) === title ||
@@ -65,8 +66,8 @@ export function PlayerControlsCardWithTrait(player: PlayerId, trait: string, ano
     return false;
   }
 
-  const leader = player === PlayerId.Player1 ? game.currentGameState.player1.leader : game.currentGameState.player2.leader;
-  const units = player === PlayerId.Player1 ? [...game.currentGameState.player1.spaceArena, ...game.currentGameState.player1.groundArena] : [...game.currentGameState.player2.spaceArena, ...game.currentGameState.player2.groundArena];
+  const leader = player === 1 ? game.currentGameState.player1.leader : game.currentGameState.player2.leader;
+  const units = player === 1 ? [...game.currentGameState.player1.spaceArena, ...game.currentGameState.player1.groundArena] : [...game.currentGameState.player2.spaceArena, ...game.currentGameState.player2.groundArena];
   const upgrades = units.flatMap(unit => unit.upgrades || []);
 
   if (another && playId) {
@@ -95,14 +96,18 @@ export function GetUnitInPlay(playId: string, player?: PlayerId): Unit | null {
   return cardInPlay as Unit;
 }
 
-export function GetUnitsForPlayer(player: PlayerId): Unit[] {
+export function GetUnitsForPlayer(player: PlayerId, readyOnly: boolean = false): Unit[] {
   const game = GetGame();
   if (!game) {
     return [];
   }
 
-  const playerObj = player === PlayerId.Player1 ? game.currentGameState.player1 : game.currentGameState.player2;
-  return [...playerObj.spaceArena, ...playerObj.groundArena];
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  let units = [...playerObj.spaceArena, ...playerObj.groundArena] as Unit[];
+  if (readyOnly) {
+    units = units.filter(unit => unit.ready);
+  }
+  return units;
 }
 
 export function PlayerHasUnitInPlay(player: PlayerId, cardId: string): boolean {
@@ -111,7 +116,7 @@ export function PlayerHasUnitInPlay(player: PlayerId, cardId: string): boolean {
     return false;
   }
 
-  const playerObj = player === PlayerId.Player1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
   const allUnitsInPlay = [...playerObj.spaceArena, ...playerObj.groundArena];
 
   return allUnitsInPlay.some(card => card.cardId === cardId);
@@ -124,7 +129,7 @@ export function PlayerHasUnitWithTraitInPlay(player: PlayerId, trait: string,
     return false;
   }
 
-  const playerObj = player === PlayerId.Player1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
   const allUnitsInPlay = [...playerObj.spaceArena, ...playerObj.groundArena];
 
   if (another && playId) {
@@ -141,7 +146,7 @@ export function PlayerHasUnitWithAspectInPlay(player: PlayerId, aspect: string,
     return false;
   }
 
-  const playerObj = player === PlayerId.Player1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
   const allUnitsInPlay = [...playerObj.spaceArena, ...playerObj.groundArena];
 
   if (another && playId) {
@@ -157,10 +162,56 @@ export function PlayerHasUnitInPlayWithMinimumPower(player: PlayerId, minimumPow
     return false;
   }
 
-  const playerObj = player === PlayerId.Player1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
   const allUnitsInPlay = [...playerObj.spaceArena, ...playerObj.groundArena];
 
-  return allUnitsInPlay.some(unit => unit.CurrentPower() >= minimumPower);
+  return allUnitsInPlay.some(unit => Unit.FromInterface(unit).CurrentPower() >= minimumPower);
+}
+
+export function PlayerHasTokenUnitInPlay(player: PlayerId): boolean {
+  const game = GetGame();
+  if (!game) {
+    return false;
+  }
+
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  const allUnitsInPlay = [...playerObj.spaceArena, ...playerObj.groundArena];
+
+  return allUnitsInPlay.some(unit => Unit.FromInterface(unit).IsTokenUnit());
+}
+
+export function PlayerHasUnitsInHand(player: PlayerId, filters?: {
+  trait?: string;
+  aspect?: string;
+  maxCost?: number;
+}): boolean {
+  const hand = GetHand(player);
+
+  return hand.some(card => {
+    if (filters?.trait && !CardTraits(card.cardId).includes(filters.trait)) {
+      return false;
+    }
+
+    if (filters?.aspect && !CardAspects(card.cardId).includes(filters.aspect)) {
+      return false;
+    }
+
+    if (filters?.maxCost && CardCost(card.cardId) > filters.maxCost) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+export function PlayerHasCardsToSmuggle(player: PlayerId): boolean {
+  const resources = GetResources(player);
+
+  return resources.some(r => {
+    const smuggleCost = SmuggleCost(r.cardId, player);
+
+    return smuggleCost > 0;
+  })
 }
 
 export function UnitIsInPlay(cardId: string): boolean {
@@ -185,7 +236,7 @@ export function NumberOfUnitsInArena(player: PlayerId, arena: "Space" | "Ground"
     return 0;
   }
 
-  const playerObj = player === PlayerId.Player1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
   const arenaUnits = arena === "Space" ? playerObj.spaceArena : playerObj.groundArena;
 
   return arenaUnits.length;
@@ -198,7 +249,7 @@ export function GetPlayIdForUniqueUnitInPlay(cardId: string, player: PlayerId): 
       return "0";
     }
 
-    const playerObj = player === PlayerId.Player1 ? game.currentGameState.player1 : game.currentGameState.player2;
+    const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
     const allUnitsInPlay = [...playerObj.spaceArena, ...playerObj.groundArena];
 
     const unitInPlay = allUnitsInPlay.find(unit => unit.cardId === cardId);
@@ -249,7 +300,7 @@ function GetLeaderForPlayer(player: PlayerId): Leader | null {
     return null;
   }
 
-  const playerObj = player === PlayerId.Player1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
   return playerObj.leader;
 }
 
@@ -317,7 +368,7 @@ export function GetResources(player: PlayerId, availableOnly = false): CardInPla
     return [];
   }
 
-  const playerObj = player === PlayerId.Player1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
   return availableOnly ? playerObj.resources.filter(resource => resource.ready) : playerObj.resources;
 }
 
@@ -327,7 +378,7 @@ export function HasTheForce(player: PlayerId) {
     return false;
   }
 
-  const playerObj = player === PlayerId.Player1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
 
   return playerObj.supplemental.forceToken === true;
 }
@@ -338,7 +389,7 @@ export function GetHand(player: PlayerId): Card[] {
     return [];
   }
 
-  const playerObj = player === PlayerId.Player1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
   return playerObj.hand;
 }
 
@@ -391,4 +442,21 @@ export function CardWasPlayedThisPhase(player: PlayerId, trait?: string, type?: 
   }
 
   return playedCards.length > 0;
+}
+
+export function LeaderCanDeployAsPilot(cardId: string): boolean {
+  switch(cardId) {
+    case "JTL_001"://Asajj Ventress
+    case "JTL_003"://Lando Calrissian
+    case "JTL_006"://Darth Vader
+    case "JTL_008"://Wedge Antilles
+    case "JTL_009"://Boba Fett
+    case "JTL_011"://Major Vonreg
+    case "JTL_012"://Luke Skywalker
+    case "JTL_015"://Rio Durant
+    case "JTL_017"://Han Solo
+    case "JTL_018"://Kazuda Xiono
+      return true;
+    default: return false;
+  }
 }

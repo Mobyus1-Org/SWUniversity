@@ -1,9 +1,9 @@
-import { CardHp, CardPower, CardType } from "./card-db/generated";
+import { CardInPlay, PlayerId, Unit as UnitInterface } from "../../lib/engine/core-models";
+import { GetCurrentEffectsForPlayer, LeaderAbilitiesIgnored, TraitContains } from "./core-functions";
+import { CardHp, CardPower, CardType, CardUpgradeHp, CardUpgradePower } from "./card-db/generated";
 import { CountBounties } from "./card-db/keyword-dictionaries.ts/bounty";
-import { GetCurrentEffectsForPlayer, LeaderAbilitiesIgnored } from "./core-functions";
-import { CardInPlay, PlayerId } from "./core-models";
 
-export class Unit implements CardInPlay {
+export class Unit implements UnitInterface {
   cardId: string;
   playId: string;
   controller: PlayerId;
@@ -12,23 +12,51 @@ export class Unit implements CardInPlay {
   damage: number;
   upgrades: CardInPlay[];
   captives: Unit[];
-  isClone?: boolean;
   numUses: number;
+  isClone: boolean;
 
-  constructor(cardId: string, playId: string, player: PlayerId) {
+  constructor(cardId: string, playId: string, owner: PlayerId, isClone = false) {
     this.cardId = cardId;
     this.playId = playId;
-    this.controller = player;
-    this.owner = player;
-    this.ready = true;
+    this.controller = owner;
+    this.owner = owner;
+    this.ready = false;
     this.damage = 0;
     this.upgrades = [];
     this.captives = [];
-    this.numUses = 1;
+    this.numUses = 0;
+    this.isClone = isClone;
+  }
+
+  static FromInterface(unit: UnitInterface): Unit {
+    const newUnit = new Unit(unit.cardId, unit.playId, unit.owner, unit.isClone);
+    newUnit.controller = unit.controller;
+    newUnit.ready = unit.ready;
+    newUnit.damage = unit.damage;
+    newUnit.upgrades = unit.upgrades;
+    newUnit.captives = unit.captives.map(c => Unit.FromInterface(c));
+    newUnit.isClone = unit.isClone;
+    newUnit.numUses = unit.numUses;
+
+    return newUnit;
   }
 
   IsLeader(): boolean {
     return CardType(this.cardId) === "Leader";
+  }
+
+  IsTokenUnit(): boolean {
+    switch(this.cardId) {
+      case "TWI_T01": //Battle Drod
+      case "TWI_T02": //Clone Trooper
+      case "JTL_T01": //TIE Fighter
+      case "JTL_T02": //X-Wing
+      case "SEC_T01": //Spy
+        return true;
+      default: break;
+    }
+
+    return false;
   }
 
   IsDamaged(): boolean {
@@ -83,6 +111,24 @@ export class Unit implements CardInPlay {
       power = 5;
     }
 
+    for(const currentEffect of GetCurrentEffectsForPlayer(this.controller)) {
+      if (currentEffect.targetPlayId && currentEffect.targetPlayId !== this.playId) continue;
+
+      switch(currentEffect.cardId) {
+        case "SOR_103": //Rebel Assault
+          power += 1;
+          break;
+        case "SOR_168": //Precision Fire
+          power += TraitContains(this.cardId, "Trooper", this.controller, this.playId) ? 2 : 0;
+          break;
+        default: break;
+      }
+    }
+
+    for (const upgrade of this.upgrades) {
+      power += CardPower(upgrade.cardId) || CardUpgradePower(upgrade.cardId) || 0;
+    }
+
     if(reportMode) {
       console.log(`Base power for ${this.cardId} is ${power}`);
     }
@@ -98,6 +144,10 @@ export class Unit implements CardInPlay {
     let hp = CardHp(this.cardId) || 0;
     if (this.HasUpgrade("LOF_056")) { //Size Matters Not
       hp = 5;
+    }
+
+    for (const upgrade of this.upgrades) {
+      hp += CardHp(upgrade.cardId) || CardUpgradeHp(upgrade.cardId) || 0;
     }
 
     return hp;
