@@ -8,8 +8,8 @@ import type {
   PlayerId,
   Resource,
   Unit,
-} from "./core-models";
-import type { TriggerEntry } from "./trigger-types";
+} from "@/lib/engine/core-models";
+import type { TriggerEntry } from "@/lib/engine/trigger-types";
 
 /** How a card entered play this phase. */
 export type EntryReason =

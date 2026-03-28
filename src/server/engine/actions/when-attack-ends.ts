@@ -1,7 +1,7 @@
-import { HasWhenAttackEnds } from "../card-db/keyword-dictionaries.ts/when-attack-ends";
-import { GetGame, GetUnitsForPlayer, TraitContains } from "../core-functions";
-import { PendingResolution } from "../pending-resolution";
-import { Unit } from "../unit";
+import { HasWhenAttackEnds } from "@/server/engine/card-db/keyword-dictionaries.ts/when-attack-ends";
+import { GetGame, GetUnitsForPlayer, TraitContains } from "@/server/engine/core-functions";
+import { PendingResolution } from "@/server/engine/pending-resolution";
+import { Unit } from "@/server/engine/unit";
 
 export function resolveWhenAttackEnds(
   attacker: Unit,

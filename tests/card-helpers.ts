@@ -47,7 +47,15 @@ export const Cards = {
     }
   },
   leaders: {
+    sor: {
+      directorKrennic: "SOR_001",
+      leiaOrgana: "SOR_009",
+      darthVader: "SOR_010",
       sabineWren: "SOR_014",
+    },
+    shd: {
+      bobaFett: "SHD_008",
+    },
   },
   units: {
     token: {
@@ -58,9 +66,11 @@ export const Cards = {
       spy: "SEC_T01",
     },
     sor: {
+      systemPatrolCraft: "SOR_066",
       battlefieldMarine: "SOR_095",
       echoBaseDefender: "SOR_098",
       fightersForFreedom: "SOR_143",
+      k2so: "SOR_145",
       wampa: "SOR_164",
     },
     shd: {
@@ -74,9 +84,14 @@ export const Cards = {
     token: {
       experience: "SOR_T01",
       shield: "SOR_T02",
+    },
+    sor: {
+      protector: "SOR_057",
     }
   },
   events: {
-
+    sor: {
+      rebelAssault: "SOR_103",
+    }
   },
 }

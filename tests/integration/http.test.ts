@@ -1,6 +1,6 @@
 import { GameState } from "@/lib/engine/game";
 import { describe, it, expect } from "vitest";
-import { sabineWrenCadBaneSimplePuzzleState } from "../engine/_gamestates/simple";
+import { sabineWrenCadBaneSimplePuzzleState } from "../unit/engine/_gamestates/simple";
 
 describe("Integration: HttpTransport", () => {
   it("responds to a simple request", async () => {

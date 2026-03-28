@@ -1,5 +1,5 @@
-import type { GameState } from "./game";
-import type { PlayerId, Zones } from "./core-models";
+import type { GameState } from "@/lib/engine/game";
+import type { PlayerId, Zones } from "@/lib/engine/core-models";
 
 // ---------------------------------------------------------------------------
 // Outbound: resolution requests
@@ -17,6 +17,7 @@ export interface NeedsOption {
   type: "Option";
   /** eg. "Do you want to collect the Bounty from {{cardId}}?" */
   helperText: string;
+  options: string[]; // eg. ["Yes", "No"] or ["deal_base_damage=3", "opponent_discards_from_hand=1"]
 }
 
 export interface NeedsPlayer {
@@ -42,8 +43,7 @@ export type DispatchType =
   | "pass-action"
   | "claim-initiative"
   | "choose-target"
-  | "choose-yes"
-  | "choose-no"
+  | "choose-option"
   | "choose-player"
   | "choose-trigger";
 
@@ -72,6 +72,10 @@ export interface ChooseTargetDispatchData {
   targetPlayIds?: string[];
 }
 
+export interface ChooseOptionDispatchData {
+  option: string;
+}
+
 export interface ChoosePlayerDispatchData {
   playerId: PlayerId;
 }
@@ -80,13 +84,13 @@ export interface ChooseTriggerDispatchData {
   cardId: string;
 }
 
-/** choose-yes and choose-no use an empty payload */
 export type DispatchData =
   | Record<string, never>
   | PlayCardDispatchData
   | InitiateAttackDispatchData
   | UseAbilityDispatchData
   | ChooseTargetDispatchData
+  | ChooseOptionDispatchData
   | ChoosePlayerDispatchData
   | ChooseTriggerDispatchData;
 

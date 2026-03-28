@@ -3,6 +3,7 @@ import { EngineConnector } from "@/lib/engine/engine-connector";
 import { Game, GameState } from "@/lib/engine/game";
 import { DispatchData, DispatchResponse, DispatchType, GameDispatch } from "@/lib/engine/message-types";
 import { InProcessTransport } from "@/lib/engine/transports/in-process";
+import { SetGame } from "@/server/engine/core-functions";
 import { randomUUID } from "crypto";
 
 export class GameTestAdapter {
@@ -28,6 +29,7 @@ export class GameTestAdapter {
     this._game.currentGameState = gameState;
     this._game.gameStateHistory = [];
     this._game.gameLog = ["Loaded new game state."];
+    SetGame(this._game);
   }
 
   get state(): GameState {
@@ -75,9 +77,20 @@ export class GameTestAdapter {
     return this.dispatchAsync(player, "initiate-attack", { playId: currentPlayId });
   }
 
+  async attackWithSpaceUnitAsync(player: PlayerId, unitIndex: number): Promise<GameTestAdapter> {
+    const currentPlayId = (player === 1 ? this.state.player1 : this.state.player2).spaceArena[unitIndex].playId;
+    return this.dispatchAsync(player, "initiate-attack", { playId: currentPlayId });
+  }
+
   async chooseGroundUnitAsync(player: PlayerId, unitIndex: number): Promise<GameTestAdapter> {
     const playerState = player === 1 ? this.state.player1 : this.state.player2;
     const targetPlayId = playerState.groundArena[unitIndex].playId;
+    return this.dispatchAsync(player, "choose-target", { targetPlayIds: [targetPlayId] });
+  }
+
+  async chooseSpaceUnitAsync(player: PlayerId, unitIndex: number): Promise<GameTestAdapter> {
+    const playerState = player === 1 ? this.state.player1 : this.state.player2;
+    const targetPlayId = playerState.spaceArena[unitIndex].playId;
     return this.dispatchAsync(player, "choose-target", { targetPlayIds: [targetPlayId] });
   }
 
@@ -89,11 +102,19 @@ export class GameTestAdapter {
     return this.dispatchAsync(player, "choose-target", { targetZones: ["Base"], targetPlayers: [player] });
   }
 
+  async chooseCardFromHandAsync(player: PlayerId, handIndex: number): Promise<GameTestAdapter> {
+    return this.dispatchAsync(player, "choose-target", { targetZones: ["Hand"], targetPlayers: [player], targetIndices: [handIndex] });
+  }
+
+  async chooseOptionAsync(player: PlayerId, option: string): Promise<GameTestAdapter> {
+    return this.dispatchAsync(player, "choose-option", { option });
+  }
+
   async chooseYesAsync(player: PlayerId): Promise<GameTestAdapter> {
-    return this.dispatchAsync(player, "choose-yes", {});
+    return this.chooseOptionAsync(player, "Yes");
   }
 
   async chooseNoAsync(player: PlayerId): Promise<GameTestAdapter> {
-    return this.dispatchAsync(player, "choose-no", {});
+    return this.chooseOptionAsync(player, "No");
   }
 }

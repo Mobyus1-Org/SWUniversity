@@ -20,13 +20,14 @@ import {
   CardHp,
   CardTitle,
   CardType,
-} from "./card-db/generated";
-import { HasOverwhelm } from "./card-db/keyword-dictionaries.ts/overwhelm";
-import { HasSentinel } from "./card-db/keyword-dictionaries.ts/sentinel";
-import { GetGame, SetGame } from "./core-functions";
-import { Unit } from "./unit";
+} from "@/server/engine/card-db/generated";
+import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
+import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
+import { GetGame, GetUnitsForPlayer, SetGame, TraitContains } from "@/server/engine/core-functions";
+import { Unit } from "@/server/engine/unit";
 
 import type {
+  ChooseOptionDispatchData,
   ChooseTargetDispatchData,
   DispatchResponse,
   GameDispatch,
@@ -42,15 +43,17 @@ import type { DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engin
 import type {
   AbilityTargetPending,
   AttackTargetPending,
+  DiscardFromHandPending,
   EngineContext,
   PendingResolution,
-} from "./pending-resolution";
-import { resolveWhenDefeated } from "./actions/when-defeated";
-import { resolveWhenPlayed } from "./actions/when-played";
-import { resolveWhenPlayedTrigger } from "./actions/when-played-trigger";
-import { resolveOnAttack } from "./actions/on-attack";
-import { HasSaboteur } from "./card-db/keyword-dictionaries.ts/saboteur";
-import { ActionAbilities } from "./actions/action-ability";
+  ResolveAttackPending,
+} from "@/server/engine/pending-resolution";
+import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
+import { resolveWhenPlayed } from "@/server/engine/actions/when-played";
+import { resolveWhenPlayedTrigger } from "@/server/engine/actions/when-played-trigger";
+import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
+import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
+import { ActionAbilities } from "@/server/engine/actions/action-ability";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -226,6 +229,29 @@ function drainTriggerBag(game: GameState, log: string[]): void {
   }
 }
 
+/**
+ * Drain on-attack triggers from the bag after the attack target is locked in.
+ * Returns a PendingResolution if the trigger requires player input (with
+ * combat queued as continuation), or null if no on-attack triggers are present.
+ */
+function drainOnAttackTriggerBag(
+  game: GameState,
+  attacker: Unit,
+  continuation: ResolveAttackPending,
+): PendingResolution | null {
+  const onAttackTriggers = game.triggerBag.filter(t => t.triggerType === "on-attack");
+  if (onAttackTriggers.length === 0) return null;
+
+  if (onAttackTriggers.length === 1) {
+    const triggerIndex = game.triggerBag.indexOf(onAttackTriggers[0]);
+    game.triggerBag.splice(triggerIndex, 1);
+    return resolveOnAttackTrigger(attacker, continuation);
+  }
+
+  // 2+ triggers: ordering needed (future) — skip for now
+  return null;
+}
+
 function updateDefeatedPlayers(game: GameState): void {
   const p1Max = CardHp(game.player1.base.cardId) || 30;
   const p2Max = CardHp(game.player2.base.cardId) || 30;
@@ -307,12 +333,17 @@ function resolveAttack(
   if (!attacker) return null;
 
   attacker.ready = false;
-  const atkPower = attacker.CurrentPower();
+  const atkPower = attacker.CurrentPower(false, true);
   const attackerName = CardTitle(attacker.cardId);
 
   if (target.type === "base") {
     dealBaseDamage(game, target.player, atkPower);
     log.push(`${attackerName} attacked the base for ${atkPower} damage.`);
+    // Clear ForAttack effects scoped to this attacker after the attack resolves
+    game.currentEffects = game.currentEffects.filter(
+      (e) => !(e.duration === "ForAttack" && e.targetPlayId === attacker.playId),
+    );
+    return resolveWhenAttackEnds(game, attacker, pending.continuation ?? null);
   } else {
     const defender = unitByPlayId(game, target.playId);
     if (!defender) return null;
@@ -349,14 +380,57 @@ function resolveAttack(
     const defDefeated = defender.CurrentHP() <= 0;
     const atkDefeated = attacker.CurrentHP() <= 0;
 
+    // Clear ForAttack effects scoped to this attacker after the attack resolves
+    game.currentEffects = game.currentEffects.filter(
+      (e) => !(e.duration === "ForAttack" && e.targetPlayId === attacker.playId),
+    );
+
     // Resolve defeats (defender first per SWU rules)
     let nextPending: PendingResolution | null = null;
     if (defDefeated) nextPending = defeatUnit(game, log, defender) ?? nextPending;
     if (atkDefeated) nextPending = defeatUnit(game, log, attacker) ?? nextPending;
+    if (nextPending && nextPending.type === "when-defeated-choice") {
+      nextPending.continuation = resolveWhenAttackEnds(game, attacker, pending.continuation ?? null);
+    }
     if (nextPending) return nextPending;
-  }
 
-  return null;
+    return resolveWhenAttackEnds(game, attacker, pending.continuation ?? null);
+  }
+}
+
+/**
+ * Fires after any attack resolves. Returns a PendingResolution if the attacker
+ * has a "when this unit completes an attack" ability, otherwise returns continuation.
+ */
+function resolveWhenAttackEnds(
+  game: GameState,
+  attacker: Unit,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  // If attacker was defeated, no trigger fires
+  if (!unitByPlayId(game, attacker.playId)) return continuation;
+
+  switch (attacker.cardId) {
+    case "SOR_009": { // Leia Organa: You may attack with another Rebel unit
+      const rebelUnits = (GetUnitsForPlayer(attacker.controller) as Unit[])
+        .filter(u => u.ready && TraitContains(u.cardId, "Rebel", attacker.controller, u.playId));
+      if (rebelUnits.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "SOR_009",
+        helperText: "Attack with another Rebel unit?",
+        onYes: {
+          type: "ability-target",
+          cardId: "SOR_009",
+          fromPlayIds: rebelUnits.map(u => u.playId),
+          continuation,
+        },
+        continuation,
+      };
+    }
+    default:
+      return continuation;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -395,20 +469,25 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       } satisfies NeedsTarget;
     }
     case "ability-option":
-      return { type: "Option", helperText: pending.helperText } satisfies NeedsOption;
+      return { type: "Option", helperText: pending.helperText, options: ["Yes", "No"] } satisfies NeedsOption;
     case "ability-target":
       return {
         type: "Target",
         fromPlayIds: pending.fromPlayIds.length > 0 ? pending.fromPlayIds : undefined,
         fromZones: ["Base"],
       } satisfies NeedsTarget;
-    case "leader-action":
-      return { type: "Option", helperText: "Choose: use leader ability or deploy leader." } satisfies NeedsOption;
     case "when-defeated-choice":
       return {
         type: "Option",
         helperText: `Choose When Defeated effect for ${CardTitle(pending.defeatedCardId)}.`,
+        options: pending.options,
       } satisfies NeedsOption;
+    case "discard-from-hand":
+      return { type: "Target", fromZones: ["Hand"] } satisfies NeedsTarget;
+    case "resolve-attack":
+      // Should never be shown to client — auto-resolves as continuation
+      return { type: "Target" } satisfies NeedsTarget;
+    default: throw new Error(`Unknown pending resolution type: ${pending.type}`);
   }
 }
 
@@ -492,12 +571,12 @@ function handleInitiateAttack(
     return { response: invalidResponse(`Unit ${playId} is exhausted.`), pending: null, stateChanged: false };
 
   // Check for optional On Attack abilities before picking the attack target
-  const onAttackPending = resolveOnAttack(attacker);
-  if (onAttackPending) {
-    return { response: resolutionResponse(pendingToResolution(onAttackPending, game)), pending: onAttackPending, stateChanged: false };
+  // On-attack triggers go into the bag here; they drain AFTER target is chosen.
+  if (["SOR_010", "SOR_014"].includes(attacker.cardId)) {
+    game.triggerBag.push({ triggerType: "on-attack", cardId: attacker.cardId, fromPlayer: player });
   }
 
-  // No On Attack ability — ask for attack target directly
+  // Ask for attack target
   const attackPending: AttackTargetPending = {
     type: "attack-target",
     attackerPlayId: playId,
@@ -559,7 +638,7 @@ function handleUseAbility(
     if (unit.controller !== player)
       return { response: invalidResponse(`Unit ${data.playId} is not controlled by Player ${player}.`), pending: null, stateChanged: false };
 
-    const nextPending = resolveActionAbility(game, log, player, unit.cardId, unit.playId);
+    const nextPending = resolveActionAbility(game, log, player, unit.cardId);//, unit.playId);
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
     }
@@ -585,13 +664,15 @@ function handleChooseTarget(
   if (pending.type === "attack-target") {
     let target: { type: "unit"; playId: string } | { type: "base"; player: PlayerId } | null =
       null;
+    let attacker: Unit | null = null;
 
     if (data.targetZones?.includes("Base")) {
       const atkController = unitByPlayId(game, pending.attackerPlayId)?.controller;
       if (atkController != null) target = { type: "base", player: otherPlayer(atkController) };
+      attacker = unitByPlayId(game, pending.attackerPlayId);
     } else if (data.targetPlayIds?.[0]) {
       const chosen = data.targetPlayIds[0];
-      const attacker = unitByPlayId(game, pending.attackerPlayId);
+      attacker = unitByPlayId(game, pending.attackerPlayId);
       if (!attacker)
         return { response: invalidResponse("Attacker no longer in play."), pending: null, stateChanged: false };
       const { unitPlayIds } = computeAttackTargets(game, attacker);
@@ -603,6 +684,34 @@ function handleChooseTarget(
     if (!target)
       return { response: invalidResponse("choose-target must include targetPlayIds or targetZones containing 'Base'."), pending, stateChanged: false };
 
+    // For ability-initiated attacks (e.g. Rebel Assault, Precision Fire), the trigger bag may not
+    // have been populated at initiate time, so fill it now if needed.
+    if (attacker && ["SOR_010", "SOR_014"].includes(attacker.cardId)) {
+      const alreadyQueued = game.triggerBag.some(
+        (t) => t.triggerType === "on-attack" && t.cardId === attacker.cardId,
+      );
+      if (!alreadyQueued) {
+        game.triggerBag.push({ triggerType: "on-attack", cardId: attacker.cardId, fromPlayer: attacker.controller });
+      }
+    }
+
+    // Drain on-attack triggers; if any fire, queue combat as continuation.
+    const resolveAttackPending: ResolveAttackPending = {
+      type: "resolve-attack",
+      attackerPlayId: pending.attackerPlayId,
+      target,
+      continuation: pending.continuation ?? null,
+    };
+    const onAttackTriggerPending = attacker
+      ? drainOnAttackTriggerBag(game, attacker, resolveAttackPending)
+      : null;
+    if (onAttackTriggerPending) {
+      if (onAttackTriggerPending.type === "resolve-attack") {
+        return handleResolveAttack(game, log, onAttackTriggerPending);
+      }
+      return { response: resolutionResponse(pendingToResolution(onAttackTriggerPending, game)), pending: onAttackTriggerPending, stateChanged: false };
+    }
+
     const nextPending = resolveAttack(game, log, pending, target);
     updateDefeatedPlayers(game);
 
@@ -611,8 +720,6 @@ function handleChooseTarget(
     }
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
-
-  // Ability target
   if (pending.type === "ability-target") {
     const chosen = data.targetPlayIds?.[0];
     const chosenBase = data.targetZones?.includes("Base") ?? false;
@@ -622,56 +729,132 @@ function handleChooseTarget(
     if (chosen && pending.fromPlayIds.length > 0 && !pending.fromPlayIds.includes(chosen))
       return { response: invalidResponse(`Unit ${chosen} is not a valid ability target.`), pending, stateChanged: false };
 
-    const nextPending = applyAbilityEffect(pending, chosenBase, chosen);
+    const rawPending = applyAbilityEffect(pending, chosenBase, chosen);
     updateDefeatedPlayers(game);
 
+    if (rawPending?.type === "resolve-attack") {
+      return handleResolveAttack(game, log, rawPending);
+    }
+    if (rawPending) {
+      return { response: resolutionResponse(pendingToResolution(rawPending, game)), pending: rawPending, stateChanged: false };
+    }
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending.type === "discard-from-hand") {
+    const idx = data.targetIndices?.[0];
+    if (idx == null)
+      return { response: invalidResponse("Choose a card index to discard."), pending, stateChanged: false };
+    const playerHand = ps(game, pending.targetPlayer).hand;
+    if (idx < 0 || idx >= playerHand.length)
+      return { response: invalidResponse("Invalid hand index."), pending, stateChanged: false };
+    playerHand.splice(idx, 1);
+    log.push(`Player ${pending.targetPlayer} discarded a card.`);
+    const remaining = pending.count - 1;
+    const nextPending: PendingResolution | null = remaining > 0
+      ? { type: "discard-from-hand", targetPlayer: pending.targetPlayer, count: remaining, continuation: pending.continuation }
+      : (pending.continuation ?? null);
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
     }
+    updateDefeatedPlayers(game);
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
   return { response: invalidResponse(`choose-target is not valid while pending: ${pending.type}.`), pending, stateChanged: false };
 }
 
-function handleChooseYes(
+function handleChooseOption(
   game: GameState,
   log: string[],
+  dispatch: GameDispatch,
   pending: PendingResolution | null,
 ): HandlerResult {
+  const option = (dispatch.dispatchData as ChooseOptionDispatchData).option;
+
   if (pending?.type === "ability-option") {
-    if (pending.onYes) {
-      return { response: resolutionResponse(pendingToResolution(pending.onYes, game)), pending: pending.onYes, stateChanged: false };
+    if (option === "Yes") {
+      const nextPending = pending.onYes ?? null;
+      if (nextPending) {
+        return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+      }
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
     }
-    if (pending.continuation) {
-      return { response: resolutionResponse(pendingToResolution(pending.continuation, game)), pending: pending.continuation, stateChanged: false };
+    // "No" — skip the ability, return to continuation
+    const nextPending = pending.continuation;
+    if (nextPending?.type === "resolve-attack") {
+      return handleResolveAttack(game, log, nextPending);
+    }
+    if (nextPending) {
+      return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
     }
     updateDefeatedPlayers(game);
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
+
   if (pending?.type === "leader-action") {
     return resolveLeaderAbility(game, log, pending.player);
   }
-  return { response: invalidResponse("No pending yes/no decision."), pending: null, stateChanged: false };
+
+  if (pending?.type === "when-defeated-choice") {
+    const eqIdx = option.indexOf("=");
+    const optionType = eqIdx >= 0 ? option.slice(0, eqIdx) : option;
+    const parts = eqIdx >= 0 ? option.slice(eqIdx + 1).split(",") : [];
+
+    if (optionType === "deal_base_damage") {
+      const targetPlayer = Number(parts[0]) as PlayerId;
+      const amount = Number(parts[1]);
+      dealBaseDamage(game, targetPlayer, amount);
+      log.push(`When Defeated: dealt ${amount} damage to Player ${targetPlayer}'s base.`);
+      const nextPending = pending.continuation ?? null;
+      updateDefeatedPlayers(game);
+      if (nextPending) {
+        return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+      }
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    if (optionType === "player_discards_from_hand") {
+      const targetPlayer = Number(parts[0]) as PlayerId;
+      const count = Number(parts[1]);
+      const discardPending: DiscardFromHandPending = {
+        type: "discard-from-hand",
+        targetPlayer,
+        count,
+        continuation: pending.continuation ?? null,
+      };
+      return { response: resolutionResponse(pendingToResolution(discardPending, game)), pending: discardPending, stateChanged: false };
+    }
+
+    return { response: invalidResponse(`Unknown when-defeated option: ${optionType}`), pending, stateChanged: false };
+  }
+
+  return { response: invalidResponse("No pending option decision."), pending: null, stateChanged: false };
 }
 
-function handleChooseNo(
+/**
+ * Executes combat for an already-chosen attacker + target, then returns the
+ * next pending resolution (e.g. when-defeated triggers, RA continuation).
+ * Used as the auto-resolve step after on-attack triggers finish.
+ */
+function handleResolveAttack(
   game: GameState,
   log: string[],
-  pending: PendingResolution | null,
+  pending: ResolveAttackPending,
 ): HandlerResult {
-  if (pending?.type === "ability-option") {
-    log.push(`Player skipped optional ability for ${CardTitle(pending.cardId) ?? pending.cardId}.`);
-    if (pending.continuation) {
-      return { response: resolutionResponse(pendingToResolution(pending.continuation, game)), pending: pending.continuation, stateChanged: false };
-    }
-    updateDefeatedPlayers(game);
-    return { response: stateResponse(game), pending: null, stateChanged: true };
+  const attackPending: AttackTargetPending = {
+    type: "attack-target",
+    attackerPlayId: pending.attackerPlayId,
+    source: "on-attack-resolved",
+    continuation: pending.continuation,
+  };
+  const nextPending = resolveAttack(game, log, attackPending, pending.target);
+  updateDefeatedPlayers(game);
+  if (nextPending) {
+    return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
   }
-  if (pending?.type === "leader-action") {
-    return deployLeader(game, log, pending.player);
-  }
-  return { response: invalidResponse("No pending yes/no decision."), pending: null, stateChanged: false };
+  return { response: stateResponse(game), pending: null, stateChanged: true };
 }
 
 function handlePassAction(game: GameState, log: string[], dispatch: GameDispatch): HandlerResult {
@@ -735,7 +918,7 @@ function resolveActionAbility(
   log: string[],
   player: PlayerId,
   cardId: string,
-  playId?: string,
+  //playId?: string,
 ): PendingResolution | null {
   switch (cardId) {
     case "SOR_014": // Sabine Wren - Galvanized Revolutionary: Deal 1 damage to each base.
@@ -760,6 +943,60 @@ function applyAbilityEffect(
   const game = GetGame();
   if(!game) throw new Error("Game not found in applyAbilityEffect.");
   switch (pending.cardId) {
+    case "SOR_010": { // Darth Vader: deal 2 damage to chosen unit
+      if (!targetPlayId) break;
+      const target = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target) {
+        target.damage += 2;
+        game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 2 damage to ${CardTitle(target.cardId) ?? target.cardId}.`);
+      }
+      break;
+    }
+    case "SOR_009": { // Leia Organa: chosen Rebel unit attacks (no buff)
+      if (!targetPlayId) break;
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "SOR_009",
+        continuation: pending.continuation,
+      };
+    }
+    case "SOR_103": { // Rebel Assault: push ForAttack +1 on chosen Rebel unit, then initiate attack with it
+      if (!targetPlayId) break;
+      const rebelUnit = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!rebelUnit) break;
+      game.currentGameState.currentEffects.push({
+        cardId: "SOR_103",
+        duration: "ForAttack",
+        affectedPlayer: rebelUnit.controller,
+        targetPlayId,
+      });
+      game.gameLog.push(`${CardTitle(pending.cardId)}: ${CardTitle(rebelUnit.cardId) || targetPlayId} gets +1/+0 for this attack.`);
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "SOR_103",
+        continuation: pending.continuation,
+      };
+    }
+    case "SOR_168": { // Precision Fire: push ForAttack Saboteur + Trooper bonus, then attack with chosen unit
+      if (!targetPlayId) break;
+      const unit168 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit168) break;
+      game.currentGameState.currentEffects.push({
+        cardId: "SOR_168",
+        duration: "ForAttack",
+        affectedPlayer: unit168.controller,
+        targetPlayId,
+      });
+      game.gameLog.push(`${CardTitle(pending.cardId)}: ${CardTitle(unit168.cardId)} gains Saboteur for this attack.`);
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "SOR_168",
+        continuation: pending.continuation,
+      };
+    }
     case "JTL_153": { // Rebellious Hammerhead: deal damage equal to hand size to chosen unit
       const sourceUnit = unitByPlayId(game.currentGameState, pending.sourcePlayId!);
       if (!sourceUnit) break;
@@ -816,8 +1053,7 @@ export function processDispatch(
       case "pass-action":       result = handlePassAction(gs, log, dispatch); break;
       case "claim-initiative":  result = handleClaimInitiative(gs, log, dispatch); break;
       case "choose-target":     result = handleChooseTarget(gs, log, dispatch, pending); break;
-      case "choose-yes":        result = handleChooseYes(gs, log, pending); break;
-      case "choose-no":         result = handleChooseNo(gs, log, pending); break;
+      case "choose-option":        result = handleChooseOption(gs, log, dispatch, pending); break;
       case "choose-player":
       case "choose-trigger":
         // Reserved for future trigger-bag resolution

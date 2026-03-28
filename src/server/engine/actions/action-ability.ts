@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand } from "../core-functions";
+import { GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand } from "@/server/engine/core-functions";
 
 export function ActionAbilities(cardId: string, player: PlayerId, playId?: string): string[] {
   const game = GetGame();

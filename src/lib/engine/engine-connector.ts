@@ -1,8 +1,8 @@
 import { Game } from "@/lib/engine/game";
 import { DispatchData, DispatchType, GameDispatch, DispatchResponse } from "@/lib/engine/message-types";
 import { randomUUID } from "crypto";
-import { PlayerId } from "./core-models";
-import type { EngineTransport, TransportFactory } from "./engine-transport";
+import { PlayerId } from "@/lib/engine/core-models";
+import type { EngineTransport, TransportFactory } from "@/lib/engine/engine-transport";
 
 export class EngineConnector {
   private _game: Game = {} as Game;

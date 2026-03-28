@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
-import { Cards } from "../../card-helpers";
+import { Cards } from "../../../card-helpers";
 import { NeedsTarget } from "@/lib/engine/message-types";
 
 
@@ -11,9 +11,9 @@ describe("Simple Combat", () => {
     const g = new GameTestAdapter();
     const s = new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sabineWren)
+      .MyLeader(Cards.leaders.sor.sabineWren)
       .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sabineWren)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
       .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
       .WithGroundUnitForPlayer(2, Cards.units.sor.battlefieldMarine)
       .Build()
@@ -35,9 +35,9 @@ describe("Simple Combat", () => {
     const g = new GameTestAdapter();
     const s = new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sabineWren)
+      .MyLeader(Cards.leaders.sor.sabineWren)
       .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sabineWren)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
       .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
       .WithGroundUnitForPlayer(2, Cards.units.sor.battlefieldMarine)
       .Build()
@@ -60,9 +60,9 @@ describe("Simple Combat with Sentinels", () => {
     const g = new GameTestAdapter();
     const s = new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sabineWren)
+      .MyLeader(Cards.leaders.sor.sabineWren)
       .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sabineWren)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
       .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
       .WithGroundUnitForPlayer(2, Cards.units.sor.echoBaseDefender)
       .Build()
@@ -81,9 +81,9 @@ describe("Simple Combat with Sentinels", () => {
     const g = new GameTestAdapter();
     const s = new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sabineWren)
+      .MyLeader(Cards.leaders.sor.sabineWren)
       .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sabineWren)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
       .WithGroundUnitForPlayer(1, Cards.units.sor.fightersForFreedom)
       .WithGroundUnitForPlayer(2, Cards.units.sor.echoBaseDefender)
       .WithUpgradesOnGroundUnitForPlayer(1, 0, [

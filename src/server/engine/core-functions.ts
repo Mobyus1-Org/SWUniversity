@@ -1,8 +1,8 @@
-import { CardAspects, CardCost, CardIsUnique, CardTitle, CardTraits, CardType } from "./card-db/generated";
-import { Card, CardInPlay, CardTypes, CurrentEffect, Leader, PlayerId } from "../../lib/engine/core-models";
-import { Game } from "../../lib/engine/game";
-import { Unit } from "./unit";
-import { SmuggleCost } from "./card-db/keyword-dictionaries.ts/smuggle";
+import { CardAspects, CardCost, CardIsUnique, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
+import { Card, CardInPlay, CardTypes, CurrentEffect, Leader, PlayerId } from "@/lib/engine/core-models";
+import { Game } from "@/lib/engine/game";
+import { Unit } from "@/server/engine/unit";
+import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
 
 let activeGame: Game | null = null;
 
@@ -93,7 +93,7 @@ export function GetUnitInPlay(playId: string, player?: PlayerId): Unit | null {
     return null;
   }
 
-  return cardInPlay as Unit;
+  return Unit.FromInterface(cardInPlay as Unit);
 }
 
 export function GetUnitsForPlayer(player: PlayerId, readyOnly: boolean = false): Unit[] {

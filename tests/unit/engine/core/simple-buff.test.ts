@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
-import { Cards } from "../../card-helpers";
+import { Cards } from "../../../card-helpers";
 import { Unit } from "@/server/engine/unit";
 
 describe("Simple buff", () => {
@@ -10,9 +10,9 @@ describe("Simple buff", () => {
     const g = new GameTestAdapter();
     const s = new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sabineWren)
+      .MyLeader(Cards.leaders.sor.sabineWren)
       .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sabineWren)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
       .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
       .WithUpgradesOnGroundUnitForPlayer(1, 0, [
         GameStateBuilder.Upgrade(Cards.upgrades.token.experience, 1),
@@ -34,9 +34,9 @@ describe("Simple buff", () => {
     const g = new GameTestAdapter();
     const s = new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sabineWren)
+      .MyLeader(Cards.leaders.sor.sabineWren)
       .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sabineWren)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
       .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
       .WithUpgradesOnGroundUnitForPlayer(1, 0, [
         GameStateBuilder.Upgrade(Cards.upgrades.token.experience, 1),

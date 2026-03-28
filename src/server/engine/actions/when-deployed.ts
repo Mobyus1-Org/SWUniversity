@@ -1,4 +1,4 @@
-import { PendingResolution } from "../pending-resolution";
+import { PendingResolution } from "@/server/engine/pending-resolution";
 
 export function resolveWhenDeployed(
   cardId: string,

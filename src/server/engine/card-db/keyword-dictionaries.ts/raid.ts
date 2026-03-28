@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetHand, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerControlsCardWithTitle, PlayerHasTokenUnitInPlay, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "../../core-functions";
-import { CardAspects } from "../generated";
+import { GetCurrentEffectsForPlayer, GetHand, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerControlsCardWithTitle, PlayerHasTokenUnitInPlay, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
+import { CardAspects } from "@/server/engine/card-db/generated";
 
 export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): number {
   let amount = 0;

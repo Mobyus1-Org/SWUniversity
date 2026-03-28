@@ -1,6 +1,6 @@
-import { GetUnitInPlay, LeaderAbilitiesIgnored, GetUnitsForPlayer, IsCoordinateActive, TraitContains, GetCurrentEffectsForPlayer, PlayerHasUnitWithTraitInPlay, HasTheForce, GetPlayIdForUniqueUnitInPlay } from "../../core-functions";
+import { GetUnitInPlay, LeaderAbilitiesIgnored, GetUnitsForPlayer, IsCoordinateActive, TraitContains, GetCurrentEffectsForPlayer, PlayerHasUnitWithTraitInPlay, HasTheForce, GetPlayIdForUniqueUnitInPlay } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
-import { CardCost } from "../generated";
+import { CardCost } from "@/server/engine/card-db/generated";
 
 /**
  * @param defenderPlayId - playId of the defending unit. When provided,

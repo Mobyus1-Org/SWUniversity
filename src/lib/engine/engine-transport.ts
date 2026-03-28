@@ -1,5 +1,5 @@
-import type { GameDispatch, DispatchResponse } from "./message-types";
-import type { Game } from "./game";
+import type { GameDispatch, DispatchResponse } from "@/lib/engine/message-types";
+import type { Game } from "@/lib/engine/game";
 
 /**
  * Pluggable transport layer between any consumer (UI, tests) and the game engine.

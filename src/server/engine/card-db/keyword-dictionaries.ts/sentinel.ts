@@ -1,6 +1,6 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, InitiativePlayer, IsCoordinateActive, GetResources, NumberOfUnitsInArena, PlayerControlsCardWithTrait, PlayerHasUnitInPlayWithMinimumPower, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "../../core-functions";
-import { PlayerId } from "../../core-models";
-import { CardAspects } from "../generated";
+import { PlayerId } from "@/lib/engine/core-models";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, InitiativePlayer, IsCoordinateActive, GetResources, NumberOfUnitsInArena, PlayerControlsCardWithTrait, PlayerHasUnitInPlayWithMinimumPower, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
+import { CardAspects } from "@/server/engine/card-db/generated";
 
 export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, isRecursion = false)
 {

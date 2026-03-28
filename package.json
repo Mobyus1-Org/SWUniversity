@@ -10,7 +10,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "vitest run",
+    "test": "vitest run tests/unit",
+    "test:run": "vitest run",
     "lint": "eslint .",
     "download-images": "node scripts/download-images.js",
     "convert-images": "node scripts/convert-to-webp.js"

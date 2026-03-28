@@ -1,5 +1,5 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitsForPlayer, LeaderAbilitiesIgnored, PlayerHasUnitWithAspectInPlay, TraitContains } from "../../core-functions";
-import { PlayerId } from "../../core-models";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitsForPlayer, LeaderAbilitiesIgnored, PlayerHasUnitWithAspectInPlay, TraitContains } from "@/server/engine/core-functions";
+import { PlayerId } from "@/lib/engine/core-models";
 
 export function HasShielded(cardId: string, playId?: string, player?: PlayerId, isRecursion = false)
 {

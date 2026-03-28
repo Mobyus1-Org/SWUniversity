@@ -1,6 +1,6 @@
-import { GetGame, GetUnitsForPlayer, TraitContains } from "../core-functions";
-import { PendingResolution } from "../pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
+import { GetGame, GetUnitsForPlayer, TraitContains } from "@/server/engine/core-functions";
+import { PendingResolution } from "@/server/engine/pending-resolution";
 
 /**
  * When Played abilities for unit cards.
@@ -29,11 +29,9 @@ export function resolveWhenPlayed(
         }
       }
     case "SOR_168": //Precision Fire "Attack with a unit. It gains Saboteur for this attack. If it's a Trooper, it also gets +2/+0 for this attack. (Ignore Sentinel and defeat the defender's Shields.)"
-      if (!playId) return null;
       return {
         type: "ability-target",
         cardId,
-        sourcePlayId: playId,
         fromPlayIds: GetUnitsForPlayer(player).map((u) => u.playId),
         continuation: null,
       }

@@ -1,6 +1,6 @@
-import { GetResources, GetUnitsForPlayer } from "../../core-functions";
+import { GetResources, GetUnitsForPlayer } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
-import { CardCost } from "../generated";
+import { CardCost } from "@/server/engine/card-db/generated";
 
 export function SmuggleCost(cardId: string, player?: PlayerId, playId?: string): number {
   let minCost = -1;

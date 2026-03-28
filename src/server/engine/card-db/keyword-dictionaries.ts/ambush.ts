@@ -1,6 +1,6 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "../../core-functions";
-import { PlayerId, Zones } from "../../core-models";
-import { CardCost, CardTitle, CardType } from "../generated";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
+import { PlayerId, Zones } from "@/lib/engine/core-models";
+import { CardCost, CardTitle, CardType } from "@/server/engine/card-db/generated";
 
 export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, player?: PlayerId, isRecursion = false)
 {

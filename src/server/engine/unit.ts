@@ -1,7 +1,9 @@
-import { CardInPlay, PlayerId, Unit as UnitInterface } from "../../lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, LeaderAbilitiesIgnored, TraitContains } from "./core-functions";
-import { CardHp, CardPower, CardType, CardUpgradeHp, CardUpgradePower } from "./card-db/generated";
-import { CountBounties } from "./card-db/keyword-dictionaries.ts/bounty";
+import { CardInPlay, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, LeaderAbilitiesIgnored, TraitContains } from "@/server/engine/core-functions";
+import { CardHp, CardPower, CardType, CardUpgradeHp, CardUpgradePower } from "@/server/engine/card-db/generated";
+import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
+import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
+import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 
 export class Unit implements UnitInterface {
   cardId: string;
@@ -71,11 +73,10 @@ export class Unit implements UnitInterface {
       if (effect.targetPlayId && effect.targetPlayId !== this.playId) continue;
 
       switch (effect.cardId) {
-        case "2639435822": //Force Lightning
-        case "4531112134": //Kazuda Xiono leader side
-        case "c1700fc85b": //Kazuda Xiono pilot Leader Unit
-        case "9184947464": //There Is No Escape
-        case "1146162009": //Mind Trick
+        case "SOR_138": //Force Lightning
+        case "JTL_018": //Kazuda Xiono
+        case "JTL_244": //There Is No Escape
+        case "LOF_202": //Mind Trick
           return true;
         default: break;
       }
@@ -92,7 +93,7 @@ export class Unit implements UnitInterface {
       }
 
       switch (upgrade.cardId) {
-        case "1368144544"://Imprisoned
+        case "SHD_072"://Imprisoned
           return true;
         default: break;
       }
@@ -105,10 +106,24 @@ export class Unit implements UnitInterface {
     return false;
   }
 
-  CurrentPower(reportMode: boolean = false): number {
+  CurrentPower(reportMode: boolean = false, isAttacking: boolean = false): number {
     let power = CardPower(this.cardId) || 0;
     if (this.HasUpgrade("LOF_056")) { //Size Matters Not
       power = 5;
+    }
+
+    // Check for other units that buff power
+    for(const unit of GetUnitsForPlayer(this.controller)) {
+      const isOtherUnit = unit.playId !== this.playId;
+      switch (unit.cardId) {
+        case "SOR_001": //Director Krennic - Aspiring to Authority
+          power += this.damage > 0 ? 1 : 0;
+          break;
+        case "SHD_008": //Boba Fett - Daimyo
+          power += isOtherUnit && HasKeyword(this.cardId, "Any", this.playId, this.controller) ? 1 : 0;
+          break;
+        default: break;
+      }
     }
 
     for(const currentEffect of GetCurrentEffectsForPlayer(this.controller)) {
@@ -130,6 +145,10 @@ export class Unit implements UnitInterface {
 
     for (const upgrade of this.upgrades) {
       power += CardUpgradePower(upgrade.cardId);
+    }
+
+    if (isAttacking) {
+      power += RaidAmount(this.cardId, this.playId, this.controller);
     }
 
     if(reportMode) {

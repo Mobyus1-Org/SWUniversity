@@ -1,4 +1,4 @@
-import type { EngineContext } from "./pending-resolution";
+import type { EngineContext } from "@/server/engine/pending-resolution";
 
 /**
  * In-memory server-side store for active game contexts.

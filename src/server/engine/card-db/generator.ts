@@ -1,7 +1,7 @@
 import path from "node:path";
 import { access, appendFile, mkdir, writeFile } from "node:fs/promises";
 import sharp from "sharp";
-import { promosToIgnore } from "./promosToIgnore";
+import { promosToIgnore } from "@/server/engine/card-db/promosToIgnore";
 
 const PAGE_SIZE = 100;
 const SWU_CARD_API_BASE = "https://admin.starwarsunlimited.com/api/cards";

@@ -1,4 +1,4 @@
-import { CardTitle } from "../card-db/generated";
+import { CardTitle } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
 

@@ -20,6 +20,7 @@ describe("Sabine Wren / Cad Bane Simple Puzzle", () => {
     await g.playCardFromHandAsync(1, 0);            // play Rebel Assault event
     await g.chooseGroundUnitAsync(1, 0);            // choose K-2SO
     await g.chooseGroundUnitAsync(2, 0);            // attack Gamorrean Guard
+    await g.chooseOptionAsync(1, "deal_base_damage=2,3");            // choose "deal_base_damage" option for K-2SO's when defeated ability
     await g.chooseGroundUnitAsync(1, 1);            // choose Sabine Wren (deployed leader)
     await g.chooseBaseAsync(2);                     // attack opponent base
     //Now Rebel Assault is fully resolved, so we can check the final state of the game
@@ -45,6 +46,7 @@ describe("Sabine Wren / Cad Bane Simple Puzzle", () => {
     await g.playCardFromHandAsync(1, 0);            // play Rebel Assault event
     await g.chooseGroundUnitAsync(1, 0);            // choose K-2SO
     await g.chooseGroundUnitAsync(2, 0);            // attack Gamorrean Guard
+    await g.chooseOptionAsync(1, "deal_base_damage=2,3");            // choose "deal_base_damage" option for K-2SO's when defeated ability
     await g.chooseGroundUnitAsync(1, 1);            // choose Sabine Wren (deployed leader)
     await g.chooseBaseAsync(2);                     // attack opponent base
     //Now Rebel Assault is fully resolved, so we can check the final state of the game

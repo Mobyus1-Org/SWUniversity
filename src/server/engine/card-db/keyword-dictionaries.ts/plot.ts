@@ -1,5 +1,5 @@
-import { GetUnitInPlay } from "../../core-functions";
-import { PlayerId } from "../../core-models";
+import { GetUnitInPlay } from "@/server/engine/core-functions";
+import { PlayerId } from "@/lib/engine/core-models";
 
 export function HasPlot(cardId: string, playId?: string, player?: PlayerId)
 {

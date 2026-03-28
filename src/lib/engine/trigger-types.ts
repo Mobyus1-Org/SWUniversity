@@ -1,4 +1,4 @@
-import { Base, PlayerId, Unit } from "./core-models";
+import { Base, PlayerId, Unit } from "@/lib/engine/core-models";
 
 export type TriggerType =
   | "when-played"

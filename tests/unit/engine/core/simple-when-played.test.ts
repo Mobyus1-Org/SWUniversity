@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
-import { Cards } from "../../card-helpers";
+import { Cards } from "../../../card-helpers";
 
 describe("Simple When Played", () => {
   it("should deal 1 damage to each base when Reckless Gunslinger is played", async () => {
@@ -9,9 +9,9 @@ describe("Simple When Played", () => {
     const g = new GameTestAdapter();
     const s = new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sabineWren)
+      .MyLeader(Cards.leaders.sor.sabineWren)
       .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sabineWren)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
       .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 1)
       .WithCardInHandForPlayer(1, Cards.units.shd.recklessGunslinger)
       .Build()
@@ -29,9 +29,9 @@ describe("Simple When Played", () => {
     const g = new GameTestAdapter();
     const s = new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sabineWren)
+      .MyLeader(Cards.leaders.sor.sabineWren)
       .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sabineWren)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
       .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 6)
       .WithCardInHandForPlayer(1, Cards.units.jtl.rebelliousHammerhead)
       .WithCardInHandForPlayer(1, Cards.units.sor.battlefieldMarine)
@@ -53,9 +53,9 @@ describe("Simple When Played", () => {
     const g = new GameTestAdapter();
     const s = new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sabineWren)
+      .MyLeader(Cards.leaders.sor.sabineWren)
       .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sabineWren)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
       .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 6)
       .WithCardInHandForPlayer(1, Cards.units.jtl.rebelliousHammerhead)
       .WithCardInHandForPlayer(1, Cards.units.sor.battlefieldMarine)

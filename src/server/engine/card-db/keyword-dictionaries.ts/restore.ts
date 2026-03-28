@@ -1,6 +1,6 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, InitiativePlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasUnitWithTraitInPlay, TraitContains } from "../../core-functions";
-import { PlayerId } from "../../core-models";
-import { CardAspects } from "../generated";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, InitiativePlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
+import { PlayerId } from "@/lib/engine/core-models";
+import { CardAspects } from "@/server/engine/card-db/generated";
 
 export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): number
 {
