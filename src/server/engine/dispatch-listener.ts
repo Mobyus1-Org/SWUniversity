@@ -16,6 +16,7 @@ import {
   CardArena,
   CardAspects,
   CardCost,
+  CardHasWhenPlayed,
   CardHp,
   CardTitle,
   CardType,
@@ -46,6 +47,7 @@ import type {
 } from "./pending-resolution";
 import { resolveWhenDefeated } from "./actions/when-defeated";
 import { resolveWhenPlayed } from "./actions/when-played";
+import { resolveWhenPlayedTrigger } from "./actions/when-played-trigger";
 import { resolveOnAttack } from "./actions/on-attack";
 import { HasSaboteur } from "./card-db/keyword-dictionaries.ts/saboteur";
 import { ActionAbilities } from "./actions/action-ability";
@@ -207,6 +209,21 @@ function pushEventToDiscard(game: GameState, player: PlayerId, cardId: string): 
 
 function dealBaseDamage(game: GameState, player: PlayerId, amount: number): void {
   ps(game, player).base.damage += amount;
+}
+
+/**
+ * Drains the trigger bag after an action resolves.
+ * - 0 triggers: no-op
+ * - 1 trigger: auto-resolve without player input
+ * - 2+ triggers: (future) will need player ordering — no-op for now
+ */
+function drainTriggerBag(game: GameState, log: string[]): void {
+  if (game.triggerBag.length === 1) {
+    const [trigger] = game.triggerBag.splice(0, 1);
+    if (trigger.triggerType === "when-played") {
+      resolveWhenPlayedTrigger(trigger, game, log);
+    }
+  }
 }
 
 function updateDefeatedPlayers(game: GameState): void {
@@ -434,9 +451,14 @@ function handlePlayCard(
     const unit = addToArena(game, player, cardId, false);
     log.push(`${CardTitle(cardId) ?? cardId} entered the ${CardArena(cardId) ?? "ground"} arena.`);
 
+    // Optional when-played abilities (e.g. "you may") use the pending resolution flow.
+    // Auto-trigger when-played abilities (no user input needed) go through the trigger bag.
     const nextPending = resolveWhenPlayed(unit.cardId, player, unit.playId);
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+    }
+    if (CardHasWhenPlayed(unit.cardId)) {
+      game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player });
     }
   } else {
     pushEventToDiscard(game, player, cardId);
@@ -448,6 +470,7 @@ function handlePlayCard(
     }
   }
 
+  drainTriggerBag(game, log);
   updateDefeatedPlayers(game);
   return { response: stateResponse(game), pending: null, stateChanged: true };
 }
@@ -599,7 +622,7 @@ function handleChooseTarget(
     if (chosen && pending.fromPlayIds.length > 0 && !pending.fromPlayIds.includes(chosen))
       return { response: invalidResponse(`Unit ${chosen} is not a valid ability target.`), pending, stateChanged: false };
 
-    const nextPending = applyAbilityEffect(pending);//, chosenBase, chosen);
+    const nextPending = applyAbilityEffect(pending, chosenBase, chosen);
     updateDefeatedPlayers(game);
 
     if (nextPending) {
@@ -731,16 +754,29 @@ function resolveActionAbility(
  */
 function applyAbilityEffect(
   pending: AbilityTargetPending,
-  //targetIsBase: boolean,
-  //targetPlayId?: string
+  targetIsBase: boolean,
+  targetPlayId?: string,
 ): PendingResolution | null {
   const game = GetGame();
   if(!game) throw new Error("Game not found in applyAbilityEffect.");
   switch (pending.cardId) {
+    case "JTL_153": { // Rebellious Hammerhead: deal damage equal to hand size to chosen unit
+      const sourceUnit = unitByPlayId(game.currentGameState, pending.sourcePlayId!);
+      if (!sourceUnit) break;
+      const owner = sourceUnit.controller;
+      const handSize = ps(game.currentGameState, owner).hand.length;
+      const target = targetPlayId ? unitByPlayId(game.currentGameState, targetPlayId) : null;
+      if (target) {
+        target.damage += handSize;
+        game.gameLog.push(`${CardTitle(pending.cardId)} dealt ${handSize} damage to ${CardTitle(target.cardId) ?? target.cardId}.`);
+      }
+      break;
+    }
     default:
       game.gameLog.push(`Ability effect for ${CardTitle(pending.cardId) ?? pending.cardId} applied.`);
-      return pending.continuation;
+      break;
   }
+  return pending.continuation;
 }
 
 // ---------------------------------------------------------------------------

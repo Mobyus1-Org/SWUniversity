@@ -53,6 +53,9 @@ export function resolveWhenPlayed(
         },
         continuation: null,
       };
+    case "SHD_160": //Reckless Gunslinger "When Played: Deal 1 damage to each base."
+      // This is a simple effect that doesn't require any player input, so we can resolve it immediately without returning a PendingResolution.
+      return null;
     default:
       return null;
   }

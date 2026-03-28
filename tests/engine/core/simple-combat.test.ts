@@ -1,5 +1,4 @@
 import { describe, it, expect } from "vitest";
-
 import { GameTestAdapter } from "../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { Cards } from "../../card-helpers";
@@ -15,8 +14,8 @@ describe("Simple Combat", () => {
       .MyLeader(Cards.leaders.sabineWren)
       .TheirBase(Cards.bases.common.green30HP)
       .TheirLeader(Cards.leaders.sabineWren)
-      .WithGroundUnitForPlayer(1, Cards.units.sor.battlefiieldMarine)
-      .WithGroundUnitForPlayer(2, Cards.units.sor.battlefiieldMarine)
+      .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
+      .WithGroundUnitForPlayer(2, Cards.units.sor.battlefieldMarine)
       .Build()
     ;
     g.loadNewState(s);
@@ -39,8 +38,8 @@ describe("Simple Combat", () => {
       .MyLeader(Cards.leaders.sabineWren)
       .TheirBase(Cards.bases.common.green30HP)
       .TheirLeader(Cards.leaders.sabineWren)
-      .WithGroundUnitForPlayer(1, Cards.units.sor.battlefiieldMarine)
-      .WithGroundUnitForPlayer(2, Cards.units.sor.battlefiieldMarine)
+      .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
+      .WithGroundUnitForPlayer(2, Cards.units.sor.battlefieldMarine)
       .Build()
     ;
     g.loadNewState(s);
@@ -64,7 +63,7 @@ describe("Simple Combat with Sentinels", () => {
       .MyLeader(Cards.leaders.sabineWren)
       .TheirBase(Cards.bases.common.green30HP)
       .TheirLeader(Cards.leaders.sabineWren)
-      .WithGroundUnitForPlayer(1, Cards.units.sor.battlefiieldMarine)
+      .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
       .WithGroundUnitForPlayer(2, Cards.units.sor.echoBaseDefender)
       .Build()
     ;

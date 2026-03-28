@@ -12,7 +12,7 @@ describe("Overwhelm", () => {
       .TheirBase(Cards.bases.common.green30HP)
       .TheirLeader(Cards.leaders.sabineWren)
       .WithGroundUnitForPlayer(1, Cards.units.sor.wampa)
-      .WithGroundUnitForPlayer(2, Cards.units.sor.battlefiieldMarine)
+      .WithGroundUnitForPlayer(2, Cards.units.sor.battlefieldMarine)
       .Build()
     ;
     const g = new GameTestAdapter();

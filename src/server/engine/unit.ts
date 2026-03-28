@@ -121,12 +121,15 @@ export class Unit implements UnitInterface {
         case "SOR_168": //Precision Fire
           power += TraitContains(this.cardId, "Trooper", this.controller, this.playId) ? 2 : 0;
           break;
+        case "SHD_179": //Desperate Attack
+          power += 2;
+          break;
         default: break;
       }
     }
 
     for (const upgrade of this.upgrades) {
-      power += CardPower(upgrade.cardId) || CardUpgradePower(upgrade.cardId) || 0;
+      power += CardUpgradePower(upgrade.cardId);
     }
 
     if(reportMode) {
@@ -147,7 +150,7 @@ export class Unit implements UnitInterface {
     }
 
     for (const upgrade of this.upgrades) {
-      hp += CardHp(upgrade.cardId) || CardUpgradeHp(upgrade.cardId) || 0;
+      hp += CardUpgradeHp(upgrade.cardId);
     }
 
     return hp;

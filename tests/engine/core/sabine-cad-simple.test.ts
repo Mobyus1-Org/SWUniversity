@@ -1,7 +1,7 @@
-import { describe } from "node:test";
-import { expect, it } from "vitest";
-import { sabineWrenCadBaneSimplePuzzleState } from "../_gamestates/simple";
+import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "../game-test-adapter";
+
+import { sabineWrenCadBaneSimplePuzzleState } from "../_gamestates/simple";
 
 describe("Sabine Wren / Cad Bane Simple Puzzle", () => {
   it("produces only Player 1 as winner when simple puzzle is completed", async () => {
@@ -22,6 +22,7 @@ describe("Sabine Wren / Cad Bane Simple Puzzle", () => {
     await g.chooseGroundUnitAsync(2, 0);            // attack Gamorrean Guard
     await g.chooseGroundUnitAsync(1, 1);            // choose Sabine Wren (deployed leader)
     await g.chooseBaseAsync(2);                     // attack opponent base
+    //Now Rebel Assault is fully resolved, so we can check the final state of the game
     // assert
     expect(g.state.player1.base.damage).toBe(24);
     expect(g.state.player2.base.damage).toBe(25);
@@ -46,6 +47,7 @@ describe("Sabine Wren / Cad Bane Simple Puzzle", () => {
     await g.chooseGroundUnitAsync(2, 0);            // attack Gamorrean Guard
     await g.chooseGroundUnitAsync(1, 1);            // choose Sabine Wren (deployed leader)
     await g.chooseBaseAsync(2);                     // attack opponent base
+    //Now Rebel Assault is fully resolved, so we can check the final state of the game
     // assert
     expect(g.state.player1.base.damage).toBe(24);
     expect(g.state.player2.base.damage).toBe(25);

@@ -58,11 +58,17 @@ export const Cards = {
       spy: "SEC_T01",
     },
     sor: {
-      battlefiieldMarine: "SOR_095",
+      battlefieldMarine: "SOR_095",
       echoBaseDefender: "SOR_098",
       fightersForFreedom: "SOR_143",
       wampa: "SOR_164",
-    }
+    },
+    shd: {
+      recklessGunslinger: "SHD_160",
+    },
+    jtl: {
+      rebelliousHammerhead: "JTL_153",
+    },
   },
   upgrades: {
     token: {
