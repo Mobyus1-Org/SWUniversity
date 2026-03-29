@@ -1,4 +1,5 @@
 import { processDispatch } from "@/server/engine/dispatch-listener";
+import { SetGame } from "@/server/engine/core-functions";
 import type { EngineContext, PendingResolution } from "@/server/engine/pending-resolution";
 import type { EngineTransport } from "@/lib/engine/engine-transport";
 import type { Game } from "@/lib/engine/game";
@@ -27,6 +28,10 @@ export class InProcessTransport implements EngineTransport {
     this._game.gameStateHistory = newContext.game.gameStateHistory;
     this._game.gameLog = newContext.game.gameLog;
     this._pending = newContext.pending;
+
+    // Restore the game singleton so callers can use engine functions
+    // (e.g. CurrentPower()) after the dispatch without re-entering processDispatch.
+    SetGame(this._game);
 
     return response;
   }

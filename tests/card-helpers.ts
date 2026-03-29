@@ -79,6 +79,9 @@ export const Cards = {
     jtl: {
       rebelliousHammerhead: "JTL_153",
     },
+    lof: {
+      strikeship: "LOF_131",
+    }
   },
   upgrades: {
     token: {
@@ -87,6 +90,7 @@ export const Cards = {
     },
     sor: {
       protector: "SOR_057",
+      academyTraining: "SOR_120",
     }
   },
   events: {

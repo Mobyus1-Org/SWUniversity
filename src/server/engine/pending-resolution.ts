@@ -62,6 +62,14 @@ export interface ResolveAttackPending {
   continuation: PendingResolution | null;
 }
 
+/** Waiting for the player to choose a unit to attach a played upgrade to. */
+export interface UpgradeTargetPending {
+  type: "upgrade-target";
+  upgradeCardId: string;
+  player: PlayerId;
+  fromPlayIds: string[];
+}
+
 export type PendingResolution =
   | AttackTargetPending
   | AbilityOptionPending
@@ -69,7 +77,8 @@ export type PendingResolution =
   | LeaderActionPending
   | WhenDefeatedChoicePending
   | DiscardFromHandPending
-  | ResolveAttackPending;
+  | ResolveAttackPending
+  | UpgradeTargetPending;
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch

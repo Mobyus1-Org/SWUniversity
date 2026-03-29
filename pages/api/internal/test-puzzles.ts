@@ -5,8 +5,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { methodNotAllowed } from "@/server/auth/http";
 import { requireAdminApi } from "@/server/auth/guards";
 import { hydratePuzzleGame, type RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
-import { computePuzzleUiHints, withPuzzleGame } from "@/server/puzzle/adapters/puzzle-bridge";
-import type { PuzzleRuntime } from "@/lib/puzzles/types";
+import type { GameState } from "@/lib/engine/game";
 
 const TEST_PUZZLES_DIR = path.join(process.cwd(), "src/server/_test-puzzles");
 const FILE_PREFIX = "test-puzzle.";
@@ -29,7 +28,7 @@ async function listPuzzleFiles(): Promise<Array<{ n: number; filename: string }>
 }
 
 type ListResponse = { puzzles: Array<{ n: number; filename: string }> };
-type LoadResponse = { state: PuzzleRuntime; ui: ReturnType<typeof computePuzzleUiHints> };
+type LoadResponse = { gameState: GameState };
 type SaveResponse = { n: number; filename: string };
 type ErrorResponse = { error: string };
 type ResponseBody = ListResponse | LoadResponse | SaveResponse | ErrorResponse;
@@ -58,16 +57,8 @@ export default async function handler(
         const filename = `${FILE_PREFIX}${num}${FILE_SUFFIX}`;
         const filePath = path.join(TEST_PUZZLES_DIR, filename);
         const raw = JSON.parse(await readFile(filePath, "utf8")) as RawPuzzleGameState;
-        const game = hydratePuzzleGame(raw);
-        const state: PuzzleRuntime = {
-          game,
-          history: [],
-          log: [`Puzzle ${num} loaded.`],
-          status: "playing",
-          prompt: null,
-        };
-        const ui = withPuzzleGame(game, () => computePuzzleUiHints(state));
-        return response.status(200).json({ state, ui });
+        const gameState = hydratePuzzleGame(raw);
+        return response.status(200).json({ gameState });
       } catch {
         return response.status(404).json({ error: `Puzzle ${n} not found.` });
       }

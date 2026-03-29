@@ -23,7 +23,7 @@ import {
 } from "@/server/engine/card-db/generated";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
-import { GetGame, GetUnitsForPlayer, SetGame, TraitContains } from "@/server/engine/core-functions";
+import { CardIsLeader, GetGame, GetUnitsForPlayer, SetGame, TraitContains } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -39,7 +39,7 @@ import type {
   UseAbilityDispatchData,
 } from "@/lib/engine/message-types";
 import type { Game, GameState, PlayerState } from "@/lib/engine/game";
-import type { DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import type { CardInPlay, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import type {
   AbilityTargetPending,
   AttackTargetPending,
@@ -47,6 +47,7 @@ import type {
   EngineContext,
   PendingResolution,
   ResolveAttackPending,
+  UpgradeTargetPending,
 } from "@/server/engine/pending-resolution";
 import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
 import { resolveWhenPlayed } from "@/server/engine/actions/when-played";
@@ -272,7 +273,7 @@ function defeatUnit(
   const removed = removeFromArena(game, unit.playId);
   if (!removed) return null;
 
-  if (CardType(unit.cardId) === "Leader") {
+  if (CardIsLeader(unit.cardId)) {
     const leader = ps(game, removed.player).leader;
     leader.deployed = false;
     leader.ready = false;
@@ -474,7 +475,6 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       return {
         type: "Target",
         fromPlayIds: pending.fromPlayIds.length > 0 ? pending.fromPlayIds : undefined,
-        fromZones: ["Base"],
       } satisfies NeedsTarget;
     case "when-defeated-choice":
       return {
@@ -484,6 +484,11 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       } satisfies NeedsOption;
     case "discard-from-hand":
       return { type: "Target", fromZones: ["Hand"] } satisfies NeedsTarget;
+    case "upgrade-target":
+      return {
+        type: "Target",
+        fromPlayIds: pending.fromPlayIds.length > 0 ? pending.fromPlayIds : undefined,
+      } satisfies NeedsTarget;
     case "resolve-attack":
       // Should never be shown to client — auto-resolves as continuation
       return { type: "Target" } satisfies NeedsTarget;
@@ -539,6 +544,19 @@ function handlePlayCard(
     if (CardHasWhenPlayed(unit.cardId)) {
       game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player });
     }
+  } else if (CardType(cardId) === "Upgrade") {
+    const eligiblePlayIds = [
+      ...ps(game, player).groundArena,
+      ...ps(game, player).spaceArena,
+    ].map((u) => u.playId);
+
+    const upgradePending: UpgradeTargetPending = {
+      type: "upgrade-target",
+      upgradeCardId: cardId,
+      player,
+      fromPlayIds: eligiblePlayIds,
+    };
+    return { response: resolutionResponse(pendingToResolution(upgradePending, game)), pending: upgradePending, stateChanged: false };
   } else {
     pushEventToDiscard(game, player, cardId);
     log.push(`${CardTitle(cardId) ?? cardId} resolved and placed in the discard.`);
@@ -761,6 +779,30 @@ function handleChooseTarget(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
+  if (pending.type === "upgrade-target") {
+    const chosen = data.targetPlayIds?.[0];
+    if (!chosen)
+      return { response: invalidResponse("choose-target must include targetPlayIds for upgrade attachment."), pending, stateChanged: false };
+    if (!pending.fromPlayIds.includes(chosen))
+      return { response: invalidResponse(`Unit ${chosen} is not a valid upgrade target.`), pending, stateChanged: false };
+
+    const targetUnit = unitByPlayId(game, chosen);
+    if (!targetUnit)
+      return { response: invalidResponse("Target unit not found."), pending, stateChanged: false };
+
+    const upgradeInPlay: CardInPlay = {
+      cardId: pending.upgradeCardId,
+      playId: nextPlayId(game),
+      owner: pending.player,
+      controller: pending.player,
+    };
+    targetUnit.upgrades.push(upgradeInPlay);
+    log.push(`${CardTitle(pending.upgradeCardId)} attached to ${CardTitle(targetUnit.cardId)}.`);
+
+    updateDefeatedPlayers(game);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
   return { response: invalidResponse(`choose-target is not valid while pending: ${pending.type}.`), pending, stateChanged: false };
 }
 
@@ -886,7 +928,7 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
 
   leader.deployed = true;
   leader.epicActionUsed = true;
-  const unit = addToArena(game, player, leader.cardId, false);
+  const unit = addToArena(game, player, leader.cardId, true);
   leader.deployedPlayId = unit.playId;
   log.push(`Player ${player} deployed ${CardTitle(leader.cardId) ?? leader.cardId}.`);
   updateDefeatedPlayers(game);
@@ -972,11 +1014,21 @@ function applyAbilityEffect(
         targetPlayId,
       });
       game.gameLog.push(`${CardTitle(pending.cardId)}: ${CardTitle(rebelUnit.cardId) || targetPlayId} gets +1/+0 for this attack.`);
+      // Re-compute continuation targets now, excluding the chosen attacker (it will be exhausted after this attack).
+      let continuationSOR103 = pending.continuation;
+      if (continuationSOR103?.type === "ability-target") {
+        const freshRebelPlayIds = GetUnitsForPlayer(rebelUnit.controller, true)
+          .filter(u => u.playId !== targetPlayId && TraitContains(u.cardId, "Rebel", u.controller, u.playId))
+          .map(u => u.playId);
+        continuationSOR103 = freshRebelPlayIds.length > 0
+          ? { ...continuationSOR103, fromPlayIds: freshRebelPlayIds }
+          : (continuationSOR103.continuation ?? null);
+      }
       return {
         type: "attack-target",
         attackerPlayId: targetPlayId,
         source: "SOR_103",
-        continuation: pending.continuation,
+        continuation: continuationSOR103,
       };
     }
     case "SOR_168": { // Precision Fire: push ForAttack Saboteur + Trooper bonus, then attack with chosen unit
@@ -1053,7 +1105,7 @@ export function processDispatch(
       case "pass-action":       result = handlePassAction(gs, log, dispatch); break;
       case "claim-initiative":  result = handleClaimInitiative(gs, log, dispatch); break;
       case "choose-target":     result = handleChooseTarget(gs, log, dispatch, pending); break;
-      case "choose-option":        result = handleChooseOption(gs, log, dispatch, pending); break;
+      case "choose-option":     result = handleChooseOption(gs, log, dispatch, pending); break;
       case "choose-player":
       case "choose-trigger":
         // Reserved for future trigger-bag resolution
@@ -1063,10 +1115,21 @@ export function processDispatch(
         result = { response: invalidResponse(`Unknown dispatch type.`), pending: null, stateChanged: false };
     }
 
+    // Snapshot the pre-dispatch state before top-level actions (play-card, initiate-attack,
+    // use-ability, pass-action, claim-initiative). Resolution steps (choose-target, choose-option,
+    // etc.) are part of the same logical action and must NOT add extra snapshots — doing so would
+    // cause multi-step actions like Precision Fire to require multiple undos.
+    const ACTION_STARTERS = [
+      "play-card", "initiate-attack", "use-ability", "pass-action", "claim-initiative",
+    ] as const;
+    const shouldSnapshot =
+      (ACTION_STARTERS as readonly string[]).includes(dispatch.dispatchType) &&
+      !result.response.invalidAction;
+
     const updatedGame: Game = {
       id: game.id,
       currentGameState: gs,
-      gameStateHistory: result.stateChanged
+      gameStateHistory: shouldSnapshot
         ? [...context.game.gameStateHistory, context.game.currentGameState]
         : context.game.gameStateHistory,
       gameLog: log,

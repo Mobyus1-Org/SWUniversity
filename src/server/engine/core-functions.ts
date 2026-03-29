@@ -286,18 +286,18 @@ export function SearchCurrentEffects(cardId: string, player?: PlayerId): Current
   return game.currentGameState.currentEffects.filter(effect => effect.cardId === cardId && (!player || effect.affectedPlayer === player));
 }
 
-function CardIsBase(cardId: string): boolean {
+export function CardIsBase(cardId: string): boolean {
   return CardType(cardId) === "Base";
 }
 
-function CardIsLeader(cardId: string): boolean {
+export function CardIsLeader(cardId: string): boolean {
   return CardType(cardId) === "Leader";
 }
 
-function GetLeaderForPlayer(player: PlayerId): Leader | null {
+export function GetLeaderForPlayer(player: PlayerId): Leader {
   const game = GetGame();
   if (!game) {
-    return null;
+    throw new Error("Game not found");
   }
 
   const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
@@ -306,7 +306,7 @@ function GetLeaderForPlayer(player: PlayerId): Leader | null {
 
 export function TraitContains(cardId: string, trait: string, player?: PlayerId, playId?: string): boolean {
   const isBase = CardIsBase(cardId);
-  const isLeaderSide = CardIsLeader(cardId) && player && !GetLeaderForPlayer(player)?.deployed;
+  const isLeaderSide = CardIsLeader(cardId) && player && !GetLeaderForPlayer(player).deployed;
   if (playId && !isLeaderSide && !isBase) {
     const unit = GetUnitInPlay(playId, player);
     const upgrades = unit?.upgrades || [];

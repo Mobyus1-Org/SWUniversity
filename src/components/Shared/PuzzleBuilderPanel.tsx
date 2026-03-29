@@ -606,8 +606,8 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(5,8,20,0.88)] backdrop-blur-sm">
-      <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="fixed inset-x-0 top-0 bottom-12 z-50 bg-[rgba(5,8,20,0.88)] backdrop-blur-sm">
+      <div className="mx-auto max-w-4xl px-4 mt-20 mb-12 pb-24 max-h-[calc(100vh-7rem)] overflow-y-auto">
         <div className={`rounded-2xl border border-white/10 p-6 ${globalBackgroundStyle} space-y-6`}>
           {/* Header */}
           <div className="flex items-center justify-between">

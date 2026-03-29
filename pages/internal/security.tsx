@@ -2,7 +2,7 @@
 
 import type { GetServerSideProps } from "next";
 
-import InternalSecurityPage from "@/containers/InternalSecurityPage";
+import InternalSecurityPage from "@/containers/internal/InternalSecurityPage";
 import { requireAdminPage } from "@/server/auth/guards";
 import { assertRequiredEnv } from "@/server/env";
 

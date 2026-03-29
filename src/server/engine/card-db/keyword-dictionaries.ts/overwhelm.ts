@@ -160,7 +160,7 @@ export function HasOverwhelm(cardId: string,
   //JTL_053: The Ghost - Heart of the Family
   if (player) {
     const theGhostPlayId = GetPlayIdForUniqueUnitInPlay("JTL_053", player);
-    if(theGhostPlayId && TraitContains(cardId, "Spectre", player)
+    if(theGhostPlayId !== "0" && TraitContains(cardId, "Spectre", player)
         && playId !== theGhostPlayId
         && HasOverwhelm("JTL_053", theGhostPlayId, player))
       return true;

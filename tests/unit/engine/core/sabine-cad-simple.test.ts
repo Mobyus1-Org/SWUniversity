@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "../game-test-adapter";
 
 import { sabineWrenCadBaneSimplePuzzleState } from "../_gamestates/simple";
+import { NeedsTarget } from "@/lib/engine/message-types";
 
 describe("Sabine Wren / Cad Bane Simple Puzzle", () => {
   it("produces only Player 1 as winner when simple puzzle is completed", async () => {
@@ -55,4 +56,21 @@ describe("Sabine Wren / Cad Bane Simple Puzzle", () => {
     expect(g.state.player2.base.damage).toBe(25);
     expect(g.state.defeatedPlayers).toEqual([2]);
   });
+
+  it("should deal 2 damage to Sentinel and 1 damage to base", async () => {
+    // arrange
+    const g = new GameTestAdapter();
+    g.loadNewState(sabineWrenCadBaneSimplePuzzleState);
+    // act
+    await g.deployLeaderAsync(1);
+    await g.attackWithGroundUnitAsync(1, 2);
+    const lastDispatch = g.lastDispatchResponse!.resolutionNeeded as NeedsTarget;
+    expect(lastDispatch.fromPlayIds!.length).toBe(1);
+    await g.chooseGroundUnitAsync(2, 0);
+    // assert
+    expect(g.state.player2.groundArena[0].damage).toBe(2);
+    expect(g.state.player2.base.damage).toBe(12);
+    expect(g.state.player1.groundArena[2].damage).toBe(4);
+  });
+
 });

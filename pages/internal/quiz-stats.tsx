@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 
-import QuizStatsPage from "@/containers/InternalPage";
+import QuizStatsPage from "@/containers/internal/InternalPage";
 import type { GetServerSideProps } from "next";
 
 import { requireAdminPage } from "@/server/auth/guards";

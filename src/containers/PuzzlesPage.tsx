@@ -1,11 +1,14 @@
 import React from "react";
-import { CardSubtitle, CardTitle, CardType } from "@/server/engine/card-db/generated";
+import { CardSubtitle, CardTitle } from "@/server/engine/card-db/generated";
 import { getCardImageLink, getSWUDBImageLink } from "@/util/func";
 import { globalBackgroundStyle, lightsaberGlow } from "@/util/style-const";
-import { type PuzzleIntent, type PuzzleRuntime } from "@/lib/puzzles/types";
-import type { PuzzleUiHints } from "@/server/puzzle/adapters/puzzle-bridge";
 import { LoadPuzzlePanel } from "@/components/Shared/LoadPuzzlePanel";
 import { PuzzleBuilderPanel } from "@/components/Shared/PuzzleBuilderPanel";
+import type { GameState } from "@/lib/engine/game";
+import type { PlayerId } from "@/lib/engine/core-models";
+import type { DispatchResponse, DispatchType, DispatchData, GameDispatch, ResolutionRequest } from "@/lib/engine/message-types";
+import type { EngineContext } from "@/server/engine/pending-resolution";
+import { CardIsLeader } from "@/server/engine/core-functions";
 
 type PreviewState = {
   imageId: string;
@@ -17,18 +20,58 @@ function getPreviewImageId(cardId: string, showBack = false): string {
   return showBack ? `${cardId}_BACK` : cardId;
 }
 
-function formatPrompt(runtime: PuzzleRuntime): string {
-  if (runtime.status === "won") {
-    return "Puzzle complete.";
-  }
-  if (runtime.status === "lost") {
-    return "Puzzle failed.";
-  }
-  if (runtime.status === "draw") {
-    return "Puzzle ended in a draw.";
-  }
-  return runtime.prompt?.title ?? "Choose an action by clicking a hand card, your leader, or a ready friendly unit.";
+// ---------------------------------------------------------------------------
+// Config — flip to true to use round-trip context mode (HttpTransport pattern)
+// ---------------------------------------------------------------------------
+const USE_HTTP = false;
+
+const PLAYER: PlayerId = 1;
+
+type GameStatus = "playing" | "won" | "lost" | "draw";
+
+function createDispatch(type: DispatchType, data: DispatchData): GameDispatch {
+  return {
+    dispatchId: globalThis.crypto.randomUUID(),
+    dispatchType: type,
+    dispatchData: data,
+    fromPlayer: PLAYER,
+  };
 }
+
+function deriveStatus(gameState: GameState): GameStatus {
+  if (gameState.defeatedPlayers.includes(1) && gameState.defeatedPlayers.includes(2)) return "draw";
+  if (gameState.defeatedPlayers.includes(2)) return "won";
+  if (gameState.defeatedPlayers.includes(1)) return "lost";
+  return "playing";
+}
+
+function formatStatus(status: GameStatus, resolutionNeeded: ResolutionRequest | null): string {
+  if (status === "won") return "Puzzle complete!";
+  if (status === "lost") return "Puzzle failed.";
+  if (status === "draw") return "Puzzle ended in a draw.";
+  if (resolutionNeeded?.type === "Option") return resolutionNeeded.helperText;
+  if (resolutionNeeded?.type === "Target") return "Choose a target.";
+  if (resolutionNeeded?.type === "Trigger") return "Choose a trigger.";
+  if (resolutionNeeded?.type === "Player") return "Choose a player.";
+  return "Choose an action — click a hand card, your leader, or a ready friendly unit.";
+}
+
+function formatOptionLabel(option: string): string {
+  if (option === "Yes" || option === "No") return option;
+  const eqIdx = option.indexOf("=");
+  const key = eqIdx >= 0 ? option.slice(0, eqIdx) : option;
+  return key.split("_").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
+// Leaders whose leader-side ability is an ACTION (not passive). Mirrors ActionAbilities() in action-ability.ts.
+const LEADERS_WITH_ACTION_ABILITY = new Set([
+  "SOR_002", "SOR_003", "SOR_004", "SOR_005", "SOR_006",
+  "SOR_007", "SOR_009", "SOR_010", "SOR_011", "SOR_012",
+  "SOR_013", "SOR_014", "SOR_016", "SOR_017", "SOR_018",
+  "SHD_002", "SHD_003", "SHD_004", "SHD_006", "SHD_007",
+  "SHD_009", "SHD_010", "SHD_011", "SHD_012", "SHD_013",
+  "SHD_016", "SHD_017",
+]);
 
 function CardVisual({
   cardId,
@@ -155,6 +198,39 @@ function FaceDownResource({
   </div>;
 }
 
+function UpgradeStrip({
+  cardId,
+  onPreviewStart,
+  onPreviewEnd,
+}: {
+  cardId: string;
+  onPreviewStart: (preview: PreviewState) => void;
+  onPreviewEnd: () => void;
+}) {
+  const primarySrc = getCardImageLink(cardId);
+  const fallbackSrc = getSWUDBImageLink(cardId);
+  const [imageSrc, setImageSrc] = React.useState(primarySrc);
+  const title = CardTitle(cardId);
+
+  React.useEffect(() => { setImageSrc(primarySrc); }, [primarySrc]);
+
+  return (
+    <div
+      className="overflow-hidden rounded-b-xl border-x border-b border-white/15 bg-black/40"
+      style={{ height: 30 }}
+      onMouseEnter={() => onPreviewStart({ imageId: cardId, cardId, label: title })}
+      onMouseLeave={onPreviewEnd}
+    >
+      <img
+        src={imageSrc}
+        alt={title}
+        className="h-full w-full object-cover object-bottom"
+        onError={() => { if (imageSrc !== fallbackSrc) setImageSrc(fallbackSrc); }}
+      />
+    </div>
+  );
+}
+
 function ZonePanel({ title, subtitle, children, hideHeader = false }: { title: string; subtitle?: string; children: React.ReactNode; hideHeader?: boolean }) {
   return <section className={`rounded-xl border border-white/10 p-4 ${globalBackgroundStyle}`}>
     {!hideHeader ? <div className="mb-3 flex items-end justify-between gap-4">
@@ -182,17 +258,29 @@ function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean }) {
-  // All hooks must be called unconditionally at the top
-  const [runtime, setRuntime] = React.useState<PuzzleRuntime | null>(null);
-  const [ui, setUi] = React.useState<PuzzleUiHints | null>(null);
+  // ---------------------------------------------------------------------------
+  // Engine communication refs (not React state — no re-render on change)
+  // ---------------------------------------------------------------------------
+  const gameIdRef = React.useRef<string | null>(null);           // server-managed mode
+  const roundTripCtxRef = React.useRef<EngineContext | null>(null); // round-trip mode
+
+  // ---------------------------------------------------------------------------
+  // React state
+  // ---------------------------------------------------------------------------
+  const [gameState, setGameState] = React.useState<GameState | null>(null);
+  const [gameLog, setGameLog] = React.useState<string[]>([]);
+  const [resolutionNeeded, setResolutionNeeded] = React.useState<ResolutionRequest | null>(null);
   const [isResolving, setIsResolving] = React.useState(false);
+  const [historyLength, setHistoryLength] = React.useState(0);
   const [lastActionMs, setLastActionMs] = React.useState<number | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
-  const [preview, setPreview] = React.useState<PreviewState | null>(null);
+  const [selectedPuzzleN, setSelectedPuzzleN] = React.useState<number | null>(null);
   const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
   const [showClosePuzzleConfirm, setShowClosePuzzleConfirm] = React.useState(false);
-  const [selectedPuzzleN, setSelectedPuzzleN] = React.useState<number | null>(null);
+  const [leaderModalOpen, setLeaderModalOpen] = React.useState(false);
   const previewTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gameLogRef = React.useRef<HTMLDivElement | null>(null);
+  const [preview, setPreview] = React.useState<PreviewState | null>(null);
   const previewPrimarySrc = preview ? getCardImageLink(preview.imageId) : "";
   const previewFallbackSrc = preview ? getSWUDBImageLink(preview.imageId) : "";
   const [previewImageSrc, setPreviewImageSrc] = React.useState(previewPrimarySrc);
@@ -219,60 +307,225 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   }, [clearPreviewTimer, setPreview]);
   React.useEffect(() => () => { clearPreviewTimer(); }, [clearPreviewTimer]);
 
-  // Always send intent to server, never mutate local game state
-  const dispatch = React.useCallback((intent: PuzzleIntent) => {
-    if (isResolving || !runtime) return;
+  // ---------------------------------------------------------------------------
+  // Core dispatch — sends a GameDispatch to the puzzle API endpoint
+  // ---------------------------------------------------------------------------
+  const sendDispatch = React.useCallback(async (d: GameDispatch) => {
+    if (isResolving) return;
     setIsResolving(true);
     setActionError(null);
-    const clientStart = performance.now();
-    fetch("/api/engine/resolve-action", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ state: runtime, action: intent }),
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({ error: "Unable to resolve action." }));
-          throw new Error(payload.error ?? "Unable to resolve action.");
-        }
-        return response.json() as Promise<{ state: PuzzleRuntime; ui: PuzzleUiHints; serverDurationMs: number }>;
-      })
-      .then((payload) => {
-        setRuntime(payload.state);
-        setUi(payload.ui);
-        const endToEndMs = Math.round(performance.now() - clientStart);
-        setLastActionMs(endToEndMs);
-      })
-      .catch((error) => {
-        setActionError(error instanceof Error ? error.message : "Unable to resolve action.");
-      })
-      .finally(() => setIsResolving(false));
-  }, [isResolving, runtime, setIsResolving, setActionError, setRuntime, setLastActionMs, setUi]);
+    const t0 = performance.now();
+    try {
+      const body = USE_HTTP
+        ? { dispatch: d, context: roundTripCtxRef.current ?? undefined }
+        : { gameId: gameIdRef.current, dispatch: d };
 
-  const loadPuzzle = React.useCallback((n: number) => {
+      const res = await fetch("/api/puzzle/dispatch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({ error: "Dispatch failed." })) as { error?: string };
+        throw new Error(payload.error ?? "Dispatch failed.");
+      }
+
+      const payload = await res.json() as {
+        response: DispatchResponse;
+        gameLog: string[];
+        currentGameState: GameState;
+        historyLength: number;
+        context?: EngineContext;
+      };
+
+      if (payload.context) roundTripCtxRef.current = payload.context;
+      setResolutionNeeded(payload.response.resolutionNeeded ?? null);
+      // Always update from currentGameState so UI reflects card placement during pending resolutions
+      setGameState(payload.currentGameState ?? payload.response.newGameState ?? null);
+      setGameLog(payload.gameLog);
+      setHistoryLength(payload.historyLength);
+      if (payload.response.invalidAction) {
+        setActionError(payload.response.invalidReason ?? "Invalid action.");
+      }
+      setLastActionMs(Math.round(performance.now() - t0));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Action failed.");
+    } finally {
+      setIsResolving(false);
+    }
+  }, [isResolving]);
+
+  // ---------------------------------------------------------------------------
+  // Click handlers — translate UI events into GameDispatch calls
+  // ---------------------------------------------------------------------------
+  const handleUnitClick = React.useCallback((playId: string) => {
+    if (isResolving) return;
+    if (resolutionNeeded?.type === "Target") {
+      void sendDispatch(createDispatch("choose-target", { targetPlayIds: [playId] }));
+    } else if (!resolutionNeeded) {
+      void sendDispatch(createDispatch("initiate-attack", { playId }));
+    }
+  }, [isResolving, resolutionNeeded, sendDispatch]);
+
+  const handleBaseClick = React.useCallback((player: PlayerId) => {
+    if (isResolving) return;
+    void sendDispatch(createDispatch("choose-target", { targetZones: ["Base"] }));
+  }, [isResolving, sendDispatch]);
+
+  const handleHandClick = React.useCallback((index: number, cardId: string) => {
+    if (isResolving) return;
+    if (resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Hand")) {
+      void sendDispatch(createDispatch("choose-target", { targetIndices: [index] }));
+    } else if (!resolutionNeeded) {
+      void sendDispatch(createDispatch("play-card", { cardId, fromZone: "Hand" }));
+    }
+  }, [isResolving, resolutionNeeded, sendDispatch]);
+
+  const handleLeaderAbility = React.useCallback(() => {
+    if (!gameState) return;
+    setLeaderModalOpen(false);
+    void sendDispatch(createDispatch("use-ability", { cardId: gameState.player1.leader.cardId }));
+  }, [gameState, sendDispatch]);
+
+  const handleLeaderDeploy = React.useCallback(() => {
+    if (!gameState) return;
+    setLeaderModalOpen(false);
+    void sendDispatch(createDispatch("use-ability", {
+      cardId: gameState.player1.leader.cardId,
+      epicAction: true,
+      deployLeader: true,
+    }));
+  }, [gameState, sendDispatch]);
+
+  const handleOptionChoice = React.useCallback((option: string) => {
+    void sendDispatch(createDispatch("choose-option", { option }));
+  }, [sendDispatch]);
+
+  const handleTriggerChoice = React.useCallback((cardId: string) => {
+    void sendDispatch(createDispatch("choose-trigger", { cardId }));
+  }, [sendDispatch]);
+
+  const handlePlayerChoice = React.useCallback((playerId: PlayerId) => {
+    void sendDispatch(createDispatch("choose-player", { playerId }));
+  }, [sendDispatch]);
+
+  const handlePass = React.useCallback(() => {
+    void sendDispatch(createDispatch("pass-action", {}));
+  }, [sendDispatch]);
+
+  const handleClaimInitiative = React.useCallback(() => {
+    void sendDispatch(createDispatch("claim-initiative", {}));
+  }, [sendDispatch]);
+
+  // ---------------------------------------------------------------------------
+  // Undo — revert to the previous committed game state
+  // ---------------------------------------------------------------------------
+  const handleUndo = React.useCallback(async () => {
+    if (isResolving || historyLength === 0) return;
     setIsResolving(true);
     setActionError(null);
-    fetch(`/api/internal/test-puzzles?n=${n}`)
-      .then(async (r) => {
-        if (!r.ok) throw new Error((await r.json()).error ?? "Load failed");
-        return r.json() as Promise<{ state: PuzzleRuntime; ui: PuzzleUiHints }>;
-      })
-      .then(({ state, ui }) => {
-        setRuntime(state);
-        setUi(ui);
-      })
-      .catch((err: unknown) => {
-        setActionError(err instanceof Error ? err.message : "Load failed.");
-      })
-      .finally(() => setIsResolving(false));
-  }, [setIsResolving, setActionError, setRuntime, setUi]);
+    try {
+      const body = USE_HTTP
+        ? { context: roundTripCtxRef.current ?? undefined }
+        : { gameId: gameIdRef.current };
+
+      const res = await fetch("/api/puzzle/undo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({ error: "Undo failed." })) as { error?: string };
+        throw new Error(payload.error ?? "Undo failed.");
+      }
+
+      const payload = await res.json() as {
+        gameState: GameState;
+        gameLog: string[];
+        historyLength: number;
+        context?: EngineContext;
+      };
+
+      if (payload.context) roundTripCtxRef.current = payload.context;
+      setGameState(payload.gameState);
+      setGameLog(payload.gameLog);
+      setHistoryLength(payload.historyLength);
+      setResolutionNeeded(null);
+      setActionError(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Undo failed.");
+    } finally {
+      setIsResolving(false);
+    }
+  }, [isResolving, historyLength]);
+
+  // ---------------------------------------------------------------------------
+  // Load puzzle — fetch initial GameState and register/seed the engine session
+  // ---------------------------------------------------------------------------
+  const loadPuzzle = React.useCallback(async (n: number) => {
+    setIsResolving(true);
+    setActionError(null);
+    try {
+      const r = await fetch(`/api/internal/test-puzzles?n=${n}`);
+      if (!r.ok) throw new Error(((await r.json()) as { error?: string }).error ?? "Load failed");
+      const { gameState: initialState } = await r.json() as { gameState: GameState };
+
+      if (USE_HTTP) {
+        // Round-trip mode: seed the initial context locally; no server registration needed
+        roundTripCtxRef.current = {
+          game: {
+            id: globalThis.crypto.randomUUID(),
+            currentGameState: initialState,
+            gameStateHistory: [],
+            gameLog: [`Puzzle ${n} loaded.`],
+          },
+          pending: null,
+        } as EngineContext;
+        gameIdRef.current = null;
+      } else {
+        // Server-managed mode: register the initial state in the game-store
+        const newGameRes = await fetch("/api/engine/new-game", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ withGameState: initialState }),
+        });
+        if (!newGameRes.ok) throw new Error("Failed to create game session.");
+        const { gameId } = await newGameRes.json() as { gameId: string };
+        gameIdRef.current = gameId;
+        roundTripCtxRef.current = null;
+      }
+
+      setGameState(initialState);
+      setGameLog([`Puzzle ${n} loaded.`]);
+      setResolutionNeeded(null);
+      setActionError(null);
+      setHistoryLength(0);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Load failed.");
+    } finally {
+      setIsResolving(false);
+    }
+  }, []);
 
   // Always call hooks before any return
   React.useEffect(() => {
     setPreviewImageSrc(previewPrimarySrc);
   }, [previewPrimarySrc, setPreviewImageSrc]);
 
-  if (!runtime) {
+  // Auto-scroll game log to bottom when entries change
+  React.useEffect(() => {
+    const el = gameLogRef.current;
+    if (!el) return;
+    try {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    } catch (err) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [gameLog]);
+
+  if (!gameState) {
     return <div className="relative z-10 mx-auto w-full max-w-[1920px] px-3 py-4 text-white sm:px-4 lg:px-6">
       {showBuilderPanelOpen && showBuilderTools ? (
         <PuzzleBuilderPanel
@@ -285,10 +538,9 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       {showBuilderTools ? (
         <div className="mb-3 flex items-start gap-4 rounded-xl border border-white/10 bg-black/30 px-4 py-3">
           <LoadPuzzlePanel
-            onPuzzleLoaded={(n, state, loadedUi) => {
+            onPuzzleLoaded={(n) => {
               setSelectedPuzzleN(n);
-              setRuntime(state);
-              setUi(loadedUi);
+              void loadPuzzle(n);
             }}
           />
           <button
@@ -304,24 +556,42 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     </div>;
   }
 
-  const player = runtime.game.player1;
-  const opponent = runtime.game.player2;
-  const selectablePlayIds = ui?.selectablePlayIds ?? [];
-  const selectableBaseForPlayer = ui?.selectableBaseForPlayer ?? [];
-  const uiCanClickLeader = ui?.canClickLeader ?? false;
-  const sentinelPlayIds = ui?.sentinelPlayIds ?? [];
-  const selectableHandIndices = ui?.selectableHandIndices ?? [];
+  const player = gameState.player1;
+  const opponent = gameState.player2;
+  const status = deriveStatus(gameState);
+  const isGameOver = status !== "playing";
+
+  const selectablePlayIds = resolutionNeeded?.type === "Target"
+    ? (resolutionNeeded.fromPlayIds ?? [])
+    : !resolutionNeeded && !isGameOver
+      ? [
+          ...player.groundArena.filter((u) => u.ready).map((u) => u.playId),
+          ...player.spaceArena.filter((u) => u.ready).map((u) => u.playId),
+        ]
+      : [];
+  const selectableBaseForPlayer: PlayerId[] = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Base")
+    ? [2]
+    : [];
+  // Clickable if deploy is still available (even exhausted) OR ability is ready
+  const uiCanClickLeader = !resolutionNeeded && !isGameOver && !player.leader.deployed &&
+    (player.leader.ready || !player.leader.epicActionUsed);
+  const sentinelPlayIds: string[] = [];
+  const selectableHandIndices: number[] = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Hand")
+    ? (resolutionNeeded.fromIndices ?? player.hand.map((_, i) => i))
+    : !resolutionNeeded && !isGameOver
+      ? player.hand.map((_, i) => i)
+      : [];
+
   const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[opponent.discard.length - 1] : null;
   const latestPlayerDiscard = player.discard.length > 0 ? player.discard[player.discard.length - 1] : null;
-  const hasPrompt = Boolean(runtime.prompt);
-  const promptOptions = ui?.promptOptions ?? [];
-  const statusTone = runtime.status === "won"
+  const hasPrompt = resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "Trigger" || resolutionNeeded?.type === "Player";
+  const statusTone = status === "won"
     ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
-    : runtime.status === "lost"
+    : status === "lost"
       ? "border-rose-400/40 bg-rose-500/15 text-rose-100"
-      : runtime.status === "draw"
+      : status === "draw"
         ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
-      : "border-white/10 bg-white/5 text-white";
+        : "border-white/10 bg-white/5 text-white";
 
   return <div className="relative z-10 mx-auto w-full max-w-[1920px] px-3 py-4 text-white sm:px-4 lg:px-6">
     {showBuilderPanelOpen && showBuilderTools ? (
@@ -333,13 +603,12 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
         }}
       />
     ) : null}
-    {showBuilderTools && !runtime ? (
+    {showBuilderTools && !gameState ? (
       <div className="mb-3 flex items-start gap-4 rounded-xl border border-white/10 bg-black/30 px-4 py-3">
         <LoadPuzzlePanel
-          onPuzzleLoaded={(n, state, loadedUi) => {
+          onPuzzleLoaded={(n) => {
             setSelectedPuzzleN(n);
-            setRuntime(state);
-            setUi(loadedUi);
+            void loadPuzzle(n);
           }}
         />
         <button
@@ -361,7 +630,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
           <span className="text-xs text-white/70">Close puzzle?</span>
           <button
             type="button"
-            onClick={() => { setRuntime(null); setUi(null); setShowClosePuzzleConfirm(false); setActionError(null); }}
+            onClick={() => { setGameState(null); setShowClosePuzzleConfirm(false); setActionError(null); }}
             className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-500/35"
           >OK</button>
           <button
@@ -385,17 +654,17 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
         <section className={`rounded-lg border border-white/10 p-2 ${globalBackgroundStyle}`}>
           <div className="mb-1.5 flex items-center justify-between">
             <h2 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/70">Game Log</h2>
-            <span className="text-[10px] text-white/50">{runtime.log.length}</span>
+            <span className="text-[10px] text-white/50">{gameLog.length}</span>
           </div>
-          <div className="h-[23vh] space-y-1.5 overflow-y-auto pr-1 text-[10px] leading-4 text-white/80">
-            {runtime.log.map((entry, index) => <div key={`${entry}-${index}`} className="rounded-md bg-black/25 px-1.5 py-1">{entry}</div>)}
+          <div ref={gameLogRef} className="h-[23vh] space-y-1.5 overflow-y-auto pr-1 text-[10px] leading-4 text-white/80">
+            {gameLog.map((entry, index) => <div key={`${entry}-${index}`} className="rounded-md bg-black/25 px-1.5 py-1">{entry}</div>)}
           </div>
         </section>
         <SectionShell title="Actions" className="mt-2 rounded-lg p-2">
           <div className="mt-2 grid gap-1.5">
-            <button type="button" onClick={() => dispatch({ type: "undo" })} disabled={isResolving || runtime.history.length === 0} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Undo</button>
-            <button type="button" onClick={() => dispatch({ type: "pass" })} disabled={isResolving || runtime.status !== "playing" || !!runtime.prompt} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass</button>
-            <button type="button" onClick={() => dispatch({ type: "take-initiative" })} disabled={isResolving || runtime.game.initiativeClaimed || runtime.status !== "playing" || !!runtime.prompt} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Initiative</button>
+            <button type="button" onClick={() => void handleUndo()} disabled={isResolving || historyLength === 0} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Undo</button>
+            <button type="button" onClick={handlePass} disabled={isResolving || isGameOver || !!resolutionNeeded} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass</button>
+            <button type="button" onClick={handleClaimInitiative} disabled={isResolving || gameState.initiativeClaimed || isGameOver || !!resolutionNeeded} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Initiative</button>
             <div className="h-3" />
             <button type="button" onClick={() => { if (selectedPuzzleN !== null) loadPuzzle(selectedPuzzleN); }} disabled={isResolving || selectedPuzzleN === null} className="rounded-lg border border-white/15 bg-rose-500/20 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40">Reset</button>
           </div>
@@ -405,12 +674,12 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
         </SectionShell>
         <SectionShell title="Initiative" className="mt-2 rounded-lg p-2">
           <div className="mt-2 rounded-lg bg-black/25 px-2 py-1.5 text-[10px] text-white/75">
-            {runtime.game.initiativePlayer === 1 ? "Player" : "Enemy"}
+            {gameState.initiativePlayer === 1 ? "Player" : "Enemy"}
           </div>
         </SectionShell>
         <SectionShell title="Status" className="mt-2 rounded-lg p-2">
           <div className={`mt-2 rounded-lg border px-2 py-1.5 text-[10px] ${statusTone}`}>
-            <div>{formatPrompt(runtime)}</div>
+            <div>{formatStatus(status, resolutionNeeded)}</div>
             {actionError ? <div className="mt-1 text-[10px] text-rose-200">{actionError}</div> : null}
           </div>
         </SectionShell>
@@ -462,13 +731,13 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
             <div className="space-y-2 xl:hidden">
               <div className="relative rounded-lg bg-black/20 p-2">
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Space</div>
-                <div className="relative z-10 flex flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
+                <div className="relative z-10 flex flex-row-reverse flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {opponent.spaceArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
                   {opponent.spaceArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
                       selectable={selectablePlayIds.includes(unit.playId)}
-                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
@@ -478,6 +747,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
+                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -490,7 +760,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     <CardVisual
                       cardId={unit.cardId}
                       selectable={selectablePlayIds.includes(unit.playId)}
-                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
@@ -500,6 +770,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
+                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -521,7 +792,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={opponent.base.cardId}
                     selectable={selectableBaseForPlayer.includes(2)}
-                    onClick={selectableBaseForPlayer.includes(2) ? () => dispatch({ type: "click-base", player: 2 }) : undefined}
+                    onClick={selectableBaseForPlayer.includes(2) ? () => handleBaseClick(2) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
@@ -535,13 +806,13 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
             <div className="hidden gap-2 xl:grid xl:grid-cols-[minmax(0,1fr)_165px_minmax(0,1fr)]">
               <div className="relative rounded-lg bg-black/20 p-2">
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Space</div>
-                <div className="relative z-10 flex flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
+                <div className="relative z-10 flex flex-row-reverse flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {opponent.spaceArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
                   {opponent.spaceArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
                       selectable={selectablePlayIds.includes(unit.playId)}
-                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
@@ -551,6 +822,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
+                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -572,7 +844,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={opponent.base.cardId}
                     selectable={selectableBaseForPlayer.includes(2)}
-                    onClick={selectableBaseForPlayer.includes(2) ? () => dispatch({ type: "click-base", player: 2 }) : undefined}
+                    onClick={selectableBaseForPlayer.includes(2) ? () => handleBaseClick(2) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
@@ -596,7 +868,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   <CardVisual
                     cardId={opponent.base.cardId}
                     selectable={selectableBaseForPlayer.includes(2)}
-                    onClick={selectableBaseForPlayer.includes(2) ? () => dispatch({ type: "click-base", player: 2 }) : undefined}
+                    onClick={selectableBaseForPlayer.includes(2) ? () => handleBaseClick(2) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
@@ -614,7 +886,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     <CardVisual
                       cardId={unit.cardId}
                       selectable={selectablePlayIds.includes(unit.playId)}
-                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
@@ -624,6 +896,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
+                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -637,7 +910,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   {!player.leader.deployed ? <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={player.leader.cardId}
                     selectable={uiCanClickLeader}
-                    onClick={uiCanClickLeader ? () => dispatch({ type: "click-leader", player: 1 }) : undefined}
+                    onClick={uiCanClickLeader ? () => { if (LEADERS_WITH_ACTION_ABILITY.has(player.leader.cardId) && player.leader.ready) { setLeaderModalOpen(true); } else { handleLeaderDeploy(); } } : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     exhausted={!player.leader.ready}
@@ -651,7 +924,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={player.base.cardId}
                     selectable={selectableBaseForPlayer.includes(1)}
-                    onClick={selectableBaseForPlayer.includes(1) ? () => dispatch({ type: "click-base", player: 1 }) : undefined}
+                    onClick={selectableBaseForPlayer.includes(1) ? () => handleBaseClick(1) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
@@ -668,9 +941,9 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   {player.groundArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
-                      imageId={getPreviewImageId(unit.cardId, CardType(unit.cardId) === "Leader")}
+                      imageId={getPreviewImageId(unit.cardId, CardIsLeader(unit.cardId))}
                       selectable={selectablePlayIds.includes(unit.playId)}
-                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
@@ -680,22 +953,23 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
+                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
 
               <div className="relative rounded-lg bg-black/20 p-2">
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Space</div>
-                <div className="relative z-10 flex flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
+                <div className="relative z-10 flex flex-row-reverse flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {player.spaceArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
                   {player.spaceArena.map((unit) => {
-                    const isLeader = CardType(unit.cardId) === "Leader";
+                    const isLeader = CardIsLeader(unit.cardId);
                     return <div key={unit.playId} className="w-24 shrink-0">
                       <CardVisual
                         cardId={unit.cardId}
                         imageId={getPreviewImageId(unit.cardId, isLeader)}
                         selectable={selectablePlayIds.includes(unit.playId)}
-                        onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
+                        onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                         onPreviewStart={handlePreviewStart}
                         onPreviewEnd={handlePreviewEnd}
                         exhausted={!unit.ready}
@@ -705,6 +979,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         sentinel={sentinelPlayIds.includes(unit.playId)}
                         square
                       />
+                      {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                     </div>})
                   }
                 </div>
@@ -714,14 +989,14 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
             <div className="hidden gap-2 xl:grid xl:grid-cols-[minmax(0,1fr)_165px_minmax(0,1fr)]">
               <div className="relative rounded-lg bg-black/20 p-2">
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibond uppercase tracking-[0.2em] text-white/30">Space</div>
-                <div className="relative z-10 flex flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
+                <div className="relative z-10 flex flex-row-reverse flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {player.spaceArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
                   {player.spaceArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
                       imageId={getPreviewImageId(unit.cardId)}
                       selectable={selectablePlayIds.includes(unit.playId)}
-                      onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
+                      onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       exhausted={!unit.ready}
@@ -731,6 +1006,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
+                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -740,7 +1016,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   {!player.leader.deployed ? <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={player.leader.cardId}
                     selectable={uiCanClickLeader}
-                    onClick={uiCanClickLeader ? () => dispatch({ type: "click-leader", player: 1 }) : undefined}
+                    onClick={uiCanClickLeader ? () => { if (LEADERS_WITH_ACTION_ABILITY.has(player.leader.cardId) && player.leader.ready) { setLeaderModalOpen(true); } else { handleLeaderDeploy(); } } : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     exhausted={!player.leader.ready}
@@ -754,7 +1030,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={player.base.cardId}
                     selectable={selectableBaseForPlayer.includes(1)}
-                    onClick={selectableBaseForPlayer.includes(1) ? () => dispatch({ type: "click-base", player: 1 }) : undefined}
+                    onClick={selectableBaseForPlayer.includes(1) ? () => handleBaseClick(1) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
@@ -766,7 +1042,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   <CardVisual
                     cardId={player.base.cardId}
                     selectable={selectableBaseForPlayer.includes(1)}
-                    onClick={selectableBaseForPlayer.includes(1) ? () => dispatch({ type: "click-base", player: 1 }) : undefined}
+                    onClick={selectableBaseForPlayer.includes(1) ? () => handleBaseClick(1) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
@@ -776,7 +1052,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   {!player.leader.deployed ? <CardVisual
                     cardId={player.leader.cardId}
                     selectable={uiCanClickLeader}
-                    onClick={uiCanClickLeader ? () => dispatch({ type: "click-leader", player: 1 }) : undefined}
+                    onClick={uiCanClickLeader ? () => { if (LEADERS_WITH_ACTION_ABILITY.has(player.leader.cardId) && player.leader.ready) { setLeaderModalOpen(true); } else { handleLeaderDeploy(); } } : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     exhausted={!player.leader.ready}
@@ -795,13 +1071,13 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                 <div className="relative z-10 flex flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {player.groundArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
                   {player.groundArena.map((unit) => {
-                    const isLeader = CardType(unit.cardId) === "Leader";
+                    const isLeader = CardIsLeader(unit.cardId);
                     return <div key={unit.playId} className="w-24 shrink-0">
                       <CardVisual
                         cardId={unit.cardId}
                         imageId={getPreviewImageId(unit.cardId, isLeader)}
                         selectable={selectablePlayIds.includes(unit.playId)}
-                        onClick={selectablePlayIds.includes(unit.playId) ? () => dispatch({ type: "click-unit", playId: unit.playId }) : undefined}
+                        onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                         onPreviewStart={handlePreviewStart}
                         onPreviewEnd={handlePreviewEnd}
                         exhausted={!unit.ready}
@@ -811,6 +1087,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         sentinel={sentinelPlayIds.includes(unit.playId)}
                         square
                       />
+                      {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                     </div>})
                   }
                 </div>
@@ -871,7 +1148,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     <CardVisual
                       cardId={card.cardId}
                       selectable={selectable}
-                      onClick={selectable ? () => dispatch({ type: "click-hand", handIndex: index }) : undefined}
+                      onClick={selectable ? () => handleHandClick(index, card.cardId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       square
@@ -882,7 +1159,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     <CardVisual
                       cardId={card.cardId}
                       selectable={selectable}
-                      onClick={selectable ? () => dispatch({ type: "click-hand", handIndex: index }) : undefined}
+                      onClick={selectable ? () => handleHandClick(index, card.cardId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       handScaleHalf
@@ -914,28 +1191,66 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       <div className="mt-2 px-1 text-xs text-white/80">{preview.label ?? CardTitle(preview.cardId)}</div>
     </div> : null}
 
-    {hasPrompt ? <div className="fixed bottom-3 left-1/2 z-40 w-[min(1100px,calc(100vw-1.5rem))] -translate-x-1/2 rounded-lg border border-white/20 bg-[rgba(8,12,26,0.94)] px-4 py-3 shadow-2xl backdrop-blur-sm">
-      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">Prompt</div>
-      <p className="mt-1 text-sm text-white/90">{ui?.promptTitle ?? formatPrompt(runtime)}</p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {promptOptions.map((option) => <button
-          key={option.id}
-          type="button"
-          disabled={isResolving || option.disabled}
-          onClick={() => dispatch({ type: "choose-option", optionId: option.id })}
-          className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {option.label}
-        </button>)}
+    {hasPrompt ? <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl">
+        <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
+          {resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : "Choose"}
+        </h3>
+        {resolutionNeeded?.type === "Option" ? <p className="-mt-2 mb-4 max-w-xs text-xs text-white/65">{resolutionNeeded.helperText}</p> : null}
+        <div className="flex flex-col gap-3">
+          {resolutionNeeded?.type === "Option" ? resolutionNeeded.options.map((opt) => (
+            <button key={opt} type="button" disabled={isResolving}
+              onClick={() => handleOptionChoice(opt)}
+              className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/35 disabled:cursor-not-allowed disabled:opacity-40">
+              {formatOptionLabel(opt)}
+            </button>
+          )) : resolutionNeeded?.type === "Trigger" ? resolutionNeeded.fromCardIds.map((id) => (
+            <button key={id} type="button" disabled={isResolving}
+              onClick={() => handleTriggerChoice(id)}
+              className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/35 disabled:cursor-not-allowed disabled:opacity-40">
+              {CardTitle(id)}
+            </button>
+          )) : resolutionNeeded?.type === "Player" ? resolutionNeeded.fromPlayers.map((p) => (
+            <button key={p} type="button" disabled={isResolving}
+              onClick={() => handlePlayerChoice(p)}
+              className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/35 disabled:cursor-not-allowed disabled:opacity-40">
+              {p === 1 ? "Player" : "Opponent"}
+            </button>
+          )) : null}
+        </div>
+      </div>
+    </div> : null}
+
+    {leaderModalOpen ? <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl">
+        <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">Leader Action</h3>
+        <div className="flex flex-col gap-3">
+          {gameState.player1.leader.ready ? (
+          <button type="button" onClick={handleLeaderAbility}
+            className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/35">
+            Use Leader Ability
+          </button>
+          ) : null}
+          {!gameState.player1.leader.epicActionUsed ? (
+            <button type="button" onClick={handleLeaderDeploy}
+              className="rounded-lg border border-amber-400/40 bg-amber-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-500/35">
+              Deploy Leader
+            </button>
+          ) : null}
+          <button type="button" onClick={() => setLeaderModalOpen(false)}
+            className="rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/20">
+            Cancel
+          </button>
+        </div>
       </div>
     </div> : null}
 
     <div className="mt-4 space-y-3 xl:hidden">
       <SectionShell title="Actions" className="rounded-lg p-3">
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <button type="button" onClick={() => dispatch({ type: "undo" })} disabled={isResolving || runtime.history.length === 0} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Undo</button>
-          <button type="button" onClick={() => dispatch({ type: "pass" })} disabled={isResolving || runtime.status !== "playing" || !!runtime.prompt} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass to Regroup Draw</button>
-          <button type="button" onClick={() => dispatch({ type: "take-initiative" })} disabled={isResolving || runtime.game.initiativeClaimed || runtime.status !== "playing" || !!runtime.prompt} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Take Initiative</button>
+          <button type="button" onClick={() => void handleUndo()} disabled={isResolving || historyLength === 0} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Undo</button>
+          <button type="button" onClick={handlePass} disabled={isResolving || isGameOver || !!resolutionNeeded} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass to Regroup Draw</button>
+          <button type="button" onClick={handleClaimInitiative} disabled={isResolving || gameState.initiativeClaimed || isGameOver || !!resolutionNeeded} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Take Initiative</button>
           <div className="hidden sm:block h-3" />
           <button type="button" onClick={() => { if (selectedPuzzleN !== null) loadPuzzle(selectedPuzzleN); }} disabled={isResolving || selectedPuzzleN === null} className="rounded-xl border border-white/15 bg-rose-500/20 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40">Reset Puzzle</button>
         </div>
@@ -945,12 +1260,12 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       </SectionShell>
       <SectionShell title="Initiative" className="rounded-lg p-3">
         <div className="mt-2 rounded-lg bg-black/25 px-3 py-2 text-xs text-white/75">
-          {runtime.game.initiativePlayer === 1 ? "Player" : "Enemy"}
+          {gameState.initiativePlayer === 1 ? "Player" : "Enemy"}
         </div>
       </SectionShell>
       <SectionShell title="Status" className="rounded-lg p-3">
         <div className={`mt-2 rounded-lg border px-3 py-2 text-xs ${statusTone}`}>
-          <div>{formatPrompt(runtime)}</div>
+          <div>{formatStatus(status, resolutionNeeded)}</div>
           {actionError ? <div className="mt-1 text-xs text-rose-200">{actionError}</div> : null}
         </div>
       </SectionShell>

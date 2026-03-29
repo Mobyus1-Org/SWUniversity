@@ -128,7 +128,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
   //JTL_053: The Ghost - Heart of the Family
   if (player) {
     const theGhostPlayId = GetPlayIdForUniqueUnitInPlay("JTL_053", player);
-    if(theGhostPlayId && TraitContains(cardId, "Spectre", player)
+    if(theGhostPlayId !== "0" && TraitContains(cardId, "Spectre", player)
         && playId !== theGhostPlayId
         && HasAmbush("JTL_053", theGhostPlayId, playedFrom, player))
       return true;

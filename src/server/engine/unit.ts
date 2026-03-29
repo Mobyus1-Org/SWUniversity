@@ -1,6 +1,6 @@
 import { CardInPlay, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, LeaderAbilitiesIgnored, TraitContains } from "@/server/engine/core-functions";
-import { CardHp, CardPower, CardType, CardUpgradeHp, CardUpgradePower } from "@/server/engine/card-db/generated";
+import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, GetLeaderForPlayer, LeaderAbilitiesIgnored, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
+import { CardHp, CardPower, CardUpgradeHp, CardUpgradePower } from "@/server/engine/card-db/generated";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
@@ -44,7 +44,7 @@ export class Unit implements UnitInterface {
   }
 
   IsLeader(): boolean {
-    return CardType(this.cardId) === "Leader";
+    return CardIsLeader(this.cardId);
   }
 
   IsTokenUnit(): boolean {
@@ -110,6 +110,16 @@ export class Unit implements UnitInterface {
     let power = CardPower(this.cardId) || 0;
     if (this.HasUpgrade("LOF_056")) { //Size Matters Not
       power = 5;
+    }
+
+    // Check for undeployed leader abilities that grant passive power buff to this unit
+    const leader = GetLeaderForPlayer(this.controller);
+    if (!leader.deployed && !LeaderAbilitiesIgnored()) {
+      switch (leader.cardId) {
+        case "SOR_001": //Director Krennic - Aspiring to Authority
+          power += this.damage > 0 ? 1 : 0;
+          break;
+      }
     }
 
     // Check for other units that buff power

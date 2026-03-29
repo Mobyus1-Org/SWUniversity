@@ -2,7 +2,7 @@
 
 import type { GetServerSideProps } from "next";
 
-import InternalCardCodeGeneratorPage from "@/containers/InternalCardCodeGeneratorPage";
+import InternalCardCodeGeneratorPage from "@/containers/internal/InternalCardCodeGeneratorPage";
 import { requireAdminPage } from "@/server/auth/guards";
 import { assertRequiredEnv } from "@/server/env";
 

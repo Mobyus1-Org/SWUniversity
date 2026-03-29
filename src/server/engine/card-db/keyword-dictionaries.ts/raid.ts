@@ -151,7 +151,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
   //JTL_053: The Ghost - Heart of the Family
   if (player) {
     const theGhostPlayId = GetPlayIdForUniqueUnitInPlay("JTL_053", player);
-    if(theGhostPlayId && TraitContains(cardId, "Spectre", player)
+    if(theGhostPlayId !== "0" && TraitContains(cardId, "Spectre", player)
         && playId !== theGhostPlayId)
       amount += RaidAmount("JTL_053", theGhostPlayId, player);
 
