@@ -946,7 +946,7 @@
    },
    {
       "id": 64,
-      "question": "Player A is playing **_Padmé Amidala, What Do You Have To Hide?_**, as their leader and has no cards in hand. Player A then plays **_Black One, Scourge of Starkiller Base_**. What best describes what happens?",
+      "question": "Player A is playing **_Padmé Amidala, What Do You Have To Hide?_**, as their leader. Player A plays **_Black One, Scourge of Starkiller Base_** and has no other cards in hand. What best describes what happens?",
       "choices": {
          "a": "**_Padmé's_** ability triggers, but Player A draws no cards.",
          "b": "**_Padmé's_** ability triggers, then Player A draws 3 cards.",
