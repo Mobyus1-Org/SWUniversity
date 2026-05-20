@@ -56,6 +56,8 @@ import { resolveWhenPlayedTrigger } from "@/server/engine/actions/when-played-tr
 import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
+import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
+import { HasAmbush } from "@/server/engine/card-db/keyword-dictionaries.ts/ambush";
 import { ActionAbilities } from "@/server/engine/actions/action-ability";
 
 // ---------------------------------------------------------------------------
@@ -223,13 +225,44 @@ function dealBaseDamage(game: GameState, player: PlayerId, amount: number): void
  * - 1 trigger: auto-resolve without player input
  * - 2+ triggers: (future) will need player ordering — no-op for now
  */
-function drainTriggerBag(game: GameState, log: string[]): void {
-  if (game.triggerBag.length === 1) {
-    const [trigger] = game.triggerBag.splice(0, 1);
-    if (trigger.triggerType === "when-played") {
-      resolveWhenPlayedTrigger(trigger, game, log);
-    }
+function drainTriggerBag(game: GameState, log: string[]): PendingResolution | null {
+  if (game.triggerBag.length !== 1) return null; // 0: no-op; 2+: future ordering
+
+  const [trigger] = game.triggerBag.splice(0, 1);
+
+  if (trigger.triggerType === "when-played") {
+    resolveWhenPlayedTrigger(trigger, game, log);
+    return null;
   }
+
+  if (trigger.triggerType === "shielded" && trigger.playId) {
+    const unit = unitByPlayId(game, trigger.playId);
+    if (unit) {
+      unit.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: trigger.fromPlayer, controller: trigger.fromPlayer });
+      log.push(`Shielded: ${CardTitle(trigger.cardId)} enters play with a Shield token.`);
+    }
+    return null;
+  }
+
+  if (trigger.triggerType === "ambush" && trigger.playId) {
+    const unit = unitByPlayId(game, trigger.playId);
+    if (!unit) return null;
+    const { unitPlayIds, includesBase } = computeAttackTargets(game, unit as Unit);
+    if (unitPlayIds.length === 0 && !includesBase) return null; // no valid targets
+    return {
+      type: "ability-option",
+      cardId: trigger.cardId,
+      helperText: `${CardTitle(trigger.cardId)} has Ambush — attack immediately?`,
+      onYes: {
+        type: "attack-target",
+        attackerPlayId: trigger.playId,
+        source: "ambush",
+      },
+      continuation: null,
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -545,6 +578,14 @@ function handlePlayCard(
     const unit = addToArena(game, player, cardId, false);
     log.push(`${CardTitle(cardId) ?? cardId} entered the ${CardArena(cardId) ?? "ground"} arena.`);
 
+    // Shielded, Ambush, and When Played all fire in the same timing window.
+    if (HasShielded(cardId, unit.playId, player)) {
+      game.triggerBag.push({ triggerType: "shielded", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
+    }
+    if (HasAmbush(cardId, unit.playId, "Hand", player)) {
+      game.triggerBag.push({ triggerType: "ambush", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
+    }
+
     // Optional when-played abilities (e.g. "you may") use the pending resolution flow.
     // Auto-trigger when-played abilities (no user input needed) go through the trigger bag.
     const nextPending = resolveWhenPlayed(unit.cardId, player, unit.playId);
@@ -574,8 +615,11 @@ function handlePlayCard(
     }
   }
 
-  drainTriggerBag(game, log);
+  const triggerPending = drainTriggerBag(game, log);
   updateDefeatedPlayers(game);
+  if (triggerPending) {
+    return { response: resolutionResponse(pendingToResolution(triggerPending, game)), pending: triggerPending, stateChanged: false };
+  }
   return { response: stateResponse(game), pending: null, stateChanged: true };
 }
 
@@ -825,6 +869,11 @@ function handleChooseOption(
     if (option === "Yes") {
       const nextPending = pending.onYes ?? null;
       if (nextPending) {
+        // Ambush: ready the unit before it attacks so it can exhaust normally during combat.
+        if (nextPending.type === "attack-target" && nextPending.source === "ambush") {
+          const ambushUnit = unitByPlayId(game, nextPending.attackerPlayId);
+          if (ambushUnit) ambushUnit.ready = true;
+        }
         return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
       }
       updateDefeatedPlayers(game);

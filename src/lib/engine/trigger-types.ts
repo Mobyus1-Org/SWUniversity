@@ -11,11 +11,14 @@ export type TriggerType =
   | "when-unit-takes-damage"
   | "when-base-damaged"
   | "when-upgrade-detached"
+  | "shielded"  // same timing window as when-played
+  | "ambush"    // same timing window as when-played
 
 export interface TriggerEntry {
   triggerType: TriggerType;
   cardId: string;
   fromPlayer: PlayerId;
+  playId?: string;  // the unit this trigger is about (e.g. for shielded)
   context?: TriggerContext;
 }
 
