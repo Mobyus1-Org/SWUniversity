@@ -57,4 +57,24 @@ describe("Simple Ambush Test", () => {
     expect(g.state.player2.groundArena.length).toBe(2);
     expect(g.state.player2.discard.length).toBe(0);
   });
+
+  it("should not prompt to resolve Ambush if no units are available to attack", async () => {
+    // arrange
+    const g = new GameTestAdapter();
+    const s = new GameStateBuilder()
+      .MyBase(Cards.bases.common.yellow30HP)
+      .MyLeader(Cards.leaders.sor.sabineWren)
+      .TheirBase(Cards.bases.common.green30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 5)
+      .WithCardInHandForPlayer(1, Cards.units.sor.syndicateLackeys)
+      .Build()
+    ;
+    g.loadNewState(s);
+    // act
+    await g.playCardFromHandAsync(1, 0);
+    const lastDispatch = g.lastDispatchResponse?.resolutionNeeded;
+    // assert
+    expect(lastDispatch).toBe(undefined);
+  });
 });

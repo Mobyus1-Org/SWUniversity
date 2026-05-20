@@ -247,8 +247,8 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
   if (trigger.triggerType === "ambush" && trigger.playId) {
     const unit = unitByPlayId(game, trigger.playId);
     if (!unit) return null;
-    const { unitPlayIds, includesBase } = computeAttackTargets(game, unit as Unit);
-    if (unitPlayIds.length === 0 && !includesBase) return null; // no valid targets
+    const { unitPlayIds } = computeAttackTargets(game, unit as Unit);
+    if (unitPlayIds.length === 0) return null; // no valid unit targets — fizzle
     return {
       type: "ability-option",
       cardId: trigger.cardId,
@@ -509,14 +509,12 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
     case "attack-target": {
       const attacker = unitByPlayId(game, pending.attackerPlayId);
       if (!attacker) return { type: "Target" } satisfies NeedsTarget;
-      const { unitPlayIds, includesBase } = computeAttackTargets(
-        game,
-        attacker,
-      );
+      const { unitPlayIds, includesBase } = computeAttackTargets(game, attacker);
+      const allowBase = includesBase && pending.source !== "ambush";
       return {
         type: "Target",
         fromPlayIds: unitPlayIds.length > 0 ? unitPlayIds : undefined,
-        fromZones: includesBase ? ["Base"] : undefined,
+        fromZones: allowBase ? ["Base"] : undefined,
       } satisfies NeedsTarget;
     }
     case "ability-option":
