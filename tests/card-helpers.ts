@@ -49,6 +49,7 @@ export const Cards = {
   leaders: {
     sor: {
       directorKrennic: "SOR_001",
+      chewbacca: "SOR_003",
       leiaOrgana: "SOR_009",
       darthVader: "SOR_010",
       sabineWren: "SOR_014",
@@ -80,6 +81,7 @@ export const Cards = {
       rebelliousHammerhead: "JTL_153",
     },
     lof: {
+      gungi: "LOF_093",
       strikeship: "LOF_131",
     }
   },
@@ -91,7 +93,11 @@ export const Cards = {
     sor: {
       protector: "SOR_057",
       academyTraining: "SOR_120",
-    }
+    },
+    lof: {
+      bolsteredEndurance: "LOF_074",
+      constructedLightsaber: "LOF_261",
+    },
   },
   events: {
     sor: {

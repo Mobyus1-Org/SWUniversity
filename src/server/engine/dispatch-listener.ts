@@ -50,6 +50,7 @@ import type {
   UpgradeTargetPending,
 } from "@/server/engine/pending-resolution";
 import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
+import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { resolveWhenPlayed } from "@/server/engine/actions/when-played";
 import { resolveWhenPlayedTrigger } from "@/server/engine/actions/when-played-trigger";
 import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
@@ -545,10 +546,7 @@ function handlePlayCard(
       game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player });
     }
   } else if (CardType(cardId) === "Upgrade") {
-    const eligiblePlayIds = [
-      ...ps(game, player).groundArena,
-      ...ps(game, player).spaceArena,
-    ].map((u) => u.playId);
+    const eligiblePlayIds = UpgradeEligibleTargets(cardId, game, player);
 
     const upgradePending: UpgradeTargetPending = {
       type: "upgrade-target",

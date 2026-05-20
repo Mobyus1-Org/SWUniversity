@@ -217,14 +217,15 @@ function UpgradeStrip({
   return (
     <div
       className="overflow-hidden rounded-b-xl border-x border-b border-white/15 bg-black/40"
-      style={{ height: 30 }}
+      style={{ height: 18 }}
       onMouseEnter={() => onPreviewStart({ imageId: cardId, cardId, label: title })}
       onMouseLeave={onPreviewEnd}
     >
       <img
         src={imageSrc}
         alt={title}
-        className="h-full w-full object-cover object-bottom"
+        className="h-full w-full object-cover"
+        style={{ objectPosition: "center 95%" }}
         onError={() => { if (imageSrc !== fallbackSrc) setImageSrc(fallbackSrc); }}
       />
     </div>
