@@ -25,4 +25,82 @@ describe("Simple Shielded Test", () => {
     expect(g.state.player1.groundArena[0].upgrades.length).toBe(1);
     expect(g.state.player1.groundArena[0].upgrades[0].cardId).toBe(Cards.upgrades.token.shield);
   });
+
+  it("defeats Shield to prevent damage", async () => {
+    // arrange
+    const g = new GameTestAdapter();
+    const s = new GameStateBuilder()
+      .MyBase(Cards.bases.common.green30HP)
+      .MyLeader(Cards.leaders.sor.sabineWren)
+      .TheirBase(Cards.bases.common.yellow30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .WithGroundUnitForPlayer(2, Cards.units.sor.craftySmuggler)
+      .WithUpgradesOnGroundUnitForPlayer(2, 0, [
+        GameStateBuilder.Upgrade(Cards.upgrades.token.shield, 2)
+      ])
+      .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
+      .Build()
+    ;
+    g.loadNewState(s);
+    // act
+    await g.attackWithGroundUnitAsync(1, 0);
+    await g.chooseGroundUnitAsync(2, 0);
+    // assert
+    expect(g.state.player1.groundArena[0].damage).toBe(2);
+    expect(g.state.player2.groundArena[0].damage).toBe(0);
+    expect(g.state.player2.groundArena[0].upgrades.length).toBe(0);
+  });
+
+  it("defeats only 1 Shield to prevent damage", async () => {
+    // arrange
+    const g = new GameTestAdapter();
+    const s = new GameStateBuilder()
+      .MyBase(Cards.bases.common.green30HP)
+      .MyLeader(Cards.leaders.sor.sabineWren)
+      .TheirBase(Cards.bases.common.yellow30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .WithGroundUnitForPlayer(2, Cards.units.sor.craftySmuggler)
+      .WithUpgradesOnGroundUnitForPlayer(2, 0, [
+        GameStateBuilder.Upgrade(Cards.upgrades.token.shield, 2),
+        GameStateBuilder.Upgrade(Cards.upgrades.token.shield, 2)
+      ])
+      .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
+      .Build()
+    ;
+    g.loadNewState(s);
+    // act
+    await g.attackWithGroundUnitAsync(1, 0);
+    await g.chooseGroundUnitAsync(2, 0);
+    // assert
+    expect(g.state.player1.groundArena[0].damage).toBe(2);
+    expect(g.state.player2.groundArena[0].damage).toBe(0);
+    expect(g.state.player2.groundArena[0].upgrades.length).toBe(1);
+  });
+
+  it("defeats Shield even if not first upgrade to prevent damage", async () => {
+    // arrange
+    const g = new GameTestAdapter();
+    const s = new GameStateBuilder()
+      .MyBase(Cards.bases.common.green30HP)
+      .MyLeader(Cards.leaders.sor.sabineWren)
+      .TheirBase(Cards.bases.common.yellow30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .WithGroundUnitForPlayer(2, Cards.units.sor.craftySmuggler)
+      .WithUpgradesOnGroundUnitForPlayer(2, 0, [
+        GameStateBuilder.Upgrade(Cards.upgrades.token.experience, 2),
+        GameStateBuilder.Upgrade(Cards.upgrades.token.shield, 2)
+      ])
+      .WithGroundUnitForPlayer(1, Cards.units.sor.k2so)
+      .Build()
+    ;
+    g.loadNewState(s);
+    // act
+    await g.attackWithGroundUnitAsync(1, 0);
+    await g.chooseGroundUnitAsync(2, 0);
+    // assert
+    expect(g.state.player1.groundArena[0].damage).toBe(3);
+    expect(g.state.player2.groundArena[0].damage).toBe(0);
+    expect(g.state.player2.groundArena[0].upgrades.length).toBe(1);
+    expect(g.state.player2.groundArena[0].upgrades[0].cardId).toBe(Cards.upgrades.token.experience);
+  });
 });

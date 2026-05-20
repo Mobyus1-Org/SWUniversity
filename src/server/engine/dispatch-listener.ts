@@ -396,7 +396,14 @@ function resolveAttack(
     const defHpBefore = defender.CurrentHP();
     const defenderName = CardTitle(defender.cardId);
 
-    defender.damage += atkPower;
+    // Shield token absorbs the first instance of damage to the defender.
+    const shieldIdx = defender.upgrades.findIndex(u => u.cardId === "SOR_T02");
+    if (shieldIdx !== -1) {
+      defender.upgrades.splice(shieldIdx, 1);
+      log.push(`${defenderName}'s Shield token was defeated, preventing ${atkPower} damage.`);
+    } else {
+      defender.damage += atkPower;
+    }
     attacker.damage += defPower;
     log.push(`${attackerName} attacked ${defenderName}.`);
 
