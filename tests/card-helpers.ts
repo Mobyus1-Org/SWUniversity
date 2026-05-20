@@ -75,6 +75,7 @@ export const Cards = {
       wampa: "SOR_164",
       craftySmuggler: "SOR_207",
       syndicateLackeys: "SOR_213",
+      rebelPathfinder: "SOR_239",
     },
     shd: {
       sundariPeaceKeeper: "SHD_098",

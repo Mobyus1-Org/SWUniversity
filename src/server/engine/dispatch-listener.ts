@@ -396,6 +396,17 @@ function resolveAttack(
     const defHpBefore = defender.CurrentHP();
     const defenderName = CardTitle(defender.cardId);
 
+    // Saboteur: strip all Shield tokens from the defender before damage is dealt.
+    try {
+      if (HasSaboteur(attacker.cardId, attacker.playId, attacker.controller)) {
+        const before = defender.upgrades.length;
+        defender.upgrades = defender.upgrades.filter(u => u.cardId !== "SOR_T02");
+        const stripped = before - defender.upgrades.length;
+        if (stripped > 0)
+          log.push(`Saboteur: ${stripped} Shield token(s) defeated on ${defenderName}.`);
+      }
+    } catch { /* unit may not be in singleton during test setup */ }
+
     // Shield token absorbs the first instance of damage to the defender.
     const shieldIdx = defender.upgrades.findIndex(u => u.cardId === "SOR_T02");
     if (shieldIdx !== -1) {
