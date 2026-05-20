@@ -12,7 +12,7 @@ describe("Sabine Wren / Cad Bane Simple Puzzle", () => {
     // act
     await g.playCardFromHandAsync(1, 1);            // play Precision Fire event
     await g.chooseGroundUnitAsync(1, 1);            // choose Reckless Gunslinger (now has Saboteur)
-    await g.chooseBaseAsync(2);                     // attack opponent base
+    await g.chooseBaseAsync(1, 2);                     // attack opponent base
     await g.useLeaderAbilityAsync(1);               // use Sabine's leader ability
     await g.deployLeaderAsync(1);                   // deploy Sabine
     await g.playCardFromHandAsync(1, 0);            // play Rebellious Hammerhead
@@ -23,7 +23,7 @@ describe("Sabine Wren / Cad Bane Simple Puzzle", () => {
     await g.chooseGroundUnitAsync(2, 0);            // attack Gamorrean Guard
     await g.chooseOptionAsync(1, "deal_base_damage=2,3");            // choose "deal_base_damage" option for K-2SO's when defeated ability
     await g.chooseGroundUnitAsync(1, 1);            // choose Sabine Wren (deployed leader)
-    await g.chooseBaseAsync(2);                     // attack opponent base
+    await g.chooseBaseAsync(1, 2);                     // attack opponent base
     //Now Rebel Assault is fully resolved, so we can check the final state of the game
     // assert
     expect(g.state.player1.base.damage).toBe(24);
@@ -38,7 +38,7 @@ describe("Sabine Wren / Cad Bane Simple Puzzle", () => {
     // act
     await g.playCardFromHandAsync(1, 1);            // play Precision Fire event
     await g.chooseGroundUnitAsync(1, 1);            // choose Reckless Gunslinger (now has Saboteur)
-    await g.chooseBaseAsync(2);                     // attack opponent base
+    await g.chooseBaseAsync(1, 2);                     // attack opponent base
     await g.useLeaderAbilityAsync(1);               // use Sabine's leader ability
     await g.playCardFromHandAsync(1, 0);            // play Rebellious Hammerhead
     await g.chooseYesAsync(1);                      // choose to deal damage
@@ -49,7 +49,7 @@ describe("Sabine Wren / Cad Bane Simple Puzzle", () => {
     await g.chooseGroundUnitAsync(2, 0);            // attack Gamorrean Guard
     await g.chooseOptionAsync(1, "deal_base_damage=2,3");            // choose "deal_base_damage" option for K-2SO's when defeated ability
     await g.chooseGroundUnitAsync(1, 1);            // choose Sabine Wren (deployed leader)
-    await g.chooseBaseAsync(2);                     // attack opponent base
+    await g.chooseBaseAsync(1, 2);                     // attack opponent base
     //Now Rebel Assault is fully resolved, so we can check the final state of the game
     // assert
     expect(g.state.player1.base.damage).toBe(24);

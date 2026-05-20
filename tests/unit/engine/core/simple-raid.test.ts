@@ -19,7 +19,7 @@ describe("Simple Raid Test", () => {
     g.loadNewState(s);
     // act
     await g.attackWithGroundUnitAsync(1, 0);
-    await g.chooseBaseAsync(2);
+    await g.chooseBaseAsync(1, 2);
     const res = g.state.player1.groundArena[0];
     // assert
     expect(Unit.FromInterface(res).CurrentPower()).toBe(3);
@@ -42,7 +42,7 @@ describe("Simple Raid Test", () => {
     g.loadNewState(s);
     // act
     await g.attackWithSpaceUnitAsync(1, 0);
-    await g.chooseBaseAsync(2);
+    await g.chooseBaseAsync(1, 2);
     const res = g.state.player1.spaceArena[0];
     // assert
     expect(Unit.FromInterface(res).CurrentPower()).toBe(1);

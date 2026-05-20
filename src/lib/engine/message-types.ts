@@ -45,7 +45,9 @@ export type DispatchType =
   | "choose-target"
   | "choose-option"
   | "choose-player"
-  | "choose-trigger";
+  | "choose-trigger"
+  | "regroup-resource"
+  | "pass-resource";
 
 export type PlayCardSourceZone = "Hand" | "Deck" | "Discard";
 
@@ -84,6 +86,10 @@ export interface ChooseTriggerDispatchData {
   cardId: string;
 }
 
+export interface RegroupResourceDispatchData {
+  handIndex: number;
+}
+
 export type DispatchData =
   | Record<string, never>
   | PlayCardDispatchData
@@ -92,7 +98,8 @@ export type DispatchData =
   | ChooseTargetDispatchData
   | ChooseOptionDispatchData
   | ChoosePlayerDispatchData
-  | ChooseTriggerDispatchData;
+  | ChooseTriggerDispatchData
+  | RegroupResourceDispatchData;
 
 // ---------------------------------------------------------------------------
 // Inbound: dispatch envelope

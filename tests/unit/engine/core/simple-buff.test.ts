@@ -23,7 +23,7 @@ describe("Simple buff", () => {
     g.loadNewState(s);
     // act
     await g.attackWithGroundUnitAsync(1, 0);
-    await g.chooseBaseAsync(2);
+    await g.chooseBaseAsync(1, 2);
     // assert
     expect(g.state.player1.base.damage).toBe(0);
     expect(g.state.player2.base.damage).toBe(5);

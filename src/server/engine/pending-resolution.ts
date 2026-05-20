@@ -70,6 +70,29 @@ export interface UpgradeTargetPending {
   fromPlayIds: string[];
 }
 
+/** Uniqueness rule: player must defeat one copy when a duplicate unique enters play. */
+export interface DefeatCopyPending {
+  type: "defeat-copy";
+  eligiblePlayIds: string[];
+}
+
+/** Capture step 1: choose which friendly unit will act as the captor. */
+export interface CaptureCaptorPending {
+  type: "capture-captor";
+  cardId: string;
+  fromPlayer: PlayerId;
+  eligiblePlayIds: string[];
+}
+
+/** Capture step 2: choose which enemy non-leader unit to capture. */
+export interface CaptureTargetPending {
+  type: "capture-target";
+  cardId: string;
+  fromPlayer: PlayerId;
+  captorPlayId: string;
+  eligiblePlayIds: string[];
+}
+
 export type PendingResolution =
   | AttackTargetPending
   | AbilityOptionPending
@@ -78,7 +101,10 @@ export type PendingResolution =
   | WhenDefeatedChoicePending
   | DiscardFromHandPending
   | ResolveAttackPending
-  | UpgradeTargetPending;
+  | UpgradeTargetPending
+  | DefeatCopyPending
+  | CaptureCaptorPending
+  | CaptureTargetPending;
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch

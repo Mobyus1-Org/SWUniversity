@@ -233,6 +233,36 @@ function UpgradeStrip({
   );
 }
 
+function CaptiveStrip({
+  cardId,
+  onPreviewStart,
+  onPreviewEnd,
+}: {
+  cardId: string;
+  onPreviewStart: (preview: PreviewState) => void;
+  onPreviewEnd: () => void;
+}) {
+  const primarySrc = getCardImageLink(cardId);
+  const fallbackSrc = getSWUDBImageLink(cardId);
+  const [imageSrc, setImageSrc] = React.useState(primarySrc);
+  const title = CardTitle(cardId);
+
+  React.useEffect(() => { setImageSrc(primarySrc); }, [primarySrc]);
+
+  return (
+    <div
+      className="overflow-hidden rounded-b-xl border-x border-b border-white/15 bg-gray-500/60"
+      style={{ height: 18 }}
+      onMouseEnter={() => onPreviewStart({ imageId: cardId, cardId, label: title })}
+      onMouseLeave={onPreviewEnd}
+    >
+      <span className="block w-full text-center text-[9px] font-semibold uppercase leading-[18px] tracking-wide text-white/70">
+        Captive
+      </span>
+    </div>
+  );
+}
+
 function ZonePanel({ title, subtitle, children, hideHeader = false }: { title: string; subtitle?: string; children: React.ReactNode; hideHeader?: boolean }) {
   return <section className={`rounded-xl border border-white/10 p-4 ${globalBackgroundStyle}`}>
     {!hideHeader ? <div className="mb-3 flex items-end justify-between gap-4">
@@ -749,7 +779,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
-                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -772,7 +802,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
-                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -824,7 +854,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
-                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -898,7 +928,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
-                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -955,7 +985,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
-                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -981,7 +1011,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         sentinel={sentinelPlayIds.includes(unit.playId)}
                         square
                       />
-                      {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                      {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                     </div>})
                   }
                 </div>
@@ -1008,7 +1038,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
-                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -1089,7 +1119,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         sentinel={sentinelPlayIds.includes(unit.playId)}
                         square
                       />
-                      {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                      {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                     </div>})
                   }
                 </div>

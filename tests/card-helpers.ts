@@ -56,6 +56,7 @@ export const Cards = {
     },
     shd: {
       bobaFett: "SHD_008",
+      cadBane: "SHD_014",
     },
   },
   units: {
@@ -70,6 +71,7 @@ export const Cards = {
       systemPatrolCraft: "SOR_066",
       battlefieldMarine: "SOR_095",
       echoBaseDefender: "SOR_098",
+      brightHope: "SOR_099",
       fightersForFreedom: "SOR_143",
       k2so: "SOR_145",
       wampa: "SOR_164",
@@ -80,13 +82,17 @@ export const Cards = {
     shd: {
       sundariPeaceKeeper: "SHD_098",
       recklessGunslinger: "SHD_160",
+      fourLom: "SHD_188",
+      zuckuss: "SHD_190",
     },
     jtl: {
+      lukeSkywalker: "JTL_094",
       rebelliousHammerhead: "JTL_153",
     },
     lof: {
       gungi: "LOF_093",
       strikeship: "LOF_131",
+      witchOfTheMist: "LOF_154",
     }
   },
   upgrades: {
@@ -98,6 +104,9 @@ export const Cards = {
       protector: "SOR_057",
       academyTraining: "SOR_120",
     },
+    shd: {
+      legalAuthority: "SHD_124",
+    },
     lof: {
       bolsteredEndurance: "LOF_074",
       constructedLightsaber: "LOF_261",
@@ -106,6 +115,9 @@ export const Cards = {
   events: {
     sor: {
       rebelAssault: "SOR_103",
-    }
+    },
+    twi: {
+      takeCaptive: "TWI_128",
+    },
   },
 }

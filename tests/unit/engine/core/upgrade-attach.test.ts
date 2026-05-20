@@ -25,7 +25,7 @@ describe("Simple Upgrade Attach", () => {
     await g.playCardFromHandAsync(1, 0);
     await g.chooseGroundUnitAsync(1, 0);
     await g.attackWithGroundUnitAsync(1, 0);
-    await g.chooseBaseAsync(2);
+    await g.chooseBaseAsync(1, 2);
     // assert
     expect(g.state.player2.base.damage).toBe(5);
   });
@@ -53,7 +53,7 @@ describe("Simple Upgrade Attach", () => {
     expect(lastDispatch.fromPlayIds!.length).toBe(1);
     await g.chooseGroundUnitAsync(1, 0);
     await g.attackWithGroundUnitAsync(1, 0);
-    await g.chooseBaseAsync(2);
+    await g.chooseBaseAsync(1, 2);
     // assert
     expect(g.state.player1.base.damage).toBe(5);
     expect(g.state.player2.base.damage).toBe(3);

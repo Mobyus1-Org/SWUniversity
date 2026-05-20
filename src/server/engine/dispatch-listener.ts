@@ -18,11 +18,13 @@ import {
   CardCost,
   CardHasWhenPlayed,
   CardHp,
+  CardIsUnique,
   CardTitle,
   CardType,
 } from "@/server/engine/card-db/generated";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
+import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { CardIsLeader, GetGame, GetUnitsForPlayer, SetGame, TraitContains } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
@@ -35,6 +37,7 @@ import type {
   NeedsOption,
   NeedsTarget,
   PlayCardDispatchData,
+  RegroupResourceDispatchData,
   ResolutionRequest,
   UseAbilityDispatchData,
 } from "@/lib/engine/message-types";
@@ -43,6 +46,9 @@ import type { CardInPlay, DiscardedCard, PlayerId, Unit as UnitInterface } from 
 import type {
   AbilityTargetPending,
   AttackTargetPending,
+  CaptureCaptorPending,
+  CaptureTargetPending,
+  DefeatCopyPending,
   DiscardFromHandPending,
   EngineContext,
   PendingResolution,
@@ -52,6 +58,7 @@ import type {
 import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { resolveWhenPlayed } from "@/server/engine/actions/when-played";
+import { executeRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
 import { resolveWhenPlayedTrigger } from "@/server/engine/actions/when-played-trigger";
 import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
@@ -322,6 +329,21 @@ function defeatUnit(
   pushToDiscard(game, removed.player, unit);
   log.push(`${CardTitle(unit.cardId)} was defeated.`);
 
+  // Rescue any units the defeated unit was guarding (CR 34.4).
+  for (const captive of unit.captives ?? []) {
+    const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
+    const rescued = Unit.FromInterface({ ...captive, ready: false });
+    if (arena === "Ground") ps(game, captive.owner).groundArena.push(rescued);
+    else ps(game, captive.owner).spaceArena.push(rescued);
+    game.roundState.cardsEnteredPlayThisPhase.push({
+      fromPlayer: captive.owner,
+      cardId: captive.cardId,
+      playId: captive.playId,
+      reason: "returned-to-play",
+    });
+    log.push(`${CardTitle(captive.cardId)} was rescued and returned to Player ${captive.owner}'s arena exhausted.`);
+  }
+
   // When-Defeated triggers: add card-specific entries to whenDefeatedRegistry below.
   return resolveWhenDefeated(unit, removed.player);
 }
@@ -339,7 +361,20 @@ function computeAttackTargets(
   const p = ps(game, defenderPlayer);
   const opposing = (arena === "Ground" ? p.groundArena : p.spaceArena) as Unit[];
 
-  const sentinels = opposing.filter((u) => {
+  // Hidden: exclude units played/deployed/created this phase. Rescued units (returned-to-play)
+  // do not regain Hidden protection — only the original play/deploy/create triggers it.
+  const enteredThisPhase = new Set(
+    game.roundState.cardsEnteredPlayThisPhase
+      .filter(e => e.reason !== "returned-to-play")
+      .map(e => e.playId)
+  );
+  const visible = opposing.filter(u =>
+    !HasHidden(u.cardId, u.playId, u.controller) ||
+    !enteredThisPhase.has(u.playId) ||
+    HasSentinel(u.cardId, u.playId, u.controller)
+  );
+
+  const sentinels = visible.filter((u) => {
     try {
       return HasSentinel(u.cardId, u.playId, u.controller);
     } catch {
@@ -350,7 +385,7 @@ function computeAttackTargets(
   if (sentinels.length > 0 && !HasSaboteur(attacker.cardId, attacker.playId, attacker.controller)) {
     return { unitPlayIds: sentinels.map((u) => u.playId), includesBase: false };
   }
-  return { unitPlayIds: opposing.map((u) => u.playId), includesBase: true };
+  return { unitPlayIds: visible.map((u) => u.playId), includesBase: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -548,6 +583,21 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         type: "Target",
         fromPlayIds: pending.fromPlayIds.length > 0 ? pending.fromPlayIds : undefined,
       } satisfies NeedsTarget;
+    case "defeat-copy":
+      return {
+        type: "Target",
+        fromPlayIds: pending.eligiblePlayIds,
+      } satisfies NeedsTarget;
+    case "capture-captor":
+      return {
+        type: "Target",
+        fromPlayIds: pending.eligiblePlayIds,
+      } satisfies NeedsTarget;
+    case "capture-target":
+      return {
+        type: "Target",
+        fromPlayIds: pending.eligiblePlayIds,
+      } satisfies NeedsTarget;
     case "resolve-attack":
       // Should never be shown to client — auto-resolves as continuation
       return { type: "Target" } satisfies NeedsTarget;
@@ -593,6 +643,21 @@ function handlePlayCard(
   if (CardType(cardId) === "Unit") {
     const unit = addToArena(game, player, cardId, false);
     log.push(`${CardTitle(cardId) ?? cardId} entered the ${CardArena(cardId) ?? "ground"} arena.`);
+    game.roundState.cardsPlayedThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId });
+    game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId, reason: "played" });
+
+    // Uniqueness rule: if a duplicate unique is now in play, the controller must defeat one copy.
+    if (CardIsUnique(cardId)) {
+      const controlled = [...ps(game, player).groundArena, ...ps(game, player).spaceArena] as Unit[];
+      const copies = controlled.filter(u => u.cardId === cardId);
+      if (copies.length > 1) {
+        const defeatCopyPending: DefeatCopyPending = {
+          type: "defeat-copy",
+          eligiblePlayIds: copies.map(u => u.playId),
+        };
+        return { response: resolutionResponse(pendingToResolution(defeatCopyPending, game)), pending: defeatCopyPending, stateChanged: false };
+      }
+    }
 
     // Shielded, Ambush, and When Played all fire in the same timing window.
     if (HasShielded(cardId, unit.playId, player)) {
@@ -846,6 +911,79 @@ function handleChooseTarget(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
+  if (pending.type === "defeat-copy") {
+    const chosen = data.targetPlayIds?.[0];
+    if (!chosen)
+      return { response: invalidResponse("choose-target must include targetPlayIds to resolve uniqueness."), pending, stateChanged: false };
+    if (!pending.eligiblePlayIds.includes(chosen))
+      return { response: invalidResponse(`Unit ${chosen} is not a valid uniqueness choice.`), pending, stateChanged: false };
+    const unit = unitByPlayId(game, chosen);
+    if (!unit)
+      return { response: invalidResponse("Chosen unit not found."), pending, stateChanged: false };
+    defeatUnit(game, log, unit);
+    updateDefeatedPlayers(game);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending.type === "capture-captor") {
+    const chosen = data.targetPlayIds?.[0];
+    if (!chosen)
+      return { response: invalidResponse("Choose a friendly unit to capture with."), pending, stateChanged: false };
+    if (!pending.eligiblePlayIds.includes(chosen))
+      return { response: invalidResponse(`Unit ${chosen} is not a valid captor.`), pending, stateChanged: false };
+    const captor = unitByPlayId(game, chosen);
+    if (!captor)
+      return { response: invalidResponse("Captor unit not found."), pending, stateChanged: false };
+    const captorArena = (CardArena(captor.cardId) ?? "Ground") as "Ground" | "Space";
+    const enemyPlayer = otherPlayer(pending.fromPlayer);
+    const enemyArena = captorArena === "Ground"
+      ? (ps(game, enemyPlayer).groundArena as Unit[])
+      : (ps(game, enemyPlayer).spaceArena as Unit[]);
+    const eligible = enemyArena.filter(u => !CardIsLeader(u.cardId));
+    if (eligible.length === 0)
+      return { response: invalidResponse("No valid capture targets in that arena."), pending, stateChanged: false };
+    const captureTargetPending: CaptureTargetPending = {
+      type: "capture-target",
+      cardId: pending.cardId,
+      fromPlayer: pending.fromPlayer,
+      captorPlayId: chosen,
+      eligiblePlayIds: eligible.map(u => u.playId),
+    };
+    return { response: resolutionResponse(pendingToResolution(captureTargetPending, game)), pending: captureTargetPending, stateChanged: false };
+  }
+
+  if (pending.type === "capture-target") {
+    const chosen = data.targetPlayIds?.[0];
+    if (!chosen)
+      return { response: invalidResponse("Choose an enemy unit to capture."), pending, stateChanged: false };
+    if (!pending.eligiblePlayIds.includes(chosen))
+      return { response: invalidResponse(`Unit ${chosen} is not a valid capture target.`), pending, stateChanged: false };
+    const target = unitByPlayId(game, chosen);
+    const captor = unitByPlayId(game, pending.captorPlayId);
+    if (!target || !captor)
+      return { response: invalidResponse("Captor or target unit not found."), pending, stateChanged: false };
+
+    // Remove target from arena; this does NOT go through defeatUnit (no When Defeated triggers).
+    removeFromArena(game, target.playId);
+
+    // Token units are defeated on capture instead of placed under the captor (CR 34.5).
+    if (target.IsTokenUnit()) {
+      log.push(`${CardTitle(target.cardId)} was captured and set aside (token).`);
+    } else {
+      // Remove all damage, defeat all upgrades, place facedown under captor.
+      target.damage = 0;
+      target.upgrades = [];
+      captor.captives.push(target);
+      log.push(`${CardTitle(captor.cardId)} captured ${CardTitle(target.cardId)}.`);
+      // Remove from phase tracking so rescue later doesn't carry "played this phase" status.
+      game.roundState.cardsPlayedThisPhase = game.roundState.cardsPlayedThisPhase.filter(e => e.playId !== target.playId);
+      game.roundState.cardsEnteredPlayThisPhase = game.roundState.cardsEnteredPlayThisPhase.filter(e => e.playId !== target.playId);
+    }
+
+    updateDefeatedPlayers(game);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
   if (pending.type === "upgrade-target") {
     const chosen = data.targetPlayIds?.[0];
     if (!chosen)
@@ -983,6 +1121,48 @@ function handleClaimInitiative(game: GameState, log: string[], dispatch: GameDis
   game.initiativePlayer = dispatch.fromPlayer;
   log.push(`Player ${dispatch.fromPlayer} claimed initiative.`);
   return { response: stateResponse(game), pending: null, stateChanged: true };
+}
+
+/**
+ * Called after every successful top-level action to advance the active player
+ * and detect action-phase end.
+ *
+ * Phase ends when both players pass consecutively (CR 1.15.6d), which includes
+ * the case where one player passes then the other claims initiative (CR 1.15.5c).
+ *
+ * When initiative has been claimed, the holder auto-passes on their subsequent
+ * turns — they never take real actions again this phase (CR 1.15.5b).
+ */
+function advanceTurn(game: GameState, log: string[], wasPass: boolean): void {
+  const prevWasPass = game.roundState.lastActionWasPass;
+  game.roundState.lastActionWasPass = wasPass;
+
+  // Consecutive passes → action phase ends.
+  if (wasPass && prevWasPass) {
+    game.gamePhase = "RegroupDraw";
+    log.push("Both players passed consecutively. Action phase ended.");
+    executeRegroupDraw(game, log);
+    updateDefeatedPlayers(game);
+    return;
+  }
+
+  // Switch active player.
+  game.activePlayer = game.activePlayer === 1 ? 2 : 1;
+
+  // If the new active player has claimed initiative, auto-pass for them.
+  if (game.initiativeClaimed && game.activePlayer === game.initiativePlayer) {
+    log.push(`Player ${game.activePlayer} auto-passes (initiative claimed).`);
+    // This auto-pass + the previous action being a pass → consecutive → phase ends.
+    if (wasPass) {
+      game.gamePhase = "RegroupDraw";
+      log.push("Action phase ended.");
+      executeRegroupDraw(game, log);
+      updateDefeatedPlayers(game);
+      return;
+    }
+    game.roundState.lastActionWasPass = true;
+    game.activePlayer = game.activePlayer === 1 ? 2 : 1;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1170,32 +1350,60 @@ export function processDispatch(
     const pending = context.pending;
     let result: HandlerResult;
 
-    switch (dispatch.dispatchType) {
-      case "play-card":         result = handlePlayCard(gs, log, dispatch); break;
-      case "initiate-attack":   result = handleInitiateAttack(gs, log, dispatch); break;
-      case "use-ability":       result = handleUseAbility(gs, log, dispatch); break;
-      case "pass-action":       result = handlePassAction(gs, log, dispatch); break;
-      case "claim-initiative":  result = handleClaimInitiative(gs, log, dispatch); break;
-      case "choose-target":     result = handleChooseTarget(gs, log, dispatch, pending); break;
-      case "choose-option":     result = handleChooseOption(gs, log, dispatch, pending); break;
-      case "choose-player":
-      case "choose-trigger":
-        // Reserved for future trigger-bag resolution
-        result = { response: invalidResponse(`${dispatch.dispatchType} not yet implemented.`), pending, stateChanged: false };
-        break;
-      default:
-        result = { response: invalidResponse(`Unknown dispatch type.`), pending: null, stateChanged: false };
+    const ACTION_STARTERS = [
+      "play-card", "initiate-attack", "use-ability", "pass-action", "claim-initiative",
+    ] as const;
+    const isTopLevelAction = (ACTION_STARTERS as readonly string[]).includes(dispatch.dispatchType);
+
+    // Enforce turn order: only the active player may take top-level actions.
+    if (isTopLevelAction && dispatch.fromPlayer !== gs.activePlayer) {
+      result = { response: invalidResponse("It is not your turn."), pending, stateChanged: false };
+    } else {
+      switch (dispatch.dispatchType) {
+        case "play-card":         result = handlePlayCard(gs, log, dispatch); break;
+        case "initiate-attack":   result = handleInitiateAttack(gs, log, dispatch); break;
+        case "use-ability":       result = handleUseAbility(gs, log, dispatch); break;
+        case "pass-action":       result = handlePassAction(gs, log, dispatch); break;
+        case "claim-initiative":  result = handleClaimInitiative(gs, log, dispatch); break;
+        case "choose-target":     result = handleChooseTarget(gs, log, dispatch, pending); break;
+        case "choose-option":     result = handleChooseOption(gs, log, dispatch, pending); break;
+        case "regroup-resource": {
+          const data = dispatch.dispatchData as RegroupResourceDispatchData;
+          const err = tryRegroupResource(gs, log, dispatch.fromPlayer, data.handIndex);
+          result = err
+            ? { response: invalidResponse(err), pending: null, stateChanged: false }
+            : { response: stateResponse(gs), pending: null, stateChanged: true };
+          break;
+        }
+        case "pass-resource": {
+          const err = tryPassResource(gs, log, dispatch.fromPlayer);
+          result = err
+            ? { response: invalidResponse(err), pending: null, stateChanged: false }
+            : { response: stateResponse(gs), pending: null, stateChanged: true };
+          break;
+        }
+        case "choose-player":
+        case "choose-trigger":
+          // Reserved for future trigger-bag resolution
+          result = { response: invalidResponse(`${dispatch.dispatchType} not yet implemented.`), pending, stateChanged: false };
+          break;
+        default:
+          result = { response: invalidResponse(`Unknown dispatch type.`), pending: null, stateChanged: false };
+      }
+
+      // After a successful top-level action, advance the turn.
+      if (isTopLevelAction && !result.response.invalidAction) {
+        const wasPass = dispatch.dispatchType === "pass-action" || dispatch.dispatchType === "claim-initiative";
+        advanceTurn(gs, log, wasPass);
+      }
     }
 
     // Snapshot the pre-dispatch state before top-level actions (play-card, initiate-attack,
     // use-ability, pass-action, claim-initiative). Resolution steps (choose-target, choose-option,
     // etc.) are part of the same logical action and must NOT add extra snapshots — doing so would
     // cause multi-step actions like Precision Fire to require multiple undos.
-    const ACTION_STARTERS = [
-      "play-card", "initiate-attack", "use-ability", "pass-action", "claim-initiative",
-    ] as const;
     const shouldSnapshot =
-      (ACTION_STARTERS as readonly string[]).includes(dispatch.dispatchType) &&
+      isTopLevelAction &&
       !result.response.invalidAction;
 
     const updatedGame: Game = {

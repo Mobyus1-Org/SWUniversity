@@ -22,9 +22,9 @@ describe("Attack with multiple units", () => {
     // act
     await g.playCardFromHandAsync(1, 0);
     await g.chooseGroundUnitAsync(1, 0);
-    await g.chooseBaseAsync(2);
+    await g.chooseBaseAsync(1, 2);
     await g.chooseGroundUnitAsync(1, 1);
-    await g.chooseBaseAsync(2);
+    await g.chooseBaseAsync(1, 2);
     // assert
     expect(g.state.player1.base.damage).toBe(0);
     expect(g.state.player2.base.damage).toBe(8);
@@ -48,9 +48,9 @@ describe("Attack with multiple units", () => {
     // act
     await g.playCardFromHandAsync(1, 0);
     await g.chooseGroundUnitAsync(1, 0);
-    await g.chooseBaseAsync(2)
+    await g.chooseBaseAsync(1, 2)
     await g.chooseGroundUnitAsync(1, 1); //should be a no-op
-    await g.chooseBaseAsync(2); //should be a no-op
+    await g.chooseBaseAsync(1, 2); //should be a no-op
     // assert
     expect(g.state.player1.base.damage).toBe(0);
     expect(g.state.player2.base.damage).toBe(4);
@@ -75,12 +75,12 @@ describe("Attack with multiple units", () => {
     // act
     await g.playCardFromHandAsync(1, 0);
     await g.chooseGroundUnitAsync(1, 0);
-    await g.chooseBaseAsync(2)
+    await g.chooseBaseAsync(1, 2)
     await g.chooseGroundUnitAsync(1, 2);
-    await g.chooseBaseAsync(2);
+    await g.chooseBaseAsync(1, 2);
     await g.chooseYesAsync(1);
     await g.chooseGroundUnitAsync(1, 1);
-    await g.chooseBaseAsync(2);
+    await g.chooseBaseAsync(1, 2);
     // assert
     expect(g.state.player1.base.damage).toBe(0);
     expect(g.state.player2.base.damage).toBe(12);

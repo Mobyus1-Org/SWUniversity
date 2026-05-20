@@ -12,16 +12,16 @@
 |---|---|---|
 | Action Phase — player alternation | ✅ | `processDispatch` routes `play-card`, `initiate-attack`, `use-ability`, `pass-action`, `claim-initiative` correctly. |
 | Pass action | ✅ | `handlePassAction` logs and returns updated state. |
-| Claim Initiative / Take the Initiative | ⚠️ | `handleClaimInitiative` sets `initiativeClaimed` and `initiativePlayer` but does **not** enforce the rule that once claimed the player auto-passes for the rest of the phase, nor does it prevent a second claim. |
-| Regroup Phase — draw 2 | ❌ | No regroup phase dispatch handler exists. Drawing cards must be handled outside the engine. |
-| Regroup Phase — resource a card | ❌ | No handler; clients manage this externally. |
-| Regroup Phase — ready all exhausted cards | ❌ | No handler. |
-| Start-of-phase / End-of-phase lasting-effect expiry | ⚠️ | `ForAttack` effects are cleared after an attack resolves. Phase-scoped (`ForThisPhase`) effects are stored in `currentEffects` but **no regroup/phase-boundary step clears them automatically**. |
-| Round counter (`currentRound`) | ⚠️ | Field exists on `GameState` and is used for `turnDiscarded`, but is never incremented by the engine. |
+| Claim Initiative / Take the Initiative | ✅ | `handleClaimInitiative` sets `initiativeClaimed`/`initiativePlayer`. `advanceTurn` auto-passes for the initiative holder on subsequent turns. Second claim is blocked by guard. |
+| Regroup Phase — draw 2 | ✅ | `executeRegroupDraw` in `actions/regroup.ts`; called automatically from `advanceTurn`. Empty-deck penalty: 3 damage per missing card. |
+| Regroup Phase — resource a card | ✅ | `"regroup-resource"` / `"pass-resource"` dispatch types; `tryRegroupResource` / `tryPassResource` in `actions/regroup.ts`. Active player (initiative holder) goes first. |
+| Regroup Phase — ready all exhausted cards | ✅ | `executeRegroupReady` in `actions/regroup.ts`; auto-called after both players complete the resource step. Readies all units, leaders, and resources. |
+| Start-of-phase / End-of-phase lasting-effect expiry | ⚠️ | `ForAttack` effects cleared after attacks. `Phase` and `Round` duration effects cleared in `executeRegroupReady`. Start-of-regroup and end-of-regroup step triggers not yet implemented. |
+| Round counter (`currentRound`) | ✅ | Incremented in `executeRegroupReady` at end of each regroup phase. |
 | Epic Action counter — once-per-game enforcement | ⚠️ | `leader.epicActionUsed` prevents a second deploy but the flag is never reset on re-entry to play per rules (it should persist). Also, non-deploy Epic Action abilities have no general once-per-game guard. |
-| Consecutive-pass end-of-phase detection | ❌ | Engine does not detect when both players have passed consecutively and does not trigger phase end. |
+| Consecutive-pass end-of-phase detection | ✅ | `advanceTurn` tracks `lastActionWasPass`; two consecutive passes (or pass + claim-initiative) set `gamePhase = "RegroupDraw"`. |
 | Game-over when base reaches 0 HP | ✅ | `updateDefeatedPlayers` runs after every state change. |
-| Draw when deck is empty (3 damage per card) | ❌ | Not implemented. |
+| Draw when deck is empty (3 damage per card) | ✅ | Handled in `executeRegroupDraw`. |
 | Mulligan / opening hand setup | ❌ | Setup is handled outside the engine. |
 
 ---
@@ -51,7 +51,7 @@
 | Upgrade attach restrictions | ⚠️ | `UpgradeEligibleTargets` only special-cases 2 cards (LOF_074, LOF_261). All other upgrades default to "attach to any friendly unit" — enemy upgrade plays and more specific restrictions (e.g., "attach to non-VEHICLE") are unhandled. |
 | Upgrade on enemy unit | ❌ | `ownUnits` only checks the playing player's units; enemy attachment is not possible. |
 | Play from non-hand zones (Smuggle, Plot) | ⚠️ | `SmuggleCost` and `HasPlot` dictionaries exist but no dispatch path handles playing a card from resources. |
-| Uniqueness rule — defeat copy if duplicate | ❌ | `CardIsUnique` is referenced but no enforcement runs when a unit enters play. |
+| Uniqueness rule — defeat copy if duplicate | ✅ | `DefeatCopyPending` returned immediately after `addToArena` if a duplicate unique is in play; player chooses which copy to defeat. |
 | "When Played" trigger window | ✅ | `resolveWhenPlayed` (immediate input required) and `triggerBag` (auto-resolve) both used. |
 | Playing a card "this phase" tracking | ✅ | `roundState.cardsPlayedThisPhase` tracked in `CardWasPlayedThisPhase`. |
 
@@ -81,8 +81,7 @@
 ### 5.1 Ambush
 | Status | Notes |
 |---|---|
-| ✅ | `HasAmbush` dictionary is extensive (covers many conditional forms, effect-granted, upgrade-granted Ambush). Ambush attack is routed through the normal attack flow with an `attack-target` pending. |
-| ⚠️ | The rule that a unit with Ambush still enters exhausted is correct, but the exhausted-unit-may-attack-via-Ambush exception must be set at dispatch. Currently it's unclear if the engine enforces that the Ambush attack ignores the "attacker must be ready" check in `handleInitiateAttack`. |
+| ✅ | `HasAmbush` dictionary is extensive. On play, an `"ambush"` trigger is pushed into the bag (same window as When Played / Shielded). `drainTriggerBag` returns an `ability-option` pending ("attack immediately?"). On Yes, unit is readied then routed to `attack-target`, bypassing `handleInitiateAttack`'s ready-check. Base is excluded from valid targets; fizzles with no prompt if no opposing units exist. |
 
 ### 5.2 Grit
 | Status | Notes |
@@ -110,20 +109,17 @@
 ### 5.6 Saboteur
 | Status | Notes |
 |---|---|
-| ✅ | `HasSaboteur` checked in `computeAttackTargets` to ignore Sentinel. |
-| ❌ | The generic Saboteur "On Attack: defeat all Shield tokens on defender" effect is not applied universally. Only Precision Fire (SOR_168) adds a `ForAttack` effect — units with innate Saboteur do not automatically strip Shields. |
+| ✅ | `HasSaboteur` checked in `computeAttackTargets` to ignore Sentinel. Also, at the start of `resolveAttack` (before damage), all `SOR_T02` Shield tokens are stripped from the defender when the attacker has Saboteur. |
 
 ### 5.7 Sentinel
 | Status | Notes |
 |---|---|
-| ✅ | `HasSentinel` dictionary is comprehensive (covers upgrades, effects, conditional forms). `computeAttackTargets` enforces Sentinel correctly. |
-| ⚠️ | The rule that "abilities can't prevent a Sentinel unit from being attacked" (i.e., Hidden + Sentinel = can be attacked) is not enforced in the engine's Hidden check. |
+| ✅ | `HasSentinel` dictionary is comprehensive (covers upgrades, effects, conditional forms). `computeAttackTargets` enforces Sentinel correctly. Hidden + Sentinel interaction handled: Sentinel units are excluded from the Hidden filter so they remain attackable. |
 
 ### 5.8 Shielded
 | Status | Notes |
 |---|---|
-| ✅ | `HasShielded` dictionary is large and well-populated. |
-| ❌ | No engine action actually **gives a Shield token** to a unit when Shielded triggers (the When Played / When Deployed window). The dictionary correctly identifies if a card has Shielded, but there is no code path to create and attach a Shield token upgrade to the unit when it enters play. |
+| ✅ | `HasShielded` dictionary is large and well-populated. On play, a `"shielded"` trigger is pushed into the bag (same timing window as When Played / Ambush). `drainTriggerBag` attaches a `SOR_T02` Shield token upgrade to the unit. In `resolveAttack`, an attacker hitting a shielded unit removes one Shield token instead of dealing damage. |
 
 ### 5.9 Bounty
 | Status | Notes |
@@ -158,8 +154,7 @@
 ### 5.14 Hidden
 | Status | Notes |
 |---|---|
-| ⚠️ | `HasHidden` dictionary is populated (LOF cards). |
-| ❌ | The engine never consults `HasHidden` during `computeAttackTargets` to exclude a unit that was played this phase. There is no tracking of "was this unit played/deployed this phase" in the attack target computation. |
+| ✅ | `HasHidden` consulted in `computeAttackTargets`. Units in `roundState.cardsEnteredPlayThisPhase` with Hidden are filtered from valid targets. `handlePlayCard` now populates `cardsPlayedThisPhase` and `cardsEnteredPlayThisPhase`. Sentinel overrides Hidden correctly. |
 
 ### 5.15 Plot
 | Status | Notes |
@@ -205,7 +200,7 @@
 
 | Token Type | Status | Notes |
 |---|---|---|
-| Shield token (upgrade, ARMOR) — prevent one damage instance, then defeat | ⚠️ | `HasShielded` dictionary exists; Shield creation is absent. `resolveAttack` does not check for or defeat Shield tokens. |
+| Shield token (upgrade, ARMOR) — prevent one damage instance, then defeat | ✅ | Created via `"shielded"` trigger bag on play. `resolveAttack` removes one `SOR_T02` token instead of dealing damage; Saboteur strips all Shield tokens before damage. |
 | Experience token (+1/+1 upgrade, LEARNED) | ❌ | No creation or attachment mechanic. |
 | Battle Droid token (ground, 1/1) | ⚠️ | `Unit.IsTokenUnit()` recognizes TWI_T01; creation must happen via card-specific When Played logic. |
 | Clone Trooper token (ground, 2/2) | ⚠️ | Same as above — TWI_T02 recognized as token unit. |
@@ -250,9 +245,11 @@
 
 | Mechanic | Status | Notes |
 |---|---|---|
-| Capture a unit (place facedown under capturer) | ⚠️ | `unit.captives: Unit[]` field exists in the data model. |
-| Rescue a captured unit | ❌ | No dispatch or engine path rescues captives. |
-| Captured unit released when guard leaves play | ❌ | `defeatUnit` / `removeFromArena` do not check and release captives. |
+| Capture a unit (place facedown under capturer) | ✅ | `TWI_128` (Take Captive) two-step resolution: choose captor → choose enemy non-leader in same arena. Damage cleared, upgrades defeated, unit placed in `captor.captives[]`. Phase-tracking entries removed on capture so rescue doesn't carry stale "played this phase" status. |
+| Token captured → set aside | ✅ | Token units are defeated on capture instead of placed under the captor (CR 34.5). |
+| Rescue a captured unit | ✅ | `defeatUnit` auto-rescues all captives when the guard leaves play — returned to owner's arena exhausted with reason `"returned-to-play"`. |
+| Captured unit released when guard leaves play | ✅ | Handled in `defeatUnit`. |
+| Rescued unit: enters play but not "played" | ✅ | Rescue adds `"returned-to-play"` entry to `cardsEnteredPlayThisPhase`. Hidden filter excludes `"returned-to-play"` entries; Shielded/Ambush triggers are only pushed during `handlePlayCard` so they don't fire on rescue. |
 | Bounty triggers when unit captured | ❌ | Not implemented. |
 
 ---
@@ -276,7 +273,7 @@
 | "Do as much as you can" | ⚠️ | Followed informally but not systematically enforced (some abilities return null silently). |
 | Golden Rule: card overrides rules | ⚠️ | Handled per-card in switch statements; no generic override system. |
 | Restrictions override permissions | ❌ | No rule engine — if two effects conflict, no precedence resolution exists. |
-| Uniqueness enforcement | ❌ | Entering play with a duplicate unique card is not detected or resolved. |
+| Uniqueness enforcement | ✅ | `DefeatCopyPending` returned immediately after `addToArena` when a duplicate unique enters play; player chooses which copy to defeat. |
 | Undo / state history | ✅ | `gameStateHistory` snapshotted before top-level actions. |
 | Open vs. hidden information enforcement | ❌ | Engine does not enforce information boundaries; all state is returned to the client. |
 | Disclose mechanic (reveal aspects from hand) | ❌ | Not implemented. |
@@ -292,18 +289,26 @@
 
 These are the highest-impact missing pieces for a playable, rules-compliant engine:
 
-1. **Shield tokens** — creation on Shielded trigger, prevention during combat, defeat-one-per-hit rule.
-2. **Regroup phase** — draw, resource, ready cards, phase-boundary lasting-effect expiry.
-3. **Bounty resolution** — trigger when unit defeated/captured, route to opponent.
-4. **Token set-aside rule** — tokens go to set-aside, not discard pile.
-5. **Saboteur shield strip** — generic "On Attack: defeat all Shields on defender" for any unit with innate Saboteur.
-6. **Exploit** — cost reduction during play, friendly unit defeat payment.
-7. **Smuggle / Plot** — play-from-resource dispatch paths and deck-replacement.
-8. **Piloting** — play-as-upgrade dispatch path including VEHICLE restriction.
-9. **Hidden** — exclude newly-played units from `computeAttackTargets`.
-10. **Trigger bag ordering** — 2+ simultaneous triggers require player-ordered resolution.
-11. **Uniqueness rule** — detect and defeat duplicate unique cards on entry.
-12. **Upgrade-on-enemy-unit** — `UpgradeEligibleTargets` must optionally include enemy units.
-13. **Delayed effects system** — "at start of regroup phase, …" pattern.
-14. **When Defeated** — only K-2SO is handled; all other When Defeated cards are silently ignored.
-15. **Capture / Rescue** — mechanic is modeled in data but has no engine actions.
+1. **Regroup phase** — draw, resource, ready cards, phase-boundary lasting-effect expiry.
+2. **Bounty resolution** — trigger when unit defeated/captured, route to opponent.
+3. **Token set-aside rule** — tokens go to set-aside, not discard pile.
+4. **Exploit** — cost reduction during play, friendly unit defeat payment.
+5. **Smuggle / Plot** — play-from-resource dispatch paths and deck-replacement.
+6. **Piloting** — play-as-upgrade dispatch path including VEHICLE restriction.
+7. **Trigger bag ordering** — 2+ simultaneous triggers require player-ordered resolution.
+8. **Upgrade-on-enemy-unit** — `UpgradeEligibleTargets` must optionally include enemy units.
+9. **Delayed effects system** — "at start of regroup phase, …" pattern.
+10. **When Defeated** — only K-2SO is handled; all other When Defeated cards are silently ignored.
+11. **Bounty resolution** — trigger when unit defeated/captured, route to opponent.
+
+### Recently Completed
+- ✅ **Capture mechanic** — `TWI_128` two-step resolution; token capture defeats token; auto-rescue on captor defeat; Hidden/Shielded/Ambush do not re-trigger on rescue.
+- ✅ **TPA (turn-per-action)** — `processDispatch` rejects out-of-turn top-level actions; `advanceTurn` alternates `activePlayer` after each action.
+- ✅ **Action phase end** — consecutive passes (or pass + claim-initiative) set `gamePhase = "RegroupDraw"`.
+- ✅ **Claim Initiative** — auto-passes for the holder on subsequent turns; second claim blocked.
+- ✅ **Hidden** — `computeAttackTargets` excludes units in `cardsEnteredPlayThisPhase` that have Hidden, unless they also have Sentinel.
+- ✅ **Shield token creation** — `"shielded"` trigger in the bag; `SOR_T02` attached on play.
+- ✅ **Shield prevention** — attacker hitting a shielded unit removes the token instead of dealing damage.
+- ✅ **Ambush** — `"ambush"` trigger in the bag; optional attack prompt, units only, fizzles with no targets.
+- ✅ **Saboteur shield strip** — all Shield tokens removed from defender before damage when attacker has Saboteur.
+- ✅ **Uniqueness rule** — `DefeatCopyPending` enforced immediately when a duplicate unique enters play.

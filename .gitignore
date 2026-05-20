@@ -1,6 +1,7 @@
 .env
 .petranaki-php-refs/
 test-puzzle.*.json
+docs/superpowers/
 # Logs
 logs
 *.log

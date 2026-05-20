@@ -95,6 +95,7 @@ type BooleanDictionary = Record<string, true>;
 type CardDictionaries = {
   cardTitle: StringDictionary;
   cardSubtitle: StringDictionary;
+  cardText: StringDictionary;
   cardCost: NumberDictionary;
   cardHp: NumberDictionary;
   cardPower: NumberDictionary;
@@ -149,6 +150,7 @@ function createEmptyDictionaries(): CardDictionaries {
   return {
     cardTitle: {},
     cardSubtitle: {},
+    cardText: {},
     cardCost: {},
     cardHp: {},
     cardPower: {},
@@ -302,6 +304,7 @@ function renderGeneratedModule(dictionaries: CardDictionaries, summary: Omit<Car
   }> = [
     { dictionaryName: "cardTitle", functionName: "CardTitle", returnType: "string" },
     { dictionaryName: "cardSubtitle", functionName: "CardSubtitle", returnType: "string" },
+    { dictionaryName: "cardText", functionName: "CardText", returnType: "string" },
     { dictionaryName: "cardCost", functionName: "CardCost", returnType: "number" },
     { dictionaryName: "cardHp", functionName: "CardHp", returnType: "number" },
     { dictionaryName: "cardPower", functionName: "CardPower", returnType: "number" },
@@ -418,6 +421,7 @@ async function fetchCardsPage(page: number): Promise<SwuCardsResponse> {
 function populateDictionaries(cardId: string, attributes: SwuCardAttributes, dictionaries: CardDictionaries): void {
   assignStringValue(dictionaries.cardTitle, cardId, attributes.title ?? "");
   assignStringValue(dictionaries.cardSubtitle, cardId, attributes.subtitle ?? "");
+  assignStringValue(dictionaries.cardText, cardId, attributes.text ?? "");
   assignNumberValue(dictionaries.cardCost, cardId, attributes.cost);
   assignNumberValue(dictionaries.cardHp, cardId, attributes.hp);
   assignNumberValue(dictionaries.cardPower, cardId, attributes.power);

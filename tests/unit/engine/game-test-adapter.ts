@@ -98,8 +98,8 @@ export class GameTestAdapter {
     return this.dispatchAsync(player, "choose-target", { targetZones: ["Leader"], targetPlayers: [player] });
   }
 
-  async chooseBaseAsync(player: PlayerId): Promise<GameTestAdapter> {
-    return this.dispatchAsync(player, "choose-target", { targetZones: ["Base"], targetPlayers: [player] });
+  async chooseBaseAsync(from: PlayerId, target: PlayerId): Promise<GameTestAdapter> {
+    return this.dispatchAsync(from, "choose-target", { targetZones: ["Base"], targetPlayers: [target] });
   }
 
   async chooseCardFromHandAsync(player: PlayerId, handIndex: number): Promise<GameTestAdapter> {
@@ -116,5 +116,13 @@ export class GameTestAdapter {
 
   async chooseNoAsync(player: PlayerId): Promise<GameTestAdapter> {
     return this.chooseOptionAsync(player, "No");
+  }
+
+  async regroupResourceAsync(player: PlayerId, handIndex: number): Promise<GameTestAdapter> {
+    return this.dispatchAsync(player, "regroup-resource", { handIndex });
+  }
+
+  async passResourceAsync(player: PlayerId): Promise<GameTestAdapter> {
+    return this.dispatchAsync(player, "pass-resource", {});
   }
 }
