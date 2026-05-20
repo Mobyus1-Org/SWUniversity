@@ -36,7 +36,7 @@
 | "Play for free" — bypasses aspect penalty | ❌ | No free-play path exists in the engine; cards always go through `playCost`. |
 | Cost modifiers (increase before decrease) | ⚠️ | `Exploit` decreases cost; no increase modifiers are tracked beyond the aspect penalty. Order is not explicitly enforced. |
 | Additional costs (non-resource) | ❌ | No mechanism for abilities like "also defeat a friendly unit to pay." |
-| Resourcing a card (facedown, exhausted) | ❌ | State model has a `resources` array but no engine dispatch for adding/removing. |
+| Resourcing a card (facedown, exhausted) | ✅ | `"regroup-resource"` dispatch in `actions/regroup.ts`; card removed from hand, pushed to `resources[]` as `{ ready: false }`. `"pass-resource"` skips the step. Both handled during RegroupResource phase. |
 | Resource rearrangement rules | ❌ | Not enforced. |
 
 ---
@@ -124,8 +124,10 @@
 ### 5.9 Bounty
 | Status | Notes |
 |---|---|
-| ⚠️ | `CountBounties` and `HasBounty` exist. `Unit.HasBounty()` is used for conditions (e.g., Hunter of the Haxion Brood). |
-| ❌ | Bounty resolution itself — when a unit with Bounty is defeated, no engine path triggers the Bounty ability and routes it to the opponent to resolve. `resolveWhenDefeated` only handles K-2SO (SOR_145). |
+| ✅ | `collectBounties` in `actions/bounty.ts` builds a `BountyPending` chain (one per bounty). Called from `defeatUnit` and the capture handler. Collecting player is always the opponent of the bounty unit's controller (CR 13f). |
+| ✅ | Collect is optional (`BountyPending` → ability-option Yes/No). Draw-card effect handled in `handleChooseOption`. Give-shield effect (Public Enemy SHD_068) uses `BountyShieldTargetPending` → player picks any unit → `SOR_T02` attached. |
+| ✅ | Multiple bounties on one unit form a linked continuation chain — each resolves sequentially. Tested with Hylobon Enforcer (innate) + Public Enemy upgrade (granted). |
+| ⚠️ | `CountBounties` and `HasBounty` dictionaries exist for condition checks but are not used during bounty resolution — `getBountyEffects` uses a direct switch. Most bounty cards beyond SHD_027 and SHD_068 need entries in `getBountyEffects` to resolve. |
 
 ### 5.10 Smuggle [Y]
 | Status | Notes |
@@ -186,8 +188,8 @@
 | Mechanic | Status | Notes |
 |---|---|---|
 | `ForAttack` lasting effects | ✅ | `currentEffects` with `duration: "ForAttack"` are cleaned up after attack. |
-| `ForThisPhase` lasting effects | ⚠️ | Stored in `currentEffects` but **never automatically cleared** at phase end because no phase-end dispatch exists. |
-| `ForThisRound` lasting effects | ❌ | Same issue — no round-end clearing. |
+| `ForThisPhase` lasting effects | ✅ | `executeRegroupReady` filters out `duration === "Phase"` effects at end of each regroup. |
+| `ForThisRound` lasting effects | ✅ | `executeRegroupReady` also filters `duration === "Round"` effects; both cleared together at round boundary. |
 | Power modifiers (+ and −) | ⚠️ | `CurrentPower` applies upgrade bonuses and effect bonuses. Negative modifiers (e.g., "Give a unit −2/−0") are not handled. |
 | HP modifiers (+ and −) | ⚠️ | `TotalHP` applies upgrade HP modifiers. Negative HP modifiers and the "defeat immediately if remaining HP ≤ 0 after modifier removal" rule are not enforced. |
 | "Lose all abilities" | ✅ | `LostAbilities()` on `Unit` checks current effects (Force Lightning, Imprisoned, etc.) and propagates to keyword checks. |
@@ -277,7 +279,7 @@
 | Undo / state history | ✅ | `gameStateHistory` snapshotted before top-level actions. |
 | Open vs. hidden information enforcement | ❌ | Engine does not enforce information boundaries; all state is returned to the client. |
 | Disclose mechanic (reveal aspects from hand) | ❌ | Not implemented. |
-| Empty deck damage (3 per card drawn) | ❌ | Not implemented. |
+| Empty deck damage (3 per card drawn) | ✅ | Implemented in `executeRegroupDraw`; 3 damage per missing card dealt to that player's base. |
 | "Defeated this phase" / "attacked this phase" tracking | ✅ | `roundState.cardsLeftPlayThisPhase` and `roundState.unitsAttackedThisPhase` tracked. |
 | "First/second event played this phase" tracking | ⚠️ | `cardsPlayedThisPhase` exists; "first/second" ordinal queries would need additional index logic. |
 | choose-player dispatch type | ❌ | Stubbed as "not yet implemented." |
@@ -289,19 +291,19 @@
 
 These are the highest-impact missing pieces for a playable, rules-compliant engine:
 
-1. **Regroup phase** — draw, resource, ready cards, phase-boundary lasting-effect expiry.
-2. **Bounty resolution** — trigger when unit defeated/captured, route to opponent.
-3. **Token set-aside rule** — tokens go to set-aside, not discard pile.
-4. **Exploit** — cost reduction during play, friendly unit defeat payment.
-5. **Smuggle / Plot** — play-from-resource dispatch paths and deck-replacement.
-6. **Piloting** — play-as-upgrade dispatch path including VEHICLE restriction.
-7. **Trigger bag ordering** — 2+ simultaneous triggers require player-ordered resolution.
-8. **Upgrade-on-enemy-unit** — `UpgradeEligibleTargets` must optionally include enemy units.
-9. **Delayed effects system** — "at start of regroup phase, …" pattern.
-10. **When Defeated** — only K-2SO is handled; all other When Defeated cards are silently ignored.
-11. **Bounty resolution** — trigger when unit defeated/captured, route to opponent.
+1. **Bounty card coverage** — `getBountyEffects` currently handles SHD_027 (draw a card) and SHD_068 (give shield). All other bounty cards in the set need entries.
+2. **Token set-aside rule** — tokens go to set-aside, not discard pile.
+3. **Exploit** — cost reduction during play, friendly unit defeat payment.
+4. **Smuggle / Plot** — play-from-resource dispatch paths and deck-replacement.
+5. **Piloting** — play-as-upgrade dispatch path including VEHICLE restriction.
+6. **Trigger bag ordering** — 2+ simultaneous triggers require player-ordered resolution.
+7. **Upgrade-on-enemy-unit** — `UpgradeEligibleTargets` must optionally include enemy units.
+8. **Delayed effects system** — "at start of regroup phase, …" pattern.
+9. **When Defeated** — only K-2SO is handled; all other When Defeated cards are silently ignored.
 
 ### Recently Completed
+- ✅ **Bounty resolution** — `collectBounties` wired into defeat and capture. Optional collect (Yes/No). Draw-card and give-shield effects implemented. Multi-bounty sequential resolution tested.
+- ✅ **Regroup phase** — draw 2 (empty-deck penalty), optional resource-a-card step, auto-ready all units/leaders/resources, Phase+Round effect clearing, round counter increment.
 - ✅ **Capture mechanic** — `TWI_128` two-step resolution; token capture defeats token; auto-rescue on captor defeat; Hidden/Shielded/Ambush do not re-trigger on rescue.
 - ✅ **TPA (turn-per-action)** — `processDispatch` rejects out-of-turn top-level actions; `advanceTurn` alternates `activePlayer` after each action.
 - ✅ **Action phase end** — consecutive passes (or pass + claim-initiative) set `gamePhase = "RegroupDraw"`.

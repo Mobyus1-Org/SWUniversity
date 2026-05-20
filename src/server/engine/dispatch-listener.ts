@@ -46,6 +46,7 @@ import type { CardInPlay, DiscardedCard, PlayerId, Unit as UnitInterface } from 
 import type {
   AbilityTargetPending,
   AttackTargetPending,
+  BountyShieldTargetPending,
   CaptureCaptorPending,
   CaptureTargetPending,
   DefeatCopyPending,
@@ -55,6 +56,7 @@ import type {
   ResolveAttackPending,
   UpgradeTargetPending,
 } from "@/server/engine/pending-resolution";
+import { collectBounties, drawCardForPlayer } from "@/server/engine/actions/bounty";
 import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { resolveWhenPlayed } from "@/server/engine/actions/when-played";
@@ -344,8 +346,10 @@ function defeatUnit(
     log.push(`${CardTitle(captive.cardId)} was rescued and returned to Player ${captive.owner}'s arena exhausted.`);
   }
 
-  // When-Defeated triggers: add card-specific entries to whenDefeatedRegistry below.
-  return resolveWhenDefeated(unit, removed.player);
+  // When-Defeated triggers fire after bounty collection (CR 13c).
+  const whenDefeated = resolveWhenDefeated(unit, removed.player);
+  const collectingPlayer: PlayerId = removed.player === 1 ? 2 : 1;
+  return collectBounties(unit, collectingPlayer, whenDefeated) ?? whenDefeated;
 }
 
 // ---------------------------------------------------------------------------
@@ -486,10 +490,16 @@ function resolveAttack(
     let nextPending: PendingResolution | null = null;
     if (defDefeated) nextPending = defeatUnit(game, log, defender) ?? nextPending;
     if (atkDefeated) nextPending = defeatUnit(game, log, attacker) ?? nextPending;
-    if (nextPending && nextPending.type === "when-defeated-choice") {
-      nextPending.continuation = resolveWhenAttackEnds(game, attacker, pending.continuation ?? null);
+    if (nextPending) {
+      // Append resolveWhenAttackEnds at the tail of the pending chain.
+      // defeatUnit returns BountyPending | WhenDefeatedChoicePending, both have continuation.
+      const whenAttackEnds = resolveWhenAttackEnds(game, attacker, pending.continuation ?? null);
+      type WithContinuation = { continuation: PendingResolution | null | undefined };
+      let tail: WithContinuation = nextPending as unknown as WithContinuation;
+      while (tail.continuation != null) tail = tail.continuation as unknown as WithContinuation;
+      tail.continuation = whenAttackEnds;
+      return nextPending;
     }
-    if (nextPending) return nextPending;
 
     return resolveWhenAttackEnds(game, attacker, pending.continuation ?? null);
   }
@@ -597,6 +607,17 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       return {
         type: "Target",
         fromPlayIds: pending.eligiblePlayIds,
+      } satisfies NeedsTarget;
+    case "bounty":
+      return {
+        type: "Option",
+        helperText: `Collect bounty (${CardTitle(pending.cardId)})?`,
+        options: ["Yes", "No"],
+      } satisfies NeedsOption;
+    case "bounty-shield-target":
+      return {
+        type: "Target",
+        fromPlayIds: pending.fromPlayIds,
       } satisfies NeedsTarget;
     case "resolve-attack":
       // Should never be shown to client — auto-resolves as continuation
@@ -969,7 +990,13 @@ function handleChooseTarget(
     // Token units are defeated on capture instead of placed under the captor (CR 34.5).
     if (target.IsTokenUnit()) {
       log.push(`${CardTitle(target.cardId)} was captured and set aside (token).`);
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
     } else {
+      // Compute bounties BEFORE clearing upgrades — upgrades carry bounty grants.
+      const captureCollector: PlayerId = target.controller === 1 ? 2 : 1;
+      const bountyPending = collectBounties(target, captureCollector, null);
+
       // Remove all damage, defeat all upgrades, place facedown under captor.
       target.damage = 0;
       target.upgrades = [];
@@ -978,10 +1005,13 @@ function handleChooseTarget(
       // Remove from phase tracking so rescue later doesn't carry "played this phase" status.
       game.roundState.cardsPlayedThisPhase = game.roundState.cardsPlayedThisPhase.filter(e => e.playId !== target.playId);
       game.roundState.cardsEnteredPlayThisPhase = game.roundState.cardsEnteredPlayThisPhase.filter(e => e.playId !== target.playId);
-    }
 
-    updateDefeatedPlayers(game);
-    return { response: stateResponse(game), pending: null, stateChanged: true };
+      updateDefeatedPlayers(game);
+      if (bountyPending) {
+        return { response: resolutionResponse(pendingToResolution(bountyPending, game)), pending: bountyPending, stateChanged: true };
+      }
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
   }
 
   if (pending.type === "upgrade-target") {
@@ -1005,6 +1035,30 @@ function handleChooseTarget(
     log.push(`${CardTitle(pending.upgradeCardId)} attached to ${CardTitle(targetUnit.cardId)}.`);
 
     updateDefeatedPlayers(game);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending.type === "bounty-shield-target") {
+    const chosen = data.targetPlayIds?.[0];
+    if (!chosen)
+      return { response: invalidResponse("Choose a unit to give the Shield token to."), pending, stateChanged: false };
+    if (!pending.fromPlayIds.includes(chosen))
+      return { response: invalidResponse("Chosen unit is not a valid shield target."), pending, stateChanged: false };
+    const targetUnit = unitByPlayId(game, chosen);
+    if (!targetUnit)
+      return { response: invalidResponse("Target unit not found."), pending, stateChanged: false };
+
+    targetUnit.upgrades.push({
+      cardId: "SOR_T02",
+      playId: nextPlayId(game),
+      owner: pending.collectingPlayer,
+      controller: pending.collectingPlayer,
+    });
+    log.push(`Bounty collected: Shield token placed on ${CardTitle(targetUnit.cardId)}.`);
+
+    updateDefeatedPlayers(game);
+    const next = pending.continuation;
+    if (next) return { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: true };
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
@@ -1080,6 +1134,42 @@ function handleChooseOption(
     }
 
     return { response: invalidResponse(`Unknown when-defeated option: ${optionType}`), pending, stateChanged: false };
+  }
+
+  if (pending?.type === "bounty") {
+    if (option === "Yes") {
+      if (pending.bountyEffect === "draw-card") {
+        drawCardForPlayer(game, log, pending.collectingPlayer);
+        const nextPending = pending.continuation ?? null;
+        updateDefeatedPlayers(game);
+        if (nextPending) {
+          return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+        }
+        return { response: stateResponse(game), pending: null, stateChanged: true };
+      }
+      if (pending.bountyEffect === "give-shield") {
+        // Build a shield-target pending so the player chooses which unit gets the Shield token
+        const allUnits = [...game.player1.groundArena, ...game.player1.spaceArena,
+                          ...game.player2.groundArena, ...game.player2.spaceArena];
+        const eligiblePlayIds = allUnits
+          .filter(u => u.controller === pending.collectingPlayer)
+          .map(u => u.playId);
+        const shieldPending: BountyShieldTargetPending = {
+          type: "bounty-shield-target",
+          collectingPlayer: pending.collectingPlayer,
+          fromPlayIds: eligiblePlayIds,
+          continuation: pending.continuation ?? null,
+        };
+        return { response: resolutionResponse(pendingToResolution(shieldPending, game)), pending: shieldPending, stateChanged: false };
+      }
+    }
+    // "No" — skip this bounty, move to continuation
+    const nextPending = pending.continuation ?? null;
+    updateDefeatedPlayers(game);
+    if (nextPending) {
+      return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+    }
+    return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
   return { response: invalidResponse("No pending option decision."), pending: null, stateChanged: false };

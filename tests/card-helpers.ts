@@ -84,6 +84,7 @@ export const Cards = {
       recklessGunslinger: "SHD_160",
       fourLom: "SHD_188",
       zuckuss: "SHD_190",
+      hylobonEnforcer: "SHD_027",
     },
     jtl: {
       lukeSkywalker: "JTL_094",
@@ -106,6 +107,7 @@ export const Cards = {
     },
     shd: {
       legalAuthority: "SHD_124",
+      publicEnemy: "SHD_068",
     },
     lof: {
       bolsteredEndurance: "LOF_074",

@@ -93,6 +93,25 @@ export interface CaptureTargetPending {
   eligiblePlayIds: string[];
 }
 
+/** Optional bounty collection prompt — shown to the opponent of the defeated/captured unit's controller. */
+export interface BountyPending {
+  type: "bounty";
+  /** The card that carries this bounty (for display in the prompt). */
+  cardId: string;
+  /** The player who may collect (always the opponent of the bounty unit's controller). */
+  collectingPlayer: PlayerId;
+  bountyEffect: "draw-card" | "give-shield";
+  continuation: PendingResolution | null;
+}
+
+/** Step 2 of give-shield bounty: choose which unit receives the Shield token. */
+export interface BountyShieldTargetPending {
+  type: "bounty-shield-target";
+  collectingPlayer: PlayerId;
+  fromPlayIds: string[];
+  continuation: PendingResolution | null;
+}
+
 export type PendingResolution =
   | AttackTargetPending
   | AbilityOptionPending
@@ -104,7 +123,9 @@ export type PendingResolution =
   | UpgradeTargetPending
   | DefeatCopyPending
   | CaptureCaptorPending
-  | CaptureTargetPending;
+  | CaptureTargetPending
+  | BountyPending
+  | BountyShieldTargetPending;
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch
