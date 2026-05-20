@@ -1,6 +1,6 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
-import { CardTraits } from "@/server/engine/card-db/generated";
+import { TraitContains } from "../core-functions";
 
 function ownUnits(game: GameState, player: PlayerId) {
   const p = player === 1 ? game.player1 : game.player2;
@@ -19,8 +19,9 @@ export function UpgradeEligibleTargets(
   const all = ownUnits(game, player);
 
   switch (upgradeCardId) {
-    case "LOF_074": // Bolstered Endurance — Attach to a Force unit.
-      return all.filter(u => CardTraits(u.cardId).includes("Force")).map(u => u.playId);
+    case "LOF_074": // Bolstered Endurance
+    case "LOF_261": // Constructed Lightsaber
+      return all.filter(u => TraitContains(u.cardId, "Force")).map(u => u.playId);
     default:
       return all.map(u => u.playId);
   }

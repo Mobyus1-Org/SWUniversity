@@ -75,6 +75,7 @@ export const Cards = {
       wampa: "SOR_164",
     },
     shd: {
+      sundariPeaceKeeper: "SHD_098",
       recklessGunslinger: "SHD_160",
     },
     jtl: {

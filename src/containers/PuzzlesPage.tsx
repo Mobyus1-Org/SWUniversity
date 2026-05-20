@@ -9,6 +9,7 @@ import type { PlayerId } from "@/lib/engine/core-models";
 import type { DispatchResponse, DispatchType, DispatchData, GameDispatch, ResolutionRequest } from "@/lib/engine/message-types";
 import type { EngineContext } from "@/server/engine/pending-resolution";
 import { CardIsLeader } from "@/server/engine/core-functions";
+import { CardIsPlayable } from "@/server/engine/card-playability";
 
 type PreviewState = {
   imageId: string;
@@ -580,7 +581,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   const selectableHandIndices: number[] = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Hand")
     ? (resolutionNeeded.fromIndices ?? player.hand.map((_, i) => i))
     : !resolutionNeeded && !isGameOver
-      ? player.hand.map((_, i) => i)
+      ? player.hand.map((_, i) => i).filter(i => CardIsPlayable(gameState, PLAYER, player.hand[i].cardId))
       : [];
 
   const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[opponent.discard.length - 1] : null;

@@ -55,6 +55,7 @@ import { resolveWhenPlayed } from "@/server/engine/actions/when-played";
 import { resolveWhenPlayedTrigger } from "@/server/engine/actions/when-played-trigger";
 import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
+import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { ActionAbilities } from "@/server/engine/actions/action-ability";
 
 // ---------------------------------------------------------------------------
@@ -333,6 +334,14 @@ function resolveAttack(
 ): PendingResolution | null {
   const attacker = unitByPlayId(game, pending.attackerPlayId);
   if (!attacker) return null;
+
+  // Restore fires as an On Attack trigger before combat damage
+  const restoreAmount = RestoreAmount(attacker.cardId, attacker.playId, attacker.controller);
+  if (restoreAmount > 0) {
+    const controllerBase = ps(game, attacker.controller).base;
+    controllerBase.damage = Math.max(0, controllerBase.damage - restoreAmount);
+    log.push(`Restore ${restoreAmount}: healed ${restoreAmount} damage from Player ${attacker.controller}'s base.`);
+  }
 
   attacker.ready = false;
   const atkPower = attacker.CurrentPower(false, true);
