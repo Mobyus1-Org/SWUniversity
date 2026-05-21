@@ -52,6 +52,7 @@ type SwuCardAttributes = {
   upgradeHp?: number | null;
   upgradePower?: number | null;
   text?: string | null;
+  deployBox?: string | null;
   unique?: boolean | null;
   rarity?: SwuRelation;
   type?: SwuRelation;
@@ -108,6 +109,7 @@ type CardDictionaries = {
   cardIsUnique: BooleanDictionary;
   cardHasWhenPlayed: BooleanDictionary;
   cardHasWhenDefeated: BooleanDictionary;
+  cardLeaderUnitText: StringDictionary;
   cardAspects: StringDictionary;
   cardTraits: StringDictionary;
   cardArena: StringDictionary;
@@ -163,6 +165,7 @@ function createEmptyDictionaries(): CardDictionaries {
     cardIsUnique: {},
     cardHasWhenPlayed: {},
     cardHasWhenDefeated: {},
+    cardLeaderUnitText: {},
     cardAspects: {},
     cardTraits: {},
     cardArena: {},
@@ -317,6 +320,7 @@ function renderGeneratedModule(dictionaries: CardDictionaries, summary: Omit<Car
     { dictionaryName: "cardIsUnique", functionName: "CardIsUnique", returnType: "boolean" },
     { dictionaryName: "cardHasWhenPlayed", functionName: "CardHasWhenPlayed", returnType: "boolean" },
     { dictionaryName: "cardHasWhenDefeated", functionName: "CardHasWhenDefeated", returnType: "boolean" },
+    { dictionaryName: "cardLeaderUnitText", functionName: "CardLeaderUnitText", returnType: "string" },
     { dictionaryName: "cardAspects", functionName: "CardAspects", returnType: "string", getterReturnType: "string[]" },
     { dictionaryName: "cardTraits", functionName: "CardTraits", returnType: "string", getterReturnType: "string[]" },
     { dictionaryName: "cardArena", functionName: "CardArena", returnType: "string" },
@@ -444,6 +448,10 @@ function populateDictionaries(cardId: string, attributes: SwuCardAttributes, dic
 
   if (/When Defeated:/i.test(cardText)) {
     dictionaries.cardHasWhenDefeated[cardId] = true;
+  }
+
+  if (getRawTypeName(attributes) === "Leader") {
+    assignStringValue(dictionaries.cardLeaderUnitText, cardId, attributes.deployBox ?? "");
   }
 
   const aspectValues = [
