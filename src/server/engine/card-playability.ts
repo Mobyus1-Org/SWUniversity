@@ -1,8 +1,9 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import { CardAspects, CardCost, CardType } from "@/server/engine/card-db/generated";
-import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { UpgradeEligibleTargets, PilotingEligibleVehicles } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
+import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 
 function playCost(game: GameState, player: PlayerId, cardId: string): number {
   const p = player === 1 ? game.player1 : game.player2;
@@ -24,8 +25,19 @@ export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string
   const fullCost = playCost(game, player, cardId);
   const exploitAmt = ExploitAmount(cardId, "hand", player, true);
   const numUnits = p.groundArena.length + p.spaceArena.length;
-  const minCost = Math.max(0, fullCost - Math.min(exploitAmt, numUnits) * 2);
-  if (readyResources < minCost) return false;
+  const minUnitCost = Math.max(0, fullCost - Math.min(exploitAmt, numUnits) * 2);
+
+  // Check if piloting is an option
+  const pilotBase = PilotingCost(cardId);
+  if (pilotBase >= 0) {
+    const aspectPen = fullCost - CardCost(cardId); // the aspect penalty already computed
+    const pilotFullCost = pilotBase + aspectPen;
+    const canAffordPilot = readyResources >= pilotFullCost;
+    const hasVehicle = PilotingEligibleVehicles(game, player).length > 0;
+    if (canAffordPilot && hasVehicle) return true;
+  }
+
+  if (readyResources < minUnitCost) return false;
 
   if (CardType(cardId) === "Upgrade") {
     return UpgradeEligibleTargets(cardId, game, player).length > 0;

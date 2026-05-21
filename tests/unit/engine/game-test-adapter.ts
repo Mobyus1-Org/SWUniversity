@@ -113,6 +113,18 @@ export class GameTestAdapter {
     return this.dispatchAsync(player, "choose-target", { targetPlayIds });
   }
 
+  async choosePilotVehicleGroundAsync(player: PlayerId, unitIndex: number): Promise<GameTestAdapter> {
+    const pState = player === 1 ? this.state.player1 : this.state.player2;
+    const targetPlayId = pState.groundArena[unitIndex].playId;
+    return this.dispatchAsync(player, "choose-target", { targetPlayIds: [targetPlayId] });
+  }
+
+  async choosePilotVehicleSpaceAsync(player: PlayerId, unitIndex: number): Promise<GameTestAdapter> {
+    const pState = player === 1 ? this.state.player1 : this.state.player2;
+    const targetPlayId = pState.spaceArena[unitIndex].playId;
+    return this.dispatchAsync(player, "choose-target", { targetPlayIds: [targetPlayId] });
+  }
+
   async chooseOptionAsync(player: PlayerId, option: string): Promise<GameTestAdapter> {
     return this.dispatchAsync(player, "choose-option", { option });
   }

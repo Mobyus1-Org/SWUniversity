@@ -61,6 +61,10 @@ export const Cards = {
     twi: {
       countDooku: "TWI_005",
     },
+    jtl: {
+      poeDameron: "JTL_013",
+      asajjVentress: "JTL_001",
+    },
   },
   units: {
     token: {
@@ -93,6 +97,9 @@ export const Cards = {
     jtl: {
       lukeSkywalker: "JTL_094",
       rebelliousHammerhead: "JTL_153",
+      snapWexley: "JTL_098",
+      r2d2: "JTL_245",
+      millenniumFalcon: "JTL_249",
     },
     lof: {
       gungi: "LOF_093",

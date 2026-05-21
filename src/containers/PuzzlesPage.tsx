@@ -212,8 +212,9 @@ function UpgradeStrip({
   onPreviewStart: (preview: PreviewState) => void;
   onPreviewEnd: () => void;
 }) {
-  const primarySrc = getCardImageLink(cardId);
-  const fallbackSrc = getSWUDBImageLink(cardId);
+  const imageCardId = CardIsLeader(cardId) ? `${cardId}_BACK` : cardId;
+  const primarySrc = getCardImageLink(imageCardId);
+  const fallbackSrc = getSWUDBImageLink(imageCardId);
   const [imageSrc, setImageSrc] = React.useState(primarySrc);
   const title = CardTitle(cardId);
 
@@ -223,7 +224,7 @@ function UpgradeStrip({
     <div
       className="overflow-hidden rounded-b-xl border-x border-b border-white/15 bg-black/40"
       style={{ height: 18 }}
-      onMouseEnter={() => onPreviewStart({ imageId: cardId, cardId, label: title })}
+      onMouseEnter={() => onPreviewStart({ imageId: imageCardId, cardId, label: title })}
       onMouseLeave={onPreviewEnd}
     >
       <img

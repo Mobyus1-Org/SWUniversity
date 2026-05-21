@@ -55,6 +55,7 @@ import type {
   ExploitOptionPending,
   ExploitTargetPending,
   PendingResolution,
+  PilotingOptionPending,
   ResolveAttackPending,
   UpgradeTargetPending,
 } from "@/server/engine/pending-resolution";
@@ -71,6 +72,9 @@ import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shi
 import { HasAmbush } from "@/server/engine/card-db/keyword-dictionaries.ts/ambush";
 import { ActionAbilities } from "@/server/engine/actions/action-ability";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
+import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
+import { PilotingEligibleVehicles } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dictionaries.ts/leader-pilot-deploy";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -151,6 +155,10 @@ function exhaustResources(game: GameState, player: PlayerId, count: number): voi
       remaining--;
     }
   }
+}
+
+function pilotPlayCost(game: GameState, player: PlayerId, cardId: string): number {
+  return PilotingCost(cardId) + aspectPenalty(game, player, cardId);
 }
 
 // ---------------------------------------------------------------------------
@@ -698,6 +706,14 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         maxTargets: pending.exploitAmount,
         needsMultiple: pending.exploitAmount > 1,
       } satisfies NeedsTarget;
+    case "piloting-option":
+      return {
+        type: "Option",
+        helperText: pending.source === "leader"
+          ? `Deploy ${CardTitle(pending.cardId)} as a unit or as a pilot upgrade on a Vehicle?`
+          : `Play ${CardTitle(pending.cardId)} as a unit or as a pilot upgrade on a Vehicle?`,
+        options: pending.source === "leader" ? ["Deploy as Unit", "Deploy as Pilot"] : ["Play as Unit", "Play as Pilot"],
+      } satisfies NeedsOption;
     default: throw new Error(`Unknown pending resolution type: ${pending.type}`);
   }
 }
@@ -804,6 +820,43 @@ function handlePlayCard(
   const readyCount = ps(game, player).resources.filter(r => r.ready).length;
   const minCost = exploitAmt > 0 ? Math.max(0, fullCost - exploitAmt * 2) : fullCost;
 
+  // --- Piloting branch (checked before the unit affordability guard) ---
+  const pilotBase = PilotingCost(cardId);
+  if (pilotBase >= 0) {
+    const pilotCost = pilotPlayCost(game, player, cardId);
+    const eligibleVehicles = PilotingEligibleVehicles(game, player);
+    const canAffordUnit = readyCount >= fullCost;
+    const canAffordPilot = readyCount >= pilotCost && eligibleVehicles.length > 0;
+
+    if (canAffordPilot) {
+      hand.splice(idx, 1);
+
+      if (!canAffordUnit) {
+        // Only piloting is affordable — skip prompt, go straight to vehicle target
+        exhaustResources(game, player, pilotCost);
+        log.push(`Player ${player} is playing ${CardTitle(cardId) ?? cardId} as a Pilot.`);
+        const upgradePending: UpgradeTargetPending = {
+          type: "upgrade-target",
+          upgradeCardId: cardId,
+          player,
+          fromPlayIds: eligibleVehicles,
+        };
+        return { response: resolutionResponse(pendingToResolution(upgradePending, game)), pending: upgradePending, stateChanged: false };
+      }
+
+      // Both affordable — prompt for choice
+      const pilotingOptionPending: PilotingOptionPending = {
+        type: "piloting-option",
+        cardId,
+        playingPlayer: player,
+        unitCost: fullCost,
+        pilotingCost: pilotCost,
+        source: "hand",
+      };
+      return { response: resolutionResponse(pendingToResolution(pilotingOptionPending, game)), pending: pilotingOptionPending, stateChanged: false };
+    }
+  }
+
   if (readyCount < minCost)
     return { response: invalidResponse(`Player ${player} cannot afford ${cardId}.`), pending: null, stateChanged: false };
 
@@ -820,7 +873,7 @@ function handlePlayCard(
     return { response: resolutionResponse(pendingToResolution(exploitOptionPending, game)), pending: exploitOptionPending, stateChanged: false };
   }
 
-  // No exploit — pay full cost immediately
+  // No piloting, no exploit — pay full cost immediately
   exhaustResources(game, player, fullCost);
   hand.splice(idx, 1);
   log.push(`Player ${player} played ${CardTitle(cardId) ?? cardId}.`);
@@ -1134,7 +1187,16 @@ function handleChooseTarget(
       controller: pending.player,
     };
     targetUnit.upgrades.push(upgradeInPlay);
-    log.push(`${CardTitle(pending.upgradeCardId)} attached to ${CardTitle(targetUnit.cardId)}.`);
+    // If a leader deployed as a pilot, record the upgrade's playId as deployedPlayId
+    if (CardIsLeader(pending.upgradeCardId)) {
+      ps(game, pending.player).leader.deployedPlayId = upgradeInPlay.playId;
+    }
+    const isPilot = PilotingCost(pending.upgradeCardId) >= 0;
+    if (isPilot) {
+      log.push(`${CardTitle(pending.upgradeCardId)} is piloting ${CardTitle(targetUnit.cardId)}.`);
+    } else {
+      log.push(`${CardTitle(pending.upgradeCardId)} attached to ${CardTitle(targetUnit.cardId)}.`);
+    }
 
     updateDefeatedPlayers(game);
     return { response: stateResponse(game), pending: null, stateChanged: true };
@@ -1377,6 +1439,50 @@ function handleChooseOption(
     }
   }
 
+  if (pending?.type === "piloting-option" && pending.source === "hand") {
+    if (option === "Play as Unit") {
+      exhaustResources(game, pending.playingPlayer, pending.unitCost);
+      log.push(`Player ${pending.playingPlayer} played ${CardTitle(pending.cardId)} as a unit.`);
+      return completePlayCard(game, log, pending.cardId, pending.playingPlayer);
+    }
+    if (option === "Play as Pilot") {
+      exhaustResources(game, pending.playingPlayer, pending.pilotingCost);
+      log.push(`Player ${pending.playingPlayer} is playing ${CardTitle(pending.cardId)} as a Pilot.`);
+      const eligibleVehicles = PilotingEligibleVehicles(game, pending.playingPlayer);
+      const upgradePending: UpgradeTargetPending = {
+        type: "upgrade-target",
+        upgradeCardId: pending.cardId,
+        player: pending.playingPlayer,
+        fromPlayIds: eligibleVehicles,
+      };
+      return { response: resolutionResponse(pendingToResolution(upgradePending, game)), pending: upgradePending, stateChanged: false };
+    }
+  }
+
+  if (pending?.type === "piloting-option" && pending.source === "leader") {
+    const leader = ps(game, pending.playingPlayer).leader;
+    if (option === "Deploy as Unit") {
+      leader.deployed = true;
+      const unit = addToArena(game, pending.playingPlayer, pending.cardId, true);
+      leader.deployedPlayId = unit.playId;
+      log.push(`Player ${pending.playingPlayer} deployed ${CardTitle(pending.cardId)} as a unit.`);
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+    if (option === "Deploy as Pilot") {
+      leader.deployed = true;
+      log.push(`Player ${pending.playingPlayer} is deploying ${CardTitle(pending.cardId)} as a Pilot.`);
+      const eligibleVehicles = PilotingEligibleVehicles(game, pending.playingPlayer);
+      const upgradePending: UpgradeTargetPending = {
+        type: "upgrade-target",
+        upgradeCardId: pending.cardId,
+        player: pending.playingPlayer,
+        fromPlayIds: eligibleVehicles,
+      };
+      return { response: resolutionResponse(pendingToResolution(upgradePending, game)), pending: upgradePending, stateChanged: false };
+    }
+  }
+
   return { response: invalidResponse("No pending option decision."), pending: null, stateChanged: false };
 }
 
@@ -1474,9 +1580,31 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
     return { response: invalidResponse("Leader is already deployed."), pending: null, stateChanged: false };
   if (leader.epicActionUsed)
     return { response: invalidResponse("Leader epic action already used this round."), pending: null, stateChanged: false };
-  if (ps(game, player).resources.length < playCost(game, player, leader.cardId))
+
+  const deployCost = playCost(game, player, leader.cardId);
+  if (ps(game, player).resources.length < deployCost)
     return { response: invalidResponse("Not enough resources to deploy leader."), pending: null, stateChanged: false };
 
+  // Check if this leader can also deploy as a pilot upgrade on a Vehicle
+  const pilotThreshold = LeaderDeployPilotThreshold(leader.cardId);
+  if (pilotThreshold !== null) {
+    const eligibleVehicles = PilotingEligibleVehicles(game, player);
+    if (eligibleVehicles.length > 0) {
+      leader.epicActionUsed = true;
+      log.push(`Player ${player} is deploying ${CardTitle(leader.cardId)} — choose unit or pilot.`);
+      const pilotingOptionPending: PilotingOptionPending = {
+        type: "piloting-option",
+        cardId: leader.cardId,
+        playingPlayer: player,
+        unitCost: deployCost,
+        pilotingCost: deployCost,
+        source: "leader",
+      };
+      return { response: resolutionResponse(pendingToResolution(pilotingOptionPending, game)), pending: pilotingOptionPending, stateChanged: false };
+    }
+  }
+
+  // Normal deploy path
   leader.deployed = true;
   leader.epicActionUsed = true;
   const unit = addToArena(game, player, leader.cardId, true);

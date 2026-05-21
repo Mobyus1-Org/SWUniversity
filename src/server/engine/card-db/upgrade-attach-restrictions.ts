@@ -1,6 +1,7 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import { TraitContains } from "../core-functions";
+import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 
 function ownUnits(game: GameState, player: PlayerId) {
   const p = player === 1 ? game.player1 : game.player2;
@@ -40,4 +41,34 @@ export function UpgradeEligibleTargets(
     default:
       return everyone.map(u => u.playId);
   }
+}
+
+const maxPilotsByCardId: Record<string, number> = {
+  "JTL_249": 2, // Millennium Falcon
+};
+
+const R2D2_CARD_ID = "JTL_245";
+
+function effectiveMaxPilots(unit: { cardId: string; upgrades: Array<{ cardId: string }> }): number {
+  const base = maxPilotsByCardId[unit.cardId] ?? 1;
+  const r2d2Aboard = unit.upgrades.some(upg => upg.cardId === R2D2_CARD_ID);
+  return r2d2Aboard ? base + 1 : base;
+}
+
+/**
+ * Returns playIds of friendly Vehicle units that have not yet reached their PILOT upgrade limit.
+ * A PILOT upgrade is any attached card with PilotingCost >= 0.
+ * Non-pilot upgrades (e.g. Poe Dameron attached via leader ability, PilotingCost = -1) are ignored.
+ * R2-D2 already aboard raises the effective max by 1.
+ */
+export function PilotingEligibleVehicles(game: GameState, player: PlayerId): string[] {
+  const p = player === 1 ? game.player1 : game.player2;
+  const friendly = [...p.groundArena, ...p.spaceArena];
+  return friendly
+    .filter(u => {
+      if (!TraitContains(u.cardId, "Vehicle")) return false;
+      const pilotCount = u.upgrades.filter(upg => PilotingCost(upg.cardId) >= 0).length;
+      return pilotCount < effectiveMaxPilots(u);
+    })
+    .map(u => u.playId);
 }

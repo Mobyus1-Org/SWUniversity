@@ -144,14 +144,18 @@
 ### 5.12 Exploit X
 | Status | Notes |
 |---|---|
-| ⚠️ | `ExploitAmount` dictionary is populated (many TWI cards). |
-| ❌ | No dispatch or play-card path invokes Exploit. The cost reduction for defeating friendly units during play is not implemented. "When Defeated" abilities from Exploit-defeated units triggering after the play action is not handled. |
+| ✅ | `ExploitAmount` consulted in `handlePlayCard`. If exploit amount > 0, `ExploitOptionPending` (Yes/No) is returned. On Yes, `ExploitTargetPending` prompts the player to select up to X friendly units via multi-select UI. Each selected unit is defeated via `defeatForExploit`, which defers When Defeated triggers to the bag (CR 16d). After unit selection, `ExploitAmount(..., false)` consumes any Count Dooku currentEffect, cost is reduced by 2× selected units, and `completePlayCard` drains the trigger bag after the card enters play. `CardIsPlayable` accounts for Exploit reduction for UI affordability. |
 
 ### 5.13 Piloting [Y]
 | Status | Notes |
 |---|---|
-| ⚠️ | `PilotingCost` dictionary is populated (JTL cards). `LeaderCanDeployAsPilot` exists. |
-| ❌ | No play-card path allows choosing to play a Piloting unit as an upgrade. The "attach to friendly VEHICLE unit without a PILOT upgrade" restriction check is absent. |
+| ✅ | `PilotingCost` dictionary populated (JTL cards). `PilotingEligibleVehicles` returns friendly Vehicle playIds not at PILOT capacity. |
+| ✅ | `handlePlayCard` branches on piloting eligibility: both costs affordable + vehicle → `PilotingOptionPending`; only pilot cost affordable + vehicle → directly returns `UpgradeTargetPending` with cost already paid. |
+| ✅ | Pilot stats (upgradePower / upgradeHp) applied automatically via existing `CurrentPower` / `TotalHP` upgrade summation. |
+| ✅ | `deployLeader` checks `PilotingCost(leader.cardId)` and eligible vehicles; if both match, defers placement via `PilotingOptionPending` with `source = "leader"`. |
+| ✅ | Millennium Falcon (JTL_249) allows 2 PILOT upgrades. R2-D2 (JTL_245) grants +1 effective max to any vehicle it pilots. Poe Dameron (JTL_013) attaches via leader ability (`PilotingCost = -1`) and does not count toward PILOT limit. |
+| ⚠️ | Keyword/ability transfer (Raid, Grit, WD, WP) from pilot to vehicle not implemented — stats only. |
+| ⚠️ | "When deployed as a pilot" triggers not implemented. |
 
 ### 5.14 Hidden
 | Status | Notes |
@@ -291,17 +295,17 @@
 
 These are the highest-impact missing pieces for a playable, rules-compliant engine:
 
-1. **Bounty card coverage** — `getBountyEffects` currently handles SHD_027 (draw a card) and SHD_068 (give shield). All other bounty cards in the set need entries.
-2. **Token set-aside rule** — tokens go to set-aside, not discard pile.
-3. **Exploit** — cost reduction during play, friendly unit defeat payment.
-4. **Smuggle / Plot** — play-from-resource dispatch paths and deck-replacement.
-5. **Piloting** — play-as-upgrade dispatch path including VEHICLE restriction.
+1. **When Defeated coverage** — Only K-2SO is handled; all other When Defeated cards are silently ignored.
+2. **Bounty card coverage** — `getBountyEffects` currently handles SHD_027 (draw a card) and SHD_068 (give shield). All other bounty cards in the set need entries.
+3. **Token set-aside rule** — tokens go to set-aside, not discard pile.
+4. **Piloting** — play-as-upgrade dispatch path including VEHICLE restriction.
+5. **Smuggle / Plot** — play-from-resource dispatch paths and deck-replacement.
 6. **Trigger bag ordering** — 2+ simultaneous triggers require player-ordered resolution.
 7. **Upgrade-on-enemy-unit** — `UpgradeEligibleTargets` must optionally include enemy units.
 8. **Delayed effects system** — "at start of regroup phase, …" pattern.
-9. **When Defeated** — only K-2SO is handled; all other When Defeated cards are silently ignored.
 
 ### Recently Completed
+- ✅ **Exploit** — `ExploitOptionPending` / `ExploitTargetPending` two-step chain. Cost reduced 2× per sacrificed unit. WD triggers deferred to bag per CR 16d. Count Dooku stacking via `currentEffect`. Superlaser Technician put-into-play-as-resource WD handled. Multi-select UI for target selection.
 - ✅ **Bounty resolution** — `collectBounties` wired into defeat and capture. Optional collect (Yes/No). Draw-card and give-shield effects implemented. Multi-bounty sequential resolution tested.
 - ✅ **Regroup phase** — draw 2 (empty-deck penalty), optional resource-a-card step, auto-ready all units/leaders/resources, Phase+Round effect clearing, round counter increment.
 - ✅ **Capture mechanic** — `TWI_128` two-step resolution; token capture defeats token; auto-rescue on captor defeat; Hidden/Shielded/Ambush do not re-trigger on rescue.

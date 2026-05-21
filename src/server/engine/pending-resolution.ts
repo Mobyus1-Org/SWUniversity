@@ -136,6 +136,20 @@ export interface ExploitTargetPending {
   fromPlayIds: string[];
 }
 
+/** Prompt when a Piloting card can be played either as a unit or as a pilot upgrade. */
+export interface PilotingOptionPending {
+  type: "piloting-option";
+  /** The card being played. For "hand": already removed from hand. For "leader": the leader cardId. */
+  cardId: string;
+  playingPlayer: PlayerId;
+  /** Unit play cost (base + aspect penalty). For "leader": already exhausted. */
+  unitCost: number;
+  /** Pilot play cost (piloting base + aspect penalty). For "leader": already exhausted. */
+  pilotingCost: number;
+  /** "hand" = from hand (cost not yet paid). "leader" = epic action deploy (cost already paid). */
+  source: "hand" | "leader";
+}
+
 export type PendingResolution =
   | AttackTargetPending
   | AbilityOptionPending
@@ -151,7 +165,8 @@ export type PendingResolution =
   | BountyPending
   | BountyShieldTargetPending
   | ExploitOptionPending
-  | ExploitTargetPending;
+  | ExploitTargetPending
+  | PilotingOptionPending;
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch
