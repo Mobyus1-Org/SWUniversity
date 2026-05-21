@@ -152,8 +152,8 @@
 | ✅ | `PilotingCost` dictionary populated (JTL cards). `PilotingEligibleVehicles` returns friendly Vehicle playIds not at PILOT capacity. |
 | ✅ | `handlePlayCard` branches on piloting eligibility: both costs affordable + vehicle → `PilotingOptionPending`; only pilot cost affordable + vehicle → directly returns `UpgradeTargetPending` with cost already paid. |
 | ✅ | Pilot stats (upgradePower / upgradeHp) applied automatically via existing `CurrentPower` / `TotalHP` upgrade summation. |
-| ✅ | `deployLeader` checks `PilotingCost(leader.cardId)` and eligible vehicles; if both match, defers placement via `PilotingOptionPending` with `source = "leader"`. |
-| ✅ | Millennium Falcon (JTL_249) allows 2 PILOT upgrades. R2-D2 (JTL_245) grants +1 effective max to any vehicle it pilots. Poe Dameron (JTL_013) attaches via leader ability (`PilotingCost = -1`) and does not count toward PILOT limit. |
+| ✅ | `LeaderDeployPilotThreshold` dictionary maps pilot-capable leaders to their minimum resource count. `deployLeader` checks this threshold + eligible vehicles; if both match, defers placement via `PilotingOptionPending { source: "leader" }`. Leader deploys are a condition check (no resources spent). Prompt shows "Deploy as Unit" / "Deploy as Pilot". Asajj Ventress (JTL_001, threshold 6) is the first entry. |
+| ✅ | Millennium Falcon (JTL_249) allows 2 PILOT upgrades. R2-D2 (JTL_245) grants +1 effective max to any vehicle it pilots. Poe Dameron (JTL_013) attaches via leader `use-ability` (`PilotingCost = -1`) and does not count toward PILOT limit. |
 | ⚠️ | Keyword/ability transfer (Raid, Grit, WD, WP) from pilot to vehicle not implemented — stats only. |
 | ⚠️ | "When deployed as a pilot" triggers not implemented. |
 
@@ -224,11 +224,11 @@
 |---|---|---|
 | Leader side in base zone with abilities | ✅ | Leader action abilities routed through `handleUseAbility`. |
 | Leader deploy (Epic Action) — flip, move to ground arena, ready | ✅ | `deployLeader` implemented. |
-| Leader deploys into space (Pilot deploy) | ⚠️ | `LeaderCanDeployAsPilot` dictionary exists but `deployLeader` always calls `addToArena` which uses `CardArena` (ground for leaders). Pilot-deploy to space is not handled. |
+| Leader deploys as pilot (Epic Action) | ✅ | `LeaderDeployPilotThreshold` dictionary maps pilot-capable leaders to their minimum resource count condition (not a payment). `deployLeader` checks threshold + eligible vehicles; defers placement via `PilotingOptionPending { source: "leader" }`. Prompt shows "Deploy as Unit" / "Deploy as Pilot". Asajj Ventress (JTL_001, threshold 6) is the first entry. |
 | Leader defeated → return to base zone exhausted | ✅ | `defeatUnit` checks `CardIsLeader` and flips `leader.deployed = false`. |
 | Epic Action used flag persists across re-entry | ✅ | `epicActionUsed` is on the leader object and survives defeat/re-entry. |
 | Leader as unit — all unit rules apply | ✅ | Leader units participate in combat normally. |
-| Leader upgrade deploy | ❌ | No path for leaders that deploy as upgrades on units. |
+| Leader upgrade deploy | ✅ | `handleChooseOption` "Deploy as Pilot" branch attaches leader as an upgrade via `UpgradeTargetPending`; sets `leader.deployedPlayId` to the upgrade's `playId`. Card renders as card back in `UpgradeStrip`. |
 | Leader abilities ignored (Brain Invaders) | ✅ | `LeaderAbilitiesIgnored()` checks for TWI_255 in play and propagates. |
 
 ---
@@ -243,7 +243,7 @@
 | Upgrade abilities that affect unit without "gains" (e.g., Entrenched "can't attack bases") | ❌ | No general mechanism; must be hardcoded per card. |
 | No limit on upgrades per unit | ✅ | `unit.upgrades` is an unbounded array. |
 | Upgrade on enemy unit (controller stays with upgrade owner) | ❌ | `UpgradeEligibleTargets` only returns friendly units. |
-| PILOT upgrades (unit as upgrade) | ⚠️ | Framework partially exists (`PilotingCost`, `isClone` flag for Clones) but playing a unit as a Pilot upgrade is not implemented end-to-end. |
+| PILOT upgrades (unit as upgrade) | ✅ | Full piloting flow implemented: `handlePlayCard` branches on `PilotingCost` eligibility → `PilotingOptionPending` (both costs affordable + vehicle present) or direct `UpgradeTargetPending` (only pilot cost affordable). `PilotingEligibleVehicles` enforces Vehicle trait and PILOT slot limits. Special cases: Millennium Falcon (2 slots), R2-D2 (+1 effective max), Poe Dameron (`PilotingCost = -1`, doesn't count). |
 
 ---
 
@@ -298,8 +298,7 @@ These are the highest-impact missing pieces for a playable, rules-compliant engi
 1. **When Defeated coverage** — Only K-2SO is handled; all other When Defeated cards are silently ignored.
 2. **Bounty card coverage** — `getBountyEffects` currently handles SHD_027 (draw a card) and SHD_068 (give shield). All other bounty cards in the set need entries.
 3. **Token set-aside rule** — tokens go to set-aside, not discard pile.
-4. **Piloting** — play-as-upgrade dispatch path including VEHICLE restriction.
-5. **Smuggle / Plot** — play-from-resource dispatch paths and deck-replacement.
+4. **Smuggle / Plot** — play-from-resource dispatch paths and deck-replacement.
 6. **Trigger bag ordering** — 2+ simultaneous triggers require player-ordered resolution.
 7. **Upgrade-on-enemy-unit** — `UpgradeEligibleTargets` must optionally include enemy units.
 8. **Delayed effects system** — "at start of regroup phase, …" pattern.
@@ -318,3 +317,4 @@ These are the highest-impact missing pieces for a playable, rules-compliant engi
 - ✅ **Ambush** — `"ambush"` trigger in the bag; optional attack prompt, units only, fizzles with no targets.
 - ✅ **Saboteur shield strip** — all Shield tokens removed from defender before damage when attacker has Saboteur.
 - ✅ **Uniqueness rule** — `DefeatCopyPending` enforced immediately when a duplicate unique enters play.
+- ✅ **Piloting** — full play-as-PILOT-upgrade dispatch path: `PilotingOptionPending` prompt, `PilotingEligibleVehicles` Vehicle+slot filtering, special cases for Millennium Falcon / R2-D2 / Poe Dameron, and leader pilot deploy via `LeaderDeployPilotThreshold` (condition-only, no resource spend).

@@ -1,7 +1,8 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
-import { TraitContains } from "../core-functions";
+import { CardIsLeader, TraitContains } from "../core-functions";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
+import { LeaderDeployPilotThreshold } from "./keyword-dictionaries.ts/leader-pilot-deploy";
 
 function ownUnits(game: GameState, player: PlayerId) {
   const p = player === 1 ? game.player1 : game.player2;
@@ -44,14 +45,13 @@ export function UpgradeEligibleTargets(
 }
 
 const maxPilotsByCardId: Record<string, number> = {
-  "JTL_249": 2, // Millennium Falcon
+  "JTL_249": 2, // Millennium Falcon - Get Out And Push
 };
 
-const R2D2_CARD_ID = "JTL_245";
 
 function effectiveMaxPilots(unit: { cardId: string; upgrades: Array<{ cardId: string }> }): number {
   const base = maxPilotsByCardId[unit.cardId] ?? 1;
-  const r2d2Aboard = unit.upgrades.some(upg => upg.cardId === R2D2_CARD_ID);
+  const r2d2Aboard = unit.upgrades.some(upg => upg.cardId === "JTL_245"); // R2-D2 - Artooooooooo!
   return r2d2Aboard ? base + 1 : base;
 }
 
@@ -67,7 +67,8 @@ export function PilotingEligibleVehicles(game: GameState, player: PlayerId): str
   return friendly
     .filter(u => {
       if (!TraitContains(u.cardId, "Vehicle")) return false;
-      const pilotCount = u.upgrades.filter(upg => PilotingCost(upg.cardId) >= 0).length;
+      const pilotCount = u.upgrades.filter(upg => PilotingCost(upg.cardId) >= 0
+        || CardIsLeader(upg.cardId) && LeaderDeployPilotThreshold(upg.cardId)! >= 0).length;
       return pilotCount < effectiveMaxPilots(u);
     })
     .map(u => u.playId);

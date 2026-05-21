@@ -144,4 +144,10 @@ export class GameTestAdapter {
   async passResourceAsync(player: PlayerId): Promise<GameTestAdapter> {
     return this.dispatchAsync(player, "pass-resource", {});
   }
+
+  async smuggleResourceAsync(player: PlayerId, resourceIndex: number): Promise<GameTestAdapter> {
+    const pState = player === 1 ? this.state.player1 : this.state.player2;
+    const playId = pState.resources[resourceIndex].playId;
+    return this.dispatchAsync(player, "play-smuggle", { playId });
+  }
 }

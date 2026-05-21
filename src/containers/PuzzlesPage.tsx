@@ -9,7 +9,7 @@ import type { PlayerId } from "@/lib/engine/core-models";
 import type { DispatchResponse, DispatchType, DispatchData, GameDispatch, ResolutionRequest } from "@/lib/engine/message-types";
 import type { EngineContext } from "@/server/engine/pending-resolution";
 import { CardIsLeader } from "@/server/engine/core-functions";
-import { CardIsPlayable } from "@/server/engine/card-playability";
+import { CardIsPlayable, ResourceIsSmuggleable } from "@/server/engine/card-playability";
 
 type PreviewState = {
   imageId: string;
@@ -187,17 +187,20 @@ function FaceDownResource({
   exhausted = false,
   onPreviewStart,
   onPreviewEnd,
+  onClick,
 }: {
   cardId: string;
   selectable?: boolean;
   exhausted?: boolean;
   onPreviewStart: (preview: PreviewState) => void;
   onPreviewEnd: () => void;
+  onClick?: () => void;
 }) {
   return <div
-    className={`overflow-hidden rounded-xl border border-white/10 bg-black/40 transition-transform duration-200 ${exhausted ? "rotate-90" : ""} ${selectable ? lightsaberGlow : ""}`}
+    className={`overflow-hidden rounded-xl border border-white/10 bg-black/40 transition-transform duration-200 ${exhausted ? "rotate-90" : ""} ${selectable ? lightsaberGlow : ""} ${selectable ? "cursor-pointer" : ""}`}
     onMouseEnter={() => onPreviewStart({ imageId: cardId, cardId, label: CardTitle(cardId) })}
     onMouseLeave={onPreviewEnd}
+    onClick={onClick}
   >
     <img src="/assets/SWUniversity_Cardback.png" alt="Resource card back" className="h-12 w-12 object-cover object-center" />
   </div>;
@@ -637,6 +640,9 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     : !resolutionNeeded && !isGameOver
       ? player.hand.map((_, i) => i).filter(i => CardIsPlayable(gameState, PLAYER, player.hand[i].cardId))
       : [];
+  const smuggleablePlayIds: Set<string> = !resolutionNeeded && !isGameOver
+    ? new Set(player.resources.filter(r => ResourceIsSmuggleable(gameState, PLAYER, r)).map(r => r.playId))
+    : new Set();
 
   const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[opponent.discard.length - 1] : null;
   const latestPlayerDiscard = player.discard.length > 0 ? player.discard[player.discard.length - 1] : null;
@@ -1168,12 +1174,24 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   <img src="/assets/tokens/credit.webp" alt="Credit token" className="mt-1 h-[80%] w-auto max-h-[80%] object-contain" />
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {player.resources.map((resource) => <div key={resource.playId} className={!resource.ready ? "opacity-40" : ""}><FaceDownResource
-                    cardId={resource.cardId}
-                    exhausted={!resource.ready}
-                    onPreviewStart={handlePreviewStart}
-                    onPreviewEnd={handlePreviewEnd}
-                  /></div>)}
+                  {player.resources.map((resource) => {
+                    const isSmuggleable = smuggleablePlayIds.has(resource.playId);
+                    return <div
+                      key={resource.playId}
+                      className={`relative ${isSmuggleable ? "cursor-pointer" : ""}`}
+                      onClick={isSmuggleable ? () => { void sendDispatch(createDispatch("play-smuggle", { playId: resource.playId })); } : undefined}
+                    >
+                      <div className={!resource.ready ? "opacity-40" : ""}>
+                        <FaceDownResource
+                          cardId={resource.cardId}
+                          exhausted={!resource.ready}
+                          onPreviewStart={handlePreviewStart}
+                          onPreviewEnd={handlePreviewEnd}
+                        />
+                      </div>
+                      {isSmuggleable && <div className={`pointer-events-none absolute inset-0 rounded-xl ${lightsaberGlow}`} />}
+                    </div>;
+                  })}
                 </div>
               </div>
               <div className="rounded-lg bg-black/20 p-2">

@@ -39,6 +39,7 @@ export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsT
 
 export type DispatchType =
   | "play-card"
+  | "play-smuggle"
   | "initiate-attack"
   | "use-ability"
   | "pass-action"
@@ -55,6 +56,10 @@ export type PlayCardSourceZone = "Hand" | "Deck" | "Discard";
 export interface PlayCardDispatchData {
   cardId: string;
   fromZone: PlayCardSourceZone;
+}
+
+export interface PlaySmuggleDispatchData {
+  playId: string;
 }
 
 export interface InitiateAttackDispatchData {
@@ -94,6 +99,7 @@ export interface RegroupResourceDispatchData {
 export type DispatchData =
   | Record<string, never>
   | PlayCardDispatchData
+  | PlaySmuggleDispatchData
   | InitiateAttackDispatchData
   | UseAbilityDispatchData
   | ChooseTargetDispatchData

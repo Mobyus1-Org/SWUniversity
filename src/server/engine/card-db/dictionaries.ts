@@ -54,7 +54,7 @@ export function HasKeyword(cardId: string, keyword: string, playId?: string, pla
     case "Restore":
       return RestoreAmount(cardId, playId, player) > 0;
     case "Smuggle":
-      return SmuggleCost(cardId, player, playId) > -1;
+      return SmuggleCost(cardId) > -1;
     case "Exploit":
       return ExploitAmount(cardId, playId, player) > 0;
     case "Piloting":
@@ -72,7 +72,7 @@ export function HasKeyword(cardId: string, keyword: string, playId?: string, pla
         HasPlot(cardId, playId, player) ||
         RaidAmount(cardId, playId, player) > 0 ||
         RestoreAmount(cardId, playId, player) > 0 ||
-        SmuggleCost(cardId, player, playId) > -1 ||
+        SmuggleCost(cardId) > -1 ||
         ExploitAmount(cardId, playId, player) > 0 ||
         PilotingCost(cardId) >= 0;
     default:

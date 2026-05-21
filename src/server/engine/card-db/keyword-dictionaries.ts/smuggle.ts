@@ -1,60 +1,72 @@
-import { GetResources, GetUnitsForPlayer } from "@/server/engine/core-functions";
-import { PlayerId } from "@/lib/engine/core-models";
-import { CardCost } from "@/server/engine/card-db/generated";
-
-export function SmuggleCost(cardId: string, player?: PlayerId, playId?: string): number {
-  let minCost = -1;
-  switch(cardId) {
-    case "SHD_065": minCost = 7; break;//Vigilant Pursuit Craft
-    case "SHD_252": minCost = 3; break;//Smuggler's Aid
-    case "SHD_149": minCost = 5; break;//Nite Owl Skirmisher
-    case "SHD_113": minCost = 6; break;//Privateer Crew
-    case "SHD_204": minCost = 6; break;//Millennium Falcon - Lando's Pride
-    case "SHD_089": minCost = 7; break;//Pirate Battle Tank
-    case "SHD_203": minCost = 6; break;//Zorii Bliss
-    case "SHD_097": minCost = 4; break;//Freetown Backup
-    case "SHD_160": minCost = 3; break;//Reckless Gunslinger
-    case "SHD_174": minCost = 3; break;//Hotshot DL-44 Blaster
-    case "SHD_248": minCost = 4; break;//Tech
-    case "SHD_184": minCost = 4; break;//Bazine Netal
-    case "SHD_075": minCost = 3; break;//Covert Strength
-    case "SEC_088": minCost = 7; break;//First Light
-    case "SHD_129": minCost = 2; break;//Timely Intervention
-    case "SHD_032": minCost = 5; break;//Lom Pyke
-    case "SHD_197": minCost = 4; break;//L3-37
-    case "SHD_215": minCost = 4; break;//Smuggler's Starfighter
-    case "SHD_086": minCost = 4; break;//Warbird Stowaway
-    case "SHD_119": minCost = 5; break;//Weequay Pirate Gang
-    case "SHD_111": minCost = 3; break;//Collections Starhopper
-    case "SHD_148": minCost = 5; break;//Cassian Andor
-    case "SHD_050": minCost = 9; break;//Chewbacca - Pykesbane
-    case "SHD_052": minCost = 6; break;//Sugi
-    case "SHD_201": minCost = 6; break;//Principled Outlaw
-    case "SHD_175": minCost = 4; break;//Armed to the Teeth
-    case "SHD_127": minCost = 3; break;//Commission
-    case "SHD_213": minCost = 7; break;//DJ - Blatant Thief
-    case "SHD_225": minCost = 4; break;//Jetpack
-    case "SHD_107": minCost = 6; break;//Enterprising Lackeys
-    case "SHD_217": minCost = 5; break;//Tobias Beckett
-    default: break;
+export function SmuggleCost(cardId: string): number {
+  switch (cardId) {
+    case "SHD_065": return 7;
+    case "SHD_252": return 3;
+    case "SHD_149": return 5;
+    case "SHD_113": return 6;
+    case "SHD_204": return 6;
+    case "SHD_089": return 7;
+    case "SHD_203": return 6;
+    case "SHD_097": return 4;
+    case "SHD_160": return 3;
+    case "SHD_174": return 3;
+    case "SHD_248": return 4;
+    case "SHD_184": return 4;
+    case "SHD_075": return 3;
+    case "SHD_129": return 2;
+    case "SHD_032": return 5;
+    case "SHD_197": return 4;
+    case "SHD_215": return 4;
+    case "SHD_086": return 4;
+    case "SHD_119": return 5;
+    case "SHD_111": return 3;
+    case "SHD_148": return 5;
+    case "SHD_050": return 9;
+    case "SHD_052": return 6;
+    case "SHD_201": return 6;
+    case "SHD_175": return 4;
+    case "SHD_127": return 3;
+    case "SHD_213": return 7;
+    case "SHD_225": return 4;
+    case "SHD_107": return 6;
+    case "SHD_217": return 5;
+    default: return -1;
   }
+}
 
-  if (player && playId) {
-    for(const u of GetUnitsForPlayer(player)) {
-      switch(u.cardId) {
-        case "SHD_248"://Tech
-          if (!u.LostAbilities()) {
-            const playIdIsFromResource = GetResources(player).some(r => r.playId === playId);
-            if (playIdIsFromResource) {
-              const cost = CardCost(cardId);
-              if (minCost == -1 || minCost > cost) minCost = cost;
-            }
-          }
-          break;
-        default: break;
-      }
-    }
-  }
+const smuggleAspectsByCardId: Record<string, string[]> = {
+  "SHD_032": ["Vigilance", "Villainy"],
+  "SHD_050": ["Aggression", "Heroism"],
+  "SHD_052": ["Vigilance"],
+  "SHD_065": ["Vigilance"],
+  "SHD_075": ["Vigilance"],
+  "SHD_086": ["Command", "Villainy"],
+  "SHD_089": ["Command", "Villainy"],
+  "SHD_097": ["Command", "Heroism"],
+  "SHD_107": ["Command", "Command"],
+  "SHD_111": ["Command"],
+  "SHD_113": ["Command"],
+  "SHD_119": ["Command"],
+  "SHD_127": ["Command"],
+  "SHD_129": ["Command"],
+  "SHD_148": ["Aggression", "Heroism"],
+  "SHD_149": ["Aggression", "Heroism"],
+  "SHD_160": ["Aggression"],
+  "SHD_174": ["Cunning"],
+  "SHD_175": ["Aggression"],
+  "SHD_184": ["Cunning", "Villainy"],
+  "SHD_197": ["Cunning", "Heroism"],
+  "SHD_201": ["Cunning", "Heroism"],
+  "SHD_203": ["Cunning", "Heroism"],
+  "SHD_204": ["Cunning", "Heroism"],
+  "SHD_213": ["Cunning", "Cunning"],
+  "SHD_215": ["Cunning"],
+  "SHD_217": ["Vigilance"],
+  "SHD_225": ["Cunning"],
+  "SHD_248": ["Heroism"],
+  "SHD_252": ["Heroism"],
+};
 
-  return minCost;
+export function SmuggleAspects(cardId: string): string[] {
+  return smuggleAspectsByCardId[cardId] ?? [];
 }

@@ -37,10 +37,12 @@ import type {
   NeedsOption,
   NeedsTarget,
   PlayCardDispatchData,
+  PlaySmuggleDispatchData,
   RegroupResourceDispatchData,
   ResolutionRequest,
   UseAbilityDispatchData,
 } from "@/lib/engine/message-types";
+import { effectiveSmuggleCost } from "@/server/engine/card-playability";
 import type { Game, GameState, PlayerState } from "@/lib/engine/game";
 import type { CardInPlay, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import type {
@@ -877,6 +879,51 @@ function handlePlayCard(
   exhaustResources(game, player, fullCost);
   hand.splice(idx, 1);
   log.push(`Player ${player} played ${CardTitle(cardId) ?? cardId}.`);
+  return completePlayCard(game, log, cardId, player);
+}
+
+function handlePlaySmuggle(
+  game: GameState,
+  log: string[],
+  dispatch: GameDispatch,
+): HandlerResult {
+  const { playId } = dispatch.dispatchData as PlaySmuggleDispatchData;
+  const player = dispatch.fromPlayer;
+  const p = ps(game, player);
+
+  const resource = p.resources.find(r => r.playId === playId);
+  if (!resource)
+    return { response: invalidResponse(`Resource ${playId} not found for player ${player}.`), pending: null, stateChanged: false };
+
+  const cost = effectiveSmuggleCost(game, player, resource);
+  if (cost === null)
+    return { response: invalidResponse(`Resource ${playId} (${resource.cardId}) cannot be Smuggled.`), pending: null, stateChanged: false };
+
+  const readyCount = p.resources.filter(r => r.ready).length;
+  if (readyCount < cost)
+    return { response: invalidResponse(`Player ${player} cannot afford Smuggle cost of ${cost}.`), pending: null, stateChanged: false };
+
+  const { cardId } = resource;
+  const wasReady = resource.ready;
+
+  const idx = p.resources.findIndex(r => r.playId === playId);
+  p.resources.splice(idx, 1);
+
+  exhaustResources(game, player, Math.max(0, wasReady ? cost - 1 : cost));
+
+  if (p.deck.length > 0) {
+    const topCard = p.deck.shift()!;
+    p.resources.push({
+      cardId: topCard.cardId,
+      playId: String(game.nextPlayId++),
+      owner: player,
+      controller: player,
+      ready: false,
+      stolen: false,
+    });
+  }
+
+  log.push(`Player ${player} played ${CardTitle(cardId)} via Smuggle.`);
   return completePlayCard(game, log, cardId, player);
 }
 
@@ -1778,7 +1825,7 @@ export function processDispatch(
     let result: HandlerResult;
 
     const ACTION_STARTERS = [
-      "play-card", "initiate-attack", "use-ability", "pass-action", "claim-initiative",
+      "play-card", "play-smuggle", "initiate-attack", "use-ability", "pass-action", "claim-initiative",
     ] as const;
     const isTopLevelAction = (ACTION_STARTERS as readonly string[]).includes(dispatch.dispatchType);
 
@@ -1788,6 +1835,7 @@ export function processDispatch(
     } else {
       switch (dispatch.dispatchType) {
         case "play-card":         result = handlePlayCard(gs, log, dispatch); break;
+        case "play-smuggle":      result = handlePlaySmuggle(gs, log, dispatch); break;
         case "initiate-attack":   result = handleInitiateAttack(gs, log, dispatch); break;
         case "use-ability":       result = handleUseAbility(gs, log, dispatch); break;
         case "pass-action":       result = handlePassAction(gs, log, dispatch); break;

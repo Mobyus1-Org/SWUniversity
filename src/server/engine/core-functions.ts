@@ -208,7 +208,7 @@ export function PlayerHasCardsToSmuggle(player: PlayerId): boolean {
   const resources = GetResources(player);
 
   return resources.some(r => {
-    const smuggleCost = SmuggleCost(r.cardId, player);
+    const smuggleCost = SmuggleCost(r.cardId);
 
     return smuggleCost > 0;
   })

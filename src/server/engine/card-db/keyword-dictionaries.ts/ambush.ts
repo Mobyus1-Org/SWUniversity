@@ -79,12 +79,12 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "SOR_117"://Mercenary Company
     case "SOR_195"://Auzituck Liberator Gunship
     case "SOR_101"://Rogue Squadron Skirmisher
-    case "SOR_149"://Mace Windu (Party Crasher)
+    case "SOR_149"://Mace Windu - Party Crasher
     case "SOR_182"://Bossk (Deadly Stalker)
     case "SOR_115"://Agent Kallus
     case "SOR_244"://Snowspeeder
     case "SOR_183"://Bounty Hunter Crew
-    case "SOR_198"://Han Solo (Reluctant Hero)
+    case "SOR_198"://Han Solo - Reluctant Hero
     case "SOR_087"://Darth Vader - Commanding the First Legion
     case "SHD_100"://Modded Cohort
     case "SHD_216"://Chain Code Collector
@@ -103,7 +103,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "TWI_196"://Plo Koon
     case "JTL_096"://Blue Leader
     case "JTL_204"://Home One
-    case "JTL_203"://Han Solo (Has His Moments)
+    case "JTL_203"://Han Solo - Has His Moments
     case "JTL_087"://TIE Ambush Squadron
     case "JTL_198"://Fireball
     case "JTL_216"://Contracted Hunter
