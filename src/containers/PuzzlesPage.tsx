@@ -24,7 +24,7 @@ function getPreviewImageId(cardId: string, showBack = false): string {
 // ---------------------------------------------------------------------------
 // Config — flip to true to use round-trip context mode (HttpTransport pattern)
 // ---------------------------------------------------------------------------
-const USE_HTTP = false;
+const USE_HTTP = true;
 
 const PLAYER: PlayerId = 1;
 
@@ -51,7 +51,11 @@ function formatStatus(status: GameStatus, resolutionNeeded: ResolutionRequest | 
   if (status === "lost") return "Puzzle failed.";
   if (status === "draw") return "Puzzle ended in a draw.";
   if (resolutionNeeded?.type === "Option") return resolutionNeeded.helperText;
-  if (resolutionNeeded?.type === "Target") return "Choose a target.";
+  if (resolutionNeeded?.type === "Target") {
+    if ((resolutionNeeded.needsMultiple ?? false) || (resolutionNeeded.maxTargets ?? 1) > 1)
+      return `Choose up to ${resolutionNeeded.maxTargets ?? "?"} targets, then confirm.`;
+    return "Choose a target.";
+  }
   if (resolutionNeeded?.type === "Trigger") return "Choose a trigger.";
   if (resolutionNeeded?.type === "Player") return "Choose a player.";
   return "Choose an action — click a hand card, your leader, or a ready friendly unit.";
@@ -306,6 +310,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   const [historyLength, setHistoryLength] = React.useState(0);
   const [lastActionMs, setLastActionMs] = React.useState<number | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
+  const [selectedTargetPlayIds, setSelectedTargetPlayIds] = React.useState<string[]>([]);
   const [selectedPuzzleN, setSelectedPuzzleN] = React.useState<number | null>(null);
   const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
   const [showClosePuzzleConfirm, setShowClosePuzzleConfirm] = React.useState(false);
@@ -331,13 +336,14 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     setPreview(null);
     previewTimerRef.current = setTimeout(() => {
       setPreview(nextPreview);
-    }, 1200);
+    }, 700);
   }, [clearPreviewTimer, setPreview]);
   const handlePreviewEnd = React.useCallback(() => {
     clearPreviewTimer();
     setPreview(null);
   }, [clearPreviewTimer, setPreview]);
   React.useEffect(() => () => { clearPreviewTimer(); }, [clearPreviewTimer]);
+  React.useEffect(() => { setSelectedTargetPlayIds([]); }, [resolutionNeeded]);
 
   // ---------------------------------------------------------------------------
   // Core dispatch — sends a GameDispatch to the puzzle API endpoint
@@ -391,14 +397,31 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   // ---------------------------------------------------------------------------
   // Click handlers — translate UI events into GameDispatch calls
   // ---------------------------------------------------------------------------
+  const isMultiSelectTarget = resolutionNeeded?.type === "Target" &&
+    ((resolutionNeeded.needsMultiple ?? false) || (resolutionNeeded.maxTargets ?? 1) > 1);
+
+  const handleConfirmTargets = React.useCallback(() => {
+    if (isResolving) return;
+    void sendDispatch(createDispatch("choose-target", { targetPlayIds: selectedTargetPlayIds }));
+  }, [isResolving, selectedTargetPlayIds, sendDispatch]);
+
   const handleUnitClick = React.useCallback((playId: string) => {
     if (isResolving) return;
     if (resolutionNeeded?.type === "Target") {
-      void sendDispatch(createDispatch("choose-target", { targetPlayIds: [playId] }));
+      if (isMultiSelectTarget) {
+        setSelectedTargetPlayIds(prev => {
+          if (prev.includes(playId)) return prev.filter(id => id !== playId);
+          const max = resolutionNeeded.maxTargets ?? Infinity;
+          if (prev.length >= max) return prev;
+          return [...prev, playId];
+        });
+      } else {
+        void sendDispatch(createDispatch("choose-target", { targetPlayIds: [playId] }));
+      }
     } else if (!resolutionNeeded) {
       void sendDispatch(createDispatch("initiate-attack", { playId }));
     }
-  }, [isResolving, resolutionNeeded, sendDispatch]);
+  }, [isResolving, isMultiSelectTarget, resolutionNeeded, sendDispatch]);
 
   const handleBaseClick = React.useCallback((player: PlayerId) => {
     if (isResolving) return;
@@ -617,6 +640,10 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[opponent.discard.length - 1] : null;
   const latestPlayerDiscard = player.discard.length > 0 ? player.discard[player.discard.length - 1] : null;
   const hasPrompt = resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "Trigger" || resolutionNeeded?.type === "Player";
+  const getUnitGlowClass = (playId: string) =>
+    isMultiSelectTarget && selectedTargetPlayIds.includes(playId)
+      ? "ring-2 ring-amber-400/80 shadow-[0_0_14px_rgba(251,191,36,0.5)]"
+      : undefined;
   const statusTone = status === "won"
     ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
     : status === "lost"
@@ -769,6 +796,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     <CardVisual
                       cardId={unit.cardId}
                       selectable={selectablePlayIds.includes(unit.playId)}
+                      customGlowClass={getUnitGlowClass(unit.playId)}
                       onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
@@ -792,6 +820,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     <CardVisual
                       cardId={unit.cardId}
                       selectable={selectablePlayIds.includes(unit.playId)}
+                      customGlowClass={getUnitGlowClass(unit.playId)}
                       onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
@@ -844,6 +873,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     <CardVisual
                       cardId={unit.cardId}
                       selectable={selectablePlayIds.includes(unit.playId)}
+                      customGlowClass={getUnitGlowClass(unit.playId)}
                       onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
@@ -918,6 +948,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     <CardVisual
                       cardId={unit.cardId}
                       selectable={selectablePlayIds.includes(unit.playId)}
+                      customGlowClass={getUnitGlowClass(unit.playId)}
                       onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
@@ -975,6 +1006,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       cardId={unit.cardId}
                       imageId={getPreviewImageId(unit.cardId, CardIsLeader(unit.cardId))}
                       selectable={selectablePlayIds.includes(unit.playId)}
+                      customGlowClass={getUnitGlowClass(unit.playId)}
                       onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
@@ -1028,6 +1060,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       cardId={unit.cardId}
                       imageId={getPreviewImageId(unit.cardId)}
                       selectable={selectablePlayIds.includes(unit.playId)}
+                      customGlowClass={getUnitGlowClass(unit.playId)}
                       onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
@@ -1221,6 +1254,16 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
         }}
       />
       <div className="mt-2 px-1 text-xs text-white/80">{preview.label ?? CardTitle(preview.cardId)}</div>
+    </div> : null}
+
+    {isMultiSelectTarget ? <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-xl border border-amber-400/30 bg-[rgba(8,12,26,0.97)] px-5 py-3 shadow-2xl">
+      <span className="text-sm text-white/70">
+        {selectedTargetPlayIds.length} / {resolutionNeeded?.maxTargets ?? "?"} selected
+      </span>
+      <button type="button" disabled={isResolving} onClick={handleConfirmTargets}
+        className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-sky-500/35 disabled:cursor-not-allowed disabled:opacity-40">
+        Confirm ({selectedTargetPlayIds.length})
+      </button>
     </div> : null}
 
     {hasPrompt ? <div className="fixed inset-0 z-50 flex items-center justify-center">

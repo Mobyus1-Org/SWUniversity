@@ -2,6 +2,7 @@ import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import { CardAspects, CardCost, CardType } from "@/server/engine/card-db/generated";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 
 function playCost(game: GameState, player: PlayerId, cardId: string): number {
   const p = player === 1 ? game.player1 : game.player2;
@@ -20,7 +21,11 @@ function playCost(game: GameState, player: PlayerId, cardId: string): number {
 export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string): boolean {
   const p = player === 1 ? game.player1 : game.player2;
   const readyResources = p.resources.filter(r => r.ready).length;
-  if (readyResources < playCost(game, player, cardId)) return false;
+  const fullCost = playCost(game, player, cardId);
+  const exploitAmt = ExploitAmount(cardId, "hand", player, true);
+  const numUnits = p.groundArena.length + p.spaceArena.length;
+  const minCost = Math.max(0, fullCost - Math.min(exploitAmt, numUnits) * 2);
+  if (readyResources < minCost) return false;
 
   if (CardType(cardId) === "Upgrade") {
     return UpgradeEligibleTargets(cardId, game, player).length > 0;

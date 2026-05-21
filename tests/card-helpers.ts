@@ -58,6 +58,9 @@ export const Cards = {
       bobaFett: "SHD_008",
       cadBane: "SHD_014",
     },
+    twi: {
+      countDooku: "TWI_005",
+    },
   },
   units: {
     token: {
@@ -72,6 +75,7 @@ export const Cards = {
       battlefieldMarine: "SOR_095",
       echoBaseDefender: "SOR_098",
       brightHope: "SOR_099",
+      superlaserTechnician: "SOR_083",
       fightersForFreedom: "SOR_143",
       k2so: "SOR_145",
       wampa: "SOR_164",
@@ -94,7 +98,10 @@ export const Cards = {
       gungi: "LOF_093",
       strikeship: "LOF_131",
       witchOfTheMist: "LOF_154",
-    }
+    },
+    twi: {
+      infiltratingDemolisher: "TWI_182",
+    },
   },
   upgrades: {
     token: {

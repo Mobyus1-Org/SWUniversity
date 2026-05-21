@@ -112,6 +112,30 @@ export interface BountyShieldTargetPending {
   continuation: PendingResolution | null;
 }
 
+/** Step 1 of Exploit: prompt the playing player whether to use Exploit. */
+export interface ExploitOptionPending {
+  type: "exploit-option";
+  /** The card being played (already removed from hand). */
+  cardId: string;
+  playingPlayer: PlayerId;
+  /** Pre-computed Exploit amount (report mode — NOT consumed yet). */
+  exploitAmount: number;
+  /** Full cost before any Exploit reduction. */
+  fullCost: number;
+}
+
+/** Step 2 of Exploit: player picks up to exploitAmount friendly units to defeat. */
+export interface ExploitTargetPending {
+  type: "exploit-target";
+  cardId: string;
+  playingPlayer: PlayerId;
+  /** Maximum units that may be defeated (consumed Dooku effect, final amount). */
+  exploitAmount: number;
+  fullCost: number;
+  /** PlayIds of all friendly units eligible to be exploited. */
+  fromPlayIds: string[];
+}
+
 export type PendingResolution =
   | AttackTargetPending
   | AbilityOptionPending
@@ -125,7 +149,9 @@ export type PendingResolution =
   | CaptureCaptorPending
   | CaptureTargetPending
   | BountyPending
-  | BountyShieldTargetPending;
+  | BountyShieldTargetPending
+  | ExploitOptionPending
+  | ExploitTargetPending;
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch

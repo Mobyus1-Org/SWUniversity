@@ -11,6 +11,7 @@ export interface NeedsTarget {
   fromPlayIds?: string[];
   fromIndices?: number[];
   needsMultiple?: boolean;
+  maxTargets?: number;
 }
 
 export interface NeedsOption {

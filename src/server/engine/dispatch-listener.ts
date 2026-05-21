@@ -52,6 +52,8 @@ import type {
   DefeatCopyPending,
   DiscardFromHandPending,
   EngineContext,
+  ExploitOptionPending,
+  ExploitTargetPending,
   PendingResolution,
   ResolveAttackPending,
   UpgradeTargetPending,
@@ -68,6 +70,7 @@ import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/r
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { HasAmbush } from "@/server/engine/card-db/keyword-dictionaries.ts/ambush";
 import { ActionAbilities } from "@/server/engine/actions/action-ability";
+import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -235,6 +238,20 @@ function dealBaseDamage(game: GameState, player: PlayerId, amount: number): void
  * - 2+ triggers: (future) will need player ordering — no-op for now
  */
 function drainTriggerBag(game: GameState, log: string[]): PendingResolution | null {
+  // When-Defeated triggers from Exploit (CR 16d): fire after the card fully resolves.
+  const wdIdx = game.triggerBag.findIndex(t => t.triggerType === "when-defeated");
+  if (wdIdx !== -1) {
+    const [wdTrigger] = game.triggerBag.splice(wdIdx, 1);
+    const wdCtx = wdTrigger.context as { defeatedUnit?: UnitInterface } | undefined;
+    if (wdCtx?.defeatedUnit) {
+      const unit = Unit.FromInterface(wdCtx.defeatedUnit);
+      const wdPending = resolveWhenDefeated(unit, wdTrigger.fromPlayer);
+      if (wdPending) return wdPending;
+      // No WD ability for this unit — fall through to process any remaining triggers (e.g. ambush, shielded)
+    }
+    // If no defeatedUnit context, trigger is consumed and we continue
+  }
+
   if (game.triggerBag.length !== 1) return null; // 0: no-op; 2+: future ordering
 
   const [trigger] = game.triggerBag.splice(0, 1);
@@ -350,6 +367,52 @@ function defeatUnit(
   const whenDefeated = resolveWhenDefeated(unit, removed.player);
   const collectingPlayer: PlayerId = removed.player === 1 ? 2 : 1;
   return collectBounties(unit, collectingPlayer, whenDefeated) ?? whenDefeated;
+}
+
+/**
+ * Defeats a unit as part of Exploit cost payment (CR 16d).
+ * Unlike defeatUnit, this adds a when-defeated trigger to the bag so WD fires
+ * AFTER the card fully resolves — not as inline pending resolution.
+ */
+function defeatForExploit(game: GameState, log: string[], unit: Unit): void {
+  const removed = removeFromArena(game, unit.playId);
+  if (!removed) return;
+
+  if (CardIsLeader(unit.cardId)) {
+    const leader = ps(game, removed.player).leader;
+    leader.deployed = false;
+    leader.ready = false;
+    leader.deployedPlayId = undefined;
+    log.push(`${CardTitle(unit.cardId)} was defeated via Exploit and returned to the leader zone.`);
+    return;
+  }
+
+  pushToDiscard(game, removed.player, unit);
+  log.push(`${CardTitle(unit.cardId)} was defeated via Exploit.`);
+
+  // Rescue captives (CR 34.4)
+  for (const captive of unit.captives ?? []) {
+    const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
+    const rescued = Unit.FromInterface({ ...captive, ready: false });
+    if (arena === "Ground") ps(game, captive.owner).groundArena.push(rescued);
+    else ps(game, captive.owner).spaceArena.push(rescued);
+    game.roundState.cardsEnteredPlayThisPhase.push({
+      fromPlayer: captive.owner,
+      cardId: captive.cardId,
+      playId: captive.playId,
+      reason: "returned-to-play",
+    });
+    log.push(`${CardTitle(captive.cardId)} was rescued from Exploit-defeated unit.`);
+  }
+
+  // Defer when-defeated trigger to bag (CR 16d: fires after Play a Card completes)
+  game.triggerBag.push({
+    triggerType: "when-defeated",
+    cardId: unit.cardId,
+    fromPlayer: removed.player,
+    playId: unit.playId,
+    context: { defeatedUnit: unit },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -622,6 +685,19 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
     case "resolve-attack":
       // Should never be shown to client — auto-resolves as continuation
       return { type: "Target" } satisfies NeedsTarget;
+    case "exploit-option":
+      return {
+        type: "Option",
+        helperText: `Use Exploit ${pending.exploitAmount} while playing ${CardTitle(pending.cardId)}?`,
+        options: ["Yes", "No"],
+      } satisfies NeedsOption;
+    case "exploit-target":
+      return {
+        type: "Target",
+        fromPlayIds: pending.fromPlayIds.length > 0 ? pending.fromPlayIds : undefined,
+        maxTargets: pending.exploitAmount,
+        needsMultiple: pending.exploitAmount > 1,
+      } satisfies NeedsTarget;
     default: throw new Error(`Unknown pending resolution type: ${pending.type}`);
   }
 }
@@ -641,33 +717,22 @@ interface HandlerResult {
 // Handlers
 // ---------------------------------------------------------------------------
 
-function handlePlayCard(
+/**
+ * Finishes playing a card after cost has been paid and the card removed from hand.
+ * Handles Unit placement, Upgrade targeting, Event resolution, and trigger draining.
+ */
+function completePlayCard(
   game: GameState,
   log: string[],
-  dispatch: GameDispatch,
+  cardId: string,
+  player: PlayerId,
 ): HandlerResult {
-  const { cardId } = dispatch.dispatchData as PlayCardDispatchData;
-  const player = dispatch.fromPlayer;
-  const hand = ps(game, player).hand;
-  const idx = hand.findIndex((c) => c.cardId === cardId);
-
-  if (idx === -1)
-    return { response: invalidResponse(`Card ${cardId} not found in Player ${player}'s hand.`), pending: null, stateChanged: false };
-  if (!canAfford(game, player, cardId))
-    return { response: invalidResponse(`Player ${player} cannot afford ${cardId}.`), pending: null, stateChanged: false };
-
-  const cost = playCost(game, player, cardId);
-  exhaustResources(game, player, cost);
-  hand.splice(idx, 1);
-  log.push(`Player ${player} played ${CardTitle(cardId) ?? cardId}.`);
-
   if (CardType(cardId) === "Unit") {
     const unit = addToArena(game, player, cardId, false);
     log.push(`${CardTitle(cardId) ?? cardId} entered the ${CardArena(cardId) ?? "ground"} arena.`);
     game.roundState.cardsPlayedThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId });
     game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId, reason: "played" });
 
-    // Uniqueness rule: if a duplicate unique is now in play, the controller must defeat one copy.
     if (CardIsUnique(cardId)) {
       const controlled = [...ps(game, player).groundArena, ...ps(game, player).spaceArena] as Unit[];
       const copies = controlled.filter(u => u.cardId === cardId);
@@ -680,7 +745,6 @@ function handlePlayCard(
       }
     }
 
-    // Shielded, Ambush, and When Played all fire in the same timing window.
     if (HasShielded(cardId, unit.playId, player)) {
       game.triggerBag.push({ triggerType: "shielded", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
     }
@@ -688,8 +752,6 @@ function handlePlayCard(
       game.triggerBag.push({ triggerType: "ambush", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
     }
 
-    // Optional when-played abilities (e.g. "you may") use the pending resolution flow.
-    // Auto-trigger when-played abilities (no user input needed) go through the trigger bag.
     const nextPending = resolveWhenPlayed(unit.cardId, player, unit.playId);
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
@@ -699,7 +761,6 @@ function handlePlayCard(
     }
   } else if (CardType(cardId) === "Upgrade") {
     const eligiblePlayIds = UpgradeEligibleTargets(cardId, game, player);
-
     const upgradePending: UpgradeTargetPending = {
       type: "upgrade-target",
       upgradeCardId: cardId,
@@ -723,6 +784,47 @@ function handlePlayCard(
     return { response: resolutionResponse(pendingToResolution(triggerPending, game)), pending: triggerPending, stateChanged: false };
   }
   return { response: stateResponse(game), pending: null, stateChanged: true };
+}
+
+function handlePlayCard(
+  game: GameState,
+  log: string[],
+  dispatch: GameDispatch,
+): HandlerResult {
+  const { cardId } = dispatch.dispatchData as PlayCardDispatchData;
+  const player = dispatch.fromPlayer;
+  const hand = ps(game, player).hand;
+  const idx = hand.findIndex((c) => c.cardId === cardId);
+
+  if (idx === -1)
+    return { response: invalidResponse(`Card ${cardId} not found in Player ${player}'s hand.`), pending: null, stateChanged: false };
+
+  const fullCost = playCost(game, player, cardId);
+  const exploitAmt = ExploitAmount(cardId, "hand", player, true); // report mode: peek without consuming
+  const readyCount = ps(game, player).resources.filter(r => r.ready).length;
+  const minCost = exploitAmt > 0 ? Math.max(0, fullCost - exploitAmt * 2) : fullCost;
+
+  if (readyCount < minCost)
+    return { response: invalidResponse(`Player ${player} cannot afford ${cardId}.`), pending: null, stateChanged: false };
+
+  if (exploitAmt > 0) {
+    hand.splice(idx, 1);
+    log.push(`Player ${player} is playing ${CardTitle(cardId) ?? cardId} (Exploit ${exploitAmt} available).`);
+    const exploitOptionPending: ExploitOptionPending = {
+      type: "exploit-option",
+      cardId,
+      playingPlayer: player,
+      exploitAmount: exploitAmt,
+      fullCost,
+    };
+    return { response: resolutionResponse(pendingToResolution(exploitOptionPending, game)), pending: exploitOptionPending, stateChanged: false };
+  }
+
+  // No exploit — pay full cost immediately
+  exhaustResources(game, player, fullCost);
+  hand.splice(idx, 1);
+  log.push(`Player ${player} played ${CardTitle(cardId) ?? cardId}.`);
+  return completePlayCard(game, log, cardId, player);
 }
 
 function handleInitiateAttack(
@@ -1062,6 +1164,38 @@ function handleChooseTarget(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
+  if (pending.type === "exploit-target") {
+    const chosen = data.targetPlayIds ?? [];
+    // Player may choose fewer than exploitAmount units (including 0)
+    if (chosen.length > pending.exploitAmount)
+      return { response: invalidResponse(`You may defeat at most ${pending.exploitAmount} unit(s) with Exploit.`), pending, stateChanged: false };
+    for (const playId of chosen) {
+      if (!pending.fromPlayIds.includes(playId))
+        return { response: invalidResponse(`Unit ${playId} is not a valid Exploit target.`), pending, stateChanged: false };
+    }
+
+    // Defeat chosen units via Exploit (CR 16d: WD triggers fire after card enters play)
+    for (const playId of chosen) {
+      const unit = unitByPlayId(game, playId);
+      if (unit) defeatForExploit(game, log, unit);
+    }
+
+    // Cost = fullCost − 2 per defeated unit, minimum 0
+    const reducedCost = Math.max(0, pending.fullCost - chosen.length * 2);
+    const readyCount = ps(game, pending.playingPlayer).resources.filter(r => r.ready).length;
+    if (readyCount < reducedCost) {
+      // Shouldn't normally happen (we validated before offering Exploit), but guard anyway
+      return { response: invalidResponse(`Not enough resources after Exploit reduction.`), pending, stateChanged: false };
+    }
+
+    // Consume the Exploit current-effect by calling ExploitAmount in consume mode
+    ExploitAmount(pending.cardId, "hand", pending.playingPlayer, false);
+
+    exhaustResources(game, pending.playingPlayer, reducedCost);
+    log.push(`Player ${pending.playingPlayer} played ${CardTitle(pending.cardId)} using Exploit (defeated ${chosen.length} unit(s), cost reduced by ${chosen.length * 2}).`);
+    return completePlayCard(game, log, pending.cardId, pending.playingPlayer);
+  }
+
   return { response: invalidResponse(`choose-target is not valid while pending: ${pending.type}.`), pending, stateChanged: false };
 }
 
@@ -1118,6 +1252,10 @@ function handleChooseOption(
       if (nextPending) {
         return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
       }
+      const bagPending = drainTriggerBag(game, log);
+      if (bagPending) {
+        return { response: resolutionResponse(pendingToResolution(bagPending, game)), pending: bagPending, stateChanged: false };
+      }
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
@@ -1131,6 +1269,43 @@ function handleChooseOption(
         continuation: pending.continuation ?? null,
       };
       return { response: resolutionResponse(pendingToResolution(discardPending, game)), pending: discardPending, stateChanged: false };
+    }
+
+    if (optionType === "put_into_play_as_resource") {
+      const cardId = parts[0];
+      const owner = Number(parts[1]) as PlayerId;
+      ps(game, owner).resources.push({
+        cardId,
+        playId: nextPlayId(game),
+        owner,
+        controller: owner,
+        ready: true,
+        stolen: false,
+      });
+      log.push(`When Defeated: ${CardTitle(cardId)} entered play as a ready resource.`);
+      const nextPending = pending.continuation ?? null;
+      updateDefeatedPlayers(game);
+      if (nextPending) {
+        return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+      }
+      const bagPending = drainTriggerBag(game, log);
+      if (bagPending) {
+        return { response: resolutionResponse(pendingToResolution(bagPending, game)), pending: bagPending, stateChanged: false };
+      }
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    if (optionType === "decline") {
+      const nextPending = pending.continuation ?? null;
+      updateDefeatedPlayers(game);
+      if (nextPending) {
+        return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+      }
+      const bagPending = drainTriggerBag(game, log);
+      if (bagPending) {
+        return { response: resolutionResponse(pendingToResolution(bagPending, game)), pending: bagPending, stateChanged: false };
+      }
+      return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
     return { response: invalidResponse(`Unknown when-defeated option: ${optionType}`), pending, stateChanged: false };
@@ -1172,6 +1347,36 @@ function handleChooseOption(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
+  if (pending?.type === "exploit-option") {
+    if (option === "No") {
+      const readyCount = ps(game, pending.playingPlayer).resources.filter(r => r.ready).length;
+      if (readyCount < pending.fullCost) {
+        // Can't afford without Exploit — return card to hand
+        ps(game, pending.playingPlayer).hand.push({ cardId: pending.cardId });
+        return { response: invalidResponse("Cannot afford this card without using Exploit."), pending: null, stateChanged: false };
+      }
+      exhaustResources(game, pending.playingPlayer, pending.fullCost);
+      log.push(`Player ${pending.playingPlayer} played ${CardTitle(pending.cardId)} (Exploit declined).`);
+      return completePlayCard(game, log, pending.cardId, pending.playingPlayer);
+    }
+    // "Yes" — prompt player to choose up to exploitAmount friendly units to defeat
+    if (option === "Yes") {
+      const friendlyUnits = [
+        ...ps(game, pending.playingPlayer).groundArena,
+        ...ps(game, pending.playingPlayer).spaceArena,
+      ] as Unit[];
+      const exploitTargetPending: ExploitTargetPending = {
+        type: "exploit-target",
+        cardId: pending.cardId,
+        playingPlayer: pending.playingPlayer,
+        exploitAmount: pending.exploitAmount,
+        fullCost: pending.fullCost,
+        fromPlayIds: friendlyUnits.map(u => u.playId),
+      };
+      return { response: resolutionResponse(pendingToResolution(exploitTargetPending, game)), pending: exploitTargetPending, stateChanged: false };
+    }
+  }
+
   return { response: invalidResponse("No pending option decision."), pending: null, stateChanged: false };
 }
 
@@ -1201,6 +1406,10 @@ function handleResolveAttack(
 
 function handlePassAction(game: GameState, log: string[], dispatch: GameDispatch): HandlerResult {
   log.push(`Player ${dispatch.fromPlayer} passed their action.`);
+  const triggerPending = drainTriggerBag(game, log);
+  if (triggerPending) {
+    return { response: resolutionResponse(pendingToResolution(triggerPending, game)), pending: triggerPending, stateChanged: false };
+  }
   return { response: stateResponse(game), pending: null, stateChanged: true };
 }
 

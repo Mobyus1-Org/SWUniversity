@@ -11,6 +11,16 @@ export function resolveWhenDefeated(
   player: PlayerId
 ): PendingResolution | null {
   switch (unit.cardId) {
+    case "SOR_083": { // Superlaser Technician: "When Defeated: You may put this unit into play as a resource and ready it."
+      return {
+        type: "when-defeated-choice",
+        defeatedCardId: unit.cardId,
+        defeatedPlayId: unit.playId,
+        controlledBy: player,
+        options: [`put_into_play_as_resource=${unit.cardId},${player}`, "decline"],
+        continuation: null,
+      };
+    }
     case "SOR_145": { //K-2SO "When Defeated: For each opponent, choose one: either deal 3 damage to that player's base, or that player discards a card from their hand."
       const opponent = player === 1 ? 2 : 1;
       return {

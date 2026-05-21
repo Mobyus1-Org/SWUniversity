@@ -106,6 +106,13 @@ export class GameTestAdapter {
     return this.dispatchAsync(player, "choose-target", { targetZones: ["Hand"], targetPlayers: [player], targetIndices: [handIndex] });
   }
 
+  /** Sends choose-target with multiple friendly ground unit playIds for Exploit resolution. */
+  async exploitGroundUnitsAsync(player: PlayerId, unitIndices: number[]): Promise<GameTestAdapter> {
+    const pState = player === 1 ? this.state.player1 : this.state.player2;
+    const targetPlayIds = unitIndices.map(i => pState.groundArena[i].playId);
+    return this.dispatchAsync(player, "choose-target", { targetPlayIds });
+  }
+
   async chooseOptionAsync(player: PlayerId, option: string): Promise<GameTestAdapter> {
     return this.dispatchAsync(player, "choose-option", { option });
   }
