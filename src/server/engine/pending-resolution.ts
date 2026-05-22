@@ -25,6 +25,8 @@ export interface AbilityTargetPending {
   type: "ability-target";
   cardId: string;
   sourcePlayId?: string;
+  /** The player who initiated this ability (needed for take-control effects). */
+  player?: PlayerId;
   fromPlayIds: string[];
   continuation: PendingResolution | null;
 }
@@ -174,6 +176,49 @@ export interface PilotingOptionPending {
   source: "hand" | "leader";
 }
 
+/**
+ * Presented when the triggerBag has 2+ simultaneous triggers (e.g. Ambush + When Played).
+ * The player picks one label to resolve first; the rest stay in the bag.
+ */
+export interface TriggerOrderPending {
+  type: "trigger-order";
+  triggers: Array<{
+    label: string;
+    triggerType: string;
+    cardId: string;
+    playId?: string;
+    fromPlayer: PlayerId;
+  }>;
+}
+
+/** JTL_096 Blue Leader: optional pay-2 to move to ground arena and give 2 Experience tokens. */
+export interface PayToMoveGroundPending {
+  type: "pay-to-move-ground";
+  cardId: string;
+  sourcePlayId: string;
+  player: PlayerId;
+  cost: number;
+  continuation: PendingResolution | null;
+}
+
+/** JTL_049 L3-37: replacement effect — Yes/No prompt when she would be defeated as a unit. */
+export interface L337ReplacePending {
+  type: "l337-replace";
+  unitPlayId: string;
+  player: PlayerId;
+  eligibleVehicles: string[];
+  continuation: PendingResolution | null;
+}
+
+/** JTL_049 L3-37: replacement effect step 2 — choose which Vehicle to attach her to. */
+export interface L337ReplaceTargetPending {
+  type: "l337-replace-target";
+  unitPlayId: string;
+  player: PlayerId;
+  eligibleVehicles: string[];
+  continuation: PendingResolution | null;
+}
+
 export type PendingResolution =
   | AttackTargetPending
   | AbilityOptionPending
@@ -193,7 +238,11 @@ export type PendingResolution =
   | PilotingOptionPending
   | PlotOrderPending
   | PlotWindowPending
-  | WhenDeployedPending;
+  | L337ReplacePending
+  | L337ReplaceTargetPending
+  | WhenDeployedPending
+  | PayToMoveGroundPending
+  | TriggerOrderPending;
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch

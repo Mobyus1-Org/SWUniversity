@@ -14,7 +14,7 @@ export type PlayerId = 1 | 2;
 
 export type DiscardEffect = "" | "TTFREE" | "OTTFREE";
 
-export type EffectDuration = "Phase" | "Round" | "Permanent" | "ForAttack" | "ForDefense";
+export type EffectDuration = "Phase" | "Round" | "Permanent" | "ForAttack" | "ForDefense" | "UntilStartOfRegroup";
 
 export type GamePhase = "ActionPhase" | "RegroupDraw" | "RegroupResource" | "RegroupReady";
 

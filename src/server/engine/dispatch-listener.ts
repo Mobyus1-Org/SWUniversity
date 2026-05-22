@@ -57,14 +57,19 @@ import type {
   EngineContext,
   ExploitOptionPending,
   ExploitTargetPending,
+  L337ReplacePending,
+  L337ReplaceTargetPending,
+  PayToMoveGroundPending,
   PendingResolution,
   PilotingOptionPending,
   PlotOrderPending,
   PlotWindowPending,
   ResolveAttackPending,
+  TriggerOrderPending,
   UpgradeTargetPending,
   WhenDeployedPending,
 } from "@/server/engine/pending-resolution";
+import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import { collectBounties, drawCardForPlayer } from "@/server/engine/actions/bounty";
 import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -205,14 +210,14 @@ function addToArena(
 function removeFromArena(
   game: GameState,
   playId: string,
-): { player: PlayerId; unit: Unit } | null {
+): { player: PlayerId; unit: Unit; zone: "groundArena" | "spaceArena" } | null {
   for (const player of [1, 2] as PlayerId[]) {
     const p = ps(game, player);
     for (const zone of ["groundArena", "spaceArena"] as const) {
       const idx = p[zone].findIndex((u) => u.playId === playId);
       if (idx !== -1) {
         const [unit] = p[zone].splice(idx, 1);
-        return { player, unit: unit as Unit };
+        return { player, unit: unit as Unit, zone };
       }
     }
   }
@@ -248,31 +253,58 @@ function dealBaseDamage(game: GameState, player: PlayerId, amount: number): void
 }
 
 /**
+ * Moves a unit to a new controller's arena, updating controller and removing from old arena.
+ * Does not fire any triggers. Used for Take Control effects (Traitorous, Change of Heart).
+ */
+function transferControl(game: GameState, log: string[], unit: Unit, newController: PlayerId): void {
+  const removed = removeFromArena(game, unit.playId);
+  unit.controller = newController;
+  const zone = removed?.zone ?? ((CardArena(unit.cardId) ?? "Ground") === "Ground" ? "groundArena" : "spaceArena");
+  ps(game, newController)[zone].push(unit);
+  log.push(`${CardTitle(unit.cardId)} is now controlled by Player ${newController}.`);
+}
+
+/**
+ * Returns playIds of friendly Vehicle units that have zero pilot upgrades.
+ * Used for L3-37's replacement effect — her card says "without a Pilot on it",
+ * which means NO pilots at all (R2-D2 is a pilot via PilotingCost=0 and counts).
+ */
+function l337EligibleVehicles(game: GameState, player: PlayerId, l337PlayId: string): string[] {
+  const p = ps(game, player);
+  const friendly = [...p.groundArena, ...p.spaceArena] as Unit[];
+  return friendly
+    .filter(u => {
+      if (u.playId === l337PlayId) return false;
+      if (!TraitContains(u.cardId, "Vehicle")) return false;
+      const pilotCount = u.upgrades.filter(
+        upg => PilotingCost(upg.cardId) >= 0 ||
+               (CardIsLeader(upg.cardId) && LeaderDeployPilotThreshold(upg.cardId) !== null)
+      ).length;
+      return pilotCount === 0;
+    })
+    .map(u => u.playId);
+}
+
+/**
  * Drains the trigger bag after an action resolves.
  * - 0 triggers: no-op
  * - 1 trigger: auto-resolve without player input
- * - 2+ triggers: (future) will need player ordering — no-op for now
+ * - 2+ triggers: presents a TriggerOrderPending so the player picks resolution order.
  */
-function drainTriggerBag(game: GameState, log: string[]): PendingResolution | null {
-  // When-Defeated triggers from Exploit (CR 16d): fire after the card fully resolves.
-  const wdIdx = game.triggerBag.findIndex(t => t.triggerType === "when-defeated");
-  if (wdIdx !== -1) {
-    const [wdTrigger] = game.triggerBag.splice(wdIdx, 1);
-    const wdCtx = wdTrigger.context as { defeatedUnit?: UnitInterface } | undefined;
-    if (wdCtx?.defeatedUnit) {
-      const unit = Unit.FromInterface(wdCtx.defeatedUnit);
-      const wdPending = resolveWhenDefeated(unit, wdTrigger.fromPlayer);
-      if (wdPending) return wdPending;
-      // No WD ability for this unit — fall through to process any remaining triggers (e.g. ambush, shielded)
-    }
-    // If no defeatedUnit context, trigger is consumed and we continue
+function triggerLabel(t: TriggerEntry): string {
+  const name = CardTitle(t.cardId) ?? t.cardId;
+  switch (t.triggerType) {
+    case "ambush":     return `${name} — Ambush`;
+    case "when-played": return `${name} — When Played`;
+    case "shielded":   return `${name} — Shielded`;
+    default:           return `${name} — ${t.triggerType}`;
   }
+}
 
-  if (game.triggerBag.length !== 1) return null; // 0: no-op; 2+: future ordering
-
-  const [trigger] = game.triggerBag.splice(0, 1);
-
+function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: string[]): PendingResolution | null {
   if (trigger.triggerType === "when-played") {
+    const nextPending = resolveWhenPlayed(trigger.cardId, trigger.fromPlayer, trigger.playId);
+    if (nextPending) return nextPending;
     resolveWhenPlayedTrigger(trigger, game, log);
     return null;
   }
@@ -295,16 +327,45 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
       type: "ability-option",
       cardId: trigger.cardId,
       helperText: `${CardTitle(trigger.cardId)} has Ambush — attack immediately?`,
-      onYes: {
-        type: "attack-target",
-        attackerPlayId: trigger.playId,
-        source: "ambush",
-      },
+      onYes: { type: "attack-target", attackerPlayId: trigger.playId, source: "ambush" },
       continuation: null,
     };
   }
 
   return null;
+}
+
+function drainTriggerBag(game: GameState, log: string[]): PendingResolution | null {
+  // When-Defeated triggers from Exploit (CR 16d): fire after the card fully resolves.
+  const wdIdx = game.triggerBag.findIndex(t => t.triggerType === "when-defeated");
+  if (wdIdx !== -1) {
+    const [wdTrigger] = game.triggerBag.splice(wdIdx, 1);
+    const wdCtx = wdTrigger.context as { defeatedUnit?: UnitInterface } | undefined;
+    if (wdCtx?.defeatedUnit) {
+      const unit = Unit.FromInterface(wdCtx.defeatedUnit);
+      const wdPending = resolveWhenDefeated(unit, wdTrigger.fromPlayer);
+      if (wdPending) return wdPending;
+    }
+  }
+
+  if (game.triggerBag.length === 0) return null;
+
+  if (game.triggerBag.length >= 2) {
+    const pending: TriggerOrderPending = {
+      type: "trigger-order",
+      triggers: game.triggerBag.map(t => ({
+        label: triggerLabel(t),
+        triggerType: t.triggerType,
+        cardId: t.cardId,
+        playId: t.playId,
+        fromPlayer: t.fromPlayer,
+      })),
+    };
+    return pending;
+  }
+
+  const [trigger] = game.triggerBag.splice(0, 1);
+  return processSingleTrigger(trigger, game, log);
 }
 
 /**
@@ -346,7 +407,22 @@ function defeatUnit(
   game: GameState,
   log: string[],
   unit: Unit,
+  bypassL337 = false,
 ): PendingResolution | null {
+  // L3-37 replacement effect: intercept BEFORE removing from arena.
+  if (!bypassL337 && unit.cardId === "JTL_049") {
+    const eligible = l337EligibleVehicles(game, unit.controller, unit.playId);
+    if (eligible.length > 0) {
+      return {
+        type: "l337-replace",
+        unitPlayId: unit.playId,
+        player: unit.controller,
+        eligibleVehicles: eligible,
+        continuation: null,
+      };
+    }
+  }
+
   const removed = removeFromArena(game, unit.playId);
   if (!removed) return null;
 
@@ -382,7 +458,21 @@ function defeatUnit(
   // When-Defeated triggers fire after bounty collection (CR 13c).
   const whenDefeated = resolveWhenDefeated(unit, removed.player);
   const collectingPlayer: PlayerId = removed.player === 1 ? 2 : 1;
-  return collectBounties(unit, collectingPlayer, whenDefeated) ?? whenDefeated;
+  const chainedDefeated = collectBounties(unit, collectingPlayer, whenDefeated) ?? whenDefeated;
+
+  // Luke Skywalker (JTL_094) as a pilot upgrade: when his vehicle is defeated, he may eject.
+  const lukeUpgrade = unit.upgrades.find(upg => upg.cardId === "JTL_094");
+  if (lukeUpgrade) {
+    return {
+      type: "when-defeated-choice",
+      defeatedCardId: "JTL_094",
+      defeatedPlayId: lukeUpgrade.playId,
+      controlledBy: lukeUpgrade.controller as PlayerId,
+      options: [`move_to_ground_exhausted=JTL_094,${lukeUpgrade.controller}`, "decline"],
+      continuation: chainedDefeated,
+    };
+  }
+  return chainedDefeated;
 }
 
 /**
@@ -439,7 +529,10 @@ function computeAttackTargets(
   game: GameState,
   attacker: Unit
 ): { unitPlayIds: string[]; includesBase: boolean } {
-  const arena = (CardArena(attacker.cardId) ?? "Ground") as "Ground" | "Space";
+  const inGround =
+    game.player1.groundArena.some(u => u.playId === attacker.playId) ||
+    game.player2.groundArena.some(u => u.playId === attacker.playId);
+  const arena = inGround ? "Ground" : "Space";
   const defenderPlayer = otherPlayer(attacker.controller);
   const p = ps(game, defenderPlayer);
   const opposing = (arena === "Ground" ? p.groundArena : p.spaceArena) as Unit[];
@@ -736,6 +829,29 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
     case "when-deployed":
       // Auto-resolves inline; should not normally be sent to client
       return { type: "Option", helperText: "Resolving When Deployed...", options: ["Continue"] } satisfies NeedsOption;
+    case "pay-to-move-ground":
+      return {
+        type: "Option",
+        helperText: `Pay ${pending.cost} resources to move ${CardTitle(pending.cardId)} to the ground arena and give 2 Experience tokens?`,
+        options: ["Yes", "No"],
+      } satisfies NeedsOption;
+    case "trigger-order":
+      return {
+        type: "Option",
+        helperText: "Choose which trigger to resolve first:",
+        options: pending.triggers.map(t => t.label),
+      } satisfies NeedsOption;
+    case "l337-replace":
+      return {
+        type: "Option",
+        helperText: "Attach L3-37 as an upgrade to a friendly Vehicle without a Pilot instead of being defeated?",
+        options: ["Yes", "No"],
+      } satisfies NeedsOption;
+    case "l337-replace-target":
+      return {
+        type: "Target",
+        fromPlayIds: pending.eligibleVehicles,
+      } satisfies NeedsTarget;
     default: throw new Error(`Unknown pending resolution type: ${pending.type}`);
   }
 }
@@ -786,16 +902,19 @@ function completePlayCard(
     if (HasShielded(cardId, unit.playId, player)) {
       game.triggerBag.push({ triggerType: "shielded", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
     }
-    if (HasAmbush(cardId, unit.playId, "Hand", player)) {
+    const hasAmbush = HasAmbush(cardId, unit.playId, "Hand", player);
+    if (hasAmbush) {
       game.triggerBag.push({ triggerType: "ambush", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
     }
 
-    const nextPending = resolveWhenPlayed(unit.cardId, player, unit.playId);
-    if (nextPending) {
-      return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
-    }
-    if (CardHasWhenPlayed(unit.cardId)) {
-      game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player });
+    const whenPlayedPending = resolveWhenPlayed(unit.cardId, player, unit.playId);
+    if (hasAmbush && (whenPlayedPending || CardHasWhenPlayed(unit.cardId))) {
+      // Both Ambush and When Played — push both to bag so the player chooses ordering.
+      game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
+    } else if (!hasAmbush && whenPlayedPending) {
+      return { response: resolutionResponse(pendingToResolution(whenPlayedPending, game)), pending: whenPlayedPending, stateChanged: false };
+    } else if (!hasAmbush && CardHasWhenPlayed(unit.cardId)) {
+      game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
     }
   } else if (CardType(cardId) === "Upgrade") {
     const eligiblePlayIds = UpgradeEligibleTargets(cardId, game, player);
@@ -1111,6 +1230,10 @@ function handleChooseTarget(
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
     }
+    const bagPendingAtk = drainTriggerBag(game, log);
+    if (bagPendingAtk) {
+      return { response: resolutionResponse(pendingToResolution(bagPendingAtk, game)), pending: bagPendingAtk, stateChanged: false };
+    }
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
   if (pending.type === "plot-window") {
@@ -1336,6 +1459,14 @@ function handleChooseTarget(
       log.push(`${CardTitle(pending.upgradeCardId)} attached to ${CardTitle(targetUnit.cardId)}.`);
     }
 
+    // Traitorous (SOR_122): take control of the attached unit when it costs 3 or less.
+    if (pending.upgradeCardId === "SOR_122"
+        && !CardIsLeader(targetUnit.cardId)
+        && CardCost(targetUnit.cardId) <= 3
+        && targetUnit.controller !== pending.player) {
+      transferControl(game, log, targetUnit, pending.player);
+    }
+
     updateDefeatedPlayers(game);
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
@@ -1396,6 +1527,49 @@ function handleChooseTarget(
     return completePlayCard(game, log, pending.cardId, pending.playingPlayer);
   }
 
+  if (pending.type === "l337-replace-target") {
+    const chosen = data.targetPlayIds?.[0];
+    if (!chosen)
+      return { response: invalidResponse("Choose a Vehicle to attach L3-37 to."), pending, stateChanged: false };
+    if (!pending.eligibleVehicles.includes(chosen))
+      return { response: invalidResponse(`Vehicle ${chosen} is not a valid target for L3-37.`), pending, stateChanged: false };
+
+    const l3 = unitByPlayId(game, pending.unitPlayId);
+    const vehicle = unitByPlayId(game, chosen);
+    if (!l3 || !vehicle)
+      return { response: invalidResponse("L3-37 or target vehicle not found."), pending, stateChanged: false };
+
+    // Remove L3-37 from arena without going to discard (she's becoming an upgrade).
+    removeFromArena(game, l3.playId);
+    // Defeat all upgrades on her per card text (just remove them).
+    for (const upg of l3.upgrades) {
+      log.push(`${CardTitle(upg.cardId)} on L3-37 was defeated.`);
+    }
+    // Rescue captives if any.
+    for (const captive of l3.captives ?? []) {
+      const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
+      const rescued = Unit.FromInterface({ ...captive, ready: false });
+      if (arena === "Ground") ps(game, captive.owner).groundArena.push(rescued);
+      else ps(game, captive.owner).spaceArena.push(rescued);
+      log.push(`${CardTitle(captive.cardId)} was rescued from L3-37.`);
+    }
+    // Attach L3-37 as a pilot upgrade to the chosen vehicle (all damage removed, no upgrades).
+    vehicle.upgrades.push({
+      cardId: "JTL_049",
+      playId: nextPlayId(game),
+      owner: pending.player,
+      controller: pending.player,
+    });
+    log.push(`L3-37 attached as a pilot upgrade to ${CardTitle(vehicle.cardId)}.`);
+
+    const nextPendingL3 = pending.continuation ?? null;
+    updateDefeatedPlayers(game);
+    if (nextPendingL3) return { response: resolutionResponse(pendingToResolution(nextPendingL3, game)), pending: nextPendingL3, stateChanged: true };
+    const bagL3 = drainTriggerBag(game, log);
+    if (bagL3) return { response: resolutionResponse(pendingToResolution(bagL3, game)), pending: bagL3, stateChanged: true };
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
   return { response: invalidResponse(`choose-target is not valid while pending: ${pending.type}.`), pending, stateChanged: false };
 }
 
@@ -1418,6 +1592,11 @@ function handleChooseOption(
         }
         return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
       }
+      // onYes resolved with no further pending — drain any remaining triggers before returning.
+      const bagPendingYes = drainTriggerBag(game, log);
+      if (bagPendingYes) {
+        return { response: resolutionResponse(pendingToResolution(bagPendingYes, game)), pending: bagPendingYes, stateChanged: false };
+      }
       updateDefeatedPlayers(game);
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
@@ -1428,6 +1607,109 @@ function handleChooseOption(
     }
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+    }
+    // No continuation — drain any remaining triggers before returning.
+    const bagPendingNo = drainTriggerBag(game, log);
+    if (bagPendingNo) {
+      return { response: resolutionResponse(pendingToResolution(bagPendingNo, game)), pending: bagPendingNo, stateChanged: false };
+    }
+    updateDefeatedPlayers(game);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending?.type === "pay-to-move-ground") {
+    if (option === "Yes") {
+      exhaustResources(game, pending.player, pending.cost);
+      const unit = unitByPlayId(game, pending.sourcePlayId);
+      if (unit) {
+        const pState = ps(game, unit.controller);
+        const spaceIdx = pState.spaceArena.findIndex(u => u.playId === unit.playId);
+        if (spaceIdx !== -1) {
+          pState.spaceArena.splice(spaceIdx, 1);
+          pState.groundArena.push(unit);
+        }
+        unit.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: unit.owner, controller: unit.controller });
+        unit.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: unit.owner, controller: unit.controller });
+        log.push(`${CardTitle(unit.cardId)} moved to the ground arena and gained 2 Experience tokens.`);
+      }
+    }
+    const nextPending = pending.continuation;
+    if (nextPending) {
+      if (nextPending.type === "attack-target" && nextPending.source === "ambush") {
+        const ambushUnit = unitByPlayId(game, nextPending.attackerPlayId);
+        if (ambushUnit) ambushUnit.ready = true;
+      }
+      return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+    }
+    // Drain any remaining triggers (e.g. ambush still in bag after When Played resolved).
+    const bagPendingMove = drainTriggerBag(game, log);
+    if (bagPendingMove) {
+      return { response: resolutionResponse(pendingToResolution(bagPendingMove, game)), pending: bagPendingMove, stateChanged: false };
+    }
+    updateDefeatedPlayers(game);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending?.type === "l337-replace") {
+    if (option === "Yes") {
+      const replacePending: L337ReplaceTargetPending = {
+        type: "l337-replace-target",
+        unitPlayId: pending.unitPlayId,
+        player: pending.player,
+        eligibleVehicles: pending.eligibleVehicles,
+        continuation: pending.continuation,
+      };
+      return { response: resolutionResponse(pendingToResolution(replacePending, game)), pending: replacePending, stateChanged: false };
+    }
+    // "No" — defeat L3-37 normally (bypass the replacement check to avoid re-triggering).
+    const l337Unit = unitByPlayId(game, pending.unitPlayId);
+    let nextPending: PendingResolution | null = pending.continuation ?? null;
+    if (l337Unit) {
+      const defeatPending = defeatUnit(game, log, l337Unit, true);
+      if (defeatPending) {
+        type WithCont = { continuation?: PendingResolution | null };
+        let tail: WithCont = defeatPending as unknown as WithCont;
+        while (tail.continuation != null) tail = tail.continuation as unknown as WithCont;
+        tail.continuation = nextPending;
+        nextPending = defeatPending;
+      }
+    }
+    updateDefeatedPlayers(game);
+    if (nextPending) return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+    const bagL337No = drainTriggerBag(game, log);
+    if (bagL337No) return { response: resolutionResponse(pendingToResolution(bagL337No, game)), pending: bagL337No, stateChanged: false };
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending?.type === "trigger-order") {
+    const chosen = pending.triggers.find(t => t.label === option);
+    if (!chosen) {
+      return { response: invalidResponse(`Unknown trigger option: ${option}`), pending, stateChanged: false };
+    }
+    // Remove the chosen trigger from the bag.
+    const bagIdx = game.triggerBag.findIndex(t =>
+      t.triggerType === chosen.triggerType && t.cardId === chosen.cardId && t.playId === chosen.playId,
+    );
+    if (bagIdx !== -1) game.triggerBag.splice(bagIdx, 1);
+
+    const trigger: TriggerEntry = {
+      triggerType: chosen.triggerType as TriggerEntry["triggerType"],
+      cardId: chosen.cardId,
+      fromPlayer: chosen.fromPlayer,
+      playId: chosen.playId,
+    };
+    const nextPending = processSingleTrigger(trigger, game, log);
+    if (nextPending) {
+      if (nextPending.type === "attack-target" && nextPending.source === "ambush") {
+        const ambushUnit = unitByPlayId(game, nextPending.attackerPlayId);
+        if (ambushUnit) ambushUnit.ready = true;
+      }
+      return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+    }
+    // This trigger auto-resolved — drain the rest of the bag.
+    const bagPendingOrder = drainTriggerBag(game, log);
+    if (bagPendingOrder) {
+      return { response: resolutionResponse(pendingToResolution(bagPendingOrder, game)), pending: bagPendingOrder, stateChanged: false };
     }
     updateDefeatedPlayers(game);
     return { response: stateResponse(game), pending: null, stateChanged: true };
@@ -1483,6 +1765,23 @@ function handleChooseOption(
         stolen: false,
       });
       log.push(`When Defeated: ${CardTitle(cardId)} entered play as a ready resource.`);
+      const nextPending = pending.continuation ?? null;
+      updateDefeatedPlayers(game);
+      if (nextPending) {
+        return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+      }
+      const bagPending = drainTriggerBag(game, log);
+      if (bagPending) {
+        return { response: resolutionResponse(pendingToResolution(bagPending, game)), pending: bagPending, stateChanged: false };
+      }
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    if (optionType === "move_to_ground_exhausted") {
+      const cardId = parts[0];
+      const owner = Number(parts[1]) as PlayerId;
+      addToArena(game, owner, cardId, false); // ready=false → exhausted
+      log.push(`When Defeated: ${CardTitle(cardId)} moved to the ground arena exhausted.`);
       const nextPending = pending.continuation ?? null;
       updateDefeatedPlayers(game);
       if (nextPending) {
@@ -1669,6 +1968,10 @@ function handleResolveAttack(
   updateDefeatedPlayers(game);
   if (nextPending) {
     return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+  }
+  const bagPendingResolve = drainTriggerBag(game, log);
+  if (bagPendingResolve) {
+    return { response: resolutionResponse(pendingToResolution(bagPendingResolve, game)), pending: bagPendingResolve, stateChanged: false };
   }
   return { response: stateResponse(game), pending: null, stateChanged: true };
 }
@@ -1969,6 +2272,75 @@ function applyAbilityEffect(
       game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target034.cardId)}.`);
       if (defeatPend) return injectContinuation(defeatPend, pending.continuation);
       return pending.continuation;
+    }
+    case "SOR_224": { // Change of Heart — take control of a non-leader unit (reverts at start of regroup)
+      if (!targetPlayId || !pending.player) break;
+      const unit224 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit224 || CardIsLeader(unit224.cardId)) break;
+      const originalOwner = unit224.owner;
+      transferControl(game.currentGameState, game.gameLog, unit224, pending.player);
+      // Record the revert — owner reclaims control at the start of the regroup phase.
+      game.currentGameState.currentEffects.push({
+        cardId: "SOR_224",
+        duration: "UntilStartOfRegroup",
+        affectedPlayer: originalOwner,
+        targetPlayId: unit224.playId,
+      });
+      break;
+    }
+    case "SOR_222": { // Waylay — "Return a non-leader unit to its owner's hand."
+      if (!targetPlayId) break;
+      const waylayResult = removeFromArena(game.currentGameState, targetPlayId);
+      if (!waylayResult) break;
+      const { unit: bouncedUnit } = waylayResult;
+      // Return unit to its owner's hand (without upgrades — they're defeated).
+      ps(game.currentGameState, bouncedUnit.owner).hand.push({ cardId: bouncedUnit.cardId });
+      game.gameLog.push(`Waylay: ${CardTitle(bouncedUnit.cardId)} returned to Player ${bouncedUnit.owner}'s hand.`);
+      // Check for Luke Skywalker (JTL_094) as a pilot upgrade — his eject ability fires.
+      const waylayLuke = bouncedUnit.upgrades.find(upg => upg.cardId === "JTL_094");
+      if (waylayLuke) {
+        return {
+          type: "when-defeated-choice",
+          defeatedCardId: "JTL_094",
+          defeatedPlayId: waylayLuke.playId,
+          controlledBy: waylayLuke.controller as PlayerId,
+          options: [`move_to_ground_exhausted=JTL_094,${waylayLuke.controller}`, "decline"],
+          continuation: pending.continuation ?? null,
+        };
+      }
+      break;
+    }
+    case "SOR_251": { // Confiscate — defeat an upgrade
+      if (!targetPlayId) break;
+      const allGameUnits = allUnits(game.currentGameState);
+      let lukeConfiscated: { cardId: string; playId: string; controller: number } | null = null;
+      for (const u of allGameUnits) {
+        const upgradeIdx = u.upgrades.findIndex(upg => upg.playId === targetPlayId);
+        if (upgradeIdx !== -1) {
+          const [defeated] = u.upgrades.splice(upgradeIdx, 1);
+          game.gameLog.push(`Confiscate defeated ${CardTitle(defeated.cardId)} on ${CardTitle(u.cardId)}.`);
+          // Traitorous unattach: owner reclaims control when the upgrade is removed.
+          if (defeated.cardId === "SOR_122" && u.controller !== u.owner) {
+            transferControl(game.currentGameState, game.gameLog, u, u.owner);
+          }
+          // Luke Skywalker eject: when defeated as a pilot upgrade, he may move to ground.
+          if (defeated.cardId === "JTL_094") {
+            lukeConfiscated = { cardId: defeated.cardId, playId: defeated.playId, controller: defeated.controller };
+          }
+          break;
+        }
+      }
+      if (lukeConfiscated) {
+        return {
+          type: "when-defeated-choice",
+          defeatedCardId: "JTL_094",
+          defeatedPlayId: lukeConfiscated.playId,
+          controlledBy: lukeConfiscated.controller as PlayerId,
+          options: [`move_to_ground_exhausted=JTL_094,${lukeConfiscated.controller}`, "decline"],
+          continuation: pending.continuation ?? null,
+        };
+      }
+      break;
     }
     default:
       game.gameLog.push(`Ability effect for ${CardTitle(pending.cardId) ?? pending.cardId} applied.`);

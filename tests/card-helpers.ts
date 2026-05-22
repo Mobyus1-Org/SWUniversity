@@ -237,7 +237,9 @@ export const Cards = {
       tobiasBeckett: "SHD_217",
     },
     jtl: {
+      l337: "JTL_049",
       lukeSkywalker: "JTL_094",
+      blueLeader: "JTL_096",
       rebelliousHammerhead: "JTL_153",
       snapWexley: "JTL_098",
       r2d2: "JTL_245",
@@ -263,6 +265,7 @@ export const Cards = {
     sor: {
       protector: "SOR_057",
       academyTraining: "SOR_120",
+      traitorous: "SOR_122",
     },
     shd: {
       legalAuthority: "SHD_124",
@@ -277,6 +280,9 @@ export const Cards = {
   events: {
     sor: {
       rebelAssault: "SOR_103",
+      waylay: "SOR_222",
+      changeOfHeart: "SOR_224",
+      confiscate: "SOR_251",
     },
     twi: {
       takeCaptive: "TWI_128",

@@ -50,7 +50,7 @@
 | Play Upgrade — pay cost, attach to eligible unit | ✅ | `UpgradeEligibleTargets` filters targets; `handleChooseTarget` attaches. |
 | Upgrade attach restrictions | ⚠️ | `UpgradeEligibleTargets` only special-cases 2 cards (LOF_074, LOF_261). All other upgrades default to "attach to any friendly unit" — enemy upgrade plays and more specific restrictions (e.g., "attach to non-VEHICLE") are unhandled. |
 | Upgrade on enemy unit | ❌ | `ownUnits` only checks the playing player's units; enemy attachment is not possible. |
-| Play from non-hand zones (Smuggle, Plot) | ⚠️ | `SmuggleCost` and `HasPlot` dictionaries exist but no dispatch path handles playing a card from resources. |
+| Play from non-hand zones (Smuggle, Plot) | ✅ | Smuggle: `play-smuggle` dispatch, `SmuggleCost` + aspect penalty, deck-top replacement (exhausted), `ResourceIsSmuggleable` UI filter. Plot: `PlotWindowPending` chain on deploy, affordability filter, multi-Plot looping, CR 19d deck-replacement exclusion enforced. |
 | Uniqueness rule — defeat copy if duplicate | ✅ | `DefeatCopyPending` returned immediately after `addToArena` if a duplicate unique is in play; player chooses which copy to defeat. |
 | "When Played" trigger window | ✅ | `resolveWhenPlayed` (immediate input required) and `triggerBag` (auto-resolve) both used. |
 | Playing a card "this phase" tracking | ✅ | `roundState.cardsPlayedThisPhase` tracked in `CardWasPlayedThisPhase`. |
@@ -132,8 +132,7 @@
 ### 5.10 Smuggle [Y]
 | Status | Notes |
 |---|---|
-| ⚠️ | `SmuggleCost` dictionary exists. `PlayerHasCardsToSmuggle` checks resource zone. |
-| ❌ | No dispatch handler allows playing a card from resources using Smuggle cost. The "replace with top of deck" effect is also unimplemented. |
+| ✅ | `play-smuggle` dispatch: `SmuggleCost` + aspect penalty computed, ready resources exhausted, card removed from resources, deck-top replacement added (exhausted), card placed in arena via `addToArena`. `ResourceIsSmuggleable` used in UI to highlight eligible resources. |
 
 ### 5.11 Coordinate
 | Status | Notes |
@@ -165,8 +164,7 @@
 ### 5.15 Plot
 | Status | Notes |
 |---|---|
-| ⚠️ | `HasPlot` dictionary exists (SEC cards). |
-| ❌ | No dispatch handler triggers when a leader is deployed to check for Plot cards in resources and offer them for play. |
+| ✅ | `HasPlot` dictionary. On deploy: `getAffordablePlotPlayIds` (cost + aspect penalty checked) → `PlotWindowPending` (or `PlotOrderPending` when leader also has When Deployed). Multi-Plot looping: after each card played, remaining affordable candidates recomputed and window reopened if any remain. CR 19d enforced: candidates filtered from the original deploy-time list — deck replacement card is never eligible. UI: `NeedsPlot` resolution type shows a card-art popup with a Pass option. |
 
 ---
 
@@ -175,7 +173,7 @@
 | Trigger Type | Status | Notes |
 |---|---|---|
 | When Played | ✅ | Two paths: `resolveWhenPlayed` (input required) and `triggerBag` → `resolveWhenPlayedTrigger` (auto). |
-| When Deployed | ⚠️ | `when-deployed.ts` action file exists. Leader deploy (`deployLeader`) does not call `resolveWhenDeployed`. |
+| When Deployed | ⚠️ | `resolveWhenDeployed` called from `deployLeader` and the Plot chain. Qi'ra (SHD_002) implemented: heal all units, then deal `floor(HP/2)` to each (Shield absorption included). Other leaders' When Deployed effects are not yet implemented. |
 | When Defeated | ⚠️ | `resolveWhenDefeated` handles K-2SO only. Vast majority of When Defeated cards are unimplemented. |
 | On Attack | ✅ | `drainOnAttackTriggerBag` resolves On Attack triggers. Currently hardcoded to specific cards pushing into the bag. |
 | When This Unit Completes an Attack | ✅ | `resolveWhenAttackEnds` implemented for SOR_009. |
@@ -272,22 +270,67 @@
 
 ## 13. Additional Rule Mechanics
 
+### 13.1 Damage & Prevention (CR 8.36, CR 21)
+
 | Mechanic | Status | Notes |
 |---|---|---|
-| Indirect damage (player assigns among own units/base) | ❌ | No pending resolution type for indirect damage assignment. |
-| Unpreventable damage | ❌ | No flag or enforcement; indirect damage should bypass Shields. |
-| "Do as much as you can" | ⚠️ | Followed informally but not systematically enforced (some abilities return null silently). |
-| Golden Rule: card overrides rules | ⚠️ | Handled per-card in switch statements; no generic override system. |
-| Restrictions override permissions | ❌ | No rule engine — if two effects conflict, no precedence resolution exists. |
-| Uniqueness enforcement | ✅ | `DefeatCopyPending` returned immediately after `addToArena` when a duplicate unique enters play; player chooses which copy to defeat. |
-| Undo / state history | ✅ | `gameStateHistory` snapshotted before top-level actions. |
-| Open vs. hidden information enforcement | ❌ | Engine does not enforce information boundaries; all state is returned to the client. |
-| Disclose mechanic (reveal aspects from hand) | ❌ | Not implemented. |
-| Empty deck damage (3 per card drawn) | ✅ | Implemented in `executeRegroupDraw`; 3 damage per missing card dealt to that player's base. |
-| "Defeated this phase" / "attacked this phase" tracking | ✅ | `roundState.cardsLeftPlayThisPhase` and `roundState.unitsAttackedThisPhase` tracked. |
-| "First/second event played this phase" tracking | ⚠️ | `cardsPlayedThisPhase` exists; "first/second" ordinal queries would need additional index logic. |
-| choose-player dispatch type | ❌ | Stubbed as "not yet implemented." |
-| choose-trigger dispatch type (trigger ordering) | ❌ | Stubbed as "not yet implemented." |
+| Indirect damage — player assigns among own units/base | ❌ | Requires a new `IndirectDamagePending` resolution type: engine picks a player, that player assigns X unpreventable damage split across any of their units/base. No pending type or dispatch path exists. Example card: splash-damage bases like LAW_020. |
+| Unpreventable damage flag | ❌ | No `unpreventable` flag on damage sources. Indirect damage (CR 36) and certain card effects should bypass Shields and "can't be damaged" clauses. Currently all damage in `resolveAttack` is checked the same way. |
+| Prevent damage (CR 21) | ❌ | No general "prevent X damage" effect system. Shield tokens are the only prevention implemented (inline in `resolveAttack`). Cards like "prevent all damage to a unit this phase" have no representation. |
+| Damage assignment ordering | ⚠️ | Simultaneous combat damage is implemented. Multi-blocker or multi-target damage assignment ordering (CR 8.13) not relevant to the 1v1 format but edge cases like Overwhelm + Shield are not fully correct (Shield removal should block excess-to-base flow). |
+
+### 13.2 Effect Resolution Language (CR 29, 31, 32, 33, 35)
+
+| Mechanic | Status | Notes |
+|---|---|---|
+| "THEN" — sequential effects (CR 29) | ⚠️ | "Then" sequencing is correctly followed in continuation chains (e.g., Rebel Assault: attack, then attack again). However, triggers spawned by the first effect are supposed to queue and fire only after both effects complete — this is not enforced generally; some fire immediately mid-chain. |
+| "You May" — optional abilities (CR 33) | ⚠️ | Optional abilities use `ability-option` (Yes/No) for explicit prompts. Cards that auto-resolve when no valid targets exist return null early. The "if you do" clause following a "you may" is implemented per-card; no general framework enforces it structurally. "Use this ability only once each round" restriction is not tracked for non-leader abilities. |
+| "Up To X" targets (CR 31) | ⚠️ | `maxTargets` on `NeedsTarget` supports multi-select up to X (Exploit uses it). Returning 0 targets (opting out) via empty `targetPlayIds` works. The semantic distinction between "must choose at least 1" vs "may choose 0" is enforced per-card, not generically. |
+| "For Each" — simultaneous multi-effects (CR 35) | ❌ | No general "for each X do Y" framework. All such effects must be hardcoded. Example: Calculated Lethality (SHD_039) — "for each upgrade defeated, give an Experience token" cannot be expressed generically. |
+| "You" — controller vs owner (CR 32) | ⚠️ | Most abilities correctly reference the controller. `controller` field exists on all in-play cards. Abilities that fire on "when you do X" correctly check the controlling player. However, when a unit changes controller mid-game (not yet supported), all triggers and ability references would still use the original controller. |
+| "Do as much as you can" (CR 1.4) | ⚠️ | Followed informally — abilities that find no valid targets return `null` and auto-resolve. No systematic enforcement: a card that says "deal damage to up to 3 units" with only 1 unit in play would need to deal damage to that 1 unit, not silently skip. Not verified for all cards. |
+
+### 13.3 Play Restrictions & Permissions (CR 3, 20)
+
+| Mechanic | Status | Notes |
+|---|---|---|
+| Golden Rule: card text overrides rules (CR 3.1) | ⚠️ | Implemented per-card in switch statements. No generic override system — each exception (e.g., "this unit can attack exhausted units," "this unit can't be defeated") must be hardcoded wherever the overridden rule is enforced. |
+| Restrictions override permissions (CR 3.3) | ❌ | No rule engine. If a card says "can't attack bases" and another says "may attack any target," there is no precedence mechanism — whichever code path runs first wins. |
+| Play restrictions — "can't play" abilities (CR 20.3) | ❌ | No `playRestrictions[]` on game state. Cards like Regional Governor (SOR_062) that prevent playing a named card cannot be enforced. `canPlayCard` only checks cost/phase, not ability-based restrictions. |
+| Play restriction — no eligible upgrade target (CR 20.2) | ✅ | `UpgradeEligibleTargets` returns empty → `handlePlayCard` rejects the play. |
+| Additional costs — "also defeat a friendly unit" (CR 6.2.4) | ❌ | No framework for non-resource additional costs. Cards requiring a sacrifice or discard as part of playing are not representable. |
+
+### 13.4 Zone Mechanics (CR 25, 26, 27, 37)
+
+| Mechanic | Status | Notes |
+|---|---|---|
+| Return a unit to hand (CR 25) | ❌ | No `returnToHand` function or pending type. Cards like Bright Hope (SOR_099) "return a friendly non-leader ground unit to hand" have the effect stubbed (current WP handling returns `null`). Requires removing from arena, adding to `hand[]`, and not triggering "When Played." |
+| Reveal from hand / Disclose (CR 26, 39) | ❌ | No reveal mechanic. "Disclose" (reveal aspect icons from hand) has no dispatch path or pending type. ISB Agent (SOR_176) "reveal an event from hand" cannot check this. Would require a new `NeedsReveal` or similar resolution asking the client to expose one or more hand cards. |
+| Search deck (CR 27) | ❌ | No search mechanic. Cards that say "search your deck for X" require showing the player a filtered view of the deck — a fundamentally different UI interaction. Not representable with current pending resolution types. |
+| Move between arenas (CR 37) | ❌ | No `moveToArena` function. Cards that move a unit from ground to space (or vice versa) would need to splice it from one arena array and push to the other without triggering enter/leave play effects. |
+| Take control of a unit (CR 28) | ❌ | `controller` field exists on all `CardInPlay` objects and differs from `owner`, but no dispatch changes controller mid-game. Cards like "take control of a unit with 3 or less power" cannot be resolved. When implemented, all ability references, attack legality checks, and bounty collection must use `controller` not `owner`. |
+
+### 13.5 Information & State Tracking
+
+| Mechanic | Status | Notes |
+|---|---|---|
+| Open vs. hidden information enforcement | ❌ | Engine returns the full `GameState` to the client on every response, exposing both players' hands and deck order. A compliant engine would send each player only their own hidden information. Requires per-player state projection before sending. |
+| Disclose mechanic (reveal aspects from hand) | ❌ | Relies on reveal; see Zone Mechanics above. No pending type for "choose cards from hand to disclose." |
+| Empty deck damage (3 per card drawn) | ✅ | `executeRegroupDraw`; 3 damage per missing card dealt to that player's base. |
+| "Defeated this phase" / "attacked this phase" tracking | ✅ | `roundState.cardsLeftPlayThisPhase` and `roundState.unitsAttackedThisPhase` tracked per round. |
+| "Entered play this phase" tracking | ✅ | `roundState.cardsEnteredPlayThisPhase` tracks playIds + method (`"played"`, `"returned-to-play"`, etc.). Used by Hidden keyword. |
+| "First/second event played this phase" ordinal tracking | ⚠️ | `cardsPlayedThisPhase` stores all cards played. Ordinal queries ("was this the first event?") require filtering by `"Unit"` / `"Event"` type and checking index — not yet used but the data is present. |
+| Undo / state history | ✅ | `gameStateHistory` deep-cloned and snapshotted before every top-level irreversible action (`stateChanged: true`). `/api/puzzle/undo` restores the last snapshot. |
+
+### 13.6 Dispatch & Trigger Infrastructure
+
+| Mechanic | Status | Notes |
+|---|---|---|
+| choose-player dispatch type | ❌ | `NeedsPlayer` resolution type exists and `pendingToResolution` emits it. The `handleChoosePlayer` stub returns "not yet implemented." No card currently requires player selection mid-resolution in the engine beyond zone targeting. |
+| choose-trigger dispatch type (trigger ordering) | ❌ | `NeedsTrigger` and `choose-trigger` dispatch are stubbed. When 2+ triggers fire simultaneously, the active player should order them; currently `drainTriggerBag` silently skips all but the first. |
+| Trigger ordering — active player chooses (CR 7.6.3) | ❌ | Single-trigger auto-resolve only. Two or more simultaneous triggers (e.g., two units both have "When Played" that need resolution) would require `NeedsTrigger` dispatch → player selects order → drain one → re-evaluate. |
+| Delayed / lasting triggered effects | ❌ | No `DelayedEffect` system. "At the start of the next regroup phase, draw 1 card" cannot be represented. Would require a persistent effect list checked at each phase boundary (already partially done for `Phase`/`Round` lasting effects but only for stat modifiers). |
+| Replacement effects ("instead," "would") | ❌ | No general replacement effect system. The "instead of dealing damage, do X" pattern requires effects to broadcast a "damage about to be dealt" event that a replacement handler can intercept. Shield prevention is the only inline replacement and it's hardcoded in `resolveAttack`. |
 
 ---
 
@@ -304,6 +347,9 @@ These are the highest-impact missing pieces for a playable, rules-compliant engi
 8. **Delayed effects system** — "at start of regroup phase, …" pattern.
 
 ### Recently Completed
+- ✅ **Smuggle** — `play-smuggle` dispatch: cost + aspect penalty, ready-resource exhaustion, deck-top replacement (exhausted). `ResourceIsSmuggleable` UI affordability check. UI highlights eligible resources.
+- ✅ **Plot** — `PlotWindowPending` / `PlotOrderPending` chain on leader deploy. Affordability filter (cost + aspect penalty). Multi-Plot looping after each card played. CR 19d enforced: deck replacement card excluded from window. `NeedsPlot` UI type shows card-art popup with Pass button. Plot timing (before/after When Deployed) handled via `PlotOrderPending`.
+- ✅ **When Deployed (Qi'ra SHD_002)** — `resolveWhenDeployed` wired into `deployLeader` and the Plot chain. Heals all units, then deals `floor(HP/2)` to each; Shield token absorbs damage. Tested: space arena, self-damage, Grit interaction, Plot ordering scenarios, CR 19d.
 - ✅ **Exploit** — `ExploitOptionPending` / `ExploitTargetPending` two-step chain. Cost reduced 2× per sacrificed unit. WD triggers deferred to bag per CR 16d. Count Dooku stacking via `currentEffect`. Superlaser Technician put-into-play-as-resource WD handled. Multi-select UI for target selection.
 - ✅ **Bounty resolution** — `collectBounties` wired into defeat and capture. Optional collect (Yes/No). Draw-card and give-shield effects implemented. Multi-bounty sequential resolution tested.
 - ✅ **Regroup phase** — draw 2 (empty-deck penalty), optional resource-a-card step, auto-ready all units/leaders/resources, Phase+Round effect clearing, round counter increment.

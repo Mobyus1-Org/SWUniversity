@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, GetUnitsForPlayer, TraitContains } from "@/server/engine/core-functions";
-import { PendingResolution } from "@/server/engine/pending-resolution";
+import { GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
+import { PayToMoveGroundPending, PendingResolution } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 
 /**
@@ -77,6 +77,53 @@ export function resolveWhenPlayed(
         cardId,
         fromPlayer: player,
         eligiblePlayIds: friendlyUnits.map(u => u.playId),
+      };
+    }
+    case "SOR_224": { // Change of Heart — "Take control of a non-leader unit."
+      const allNonLeaders = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+        .filter(u => !CardIsLeader(u.cardId));
+      if (allNonLeaders.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_224",
+        player,
+        fromPlayIds: allNonLeaders.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_222": { // Waylay — "Return a non-leader unit to its owner's hand."
+      const allNonLeaders = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+        .filter(u => !CardIsLeader(u.cardId));
+      if (allNonLeaders.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_222",
+        player,
+        fromPlayIds: allNonLeaders.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "JTL_096": { // Blue Leader — "You may pay 2 resources. If you do, move this unit to the ground arena and give 2 Experience tokens to it."
+      if (!playId) return null;
+      return {
+        type: "pay-to-move-ground",
+        cardId: "JTL_096",
+        sourcePlayId: playId,
+        player,
+        cost: 2,
+        continuation: null,
+      };
+    }
+    case "SOR_251": { // Confiscate — "Defeat an upgrade."
+      const allUpgradePlayIds = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+        .flatMap(u => u.upgrades.map(upg => upg.playId));
+      if (allUpgradePlayIds.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_251",
+        player,
+        fromPlayIds: allUpgradePlayIds,
+        continuation: null,
       };
     }
     default:

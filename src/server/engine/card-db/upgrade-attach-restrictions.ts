@@ -1,6 +1,7 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import { CardIsLeader, TraitContains } from "../core-functions";
+import { CardCost } from "@/server/engine/card-db/generated";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { LeaderDeployPilotThreshold } from "./keyword-dictionaries.ts/leader-pilot-deploy";
 
@@ -86,6 +87,17 @@ export function UpgradeEligibleTargets(
     // "Attach to a friendly unit."
     case "SHD_124": // Legal Authority
       return friendly.map(u => u.playId);
+
+    // "Attach to a non-leader unit that costs 3 or less (and has no leader pilot)."
+    // When attached: take control. Not eligible on units that have a leader as upgrade
+    // because those become "Leader units."
+    case "SOR_122": // Traitorous
+      return everyone.filter(u => {
+        if (CardIsLeader(u.cardId)) return false;
+        if (CardCost(u.cardId) > 3) return false;
+        if (u.upgrades.some(upg => CardIsLeader(upg.cardId))) return false;
+        return true;
+      }).map(u => u.playId);
 
     // "Attach to a Force unit."
     case "LOF_074": //Bolstered Endurance

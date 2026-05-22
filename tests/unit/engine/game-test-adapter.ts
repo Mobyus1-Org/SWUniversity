@@ -160,4 +160,21 @@ export class GameTestAdapter {
   async passPlotAsync(player: PlayerId): Promise<GameTestAdapter> {
     return this.dispatchAsync(player, "choose-target", { targetPlayIds: [] });
   }
+
+  /**
+   * Targets an upgrade (by position) on a unit in the given arena.
+   * fromPlayer = who dispatches choose-target.
+   * unitPlayer = whose arena contains the unit.
+   */
+  async chooseUpgradeOnGroundUnitAsync(fromPlayer: PlayerId, unitPlayer: PlayerId, unitIndex: number, upgradeIndex = 0): Promise<GameTestAdapter> {
+    const pState = unitPlayer === 1 ? this.state.player1 : this.state.player2;
+    const upgradePlayId = pState.groundArena[unitIndex].upgrades[upgradeIndex].playId;
+    return this.dispatchAsync(fromPlayer, "choose-target", { targetPlayIds: [upgradePlayId] });
+  }
+
+  async chooseUpgradeOnSpaceUnitAsync(fromPlayer: PlayerId, unitPlayer: PlayerId, unitIndex: number, upgradeIndex = 0): Promise<GameTestAdapter> {
+    const pState = unitPlayer === 1 ? this.state.player1 : this.state.player2;
+    const upgradePlayId = pState.spaceArena[unitIndex].upgrades[upgradeIndex].playId;
+    return this.dispatchAsync(fromPlayer, "choose-target", { targetPlayIds: [upgradePlayId] });
+  }
 }

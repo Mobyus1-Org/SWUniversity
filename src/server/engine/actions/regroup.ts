@@ -1,11 +1,33 @@
 import type { GameState, PlayerState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
+import { CardTitle } from "@/server/engine/card-db/generated";
 
 function ps(gs: GameState, player: PlayerId): PlayerState {
   return player === 1 ? gs.player1 : gs.player2;
 }
 
 export function executeRegroupDraw(gs: GameState, log: string[]): void {
+  // Revert "UntilStartOfRegroup" effects before drawing (e.g. Change of Heart).
+  const revertEffects = gs.currentEffects.filter(e => e.duration === "UntilStartOfRegroup");
+  for (const eff of revertEffects) {
+    if (!eff.targetPlayId) continue;
+    const ownerPlayer = eff.affectedPlayer;
+    const ownerState = ownerPlayer === 1 ? gs.player1 : gs.player2;
+    outer: for (const pState of [gs.player1, gs.player2]) {
+      for (const zone of ["groundArena", "spaceArena"] as const) {
+        const idx = pState[zone].findIndex(u => u.playId === eff.targetPlayId);
+        if (idx !== -1) {
+          const [unit] = pState[zone].splice(idx, 1);
+          unit.controller = ownerPlayer;
+          ownerState[zone].push(unit);
+          log.push(`${CardTitle(unit.cardId)} returned to Player ${ownerPlayer}'s control (Change of Heart expired).`);
+          break outer;
+        }
+      }
+    }
+  }
+  gs.currentEffects = gs.currentEffects.filter(e => e.duration !== "UntilStartOfRegroup");
+
   for (const player of [1, 2] as PlayerId[]) {
     const p = ps(gs, player);
     const toDraw = 2;
