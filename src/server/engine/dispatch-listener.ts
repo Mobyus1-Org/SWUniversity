@@ -77,6 +77,7 @@ import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/e
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { PilotingEligibleVehicles } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dictionaries.ts/leader-pilot-deploy";
+import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -1657,7 +1658,11 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
   const unit = addToArena(game, player, leader.cardId, true);
   leader.deployedPlayId = unit.playId;
   log.push(`Player ${player} deployed ${CardTitle(leader.cardId) ?? leader.cardId}.`);
+  const whenDeployedPending = resolveWhenDeployed(leader.cardId, player, log);
   updateDefeatedPlayers(game);
+  if (whenDeployedPending) {
+    return { response: resolutionResponse(pendingToResolution(whenDeployedPending, game)), pending: whenDeployedPending, stateChanged: true };
+  }
   return { response: stateResponse(game), pending: null, stateChanged: true };
 }
 

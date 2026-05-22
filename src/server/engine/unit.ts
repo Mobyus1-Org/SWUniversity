@@ -4,6 +4,7 @@ import { CardHp, CardPower, CardUpgradeHp, CardUpgradePower } from "@/server/eng
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
+import { HasGrit } from "./card-db/keyword-dictionaries.ts/grit";
 
 export class Unit implements UnitInterface {
   cardId: string;
@@ -155,6 +156,10 @@ export class Unit implements UnitInterface {
 
     for (const upgrade of this.upgrades) {
       power += CardUpgradePower(upgrade.cardId);
+    }
+
+    if (HasGrit(this.cardId, this.playId, this.controller) && !this.LostAbilities()) {
+      power += this.damage;
     }
 
     if (isAttacking) {

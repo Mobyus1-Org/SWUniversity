@@ -91,6 +91,7 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
     case "LOF_038"://Pong Krell
     case "LOF_232"://Sandtrooper Cavalry
     case "SEC_057"://Lobot
+      return true;
     default: break;
   }
   //JTL_053: The Ghost - Heart of the Family
