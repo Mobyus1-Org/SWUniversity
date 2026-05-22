@@ -211,6 +211,7 @@ export const Cards = {
       spy: "SEC_T01",
     },
     sor: {
+      wingLeader: "SOR_241",
       systemPatrolCraft: "SOR_066",
       battlefieldMarine: "SOR_095",
       echoBaseDefender: "SOR_098",
@@ -237,6 +238,7 @@ export const Cards = {
       tobiasBeckett: "SHD_217",
     },
     jtl: {
+      kijimiPatrollers: "JTL_082",
       l337: "JTL_049",
       lukeSkywalker: "JTL_094",
       blueLeader: "JTL_096",
@@ -279,13 +281,22 @@ export const Cards = {
   },
   events: {
     sor: {
+      momentOfPeace: "SOR_073",
       rebelAssault: "SOR_103",
       waylay: "SOR_222",
       changeOfHeart: "SOR_224",
       confiscate: "SOR_251",
     },
     twi: {
+      droidDeployment: "TWI_237",
+      dropIn: "TWI_251",
       takeCaptive: "TWI_128",
+    },
+    jtl: {
+      dedicatedWingmen: "JTL_254",
+    },
+    sec: {
+      iAmTheSenate: "SEC_092",
     },
   },
 }

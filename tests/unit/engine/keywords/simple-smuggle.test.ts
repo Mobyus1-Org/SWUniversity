@@ -3,7 +3,7 @@ import { SmuggleCost, SmuggleAspects } from "@/server/engine/card-db/keyword-dic
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { effectiveSmuggleCost, ResourceIsSmuggleable } from "@/server/engine/card-playability";
 import { Cards } from "../../../card-helpers";
-import { GameTestAdapter } from "../game-test-adapter";
+import { GameTestAdapter } from "../../game-test-adapter";
 import type { Resource } from "@/lib/engine/core-models";
 
 function makeResource(cardId: string, ready = true): Resource {

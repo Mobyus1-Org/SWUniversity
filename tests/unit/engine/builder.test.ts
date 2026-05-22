@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { GameTestAdapter } from "./game-test-adapter";
+import { GameTestAdapter } from "../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 
 describe("GameStateBuilder", () => {

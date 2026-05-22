@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { GameTestAdapter } from "../game-test-adapter";
+import { GameTestAdapter } from "../../game-test-adapter";
 
 import { sabineWrenCadBaneSimplePuzzleState } from "../_gamestates/simple";
 import { NeedsTarget } from "@/lib/engine/message-types";

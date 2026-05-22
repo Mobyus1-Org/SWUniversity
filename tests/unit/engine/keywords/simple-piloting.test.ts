@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { PilotingEligibleVehicles } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { Cards } from "../../../card-helpers";
-import { GameTestAdapter } from "../game-test-adapter";
+import { GameTestAdapter } from "../../game-test-adapter";
 
 describe("PilotingEligibleVehicles", () => {
   it("returns vehicle playIds that have no PILOT upgrade", () => {

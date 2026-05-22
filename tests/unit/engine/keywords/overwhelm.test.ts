@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GameTestAdapter } from "../game-test-adapter";
+import { GameTestAdapter } from "../../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { Cards } from "../../../card-helpers";
 

@@ -2,6 +2,8 @@ import { PlayerId } from "@/lib/engine/core-models";
 import { GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
 import { PayToMoveGroundPending, PendingResolution } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
+import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
+import { CardTitle } from "@/server/engine/card-db/generated";
 
 /**
  * When Played abilities for unit cards.
@@ -67,8 +69,58 @@ export function resolveWhenPlayed(
       };
     }
     case "SHD_160": //Reckless Gunslinger "When Played: Deal 1 damage to each base."
-      // This is a simple effect that doesn't require any player input, so we can resolve it immediately without returning a PendingResolution.
       return null;
+    case "TWI_237": { // Droid Deployment — "Create 2 Battle Droid tokens."
+      const gs237 = game.currentGameState;
+      CreateBattleDroid(gs237, player);
+      CreateBattleDroid(gs237, player);
+      game.gameLog.push(`${CardTitle(cardId)}: 2 Battle Droid tokens created.`);
+      return null;
+    }
+    case "TWI_251": { // Drop In — "Create 2 Clone Trooper tokens."
+      const gs251 = game.currentGameState;
+      CreateCloneTrooper(gs251, player);
+      CreateCloneTrooper(gs251, player);
+      game.gameLog.push(`${CardTitle(cardId)}: 2 Clone Trooper tokens created.`);
+      return null;
+    }
+    case "JTL_254": { // Dedicated Wingmen — "Create 2 X-Wing tokens."
+      const gs254 = game.currentGameState;
+      CreateXWing(gs254, player);
+      CreateXWing(gs254, player);
+      game.gameLog.push(`${CardTitle(cardId)}: 2 X-Wing tokens created.`);
+      return null;
+    }
+    case "SEC_092": { // I Am the Senate — "Create 5 Spy tokens."
+      const gs092 = game.currentGameState;
+      for (let i = 0; i < 5; i++) CreateSpy(gs092, player);
+      game.gameLog.push(`${CardTitle(cardId)}: 5 Spy tokens created.`);
+      return null;
+    }
+    case "SOR_073": { // Moment of Peace — "Give a Shield token to a unit."
+      const allUnits073 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      if (allUnits073.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: allUnits073.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_241": { // Wing Leader — "When Played: Give 2 Experience tokens to another friendly REBEL unit."
+      const friendlyRebels241 = GetUnitsForPlayer(player, true)
+        .filter(u => u.playId !== playId && TraitContains(u.cardId, "Rebel", u.controller, u.playId));
+      if (friendlyRebels241.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        sourcePlayId: playId,
+        fromPlayIds: friendlyRebels241.map(u => u.playId),
+        continuation: null,
+      };
+    }
     case "TWI_128": { // Take Captive "A friendly unit captures an enemy non-leader unit in the same arena."
       const friendlyUnits = GetUnitsForPlayer(player, true);
       if (friendlyUnits.length === 0) return null;

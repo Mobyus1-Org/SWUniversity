@@ -176,6 +176,9 @@ type PlayerBuilderState = {
 };
 
 type BuilderState = {
+  name: string;
+  description: string;
+  difficulty: number;
   activePlayer: 1 | 2;
   gamePhase: GamePhase;
   currentRound: number;
@@ -195,6 +198,9 @@ function emptyPlayer(): PlayerBuilderState {
 
 function initialBuilderState(): BuilderState {
   return {
+    name: "",
+    description: "",
+    difficulty: 1,
     activePlayer: 1,
     gamePhase: "ActionPhase" as GamePhase,
     currentRound: 1,
@@ -586,13 +592,20 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
   }
 
   function handleSave() {
+    if (!state.name.trim()) { setSaveError("Puzzle name is required."); return; }
     setSaving(true);
     setSaveError(null);
-    const raw = toRaw(state);
+    const puzzleData = {
+      id: "",
+      name: state.name.trim(),
+      description: state.description.trim(),
+      difficulty: state.difficulty,
+      initialGamestate: toRaw(state),
+    };
     fetch("/api/internal/test-puzzles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(raw),
+      body: JSON.stringify(puzzleData),
     })
       .then(async (r) => {
         if (!r.ok) throw new Error((await r.json()).error ?? "Save failed");
@@ -625,6 +638,41 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
             <p className="text-xs text-white/50">Loading card catalog…</p>
           ) : (
             <>
+              {/* Puzzle metadata */}
+              <div className="rounded-lg bg-black/20 p-4 space-y-3">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Puzzle Info</div>
+                <FieldRow label="Name">
+                  <input
+                    type="text"
+                    value={state.name}
+                    onChange={(e) => patchGlobal({ name: e.target.value })}
+                    placeholder="Puzzle name…"
+                    className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
+                  />
+                </FieldRow>
+                <FieldRow label="Description">
+                  <input
+                    type="text"
+                    value={state.description}
+                    onChange={(e) => patchGlobal({ description: e.target.value })}
+                    placeholder="Optional description…"
+                    className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
+                  />
+                </FieldRow>
+                <FieldRow label="Difficulty">
+                  <div className="flex items-center gap-2">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => patchGlobal({ difficulty: n })}
+                        className={`h-6 w-6 rounded-full transition-colors ${n <= state.difficulty ? "bg-primary" : "bg-white/20 hover:bg-white/30"}`}
+                      />
+                    ))}
+                  </div>
+                </FieldRow>
+              </div>
+
               {/* Global state */}
               <div className="rounded-lg bg-black/20 p-4 space-y-3">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Game State</div>

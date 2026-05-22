@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
-import { Cards } from "../../../card-helpers";
+import { Cards } from "../../card-helpers";
 
 // Luke Skywalker JTL_094 (Ground, 2/3, cost 2, Command+Heroism, Pilot):
 //   "You Still With Me?" — When defeated as a pilot upgrade, you may move this

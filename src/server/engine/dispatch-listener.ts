@@ -2288,6 +2288,23 @@ function applyAbilityEffect(
       });
       break;
     }
+    case "SOR_073": { // Moment of Peace — "Give a Shield token to a unit."
+      if (!targetPlayId) break;
+      const target073 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!target073) break;
+      target073.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target073.owner, controller: target073.controller });
+      game.gameLog.push(`${CardTitle(pending.cardId)}: Shield token placed on ${CardTitle(target073.cardId)}.`);
+      break;
+    }
+    case "SOR_241": { // Wing Leader — "Give 2 Experience tokens to another friendly REBEL unit."
+      if (!targetPlayId) break;
+      const target241 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!target241) break;
+      target241.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target241.owner, controller: target241.controller });
+      target241.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target241.owner, controller: target241.controller });
+      game.gameLog.push(`${CardTitle(pending.cardId)}: 2 Experience tokens given to ${CardTitle(target241.cardId)}.`);
+      break;
+    }
     case "SOR_222": { // Waylay — "Return a non-leader unit to its owner's hand."
       if (!targetPlayId) break;
       const waylayResult = removeFromArena(game.currentGameState, targetPlayId);
