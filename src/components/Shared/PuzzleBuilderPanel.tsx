@@ -602,7 +602,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
       difficulty: state.difficulty,
       initialGamestate: toRaw(state),
     };
-    fetch("/api/internal/test-puzzles", {
+    fetch("/api/puzzles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(puzzleData),

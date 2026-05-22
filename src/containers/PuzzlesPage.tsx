@@ -528,7 +528,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     setIsResolving(true);
     setActionError(null);
     try {
-      const r = await fetch(`/api/internal/test-puzzles?filename=${encodeURIComponent(filename)}`);
+      const r = await fetch(`/api/puzzles?id=${encodeURIComponent(filename)}`);
       if (!r.ok) throw new Error(((await r.json()) as { error?: string }).error ?? "Load failed");
       const { gameState: initialState } = await r.json() as { gameState: GameState };
 
@@ -595,8 +595,8 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
           }}
         />
       ) : null}
-      {showBuilderTools ? (
-        <div className="mb-3 flex flex-col gap-3">
+      <div className="mb-3 flex flex-col gap-3">
+        {showBuilderTools ? (
           <button
             type="button"
             onClick={() => setShowBuilderPanelOpen(true)}
@@ -604,17 +604,17 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
           >
             Build New Puzzle
           </button>
-          <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
-            <LoadPuzzlePanel
-              onPuzzleLoaded={(filename, meta) => {
-                setSelectedPuzzleFilename(filename);
-                setPuzzleName(meta.name);
-                void loadPuzzle(filename);
-              }}
-            />
-          </div>
+        ) : null}
+        <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+          <LoadPuzzlePanel
+            onPuzzleLoaded={(filename, meta) => {
+              setSelectedPuzzleFilename(filename);
+              setPuzzleName(meta.name);
+              void loadPuzzle(filename);
+            }}
+          />
         </div>
-      ) : null}
+      </div>
       <p className="mt-4 text-center text-sm text-white/60">Select a puzzle to get started.</p>
     </div>;
   }

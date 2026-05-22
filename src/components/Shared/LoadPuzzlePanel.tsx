@@ -27,7 +27,7 @@ export function LoadPuzzlePanel({ onPuzzleLoaded }: Props) {
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    fetch("/api/internal/test-puzzles")
+    fetch("/api/puzzles")
       .then((r) => r.json())
       .then((data: { puzzles: PuzzleEntry[] }) => setPuzzles(data.puzzles))
       .catch(() => setError("Failed to list puzzles."))
