@@ -315,7 +315,8 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   const [lastActionMs, setLastActionMs] = React.useState<number | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [selectedTargetPlayIds, setSelectedTargetPlayIds] = React.useState<string[]>([]);
-  const [selectedPuzzleN, setSelectedPuzzleN] = React.useState<number | null>(null);
+  const [selectedPuzzleFilename, setSelectedPuzzleFilename] = React.useState<string | null>(null);
+  const [puzzleName, setPuzzleName] = React.useState<string | null>(null);
   const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
   const [showClosePuzzleConfirm, setShowClosePuzzleConfirm] = React.useState(false);
   const [leaderModalOpen, setLeaderModalOpen] = React.useState(false);
@@ -523,11 +524,11 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   // ---------------------------------------------------------------------------
   // Load puzzle — fetch initial GameState and register/seed the engine session
   // ---------------------------------------------------------------------------
-  const loadPuzzle = React.useCallback(async (n: number) => {
+  const loadPuzzle = React.useCallback(async (filename: string) => {
     setIsResolving(true);
     setActionError(null);
     try {
-      const r = await fetch(`/api/internal/test-puzzles?n=${n}`);
+      const r = await fetch(`/api/internal/test-puzzles?filename=${encodeURIComponent(filename)}`);
       if (!r.ok) throw new Error(((await r.json()) as { error?: string }).error ?? "Load failed");
       const { gameState: initialState } = await r.json() as { gameState: GameState };
 
@@ -538,7 +539,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
             id: globalThis.crypto.randomUUID(),
             currentGameState: initialState,
             gameStateHistory: [],
-            gameLog: [`Puzzle ${n} loaded.`],
+            gameLog: [`Puzzle loaded.`],
           },
           pending: null,
         } as EngineContext;
@@ -557,7 +558,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       }
 
       setGameState(initialState);
-      setGameLog([`Puzzle ${n} loaded.`]);
+      setGameLog([`Puzzle loaded.`]);
       setResolutionNeeded(null);
       setActionError(null);
       setHistoryLength(0);
@@ -589,26 +590,29 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       {showBuilderPanelOpen && showBuilderTools ? (
         <PuzzleBuilderPanel
           onClose={() => setShowBuilderPanelOpen(false)}
-          onSaved={(n) => {
+          onSaved={(_id) => {
             setShowBuilderPanelOpen(false);
           }}
         />
       ) : null}
       {showBuilderTools ? (
-        <div className="mb-3 flex items-start gap-4 rounded-xl border border-white/10 bg-black/30 px-4 py-3">
-          <LoadPuzzlePanel
-            onPuzzleLoaded={(n) => {
-              setSelectedPuzzleN(n);
-              void loadPuzzle(n);
-            }}
-          />
+        <div className="mb-3 flex flex-col gap-3">
           <button
             type="button"
             onClick={() => setShowBuilderPanelOpen(true)}
-            className="shrink-0 self-start rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500/25"
+            className="self-start rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500/25"
           >
             Build New Puzzle
           </button>
+          <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+            <LoadPuzzlePanel
+              onPuzzleLoaded={(filename, meta) => {
+                setSelectedPuzzleFilename(filename);
+                setPuzzleName(meta.name);
+                void loadPuzzle(filename);
+              }}
+            />
+          </div>
         </div>
       ) : null}
       <p className="mt-4 text-center text-sm text-white/60">Select a puzzle to get started.</p>
@@ -664,18 +668,19 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     {showBuilderPanelOpen && showBuilderTools ? (
       <PuzzleBuilderPanel
         onClose={() => setShowBuilderPanelOpen(false)}
-        onSaved={(n) => {
+        onSaved={(_id) => {
           setShowBuilderPanelOpen(false);
-          setActionError(`Puzzle ${n} saved.`);
+          setActionError(`Puzzle saved.`);
         }}
       />
     ) : null}
     {showBuilderTools && !gameState ? (
       <div className="mb-3 flex items-start gap-4 rounded-xl border border-white/10 bg-black/30 px-4 py-3">
         <LoadPuzzlePanel
-          onPuzzleLoaded={(n) => {
-            setSelectedPuzzleN(n);
-            void loadPuzzle(n);
+          onPuzzleLoaded={(filename, meta) => {
+            setSelectedPuzzleFilename(filename);
+            setPuzzleName(meta.name);
+            void loadPuzzle(filename);
           }}
         />
         <button
@@ -689,15 +694,15 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     ) : null}
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/35 px-4 py-3 backdrop-blur-sm">
       <div>
-        <h1 className="text-2xl font-black uppercase tracking-[0.24em] text-white sm:text-3xl">Puzzle Mode</h1>
-        <p className="mt-1 text-xs text-white/65 sm:text-sm">Board-first tactical sandbox. Opponent already has initiative.</p>
+        <h1 className="text-2xl font-black uppercase tracking-[0.24em] text-white sm:text-3xl">{puzzleName ?? "Puzzle Mode"}</h1>
+        {!puzzleName ? <p className="mt-1 text-xs text-white/65 sm:text-sm">Board-first tactical sandbox. Opponent already has initiative.</p> : null}
       </div>
       {showClosePuzzleConfirm ? (
         <div className="flex items-center gap-2">
           <span className="text-xs text-white/70">Close puzzle?</span>
           <button
             type="button"
-            onClick={() => { setGameState(null); setShowClosePuzzleConfirm(false); setActionError(null); }}
+            onClick={() => { setGameState(null); setPuzzleName(null); setShowClosePuzzleConfirm(false); setActionError(null); }}
             className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-500/35"
           >OK</button>
           <button
@@ -733,7 +738,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
             <button type="button" onClick={handlePass} disabled={isResolving || isGameOver || !!resolutionNeeded} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass</button>
             <button type="button" onClick={handleClaimInitiative} disabled={isResolving || gameState.initiativeClaimed || isGameOver || !!resolutionNeeded} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Initiative</button>
             <div className="h-3" />
-            <button type="button" onClick={() => { if (selectedPuzzleN !== null) loadPuzzle(selectedPuzzleN); }} disabled={isResolving || selectedPuzzleN === null} className="rounded-lg border border-white/15 bg-rose-500/20 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40">Reset</button>
+            <button type="button" onClick={() => { if (selectedPuzzleFilename !== null) void loadPuzzle(selectedPuzzleFilename); }} disabled={isResolving || selectedPuzzleFilename === null} className="rounded-lg border border-white/15 bg-rose-500/20 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40">Reset</button>
           </div>
           <div className={`mt-1 text-[10px] ${lastActionMs !== null && lastActionMs > 600 ? "text-amber-200" : "text-white/55"}`}>
             {isResolving ? "Resolving..." : lastActionMs !== null ? `Last action ${lastActionMs} ms` : "Last action --"}
@@ -1385,7 +1390,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
           <button type="button" onClick={handlePass} disabled={isResolving || isGameOver || !!resolutionNeeded} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass to Regroup Draw</button>
           <button type="button" onClick={handleClaimInitiative} disabled={isResolving || gameState.initiativeClaimed || isGameOver || !!resolutionNeeded} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Take Initiative</button>
           <div className="hidden sm:block h-3" />
-          <button type="button" onClick={() => { if (selectedPuzzleN !== null) loadPuzzle(selectedPuzzleN); }} disabled={isResolving || selectedPuzzleN === null} className="rounded-xl border border-white/15 bg-rose-500/20 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40">Reset Puzzle</button>
+          <button type="button" onClick={() => { if (selectedPuzzleFilename !== null) void loadPuzzle(selectedPuzzleFilename); }} disabled={isResolving || selectedPuzzleFilename === null} className="rounded-xl border border-white/15 bg-rose-500/20 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40">Reset Puzzle</button>
         </div>
         <div className={`mt-1 text-xs ${lastActionMs !== null && lastActionMs > 600 ? "text-amber-200" : "text-white/55"}`}>
           {isResolving ? "Resolving..." : lastActionMs !== null ? `Last action ${lastActionMs} ms` : "Last action --"}

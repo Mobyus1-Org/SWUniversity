@@ -564,7 +564,7 @@ function BoardPreview({ state, cards }: { state: BuilderState; cards: CardCatalo
 
 type Props = {
   onClose: () => void;
-  onSaved: (n: number) => void;
+  onSaved: (id: string) => void;
 };
 
 export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
@@ -596,9 +596,9 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
     })
       .then(async (r) => {
         if (!r.ok) throw new Error((await r.json()).error ?? "Save failed");
-        return r.json() as Promise<{ n: number }>;
+        return r.json() as Promise<{ id: string }>;
       })
-      .then(({ n }) => onSaved(n))
+      .then(({ id }) => onSaved(id))
       .catch((err: unknown) =>
         setSaveError(err instanceof Error ? err.message : "Save failed."),
       )
