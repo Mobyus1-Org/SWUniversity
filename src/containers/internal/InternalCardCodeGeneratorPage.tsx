@@ -51,7 +51,7 @@ export default function InternalCardCodeGeneratorPage() {
       const payload = (await response.json()) as CombinedGenerationResult | { error?: string };
       if (!response.ok) {
         setGeneratorResult(null);
-        setGeneratorError(payload.error ?? "Unable to generate SWU cards and images.");
+        setGeneratorError(("error" in payload ? payload.error : undefined) ?? "Unable to generate SWU cards and images.");
         return;
       }
 
