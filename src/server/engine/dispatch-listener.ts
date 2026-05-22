@@ -45,7 +45,7 @@ import type {
 } from "@/lib/engine/message-types";
 import { effectiveSmuggleCost } from "@/server/engine/card-playability";
 import type { Game, GameState, PlayerState } from "@/lib/engine/game";
-import type { CardInPlay, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import type {
   AbilityTargetPending,
   AttackTargetPending,
@@ -54,6 +54,7 @@ import type {
   CaptureTargetPending,
   DefeatCopyPending,
   DiscardFromHandPending,
+  EclPlayPending,
   EngineContext,
   ExploitOptionPending,
   ExploitTargetPending,
@@ -852,6 +853,8 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         type: "Target",
         fromPlayIds: pending.eligibleVehicles,
       } satisfies NeedsTarget;
+    case "ecl-play":
+      return { type: "Target", fromZones: ["Hand"] } satisfies NeedsTarget;
     default: throw new Error(`Unknown pending resolution type: ${pending.type}`);
   }
 }
@@ -880,6 +883,9 @@ function completePlayCard(
   log: string[],
   cardId: string,
   player: PlayerId,
+  opts?: {
+    injectEffect?: Omit<CurrentEffect, "targetPlayId">;
+  },
 ): HandlerResult {
   if (CardType(cardId) === "Unit") {
     const unit = addToArena(game, player, cardId, false);
@@ -901,6 +907,9 @@ function completePlayCard(
 
     if (HasShielded(cardId, unit.playId, player)) {
       game.triggerBag.push({ triggerType: "shielded", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
+    }
+    if (opts?.injectEffect) {
+      game.currentEffects.push({ ...opts.injectEffect, targetPlayId: unit.playId });
     }
     const hasAmbush = HasAmbush(cardId, unit.playId, "Hand", player);
     if (hasAmbush) {
@@ -1158,7 +1167,46 @@ function handleUseAbility(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
+  // Base epic action
+  const base = ps(game, player).base;
+  if (base.cardId === data.cardId) {
+    return handleBaseEpicAction(game, log, player);
+  }
+
   return { response: invalidResponse("use-ability requires a leader cardId or a unit playId."), pending: null, stateChanged: false };
+}
+
+function handleBaseEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
+  const base = ps(game, player).base;
+  if (base.epicActionUsed)
+    return { response: invalidResponse("Base epic action already used this round."), pending: null, stateChanged: false };
+  if (game.gamePhase !== "ActionPhase")
+    return { response: invalidResponse("Base epic action can only be used during the action phase."), pending: null, stateChanged: false };
+
+  switch (base.cardId) {
+    case "SOR_022": return resolveEclEpicAction(game, log, player);
+    default: return { response: invalidResponse("This base has no implemented epic action."), pending: null, stateChanged: false };
+  }
+}
+
+function resolveEclEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
+  ps(game, player).base.epicActionUsed = true;
+
+  const readyCount = ps(game, player).resources.filter(r => r.ready).length;
+  const eligible = ps(game, player).hand.filter(c =>
+    CardType(c.cardId) === "Unit" &&
+    (CardCost(c.cardId) ?? 0) <= 6 &&
+    playCost(game, player, c.cardId) <= readyCount
+  );
+
+  if (eligible.length === 0) {
+    log.push(`Player ${player} used Energy Conversion Lab — no eligible units to play.`);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  log.push(`Player ${player} used Energy Conversion Lab.`);
+  const pending: EclPlayPending = { type: "ecl-play", player, continuation: null };
+  return { response: resolutionResponse(pendingToResolution(pending, game)), pending, stateChanged: false };
 }
 
 function handleChooseTarget(
@@ -1568,6 +1616,31 @@ function handleChooseTarget(
     const bagL3 = drainTriggerBag(game, log);
     if (bagL3) return { response: resolutionResponse(pendingToResolution(bagL3, game)), pending: bagL3, stateChanged: true };
     return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending.type === "ecl-play") {
+    const idx = data.targetIndices?.[0];
+    if (idx == null)
+      return { response: invalidResponse("Choose a card from hand to play."), pending, stateChanged: false };
+    const hand = ps(game, pending.player).hand;
+    if (idx < 0 || idx >= hand.length)
+      return { response: invalidResponse("Invalid hand index."), pending, stateChanged: false };
+    const cardId = hand[idx].cardId;
+    if (CardType(cardId) !== "Unit")
+      return { response: invalidResponse("ECL: chosen card is not a Unit."), pending, stateChanged: false };
+    if ((CardCost(cardId) ?? 0) > 6)
+      return { response: invalidResponse("ECL: chosen unit costs more than 6."), pending, stateChanged: false };
+    const cost = playCost(game, pending.player, cardId);
+    const readyCount = ps(game, pending.player).resources.filter(r => r.ready).length;
+    if (readyCount < cost)
+      return { response: invalidResponse("ECL: not enough resources to play this unit."), pending, stateChanged: false };
+
+    exhaustResources(game, pending.player, cost);
+    hand.splice(idx, 1);
+    log.push(`Player ${pending.player} played ${CardTitle(cardId) ?? cardId} via Energy Conversion Lab.`);
+    return completePlayCard(game, log, cardId, pending.player, {
+      injectEffect: { cardId: "SOR_022", duration: "Phase", affectedPlayer: pending.player },
+    });
   }
 
   return { response: invalidResponse(`choose-target is not valid while pending: ${pending.type}.`), pending, stateChanged: false };

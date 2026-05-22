@@ -12,7 +12,7 @@ const puzzleSchema = new Schema<PuzzleDocument>(
   {
     name: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
-    difficulty: { type: Number, required: true, min: 1, max: 5 },
+    difficulty: { type: Number, required: true, min: 1.0, max: 5.0, set: (v: number) => parseFloat(String(v)) },
     initialGamestate: { type: Schema.Types.Mixed, required: true },
   },
   { timestamps: true },

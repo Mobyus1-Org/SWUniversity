@@ -219,6 +219,12 @@ export interface L337ReplaceTargetPending {
   continuation: PendingResolution | null;
 }
 
+export interface EclPlayPending {
+  type: "ecl-play";
+  player: PlayerId;
+  continuation: PendingResolution | null;
+}
+
 export type PendingResolution =
   | AttackTargetPending
   | AbilityOptionPending
@@ -242,7 +248,8 @@ export type PendingResolution =
   | L337ReplaceTargetPending
   | WhenDeployedPending
   | PayToMoveGroundPending
-  | TriggerOrderPending;
+  | TriggerOrderPending
+  | EclPlayPending;
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch
