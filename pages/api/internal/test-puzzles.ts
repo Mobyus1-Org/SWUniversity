@@ -1,16 +1,13 @@
-import path from "node:path";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 import { methodNotAllowed } from "@/server/auth/http";
 import { requireAdminApi } from "@/server/auth/guards";
 import { hydratePuzzleGame } from "@/server/puzzle/adapters/puzzle-runtime";
-import { FilesystemPuzzleRepository } from "@/server/puzzle/adapters/filesystem-puzzle-repository";
+import { MongoDBPuzzleRepository } from "@/server/puzzle/adapters/mongodb-puzzle-repository";
 import type { PuzzleData } from "@/server/puzzle/puzzle-repository";
 import type { GameState } from "@/lib/engine/game";
 
-const repo = new FilesystemPuzzleRepository(
-  path.join(process.cwd(), "src/server/_test-puzzles"),
-);
+const repo = new MongoDBPuzzleRepository();
 
 function isDevOrAdmin(): boolean {
   return process.env.NODE_ENV === "development";
