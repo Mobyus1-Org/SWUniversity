@@ -150,4 +150,14 @@ export class GameTestAdapter {
     const playId = pState.resources[resourceIndex].playId;
     return this.dispatchAsync(player, "play-smuggle", { playId });
   }
+
+  async choosePlotCardAsync(player: PlayerId, resourceIndex: number): Promise<GameTestAdapter> {
+    const pState = player === 1 ? this.state.player1 : this.state.player2;
+    const targetPlayId = pState.resources[resourceIndex].playId;
+    return this.dispatchAsync(player, "choose-target", { targetPlayIds: [targetPlayId] });
+  }
+
+  async passPlotAsync(player: PlayerId): Promise<GameTestAdapter> {
+    return this.dispatchAsync(player, "choose-target", { targetPlayIds: [] });
+  }
 }

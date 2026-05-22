@@ -35,6 +35,7 @@ import type {
   GameDispatch,
   InitiateAttackDispatchData,
   NeedsOption,
+  NeedsPlot,
   NeedsTarget,
   PlayCardDispatchData,
   PlaySmuggleDispatchData,
@@ -58,8 +59,11 @@ import type {
   ExploitTargetPending,
   PendingResolution,
   PilotingOptionPending,
+  PlotOrderPending,
+  PlotWindowPending,
   ResolveAttackPending,
   UpgradeTargetPending,
+  WhenDeployedPending,
 } from "@/server/engine/pending-resolution";
 import { collectBounties, drawCardForPlayer } from "@/server/engine/actions/bounty";
 import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
@@ -77,6 +81,7 @@ import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/e
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { PilotingEligibleVehicles } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dictionaries.ts/leader-pilot-deploy";
+import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 
 // ---------------------------------------------------------------------------
@@ -717,6 +722,20 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
           : `Play ${CardTitle(pending.cardId)} as a unit or as a pilot upgrade on a Vehicle?`,
         options: pending.source === "leader" ? ["Deploy as Unit", "Deploy as Pilot"] : ["Play as Unit", "Play as Pilot"],
       } satisfies NeedsOption;
+    case "plot-order":
+      return {
+        type: "Option",
+        helperText: `Use Plot before or after When Deployed?`,
+        options: ["Plot First", "When Deployed First"],
+      } satisfies NeedsOption;
+    case "plot-window":
+      return {
+        type: "Plot",
+        fromPlayIds: pending.plotResourcePlayIds,
+      } satisfies NeedsPlot;
+    case "when-deployed":
+      // Auto-resolves inline; should not normally be sent to client
+      return { type: "Option", helperText: "Resolving When Deployed...", options: ["Continue"] } satisfies NeedsOption;
     default: throw new Error(`Unknown pending resolution type: ${pending.type}`);
   }
 }
@@ -1094,6 +1113,69 @@ function handleChooseTarget(
     }
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
+  if (pending.type === "plot-window") {
+    const chosenPlayId = data.targetPlayIds?.[0];
+    if (!chosenPlayId) {
+      // Player passes on Plot
+      if (pending.fireWhenDeployedAfter) resolveWhenDeployed(pending.leaderCardId, pending.player, log);
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+    const playerState = ps(game, pending.player);
+    const resourceIdx = playerState.resources.findIndex(r => r.playId === chosenPlayId);
+    if (resourceIdx === -1)
+      return { response: invalidResponse("Plot resource not found."), pending, stateChanged: false };
+    const resource = playerState.resources[resourceIdx];
+    if (!HasPlot(resource.cardId))
+      return { response: invalidResponse("Chosen card is not a Plot card."), pending, stateChanged: false };
+    if (!canAfford(game, pending.player, resource.cardId))
+      return { response: invalidResponse("Not enough resources to play this Plot card."), pending, stateChanged: false };
+
+    exhaustResources(game, pending.player, playCost(game, pending.player, resource.cardId));
+    playerState.resources.splice(resourceIdx, 1);
+    if (playerState.deck.length > 0) {
+      const topCard = playerState.deck.shift()!;
+      playerState.resources.push({ cardId: topCard.cardId, playId: nextPlayId(game), owner: pending.player, controller: pending.player, ready: false, stolen: false });
+    }
+    log.push(`Player ${pending.player} played ${CardTitle(resource.cardId)} from resources via Plot.`);
+    const newUnit = addToArena(game, pending.player, resource.cardId, false);
+
+    // CR 19d: only cards already in resources when the leader deployed may be played.
+    // The deck replacement card cannot be played during the same deploy action.
+    // Filter the original plotResourcePlayIds list (never re-scan all resources).
+    const remainingPlotPlayIds = pending.plotResourcePlayIds.filter(pid =>
+      playerState.resources.some(r => r.playId === pid && canAfford(game, pending.player, r.cardId)));
+    let nextCont: PendingResolution | null;
+    if (remainingPlotPlayIds.length > 0) {
+      nextCont = {
+        type: "plot-window",
+        player: pending.player,
+        leaderCardId: pending.leaderCardId,
+        plotResourcePlayIds: remainingPlotPlayIds,
+        fireWhenDeployedAfter: pending.fireWhenDeployedAfter,
+      } satisfies PlotWindowPending;
+    } else if (pending.fireWhenDeployedAfter) {
+      nextCont = { type: "when-deployed", leaderCardId: pending.leaderCardId, player: pending.player };
+    } else {
+      nextCont = null;
+    }
+
+    const whenPlayedPending = resolveWhenPlayed(resource.cardId, pending.player, newUnit.playId);
+    if (whenPlayedPending) {
+      const chained = injectContinuation(whenPlayedPending, nextCont);
+      return { response: resolutionResponse(pendingToResolution(chained, game)), pending: chained, stateChanged: true };
+    }
+    // No whenPlayed: advance to next continuation directly
+    if (nextCont?.type === "plot-window") {
+      return { response: resolutionResponse(pendingToResolution(nextCont, game)), pending: nextCont, stateChanged: true };
+    }
+    if (nextCont?.type === "when-deployed") {
+      resolveWhenDeployed(nextCont.leaderCardId, nextCont.player, log);
+    }
+    updateDefeatedPlayers(game);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
   if (pending.type === "ability-target") {
     const chosen = data.targetPlayIds?.[0];
     const chosenBase = data.targetZones?.includes("Base") ?? false;
@@ -1108,6 +1190,14 @@ function handleChooseTarget(
 
     if (rawPending?.type === "resolve-attack") {
       return handleResolveAttack(game, log, rawPending);
+    }
+    if (rawPending?.type === "when-deployed") {
+      resolveWhenDeployed(rawPending.leaderCardId, rawPending.player, log);
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+    if (rawPending?.type === "plot-window") {
+      return { response: resolutionResponse(pendingToResolution(rawPending, game)), pending: rawPending, stateChanged: true };
     }
     if (rawPending) {
       return { response: resolutionResponse(pendingToResolution(rawPending, game)), pending: rawPending, stateChanged: false };
@@ -1531,6 +1621,31 @@ function handleChooseOption(
     }
   }
 
+  if (pending?.type === "plot-order") {
+    if (option === "Plot First") {
+      const plotPending: PlotWindowPending = {
+        type: "plot-window",
+        player: pending.player,
+        leaderCardId: pending.leaderCardId,
+        plotResourcePlayIds: getAffordablePlotPlayIds(game, pending.player),
+        fireWhenDeployedAfter: true,
+      };
+      return { response: resolutionResponse(pendingToResolution(plotPending, game)), pending: plotPending, stateChanged: false };
+    }
+    if (option === "When Deployed First") {
+      resolveWhenDeployed(pending.leaderCardId, pending.player, log);
+      updateDefeatedPlayers(game);
+      const plotPending: PlotWindowPending = {
+        type: "plot-window",
+        player: pending.player,
+        leaderCardId: pending.leaderCardId,
+        plotResourcePlayIds: getAffordablePlotPlayIds(game, pending.player),
+        fireWhenDeployedAfter: false,
+      };
+      return { response: resolutionResponse(pendingToResolution(plotPending, game)), pending: plotPending, stateChanged: true };
+    }
+  }
+
   return { response: invalidResponse("No pending option decision."), pending: null, stateChanged: false };
 }
 
@@ -1622,6 +1737,32 @@ function advanceTurn(game: GameState, log: string[], wasPass: boolean): void {
 // Leader helpers
 // ---------------------------------------------------------------------------
 
+/** Returns playIds of Plot-eligible resources the player can currently afford (aspect penalties included). */
+function getAffordablePlotPlayIds(game: GameState, player: PlayerId): string[] {
+  return ps(game, player).resources
+    .filter(r => HasPlot(r.cardId) && canAfford(game, player, r.cardId))
+    .map(r => r.playId);
+}
+
+function leaderHasWhenDeployed(cardId: string): boolean {
+  switch (cardId) {
+    case "SHD_002": return true;
+    default: return false;
+  }
+}
+
+function injectContinuation(
+  p: PendingResolution,
+  cont: PendingResolution | null,
+): PendingResolution {
+  if (cont === null) return p;
+  if ("continuation" in p && p.continuation !== undefined) {
+    if (p.continuation === null) return { ...p, continuation: cont } as PendingResolution;
+    return { ...p, continuation: injectContinuation(p.continuation, cont) } as PendingResolution;
+  }
+  return p;
+}
+
 function deployLeader(game: GameState, log: string[], player: PlayerId): HandlerResult {
   const leader = ps(game, player).leader;
   if (leader.deployed)
@@ -1658,6 +1799,32 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
   const unit = addToArena(game, player, leader.cardId, true);
   leader.deployedPlayId = unit.playId;
   log.push(`Player ${player} deployed ${CardTitle(leader.cardId) ?? leader.cardId}.`);
+
+  const plotPlayIds = getAffordablePlotPlayIds(game, player);
+  const hasWD = leaderHasWhenDeployed(leader.cardId);
+
+  if (plotPlayIds.length > 0 && hasWD) {
+    const orderPending: PlotOrderPending = {
+      type: "plot-order",
+      player,
+      leaderCardId: leader.cardId,
+      plotResourcePlayIds: plotPlayIds,
+    };
+    return { response: resolutionResponse(pendingToResolution(orderPending, game)), pending: orderPending, stateChanged: true };
+  }
+
+  if (plotPlayIds.length > 0) {
+    const plotPending: PlotWindowPending = {
+      type: "plot-window",
+      player,
+      leaderCardId: leader.cardId,
+      plotResourcePlayIds: plotPlayIds,
+      fireWhenDeployedAfter: false,
+    };
+    updateDefeatedPlayers(game);
+    return { response: resolutionResponse(pendingToResolution(plotPending, game)), pending: plotPending, stateChanged: true };
+  }
+
   const whenDeployedPending = resolveWhenDeployed(leader.cardId, player, log);
   updateDefeatedPlayers(game);
   if (whenDeployedPending) {
@@ -1791,6 +1958,17 @@ function applyAbilityEffect(
         game.gameLog.push(`${CardTitle(pending.cardId)} dealt ${handSize} damage to ${CardTitle(target.cardId) ?? target.cardId}.`);
       }
       break;
+    }
+    case "SEC_034": { // Cad Bane — defeat a unit with ≤2 remaining HP
+      if (!targetPlayId) break;
+      const target034 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!target034) break;
+      const target034Unit = Unit.FromInterface(target034);
+      if (target034Unit.CurrentHP() > 2) break;
+      const defeatPend = defeatUnit(game.currentGameState, game.gameLog, target034);
+      game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target034.cardId)}.`);
+      if (defeatPend) return injectContinuation(defeatPend, pending.continuation);
+      return pending.continuation;
     }
     default:
       game.gameLog.push(`Ability effect for ${CardTitle(pending.cardId) ?? pending.cardId} applied.`);

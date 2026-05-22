@@ -31,7 +31,14 @@ export interface NeedsTrigger {
   fromCardIds: string[];
 }
 
-export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger;
+/** Plot window: player chooses which Plot card to play from resources, or passes. */
+export interface NeedsPlot {
+  type: "Plot";
+  /** PlayIds of Plot-eligible resources the player may choose from. */
+  fromPlayIds: string[];
+}
+
+export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot;
 
 // ---------------------------------------------------------------------------
 // Inbound: dispatch types and data payloads

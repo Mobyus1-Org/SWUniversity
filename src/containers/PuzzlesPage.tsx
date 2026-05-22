@@ -647,6 +647,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[opponent.discard.length - 1] : null;
   const latestPlayerDiscard = player.discard.length > 0 ? player.discard[player.discard.length - 1] : null;
   const hasPrompt = resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "Trigger" || resolutionNeeded?.type === "Player";
+  const hasPlotPrompt = resolutionNeeded?.type === "Plot";
   const getUnitGlowClass = (playId: string) =>
     isMultiSelectTarget && selectedTargetPlayIds.includes(playId)
       ? "ring-2 ring-amber-400/80 shadow-[0_0_14px_rgba(251,191,36,0.5)]"
@@ -1336,6 +1337,44 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
             Cancel
           </button>
         </div>
+      </div>
+    </div> : null}
+
+    {hasPlotPrompt && resolutionNeeded?.type === "Plot" ? <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="rounded-xl border border-amber-400/30 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl">
+        <h3 className="mb-1 text-sm font-semibold uppercase tracking-[0.2em] text-amber-200">Plot</h3>
+        <p className="mb-4 text-xs text-white/60">Choose a Plot card to play from your resources, or pass.</p>
+        <div className="mb-4 flex flex-wrap gap-3 justify-center">
+          {resolutionNeeded.fromPlayIds.map((playId) => {
+            const resource = player.resources.find(r => r.playId === playId);
+            if (!resource) return null;
+            return <button
+              key={playId}
+              type="button"
+              disabled={isResolving}
+              onClick={() => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [playId] }))}
+              className="w-28 text-left"
+              onMouseEnter={() => handlePreviewStart({ imageId: resource.cardId, cardId: resource.cardId, label: CardTitle(resource.cardId) })}
+              onMouseLeave={handlePreviewEnd}
+            >
+              <CardVisual
+                cardId={resource.cardId}
+                selectable={!isResolving}
+                onPreviewStart={handlePreviewStart}
+                onPreviewEnd={handlePreviewEnd}
+                compact
+              />
+            </button>;
+          })}
+        </div>
+        <button
+          type="button"
+          disabled={isResolving}
+          onClick={() => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [] }))}
+          className="w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Pass (skip Plot)
+        </button>
       </div>
     </div> : null}
 

@@ -251,6 +251,9 @@ export const Cards = {
     twi: {
       infiltratingDemolisher: "TWI_182",
     },
+    sec: {
+      cadBane: "SEC_034",
+    },
   },
   upgrades: {
     token: {

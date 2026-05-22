@@ -136,6 +136,30 @@ export interface ExploitTargetPending {
   fromPlayIds: string[];
 }
 
+/** Plot mechanic step 1: ask whether to use Plot before or after When Deployed. */
+export interface PlotOrderPending {
+  type: "plot-order";
+  player: PlayerId;
+  leaderCardId: string;
+  plotResourcePlayIds: string[];
+}
+
+/** Plot mechanic step 2: player selects which Plot card in resources to play (or passes with empty targetPlayIds). */
+export interface PlotWindowPending {
+  type: "plot-window";
+  player: PlayerId;
+  leaderCardId: string;
+  plotResourcePlayIds: string[];
+  fireWhenDeployedAfter: boolean;
+}
+
+/** Auto-resolving continuation that fires the leader's When Deployed effect after Plot window closes. */
+export interface WhenDeployedPending {
+  type: "when-deployed";
+  leaderCardId: string;
+  player: PlayerId;
+}
+
 /** Prompt when a Piloting card can be played either as a unit or as a pilot upgrade. */
 export interface PilotingOptionPending {
   type: "piloting-option";
@@ -166,7 +190,10 @@ export type PendingResolution =
   | BountyShieldTargetPending
   | ExploitOptionPending
   | ExploitTargetPending
-  | PilotingOptionPending;
+  | PilotingOptionPending
+  | PlotOrderPending
+  | PlotWindowPending
+  | WhenDeployedPending;
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch

@@ -1,6 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { GetGame, GetUnitsForPlayer, TraitContains } from "@/server/engine/core-functions";
 import { PendingResolution } from "@/server/engine/pending-resolution";
+import { Unit } from "@/server/engine/unit";
 
 /**
  * When Played abilities for unit cards.
@@ -54,6 +55,17 @@ export function resolveWhenPlayed(
         },
         continuation: null,
       };
+    case "SEC_034": { // Cad Bane — "When Played: You may defeat a unit with 2 or less remaining HP."
+      const allUnits = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      const eligible = allUnits.filter(u => Unit.FromInterface(u).CurrentHP() <= 2);
+      if (eligible.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SEC_034",
+        fromPlayIds: eligible.map(u => u.playId),
+        continuation: null,
+      };
+    }
     case "SHD_160": //Reckless Gunslinger "When Played: Deal 1 damage to each base."
       // This is a simple effect that doesn't require any player input, so we can resolve it immediately without returning a PendingResolution.
       return null;
