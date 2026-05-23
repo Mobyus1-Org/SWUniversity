@@ -1319,6 +1319,10 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       </button>
     </div> : null}
 
+    {resolutionNeeded && !hasPrompt ? <div className={`fixed left-1/2 z-40 w-[min(90vw,42rem)] -translate-x-1/2 rounded-xl border border-white/15 bg-black/80 px-5 py-3 text-center text-sm text-white/90 shadow-2xl backdrop-blur-sm transition-all ${isMultiSelectTarget ? "bottom-20" : "bottom-5"}`}>
+      {formatStatus(status, resolutionNeeded)}
+    </div> : null}
+
     {hasPrompt ? <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">

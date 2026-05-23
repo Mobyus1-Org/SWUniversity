@@ -136,6 +136,17 @@ function allUnits(game: GameState): Unit[] {
   ] as Unit[];
 }
 
+function sweepDeadUnits(gs: GameState, log: string[], continuation: PendingResolution | null): PendingResolution | null {
+  let pending = continuation;
+  for (const unit of allUnits(gs)) {
+    if (Unit.FromInterface(unit).CurrentHP() <= 0) {
+      const defeatPend = defeatUnit(gs, log, unit);
+      if (defeatPend) pending = injectContinuation(defeatPend, pending);
+    }
+  }
+  return pending;
+}
+
 function unitByPlayId(game: GameState, playId: string): Unit | null {
   return allUnits(game).find((u) => u.playId === playId) ?? null;
 }
@@ -2538,11 +2549,7 @@ function applyAbilityEffect(
       const power127 = Unit.FromInterface(attacker127).CurrentPower();
       target127.damage += power127;
       game.gameLog.push(`Strike True: ${CardTitle(attacker127.cardId)} dealt ${power127} damage to ${CardTitle(target127.cardId)}.`);
-      if (Unit.FromInterface(target127).CurrentHP() <= 0) {
-        const defeatPend127 = defeatUnit(game.currentGameState, game.gameLog, target127);
-        if (defeatPend127) return injectContinuation(defeatPend127, pending.continuation);
-      }
-      return pending.continuation;
+      break;
     }
     case "SOR_251": { // Confiscate — defeat an upgrade
       if (!targetPlayId) break;
@@ -2650,7 +2657,7 @@ function applyAbilityEffect(
       game.gameLog.push(`Ability effect for ${CardTitle(pending.cardId) ?? pending.cardId} applied.`);
       break;
   }
-  return pending.continuation;
+  return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
 }
 
 // ---------------------------------------------------------------------------
