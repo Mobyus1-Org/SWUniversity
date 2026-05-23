@@ -162,12 +162,7 @@ function CardVisual({
           />
           {exhausted ? <div className="pointer-events-none absolute inset-0 bg-black/35" /> : null}
         </div>
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-end p-2 text-xs font-semibold uppercase tracking-[0.2em] text-white">
-          <span className="flex items-start gap-1">
-            {sentinel ? <img src="/assets/tokens/sentinel.png" alt="Sentinel bodyguard" className="h-8 w-8 rounded-sm border border-white/20 bg-black/50" /> : null}
-          </span>
-        </div>
-        {typeof damage === "number" && damage > 0 ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          {typeof damage === "number" && damage > 0 ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200/30 bg-red-800/55 text-xs font-black text-white shadow-[0_0_12px_rgba(127,29,29,0.4)]">
             {damage}
           </span>
@@ -178,6 +173,9 @@ function CardVisual({
           </span>
         </div> : null}
       </div>
+      {sentinel ? <div className="pointer-events-none absolute top-0 right-0 z-10">
+        <img src="/assets/tokens/sentinel.png" alt="Sentinel" className="h-[29px] w-[29px]" />
+      </div> : null}
       {epicUsed ? <div className="pointer-events-none absolute -bottom-1 right-1.5 z-10">
         <img src="/assets/tokens/epic-used.png" alt="Epic action used" className="h-[26px] w-[26px] rotate-90" />
       </div> : null}
@@ -319,6 +317,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   // React state
   // ---------------------------------------------------------------------------
   const [gameState, setGameState] = React.useState<GameState | null>(null);
+  const [sentinelPlayIds, setSentinelPlayIds] = React.useState<string[]>([]);
   const [gameLog, setGameLog] = React.useState<string[]>([]);
   const [resolutionNeeded, setResolutionNeeded] = React.useState<ResolutionRequest | null>(null);
   const [isResolving, setIsResolving] = React.useState(false);
@@ -397,6 +396,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       setResolutionNeeded(payload.response.resolutionNeeded ?? null);
       // Always update from currentGameState so UI reflects card placement during pending resolutions
       setGameState(payload.currentGameState ?? payload.response.newGameState ?? null);
+      if (payload.response.sentinelPlayIds !== undefined) setSentinelPlayIds(payload.response.sentinelPlayIds);
       setGameLog(payload.gameLog);
       setHistoryLength(payload.historyLength);
       if (payload.response.invalidAction) {
@@ -520,11 +520,13 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
         gameState: GameState;
         gameLog: string[];
         historyLength: number;
+        sentinelPlayIds: string[];
         context?: EngineContext;
       };
 
       if (payload.context) roundTripCtxRef.current = payload.context;
       setGameState(payload.gameState);
+      setSentinelPlayIds(payload.sentinelPlayIds ?? []);
       setGameLog(payload.gameLog);
       setHistoryLength(payload.historyLength);
       setResolutionNeeded(null);
@@ -545,7 +547,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     try {
       const r = await fetch(`/api/puzzles?id=${encodeURIComponent(filename)}`);
       if (!r.ok) throw new Error(((await r.json()) as { error?: string }).error ?? "Load failed");
-      const { gameState: initialState } = await r.json() as { gameState: GameState };
+      const { gameState: initialState, sentinelPlayIds: initialSentinelIds } = await r.json() as { gameState: GameState; sentinelPlayIds: string[] };
 
       if (USE_HTTP_TRANSPORT) {
         // Round-trip mode: seed the initial context locally; no server registration needed
@@ -573,6 +575,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       }
 
       setGameState(initialState);
+      setSentinelPlayIds(initialSentinelIds ?? []);
       setGameLog([`Puzzle loaded.`]);
       setResolutionNeeded(null);
       setActionError(null);
@@ -655,7 +658,6 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     (player.leader.ready || !player.leader.epicActionUsed);
   const uiCanClickBase = !resolutionNeeded && !isGameOver &&
     BASES_WITH_EPIC_ACTION.has(player.base.cardId) && !player.base.epicActionUsed;
-  const sentinelPlayIds: string[] = [];
   const selectableHandIndices: number[] = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Hand")
     ? (resolutionNeeded.fromIndices ?? player.hand.map((_, i) => i))
     : !resolutionNeeded && !isGameOver
@@ -1030,7 +1032,6 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     square
                     centerDamageBadge={player.base.damage}
                     epicUsed={player.base.epicActionUsed}
-                    footer={uiCanClickBase ? <div className="text-center text-xs text-white/80">Epic Action</div> : undefined}
                   /></div>
                 </div>
               </div>
@@ -1140,7 +1141,6 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     square
                     centerDamageBadge={player.base.damage}
                     epicUsed={player.base.epicActionUsed}
-                    footer={uiCanClickBase ? <div className="text-center text-xs text-white/80">Epic Action</div> : undefined}
                   /></div>
                 </div>
                 <div className="hidden xl:space-y-2 xl:block">
@@ -1154,7 +1154,6 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     cardScale90
                     centerDamageBadge={player.base.damage}
                     epicUsed={player.base.epicActionUsed}
-                    footer={uiCanClickBase ? <div className="text-center text-xs text-white/80">Epic Action</div> : undefined}
                   />
                   {!player.leader.deployed ? <CardVisual
                     cardId={player.leader.cardId}

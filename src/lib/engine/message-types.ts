@@ -143,4 +143,5 @@ export interface DispatchResponse {
   resolutionNeeded?: ResolutionRequest;
   invalidAction?: boolean;
   invalidReason?: string;
+  sentinelPlayIds?: string[];
 }

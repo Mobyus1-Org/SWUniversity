@@ -96,13 +96,23 @@ import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 // Helpers: hydration (plain objects → Unit class instances)
 // ---------------------------------------------------------------------------
 
-function hydrateGame(game: Game): void {
+export function hydrateGame(game: Game): void {
   const hydrate = (units: UnitInterface[]) => units.map((u) => Unit.FromInterface(u));
   const g = game.currentGameState;
   g.player1.groundArena = hydrate(g.player1.groundArena);
   g.player1.spaceArena = hydrate(g.player1.spaceArena);
   g.player2.groundArena = hydrate(g.player2.groundArena);
   g.player2.spaceArena = hydrate(g.player2.spaceArena);
+}
+
+export function computeSentinelPlayIds(gs: GameState): string[] {
+  const units = [
+    ...gs.player1.groundArena, ...gs.player1.spaceArena,
+    ...gs.player2.groundArena, ...gs.player2.spaceArena,
+  ];
+  return units
+    .filter(u => { try { return HasSentinel(u.cardId, u.playId, u.controller); } catch { return false; } })
+    .map(u => u.playId);
 }
 
 // ---------------------------------------------------------------------------
@@ -769,7 +779,7 @@ function invalidResponse(reason: string): DispatchResponse {
 }
 
 function stateResponse(game: GameState): DispatchResponse {
-  return { dispatchResponseId: randomUUID(), newGameState: game };
+  return { dispatchResponseId: randomUUID(), newGameState: game, sentinelPlayIds: computeSentinelPlayIds(game) };
 }
 
 function resolutionResponse(resolution: ResolutionRequest): DispatchResponse {

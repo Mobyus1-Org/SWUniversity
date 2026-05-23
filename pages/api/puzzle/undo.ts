@@ -14,8 +14,11 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 import { methodNotAllowed } from "@/server/auth/http";
 import { getContext, setContext } from "@/server/engine/game-store";
+import { SetGame } from "@/server/engine/core-functions";
+import { hydrateGame, computeSentinelPlayIds } from "@/server/engine/dispatch-listener";
 import type { EngineContext } from "@/server/engine/pending-resolution";
 import type { GameState } from "@/lib/engine/game";
+import type { Game } from "@/lib/engine/game";
 
 type RequestBody = {
   gameId?: string;
@@ -26,6 +29,7 @@ type ResponseBody = {
   gameState: GameState;
   gameLog: string[];
   historyLength: number;
+  sentinelPlayIds: string[];
   context?: EngineContext;
 };
 
@@ -75,10 +79,17 @@ export default function handler(
     setContext(gameId, newCtx);
   }
 
+  const tempGame: Game = structuredClone(newCtx.game);
+  hydrateGame(tempGame);
+  SetGame(tempGame);
+  const sentinelPlayIds = computeSentinelPlayIds(tempGame.currentGameState);
+  SetGame(null);
+
   const body: ResponseBody = {
     gameState: newCtx.game.currentGameState,
     gameLog: newCtx.game.gameLog,
     historyLength: newCtx.game.gameStateHistory.length,
+    sentinelPlayIds,
   };
 
   if (!serverManaged) {

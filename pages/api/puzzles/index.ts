@@ -4,13 +4,15 @@ import { methodNotAllowed } from "@/server/auth/http";
 import { requireAdminApi } from "@/server/auth/guards";
 import { hydratePuzzleGame } from "@/server/puzzle/adapters/puzzle-runtime";
 import { MongoDBPuzzleRepository } from "@/server/puzzle/adapters/mongodb-puzzle-repository";
+import { SetGame } from "@/server/engine/core-functions";
+import { hydrateGame, computeSentinelPlayIds } from "@/server/engine/dispatch-listener";
 import type { PuzzleData } from "@/server/puzzle/puzzle-repository";
-import type { GameState } from "@/lib/engine/game";
+import type { GameState, Game } from "@/lib/engine/game";
 
 const repo = new MongoDBPuzzleRepository();
 
 type ListResponse = { puzzles: PuzzleData[] };
-type LoadResponse = { gameState: GameState };
+type LoadResponse = { gameState: GameState; sentinelPlayIds: string[] };
 type ErrorResponse = { error: string };
 type ResponseBody = ListResponse | LoadResponse | PuzzleData | ErrorResponse;
 
@@ -25,7 +27,12 @@ export default async function handler(
       try {
         const raw = await repo.load(String(id));
         const gameState = hydratePuzzleGame(raw);
-        return response.status(200).json({ gameState });
+        const tempGame: Game = { id: "", currentGameState: structuredClone(gameState), gameStateHistory: [], gameLog: [] };
+        hydrateGame(tempGame);
+        SetGame(tempGame);
+        const sentinelPlayIds = computeSentinelPlayIds(tempGame.currentGameState);
+        SetGame(null);
+        return response.status(200).json({ gameState, sentinelPlayIds });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Not found.";
         return response.status(404).json({ error: msg });
