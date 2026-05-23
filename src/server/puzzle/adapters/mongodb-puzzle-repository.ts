@@ -17,7 +17,9 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
       description: doc.description ?? "",
       difficulty: doc.difficulty,
       initialGamestate: doc.initialGamestate as RawPuzzleGameState,
-    }));
+      deploy: doc.deploy
+    }))
+    .filter((p) => p.deploy || process.env.NODE_ENV === "development");
   }
 
   async load(id: string): Promise<RawPuzzleGameState> {

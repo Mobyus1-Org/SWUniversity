@@ -178,6 +178,30 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SOR_106": { // Attack Pattern Delta
+      const friendlies = GetUnitsForPlayer(player);
+      if (friendlies.length === 0) return null;
+      const allIds = friendlies.map(u => u.playId);
+      return {
+        type: "ability-target",
+        cardId: "SOR_106_3",
+        player,
+        fromPlayIds: allIds,
+        continuation: {
+          type: "ability-target",
+          cardId: "SOR_106_2",
+          player,
+          fromPlayIds: allIds, // stale — refreshed in applyAbilityEffect for SOR_106_3
+          continuation: {
+            type: "ability-target",
+            cardId: "SOR_106_1",
+            player,
+            fromPlayIds: allIds, // stale — refreshed in applyAbilityEffect for SOR_106_2
+            continuation: null,
+          },
+        },
+      };
+    }
     default:
       return null;
   }

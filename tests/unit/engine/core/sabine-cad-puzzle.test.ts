@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "../../game-test-adapter";
 
-import { sabineWrenCadBaneSimplePuzzleState } from "../_gamestates/simple";
+import { sabineWrenCadBaneSimplePuzzleState } from "../../_gamestates/puzzles";
 import { NeedsTarget } from "@/lib/engine/message-types";
 
 describe("Sabine Wren / Cad Bane Simple Puzzle", () => {

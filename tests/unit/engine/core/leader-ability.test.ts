@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "../../game-test-adapter";
-import { sabineWrenCadBaneSimplePuzzleState } from "../_gamestates/simple";
+import { sabineWrenCadBaneSimplePuzzleState } from "../../_gamestates/puzzles";
 
 describe("Simple Leader Test", () => {
   it("behaves correctly when using leader ability", async () => {

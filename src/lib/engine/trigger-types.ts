@@ -13,6 +13,7 @@ export type TriggerType =
   | "when-upgrade-detached"
   | "shielded"  // same timing window as when-played
   | "ambush"    // same timing window as when-played
+  | "leader-reaction"
 
 export interface TriggerEntry {
   triggerType: TriggerType;

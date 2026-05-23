@@ -21,7 +21,7 @@ describe("ECL Epic Action", () => {
     const enemyUnitPlayId = g.state.player2.groundArena[0].playId;
 
     // act
-    await g.useBaseEpicActionAsync(1);
+    await g.useBaseAbilityAsync(1);
     await g.chooseCardFromHandAsync(1, 0);
     await g.chooseYesAsync(1);
     await g.dispatchAsync(1, "choose-target", { targetPlayIds: [enemyUnitPlayId] });
@@ -46,7 +46,7 @@ describe("ECL Epic Action", () => {
     const enemyUnitPlayId = g.state.player2.groundArena[0].playId;
 
     // act
-    await g.useBaseEpicActionAsync(1);
+    await g.useBaseAbilityAsync(1);
     await g.chooseCardFromHandAsync(1, 0);
 
     // assert Ambush prompt
@@ -77,7 +77,7 @@ describe("ECL Epic Action", () => {
     g.loadNewState(state);
 
     // act
-    await g.useBaseEpicActionAsync(1);
+    await g.useBaseAbilityAsync(1);
     await g.chooseCardFromHandAsync(1, 0);
     await g.chooseNoAsync(1);
 
@@ -103,7 +103,7 @@ describe("ECL Epic Action", () => {
     const enemyUnitPlayId = g.state.player2.groundArena[0].playId;
 
     // act
-    await g.useBaseEpicActionAsync(1);
+    await g.useBaseAbilityAsync(1);
     await g.chooseCardFromHandAsync(1, 0);
 
     // Check: Ambush prompt fires for battlefieldMarine (NOT for systemPatrolCraft)
@@ -131,7 +131,7 @@ describe("ECL Epic Action", () => {
     g.loadNewState(state);
 
     // act
-    await g.useBaseEpicActionAsync(1);
+    await g.useBaseAbilityAsync(1);
 
     // assert
     expect(g.state.player1.base.epicActionUsed).toBe(true);
@@ -153,7 +153,7 @@ describe("ECL Epic Action", () => {
     g.loadNewState(state);
 
     // act
-    await g.useBaseEpicActionAsync(1);
+    await g.useBaseAbilityAsync(1);
 
     // assert
     expect(g.state.player1.base.epicActionUsed).toBe(true);
@@ -175,7 +175,7 @@ describe("ECL Epic Action", () => {
     g.loadNewState(state);
 
     // act
-    await g.useBaseEpicActionAsync(1);
+    await g.useBaseAbilityAsync(1);
 
     // assert
     expect(g.state.player1.base.epicActionUsed).toBe(true);
@@ -197,7 +197,7 @@ describe("ECL Epic Action", () => {
     g.loadNewState(state);
 
     // act
-    await g.useBaseEpicActionAsync(1);
+    await g.useBaseAbilityAsync(1);
 
     // assert
     expect(g.lastDispatchResponse?.invalidAction).toBe(true);
@@ -218,7 +218,7 @@ describe("ECL Epic Action", () => {
     g.loadNewState(state);
 
     // act
-    await g.useBaseEpicActionAsync(1);
+    await g.useBaseAbilityAsync(1);
     await g.chooseCardFromHandAsync(1, 0);
 
     // r2d2 is now in groundArena, Ambush trigger fires (not a piloting-option)
@@ -245,7 +245,7 @@ describe("ECL Epic Action", () => {
     g.loadNewState(state);
 
     // act
-    await g.useBaseEpicActionAsync(1);
+    await g.useBaseAbilityAsync(1);
     await g.chooseCardFromHandAsync(1, 0);
 
     // assert — trigger-order prompt because both Ambush and When Played are in the bag

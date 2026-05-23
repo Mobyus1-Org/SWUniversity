@@ -62,7 +62,7 @@ export class GameTestAdapter {
     return this.dispatchAsync(player, "use-ability", { cardId });
   }
 
-  async useBaseEpicActionAsync(player: PlayerId): Promise<GameTestAdapter> {
+  async useBaseAbilityAsync(player: PlayerId): Promise<GameTestAdapter> {
     const cardId = (player === 1 ? this.state.player1 : this.state.player2).base.cardId;
     return this.dispatchAsync(player, "use-ability", { cardId });
   }

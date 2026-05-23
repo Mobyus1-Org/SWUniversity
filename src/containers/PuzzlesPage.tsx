@@ -78,6 +78,10 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "SHD_016", "SHD_017",
 ]);
 
+const BASES_WITH_EPIC_ACTION = new Set([
+  "SOR_022", "SOR_025", "SOR_028",
+]);
+
 function CardVisual({
   cardId,
   imageId,
@@ -428,10 +432,14 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     }
   }, [isResolving, isMultiSelectTarget, resolutionNeeded, sendDispatch]);
 
-  const handleBaseClick = React.useCallback((player: PlayerId) => {
+  const handleBaseClick = React.useCallback((_player: PlayerId) => {
     if (isResolving) return;
-    void sendDispatch(createDispatch("choose-target", { targetZones: ["Base"] }));
-  }, [isResolving, sendDispatch]);
+    if (resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Base")) {
+      void sendDispatch(createDispatch("choose-target", { targetZones: ["Base"] }));
+    } else if (!resolutionNeeded && gameState && BASES_WITH_EPIC_ACTION.has(gameState.player1.base.cardId)) {
+      void sendDispatch(createDispatch("use-ability", { cardId: gameState.player1.base.cardId }));
+    }
+  }, [isResolving, resolutionNeeded, gameState, sendDispatch]);
 
   const handleHandClick = React.useCallback((index: number, cardId: string) => {
     if (isResolving) return;
@@ -638,6 +646,8 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   // Clickable if deploy is still available (even exhausted) OR ability is ready
   const uiCanClickLeader = !resolutionNeeded && !isGameOver && !player.leader.deployed &&
     (player.leader.ready || !player.leader.epicActionUsed);
+  const uiCanClickBase = !resolutionNeeded && !isGameOver &&
+    BASES_WITH_EPIC_ACTION.has(player.base.cardId) && !player.base.epicActionUsed;
   const sentinelPlayIds: string[] = [];
   const selectableHandIndices: number[] = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Hand")
     ? (resolutionNeeded.fromIndices ?? player.hand.map((_, i) => i))
@@ -999,13 +1009,14 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   </div>}
                   <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={player.base.cardId}
-                    selectable={selectableBaseForPlayer.includes(1)}
-                    onClick={selectableBaseForPlayer.includes(1) ? () => handleBaseClick(1) : undefined}
+                    selectable={uiCanClickBase || selectableBaseForPlayer.includes(1)}
+                    onClick={uiCanClickBase || selectableBaseForPlayer.includes(1) ? () => handleBaseClick(1) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
                     square
                     centerDamageBadge={player.base.damage}
+                    footer={uiCanClickBase || player.base.epicActionUsed ? <div className="text-center text-xs text-white/80">{player.base.epicActionUsed ? "Epic used" : "Epic Action"}</div> : undefined}
                   /></div>
                 </div>
               </div>
@@ -1107,25 +1118,27 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   </div>}
                   <div className="mx-auto w-full max-w-[140px]"><CardVisual
                     cardId={player.base.cardId}
-                    selectable={selectableBaseForPlayer.includes(1)}
-                    onClick={selectableBaseForPlayer.includes(1) ? () => handleBaseClick(1) : undefined}
+                    selectable={uiCanClickBase || selectableBaseForPlayer.includes(1)}
+                    onClick={uiCanClickBase || selectableBaseForPlayer.includes(1) ? () => handleBaseClick(1) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
                     square
                     centerDamageBadge={player.base.damage}
+                    footer={uiCanClickBase || player.base.epicActionUsed ? <div className="text-center text-xs text-white/80">{player.base.epicActionUsed ? "Epic used" : "Epic Action"}</div> : undefined}
                   /></div>
                 </div>
                 <div className="hidden xl:space-y-2 xl:block">
                   <CardVisual
                     cardId={player.base.cardId}
-                    selectable={selectableBaseForPlayer.includes(1)}
-                    onClick={selectableBaseForPlayer.includes(1) ? () => handleBaseClick(1) : undefined}
+                    selectable={uiCanClickBase || selectableBaseForPlayer.includes(1)}
+                    onClick={uiCanClickBase || selectableBaseForPlayer.includes(1) ? () => handleBaseClick(1) : undefined}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
                     cardScale90
                     centerDamageBadge={player.base.damage}
+                    footer={uiCanClickBase || player.base.epicActionUsed ? <div className="text-center text-xs text-white/80">{player.base.epicActionUsed ? "Epic used" : "Epic Action"}</div> : undefined}
                   />
                   {!player.leader.deployed ? <CardVisual
                     cardId={player.leader.cardId}

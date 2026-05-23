@@ -22,6 +22,7 @@ import {
   CardTitle,
   CardType,
 } from "@/server/engine/card-db/generated";
+import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
@@ -47,6 +48,7 @@ import { effectiveSmuggleCost } from "@/server/engine/card-playability";
 import type { Game, GameState, PlayerState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import type {
+  AbilityOptionPending,
   AbilityTargetPending,
   AttackTargetPending,
   BountyShieldTargetPending,
@@ -333,6 +335,31 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
     };
   }
 
+  if (trigger.triggerType === "leader-reaction") {
+    const leaderState = ps(game, trigger.fromPlayer).leader;
+    if (leaderState.deployed || !leaderState.ready) return null;
+    switch (trigger.cardId) {
+      case "SHD_008": {
+        const friendlyPlayIds = GetUnitsForPlayer(trigger.fromPlayer).map(u => u.playId);
+        if (friendlyPlayIds.length === 0) return null;
+        return {
+          type: "ability-option",
+          cardId: "SHD_008",
+          helperText: "Exhaust Boba Fett — give a friendly unit +1/+0 for this phase?",
+          onYes: {
+            type: "ability-target",
+            cardId: "SHD_008",
+            player: trigger.fromPlayer,
+            fromPlayIds: friendlyPlayIds,
+            continuation: null,
+          },
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
+    }
+    return null;
+  }
+
   return null;
 }
 
@@ -438,7 +465,10 @@ function defeatUnit(
     return null;
   }
 
-  pushToDiscard(game, removed.player, unit);
+  // Tokens are set aside on defeat, not placed in discard (CR 7.6.1).
+  if (!unit.IsTokenUnit()) {
+    pushToDiscard(game, removed.player, unit);
+  }
   log.push(`${CardTitle(unit.cardId)} was defeated.`);
 
   // Rescue any units the defeated unit was guarding (CR 34.4).
@@ -494,7 +524,9 @@ function defeatForExploit(game: GameState, log: string[], unit: Unit): void {
     return;
   }
 
-  pushToDiscard(game, removed.player, unit);
+  if (!unit.IsTokenUnit()) {
+    pushToDiscard(game, removed.player, unit);
+  }
   log.push(`${CardTitle(unit.cardId)} was defeated via Exploit.`);
 
   // Rescue captives (CR 34.4)
@@ -911,6 +943,17 @@ function completePlayCard(
     if (opts?.injectEffect) {
       game.currentEffects.push({ ...opts.injectEffect, targetPlayId: unit.playId });
     }
+    // Leader-reaction: Boba Fett — when the active player plays a keyword unit
+    const leaderState = ps(game, player).leader;
+    if (
+      leaderState.cardId === "SHD_008" &&
+      !leaderState.deployed &&
+      leaderState.ready &&
+      HasKeyword(cardId, "Any", unit.playId, player)
+    ) {
+      game.triggerBag.push({ triggerType: "leader-reaction", cardId: "SHD_008", fromPlayer: player });
+    }
+
     const hasAmbush = HasAmbush(cardId, unit.playId, "Hand", player);
     if (hasAmbush) {
       game.triggerBag.push({ triggerType: "ambush", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
@@ -2383,6 +2426,11 @@ function applyAbilityEffect(
       const waylayResult = removeFromArena(game.currentGameState, targetPlayId);
       if (!waylayResult) break;
       const { unit: bouncedUnit } = waylayResult;
+      // Tokens are defeated (set aside) when bounced — they cannot return to hand (CR 7.6.1).
+      if (bouncedUnit.IsTokenUnit()) {
+        game.gameLog.push(`Waylay: ${CardTitle(bouncedUnit.cardId)} set aside (token).`);
+        break;
+      }
       // Return unit to its owner's hand (without upgrades — they're defeated).
       ps(game.currentGameState, bouncedUnit.owner).hand.push({ cardId: bouncedUnit.cardId });
       game.gameLog.push(`Waylay: ${CardTitle(bouncedUnit.cardId)} returned to Player ${bouncedUnit.owner}'s hand.`);
@@ -2430,6 +2478,76 @@ function applyAbilityEffect(
           continuation: pending.continuation ?? null,
         };
       }
+      break;
+    }
+    case "SHD_008": { // Boba Fett leader reaction: exhaust leader, give chosen unit +1/+0 for this phase
+      if (!targetPlayId) break;
+      const gs008 = game.currentGameState;
+      ps(gs008, pending.player!).leader.ready = false;
+      gs008.currentEffects.push({
+        cardId: "SHD_008",
+        duration: "Phase",
+        affectedPlayer: pending.player!,
+        targetPlayId,
+      });
+      const target008 = unitByPlayId(gs008, targetPlayId);
+      game.gameLog.push(
+        `Boba Fett: gave +1/+0 to ${CardTitle(target008?.cardId ?? "") ?? targetPlayId} for this phase.`
+      );
+      break;
+    }
+    case "SOR_106_3": { // Attack Pattern Delta — step 1: give chosen unit +3/+3 for this phase
+      if (!targetPlayId) break;
+      const gs3 = game.currentGameState;
+      gs3.currentEffects.push({ cardId: "SOR_106_3", duration: "Phase", affectedPlayer: pending.player!, targetPlayId });
+      const t3 = unitByPlayId(gs3, targetPlayId);
+      game.gameLog.push(`Attack Pattern Delta: ${CardTitle(t3?.cardId ?? "") ?? targetPlayId} gets +3/+3 for this phase.`);
+      // Rebuild step-2 fromPlayIds excluding the just-chosen unit
+      const fresh2 = GetUnitsForPlayer(pending.player!).filter(u => u.playId !== targetPlayId).map(u => u.playId);
+      if (fresh2.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_106_2",
+        player: pending.player,
+        fromPlayIds: fresh2,
+        continuation: {
+          type: "ability-target",
+          cardId: "SOR_106_1",
+          player: pending.player,
+          fromPlayIds: fresh2, // stale — refreshed in SOR_106_2 handler
+          continuation: null,
+        },
+      };
+    }
+    case "SOR_106_2": { // Attack Pattern Delta — step 2: give chosen unit +2/+2 for this phase
+      if (!targetPlayId) break;
+      const gs2 = game.currentGameState;
+      gs2.currentEffects.push({ cardId: "SOR_106_2", duration: "Phase", affectedPlayer: pending.player!, targetPlayId });
+      const t2 = unitByPlayId(gs2, targetPlayId);
+      game.gameLog.push(`Attack Pattern Delta: ${CardTitle(t2?.cardId ?? "") ?? targetPlayId} gets +2/+2 for this phase.`);
+      // Rebuild step-3 fromPlayIds excluding units already tagged (SOR_106_3) plus current pick
+      const alreadyPicked = new Set(
+        gs2.currentEffects
+          .filter(e => e.cardId === "SOR_106_3" && e.targetPlayId)
+          .map(e => e.targetPlayId!)
+      );
+      alreadyPicked.add(targetPlayId);
+      const fresh1 = GetUnitsForPlayer(pending.player!).filter(u => !alreadyPicked.has(u.playId)).map(u => u.playId);
+      if (fresh1.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_106_1",
+        player: pending.player,
+        fromPlayIds: fresh1,
+        continuation: null,
+      };
+    }
+    case "SOR_106_1": { // Attack Pattern Delta — step 3: give chosen unit +1/+1 for this phase
+      if (!targetPlayId) break;
+      const gs1 = game.currentGameState;
+      gs1.currentEffects.push({ cardId: "SOR_106_1", duration: "Phase", affectedPlayer: pending.player!, targetPlayId });
+      const t1 = unitByPlayId(gs1, targetPlayId);
+      game.gameLog.push(`Attack Pattern Delta: ${CardTitle(t1?.cardId ?? "") ?? targetPlayId} gets +1/+1 for this phase.`);
       break;
     }
     default:

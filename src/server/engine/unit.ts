@@ -147,9 +147,15 @@ export class Unit implements UnitInterface {
         case "SOR_168": //Precision Fire
           power += TraitContains(this.cardId, "Trooper", this.controller, this.playId) ? 2 : 0;
           break;
+        case "SHD_008": //Boba Fett - Daimyo
+          power += 1;
+          break;
         case "SHD_179": //Desperate Attack
           power += 2;
           break;
+        case "SOR_106_3": power += 3; break; // Attack Pattern Delta
+        case "SOR_106_2": power += 2; break;
+        case "SOR_106_1": power += 1; break;
         default: break;
       }
     }
@@ -185,6 +191,15 @@ export class Unit implements UnitInterface {
 
     for (const upgrade of this.upgrades) {
       hp += CardUpgradeHp(upgrade.cardId);
+    }
+
+    for (const effect of GetCurrentEffectsForPlayer(this.controller)) {
+      if (effect.targetPlayId && effect.targetPlayId !== this.playId) continue;
+      switch (effect.cardId) {
+        case "SOR_106_3": hp += 3; break; // Attack Pattern Delta
+        case "SOR_106_2": hp += 2; break;
+        case "SOR_106_1": hp += 1; break;
+      }
     }
 
     return hp;

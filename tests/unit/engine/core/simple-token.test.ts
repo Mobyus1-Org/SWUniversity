@@ -158,3 +158,48 @@ describe("Token Creation", () => {
     expect(target.upgrades.every(u => u.cardId === Cards.upgrades.token.experience)).toBe(true);
   });
 });
+
+describe("Token Removal", () => {
+  it("does not go to discard pile when defeated by combat", async () => {
+    const g = new GameTestAdapter();
+    const s = new GameStateBuilder()
+      .MyBase(Cards.bases.common.green30HP)
+      .MyLeader(Cards.leaders.sor.sabineWren)
+      .TheirBase(Cards.bases.common.green30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .WithGroundUnitForPlayer(1, Cards.units.token.spy)
+      .WithGroundUnitForPlayer(2, Cards.units.sor.battlefieldMarine)
+      .Build();
+    g.loadNewState(s);
+
+    await g.attackWithGroundUnitAsync(1, 0);
+    await g.chooseGroundUnitAsync(2, 0);
+
+    expect(g.state.player1.groundArena.length).toBe(0);
+    expect(g.state.player2.groundArena.length).toBe(1);
+    expect(g.state.player2.groundArena[0].damage).toBe(2);
+    expect(g.state.player1.discard.length).toBe(0);
+  });
+
+  it("does not go to discard pile when defeated by bounce", async () => {
+    const g = new GameTestAdapter();
+    const s = new GameStateBuilder()
+      .MyBase(Cards.bases.common.yellow30HP)
+      .MyLeader(Cards.leaders.sor.sabineWren)
+      .TheirBase(Cards.bases.common.green30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 3)
+      .WithCardInHandForPlayer(1, Cards.events.sor.waylay)
+      .WithGroundUnitForPlayer(2, Cards.units.token.spy)
+      .Build();
+    g.loadNewState(s);
+
+    await g.playCardFromHandAsync(1, 0);
+    await g.chooseGroundUnitAsync(2, 0);
+
+    expect(g.state.player1.hand.length).toBe(0);
+    expect(g.state.player2.hand.length).toBe(0);
+    expect(g.state.player2.groundArena.length).toBe(0);
+    expect(g.state.player2.discard.length).toBe(0);
+  });
+});

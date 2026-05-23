@@ -137,8 +137,7 @@
 ### 5.11 Coordinate
 | Status | Notes |
 |---|---|
-| ⚠️ | `HasCoordinate` and `IsCoordinateActive` (≥3 units) exist. Coordinate is used as a condition for some Sentinel/power checks. |
-| ❌ | The Coordinate **ability text** (what a unit gains while Coordinate is active) is not automatically applied — each card-specific effect must be hardcoded elsewhere. There is no generic "if Coordinate active, apply this keyword/ability" framework. |
+| ✅ | `HasCoordinate` and `IsCoordinateActive` (≥3 units) exist. `IsCoordinateActive` gates actual keyword grants per implemented card: TWI_051 (Restore), TWI_061 (Sentinel), TWI_164 / TWI_196 (Raid). Each card's Coordinate ability is hardcoded where the keyword is checked — no generic framework, but all currently implemented Coordinate cards are wired correctly. |
 
 ### 5.12 Exploit X
 | Status | Notes |
@@ -174,13 +173,14 @@
 |---|---|---|
 | When Played | ✅ | Two paths: `resolveWhenPlayed` (input required) and `triggerBag` → `resolveWhenPlayedTrigger` (auto). |
 | When Deployed | ⚠️ | `resolveWhenDeployed` called from `deployLeader` and the Plot chain. Qi'ra (SHD_002) implemented: heal all units, then deal `floor(HP/2)` to each (Shield absorption included). Other leaders' When Deployed effects are not yet implemented. |
-| When Defeated | ⚠️ | `resolveWhenDefeated` handles K-2SO only. Vast majority of When Defeated cards are unimplemented. |
+| When Defeated | ⚠️ | `resolveWhenDefeated` handles K-2SO (SOR_047), Superlaser Technician (SOR_083, put into play as a resource), and Luke Skywalker pilot eject (special-cased in `defeatUnit` to rescue attached pilot). Vast majority of When Defeated cards are still unimplemented. |
 | On Attack | ✅ | `drainOnAttackTriggerBag` resolves On Attack triggers. Currently hardcoded to specific cards pushing into the bag. |
 | When This Unit Completes an Attack | ✅ | `resolveWhenAttackEnds` implemented for SOR_009. |
 | When a Unit is Attacked | ❌ | No trigger mechanism for defender-side triggers. |
-| Trigger ordering (active player chooses) | ❌ | `drainTriggerBag`: 2+ triggers in bag are silently skipped ("future"). Only single-trigger auto-resolve is supported. |
+| Trigger ordering (active player chooses) | ⚠️ | `drainTriggerBag` correctly returns `TriggerOrderPending` when 2+ triggers are in the bag. Resolved as `NeedsOption` (type `"Option"`) via `handleChooseOption` with helperText `"Choose which trigger to resolve first:"`. The `choose-trigger` dispatch case is a vestigial stub; ordering goes through `choose-option`. Full multi-layer nesting with re-queued triggers is not yet stress-tested. |
+| Leader-reaction triggers | ✅ | `"leader-reaction"` TriggerType added. `completePlayCard` injects the trigger when the played unit meets the leader's condition (e.g., SHD_008 Boba Fett: keyword unit played, leader not deployed and ready). `processSingleTrigger` returns an `ability-option` (exhaust leader Y/N); on Yes, routes to `ability-target` for the effect. Participates in `drainTriggerBag` ordering correctly. |
 | Nested trigger resolution | ⚠️ | Continuation chains (PendingResolution linked list) model this partially, but multi-layer nesting with player choice of order is not enforced. |
-| Delayed effects | ❌ | No `DelayedEffect` system. Cards like "At the start of the regroup phase, draw 1 card" cannot be represented. |
+| Delayed effects | ⚠️ | No general `DelayedEffect` system for arbitrary "at start of regroup phase, …" patterns. However, `UntilStartOfRegroup` duration exists for revert-on-regroup effects: Change of Heart (SOR_224) uses it to transfer unit control and auto-revert at start of the next regroup phase. |
 | Replacement effects ("instead", "would") | ❌ | No general replacement effect system. Shield prevention is inline in `resolveAttack` but only if engine explicitly checks for tokens (not currently done). |
 
 ---
@@ -195,8 +195,9 @@
 | Power modifiers (+ and −) | ⚠️ | `CurrentPower` applies upgrade bonuses and effect bonuses. Negative modifiers (e.g., "Give a unit −2/−0") are not handled. |
 | HP modifiers (+ and −) | ⚠️ | `TotalHP` applies upgrade HP modifiers. Negative HP modifiers and the "defeat immediately if remaining HP ≤ 0 after modifier removal" rule are not enforced. |
 | "Lose all abilities" | ✅ | `LostAbilities()` on `Unit` checks current effects (Force Lightning, Imprisoned, etc.) and propagates to keyword checks. |
-| Take control of a unit | ❌ | No mechanic. `controller` can differ from `owner` but no dispatch changes controller. |
-| Move a unit to another arena | ❌ | No dispatch or effect for moving between ground/space. |
+| Take control of a unit | ⚠️ | `transferControl(game, log, unit, newController)` function exists. Change of Heart (SOR_224) fully implemented: `transferControl` moves the unit, pushing a `UntilStartOfRegroup` revert effect that calls `transferControl` back at the start of the next regroup phase. |
+| Move a unit to another arena | ⚠️ | `PayToMoveGroundPending` exists for unit-to-ground-arena movement. Luke Skywalker's pilot-eject triggers a ground placement, and Blue Leader (JTL_096) uses a pay-to-move flow. No generic `moveToArena` for arbitrary arena swaps. |
+| Revert-on-regroup lasting effects | ⚠️ | `UntilStartOfRegroup` duration used by Change of Heart (SOR_224). `executeRegroupReady` processes revert effects before readying cards. Single-card coverage; no general delayed-trigger system. |
 
 ---
 
@@ -205,7 +206,7 @@
 | Token Type | Status | Notes |
 |---|---|---|
 | Shield token (upgrade, ARMOR) — prevent one damage instance, then defeat | ✅ | Created via `"shielded"` trigger bag on play. `resolveAttack` removes one `SOR_T02` token instead of dealing damage; Saboteur strips all Shield tokens before damage. |
-| Experience token (+1/+1 upgrade, LEARNED) | ❌ | No creation or attachment mechanic. |
+| Experience token (+1/+1 upgrade, LEARNED) | ⚠️ | `SOR_T01` token type exists and is recognized. Wing Leader (SOR_241) and Blue Leader (JTL_096) create Experience tokens via card-specific When Played / ability logic. No generic "give Experience token" effect helper; each card that creates tokens is hardcoded. |
 | Battle Droid token (ground, 1/1) | ⚠️ | `Unit.IsTokenUnit()` recognizes TWI_T01; creation must happen via card-specific When Played logic. |
 | Clone Trooper token (ground, 2/2) | ⚠️ | Same as above — TWI_T02 recognized as token unit. |
 | TIE Fighter token (space, 1/1) | ⚠️ | JTL_T01 recognized. |
@@ -304,11 +305,11 @@
 
 | Mechanic | Status | Notes |
 |---|---|---|
-| Return a unit to hand (CR 25) | ❌ | No `returnToHand` function or pending type. Cards like Bright Hope (SOR_099) "return a friendly non-leader ground unit to hand" have the effect stubbed (current WP handling returns `null`). Requires removing from arena, adding to `hand[]`, and not triggering "When Played." |
+| Return a unit to hand (CR 25) | ⚠️ | Implemented for Waylay (SOR_222): `removeFromArena()` + push to `owner.hand[]`. Does not re-trigger When Played or Shielded/Ambush. Other return-to-hand cards (e.g., Bright Hope SOR_099) are not yet wired; they still return `null` from `resolveWhenPlayed`. |
 | Reveal from hand / Disclose (CR 26, 39) | ❌ | No reveal mechanic. "Disclose" (reveal aspect icons from hand) has no dispatch path or pending type. ISB Agent (SOR_176) "reveal an event from hand" cannot check this. Would require a new `NeedsReveal` or similar resolution asking the client to expose one or more hand cards. |
 | Search deck (CR 27) | ❌ | No search mechanic. Cards that say "search your deck for X" require showing the player a filtered view of the deck — a fundamentally different UI interaction. Not representable with current pending resolution types. |
-| Move between arenas (CR 37) | ❌ | No `moveToArena` function. Cards that move a unit from ground to space (or vice versa) would need to splice it from one arena array and push to the other without triggering enter/leave play effects. |
-| Take control of a unit (CR 28) | ❌ | `controller` field exists on all `CardInPlay` objects and differs from `owner`, but no dispatch changes controller mid-game. Cards like "take control of a unit with 3 or less power" cannot be resolved. When implemented, all ability references, attack legality checks, and bounty collection must use `controller` not `owner`. |
+| Move between arenas (CR 37) | ⚠️ | `PayToMoveGroundPending` exists for specific cards (Luke pilot-eject → ground placement, Blue Leader JTL_096 pay-to-move flow). No generic `moveToArena` function for arbitrary ground↔space swaps. |
+| Take control of a unit (CR 28) | ⚠️ | `transferControl(game, log, unit, newController)` implemented. Change of Heart (SOR_224) fully wired with `UntilStartOfRegroup` auto-revert. Broader coverage (e.g., "take control of a unit with 3 or less power") needs per-card wiring; the infrastructure is in place. |
 
 ### 13.5 Information & State Tracking
 
@@ -327,9 +328,9 @@
 | Mechanic | Status | Notes |
 |---|---|---|
 | choose-player dispatch type | ❌ | `NeedsPlayer` resolution type exists and `pendingToResolution` emits it. The `handleChoosePlayer` stub returns "not yet implemented." No card currently requires player selection mid-resolution in the engine beyond zone targeting. |
-| choose-trigger dispatch type (trigger ordering) | ❌ | `NeedsTrigger` and `choose-trigger` dispatch are stubbed. When 2+ triggers fire simultaneously, the active player should order them; currently `drainTriggerBag` silently skips all but the first. |
-| Trigger ordering — active player chooses (CR 7.6.3) | ❌ | Single-trigger auto-resolve only. Two or more simultaneous triggers (e.g., two units both have "When Played" that need resolution) would require `NeedsTrigger` dispatch → player selects order → drain one → re-evaluate. |
-| Delayed / lasting triggered effects | ❌ | No `DelayedEffect` system. "At the start of the next regroup phase, draw 1 card" cannot be represented. Would require a persistent effect list checked at each phase boundary (already partially done for `Phase`/`Round` lasting effects but only for stat modifiers). |
+| choose-trigger dispatch type (trigger ordering) | ⚠️ | `drainTriggerBag` returns `TriggerOrderPending` (resolved as `NeedsOption` via `handleChooseOption`) when 2+ triggers are in the bag. The `choose-trigger` dispatch case is a vestigial stub — ordering flows through `choose-option`. Trigger-order prompt is confirmed working (tested: Ambush + leader-reaction on the same play). |
+| Trigger ordering — active player chooses (CR 7.6.3) | ⚠️ | Working for simultaneous triggers within one `drainTriggerBag` call. Triggers spawned *by* the resolution of one trigger may re-enter the bag correctly, but complex multi-wave ordering is not fully stress-tested. |
+| Delayed / lasting triggered effects | ⚠️ | `UntilStartOfRegroup` duration exists (used by Change of Heart SOR_224 for revert-on-regroup). Arbitrary "at start of regroup phase, draw 1 card" patterns still have no general `DelayedEffect` system. |
 | Replacement effects ("instead," "would") | ❌ | No general replacement effect system. The "instead of dealing damage, do X" pattern requires effects to broadcast a "damage about to be dealt" event that a replacement handler can intercept. Shield prevention is the only inline replacement and it's hardcoded in `resolveAttack`. |
 
 ---
@@ -338,15 +339,18 @@
 
 These are the highest-impact missing pieces for a playable, rules-compliant engine:
 
-1. **When Defeated coverage** — Only K-2SO is handled; all other When Defeated cards are silently ignored.
+1. **When Defeated coverage** — K-2SO, Superlaser Technician, and Luke pilot-eject are handled; all other When Defeated cards are silently ignored.
 2. **Bounty card coverage** — `getBountyEffects` currently handles SHD_027 (draw a card) and SHD_068 (give shield). All other bounty cards in the set need entries.
 3. **Token set-aside rule** — tokens go to set-aside, not discard pile.
-4. **Smuggle / Plot** — play-from-resource dispatch paths and deck-replacement.
-6. **Trigger bag ordering** — 2+ simultaneous triggers require player-ordered resolution.
-7. **Upgrade-on-enemy-unit** — `UpgradeEligibleTargets` must optionally include enemy units.
-8. **Delayed effects system** — "at start of regroup phase, …" pattern.
+4. **Upgrade-on-enemy-unit** — `UpgradeEligibleTargets` must optionally include enemy units.
+5. **Delayed effects system** — general "at start of regroup phase, …" pattern (beyond `UntilStartOfRegroup` revert).
+6. **Return to hand — broader coverage** — infrastructure exists (Waylay); other return-to-hand cards need wiring.
 
 ### Recently Completed
+- ✅ **Boba Fett leader reaction (SHD_008)** — `"leader-reaction"` TriggerType added. `completePlayCard` injects trigger when a keyword unit is played and leader is ready + undeployed. `processSingleTrigger` returns `ability-option` (exhaust Y/N); `applyAbilityEffect` exhausts leader and pushes a Phase `+1/+0` effect. Participates in trigger-bag ordering (tested with Ambush).
+- ✅ **Attack Pattern Delta (SOR_106)** — three-step mandatory ability-target chain via virtual card IDs `SOR_106_3/2/1`. Each step refreshes `fromPlayIds` to exclude already-chosen units. Phase effects grant +3/+3, +2/+2, +1/+1 tracked in `CurrentPower` and `TotalHP` loops. Fizzles gracefully when fewer than 3 friendly units exist.
+- ✅ **Trigger ordering** — `drainTriggerBag` returns `TriggerOrderPending` when 2+ triggers queue simultaneously. Resolved as `NeedsOption` via `handleChooseOption` with "Choose which trigger to resolve first:" prompt.
+- ✅ **ECL Epic Action** — leader epic action for ECL (specific card) implemented.
 - ✅ **Smuggle** — `play-smuggle` dispatch: cost + aspect penalty, ready-resource exhaustion, deck-top replacement (exhausted). `ResourceIsSmuggleable` UI affordability check. UI highlights eligible resources.
 - ✅ **Plot** — `PlotWindowPending` / `PlotOrderPending` chain on leader deploy. Affordability filter (cost + aspect penalty). Multi-Plot looping after each card played. CR 19d enforced: deck replacement card excluded from window. `NeedsPlot` UI type shows card-art popup with Pass button. Plot timing (before/after When Deployed) handled via `PlotOrderPending`.
 - ✅ **When Deployed (Qi'ra SHD_002)** — `resolveWhenDeployed` wired into `deployLeader` and the Plot chain. Heals all units, then deals `floor(HP/2)` to each; Shield token absorbs damage. Tested: space arena, self-damage, Grit interaction, Plot ordering scenarios, CR 19d.

@@ -236,6 +236,7 @@ export const Cards = {
       sugi: "SHD_052",
       djBlatantThief: "SHD_213",
       tobiasBeckett: "SHD_217",
+      supercommandoSquad: "SHD_034",
     },
     jtl: {
       kijimiPatrollers: "JTL_082",
@@ -286,6 +287,7 @@ export const Cards = {
       waylay: "SOR_222",
       changeOfHeart: "SOR_224",
       confiscate: "SOR_251",
+      attackPatternDelta: "SOR_106",
     },
     twi: {
       droidDeployment: "TWI_237",
