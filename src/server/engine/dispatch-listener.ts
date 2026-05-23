@@ -627,11 +627,20 @@ function resolveAttack(
   if (target.type === "base") {
     dealBaseDamage(game, target.player, atkPower);
     log.push(`${attackerName} attacked the base for ${atkPower} damage.`);
+    const willSacrifice = game.currentEffects.some(
+      e => e.cardId === "SOR_150_sacrifice" && e.targetPlayId === attacker.playId,
+    );
     // Clear ForAttack effects scoped to this attacker after the attack resolves
     game.currentEffects = game.currentEffects.filter(
       (e) => !(e.duration === "ForAttack" && e.targetPlayId === attacker.playId),
     );
-    return resolveWhenAttackEnds(game, attacker, pending.continuation ?? null);
+    const whenAttackEnds = resolveWhenAttackEnds(game, attacker, pending.continuation ?? null);
+    if (willSacrifice) {
+      log.push(`Heroic Sacrifice: ${attackerName} is defeated after dealing combat damage.`);
+      const sacrificePend = defeatUnit(game, log, attacker);
+      if (sacrificePend) return injectContinuation(sacrificePend, whenAttackEnds);
+    }
+    return whenAttackEnds;
   } else {
     const defender = unitByPlayId(game, target.playId);
     if (!defender) return null;
@@ -684,12 +693,18 @@ function resolveAttack(
     }
 
     const defDefeated = defender.CurrentHP() <= 0;
-    const atkDefeated = attacker.CurrentHP() <= 0;
+    const willSacrificeUnit = game.currentEffects.some(
+      e => e.cardId === "SOR_150_sacrifice" && e.targetPlayId === attacker.playId,
+    );
+    const atkDefeated = attacker.CurrentHP() <= 0 || willSacrificeUnit;
 
     // Clear ForAttack effects scoped to this attacker after the attack resolves
     game.currentEffects = game.currentEffects.filter(
       (e) => !(e.duration === "ForAttack" && e.targetPlayId === attacker.playId),
     );
+    if (willSacrificeUnit && attacker.CurrentHP() > 0) {
+      log.push(`Heroic Sacrifice: ${attackerName} is defeated after dealing combat damage.`);
+    }
 
     // Resolve defeats (defender first per SWU rules)
     let nextPending: PendingResolution | null = null;
@@ -2457,6 +2472,13 @@ function applyAbilityEffect(
         };
       }
       break;
+    }
+    case "SOR_150": { // Heroic Sacrifice — chosen unit attacks with +2/+0; dies after dealing combat damage
+      if (!targetPlayId || !pending.player) break;
+      const gs150 = game.currentGameState;
+      gs150.currentEffects.push({ cardId: "SOR_150", duration: "ForAttack", affectedPlayer: pending.player, targetPlayId });
+      gs150.currentEffects.push({ cardId: "SOR_150_sacrifice", duration: "ForAttack", affectedPlayer: pending.player, targetPlayId });
+      return { type: "attack-target", attackerPlayId: targetPlayId, source: "SOR_150", continuation: null };
     }
     case "SHD_132": { // Choose Sides — step 1: chose friendly unit, now prompt for enemy non-leader
       if (!targetPlayId || !pending.player) break;

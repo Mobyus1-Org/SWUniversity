@@ -223,6 +223,7 @@ export const Cards = {
       craftySmuggler: "SOR_207",
       syndicateLackeys: "SOR_213",
       rebelPathfinder: "SOR_239",
+      gamorreanGuards: "SOR_211",
     },
     shd: {
       sundariPeaceKeeper: "SHD_098",
@@ -288,6 +289,7 @@ export const Cards = {
       momentOfPeace: "SOR_073",
       rebelAssault: "SOR_103",
       strikeTrue: "SOR_127",
+      heroicSacrifice: "SOR_150",
       waylay: "SOR_222",
       changeOfHeart: "SOR_224",
       confiscate: "SOR_251",

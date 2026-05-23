@@ -101,6 +101,7 @@ function CardVisual({
   rotateWhenExhausted = true,
   cardScale90 = false,
   customGlowClass,
+  epicUsed = false,
 }: {
   cardId: string;
   imageId?: string;
@@ -120,6 +121,7 @@ function CardVisual({
   rotateWhenExhausted?: boolean;
   cardScale90?: boolean;
   customGlowClass?: string;
+  epicUsed?: boolean;
 }) {
   const pattern = imageId ?? cardId;
   const primarySrc = square ? `/assets/cards/square/${pattern}.webp` : getCardImageLink(pattern);
@@ -140,39 +142,44 @@ function CardVisual({
       : (arenaScale60 ? "h-[7.2rem]" : "h-48");
 
   const cardBody = <>
-    <div
-      className={`relative overflow-hidden rounded-2xl border border-white/15 bg-black/40 ${selectable ? `cursor-pointer ${customGlowClass ?? lightsaberGlow}` : "opacity-90"}`}
-      style={cardScale90 ? { width: "90%", marginInline: "auto" } : undefined}
-      onMouseEnter={() => onPreviewStart({ imageId: imageId ?? cardId, cardId, label: subtitle ? `${title} — ${subtitle}` : title })}
-      onMouseLeave={onPreviewEnd}
-    >
-      <div className={`relative transition-transform duration-200 ${exhausted && rotateWhenExhausted ? "rotate-90" : ""}`}>
-        <img
-          src={imageSrc}
-          alt={title}
-          className={`w-full object-cover ${imageClass}`}
-          onError={() => {
-            if (imageSrc !== fallbackSrc) {
-              setImageSrc(fallbackSrc);
-            }
-          }}
-        />
-        {exhausted ? <div className="pointer-events-none absolute inset-0 bg-black/35" /> : null}
+    <div className="relative">
+      <div
+        className={`relative overflow-hidden rounded-2xl border border-white/15 bg-black/40 ${selectable ? `cursor-pointer ${customGlowClass ?? lightsaberGlow}` : "opacity-90"}`}
+        style={cardScale90 ? { width: "90%", marginInline: "auto" } : undefined}
+        onMouseEnter={() => onPreviewStart({ imageId: imageId ?? cardId, cardId, label: subtitle ? `${title} — ${subtitle}` : title })}
+        onMouseLeave={onPreviewEnd}
+      >
+        <div className={`relative transition-transform duration-200 ${exhausted && rotateWhenExhausted ? "rotate-90" : ""}`}>
+          <img
+            src={imageSrc}
+            alt={title}
+            className={`w-full object-cover ${imageClass}`}
+            onError={() => {
+              if (imageSrc !== fallbackSrc) {
+                setImageSrc(fallbackSrc);
+              }
+            }}
+          />
+          {exhausted ? <div className="pointer-events-none absolute inset-0 bg-black/35" /> : null}
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-end p-2 text-xs font-semibold uppercase tracking-[0.2em] text-white">
+          <span className="flex items-start gap-1">
+            {sentinel ? <img src="/assets/tokens/sentinel.png" alt="Sentinel bodyguard" className="h-8 w-8 rounded-sm border border-white/20 bg-black/50" /> : null}
+          </span>
+        </div>
+        {typeof damage === "number" && damage > 0 ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200/30 bg-red-800/55 text-xs font-black text-white shadow-[0_0_12px_rgba(127,29,29,0.4)]">
+            {damage}
+          </span>
+        </div> : null}
+        {typeof centerDamageBadge === "number" && centerDamageBadge > 0 ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-rose-200/25 bg-rose-800/55 text-sm font-black text-white shadow-[0_0_14px_rgba(127,29,29,0.45)]">
+            {centerDamageBadge}
+          </span>
+        </div> : null}
       </div>
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-end p-2 text-xs font-semibold uppercase tracking-[0.2em] text-white">
-        <span className="flex items-start gap-1">
-          {sentinel ? <img src="/assets/tokens/sentinel.png" alt="Sentinel bodyguard" className="h-8 w-8 rounded-sm border border-white/20 bg-black/50" /> : null}
-        </span>
-      </div>
-      {typeof damage === "number" && damage > 0 ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200/30 bg-red-800/55 text-xs font-black text-white shadow-[0_0_12px_rgba(127,29,29,0.4)]">
-          {damage}
-        </span>
-      </div> : null}
-      {typeof centerDamageBadge === "number" && centerDamageBadge > 0 ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-rose-200/25 bg-rose-800/55 text-sm font-black text-white shadow-[0_0_14px_rgba(127,29,29,0.45)]">
-          {centerDamageBadge}
-        </span>
+      {epicUsed ? <div className="pointer-events-none absolute -bottom-1 right-1.5 z-10">
+        <img src="/assets/tokens/epic-used.png" alt="Epic action used" className="h-[26px] w-[26px] rotate-90" />
       </div> : null}
     </div>
     {footer ? <div className="mt-2">{footer}</div> : null}
@@ -870,6 +877,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     rotateWhenExhausted={false}
                     compact
                     square
+                    epicUsed={opponent.leader.epicActionUsed}
                   /></div> : <div className="mx-auto w-full max-w-[140px] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
                     Leader deployed to Ground Arena
                   </div>}
@@ -882,6 +890,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     compact
                     square
                     centerDamageBadge={opponent.base.damage}
+                    epicUsed={opponent.base.epicActionUsed}
                   /></div>
                 </div>
               </div>
@@ -923,6 +932,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     rotateWhenExhausted={false}
                     compact
                     square
+                    epicUsed={opponent.leader.epicActionUsed}
                   /></div> : <div className="mx-auto w-full max-w-[140px] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
                     Leader deployed to Ground Arena
                   </div>}
@@ -935,6 +945,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     compact
                     square
                     centerDamageBadge={opponent.base.damage}
+                    epicUsed={opponent.base.epicActionUsed}
                   /></div>
                 </div>
                 <div className="hidden xl:space-y-2 xl:block">
@@ -947,6 +958,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     rotateWhenExhausted={false}
                     cardScale90
                     compact
+                    epicUsed={opponent.leader.epicActionUsed}
                   /> : <div className="rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
                     Leader deployed to Ground Arena
                   </div>}
@@ -959,6 +971,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     compact
                     cardScale90
                     centerDamageBadge={opponent.base.damage}
+                    epicUsed={opponent.base.epicActionUsed}
                   />
                 </div>
               </div>
@@ -1003,7 +1016,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     rotateWhenExhausted={false}
                     compact
                     square
-                    footer={<div className="text-center text-xs text-white/80">{player.leader.epicActionUsed ? "Epic used" : "Ready"}</div>}
+                    epicUsed={player.leader.epicActionUsed}
                   /></div> : <div className="mx-auto w-full max-w-[140px] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
                     Leader deployed to Ground Arena
                   </div>}
@@ -1016,7 +1029,8 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     compact
                     square
                     centerDamageBadge={player.base.damage}
-                    footer={uiCanClickBase || player.base.epicActionUsed ? <div className="text-center text-xs text-white/80">{player.base.epicActionUsed ? "Epic used" : "Epic Action"}</div> : undefined}
+                    epicUsed={player.base.epicActionUsed}
+                    footer={uiCanClickBase ? <div className="text-center text-xs text-white/80">Epic Action</div> : undefined}
                   /></div>
                 </div>
               </div>
@@ -1112,7 +1126,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     rotateWhenExhausted={false}
                     compact
                     square
-                    footer={<div className="text-center text-xs text-white/80">{player.leader.epicActionUsed ? "Epic used" : "Ready"}</div>}
+                    epicUsed={player.leader.epicActionUsed}
                   /></div> : <div className="mx-auto w-full max-w-[140px] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
                     Leader deployed to Ground Arena
                   </div>}
@@ -1125,7 +1139,8 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     compact
                     square
                     centerDamageBadge={player.base.damage}
-                    footer={uiCanClickBase || player.base.epicActionUsed ? <div className="text-center text-xs text-white/80">{player.base.epicActionUsed ? "Epic used" : "Epic Action"}</div> : undefined}
+                    epicUsed={player.base.epicActionUsed}
+                    footer={uiCanClickBase ? <div className="text-center text-xs text-white/80">Epic Action</div> : undefined}
                   /></div>
                 </div>
                 <div className="hidden xl:space-y-2 xl:block">
@@ -1138,7 +1153,8 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     compact
                     cardScale90
                     centerDamageBadge={player.base.damage}
-                    footer={uiCanClickBase || player.base.epicActionUsed ? <div className="text-center text-xs text-white/80">{player.base.epicActionUsed ? "Epic used" : "Epic Action"}</div> : undefined}
+                    epicUsed={player.base.epicActionUsed}
+                    footer={uiCanClickBase ? <div className="text-center text-xs text-white/80">Epic Action</div> : undefined}
                   />
                   {!player.leader.deployed ? <CardVisual
                     cardId={player.leader.cardId}
@@ -1150,7 +1166,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     rotateWhenExhausted={false}
                     compact
                     cardScale90
-                    footer={<div className="text-center text-xs text-white/80">{player.leader.epicActionUsed ? "Epic used" : "Ready"}</div>}
+                    epicUsed={player.leader.epicActionUsed}
                   /> : <div className="rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
                     Leader deployed to Ground Arena
                   </div>}

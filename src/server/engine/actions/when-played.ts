@@ -166,6 +166,27 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SOR_150": { // Heroic Sacrifice — "Draw a card, then attack with a unit. It gets +2/+0 and dies when it deals combat damage."
+      const game150 = game!;
+      const gs150 = game150.currentGameState;
+      const p150 = player === 1 ? gs150.player1 : gs150.player2;
+      if (p150.deck.length > 0) {
+        p150.hand.push(p150.deck.pop()!);
+        game150.gameLog.push(`${CardTitle("SOR_150")}: drew a card.`);
+      } else {
+        p150.base.damage += 3;
+        game150.gameLog.push(`${CardTitle("SOR_150")}: drew from empty deck — 3 damage to base.`);
+      }
+      const attackers150 = GetUnitsForPlayer(player, true);
+      if (attackers150.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_150",
+        player,
+        fromPlayIds: attackers150.map(u => u.playId),
+        continuation: null,
+      };
+    }
     case "SHD_132": { // Choose Sides — "Choose a friendly non-leader unit and an enemy non-leader unit. Exchange control of those units."
       const friendly132 = GetUnitsForPlayer(player, true).filter(u => !CardIsLeader(u.cardId));
       if (friendly132.length === 0) return null;

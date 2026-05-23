@@ -150,6 +150,9 @@ export class Unit implements UnitInterface {
         case "SHD_008": //Boba Fett - Daimyo
           power += 1;
           break;
+        case "SOR_150": //Heroic Sacrifice
+          power += 2;
+          break;
         case "SHD_179": //Desperate Attack
           power += 2;
           break;
