@@ -1416,6 +1416,16 @@ function handleChooseTarget(
     if (rawPending) {
       return { response: resolutionResponse(pendingToResolution(rawPending, game)), pending: rawPending, stateChanged: false };
     }
+    // Drain any triggers that were waiting while this ability resolved (e.g. Ambush
+    // still in the bag after a trigger-order put leader-reaction first).
+    const bagAfterAbility = drainTriggerBag(game, log);
+    if (bagAfterAbility) {
+      if (bagAfterAbility.type === "attack-target" && bagAfterAbility.source === "ambush") {
+        const ambushUnit = unitByPlayId(game, bagAfterAbility.attackerPlayId);
+        if (ambushUnit) ambushUnit.ready = true;
+      }
+      return { response: resolutionResponse(pendingToResolution(bagAfterAbility, game)), pending: bagAfterAbility, stateChanged: false };
+    }
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
@@ -2448,6 +2458,60 @@ function applyAbilityEffect(
       }
       break;
     }
+    case "SHD_132": { // Choose Sides — step 1: chose friendly unit, now prompt for enemy non-leader
+      if (!targetPlayId || !pending.player) break;
+      const enemyPlayer132 = otherPlayer(pending.player);
+      const enemyUnits132 = GetUnitsForPlayer(enemyPlayer132).filter(u => !CardIsLeader(u.cardId));
+      if (enemyUnits132.length === 0) break;
+      return {
+        type: "ability-target",
+        cardId: "SHD_132_swap",
+        player: pending.player,
+        sourcePlayId: targetPlayId,
+        fromPlayIds: enemyUnits132.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SHD_132_swap": { // Choose Sides — step 2: exchange control of both units (permanent)
+      if (!targetPlayId || !pending.sourcePlayId || !pending.player) break;
+      const gs132 = game.currentGameState;
+      const friendlyUnit = unitByPlayId(gs132, pending.sourcePlayId);
+      const enemyUnit = unitByPlayId(gs132, targetPlayId);
+      if (!friendlyUnit || !enemyUnit) break;
+      const friendlyOriginalController = friendlyUnit.controller;
+      const enemyOriginalController = enemyUnit.controller;
+      transferControl(gs132, game.gameLog, friendlyUnit, enemyOriginalController);
+      transferControl(gs132, game.gameLog, enemyUnit, friendlyOriginalController);
+      break;
+    }
+    case "SOR_127": { // Strike True — step 1: chose friendly unit, now prompt for enemy target
+      if (!targetPlayId || !pending.player) break;
+      const enemyPlayer127 = otherPlayer(pending.player);
+      const enemyUnits127 = GetUnitsForPlayer(enemyPlayer127);
+      if (enemyUnits127.length === 0) break;
+      return {
+        type: "ability-target",
+        cardId: "SOR_127_deal",
+        player: pending.player,
+        sourcePlayId: targetPlayId,
+        fromPlayIds: enemyUnits127.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_127_deal": { // Strike True — step 2: deal power damage to chosen enemy unit
+      if (!targetPlayId || !pending.sourcePlayId) break;
+      const attacker127 = unitByPlayId(game.currentGameState, pending.sourcePlayId);
+      const target127 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!attacker127 || !target127) break;
+      const power127 = Unit.FromInterface(attacker127).CurrentPower();
+      target127.damage += power127;
+      game.gameLog.push(`Strike True: ${CardTitle(attacker127.cardId)} dealt ${power127} damage to ${CardTitle(target127.cardId)}.`);
+      if (Unit.FromInterface(target127).CurrentHP() <= 0) {
+        const defeatPend127 = defeatUnit(game.currentGameState, game.gameLog, target127);
+        if (defeatPend127) return injectContinuation(defeatPend127, pending.continuation);
+      }
+      return pending.continuation;
+    }
     case "SOR_251": { // Confiscate — defeat an upgrade
       if (!targetPlayId) break;
       const allGameUnits = allUnits(game.currentGameState);
@@ -2586,6 +2650,11 @@ export function processDispatch(
   try {
     const pending = context.pending;
     let result: HandlerResult;
+
+    // Reject all actions once the game is over.
+    if (gs.defeatedPlayers.length > 0) {
+      return { response: invalidResponse("The game is over."), context };
+    }
 
     const ACTION_STARTERS = [
       "play-card", "play-smuggle", "initiate-attack", "use-ability", "pass-action", "claim-initiative",

@@ -5,15 +5,17 @@ import { DispatchData, DispatchResponse, DispatchType, GameDispatch } from "@/li
 import { InProcessTransport } from "@/lib/engine/transports/in-process";
 import { SetGame } from "@/server/engine/core-functions";
 import { randomUUID } from "crypto";
+import type { TransportFactory } from "@/lib/engine/engine-transport";
 
 export class GameTestAdapter {
   private _game: Game = {} as Game;
-  private _engineConnector: EngineConnector = new EngineConnector(
-    (game) => new InProcessTransport(game),
-  );
+  private _engineConnector: EngineConnector;
   private _lastDispatchResponse: DispatchResponse | null = null;
 
-  constructor(autoconnect: boolean = true) {
+  constructor(autoconnect: boolean = true, transportFactory?: TransportFactory) {
+    this._engineConnector = new EngineConnector(
+      transportFactory ?? ((game) => new InProcessTransport(game)),
+    );
     if (autoconnect) {
       this.connectToEngine();
       this._game = this._engineConnector.Game;

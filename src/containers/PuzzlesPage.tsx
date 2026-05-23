@@ -24,7 +24,7 @@ function getPreviewImageId(cardId: string, showBack = false): string {
 // ---------------------------------------------------------------------------
 // Config — flip to true to use round-trip context mode (HttpTransport pattern)
 // ---------------------------------------------------------------------------
-const USE_HTTP = true;
+const USE_HTTP_TRANSPORT = true;
 
 const PLAYER: PlayerId = 1;
 
@@ -363,7 +363,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     setActionError(null);
     const t0 = performance.now();
     try {
-      const body = USE_HTTP
+      const body = USE_HTTP_TRANSPORT
         ? { dispatch: d, context: roundTripCtxRef.current ?? undefined }
         : { gameId: gameIdRef.current, dispatch: d };
 
@@ -494,7 +494,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     setIsResolving(true);
     setActionError(null);
     try {
-      const body = USE_HTTP
+      const body = USE_HTTP_TRANSPORT
         ? { context: roundTripCtxRef.current ?? undefined }
         : { gameId: gameIdRef.current };
 
@@ -540,7 +540,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       if (!r.ok) throw new Error(((await r.json()) as { error?: string }).error ?? "Load failed");
       const { gameState: initialState } = await r.json() as { gameState: GameState };
 
-      if (USE_HTTP) {
+      if (USE_HTTP_TRANSPORT) {
         // Round-trip mode: seed the initial context locally; no server registration needed
         roundTripCtxRef.current = {
           game: {

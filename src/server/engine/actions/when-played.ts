@@ -166,6 +166,28 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SHD_132": { // Choose Sides — "Choose a friendly non-leader unit and an enemy non-leader unit. Exchange control of those units."
+      const friendly132 = GetUnitsForPlayer(player, true).filter(u => !CardIsLeader(u.cardId));
+      if (friendly132.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SHD_132",
+        player,
+        fromPlayIds: friendly132.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_127": { // Strike True — "A friendly unit deals damage equal to its power to an enemy unit."
+      const friendlyUnits127 = GetUnitsForPlayer(player);
+      if (friendlyUnits127.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_127",
+        player,
+        fromPlayIds: friendlyUnits127.map(u => u.playId),
+        continuation: null,
+      };
+    }
     case "SOR_251": { // Confiscate — "Defeat an upgrade."
       const allUpgradePlayIds = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
         .flatMap(u => u.upgrades.map(upg => upg.playId));

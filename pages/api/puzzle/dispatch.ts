@@ -23,7 +23,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
 import { methodNotAllowed } from "@/server/auth/http";
-import { processDispatch } from "@/server/engine/dispatch-listener";
+import { processPuzzleDispatch } from "@/server/puzzle/puzzle-dispatch";
 import { getContext, setContext } from "@/server/engine/game-store";
 import type { EngineContext } from "@/server/engine/pending-resolution";
 import type { GameState } from "@/lib/engine/game";
@@ -76,7 +76,7 @@ export default function handler(
   }
 
   try {
-    const result = processDispatch(dispatch, ctx);
+    const result = processPuzzleDispatch(dispatch, ctx);
 
     if (serverManaged && gameId) {
       setContext(gameId, result.context);

@@ -232,12 +232,6 @@ export class GameStateBuilder {
   // Current effects
   // ---------------------------------------------------------------------------
 
-  WithPuzzleAutoResponse(cardId: string, option: string): this {
-    if (!this._raw.puzzleAutoResponses) this._raw.puzzleAutoResponses = {};
-    this._raw.puzzleAutoResponses[cardId] = option;
-    return this;
-  }
-
   WithCurrentEffect(effect: GameState["currentEffects"][number]): this {
     this._raw.currentEffects.push(effect);
     return this;

@@ -161,4 +161,40 @@ describe("SHD_008 Boba Fett — Leader Trigger", () => {
     expect(res6.type).toBe("Option");
     expect(res6.helperText).toContain("Choose which trigger");
   });
+
+  it("test 8: trigger-order → resolve leader-reaction first → ambush still prompts after", async () => {
+    // Regression: after choosing leader-reaction first in trigger-order and completing it,
+    // the Ambush trigger should still appear rather than the game returning to normal action.
+    const g = new GameTestAdapter();
+    const state = new GameStateBuilder()
+      .MyBase(Cards.bases.common.green30HP)
+      .MyLeader(Cards.leaders.shd.bobaFett)
+      .TheirBase(Cards.bases.common.green30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .WithGroundUnitForPlayer(2, Cards.units.sor.battlefieldMarine) // valid ambush target
+      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 8)
+      .WithCardInHandForPlayer(1, Cards.units.sor.syndicateLackeys) // has Ambush
+      .Build();
+    g.loadNewState(state);
+
+    await g.playCardFromHandAsync(1, 0);
+
+    // trigger-order: both ambush and leader-reaction queued
+    const triggerPrompt = g.lastDispatchResponse!.resolutionNeeded as NeedsOption;
+    expect(triggerPrompt.helperText).toContain("Choose which trigger");
+
+    // Resolve leader-reaction first
+    await g.chooseOptionAsync(1, "Boba Fett — leader-reaction");
+    expect(g.lastDispatchResponse!.resolutionNeeded?.type).toBe("Option"); // Yes/No for Boba
+    await g.chooseYesAsync(1);
+
+    // pick the Syndicate Lackeys itself as the buff target
+    const lackeysPlayId = g.state.player1.groundArena[0].playId;
+    await g.dispatchAsync(1, "choose-target", { targetPlayIds: [lackeysPlayId] });
+
+    // Ambush should now be the pending resolution
+    const ambushPrompt = g.lastDispatchResponse!.resolutionNeeded as NeedsOption;
+    expect(ambushPrompt.type).toBe("Option");
+    expect(ambushPrompt.helperText).toContain("Ambush");
+  });
 });

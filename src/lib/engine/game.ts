@@ -63,12 +63,6 @@ export interface GameState {
     regroupResourcedPlayers: PlayerId[];
   };
   triggerBag: TriggerEntry[];
-  /**
-   * Puzzle-mode only. Maps defeated-card IDs to the option string that Player 2
-   * should auto-pick when a when-defeated-choice fires for their unit.
-   * Never set in real games — only InProcessTransport consults this.
-   */
-  puzzleAutoResponses?: Record<string, string>;
 }
 
 export interface Game {

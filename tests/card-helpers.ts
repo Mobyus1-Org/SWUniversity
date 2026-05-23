@@ -281,9 +281,13 @@ export const Cards = {
     },
   },
   events: {
+    shd: {
+      chooseSides: "SHD_132",
+    },
     sor: {
       momentOfPeace: "SOR_073",
       rebelAssault: "SOR_103",
+      strikeTrue: "SOR_127",
       waylay: "SOR_222",
       changeOfHeart: "SOR_224",
       confiscate: "SOR_251",

@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "../../game-test-adapter";
 import { bobaDaimyoLeiaAdelphiPuzzleState } from "../../_gamestates/puzzles";
+import { PuzzleInProcessTransport } from "@/lib/engine/transports/puzzle-in-process";
 
 describe("Boba Fett Daimyo / Leia Organa Adelphi Puzzle", () => {
   it("produces only Player 1 as winner when simple puzzle is completed", async () => {
     // arrange
-    const g = new GameTestAdapter();
+    const g = new GameTestAdapter(true, (game) => new PuzzleInProcessTransport(game));
     g.loadNewState(bobaDaimyoLeiaAdelphiPuzzleState);
     // act
     await g.useBaseAbilityAsync(1);
