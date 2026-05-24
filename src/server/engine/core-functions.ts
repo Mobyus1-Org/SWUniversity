@@ -407,20 +407,29 @@ export function UnitWasDefeatedThisPhase(player: PlayerId, trait?: string): bool
   return defeatedUnits.length > 0;
 }
 
-export function UnitAttackedThisPhase(player: PlayerId, trait?: string): boolean {
+export function UnitAttackedThisPhase(player: PlayerId, trait?: string, another?: boolean, playId?: string): boolean {
   const game = GetGame();
   if (!game) {
     return false;
   }
 
-  const attackedUnits = game.currentGameState.roundState.unitsAttackedThisPhase.filter(attached => attached.fromPlayer === player);
+  let attackedUnits = game.currentGameState.roundState.unitsAttackedThisPhase.filter(attacked => attacked.fromPlayer === player);
+
+  if (another && !playId) {
+    throw new Error("playId is required when another is true");
+  }
+
+  if (another && playId) {
+    attackedUnits = attackedUnits.filter(attacked => attacked.playId !== playId);
+  }
+
   if (trait) {
     /*
       not relevant now, but keep in mind that if a unit loses the Force trait during an attack,
       it will be "put" in this array with its original traits; will only be relevant if Nameless Terror
       becomes meta and some future card requires a Force unit to attack
     */
-    return attackedUnits.some(attached => TraitContains(attached.cardId, trait));
+    return attackedUnits.some(attacked => TraitContains(attacked.cardId, trait));
   }
 
   return attackedUnits.length > 0;

@@ -26,7 +26,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { CardIsLeader, GetGame, GetUnitsForPlayer, SetGame, TraitContains } from "@/server/engine/core-functions";
+import { CardIsLeader, GetGame, GetUnitsForPlayer, SetGame, TraitContains, UnitAttackedThisPhase } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -642,6 +642,11 @@ function resolveAttack(
   }
 
   attacker.ready = false;
+  game.roundState.unitsAttackedThisPhase.push({
+    fromPlayer: attacker.controller,
+    cardId: attacker.cardId,
+    playId: attacker.playId,
+  });
   const atkPower = attacker.CurrentPower(false, true);
   const attackerName = CardTitle(attacker.cardId);
 
@@ -1172,7 +1177,7 @@ function handleInitiateAttack(
 
   // Check for optional On Attack abilities before picking the attack target
   // On-attack triggers go into the bag here; they drain AFTER target is chosen.
-  if (["SOR_010", "SOR_014"].includes(attacker.cardId)) {
+  if (["SOR_010", "SOR_014", "SHD_012"].includes(attacker.cardId)) {
     game.triggerBag.push({ triggerType: "on-attack", cardId: attacker.cardId, fromPlayer: player });
   }
 
@@ -2331,6 +2336,21 @@ function resolveActionAbility(
       game.player2.base.damage += 1;
       log.push(`${CardTitle(cardId)} dealt 1 damage to each base.`);
       return null;
+    case "SHD_012": { // Bo-Katan Kryze - Princess in Exile: If a Mandalorian attacked this phase, deal 1 damage to a unit.
+      if (!UnitAttackedThisPhase(player, "Mandalorian")) {
+        log.push(`${CardTitle(cardId)}: no Mandalorian attacked this phase — soft pass.`);
+        return null;
+      }
+      const allUnits012 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      if (allUnits012.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: allUnits012.map(u => u.playId),
+        continuation: null,
+      };
+    }
     default:
       return null;
   }
@@ -2348,6 +2368,17 @@ function applyAbilityEffect(
   const game = GetGame();
   if(!game) throw new Error("Game not found in applyAbilityEffect.");
   switch (pending.cardId) {
+    case "SHD_012": // Bo-Katan Kryze leader action: deal 1 damage to chosen unit
+    case "SHD_012_1": // Bo-Katan deployed on-attack: first 1-damage shot
+    case "SHD_012_2": { // Bo-Katan deployed on-attack: second 1-damage shot (another Mandalorian attacked)
+      if (!targetPlayId) break;
+      const target012 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target012) {
+        target012.damage += 1;
+        game.gameLog.push(`${CardTitle("SHD_012")}: dealt 1 damage to ${CardTitle(target012.cardId)}.`);
+      }
+      break;
+    }
     case "SOR_010": { // Darth Vader: deal 2 damage to chosen unit
       if (!targetPlayId) break;
       const target = unitByPlayId(game.currentGameState, targetPlayId);

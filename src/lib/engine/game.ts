@@ -58,7 +58,7 @@ export interface GameState {
     cardsPlayedThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string }[];
     cardsEnteredPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: EntryReason }[];
     cardsLeftPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: ExitReason }[];
-    unitsAttackedThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string }[];
+    unitsAttackedThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; }[];
     lastActionWasPass: boolean;
     regroupResourcedPlayers: PlayerId[];
   };
