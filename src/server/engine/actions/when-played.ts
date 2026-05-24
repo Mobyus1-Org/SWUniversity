@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
-import { PayToMoveGroundPending, PendingResolution } from "@/server/engine/pending-resolution";
+import { PendingResolution } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
 import { CardTitle } from "@/server/engine/card-db/generated";
@@ -33,6 +33,27 @@ export function resolveWhenPlayed(
         }
       };
     }
+
+    case "SOR_162": //Disabling Fang Fighter: You may defeat an upgrade.
+    case "SHD_166": //reprint of SOR_162
+      if (!playId && !player) return null;
+      const allUpgradePlayIds = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+        .flatMap(u => u.upgrades.map(upg => upg.playId));
+      if (allUpgradePlayIds.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        sourcePlayId: playId,
+        helperText: "Defeat an upgrade?",
+        onYes: {
+          type: "ability-target",
+          cardId,
+          player,
+          fromPlayIds: allUpgradePlayIds,
+          continuation: null,
+        },
+        continuation: null,
+      }
     case "SOR_168": //Precision Fire "Attack with a unit. It gains Saboteur for this attack. If it's a Trooper, it also gets +2/+0 for this attack. (Ignore Sentinel and defeat the defender's Shields.)"
       return {
         type: "ability-target",
@@ -45,7 +66,7 @@ export function resolveWhenPlayed(
       return {
         type: "ability-option",
         cardId,
-        sourcePlayId: playId!,
+        sourcePlayId: playId,
         helperText: "Deal damage to a unit equal to the number of cards in your hand?",
         onYes: {
           type: "ability-target",
@@ -63,7 +84,7 @@ export function resolveWhenPlayed(
       if (eligible.length === 0) return null;
       return {
         type: "ability-target",
-        cardId: "SEC_034",
+        cardId,
         fromPlayIds: eligible.map(u => u.playId),
         continuation: null,
       };
@@ -137,7 +158,7 @@ export function resolveWhenPlayed(
       if (allNonLeaders.length === 0) return null;
       return {
         type: "ability-target",
-        cardId: "SOR_224",
+        cardId,
         player,
         fromPlayIds: allNonLeaders.map(u => u.playId),
         continuation: null,
@@ -149,7 +170,7 @@ export function resolveWhenPlayed(
       if (allNonLeaders.length === 0) return null;
       return {
         type: "ability-target",
-        cardId: "SOR_222",
+        cardId,
         player,
         fromPlayIds: allNonLeaders.map(u => u.playId),
         continuation: null,
@@ -159,7 +180,7 @@ export function resolveWhenPlayed(
       if (!playId) return null;
       return {
         type: "pay-to-move-ground",
-        cardId: "JTL_096",
+        cardId,
         sourcePlayId: playId,
         player,
         cost: 2,
@@ -181,7 +202,7 @@ export function resolveWhenPlayed(
       if (attackers150.length === 0) return null;
       return {
         type: "ability-target",
-        cardId: "SOR_150",
+        cardId,
         player,
         fromPlayIds: attackers150.map(u => u.playId),
         continuation: null,
@@ -192,7 +213,7 @@ export function resolveWhenPlayed(
       if (friendly132.length === 0) return null;
       return {
         type: "ability-target",
-        cardId: "SHD_132",
+        cardId,
         player,
         fromPlayIds: friendly132.map(u => u.playId),
         continuation: null,
@@ -203,7 +224,7 @@ export function resolveWhenPlayed(
       if (friendlyUnits127.length === 0) return null;
       return {
         type: "ability-target",
-        cardId: "SOR_127",
+        cardId,
         player,
         fromPlayIds: friendlyUnits127.map(u => u.playId),
         continuation: null,
@@ -215,7 +236,7 @@ export function resolveWhenPlayed(
       if (allUpgradePlayIds.length === 0) return null;
       return {
         type: "ability-target",
-        cardId: "SOR_251",
+        cardId,
         player,
         fromPlayIds: allUpgradePlayIds,
         continuation: null,

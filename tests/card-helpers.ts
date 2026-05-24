@@ -236,6 +236,7 @@ export const Cards = {
       chewbaccaPykesbane: "SHD_050",
       sugi: "SHD_052",
       djBlatantThief: "SHD_213",
+      theMandalorian: "SHD_049",
       tobiasBeckett: "SHD_217",
       supercommandoSquad: "SHD_034",
     },
@@ -275,6 +276,7 @@ export const Cards = {
       legalAuthority: "SHD_124",
       publicEnemy: "SHD_068",
       hotshotBlaster: "SHD_174",
+      theDarksaber: "SHD_126",
     },
     lof: {
       bolsteredEndurance: "LOF_074",

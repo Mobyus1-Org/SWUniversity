@@ -217,10 +217,16 @@ function FaceDownResource({
 
 function UpgradeStrip({
   cardId,
+  playId,
+  selectable = false,
+  onClick,
   onPreviewStart,
   onPreviewEnd,
 }: {
   cardId: string;
+  playId?: string;
+  selectable?: boolean;
+  onClick?: () => void;
   onPreviewStart: (preview: PreviewState) => void;
   onPreviewEnd: () => void;
 }) {
@@ -232,9 +238,9 @@ function UpgradeStrip({
 
   React.useEffect(() => { setImageSrc(primarySrc); }, [primarySrc]);
 
-  return (
+  const inner = (
     <div
-      className="overflow-hidden rounded-b-xl border-x border-b border-white/15 bg-black/40"
+      className={`overflow-hidden rounded-b-xl border-x border-b border-white/15 bg-black/40${selectable && onClick ? " ring-2 ring-rose-400/90 shadow-[0_0_10px_rgba(251,113,133,0.5)]" : ""}`}
       style={{ height: 18 }}
       onMouseEnter={() => onPreviewStart({ imageId: imageCardId, cardId, label: title })}
       onMouseLeave={onPreviewEnd}
@@ -248,6 +254,15 @@ function UpgradeStrip({
       />
     </div>
   );
+
+  if (selectable && onClick) {
+    return (
+      <button type="button" className="block w-full cursor-pointer" title={title} onClick={onClick}>
+        {inner}
+      </button>
+    );
+  }
+  return inner;
 }
 
 function CaptiveStrip({
@@ -259,12 +274,7 @@ function CaptiveStrip({
   onPreviewStart: (preview: PreviewState) => void;
   onPreviewEnd: () => void;
 }) {
-  const primarySrc = getCardImageLink(cardId);
-  const fallbackSrc = getSWUDBImageLink(cardId);
-  const [imageSrc, setImageSrc] = React.useState(primarySrc);
   const title = CardTitle(cardId);
-
-  React.useEffect(() => { setImageSrc(primarySrc); }, [primarySrc]);
 
   return (
     <div
@@ -650,6 +660,20 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
           ...player.spaceArena.filter((u) => u.ready).map((u) => u.playId),
         ]
       : [];
+  const selectableUpgradePlayIds: Set<string> =
+    resolutionNeeded?.type === "Target" && (resolutionNeeded.fromPlayIds ?? []).length > 0
+      ? new Set(
+          [
+            ...gameState.player1.groundArena,
+            ...gameState.player1.spaceArena,
+            ...gameState.player2.groundArena,
+            ...gameState.player2.spaceArena,
+          ]
+            .flatMap(u => u.upgrades)
+            .filter(upg => (resolutionNeeded.fromPlayIds ?? []).includes(upg.playId))
+            .map(upg => upg.playId)
+        )
+      : new Set();
   const selectableBaseForPlayer: PlayerId[] = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Base")
     ? [2]
     : [];
@@ -839,7 +863,20 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
-                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {unit.upgrades.map((upgrade) => {
+                      const isSelectable = selectableUpgradePlayIds.has(upgrade.playId);
+                      return (
+                        <UpgradeStrip
+                          key={upgrade.playId}
+                          cardId={upgrade.cardId}
+                          playId={upgrade.playId}
+                          selectable={isSelectable}
+                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          onPreviewStart={handlePreviewStart}
+                          onPreviewEnd={handlePreviewEnd}
+                        />
+                      );
+                    })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -863,7 +900,20 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
-                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {unit.upgrades.map((upgrade) => {
+                      const isSelectable = selectableUpgradePlayIds.has(upgrade.playId);
+                      return (
+                        <UpgradeStrip
+                          key={upgrade.playId}
+                          cardId={upgrade.cardId}
+                          playId={upgrade.playId}
+                          selectable={isSelectable}
+                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          onPreviewStart={handlePreviewStart}
+                          onPreviewEnd={handlePreviewEnd}
+                        />
+                      );
+                    })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -918,7 +968,20 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
-                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {unit.upgrades.map((upgrade) => {
+                      const isSelectable = selectableUpgradePlayIds.has(upgrade.playId);
+                      return (
+                        <UpgradeStrip
+                          key={upgrade.playId}
+                          cardId={upgrade.cardId}
+                          playId={upgrade.playId}
+                          selectable={isSelectable}
+                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          onPreviewStart={handlePreviewStart}
+                          onPreviewEnd={handlePreviewEnd}
+                        />
+                      );
+                    })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -997,7 +1060,20 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
-                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {unit.upgrades.map((upgrade) => {
+                      const isSelectable = selectableUpgradePlayIds.has(upgrade.playId);
+                      return (
+                        <UpgradeStrip
+                          key={upgrade.playId}
+                          cardId={upgrade.cardId}
+                          playId={upgrade.playId}
+                          selectable={isSelectable}
+                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          onPreviewStart={handlePreviewStart}
+                          onPreviewEnd={handlePreviewEnd}
+                        />
+                      );
+                    })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -1056,7 +1132,20 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
-                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {unit.upgrades.map((upgrade) => {
+                      const isSelectable = selectableUpgradePlayIds.has(upgrade.playId);
+                      return (
+                        <UpgradeStrip
+                          key={upgrade.playId}
+                          cardId={upgrade.cardId}
+                          playId={upgrade.playId}
+                          selectable={isSelectable}
+                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          onPreviewStart={handlePreviewStart}
+                          onPreviewEnd={handlePreviewEnd}
+                        />
+                      );
+                    })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -1082,7 +1171,20 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         sentinel={sentinelPlayIds.includes(unit.playId)}
                         square
                       />
-                      {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                      {unit.upgrades.map((upgrade) => {
+                      const isSelectable = selectableUpgradePlayIds.has(upgrade.playId);
+                      return (
+                        <UpgradeStrip
+                          key={upgrade.playId}
+                          cardId={upgrade.cardId}
+                          playId={upgrade.playId}
+                          selectable={isSelectable}
+                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          onPreviewStart={handlePreviewStart}
+                          onPreviewEnd={handlePreviewEnd}
+                        />
+                      );
+                    })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                     </div>})
                   }
                 </div>
@@ -1110,7 +1212,20 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       sentinel={sentinelPlayIds.includes(unit.playId)}
                       square
                     />
-                    {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {unit.upgrades.map((upgrade) => {
+                      const isSelectable = selectableUpgradePlayIds.has(upgrade.playId);
+                      return (
+                        <UpgradeStrip
+                          key={upgrade.playId}
+                          cardId={upgrade.cardId}
+                          playId={upgrade.playId}
+                          selectable={isSelectable}
+                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          onPreviewStart={handlePreviewStart}
+                          onPreviewEnd={handlePreviewEnd}
+                        />
+                      );
+                    })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                   </div>)}
                 </div>
               </div>
@@ -1193,7 +1308,20 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         sentinel={sentinelPlayIds.includes(unit.playId)}
                         square
                       />
-                      {unit.upgrades.map((upgrade) => <UpgradeStrip key={upgrade.playId} cardId={upgrade.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                      {unit.upgrades.map((upgrade) => {
+                      const isSelectable = selectableUpgradePlayIds.has(upgrade.playId);
+                      return (
+                        <UpgradeStrip
+                          key={upgrade.playId}
+                          cardId={upgrade.cardId}
+                          playId={upgrade.playId}
+                          selectable={isSelectable}
+                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          onPreviewStart={handlePreviewStart}
+                          onPreviewEnd={handlePreviewEnd}
+                        />
+                      );
+                    })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                     </div>})
                   }
                 </div>

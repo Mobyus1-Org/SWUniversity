@@ -52,7 +52,6 @@ import type {
   AbilityTargetPending,
   AttackTargetPending,
   BountyShieldTargetPending,
-  CaptureCaptorPending,
   CaptureTargetPending,
   DefeatCopyPending,
   DiscardFromHandPending,
@@ -60,9 +59,7 @@ import type {
   EngineContext,
   ExploitOptionPending,
   ExploitTargetPending,
-  L337ReplacePending,
   L337ReplaceTargetPending,
-  PayToMoveGroundPending,
   PendingResolution,
   PilotingOptionPending,
   PlotOrderPending,
@@ -70,7 +67,6 @@ import type {
   ResolveAttackPending,
   TriggerOrderPending,
   UpgradeTargetPending,
-  WhenDeployedPending,
 } from "@/server/engine/pending-resolution";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import { collectBounties, drawCardForPlayer } from "@/server/engine/actions/bounty";
@@ -157,6 +153,14 @@ function unitByPlayId(game: GameState, playId: string): Unit | null {
 
 function aspectPenalty(game: GameState, player: PlayerId, cardId: string): number {
   const playerState = ps(game, player);
+
+  // Darksaber: free aspect cost when a friendly Mandalorian non-Vehicle target exists
+  if (cardId === "SHD_126") {
+    const hasMandalorian = [...playerState.groundArena, ...playerState.spaceArena]
+      .some(u => !TraitContains(u.cardId, "Vehicle") && TraitContains(u.cardId, "Mandalorian", player, u.playId));
+    if (hasMandalorian) return 0;
+  }
+
   const provided = [
     ...CardAspects(playerState.base.cardId),
     ...CardAspects(playerState.leader.cardId),
@@ -1177,7 +1181,8 @@ function handleInitiateAttack(
 
   // Check for optional On Attack abilities before picking the attack target
   // On-attack triggers go into the bag here; they drain AFTER target is chosen.
-  if (["SOR_010", "SOR_014", "SHD_012"].includes(attacker.cardId)) {
+  const attackerHasDarksaber = attacker.upgrades.some(u => u.cardId === "SHD_126");
+  if (["SOR_010", "SOR_014", "SHD_012"].includes(attacker.cardId) || attackerHasDarksaber) {
     game.triggerBag.push({ triggerType: "on-attack", cardId: attacker.cardId, fromPlayer: player });
   }
 
@@ -2582,6 +2587,8 @@ function applyAbilityEffect(
       game.gameLog.push(`Strike True: ${CardTitle(attacker127.cardId)} dealt ${power127} damage to ${CardTitle(target127.cardId)}.`);
       break;
     }
+    case "SOR_162": //Disabling Fang Fighter
+    case "SHD_166": //reprint of SOR_162
     case "SOR_251": { // Confiscate — defeat an upgrade
       if (!targetPlayId) break;
       const allGameUnits = allUnits(game.currentGameState);

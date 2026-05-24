@@ -158,7 +158,7 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v
 // Builder state types
 // ---------------------------------------------------------------------------
 
-type UnitEntry = { cardId: string; ready: boolean; damage: number };
+type UnitEntry = { cardId: string; ready: boolean; damage: number; upgrades: string[]; captives: string[] };
 type ResourceEntry = { cardId: string; ready: boolean };
 
 type PlayerBuilderState = {
@@ -212,6 +212,63 @@ function initialBuilderState(): BuilderState {
 }
 
 // ---------------------------------------------------------------------------
+// Convert RawGameState → builder state (used for JSON import)
+// ---------------------------------------------------------------------------
+
+const PHASE_NAMES = ["ActionPhase", "RegroupDraw", "RegroupResource", "RegroupReady"] as const;
+
+function resolvePhase(raw: unknown): GamePhase {
+  if (typeof raw === "number") return (PHASE_NAMES[raw] ?? "ActionPhase") as GamePhase;
+  if (typeof raw === "string" && (PHASE_NAMES as readonly string[]).includes(raw)) return raw as GamePhase;
+  return "ActionPhase" as GamePhase;
+}
+
+function parseRawPlayer(p: Record<string, unknown>): PlayerBuilderState {
+  const base = (p.base ?? {}) as Record<string, unknown>;
+  const leader = (p.leader ?? {}) as Record<string, unknown>;
+  const ground = (p.groundArena ?? []) as Record<string, unknown>[];
+  const space = (p.spaceArena ?? []) as Record<string, unknown>[];
+  const resources = (p.resources ?? []) as Record<string, unknown>[];
+  const hand = (p.hand ?? []) as Record<string, unknown>[];
+  return {
+    baseCardId: String(base.cardId ?? ""),
+    baseDamage: Number(base.damage ?? 0),
+    baseEpicActionUsed: Boolean(base.epicActionUsed),
+    leaderCardId: String(leader.cardId ?? ""),
+    leaderReady: leader.ready !== false,
+    leaderDeployed: Boolean(leader.deployed),
+    leaderEpicActionUsed: Boolean(leader.epicActionUsed),
+    resources: resources.map((r) => ({ cardId: String(r.cardId ?? ""), ready: r.ready !== false })),
+    handCards: hand.map((h) => String((h as Record<string, unknown>).cardId ?? "")),
+    groundUnits: ground.map((u) => ({
+      cardId: String(u.cardId ?? ""), ready: u.ready !== false, damage: Number(u.damage ?? 0),
+      upgrades: ((u.upgrades ?? []) as Record<string, unknown>[]).map((ug) => String(ug.cardId ?? "")),
+      captives: ((u.captives ?? []) as Record<string, unknown>[]).map((c) => String(c.cardId ?? "")),
+    })),
+    spaceUnits: space.map((u) => ({
+      cardId: String(u.cardId ?? ""), ready: u.ready !== false, damage: Number(u.damage ?? 0),
+      upgrades: ((u.upgrades ?? []) as Record<string, unknown>[]).map((ug) => String(ug.cardId ?? "")),
+      captives: ((u.captives ?? []) as Record<string, unknown>[]).map((c) => String(c.cardId ?? "")),
+    })),
+  };
+}
+
+function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; difficulty: number }): BuilderState {
+  return {
+    name: meta.name,
+    description: meta.description,
+    difficulty: meta.difficulty,
+    activePlayer: Number(raw.activePlayer) === 2 ? 2 : 1,
+    gamePhase: resolvePhase(raw.gamePhase),
+    currentRound: Number(raw.currentRound ?? 1),
+    initiativePlayer: Number(raw.initiativePlayer) === 2 ? 2 : 1,
+    initiativeClaimed: raw.initiativeClaimed !== false,
+    player1: parseRawPlayer((raw.player1 ?? {}) as Record<string, unknown>),
+    player2: parseRawPlayer((raw.player2 ?? {}) as Record<string, unknown>),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Convert builder state → RawGameState
 // ---------------------------------------------------------------------------
 
@@ -222,11 +279,15 @@ function toRaw(s: BuilderState): RawPuzzleGameState {
       leader: { cardId: p.leaderCardId, ready: p.leaderReady, deployed: p.leaderDeployed, epicActionUsed: p.leaderEpicActionUsed },
       groundArena: p.groundUnits.map((u) => ({
         cardId: u.cardId, playId: "@", owner: playerId, controller: playerId,
-        ready: u.ready, damage: u.damage, upgrades: [], captives: [],
+        ready: u.ready, damage: u.damage,
+        upgrades: u.upgrades.map((cardId) => ({ cardId, playId: "@", owner: playerId, controller: playerId })),
+        captives: u.captives.map((cardId) => ({ cardId, playId: "@", owner: playerId, controller: playerId })),
       })),
       spaceArena: p.spaceUnits.map((u) => ({
         cardId: u.cardId, playId: "@", owner: playerId, controller: playerId,
-        ready: u.ready, damage: u.damage, upgrades: [], captives: [],
+        ready: u.ready, damage: u.damage,
+        upgrades: u.upgrades.map((cardId) => ({ cardId, playId: "@", owner: playerId, controller: playerId })),
+        captives: u.captives.map((cardId) => ({ cardId, playId: "@", owner: playerId, controller: playerId })),
       })),
       resources: p.resources.map((r) => ({
         cardId: r.cardId, playId: "@", owner: playerId, controller: playerId, ready: r.ready,
@@ -418,6 +479,7 @@ function PlayerSection({ label, state, cards, onChange }: PlayerSectionProps) {
           cards={cards}
           onAdd={(u) => patch({ groundUnits: [...state.groundUnits, u] })}
           onRemove={(i) => patch({ groundUnits: state.groundUnits.filter((_, j) => j !== i) })}
+          onUpdate={(i, u) => patch({ groundUnits: state.groundUnits.map((x, j) => j === i ? u : x) })}
         />
       </div>
 
@@ -430,22 +492,104 @@ function PlayerSection({ label, state, cards, onChange }: PlayerSectionProps) {
           cards={cards}
           onAdd={(u) => patch({ spaceUnits: [...state.spaceUnits, u] })}
           onRemove={(i) => patch({ spaceUnits: state.spaceUnits.filter((_, j) => j !== i) })}
+          onUpdate={(i, u) => patch({ spaceUnits: state.spaceUnits.map((x, j) => j === i ? u : x) })}
         />
       </div>
     </div>
   );
 }
 
-function UnitAdder({ unitCards, units, cards, onAdd, onRemove }: {
+// ---------------------------------------------------------------------------
+// Unit edit dialog (upgrades / captives)
+// ---------------------------------------------------------------------------
+
+type UnitEditDialogProps = {
+  unit: UnitEntry;
+  type: "upgrades" | "captives";
+  cards: CardCatalogEntry[];
+  unitCards: CardCatalogEntry[];
+  onUpdate: (next: UnitEntry) => void;
+  onClose: () => void;
+};
+
+function UnitEditDialog({ unit, type, cards, unitCards, onUpdate, onClose }: UnitEditDialogProps) {
+  const [newCardId, setNewCardId] = React.useState("");
+  const isUpgrades = type === "upgrades";
+  const items = isUpgrades ? unit.upgrades : unit.captives;
+  const pickerCards = isUpgrades ? cards.filter((c) => c.type === "Upgrade") : unitCards;
+  const unitName = cards.find((c) => c.cardId === unit.cardId)?.label ?? unit.cardId;
+
+  function addItem() {
+    if (!newCardId) return;
+    const next = [...items, newCardId];
+    onUpdate(isUpgrades ? { ...unit, upgrades: next } : { ...unit, captives: next });
+    setNewCardId("");
+  }
+
+  function removeItem(i: number) {
+    const next = items.filter((_, j) => j !== i);
+    onUpdate(isUpgrades ? { ...unit, upgrades: next } : { ...unit, captives: next });
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60">
+      <div className="w-80 rounded-2xl border border-white/10 bg-[rgba(5,8,20,0.97)] p-5 shadow-2xl space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <div className="text-xs font-bold uppercase tracking-[0.2em] text-white">
+              {isUpgrades ? "Upgrades" : "Captives"}
+            </div>
+            <div className="text-[11px] text-white/40">{unitName}</div>
+          </div>
+          <button type="button" onClick={onClose} className="text-lg leading-none text-white/30 hover:text-white">×</button>
+        </div>
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <CardPicker
+            cards={pickerCards}
+            value={newCardId}
+            onChange={setNewCardId}
+            placeholder={isUpgrades ? "Search upgrades…" : "Search units…"}
+          />
+          <button
+            type="button"
+            disabled={!newCardId}
+            onClick={addItem}
+            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20 disabled:opacity-40"
+          >
+            Add
+          </button>
+        </div>
+        {items.length > 0 ? (
+          <div className="space-y-1">
+            {items.map((cardId, i) => (
+              <div key={i} className="flex items-center justify-between rounded-md bg-black/20 px-2 py-1 text-[11px]">
+                <span className="text-white/80">{cards.find((c) => c.cardId === cardId)?.label ?? cardId}</span>
+                <button type="button" onClick={() => removeItem(i)} className="text-white/30 hover:text-rose-300">×</button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[11px] text-white/30">None added.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function UnitAdder({ unitCards, units, cards, onAdd, onRemove, onUpdate }: {
   unitCards: CardCatalogEntry[];
   units: UnitEntry[];
   cards: CardCatalogEntry[];
   onAdd: (u: UnitEntry) => void;
   onRemove: (i: number) => void;
+  onUpdate: (i: number, u: UnitEntry) => void;
 }) {
   const [cardId, setCardId] = React.useState("");
   const [ready, setReady] = React.useState(true);
   const [damage, setDamage] = React.useState(0);
+  const [editDialog, setEditDialog] = React.useState<{ index: number; type: "upgrades" | "captives" } | null>(null);
 
   return (
     <>
@@ -465,29 +609,65 @@ function UnitAdder({ unitCards, units, cards, onAdd, onRemove }: {
         <button
           type="button"
           disabled={!cardId}
-          onClick={() => { onAdd({ cardId, ready, damage }); setCardId(""); setDamage(0); setReady(true); }}
+          onClick={() => { onAdd({ cardId, ready, damage, upgrades: [], captives: [] }); setCardId(""); setDamage(0); setReady(true); }}
           className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20 disabled:opacity-40"
         >
           Add
         </button>
       </div>
       {units.length > 0 && (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {units.map((u, i) => (
-            <div key={i} className="flex items-center justify-between rounded-md bg-black/20 px-2 py-1 text-[11px]">
-              <span className="text-white/80">
-                {cards.find((c) => c.cardId === u.cardId)?.label ?? u.cardId}
-                {u.damage > 0 ? <span className="ml-1.5 text-rose-300">({u.damage} dmg)</span> : null}
-                {!u.ready ? <span className="ml-1.5 text-white/40">[exhausted]</span> : null}
-              </span>
-              <button
-                type="button"
-                onClick={() => onRemove(i)}
-                className="text-white/30 hover:text-rose-300"
-              >×</button>
+            <div key={i} className="space-y-0.5">
+              <div className="flex items-center gap-1.5 rounded-md bg-black/20 px-2 py-1 text-[11px]">
+                <span className="text-white/80 mr-0.5">
+                  {cards.find((c) => c.cardId === u.cardId)?.label ?? u.cardId}
+                  {u.damage > 0 ? <span className="ml-1.5 text-rose-300">({u.damage} dmg)</span> : null}
+                  {!u.ready ? <span className="ml-1.5 text-white/40">[exhausted]</span> : null}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setEditDialog({ index: i, type: "upgrades" })}
+                  className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-blue-300 bg-blue-500/15 hover:bg-blue-500/30 transition-colors"
+                >
+                  {u.upgrades.length > 0 ? `Upgrades (${u.upgrades.length})` : "Upgrades"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditDialog({ index: i, type: "captives" })}
+                  className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-white/50 bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  {u.captives.length > 0 ? `Captives (${u.captives.length})` : "Captives"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onRemove(i)}
+                  className="ml-auto text-white/30 hover:text-rose-300"
+                >×</button>
+              </div>
+              {u.upgrades.length > 0 && (
+                <div className="ml-3 flex flex-wrap gap-1">
+                  {u.upgrades.map((cardId, j) => (
+                    <span key={j} className="text-[10px] text-blue-300/70">
+                      {cards.find((c) => c.cardId === cardId)?.label ?? cardId}
+                      {j < u.upgrades.length - 1 ? "," : ""}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
+      )}
+      {editDialog && (
+        <UnitEditDialog
+          unit={units[editDialog.index]}
+          type={editDialog.type}
+          cards={cards}
+          unitCards={unitCards}
+          onUpdate={(next) => onUpdate(editDialog.index, next)}
+          onClose={() => setEditDialog(null)}
+        />
       )}
     </>
   );
@@ -579,6 +759,37 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
   const [state, setState] = React.useState<BuilderState>(initialBuilderState);
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
+  const [importError, setImportError] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const json = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
+        let gamestate: Record<string, unknown>;
+        let meta = { name: "New Puzzle", description: "", difficulty: 1 };
+        if (json.initialGamestate !== undefined) {
+          gamestate = json.initialGamestate as Record<string, unknown>;
+          meta = {
+            name: String(json.name ?? "New Puzzle"),
+            description: String(json.description ?? ""),
+            difficulty: Number(json.difficulty ?? 1),
+          };
+        } else {
+          gamestate = json;
+        }
+        setState(fromRaw(gamestate, meta));
+        setImportError(null);
+      } catch {
+        setImportError("Invalid JSON file.");
+      }
+    };
+    reader.readAsText(file);
+  }
 
   React.useEffect(() => {
     fetch("/api/internal/card-catalog")
@@ -625,13 +836,30 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
           {/* Header */}
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-black uppercase tracking-[0.24em] text-white">Build Puzzle</h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20"
-            >
-              Cancel
-            </button>
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={handleImport}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20"
+              >
+                Import JSON
+              </button>
+              {importError && <span className="text-xs text-rose-300">{importError}</span>}
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
 
           {cardsLoading ? (
@@ -661,14 +889,26 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
                 </FieldRow>
                 <FieldRow label="Difficulty">
                   <div className="flex items-center gap-2">
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => patchGlobal({ difficulty: n })}
-                        className={`h-6 w-6 rounded-full transition-colors ${n <= state.difficulty ? "bg-primary" : "bg-white/20 hover:bg-white/30"}`}
-                      />
-                    ))}
+                    {[1, 2, 3, 4, 5].map((n) => {
+                      const fillPct = state.difficulty >= n ? 100 : state.difficulty >= n - 0.5 ? 50 : 0;
+                      return (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => {
+                            if (state.difficulty === n) patchGlobal({ difficulty: n - 0.5 });
+                            else if (state.difficulty === n - 0.5) patchGlobal({ difficulty: n });
+                            else patchGlobal({ difficulty: n });
+                          }}
+                          className="relative h-6 w-6 overflow-hidden rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                        >
+                          <span
+                            className="absolute inset-y-0 left-0 bg-primary transition-[width]"
+                            style={{ width: `${fillPct}%` }}
+                          />
+                        </button>
+                      );
+                    })}
                   </div>
                 </FieldRow>
               </div>

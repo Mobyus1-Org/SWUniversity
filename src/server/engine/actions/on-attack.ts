@@ -1,6 +1,6 @@
 import { Unit } from "@/server/engine/unit";
 import { PendingResolution, ResolveAttackPending } from "@/server/engine/pending-resolution";
-import { GetGame, UnitAttackedThisPhase } from "@/server/engine/core-functions";
+import { GetGame, UnitAttackedThisPhase, TraitContains } from "@/server/engine/core-functions";
 
 /**
  * On Attack abilities — called after the attack target is chosen.
@@ -13,6 +13,30 @@ export function resolveOnAttackTrigger(
   attacker: Unit,
   continuation: ResolveAttackPending,
 ): PendingResolution | null {
+  // Upgrade-granted: Darksaber — give XP to each other friendly Mandalorian (automatic, no player input)
+  const hasDarksaber = attacker.upgrades.some(u => u.cardId === "SHD_126");
+  if (hasDarksaber) {
+    const game = GetGame();
+    if (game) {
+      const gs = game.currentGameState;
+      const player = attacker.controller;
+      const friendly = player === 1
+        ? [...gs.player1.groundArena, ...gs.player1.spaceArena]
+        : [...gs.player2.groundArena, ...gs.player2.spaceArena];
+      for (const unit of friendly) {
+        if (unit.playId === attacker.playId) continue;
+        if (TraitContains(unit.cardId, "Mandalorian", player, unit.playId)) {
+          unit.upgrades.push({
+            cardId: "SOR_T01",
+            playId: String(gs.nextPlayId++),
+            owner: player,
+            controller: player,
+          });
+        }
+      }
+    }
+  }
+
   switch (attacker.cardId) {
     case "SOR_010": { // Darth Vader "On Attack: You may deal 2 damage to a unit."
       const game = GetGame();
@@ -91,6 +115,7 @@ export function resolveOnAttackTrigger(
       };
     }
     default:
-      return null;
+      // If Darksaber fired but no native ability, return continuation so combat proceeds.
+      return hasDarksaber ? continuation : null;
   }
 }
