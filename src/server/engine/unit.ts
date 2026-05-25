@@ -95,6 +95,7 @@ export class Unit implements UnitInterface {
 
       switch (upgrade.cardId) {
         case "SHD_072"://Imprisoned
+        case "LOF_054"://Exiled From The Force (loses all except Grit)
           return true;
         default: break;
       }

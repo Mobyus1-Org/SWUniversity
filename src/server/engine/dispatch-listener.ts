@@ -59,8 +59,7 @@ import type {
   DiscardFromHandPending,
   DookuLeaderPlayPending,
   EclPlayPending,
-  ReturnFromDiscardPending,
-  GiveXpMultiplePending,
+  IndirectDamagePending,
   EngineContext,
   ExploitOptionPending,
   ExploitTargetPending,
@@ -993,6 +992,21 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         totalDamage: pending.totalDamage,
         optional: pending.optional,
         eligiblePlayIds: pending.eligiblePlayIds,
+      } satisfies NeedsSpreadDamage;
+    case "choose-indirect-target":
+      return {
+        type: "Option",
+        helperText: `Deal ${pending.totalDamage} indirect damage to which player?`,
+        options: ["Opponent", "Yourself"],
+      } satisfies NeedsOption;
+    case "indirect-damage":
+      return {
+        type: "SpreadDamage",
+        totalDamage: pending.totalDamage,
+        optional: false,
+        eligiblePlayIds: pending.eligibleUnitPlayIds,
+        includesBase: true,
+        assigningPlayer: pending.targetPlayer,
       } satisfies NeedsSpreadDamage;
     case "on-attack-order":
       return {
@@ -1953,6 +1967,51 @@ function handleChooseTarget(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
+  if (pending.type === "indirect-damage") {
+    const BASE_SENTINEL = "__base__";
+    const assignments = data.spreadDamageAssignments ?? [];
+    const baseDamage = assignments.find(a => a.playId === BASE_SENTINEL)?.damage ?? 0;
+    const unitAssignments = assignments.filter(a => a.playId !== BASE_SENTINEL && a.damage > 0);
+
+    const invalidUnit = unitAssignments.find(a => !pending.eligibleUnitPlayIds.includes(a.playId));
+    if (invalidUnit)
+      return { response: invalidResponse(`Unit ${invalidUnit.playId} is not eligible for indirect damage.`), pending, stateChanged: false };
+
+    const total = unitAssignments.reduce((sum, a) => sum + a.damage, 0) + baseDamage;
+    if (total !== pending.totalDamage)
+      return { response: invalidResponse(`Must assign exactly ${pending.totalDamage} indirect damage (got ${total}).`), pending, stateChanged: false };
+
+    // Per-unit cap: cannot assign more than remaining HP (CR 8.36.3)
+    for (const a of unitAssignments) {
+      const unit = unitByPlayId(game, a.playId);
+      if (!unit) continue;
+      const remaining = Unit.FromInterface(unit).CurrentHP();
+      if (a.damage > remaining)
+        return { response: invalidResponse(`Cannot assign more than ${remaining} indirect damage to ${CardTitle(unit.cardId)}.`), pending, stateChanged: false };
+    }
+
+    // Apply unit damage — shields are NOT removed (CR 8.36.2)
+    for (const a of unitAssignments) {
+      const unit = unitByPlayId(game, a.playId);
+      if (unit) unit.damage += a.damage;
+    }
+
+    // Apply base damage
+    const targetState = pending.targetPlayer === 1 ? game.player1 : game.player2;
+    targetState.base.damage += baseDamage;
+
+    log.push(`${CardTitle(pending.cardId)}: ${pending.totalDamage} indirect damage assigned by player ${pending.targetPlayer}.`);
+    updateDefeatedPlayers(game);
+    const afterSweepI = sweepDeadUnits(game, log, pending.continuation ?? null);
+    if (afterSweepI) {
+      if (afterSweepI.type === "resolve-attack") return handleResolveAttack(game, log, afterSweepI);
+      return { response: resolutionResponse(pendingToResolution(afterSweepI, game)), pending: afterSweepI, stateChanged: true };
+    }
+    const bagI = drainTriggerBag(game, log);
+    if (bagI) return { response: resolutionResponse(pendingToResolution(bagI, game)), pending: bagI, stateChanged: true };
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
   return { response: invalidResponse(`choose-target is not valid while pending: ${pending.type}.`), pending, stateChanged: false };
 }
 
@@ -2075,6 +2134,22 @@ function handleChooseOption(
     }
     updateDefeatedPlayers(game);
     return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending?.type === "choose-indirect-target") {
+    const targetPlayer: PlayerId = option === "Yourself" ? pending.sourcePlayer : (pending.sourcePlayer === 1 ? 2 : 1);
+    const targetState = targetPlayer === 1 ? game.player1 : game.player2;
+    const eligibleUnits = [...targetState.groundArena, ...targetState.spaceArena].map(u => u.playId);
+    const indirectPending: IndirectDamagePending = {
+      type: "indirect-damage",
+      cardId: pending.cardId,
+      sourcePlayer: pending.sourcePlayer,
+      targetPlayer,
+      totalDamage: pending.totalDamage,
+      eligibleUnitPlayIds: eligibleUnits,
+      continuation: null,
+    };
+    return { response: resolutionResponse(pendingToResolution(indirectPending, game)), pending: indirectPending, stateChanged: false };
   }
 
   if (pending?.type === "pay-to-move-ground") {

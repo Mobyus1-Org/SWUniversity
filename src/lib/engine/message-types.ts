@@ -45,6 +45,10 @@ export interface NeedsSpreadDamage {
   /** true = "you may" — player can assign 0 OR all, never partial */
   optional: boolean;
   eligiblePlayIds: string[];
+  /** Indirect damage: base is also a valid target (use playId "__base__" in assignments) */
+  includesBase?: boolean;
+  /** Indirect damage: the player who assigns (may differ from the active player) */
+  assigningPlayer?: PlayerId;
 }
 
 export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot | NeedsSpreadDamage;

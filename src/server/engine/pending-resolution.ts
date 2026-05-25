@@ -270,6 +270,31 @@ export interface ReturnFromDiscardPending {
   continuation: PendingResolution | null;
 }
 
+/**
+ * First step for "deal X indirect damage to a player" effects: the source player
+ * chooses whether to target themselves or their opponent.
+ */
+export interface ChooseIndirectTargetPending {
+  type: "choose-indirect-target";
+  cardId: string;
+  sourcePlayer: PlayerId;
+  totalDamage: number;
+}
+
+/**
+ * Indirect damage: the targetPlayer assigns totalDamage unpreventably among
+ * their own units and/or base. Shields are NOT removed (CR 8.36.2).
+ */
+export interface IndirectDamagePending {
+  type: "indirect-damage";
+  cardId: string;
+  sourcePlayer: PlayerId;
+  targetPlayer: PlayerId;
+  totalDamage: number;
+  eligibleUnitPlayIds: string[];
+  continuation: PendingResolution | null;
+}
+
 /** Give an Experience token to each of up to N chosen units (e.g. General Tagge SOR_080). */
 export interface GiveXpMultiplePending {
   type: "give-xp-multiple";
@@ -309,7 +334,9 @@ export type PendingResolution =
   | OnAttackOrderPending
   | DookuLeaderPlayPending
   | ReturnFromDiscardPending
-  | GiveXpMultiplePending;
+  | GiveXpMultiplePending
+  | ChooseIndirectTargetPending
+  | IndirectDamagePending;
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch

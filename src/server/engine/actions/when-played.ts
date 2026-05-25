@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
-import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, GiveXpMultiplePending } from "@/server/engine/pending-resolution";
+import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, GiveXpMultiplePending, ChooseIndirectTargetPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
 import { CardTitle } from "@/server/engine/card-db/generated";
@@ -359,6 +359,13 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies GiveXpMultiplePending;
     }
+    case "JTL_234": // Torpedo Barrage — Deal 5 indirect damage to a player.
+      return {
+        type: "choose-indirect-target",
+        cardId,
+        sourcePlayer: player,
+        totalDamage: 5,
+      } satisfies ChooseIndirectTargetPending;
     default:
       return null;
   }

@@ -312,11 +312,14 @@ export function TraitContains(cardId: string, trait: string, player?: PlayerId, 
     const upgrades = unit?.upgrades || [];
     for(const u of upgrades) {
       switch (u.cardId) {
-        case "7687006104"://Foundling
+        case "SHD_069"://Foundling
           if(trait === "Mandalorian") return true;
           break;
-        case "0545149763"://Jedi Trials
+        case "LOF_052"://Jedi Trials
           if(trait === "Jedi" && (upgrades.length || 0) >= 4) return true;
+          break;
+        case "LOF_054"://Exiled From The Force
+          if(trait === "Force") return false;
           break;
         default: break;
       }

@@ -260,6 +260,7 @@ export const Cards = {
       strikeship: "LOF_131",
       witchOfTheMist: "LOF_154",
       theLegacyRun: "LOF_213",
+      sandtrooperCavalry: "LOF_232",
     },
     twi: {
       infiltratingDemolisher: "TWI_182",
@@ -317,6 +318,7 @@ export const Cards = {
       takeCaptive: "TWI_128",
     },
     jtl: {
+      torpedoBarrage: "JTL_234",
       dedicatedWingmen: "JTL_254",
     },
     sec: {

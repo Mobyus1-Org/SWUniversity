@@ -6,7 +6,7 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
   if (player && playId) {
     const unit = GetUnitInPlay(playId, player);
     if (!unit) throw new Error("Unit not found for given playId and player in HasGrit");
-    if (unit.LostAbilities()) return false;
+    if (unit.LostAbilities()) return unit.upgrades.some(u => u.cardId === "LOF_054");//Exiled From The Force
     if (!unit.IsLeader()) {
       const units = GetUnitsForPlayer(player);
       for (const u of units) {
@@ -24,6 +24,8 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
         case "JTL_001"://Asajj - I Work Alone
         case "JTL_034"://Interceptor Ace
         case "JTL_050"://Phantom II
+        case "SEC_054"://Exiled From The Force
+        case "LAW_128"://Veiled Strength
           return true;
         case "JTL_150"://Biggs Darklighter
           if(TraitContains(cardId, "Speeder", player)) return true;
@@ -57,6 +59,8 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
           if(HasGrit(unit.cardId, unit.playId, player, true)) return true;
         }
         break;
+      case "SEC_029": //Zam Wesell - Inconspicuous Assassin
+        return unit.upgrades.length > 0;
       default: break;
     }
   }
@@ -66,9 +70,9 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
     case "SOR_148"://Guerilla Attack Pod
     case "SOR_032"://Scout Bike Pursuer
     case "SOR_165"://Occupier Siege Tank
-    case "SOR_065"://Baze Malbus (Temple Guardian)
+    case "SOR_065"://Baze Malbus - Temple Guardian
     case "SOR_067"://Rugged Survivors
-    case "SOR_003"://Chewbacca (Walking Carpet)
+    case "SOR_003"://Chewbacca - Walking Carpet
     case "SHD_136"://Death Watch Loyalist
     case "SHD_027"://Hylobon Enforcer
     case "SHD_048"://Gentle Giant
@@ -90,7 +94,15 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
     case "JTL_167"://Occupier Siege Tank
     case "LOF_038"://Pong Krell
     case "LOF_232"://Sandtrooper Cavalry
-    case "SEC_057"://Lobot
+    case "SEC_031"://Nute Gunray - Escaping Justice
+    case "SEC_057"://Lobot - Cloud City Coordinator
+    case "SEC_058"://Lost Jedi
+    case "SEC_068"://Lando Calrissian - Trust Me
+    case "SEC_143"://The Elite Squad - Neutralizing Insurgents
+    case "SEC_166"://Republic Aurek Starfighter
+    case "LAW_060"://Quarren Contractor
+    case "LAW_086"://The Stranger - No Survivors
+    case "LAW_123"://Syndicate Security
       return true;
     default: break;
   }
