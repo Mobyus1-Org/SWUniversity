@@ -1,6 +1,9 @@
 import { Unit } from "@/server/engine/unit";
-import { PendingResolution } from "@/server/engine/pending-resolution";
+import { AbilityOptionPending, PendingResolution, SpreadDamagePending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
+import { GetGame, GetUnitsForPlayer } from "@/server/engine/core-functions";
+import { CardAspects, CardTitle } from "@/server/engine/card-db/generated";
+import { CreateBattleDroid } from "@/server/engine/token-helpers";
 
 /**
  * When Defeated abilities — called immediately after the unit is removed from
@@ -10,6 +13,18 @@ export function resolveWhenDefeated(
   unit: Unit,
   player: PlayerId
 ): PendingResolution | null {
+  // TWI_218 Droid Cohort: attached unit gains "When Defeated: Create a Battle Droid token."
+  const droidCohortCount = unit.upgrades.filter(u => u.cardId === "TWI_218").length;
+  if (droidCohortCount > 0) {
+    const game = GetGame();
+    if (game) {
+      for (let i = 0; i < droidCohortCount; i++) {
+        CreateBattleDroid(game.currentGameState, player);
+        game.gameLog.push(`Droid Cohort: Battle Droid token created for ${CardTitle(unit.cardId)}.`);
+      }
+    }
+  }
+
   switch (unit.cardId) {
     case "SOR_083": { // Superlaser Technician: "When Defeated: You may put this unit into play as a resource and ready it."
       return {
@@ -30,6 +45,73 @@ export function resolveWhenDefeated(
         controlledBy: player,
         options: [`deal_base_damage=${opponent},3`, `player_discards_from_hand=${opponent},1`],
       };
+    }
+    case "LOF_213": { // The Legacy Run — When Defeated: Deal 6 damage divided as you choose among enemy units.
+      const opponent213 = player === 1 ? 2 : 1;
+      const enemies213 = GetUnitsForPlayer(opponent213);
+      if (enemies213.length === 0) return null;
+      return {
+        type: "spread-damage",
+        cardId: unit.cardId,
+        player,
+        totalDamage: 6,
+        optional: false,
+        eligiblePlayIds: enemies213.map(u => u.playId),
+        continuation: null,
+      } satisfies SpreadDamagePending;
+    }
+    case "SOR_108": { // Vanguard Infantry — "When Defeated: You may give an Experience token to a unit."
+      const game108 = GetGame();
+      if (!game108) return null;
+      const gs108 = game108.currentGameState;
+      const allUnits108 = [
+        ...gs108.player1.groundArena, ...gs108.player1.spaceArena,
+        ...gs108.player2.groundArena, ...gs108.player2.spaceArena,
+      ];
+      if (allUnits108.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId: "SOR_108",
+        helperText: "Give an Experience token to a unit?",
+        onYes: {
+          type: "ability-target",
+          cardId: "SOR_108",
+          player,
+          fromPlayIds: allUnits108.map(u => u.playId),
+          continuation: null,
+        },
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "SOR_226": { // Admiral Motti — "When Defeated: You may ready a [Villainy] unit."
+      const game226 = GetGame();
+      if (!game226) return null;
+      const gs226 = game226.currentGameState;
+      const villainyUnits = [
+        ...gs226.player1.groundArena, ...gs226.player1.spaceArena,
+        ...gs226.player2.groundArena, ...gs226.player2.spaceArena,
+      ].filter(u => CardAspects(u.cardId).includes("Villainy"));
+      if (villainyUnits.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId: "SOR_226",
+        helperText: "Ready a [Villainy] unit?",
+        onYes: {
+          type: "ability-target",
+          cardId: "SOR_226",
+          player,
+          fromPlayIds: villainyUnits.map(u => u.playId),
+          continuation: null,
+        },
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "TWI_229": { // Battle Droid Escort — "When Defeated: Create a Battle Droid token."
+      const game229 = GetGame();
+      if (!game229) return null;
+      CreateBattleDroid(game229.currentGameState, player);
+      game229.gameLog.push(`${CardTitle("TWI_229")}: Battle Droid token created.`);
+      return null;
     }
     default:
       return null;

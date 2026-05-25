@@ -78,6 +78,10 @@ export function UpgradeEligibleTargets(
     case "LOF_151": //Knight's Saber
       return everyone.filter(u => TraitContains(u.cardId, "Jedi") && !TraitContains(u.cardId, "Vehicle")).map(u => u.playId);
 
+    // "Attach to a VEHICLE unit."
+    case "SOR_121": //Hardpoint Heavy Blaster
+      return everyone.filter(u => TraitContains(u.cardId, "Vehicle")).map(u => u.playId);
+
     // "Attach to a friendly non-Vehicle unit."
     case "SHD_251": //The Mandalorian's Rifle
     case "LOF_140": //Darth Maul's Lightsaber

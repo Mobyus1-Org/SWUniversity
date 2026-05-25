@@ -20,6 +20,7 @@ import {
   CardHp,
   CardIsUnique,
   CardTitle,
+  CardTraits,
   CardType,
 } from "@/server/engine/card-db/generated";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
@@ -37,6 +38,7 @@ import type {
   InitiateAttackDispatchData,
   NeedsOption,
   NeedsPlot,
+  NeedsSpreadDamage,
   NeedsTarget,
   PlayCardDispatchData,
   PlaySmuggleDispatchData,
@@ -55,16 +57,22 @@ import type {
   CaptureTargetPending,
   DefeatCopyPending,
   DiscardFromHandPending,
+  DookuLeaderPlayPending,
   EclPlayPending,
+  ReturnFromDiscardPending,
+  GiveXpMultiplePending,
   EngineContext,
   ExploitOptionPending,
   ExploitTargetPending,
   L337ReplaceTargetPending,
+  OnAttackOrderPending,
+  OnAttackTriggerEntry,
   PendingResolution,
   PilotingOptionPending,
   PlotOrderPending,
   PlotWindowPending,
   ResolveAttackPending,
+  SpreadDamagePending,
   TriggerOrderPending,
   UpgradeTargetPending,
 } from "@/server/engine/pending-resolution";
@@ -75,7 +83,7 @@ import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-r
 import { resolveWhenPlayed } from "@/server/engine/actions/when-played";
 import { executeRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
 import { resolveWhenPlayedTrigger } from "@/server/engine/actions/when-played-trigger";
-import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
+import { resolveOnAttackTrigger, applyDarksaberOnAttack } from "@/server/engine/actions/on-attack";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
@@ -330,6 +338,13 @@ function triggerLabel(t: TriggerEntry): string {
 }
 
 function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: string[]): PendingResolution | null {
+  if (trigger.triggerType === "when-defeated") {
+    const wdCtx = trigger.context as { defeatedUnit?: UnitInterface } | undefined;
+    if (!wdCtx?.defeatedUnit) return null;
+    const unit = Unit.FromInterface(wdCtx.defeatedUnit);
+    return resolveWhenDefeated(unit, trigger.fromPlayer);
+  }
+
   if (trigger.triggerType === "when-played") {
     const nextPending = resolveWhenPlayed(trigger.cardId, trigger.fromPlayer, trigger.playId);
     if (nextPending) return nextPending;
@@ -389,16 +404,16 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
 }
 
 function drainTriggerBag(game: GameState, log: string[]): PendingResolution | null {
-  // When-Defeated triggers from Exploit (CR 16d): fire after the card fully resolves.
-  const wdIdx = game.triggerBag.findIndex(t => t.triggerType === "when-defeated");
-  if (wdIdx !== -1) {
-    const [wdTrigger] = game.triggerBag.splice(wdIdx, 1);
-    const wdCtx = wdTrigger.context as { defeatedUnit?: UnitInterface } | undefined;
-    if (wdCtx?.defeatedUnit) {
-      const unit = Unit.FromInterface(wdCtx.defeatedUnit);
-      const wdPending = resolveWhenDefeated(unit, wdTrigger.fromPlayer);
-      if (wdPending) return wdPending;
-    }
+  // When-Defeated triggers from Exploit (CR 16d): drain in order, skip units with no WD effect.
+  for (let i = 0; i < game.triggerBag.length; ) {
+    const t = game.triggerBag[i];
+    if (t.triggerType !== "when-defeated") { i++; continue; }
+    game.triggerBag.splice(i, 1);
+    const wdCtx = t.context as { defeatedUnit?: UnitInterface } | undefined;
+    if (!wdCtx?.defeatedUnit) continue;
+    const unit = Unit.FromInterface(wdCtx.defeatedUnit);
+    const wdPending = resolveWhenDefeated(unit, t.fromPlayer);
+    if (wdPending) return wdPending;
   }
 
   if (game.triggerBag.length === 0) return null;
@@ -494,6 +509,12 @@ function defeatUnit(
   if (!unit.IsTokenUnit()) {
     pushToDiscard(game, removed.player, unit);
   }
+  game.roundState.cardsLeftPlayThisPhase.push({
+    fromPlayer: removed.player,
+    cardId: unit.cardId,
+    playId: unit.playId,
+    reason: unit.IsTokenUnit() ? "token-defeated" : "defeated",
+  });
   log.push(`${CardTitle(unit.cardId)} was defeated.`);
 
   // Rescue any units the defeated unit was guarding (CR 34.4).
@@ -552,6 +573,12 @@ function defeatForExploit(game: GameState, log: string[], unit: Unit): void {
   if (!unit.IsTokenUnit()) {
     pushToDiscard(game, removed.player, unit);
   }
+  game.roundState.cardsLeftPlayThisPhase.push({
+    fromPlayer: removed.player,
+    cardId: unit.cardId,
+    playId: unit.playId,
+    reason: unit.IsTokenUnit() ? "token-defeated" : "defeated",
+  });
   log.push(`${CardTitle(unit.cardId)} was defeated via Exploit.`);
 
   // Rescue captives (CR 34.4)
@@ -619,7 +646,8 @@ function computeAttackTargets(
   if (sentinels.length > 0 && !HasSaboteur(attacker.cardId, attacker.playId, attacker.controller)) {
     return { unitPlayIds: sentinels.map((u) => u.playId), includesBase: false };
   }
-  return { unitPlayIds: visible.map((u) => u.playId), includesBase: true };
+  const entrenchedUnit = attacker.upgrades.some(u => u.cardId === "SOR_072");
+  return { unitPlayIds: visible.map((u) => u.playId), includesBase: !entrenchedUnit };
 }
 
 // ---------------------------------------------------------------------------
@@ -680,15 +708,18 @@ function resolveAttack(
     const defenderName = CardTitle(defender.cardId);
 
     // Saboteur: strip all Shield tokens from the defender before damage is dealt.
-    try {
-      if (HasSaboteur(attacker.cardId, attacker.playId, attacker.controller)) {
-        const before = defender.upgrades.length;
-        defender.upgrades = defender.upgrades.filter(u => u.cardId !== "SOR_T02");
-        const stripped = before - defender.upgrades.length;
-        if (stripped > 0)
-          log.push(`Saboteur: ${stripped} Shield token(s) defeated on ${defenderName}.`);
-      }
-    } catch { /* unit may not be in singleton during test setup */ }
+    // Skip if already applied via on-attack-order (player chose Saboteur first).
+    if (!pending.saboteurApplied) {
+      try {
+        if (HasSaboteur(attacker.cardId, attacker.playId, attacker.controller)) {
+          const before = defender.upgrades.length;
+          defender.upgrades = defender.upgrades.filter(u => u.cardId !== "SOR_T02");
+          const stripped = before - defender.upgrades.length;
+          if (stripped > 0)
+            log.push(`Saboteur: ${stripped} Shield token(s) defeated on ${defenderName}.`);
+        }
+      } catch { /* unit may not be in singleton during test setup */ }
+    }
 
     // Shield token absorbs the first instance of damage to the defender.
     const shieldIdx = defender.upgrades.findIndex(u => u.cardId === "SOR_T02");
@@ -698,7 +729,14 @@ function resolveAttack(
     } else {
       defender.damage += atkPower;
     }
-    attacker.damage += defPower;
+    // Shield token absorbs the first instance of counter-damage to the attacker.
+    const attackerShieldIdx = attacker.upgrades.findIndex(u => u.cardId === "SOR_T02");
+    if (attackerShieldIdx !== -1) {
+      attacker.upgrades.splice(attackerShieldIdx, 1);
+      log.push(`${attackerName}'s Shield token was defeated, preventing ${defPower} counter-damage.`);
+    } else {
+      attacker.damage += defPower;
+    }
     log.push(`${attackerName} attacked ${defenderName}.`);
 
     // Overwhelm: excess damage spills to base
@@ -930,8 +968,38 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         type: "Target",
         fromPlayIds: pending.eligibleVehicles,
       } satisfies NeedsTarget;
+    case "dooku-leader-play":
+      return { type: "Target", fromZones: ["Hand"] } satisfies NeedsTarget;
     case "ecl-play":
       return { type: "Target", fromZones: ["Hand"] } satisfies NeedsTarget;
+    case "return-from-discard":
+      return {
+        type: "Target",
+        fromPlayIds: pending.eligiblePlayIds,
+        fromZones: ["Discard"],
+        maxTargets: pending.maxCount,
+        needsMultiple: pending.maxCount > 1,
+      } satisfies NeedsTarget;
+    case "give-xp-multiple":
+      return {
+        type: "Target",
+        fromPlayIds: pending.eligiblePlayIds,
+        maxTargets: pending.maxCount,
+        needsMultiple: pending.maxCount > 1,
+      } satisfies NeedsTarget;
+    case "spread-damage":
+      return {
+        type: "SpreadDamage",
+        totalDamage: pending.totalDamage,
+        optional: pending.optional,
+        eligiblePlayIds: pending.eligiblePlayIds,
+      } satisfies NeedsSpreadDamage;
+    case "on-attack-order":
+      return {
+        type: "Option",
+        helperText: "Choose which On Attack ability to resolve first:",
+        options: pending.triggers.map(t => t.label),
+      } satisfies NeedsOption;
     default: throw new Error(`Unknown pending resolution type: ${pending.type}`);
   }
 }
@@ -1004,13 +1072,15 @@ function completePlayCard(
       game.triggerBag.push({ triggerType: "ambush", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
     }
 
-    const whenPlayedPending = resolveWhenPlayed(unit.cardId, player, unit.playId);
-    if (hasAmbush && (whenPlayedPending || CardHasWhenPlayed(unit.cardId))) {
+    if (hasAmbush && CardHasWhenPlayed(unit.cardId)) {
       // Both Ambush and When Played — push both to bag so the player chooses ordering.
       game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
-    } else if (!hasAmbush && whenPlayedPending) {
-      return { response: resolutionResponse(pendingToResolution(whenPlayedPending, game)), pending: whenPlayedPending, stateChanged: false };
     } else if (!hasAmbush && CardHasWhenPlayed(unit.cardId)) {
+      const whenPlayedPending = resolveWhenPlayed(unit.cardId, player, unit.playId);
+      if (whenPlayedPending) {
+        return { response: resolutionResponse(pendingToResolution(whenPlayedPending, game)), pending: whenPlayedPending, stateChanged: false };
+      }
+      // Auto-resolving WP (returns null) — push to bag so it fires via processSingleTrigger.
       game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
     }
   } else if (CardType(cardId) === "Upgrade") {
@@ -1182,7 +1252,9 @@ function handleInitiateAttack(
   // Check for optional On Attack abilities before picking the attack target
   // On-attack triggers go into the bag here; they drain AFTER target is chosen.
   const attackerHasDarksaber = attacker.upgrades.some(u => u.cardId === "SHD_126");
-  if (["SOR_010", "SOR_014", "SHD_012"].includes(attacker.cardId) || attackerHasDarksaber) {
+  const attackerHasVambrace = attacker.upgrades.some(u => u.cardId === "SHD_177");
+  const attackerHasHardpoint = attacker.upgrades.some(u => u.cardId === "SOR_121");
+  if (["SOR_010", "SOR_014", "SHD_012", "TWI_186"].includes(attacker.cardId) || attackerHasDarksaber || attackerHasVambrace || attackerHasHardpoint) {
     game.triggerBag.push({ triggerType: "on-attack", cardId: attacker.cardId, fromPlayer: player });
   }
 
@@ -1475,6 +1547,56 @@ function handleChooseTarget(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
+  if (pending.type === "return-from-discard") {
+    const chosen = data.targetPlayIds ?? [];
+    const invalid = chosen.find(id => !pending.eligiblePlayIds.includes(id));
+    if (invalid)
+      return { response: invalidResponse(`Card ${invalid} is not eligible for return from discard.`), pending, stateChanged: false };
+    const playerState = ps(game, pending.player);
+    const returned: string[] = [];
+    for (const playId of chosen.slice(0, pending.maxCount)) {
+      const idx = playerState.discard.findIndex(d => d.playId === playId);
+      if (idx !== -1) {
+        const card = playerState.discard.splice(idx, 1)[0];
+        playerState.hand.push({ cardId: card.cardId });
+        returned.push(CardTitle(card.cardId) ?? card.cardId);
+      }
+    }
+    if (returned.length > 0)
+      log.push(`${CardTitle(pending.cardId)}: returned ${returned.join(", ")} to hand.`);
+    const next = pending.continuation;
+    if (next)
+      return { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: false };
+    const bagAfterReturn = drainTriggerBag(game, log);
+    if (bagAfterReturn)
+      return { response: resolutionResponse(pendingToResolution(bagAfterReturn, game)), pending: bagAfterReturn, stateChanged: false };
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending.type === "give-xp-multiple") {
+    const chosen = (data.targetPlayIds ?? []).slice(0, pending.maxCount);
+    const invalid = chosen.find(id => !pending.eligiblePlayIds.includes(id));
+    if (invalid)
+      return { response: invalidResponse(`Unit ${invalid} is not eligible for Experience token.`), pending, stateChanged: false };
+    const gifted: string[] = [];
+    for (const playId of chosen) {
+      const target = unitByPlayId(game, playId);
+      if (target) {
+        target.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: target.owner, controller: target.controller });
+        gifted.push(CardTitle(target.cardId) ?? target.cardId);
+      }
+    }
+    if (gifted.length > 0)
+      log.push(`${CardTitle(pending.cardId)}: gave Experience to ${gifted.join(", ")}.`);
+    const next = pending.continuation;
+    if (next)
+      return { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: false };
+    const bagAfterXp = drainTriggerBag(game, log);
+    if (bagAfterXp)
+      return { response: resolutionResponse(pendingToResolution(bagAfterXp, game)), pending: bagAfterXp, stateChanged: false };
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
   if (pending.type === "discard-from-hand") {
     const idx = data.targetIndices?.[0];
     if (idx == null)
@@ -1614,6 +1736,19 @@ function handleChooseTarget(
       transferControl(game, log, targetUnit, pending.player);
     }
 
+    // SHD_073 Mandalorian Armor: When Played — if attached unit is Mandalorian, give Shield.
+    if (pending.upgradeCardId === "SHD_073") {
+      if (TraitContains(targetUnit.cardId, "Mandalorian", pending.player, targetUnit.playId)) {
+        targetUnit.upgrades.push({
+          cardId: "SOR_T02",
+          playId: nextPlayId(game),
+          owner: pending.player,
+          controller: pending.player,
+        });
+        log.push(`Mandalorian Armor: Shield token given to ${CardTitle(targetUnit.cardId)}.`);
+      }
+    }
+
     updateDefeatedPlayers(game);
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
@@ -1742,7 +1877,160 @@ function handleChooseTarget(
     });
   }
 
+  if (pending.type === "dooku-leader-play") {
+    const idx = data.targetIndices?.[0];
+    if (idx == null)
+      return { response: invalidResponse("Choose a Separatist card from hand to play."), pending, stateChanged: false };
+    const hand = ps(game, pending.player).hand;
+    if (idx < 0 || idx >= hand.length)
+      return { response: invalidResponse("Invalid hand index."), pending, stateChanged: false };
+    const cardId = hand[idx].cardId;
+    if (!CardTraits(cardId).includes("Separatist"))
+      return { response: invalidResponse("Dooku: chosen card is not a Separatist card."), pending, stateChanged: false };
+
+    const fullCost = playCost(game, pending.player, cardId);
+    // Card's own native exploit + Dooku's +1 bonus (bypass currentEffects so nothing is consumed here)
+    const cardExploit = ExploitAmount(cardId, undefined, undefined, true);
+    const totalExploit = cardExploit + 1;
+    const readyCount = ps(game, pending.player).resources.filter(r => r.ready).length;
+    const minCost = Math.max(0, fullCost - totalExploit * 2);
+
+    if (readyCount < minCost)
+      return { response: invalidResponse("Not enough resources to play that card."), pending, stateChanged: false };
+
+    hand.splice(idx, 1);
+    log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Count Dooku's action (Exploit ${totalExploit} available).`);
+
+    const exploitPending: ExploitOptionPending = {
+      type: "exploit-option",
+      cardId,
+      playingPlayer: pending.player,
+      exploitAmount: totalExploit,
+      fullCost,
+    };
+    return { response: resolutionResponse(pendingToResolution(exploitPending, game)), pending: exploitPending, stateChanged: false };
+  }
+
+  if (pending.type === "spread-damage") {
+    const assignments = (data.spreadDamageAssignments ?? []).filter(
+      a => pending.eligiblePlayIds.includes(a.playId) && a.damage > 0,
+    );
+    const total = assignments.reduce((sum, a) => sum + a.damage, 0);
+
+    if (pending.optional) {
+      if (total !== 0 && total !== pending.totalDamage) {
+        return { response: invalidResponse(`Spread damage must be 0 or all ${pending.totalDamage}. No partial damage.`), pending, stateChanged: false };
+      }
+    } else {
+      if (total !== pending.totalDamage) {
+        return { response: invalidResponse(`Must assign exactly ${pending.totalDamage} damage.`), pending, stateChanged: false };
+      }
+    }
+
+    for (const assignment of assignments) {
+      const unit = unitByPlayId(game, assignment.playId);
+      if (!unit) continue;
+      const shieldIdx = unit.upgrades.findIndex(u => u.cardId === "SOR_T02");
+      if (shieldIdx !== -1) {
+        unit.upgrades.splice(shieldIdx, 1);
+        log.push(`${CardTitle(unit.cardId)}'s Shield token was defeated, preventing ${assignment.damage} damage.`);
+      } else {
+        unit.damage += assignment.damage;
+      }
+    }
+
+    if (total > 0) {
+      log.push(`${CardTitle(pending.cardId)}: damage spread among targets.`);
+    }
+    updateDefeatedPlayers(game);
+    const afterSweep = sweepDeadUnits(game, log, pending.continuation ?? null);
+    if (afterSweep) {
+      if (afterSweep.type === "resolve-attack") return handleResolveAttack(game, log, afterSweep);
+      return { response: resolutionResponse(pendingToResolution(afterSweep, game)), pending: afterSweep, stateChanged: true };
+    }
+    const bag = drainTriggerBag(game, log);
+    if (bag) return { response: resolutionResponse(pendingToResolution(bag, game)), pending: bag, stateChanged: true };
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
   return { response: invalidResponse(`choose-target is not valid while pending: ${pending.type}.`), pending, stateChanged: false };
+}
+
+/**
+ * Process a single on-attack trigger directly (used when only 1 trigger remains after ordering).
+ * Auto-resolving triggers (saboteur, darksaber) return a ResolveAttackPending.
+ * Input-requiring triggers (vambrace, native) return their prompt pending.
+ */
+function processSingleOnAttackTrigger(
+  trigger: OnAttackTriggerEntry,
+  attacker: Unit,
+  cont: ResolveAttackPending,
+  game: GameState,
+  log: string[],
+): PendingResolution | null {
+  switch (trigger.id) {
+    case "saboteur": {
+      if (cont.target.type === "unit") {
+        const def = unitByPlayId(game, cont.target.playId);
+        if (def) {
+          const before = def.upgrades.length;
+          def.upgrades = def.upgrades.filter(u => u.cardId !== "SOR_T02");
+          const stripped = before - def.upgrades.length;
+          if (stripped > 0)
+            log.push(`Saboteur: ${stripped} Shield token(s) defeated on ${CardTitle(def.cardId)}.`);
+        }
+      }
+      return { ...cont, saboteurApplied: true };
+    }
+    case "darksaber": {
+      applyDarksaberOnAttack(attacker);
+      return cont;
+    }
+    case "vambrace": {
+      const opponent = attacker.controller === 1 ? 2 : 1;
+      const enemyGround = (opponent === 1 ? game.player1.groundArena : game.player2.groundArena).map(u => u.playId);
+      if (enemyGround.length === 0) return cont;
+      const spreadPending: SpreadDamagePending = {
+        type: "spread-damage",
+        cardId: "SHD_177",
+        player: attacker.controller,
+        totalDamage: 3,
+        optional: true,
+        eligiblePlayIds: enemyGround,
+        continuation: cont,
+      };
+      return {
+        type: "ability-option",
+        cardId: "SHD_177",
+        helperText: "Deal 3 damage divided among enemy ground units?",
+        onYes: spreadPending,
+        continuation: cont,
+      };
+    }
+    case "hardpoint": {
+      if (cont.target.type !== "unit") return cont;
+      const defenderPlayId121 = cont.target.playId;
+      const inGround121 = [...game.player1.groundArena, ...game.player2.groundArena].some(u => u.playId === defenderPlayId121);
+      const arenaUnits121 = inGround121
+        ? [...game.player1.groundArena, ...game.player2.groundArena]
+        : [...game.player1.spaceArena, ...game.player2.spaceArena];
+      if (arenaUnits121.length === 0) return cont;
+      return {
+        type: "ability-option",
+        cardId: "SOR_121",
+        helperText: "Deal 2 damage to a unit in the defender's arena?",
+        onYes: {
+          type: "ability-target",
+          cardId: "SOR_121",
+          fromPlayIds: arenaUnits121.map(u => u.playId),
+          continuation: cont,
+        },
+        continuation: cont,
+      };
+    }
+    case "native":
+      return resolveOnAttackTrigger(attacker, cont, { skipOrderingPrompt: true });
+  }
 }
 
 function handleChooseOption(
@@ -1853,18 +2141,113 @@ function handleChooseOption(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
+  if (pending?.type === "on-attack-order") {
+    const attacker = unitByPlayId(game, pending.attackerPlayId) as Unit | null;
+    if (!attacker) {
+      return handleResolveAttack(game, log, pending.continuation);
+    }
+
+    const chosenIdx = pending.triggers.findIndex(t => t.label === option);
+    if (chosenIdx === -1) {
+      return { response: invalidResponse(`Unknown on-attack trigger: ${option}`), pending, stateChanged: false };
+    }
+    const chosen = pending.triggers[chosenIdx];
+    const remaining = pending.triggers.filter((_, i) => i !== chosenIdx);
+
+    // Build the pending for the remaining triggers (with the given continuation for combat).
+    // If 2+ remain: show ordering prompt again.
+    // If 1 remains: process it directly (auto-triggers resolve immediately, input-triggers return their pending).
+    // If 0 remain: the continuation (ResolveAttackPending) flows to combat.
+    const buildRemaining = (cont: ResolveAttackPending): PendingResolution | null => {
+      if (remaining.length === 0) return cont;
+      if (remaining.length >= 2) {
+        return {
+          type: "on-attack-order",
+          attackerPlayId: attacker.playId,
+          player: attacker.controller,
+          triggers: remaining,
+          continuation: cont,
+        } satisfies OnAttackOrderPending;
+      }
+      // 1 remaining — resolve it directly
+      return processSingleOnAttackTrigger(remaining[0], attacker, cont, game, log);
+    };
+
+    // Helper for routing the result back to the caller
+    const returnPending = (next: PendingResolution | null, fallbackCont: ResolveAttackPending): HandlerResult => {
+      if (!next || next.type === "resolve-attack") return handleResolveAttack(game, log, (next ?? fallbackCont) as ResolveAttackPending);
+      return { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: false };
+    };
+
+    switch (chosen.id) {
+      case "saboteur": {
+        // Strip defender's shields now
+        if (pending.continuation.target.type === "unit") {
+          const defender = unitByPlayId(game, pending.continuation.target.playId);
+          if (defender) {
+            const before = defender.upgrades.length;
+            defender.upgrades = defender.upgrades.filter(u => u.cardId !== "SOR_T02");
+            const stripped = before - defender.upgrades.length;
+            if (stripped > 0)
+              log.push(`Saboteur: ${stripped} Shield token(s) defeated on ${CardTitle(defender.cardId)}.`);
+          }
+        }
+        const contSab: ResolveAttackPending = { ...pending.continuation, saboteurApplied: true };
+        return returnPending(buildRemaining(contSab), contSab);
+      }
+      case "darksaber": {
+        // Auto: give XP to other friendly Mandalorian units
+        applyDarksaberOnAttack(attacker);
+        return returnPending(buildRemaining(pending.continuation), pending.continuation);
+      }
+      case "vambrace": {
+        // Build VF option; wrap its continuation with remaining triggers
+        const afterVF = buildRemaining(pending.continuation);
+        const vfCont: ResolveAttackPending | PendingResolution = afterVF ?? pending.continuation;
+        const opponent = attacker.controller === 1 ? 2 : 1;
+        const enemyGround = (opponent === 1 ? game.player1.groundArena : game.player2.groundArena).map(u => u.playId);
+        if (enemyGround.length === 0) {
+          return returnPending(afterVF, pending.continuation);
+        }
+        const spreadPending: SpreadDamagePending = {
+          type: "spread-damage",
+          cardId: "SHD_177",
+          player: attacker.controller,
+          totalDamage: 3,
+          optional: true,
+          eligiblePlayIds: enemyGround,
+          continuation: vfCont as ResolveAttackPending,
+        };
+        const vfOption = {
+          type: "ability-option" as const,
+          cardId: "SHD_177",
+          helperText: "Deal 3 damage divided among enemy ground units?",
+          onYes: spreadPending,
+          continuation: vfCont,
+        };
+        return { response: resolutionResponse(pendingToResolution(vfOption, game)), pending: vfOption, stateChanged: false };
+      }
+      case "native": {
+        // Resolve the native on-attack trigger with remaining triggers as the new continuation
+        const afterNative = buildRemaining(pending.continuation);
+        const nativeCont = (afterNative ?? pending.continuation) as ResolveAttackPending;
+        const nativePending = resolveOnAttackTrigger(attacker, nativeCont, { skipOrderingPrompt: true });
+        return returnPending(nativePending, pending.continuation);
+      }
+    }
+  }
+
   if (pending?.type === "trigger-order") {
     const chosen = pending.triggers.find(t => t.label === option);
     if (!chosen) {
       return { response: invalidResponse(`Unknown trigger option: ${option}`), pending, stateChanged: false };
     }
-    // Remove the chosen trigger from the bag.
+    // Remove the chosen trigger from the bag, preserving context (e.g. defeatedUnit for WD).
     const bagIdx = game.triggerBag.findIndex(t =>
       t.triggerType === chosen.triggerType && t.cardId === chosen.cardId && t.playId === chosen.playId,
     );
-    if (bagIdx !== -1) game.triggerBag.splice(bagIdx, 1);
-
-    const trigger: TriggerEntry = {
+    const [originalTrigger] = bagIdx !== -1 ? game.triggerBag.splice(bagIdx, 1) : [];
+    const trigger: TriggerEntry = originalTrigger ?? {
       triggerType: chosen.triggerType as TriggerEntry["triggerType"],
       cardId: chosen.cardId,
       fromPlayer: chosen.fromPlayer,
@@ -2135,6 +2518,7 @@ function handleResolveAttack(
     attackerPlayId: pending.attackerPlayId,
     source: "on-attack-resolved",
     continuation: pending.continuation,
+    saboteurApplied: pending.saboteurApplied,
   };
   const nextPending = resolveAttack(game, log, attackPending, pending.target);
   updateDefeatedPlayers(game);
@@ -2336,6 +2720,14 @@ function resolveActionAbility(
   //playId?: string,
 ): PendingResolution | null {
   switch (cardId) {
+    case "TWI_005": { // Count Dooku — Action [Exhaust]: Play a Separatist card from your hand. It gains Exploit 1.
+      const separatistInHand = ps(game, player).hand.some(c => CardTraits(c.cardId).includes("Separatist"));
+      if (!separatistInHand) {
+        log.push(`${CardTitle("TWI_005")}: no Separatist cards in hand.`);
+        return null;
+      }
+      return { type: "dooku-leader-play", player } satisfies DookuLeaderPlayPending;
+    }
     case "SOR_014": // Sabine Wren - Galvanized Revolutionary: Deal 1 damage to each base.
       game.player1.base.damage += 1;
       game.player2.base.damage += 1;
@@ -2373,6 +2765,33 @@ function applyAbilityEffect(
   const game = GetGame();
   if(!game) throw new Error("Game not found in applyAbilityEffect.");
   switch (pending.cardId) {
+    case "SOR_108": { // Vanguard Infantry when-defeated: give Experience token to chosen unit
+      if (!targetPlayId) break;
+      const target108 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target108) {
+        target108.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target108.owner, controller: target108.controller });
+        game.gameLog.push(`${CardTitle("SOR_108")}: gave an Experience token to ${CardTitle(target108.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_121": { // Hardpoint Heavy Blaster on-attack: deal 2 damage to chosen unit in defender's arena
+      if (!targetPlayId) break;
+      const target121 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target121) {
+        target121.damage += 2;
+        game.gameLog.push(`${CardTitle("SOR_121")}: dealt 2 damage to ${CardTitle(target121.cardId)}.`);
+      }
+      return pending.continuation;
+    }
+    case "SOR_226": { // Admiral Motti when-defeated: ready chosen Villainy unit
+      if (!targetPlayId) break;
+      const target226 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target226) {
+        target226.ready = true;
+        game.gameLog.push(`${CardTitle("SOR_226")}: readied ${CardTitle(target226.cardId)}.`);
+      }
+      break;
+    }
     case "SHD_012": // Bo-Katan Kryze leader action: deal 1 damage to chosen unit
     case "SHD_012_1": // Bo-Katan deployed on-attack: first 1-damage shot
     case "SHD_012_2": { // Bo-Katan deployed on-attack: second 1-damage shot (another Mandalorian attacked)
@@ -2459,6 +2878,16 @@ function applyAbilityEffect(
         game.gameLog.push(`${CardTitle(pending.cardId)} dealt ${handSize} damage to ${CardTitle(target.cardId) ?? target.cardId}.`);
       }
       break;
+    }
+    case "SOR_077": { // Takedown — defeat a unit with ≤5 remaining HP
+      if (!targetPlayId) break;
+      const target077 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!target077) break;
+      if (Unit.FromInterface(target077).CurrentHP() > 5) break;
+      const defeatPend077 = defeatUnit(game.currentGameState, game.gameLog, target077);
+      game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target077.cardId)}.`);
+      if (defeatPend077) return injectContinuation(defeatPend077, pending.continuation);
+      return pending.continuation;
     }
     case "SEC_034": { // Cad Bane — defeat a unit with ≤2 remaining HP
       if (!targetPlayId) break;
@@ -2690,6 +3119,45 @@ function applyAbilityEffect(
       const t1 = unitByPlayId(gs1, targetPlayId);
       game.gameLog.push(`Attack Pattern Delta: ${CardTitle(t1?.cardId ?? "") ?? targetPlayId} gets +1/+1 for this phase.`);
       break;
+    }
+    case "SOR_092": { // Overwhelming Barrage — +2/+2 and spread power damage
+      if (!targetPlayId) break;
+      const target092 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!target092) break;
+
+      // Push +2/+2 current effect on the chosen unit
+      game.currentGameState.currentEffects.push({
+        cardId: "SOR_092",
+        duration: "Phase",
+        affectedPlayer: pending.player!,
+        targetPlayId,
+      });
+
+      // Read buffed power (includes the +2 just applied)
+      const buffedPower = Unit.FromInterface(target092).CurrentPower();
+
+      // Eligible: all units except the chosen unit
+      const allUnits092 = [
+        ...game.currentGameState.player1.groundArena,
+        ...game.currentGameState.player1.spaceArena,
+        ...game.currentGameState.player2.groundArena,
+        ...game.currentGameState.player2.spaceArena,
+      ].filter(u => u.playId !== targetPlayId);
+
+      game.gameLog.push(`${CardTitle("SOR_092")}: ${CardTitle(target092.cardId)} gets +2/+2 and deals ${buffedPower} damage spread among other units.`);
+
+      if (allUnits092.length === 0 || buffedPower === 0) return pending.continuation;
+
+      const spreadPending092: SpreadDamagePending = {
+        type: "spread-damage",
+        cardId: "SOR_092",
+        player: pending.player!,
+        totalDamage: buffedPower,
+        optional: false,
+        eligiblePlayIds: allUnits092.map(u => u.playId),
+        continuation: pending.continuation,
+      };
+      return spreadPending092;
     }
     default:
       game.gameLog.push(`Ability effect for ${CardTitle(pending.cardId) ?? pending.cardId} applied.`);

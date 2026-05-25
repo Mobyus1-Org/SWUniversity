@@ -10,6 +10,7 @@ export interface AttackTargetPending {
   attackerPlayId: string;
   source: string;
   continuation?: PendingResolution | null;
+  saboteurApplied?: boolean;
 }
 
 export interface AbilityOptionPending {
@@ -62,6 +63,22 @@ export interface ResolveAttackPending {
   attackerPlayId: string;
   target: { type: "unit"; playId: string } | { type: "base"; player: PlayerId };
   continuation: PendingResolution | null;
+  /** Set when Saboteur was already resolved before combat (prevents double-stripping). */
+  saboteurApplied?: boolean;
+}
+
+export interface OnAttackTriggerEntry {
+  id: "saboteur" | "darksaber" | "vambrace" | "hardpoint" | "native";
+  label: string;
+}
+
+/** Player must choose which On Attack ability to resolve first when 2+ triggers are pending. */
+export interface OnAttackOrderPending {
+  type: "on-attack-order";
+  attackerPlayId: string;
+  player: PlayerId;
+  triggers: OnAttackTriggerEntry[];
+  continuation: ResolveAttackPending;
 }
 
 /** Waiting for the player to choose a unit to attach a played upgrade to. */
@@ -225,6 +242,44 @@ export interface EclPlayPending {
   continuation: PendingResolution | null;
 }
 
+/** Count Dooku leader action: player picks a Separatist card from hand to play with Exploit 1 bonus. */
+export interface DookuLeaderPlayPending {
+  type: "dooku-leader-play";
+  player: PlayerId;
+}
+
+/** Spread N damage simultaneously across eligible units. */
+export interface SpreadDamagePending {
+  type: "spread-damage";
+  cardId: string;
+  player: PlayerId;
+  totalDamage: number;
+  /** true = "you may" (0 or all, never partial). false = must assign exactly totalDamage. */
+  optional: boolean;
+  eligiblePlayIds: string[];
+  continuation: PendingResolution | null;
+}
+
+/** Return up to N units from the discard pile to hand (e.g. Admiral Trench TWI_086). */
+export interface ReturnFromDiscardPending {
+  type: "return-from-discard";
+  cardId: string;
+  player: PlayerId;
+  maxCount: number;
+  eligiblePlayIds: string[];
+  continuation: PendingResolution | null;
+}
+
+/** Give an Experience token to each of up to N chosen units (e.g. General Tagge SOR_080). */
+export interface GiveXpMultiplePending {
+  type: "give-xp-multiple";
+  cardId: string;
+  player: PlayerId;
+  maxCount: number;
+  eligiblePlayIds: string[];
+  continuation: PendingResolution | null;
+}
+
 export type PendingResolution =
   | AttackTargetPending
   | AbilityOptionPending
@@ -249,7 +304,12 @@ export type PendingResolution =
   | WhenDeployedPending
   | PayToMoveGroundPending
   | TriggerOrderPending
-  | EclPlayPending;
+  | EclPlayPending
+  | SpreadDamagePending
+  | OnAttackOrderPending
+  | DookuLeaderPlayPending
+  | ReturnFromDiscardPending
+  | GiveXpMultiplePending;
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch

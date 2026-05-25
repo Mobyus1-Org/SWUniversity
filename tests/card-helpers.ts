@@ -224,8 +224,12 @@ export const Cards = {
       syndicateLackeys: "SOR_213",
       rebelPathfinder: "SOR_239",
       gamorreanGuards: "SOR_211",
+      emperorPalpatine: "SOR_135",
+      vanguardInfantry: "SOR_108",
+      generalTagge: "SOR_080",
     },
     shd: {
+      generalTagge: "SHD_081",
       sundariPeaceKeeper: "SHD_098",
       recklessGunslinger: "SHD_160",
       fourLom: "SHD_188",
@@ -239,6 +243,7 @@ export const Cards = {
       theMandalorian: "SHD_049",
       tobiasBeckett: "SHD_217",
       supercommandoSquad: "SHD_034",
+      followerOfTheWay: "SHD_056",
     },
     jtl: {
       kijimiPatrollers: "JTL_082",
@@ -254,9 +259,12 @@ export const Cards = {
       gungi: "LOF_093",
       strikeship: "LOF_131",
       witchOfTheMist: "LOF_154",
+      theLegacyRun: "LOF_213",
     },
     twi: {
       infiltratingDemolisher: "TWI_182",
+      admiralTrench: "TWI_086",
+      sanHill: "TWI_186",
     },
     sec: {
       cadBane: "SEC_034",
@@ -268,15 +276,19 @@ export const Cards = {
       shield: "SOR_T02",
     },
     sor: {
+      entrenched: "SOR_072",
       protector: "SOR_057",
       academyTraining: "SOR_120",
       traitorous: "SOR_122",
+      hardpointHeavyBlaster: "SOR_121",
     },
     shd: {
       legalAuthority: "SHD_124",
       publicEnemy: "SHD_068",
       hotshotBlaster: "SHD_174",
       theDarksaber: "SHD_126",
+      mandalorianArmor: "SHD_073",
+      vambraceFlamethrower: "SHD_177",
     },
     lof: {
       bolsteredEndurance: "LOF_074",
@@ -296,6 +308,8 @@ export const Cards = {
       changeOfHeart: "SOR_224",
       confiscate: "SOR_251",
       attackPatternDelta: "SOR_106",
+      takedown: "SOR_077",
+      overwhelmingBarrage: "SOR_092",
     },
     twi: {
       droidDeployment: "TWI_237",

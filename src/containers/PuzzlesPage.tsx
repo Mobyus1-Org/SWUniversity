@@ -50,6 +50,9 @@ function formatStatus(status: GameStatus, resolutionNeeded: ResolutionRequest | 
   if (status === "won") return "Puzzle complete!";
   if (status === "lost") return "Puzzle failed.";
   if (status === "draw") return "Puzzle ended in a draw.";
+  if (resolutionNeeded?.type === "SpreadDamage") {
+    return `Distribute ${resolutionNeeded.totalDamage} damage${resolutionNeeded.optional ? " (optional)" : ""}.`;
+  }
   if (resolutionNeeded?.type === "Option") return resolutionNeeded.helperText;
   if (resolutionNeeded?.type === "Target") {
     if ((resolutionNeeded.needsMultiple ?? false) || (resolutionNeeded.maxTargets ?? 1) > 1)
@@ -76,6 +79,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "SHD_002", "SHD_003", "SHD_004", "SHD_006", "SHD_007",
   "SHD_009", "SHD_010", "SHD_011", "SHD_012", "SHD_013",
   "SHD_016", "SHD_017",
+  "TWI_005",
 ]);
 
 const BASES_WITH_EPIC_ACTION = new Set([
@@ -335,6 +339,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   const [lastActionMs, setLastActionMs] = React.useState<number | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [selectedTargetPlayIds, setSelectedTargetPlayIds] = React.useState<string[]>([]);
+  const [spreadDmgMap, setSpreadDmgMap] = React.useState<Record<string, number>>({});
   const [selectedPuzzleFilename, setSelectedPuzzleFilename] = React.useState<string | null>(null);
   const [puzzleName, setPuzzleName] = React.useState<string | null>(null);
   const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
@@ -368,7 +373,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     setPreview(null);
   }, [clearPreviewTimer, setPreview]);
   React.useEffect(() => () => { clearPreviewTimer(); }, [clearPreviewTimer]);
-  React.useEffect(() => { setSelectedTargetPlayIds([]); }, [resolutionNeeded]);
+  React.useEffect(() => { setSelectedTargetPlayIds([]); setSpreadDmgMap({}); }, [resolutionNeeded]);
 
   // ---------------------------------------------------------------------------
   // Core dispatch — sends a GameDispatch to the puzzle API endpoint
@@ -482,6 +487,22 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       deployLeader: true,
     }));
   }, [gameState, sendDispatch]);
+
+  const handleSpreadIncrement = React.useCallback((playId: string) => {
+    setSpreadDmgMap(prev => ({ ...prev, [playId]: (prev[playId] ?? 0) + 1 }));
+  }, []);
+
+  const handleSpreadDecrement = React.useCallback((playId: string) => {
+    setSpreadDmgMap(prev => {
+      const next = { ...prev, [playId]: Math.max(0, (prev[playId] ?? 0) - 1) };
+      if (next[playId] === 0) delete next[playId];
+      return next;
+    });
+  }, []);
+
+  const handleSpreadConfirm = React.useCallback((assignments: { playId: string; damage: number }[]) => {
+    void sendDispatch(createDispatch("choose-target", { spreadDamageAssignments: assignments }));
+  }, [sendDispatch]);
 
   const handleOptionChoice = React.useCallback((option: string) => {
     void sendDispatch(createDispatch("choose-option", { option }));
@@ -674,6 +695,14 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
             .map(upg => upg.playId)
         )
       : new Set();
+  const spreadEligiblePlayIds: Set<string> = resolutionNeeded?.type === "SpreadDamage"
+    ? new Set(resolutionNeeded.eligiblePlayIds)
+    : new Set();
+  const spreadAssigned = Object.values(spreadDmgMap).reduce((s, v) => s + v, 0);
+  const spreadCanConfirm = resolutionNeeded?.type === "SpreadDamage"
+    ? (resolutionNeeded.optional ? spreadAssigned === 0 || spreadAssigned === resolutionNeeded.totalDamage : spreadAssigned === resolutionNeeded.totalDamage)
+    : false;
+
   const selectableBaseForPlayer: PlayerId[] = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Base")
     ? [2]
     : [];
@@ -691,6 +720,11 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     ? new Set(player.resources.filter(r => ResourceIsSmuggleable(gameState, PLAYER, r)).map(r => r.playId))
     : new Set();
 
+  const selectableDiscardPlayIds: Set<string> = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Discard")
+    ? new Set(resolutionNeeded.fromPlayIds ?? [])
+    : new Set();
+  const hasDiscardSelection = selectableDiscardPlayIds.size > 0;
+
   const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[opponent.discard.length - 1] : null;
   const latestPlayerDiscard = player.discard.length > 0 ? player.discard[player.discard.length - 1] : null;
   const hasPrompt = resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "Trigger" || resolutionNeeded?.type === "Player";
@@ -698,7 +732,9 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   const getUnitGlowClass = (playId: string) =>
     isMultiSelectTarget && selectedTargetPlayIds.includes(playId)
       ? "ring-2 ring-amber-400/80 shadow-[0_0_14px_rgba(251,191,36,0.5)]"
-      : undefined;
+      : isMultiSelectTarget && selectablePlayIds.includes(playId)
+        ? "ring-2 ring-rose-400/90 shadow-[0_0_10px_rgba(251,113,133,0.5)]"
+        : undefined;
   const statusTone = status === "won"
     ? "border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
     : status === "lost"
@@ -848,7 +884,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Space</div>
                 <div className="relative z-10 flex flex-row-reverse flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {opponent.spaceArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
-                  {opponent.spaceArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
+                  {opponent.spaceArena.map((unit) => <div key={unit.playId} className="relative w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
                       selectable={selectablePlayIds.includes(unit.playId)}
@@ -877,6 +913,13 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         />
                       );
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {spreadEligiblePlayIds.has(unit.playId) && (
+                      <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">−</button>
+                        <span className="min-w-[1.4rem] text-center text-xs font-bold text-rose-300">{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={spreadAssigned >= (resolutionNeeded?.type === "SpreadDamage" ? resolutionNeeded.totalDamage : 0)} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">+</button>
+                      </div>
+                    )}
                   </div>)}
                 </div>
               </div>
@@ -885,7 +928,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Ground</div>
                 <div className="relative z-10 flex flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {opponent.groundArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
-                  {opponent.groundArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
+                  {opponent.groundArena.map((unit) => <div key={unit.playId} className="relative w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
                       selectable={selectablePlayIds.includes(unit.playId)}
@@ -914,6 +957,13 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         />
                       );
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {spreadEligiblePlayIds.has(unit.playId) && (
+                      <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">−</button>
+                        <span className="min-w-[1.4rem] text-center text-xs font-bold text-rose-300">{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={spreadAssigned >= (resolutionNeeded?.type === "SpreadDamage" ? resolutionNeeded.totalDamage : 0)} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">+</button>
+                      </div>
+                    )}
                   </div>)}
                 </div>
               </div>
@@ -953,7 +1003,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Space</div>
                 <div className="relative z-10 flex flex-row-reverse flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {opponent.spaceArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
-                  {opponent.spaceArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
+                  {opponent.spaceArena.map((unit) => <div key={unit.playId} className="relative w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
                       selectable={selectablePlayIds.includes(unit.playId)}
@@ -982,6 +1032,13 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         />
                       );
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {spreadEligiblePlayIds.has(unit.playId) && (
+                      <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">−</button>
+                        <span className="min-w-[1.4rem] text-center text-xs font-bold text-rose-300">{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={spreadAssigned >= (resolutionNeeded?.type === "SpreadDamage" ? resolutionNeeded.totalDamage : 0)} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">+</button>
+                      </div>
+                    )}
                   </div>)}
                 </div>
               </div>
@@ -1045,7 +1102,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Ground</div>
                 <div className="relative z-10 flex flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {opponent.groundArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
-                  {opponent.groundArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
+                  {opponent.groundArena.map((unit) => <div key={unit.playId} className="relative w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
                       selectable={selectablePlayIds.includes(unit.playId)}
@@ -1074,6 +1131,13 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         />
                       );
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {spreadEligiblePlayIds.has(unit.playId) && (
+                      <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">−</button>
+                        <span className="min-w-[1.4rem] text-center text-xs font-bold text-rose-300">{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={spreadAssigned >= (resolutionNeeded?.type === "SpreadDamage" ? resolutionNeeded.totalDamage : 0)} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">+</button>
+                      </div>
+                    )}
                   </div>)}
                 </div>
               </div>
@@ -1116,7 +1180,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Ground</div>
                 <div className="relative z-10 flex flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {player.groundArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
-                  {player.groundArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
+                  {player.groundArena.map((unit) => <div key={unit.playId} className="relative w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
                       imageId={getPreviewImageId(unit.cardId, CardIsLeader(unit.cardId))}
@@ -1146,6 +1210,13 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         />
                       );
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {spreadEligiblePlayIds.has(unit.playId) && (
+                      <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">−</button>
+                        <span className="min-w-[1.4rem] text-center text-xs font-bold text-rose-300">{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={spreadAssigned >= (resolutionNeeded?.type === "SpreadDamage" ? resolutionNeeded.totalDamage : 0)} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">+</button>
+                      </div>
+                    )}
                   </div>)}
                 </div>
               </div>
@@ -1156,11 +1227,12 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   {player.spaceArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
                   {player.spaceArena.map((unit) => {
                     const isLeader = CardIsLeader(unit.cardId);
-                    return <div key={unit.playId} className="w-24 shrink-0">
+                    return <div key={unit.playId} className="relative w-24 shrink-0">
                       <CardVisual
                         cardId={unit.cardId}
                         imageId={getPreviewImageId(unit.cardId, isLeader)}
                         selectable={selectablePlayIds.includes(unit.playId)}
+                        customGlowClass={getUnitGlowClass(unit.playId)}
                         onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                         onPreviewStart={handlePreviewStart}
                         onPreviewEnd={handlePreviewEnd}
@@ -1196,7 +1268,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibond uppercase tracking-[0.2em] text-white/30">Space</div>
                 <div className="relative z-10 flex flex-row-reverse flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
                   {player.spaceArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
-                  {player.spaceArena.map((unit) => <div key={unit.playId} className="w-24 shrink-0">
+                  {player.spaceArena.map((unit) => <div key={unit.playId} className="relative w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
                       imageId={getPreviewImageId(unit.cardId)}
@@ -1226,6 +1298,13 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         />
                       );
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {spreadEligiblePlayIds.has(unit.playId) && (
+                      <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">−</button>
+                        <span className="min-w-[1.4rem] text-center text-xs font-bold text-rose-300">{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={spreadAssigned >= (resolutionNeeded?.type === "SpreadDamage" ? resolutionNeeded.totalDamage : 0)} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">+</button>
+                      </div>
+                    )}
                   </div>)}
                 </div>
               </div>
@@ -1293,11 +1372,12 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                   {player.groundArena.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-7 text-sm text-white/40">No units</div> : null}
                   {player.groundArena.map((unit) => {
                     const isLeader = CardIsLeader(unit.cardId);
-                    return <div key={unit.playId} className="w-24 shrink-0">
+                    return <div key={unit.playId} className="relative w-24 shrink-0">
                       <CardVisual
                         cardId={unit.cardId}
                         imageId={getPreviewImageId(unit.cardId, isLeader)}
                         selectable={selectablePlayIds.includes(unit.playId)}
+                        customGlowClass={getUnitGlowClass(unit.playId)}
                         onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
                         onPreviewStart={handlePreviewStart}
                         onPreviewEnd={handlePreviewEnd}
@@ -1362,7 +1442,43 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
               </div>
               <div className="rounded-lg bg-black/20 p-2">
                 <div className="mb-2 text-xs uppercase tracking-[0.2em] text-white/60">Discard</div>
-                {latestPlayerDiscard ? <div className="w-24">
+                {hasDiscardSelection ? (
+                  <div className="flex flex-col gap-1">
+                    {player.discard.filter(d => selectableDiscardPlayIds.has(d.playId)).map(d => (
+                      <button
+                        key={d.playId}
+                        type="button"
+                        disabled={isResolving}
+                        onClick={() => {
+                          if (isMultiSelectTarget) {
+                            setSelectedTargetPlayIds(prev =>
+                              prev.includes(d.playId)
+                                ? prev.filter(id => id !== d.playId)
+                                : prev.length < (resolutionNeeded?.type === "Target" ? (resolutionNeeded.maxTargets ?? Infinity) : Infinity)
+                                  ? [...prev, d.playId]
+                                  : prev
+                            );
+                          } else {
+                            void sendDispatch(createDispatch("choose-target", { targetPlayIds: [d.playId] }));
+                          }
+                        }}
+                        className="w-24 text-left"
+                        onMouseEnter={() => handlePreviewStart({ imageId: d.cardId, cardId: d.cardId, label: CardTitle(d.cardId) })}
+                        onMouseLeave={handlePreviewEnd}
+                      >
+                        <CardVisual
+                          cardId={d.cardId}
+                          selectable={!isResolving}
+                          customGlowClass={isMultiSelectTarget && selectedTargetPlayIds.includes(d.playId) ? "ring-2 ring-amber-400/80 shadow-[0_0_14px_rgba(251,191,36,0.5)]" : undefined}
+                          onPreviewStart={handlePreviewStart}
+                          onPreviewEnd={handlePreviewEnd}
+                          compact
+                          square
+                        />
+                      </button>
+                    ))}
+                  </div>
+                ) : latestPlayerDiscard ? <div className="w-24">
                   <CardVisual
                     cardId={latestPlayerDiscard.cardId}
                     selectable={false}
@@ -1450,6 +1566,25 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     {resolutionNeeded && !hasPrompt ? <div className={`fixed left-1/2 z-40 w-[min(90vw,42rem)] -translate-x-1/2 rounded-xl border border-white/15 bg-black/80 px-5 py-3 text-center text-sm text-white/90 shadow-2xl backdrop-blur-sm transition-all ${isMultiSelectTarget ? "bottom-20" : "bottom-5"}`}>
       {formatStatus(status, resolutionNeeded)}
     </div> : null}
+
+    {resolutionNeeded?.type === "SpreadDamage" && (
+      <div className="fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-rose-400/30 bg-[rgba(8,12,26,0.97)] px-5 py-3 shadow-2xl">
+        <span className="text-sm text-white/70">
+          {spreadAssigned} / {resolutionNeeded.totalDamage} dmg assigned
+        </span>
+        {resolutionNeeded.optional && (
+          <button type="button" onClick={() => handleSpreadConfirm([])}
+            className="rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white hover:bg-white/20">
+            Skip
+          </button>
+        )}
+        <button type="button" disabled={!spreadCanConfirm}
+          onClick={() => handleSpreadConfirm(Object.entries(spreadDmgMap).filter(([, v]) => v > 0).map(([playId, damage]) => ({ playId, damage })))}
+          className="rounded-lg bg-rose-700 px-4 py-1.5 text-sm font-semibold text-white hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40">
+          Confirm
+        </button>
+      </div>
+    )}
 
     {hasPrompt ? <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl">

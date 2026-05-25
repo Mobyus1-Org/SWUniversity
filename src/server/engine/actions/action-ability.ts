@@ -1,5 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand } from "@/server/engine/core-functions";
+import { CardTraits } from "@/server/engine/card-db/generated";
 
 export function ActionAbilities(cardId: string, player: PlayerId, playId?: string): string[] {
   const game = GetGame();
@@ -38,6 +39,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "SHD_016": //Fennec Shand - Honoring the Deal
       case "SHD_017": //Lando Calrissian - With Impeccable Taste
         abilities.push(cardId);
+        break;
+      case "TWI_005": // Count Dooku — needs Separatist card in hand
+        if (GetHand(player).some(c => CardTraits(c.cardId).includes("Separatist"))) abilities.push(cardId);
         break;
       //needs conditions met
       case "SOR_006": //Emperor Palpatine - Galactic Ruler

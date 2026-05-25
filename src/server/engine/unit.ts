@@ -159,12 +159,19 @@ export class Unit implements UnitInterface {
         case "SOR_106_3": power += 3; break; // Attack Pattern Delta
         case "SOR_106_2": power += 2; break;
         case "SOR_106_1": power += 1; break;
+        case "SOR_092": // Overwhelming Barrage
+          if (currentEffect.targetPlayId === this.playId) power += 2;
+          break;
         default: break;
       }
     }
 
     for (const upgrade of this.upgrades) {
       power += CardUpgradePower(upgrade.cardId);
+    }
+
+    if (this.cardId === "SHD_056" && this.upgrades.length > 0 && !this.LostAbilities()) {
+      power += 1;
     }
 
     if (HasGrit(this.cardId, this.playId, this.controller) && !this.LostAbilities()) {
@@ -196,12 +203,19 @@ export class Unit implements UnitInterface {
       hp += CardUpgradeHp(upgrade.cardId);
     }
 
+    if (this.cardId === "SHD_056" && this.upgrades.length > 0) {
+      hp += 1;
+    }
+
     for (const effect of GetCurrentEffectsForPlayer(this.controller)) {
       if (effect.targetPlayId && effect.targetPlayId !== this.playId) continue;
       switch (effect.cardId) {
         case "SOR_106_3": hp += 3; break; // Attack Pattern Delta
         case "SOR_106_2": hp += 2; break;
         case "SOR_106_1": hp += 1; break;
+        case "SOR_092": // Overwhelming Barrage
+          if (effect.targetPlayId === this.playId) hp += 2;
+          break;
       }
     }
 

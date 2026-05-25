@@ -1,14 +1,23 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId, Resource } from "@/lib/engine/core-models";
-import { CardAspects, CardCost, CardType } from "@/server/engine/card-db/generated";
+import { CardAspects, CardCost, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradeEligibleTargets, PilotingEligibleVehicles } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { Unit } from "@/server/engine/unit";
 import { SmuggleCost, SmuggleAspects } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
 
-function playCost(game: GameState, player: PlayerId, cardId: string): number {
+function aspectPenalty(game: GameState, player: PlayerId, cardId: string): number {
   const p = player === 1 ? game.player1 : game.player2;
+
+  // Darksaber: free aspect penalty when a friendly non-Vehicle Mandalorian unit is in play
+  if (cardId === "SHD_126") {
+    const hasMandalorian = [...p.groundArena, ...p.spaceArena].some(
+      u => !CardTraits(u.cardId).includes("Vehicle") && CardTraits(u.cardId).includes("Mandalorian"),
+    );
+    if (hasMandalorian) return 0;
+  }
+
   const provided = [...CardAspects(p.base.cardId), ...CardAspects(p.leader.cardId)];
   const counts = new Map<string, number>();
   for (const a of provided) counts.set(a, (counts.get(a) ?? 0) + 1);
@@ -18,7 +27,11 @@ function playCost(game: GameState, player: PlayerId, cardId: string): number {
     if (rem > 0) counts.set(a, rem - 1);
     else missing++;
   }
-  return CardCost(cardId) + missing * 2;
+  return missing * 2;
+}
+
+function playCost(game: GameState, player: PlayerId, cardId: string): number {
+  return CardCost(cardId) + aspectPenalty(game, player, cardId);
 }
 
 function aspectPenaltyForAspects(game: GameState, player: PlayerId, aspects: string[]): number {

@@ -38,7 +38,16 @@ export interface NeedsPlot {
   fromPlayIds: string[];
 }
 
-export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot;
+/** Spread damage: player distributes totalDamage points across eligiblePlayIds simultaneously. */
+export interface NeedsSpreadDamage {
+  type: "SpreadDamage";
+  totalDamage: number;
+  /** true = "you may" — player can assign 0 OR all, never partial */
+  optional: boolean;
+  eligiblePlayIds: string[];
+}
+
+export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot | NeedsSpreadDamage;
 
 // ---------------------------------------------------------------------------
 // Inbound: dispatch types and data payloads
@@ -85,6 +94,8 @@ export interface ChooseTargetDispatchData {
   targetPlayers?: PlayerId[];
   targetIndices?: number[];
   targetPlayIds?: string[];
+  /** For spread-damage resolutions: how much damage to assign to each unit. */
+  spreadDamageAssignments?: { playId: string; damage: number }[];
 }
 
 export interface ChooseOptionDispatchData {

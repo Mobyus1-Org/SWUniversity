@@ -25,11 +25,16 @@ function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
   );
 }
 
+type SortKey = "title" | "difficulty";
+type SortDir = "asc" | "desc";
+
 export function LoadPuzzlePanel({ onPuzzleLoaded }: Props) {
   const [puzzles, setPuzzles] = React.useState<PuzzleEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [sortKey, setSortKey] = React.useState<SortKey>("difficulty");
+  const [sortDir, setSortDir] = React.useState<SortDir>("asc");
 
   React.useEffect(() => {
     fetch("/api/puzzles")
@@ -44,9 +49,43 @@ export function LoadPuzzlePanel({ onPuzzleLoaded }: Props) {
     onPuzzleLoaded(entry.id, { name: entry.name, description: entry.description, difficulty: entry.difficulty });
   }
 
+  function handleSortClick(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  const sortedPuzzles = [...puzzles].sort((a, b) => {
+    const mul = sortDir === "asc" ? 1 : -1;
+    if (sortKey === "title") return mul * a.name.localeCompare(b.name);
+    return mul * (a.difficulty - b.difficulty);
+  });
+
+  const sortLabel = (key: SortKey) => {
+    if (sortKey !== key) return key === "title" ? "Title" : "Difficulty";
+    return `${key === "title" ? "Title" : "Difficulty"} ${sortDir === "asc" ? "↑" : "↓"}`;
+  };
+
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-2">
-      <p className="text-sm font-semibold uppercase tracking-widest">Puzzles</p>
+      <div className="flex items-center gap-3">
+        <p className="text-sm font-semibold uppercase tracking-widest">Puzzles</p>
+        <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 p-0.5 text-xs">
+          {(["difficulty", "title"] as SortKey[]).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => handleSortClick(key)}
+              className={`rounded px-2 py-0.5 font-medium transition-colors ${sortKey === key ? "bg-white/15 text-white" : "text-white/50 hover:text-white/80"}`}
+            >
+              {sortLabel(key)}
+            </button>
+          ))}
+        </div>
+      </div>
       {loading ? (
         <p className="text-sm opacity-60">Scanning…</p>
       ) : error ? (
@@ -54,8 +93,8 @@ export function LoadPuzzlePanel({ onPuzzleLoaded }: Props) {
       ) : puzzles.length === 0 ? (
         <p className="text-sm opacity-60">No puzzles found.</p>
       ) : (
-        <ul className="max-h-64 space-y-2 overflow-y-auto pr-1">
-          {puzzles.map((entry) => {
+        <ul className="h-128 space-y-2 overflow-y-auto pr-1">
+          {sortedPuzzles.map((entry) => {
             const { id, name, description, difficulty } = entry;
             const isSelected = selectedId === id;
             return (

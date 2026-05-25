@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
-import { PendingResolution } from "@/server/engine/pending-resolution";
+import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, GiveXpMultiplePending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
 import { CardTitle } from "@/server/engine/card-db/generated";
@@ -209,13 +209,24 @@ export function resolveWhenPlayed(
       };
     }
     case "SHD_132": { // Choose Sides — "Choose a friendly non-leader unit and an enemy non-leader unit. Exchange control of those units."
-      const friendly132 = GetUnitsForPlayer(player, true).filter(u => !CardIsLeader(u.cardId));
+      const friendly132 = GetUnitsForPlayer(player).filter(u => !CardIsLeader(u.cardId));
       if (friendly132.length === 0) return null;
       return {
         type: "ability-target",
         cardId,
         player,
         fromPlayIds: friendly132.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_092": { // Overwhelming Barrage — choose a friendly unit to buff and spread damage
+      const friendly092 = GetUnitsForPlayer(player);
+      if (friendly092.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: friendly092.map(u => u.playId),
         continuation: null,
       };
     }
@@ -242,6 +253,69 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SOR_077": { // Takedown — "Defeat a unit with 5 or less remaining HP."
+      const eligible077 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+        .filter(u => Unit.FromInterface(u).CurrentHP() <= 5);
+      if (eligible077.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: eligible077.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_135": { // Emperor Palpatine — When Played: Deal 6 damage divided as you choose among enemy units.
+      const enemies135 = GetUnitsForPlayer(player === 1 ? 2 : 1);
+      if (enemies135.length === 0) return null;
+      return {
+        type: "spread-damage",
+        cardId,
+        player,
+        totalDamage: 6,
+        optional: false,
+        eligiblePlayIds: enemies135.map(u => u.playId),
+        continuation: null,
+      } satisfies SpreadDamagePending;
+    }
+    case "TWI_229": { // Battle Droid Escort — "When Played: Create a Battle Droid token."
+      const gs229 = game.currentGameState;
+      CreateBattleDroid(gs229, player);
+      game.gameLog.push(`${CardTitle(cardId)}: Battle Droid token created.`);
+      return null;
+    }
+    case "TWI_190": { // On the Doorstep — "Create 3 Battle Droid tokens and ready them."
+      const gs190 = game.currentGameState;
+      const d1 = CreateBattleDroid(gs190, player);
+      const d2 = CreateBattleDroid(gs190, player);
+      const d3 = CreateBattleDroid(gs190, player);
+      d1.ready = true;
+      d2.ready = true;
+      d3.ready = true;
+      game.gameLog.push(`${CardTitle(cardId)}: 3 Battle Droid tokens created and readied.`);
+      return null;
+    }
+    case "TWI_086": { // Admiral Trench — "When Played: Return up to 3 units that were defeated this phase from your discard pile to your hand."
+      const gs086 = game.currentGameState;
+      const playerState086 = player === 1 ? gs086.player1 : gs086.player2;
+      const defeatedPlayIds086 = new Set(
+        gs086.roundState.cardsLeftPlayThisPhase
+          .filter(c => c.fromPlayer === player && c.reason === "defeated")
+          .map(c => c.playId)
+      );
+      const eligible086 = playerState086.discard
+        .filter(d => defeatedPlayIds086.has(d.playId))
+        .map(d => d.playId);
+      if (eligible086.length === 0) return null;
+      return {
+        type: "return-from-discard",
+        cardId,
+        player,
+        maxCount: 3,
+        eligiblePlayIds: eligible086,
+        continuation: null,
+      } satisfies ReturnFromDiscardPending;
+    }
     case "SOR_106": { // Attack Pattern Delta
       const friendlies = GetUnitsForPlayer(player);
       if (friendlies.length === 0) return null;
@@ -265,6 +339,25 @@ export function resolveWhenPlayed(
           },
         },
       };
+    }
+    case "SOR_080": // General Tagge — When Played: Give an Experience token to each of up to 3 TROOPER units.
+    case "SHD_081": { // reprint of SOR_080
+      const game080 = GetGame();
+      if (!game080) return null;
+      const gs080 = game080.currentGameState;
+      const troopers = [
+        ...gs080.player1.groundArena, ...gs080.player1.spaceArena,
+        ...gs080.player2.groundArena, ...gs080.player2.spaceArena,
+      ].filter(u => TraitContains(u.cardId, "Trooper", u.controller, u.playId));
+      if (troopers.length === 0) return null;
+      return {
+        type: "give-xp-multiple",
+        cardId,
+        player,
+        maxCount: 3,
+        eligiblePlayIds: troopers.map(u => u.playId),
+        continuation: null,
+      } satisfies GiveXpMultiplePending;
     }
     default:
       return null;
