@@ -146,10 +146,11 @@ export function resolveWhenPlayed(
       const friendlyUnits = GetUnitsForPlayer(player, true);
       if (friendlyUnits.length === 0) return null;
       return {
-        type: "capture-captor",
+        type: "ability-target",
         cardId,
-        fromPlayer: player,
-        eligiblePlayIds: friendlyUnits.map(u => u.playId),
+        player,
+        fromPlayIds: friendlyUnits.map(u => u.playId),
+        continuation: null,
       };
     }
     case "SOR_224": { // Change of Heart — "Take control of a non-leader unit."
@@ -179,11 +180,11 @@ export function resolveWhenPlayed(
     case "JTL_096": { // Blue Leader — "You may pay 2 resources. If you do, move this unit to the ground arena and give 2 Experience tokens to it."
       if (!playId) return null;
       return {
-        type: "pay-to-move-ground",
+        type: "ability-option",
         cardId,
         sourcePlayId: playId,
-        player,
-        cost: 2,
+        helperText: `Pay 2 resources to move ${CardTitle(cardId)} to the ground arena and give 2 Experience tokens?`,
+        onYes: null,
         continuation: null,
       };
     }

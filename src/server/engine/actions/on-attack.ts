@@ -59,12 +59,12 @@ export function resolveOnAttackTrigger(
     })();
     if (hasSab) {
       const triggers: OnAttackTriggerEntry[] = [
-        { id: "saboteur", label: `${CardTitle(attacker.cardId)} — Saboteur` },
+        { cardId: "saboteur", label: `${CardTitle(attacker.cardId)} — Saboteur` },
       ];
-      if (hasVambrace) triggers.push({ id: "vambrace", label: "Vambrace Flamethrower — On Attack" });
-      if (hasDarksaber) triggers.push({ id: "darksaber", label: "The Darksaber — On Attack" });
-      if (hasHardpointBlaster) triggers.push({ id: "hardpoint", label: "Hardpoint Heavy Blaster — On Attack" });
-      if (hasNativeAbility) triggers.push({ id: "native", label: `${CardTitle(attacker.cardId)} — On Attack` });
+      if (hasVambrace) triggers.push({ cardId: "SHD_177", label: "Vambrace Flamethrower — On Attack" });
+      if (hasDarksaber) triggers.push({ cardId: "SHD_126", label: "The Darksaber — On Attack" });
+      if (hasHardpointBlaster) triggers.push({ cardId: "SOR_121", label: "Hardpoint Heavy Blaster — On Attack" });
+      if (hasNativeAbility) triggers.push({ cardId: attacker.cardId, label: `${CardTitle(attacker.cardId)} — On Attack` });
       return {
         type: "on-attack-order",
         attackerPlayId: attacker.playId,

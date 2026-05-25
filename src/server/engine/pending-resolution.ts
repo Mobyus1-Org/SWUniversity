@@ -68,7 +68,7 @@ export interface ResolveAttackPending {
 }
 
 export interface OnAttackTriggerEntry {
-  id: "saboteur" | "darksaber" | "vambrace" | "hardpoint" | "native";
+  cardId: string;  // upgrade/card ID, or "saboteur" for the Saboteur keyword
   label: string;
 }
 
@@ -96,21 +96,6 @@ export interface DefeatCopyPending {
 }
 
 /** Capture step 1: choose which friendly unit will act as the captor. */
-export interface CaptureCaptorPending {
-  type: "capture-captor";
-  cardId: string;
-  fromPlayer: PlayerId;
-  eligiblePlayIds: string[];
-}
-
-/** Capture step 2: choose which enemy non-leader unit to capture. */
-export interface CaptureTargetPending {
-  type: "capture-target";
-  cardId: string;
-  fromPlayer: PlayerId;
-  captorPlayId: string;
-  eligiblePlayIds: string[];
-}
 
 /** Optional bounty collection prompt — shown to the opponent of the defeated/captured unit's controller. */
 export interface BountyPending {
@@ -119,16 +104,15 @@ export interface BountyPending {
   cardId: string;
   /** The player who may collect (always the opponent of the bounty unit's controller). */
   collectingPlayer: PlayerId;
-  bountyEffect: "draw-card" | "give-shield";
   continuation: PendingResolution | null;
 }
 
-/** Step 2 of give-shield bounty: choose which unit receives the Shield token. */
-export interface BountyShieldTargetPending {
-  type: "bounty-shield-target";
-  collectingPlayer: PlayerId;
-  fromPlayIds: string[];
-  continuation: PendingResolution | null;
+/** Generic "pick a card from hand to play" — cardId identifies validation + execution logic. */
+export interface PlayFromHandPending {
+  type: "play-from-hand";
+  /** Card granting this ability (e.g. "SOR_022" for ECL, "TWI_005" for Count Dooku). */
+  cardId: string;
+  player: PlayerId;
 }
 
 /** Step 1 of Exploit: prompt the playing player whether to use Exploit. */
@@ -208,45 +192,6 @@ export interface TriggerOrderPending {
   }>;
 }
 
-/** JTL_096 Blue Leader: optional pay-2 to move to ground arena and give 2 Experience tokens. */
-export interface PayToMoveGroundPending {
-  type: "pay-to-move-ground";
-  cardId: string;
-  sourcePlayId: string;
-  player: PlayerId;
-  cost: number;
-  continuation: PendingResolution | null;
-}
-
-/** JTL_049 L3-37: replacement effect — Yes/No prompt when she would be defeated as a unit. */
-export interface L337ReplacePending {
-  type: "l337-replace";
-  unitPlayId: string;
-  player: PlayerId;
-  eligibleVehicles: string[];
-  continuation: PendingResolution | null;
-}
-
-/** JTL_049 L3-37: replacement effect step 2 — choose which Vehicle to attach her to. */
-export interface L337ReplaceTargetPending {
-  type: "l337-replace-target";
-  unitPlayId: string;
-  player: PlayerId;
-  eligibleVehicles: string[];
-  continuation: PendingResolution | null;
-}
-
-export interface EclPlayPending {
-  type: "ecl-play";
-  player: PlayerId;
-  continuation: PendingResolution | null;
-}
-
-/** Count Dooku leader action: player picks a Separatist card from hand to play with Exploit 1 bonus. */
-export interface DookuLeaderPlayPending {
-  type: "dooku-leader-play";
-  player: PlayerId;
-}
 
 /** Spread N damage simultaneously across eligible units. */
 export interface SpreadDamagePending {
@@ -315,28 +260,21 @@ export type PendingResolution =
   | ResolveAttackPending
   | UpgradeTargetPending
   | DefeatCopyPending
-  | CaptureCaptorPending
-  | CaptureTargetPending
   | BountyPending
-  | BountyShieldTargetPending
   | ExploitOptionPending
   | ExploitTargetPending
   | PilotingOptionPending
   | PlotOrderPending
   | PlotWindowPending
-  | L337ReplacePending
-  | L337ReplaceTargetPending
   | WhenDeployedPending
-  | PayToMoveGroundPending
   | TriggerOrderPending
-  | EclPlayPending
   | SpreadDamagePending
   | OnAttackOrderPending
-  | DookuLeaderPlayPending
   | ReturnFromDiscardPending
   | GiveXpMultiplePending
   | ChooseIndirectTargetPending
-  | IndirectDamagePending;
+  | IndirectDamagePending
+  | PlayFromHandPending;
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch

@@ -53,21 +53,17 @@ import type {
   AbilityOptionPending,
   AbilityTargetPending,
   AttackTargetPending,
-  BountyShieldTargetPending,
-  CaptureTargetPending,
   DefeatCopyPending,
   DiscardFromHandPending,
-  DookuLeaderPlayPending,
-  EclPlayPending,
   IndirectDamagePending,
   EngineContext,
   ExploitOptionPending,
   ExploitTargetPending,
-  L337ReplaceTargetPending,
   OnAttackOrderPending,
   OnAttackTriggerEntry,
   PendingResolution,
   PilotingOptionPending,
+  PlayFromHandPending,
   PlotOrderPending,
   PlotWindowPending,
   ResolveAttackPending,
@@ -481,10 +477,11 @@ function defeatUnit(
     const eligible = l337EligibleVehicles(game, unit.controller, unit.playId);
     if (eligible.length > 0) {
       return {
-        type: "l337-replace",
-        unitPlayId: unit.playId,
-        player: unit.controller,
-        eligibleVehicles: eligible,
+        type: "ability-option",
+        cardId: "JTL_049",
+        sourcePlayId: unit.playId,
+        helperText: "Attach L3-37 as an upgrade to a friendly Vehicle without a Pilot instead of being defeated?",
+        onYes: null,
         continuation: null,
       };
     }
@@ -885,27 +882,12 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         type: "Target",
         fromPlayIds: pending.eligiblePlayIds,
       } satisfies NeedsTarget;
-    case "capture-captor":
-      return {
-        type: "Target",
-        fromPlayIds: pending.eligiblePlayIds,
-      } satisfies NeedsTarget;
-    case "capture-target":
-      return {
-        type: "Target",
-        fromPlayIds: pending.eligiblePlayIds,
-      } satisfies NeedsTarget;
     case "bounty":
       return {
         type: "Option",
         helperText: `Collect bounty (${CardTitle(pending.cardId)})?`,
         options: ["Yes", "No"],
       } satisfies NeedsOption;
-    case "bounty-shield-target":
-      return {
-        type: "Target",
-        fromPlayIds: pending.fromPlayIds,
-      } satisfies NeedsTarget;
     case "resolve-attack":
       // Should never be shown to client — auto-resolves as continuation
       return { type: "Target" } satisfies NeedsTarget;
@@ -944,32 +926,13 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
     case "when-deployed":
       // Auto-resolves inline; should not normally be sent to client
       return { type: "Option", helperText: "Resolving When Deployed...", options: ["Continue"] } satisfies NeedsOption;
-    case "pay-to-move-ground":
-      return {
-        type: "Option",
-        helperText: `Pay ${pending.cost} resources to move ${CardTitle(pending.cardId)} to the ground arena and give 2 Experience tokens?`,
-        options: ["Yes", "No"],
-      } satisfies NeedsOption;
     case "trigger-order":
       return {
         type: "Option",
         helperText: "Choose which trigger to resolve first:",
         options: pending.triggers.map(t => t.label),
       } satisfies NeedsOption;
-    case "l337-replace":
-      return {
-        type: "Option",
-        helperText: "Attach L3-37 as an upgrade to a friendly Vehicle without a Pilot instead of being defeated?",
-        options: ["Yes", "No"],
-      } satisfies NeedsOption;
-    case "l337-replace-target":
-      return {
-        type: "Target",
-        fromPlayIds: pending.eligibleVehicles,
-      } satisfies NeedsTarget;
-    case "dooku-leader-play":
-      return { type: "Target", fromZones: ["Hand"] } satisfies NeedsTarget;
-    case "ecl-play":
+    case "play-from-hand":
       return { type: "Target", fromZones: ["Hand"] } satisfies NeedsTarget;
     case "return-from-discard":
       return {
@@ -1380,7 +1343,7 @@ function resolveEclEpicAction(game: GameState, log: string[], player: PlayerId):
   }
 
   log.push(`Player ${player} used Energy Conversion Lab.`);
-  const pending: EclPlayPending = { type: "ecl-play", player, continuation: null };
+  const pending: PlayFromHandPending = { type: "play-from-hand", cardId: "SOR_022", player };
   return { response: resolutionResponse(pendingToResolution(pending, game)), pending, stateChanged: false };
 }
 
@@ -1645,74 +1608,6 @@ function handleChooseTarget(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
-  if (pending.type === "capture-captor") {
-    const chosen = data.targetPlayIds?.[0];
-    if (!chosen)
-      return { response: invalidResponse("Choose a friendly unit to capture with."), pending, stateChanged: false };
-    if (!pending.eligiblePlayIds.includes(chosen))
-      return { response: invalidResponse(`Unit ${chosen} is not a valid captor.`), pending, stateChanged: false };
-    const captor = unitByPlayId(game, chosen);
-    if (!captor)
-      return { response: invalidResponse("Captor unit not found."), pending, stateChanged: false };
-    const captorArena = (CardArena(captor.cardId) ?? "Ground") as "Ground" | "Space";
-    const enemyPlayer = otherPlayer(pending.fromPlayer);
-    const enemyArena = captorArena === "Ground"
-      ? (ps(game, enemyPlayer).groundArena as Unit[])
-      : (ps(game, enemyPlayer).spaceArena as Unit[]);
-    const eligible = enemyArena.filter(u => !CardIsLeader(u.cardId));
-    if (eligible.length === 0)
-      return { response: invalidResponse("No valid capture targets in that arena."), pending, stateChanged: false };
-    const captureTargetPending: CaptureTargetPending = {
-      type: "capture-target",
-      cardId: pending.cardId,
-      fromPlayer: pending.fromPlayer,
-      captorPlayId: chosen,
-      eligiblePlayIds: eligible.map(u => u.playId),
-    };
-    return { response: resolutionResponse(pendingToResolution(captureTargetPending, game)), pending: captureTargetPending, stateChanged: false };
-  }
-
-  if (pending.type === "capture-target") {
-    const chosen = data.targetPlayIds?.[0];
-    if (!chosen)
-      return { response: invalidResponse("Choose an enemy unit to capture."), pending, stateChanged: false };
-    if (!pending.eligiblePlayIds.includes(chosen))
-      return { response: invalidResponse(`Unit ${chosen} is not a valid capture target.`), pending, stateChanged: false };
-    const target = unitByPlayId(game, chosen);
-    const captor = unitByPlayId(game, pending.captorPlayId);
-    if (!target || !captor)
-      return { response: invalidResponse("Captor or target unit not found."), pending, stateChanged: false };
-
-    // Remove target from arena; this does NOT go through defeatUnit (no When Defeated triggers).
-    removeFromArena(game, target.playId);
-
-    // Token units are defeated on capture instead of placed under the captor (CR 34.5).
-    if (target.IsTokenUnit()) {
-      log.push(`${CardTitle(target.cardId)} was captured and set aside (token).`);
-      updateDefeatedPlayers(game);
-      return { response: stateResponse(game), pending: null, stateChanged: true };
-    } else {
-      // Compute bounties BEFORE clearing upgrades — upgrades carry bounty grants.
-      const captureCollector: PlayerId = target.controller === 1 ? 2 : 1;
-      const bountyPending = collectBounties(target, captureCollector, null);
-
-      // Remove all damage, defeat all upgrades, place facedown under captor.
-      target.damage = 0;
-      target.upgrades = [];
-      captor.captives.push(target);
-      log.push(`${CardTitle(captor.cardId)} captured ${CardTitle(target.cardId)}.`);
-      // Remove from phase tracking so rescue later doesn't carry "played this phase" status.
-      game.roundState.cardsPlayedThisPhase = game.roundState.cardsPlayedThisPhase.filter(e => e.playId !== target.playId);
-      game.roundState.cardsEnteredPlayThisPhase = game.roundState.cardsEnteredPlayThisPhase.filter(e => e.playId !== target.playId);
-
-      updateDefeatedPlayers(game);
-      if (bountyPending) {
-        return { response: resolutionResponse(pendingToResolution(bountyPending, game)), pending: bountyPending, stateChanged: true };
-      }
-      return { response: stateResponse(game), pending: null, stateChanged: true };
-    }
-  }
-
   if (pending.type === "upgrade-target") {
     const chosen = data.targetPlayIds?.[0];
     if (!chosen)
@@ -1767,30 +1662,6 @@ function handleChooseTarget(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
-  if (pending.type === "bounty-shield-target") {
-    const chosen = data.targetPlayIds?.[0];
-    if (!chosen)
-      return { response: invalidResponse("Choose a unit to give the Shield token to."), pending, stateChanged: false };
-    if (!pending.fromPlayIds.includes(chosen))
-      return { response: invalidResponse("Chosen unit is not a valid shield target."), pending, stateChanged: false };
-    const targetUnit = unitByPlayId(game, chosen);
-    if (!targetUnit)
-      return { response: invalidResponse("Target unit not found."), pending, stateChanged: false };
-
-    targetUnit.upgrades.push({
-      cardId: "SOR_T02",
-      playId: nextPlayId(game),
-      owner: pending.collectingPlayer,
-      controller: pending.collectingPlayer,
-    });
-    log.push(`Bounty collected: Shield token placed on ${CardTitle(targetUnit.cardId)}.`);
-
-    updateDefeatedPlayers(game);
-    const next = pending.continuation;
-    if (next) return { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: true };
-    return { response: stateResponse(game), pending: null, stateChanged: true };
-  }
-
   if (pending.type === "exploit-target") {
     const chosen = data.targetPlayIds ?? [];
     // Player may choose fewer than exploitAmount units (including 0)
@@ -1823,50 +1694,7 @@ function handleChooseTarget(
     return completePlayCard(game, log, pending.cardId, pending.playingPlayer);
   }
 
-  if (pending.type === "l337-replace-target") {
-    const chosen = data.targetPlayIds?.[0];
-    if (!chosen)
-      return { response: invalidResponse("Choose a Vehicle to attach L3-37 to."), pending, stateChanged: false };
-    if (!pending.eligibleVehicles.includes(chosen))
-      return { response: invalidResponse(`Vehicle ${chosen} is not a valid target for L3-37.`), pending, stateChanged: false };
-
-    const l3 = unitByPlayId(game, pending.unitPlayId);
-    const vehicle = unitByPlayId(game, chosen);
-    if (!l3 || !vehicle)
-      return { response: invalidResponse("L3-37 or target vehicle not found."), pending, stateChanged: false };
-
-    // Remove L3-37 from arena without going to discard (she's becoming an upgrade).
-    removeFromArena(game, l3.playId);
-    // Defeat all upgrades on her per card text (just remove them).
-    for (const upg of l3.upgrades) {
-      log.push(`${CardTitle(upg.cardId)} on L3-37 was defeated.`);
-    }
-    // Rescue captives if any.
-    for (const captive of l3.captives ?? []) {
-      const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
-      const rescued = Unit.FromInterface({ ...captive, ready: false });
-      if (arena === "Ground") ps(game, captive.owner).groundArena.push(rescued);
-      else ps(game, captive.owner).spaceArena.push(rescued);
-      log.push(`${CardTitle(captive.cardId)} was rescued from L3-37.`);
-    }
-    // Attach L3-37 as a pilot upgrade to the chosen vehicle (all damage removed, no upgrades).
-    vehicle.upgrades.push({
-      cardId: "JTL_049",
-      playId: nextPlayId(game),
-      owner: pending.player,
-      controller: pending.player,
-    });
-    log.push(`L3-37 attached as a pilot upgrade to ${CardTitle(vehicle.cardId)}.`);
-
-    const nextPendingL3 = pending.continuation ?? null;
-    updateDefeatedPlayers(game);
-    if (nextPendingL3) return { response: resolutionResponse(pendingToResolution(nextPendingL3, game)), pending: nextPendingL3, stateChanged: true };
-    const bagL3 = drainTriggerBag(game, log);
-    if (bagL3) return { response: resolutionResponse(pendingToResolution(bagL3, game)), pending: bagL3, stateChanged: true };
-    return { response: stateResponse(game), pending: null, stateChanged: true };
-  }
-
-  if (pending.type === "ecl-play") {
+  if (pending.type === "play-from-hand") {
     const idx = data.targetIndices?.[0];
     if (idx == null)
       return { response: invalidResponse("Choose a card from hand to play."), pending, stateChanged: false };
@@ -1874,55 +1702,48 @@ function handleChooseTarget(
     if (idx < 0 || idx >= hand.length)
       return { response: invalidResponse("Invalid hand index."), pending, stateChanged: false };
     const cardId = hand[idx].cardId;
-    if (CardType(cardId) !== "Unit")
-      return { response: invalidResponse("ECL: chosen card is not a Unit."), pending, stateChanged: false };
-    if ((CardCost(cardId) ?? 0) > 6)
-      return { response: invalidResponse("ECL: chosen unit costs more than 6."), pending, stateChanged: false };
-    const cost = playCost(game, pending.player, cardId);
-    const readyCount = ps(game, pending.player).resources.filter(r => r.ready).length;
-    if (readyCount < cost)
-      return { response: invalidResponse("ECL: not enough resources to play this unit."), pending, stateChanged: false };
 
-    exhaustResources(game, pending.player, cost);
-    hand.splice(idx, 1);
-    log.push(`Player ${pending.player} played ${CardTitle(cardId) ?? cardId} via Energy Conversion Lab.`);
-    return completePlayCard(game, log, cardId, pending.player, {
-      injectEffect: { cardId: "SOR_022", duration: "Phase", affectedPlayer: pending.player },
-    });
-  }
-
-  if (pending.type === "dooku-leader-play") {
-    const idx = data.targetIndices?.[0];
-    if (idx == null)
-      return { response: invalidResponse("Choose a Separatist card from hand to play."), pending, stateChanged: false };
-    const hand = ps(game, pending.player).hand;
-    if (idx < 0 || idx >= hand.length)
-      return { response: invalidResponse("Invalid hand index."), pending, stateChanged: false };
-    const cardId = hand[idx].cardId;
-    if (!CardTraits(cardId).includes("Separatist"))
-      return { response: invalidResponse("Dooku: chosen card is not a Separatist card."), pending, stateChanged: false };
-
-    const fullCost = playCost(game, pending.player, cardId);
-    // Card's own native exploit + Dooku's +1 bonus (bypass currentEffects so nothing is consumed here)
-    const cardExploit = ExploitAmount(cardId, undefined, undefined, true);
-    const totalExploit = cardExploit + 1;
-    const readyCount = ps(game, pending.player).resources.filter(r => r.ready).length;
-    const minCost = Math.max(0, fullCost - totalExploit * 2);
-
-    if (readyCount < minCost)
-      return { response: invalidResponse("Not enough resources to play that card."), pending, stateChanged: false };
-
-    hand.splice(idx, 1);
-    log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Count Dooku's action (Exploit ${totalExploit} available).`);
-
-    const exploitPending: ExploitOptionPending = {
-      type: "exploit-option",
-      cardId,
-      playingPlayer: pending.player,
-      exploitAmount: totalExploit,
-      fullCost,
-    };
-    return { response: resolutionResponse(pendingToResolution(exploitPending, game)), pending: exploitPending, stateChanged: false };
+    switch (pending.cardId) {
+      case "SOR_022": {
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("ECL: chosen card is not a Unit."), pending, stateChanged: false };
+        if ((CardCost(cardId) ?? 0) > 6)
+          return { response: invalidResponse("ECL: chosen unit costs more than 6."), pending, stateChanged: false };
+        const eclCost = playCost(game, pending.player, cardId);
+        const eclReady = ps(game, pending.player).resources.filter(r => r.ready).length;
+        if (eclReady < eclCost)
+          return { response: invalidResponse("ECL: not enough resources to play this unit."), pending, stateChanged: false };
+        exhaustResources(game, pending.player, eclCost);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId) ?? cardId} via Energy Conversion Lab.`);
+        return completePlayCard(game, log, cardId, pending.player, {
+          injectEffect: { cardId: "SOR_022", duration: "Phase", affectedPlayer: pending.player },
+        });
+      }
+      case "TWI_005": {
+        if (!TraitContains(cardId, "Separatist"))
+          return { response: invalidResponse("Dooku: chosen card is not a Separatist card."), pending, stateChanged: false };
+        const fullCost = playCost(game, pending.player, cardId);
+        const cardExploit = ExploitAmount(cardId, undefined, undefined, true);
+        const totalExploit = cardExploit + 1;
+        const dookuReady = ps(game, pending.player).resources.filter(r => r.ready).length;
+        const minCost = Math.max(0, fullCost - totalExploit * 2);
+        if (dookuReady < minCost)
+          return { response: invalidResponse("Not enough resources to play that card."), pending, stateChanged: false };
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Count Dooku's action (Exploit ${totalExploit} available).`);
+        const exploitPending: ExploitOptionPending = {
+          type: "exploit-option",
+          cardId,
+          playingPlayer: pending.player,
+          exploitAmount: totalExploit,
+          fullCost,
+        };
+        return { response: resolutionResponse(pendingToResolution(exploitPending, game)), pending: exploitPending, stateChanged: false };
+      }
+      default:
+        return { response: invalidResponse(`Unknown play-from-hand source: ${pending.cardId}`), pending, stateChanged: false };
+    }
   }
 
   if (pending.type === "spread-damage") {
@@ -2027,7 +1848,7 @@ function processSingleOnAttackTrigger(
   game: GameState,
   log: string[],
 ): PendingResolution | null {
-  switch (trigger.id) {
+  switch (trigger.cardId) {
     case "saboteur": {
       if (cont.target.type === "unit") {
         const def = unitByPlayId(game, cont.target.playId);
@@ -2041,11 +1862,11 @@ function processSingleOnAttackTrigger(
       }
       return { ...cont, saboteurApplied: true };
     }
-    case "darksaber": {
+    case "SHD_126": {
       applyDarksaberOnAttack(attacker);
       return cont;
     }
-    case "vambrace": {
+    case "SHD_177": {
       const opponent = attacker.controller === 1 ? 2 : 1;
       const enemyGround = (opponent === 1 ? game.player1.groundArena : game.player2.groundArena).map(u => u.playId);
       if (enemyGround.length === 0) return cont;
@@ -2066,7 +1887,7 @@ function processSingleOnAttackTrigger(
         continuation: cont,
       };
     }
-    case "hardpoint": {
+    case "SOR_121": {
       if (cont.target.type !== "unit") return cont;
       const defenderPlayId121 = cont.target.playId;
       const inGround121 = [...game.player1.groundArena, ...game.player2.groundArena].some(u => u.playId === defenderPlayId121);
@@ -2087,8 +1908,76 @@ function processSingleOnAttackTrigger(
         continuation: cont,
       };
     }
-    case "native":
+    default:
       return resolveOnAttackTrigger(attacker, cont, { skipOrderingPrompt: true });
+  }
+}
+
+function applyAbilityOptionEffect(
+  pending: AbilityOptionPending,
+  game: GameState,
+  log: string[],
+): PendingResolution | null {
+  switch (pending.cardId) {
+    case "JTL_096": {
+      const unit = unitByPlayId(game, pending.sourcePlayId!);
+      if (unit) {
+        exhaustResources(game, unit.controller, 2);
+        const pState = ps(game, unit.controller);
+        const spaceIdx = pState.spaceArena.findIndex(u => u.playId === unit.playId);
+        if (spaceIdx !== -1) {
+          pState.spaceArena.splice(spaceIdx, 1);
+          pState.groundArena.push(unit);
+        }
+        unit.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: unit.owner, controller: unit.controller });
+        unit.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: unit.owner, controller: unit.controller });
+        log.push(`${CardTitle(unit.cardId)} moved to the ground arena and gained 2 Experience tokens.`);
+      }
+      return pending.continuation ?? null;
+    }
+    case "JTL_049": {
+      const unit = unitByPlayId(game, pending.sourcePlayId!);
+      if (!unit) return pending.continuation ?? null;
+      const eligible = l337EligibleVehicles(game, unit.controller, pending.sourcePlayId!);
+      if (eligible.length === 0) return pending.continuation ?? null;
+      return {
+        type: "ability-target",
+        cardId: "JTL_049",
+        player: unit.controller,
+        sourcePlayId: pending.sourcePlayId,
+        fromPlayIds: eligible,
+        continuation: pending.continuation ?? null,
+      } satisfies AbilityTargetPending;
+    }
+    default:
+      return pending.continuation ?? null;
+  }
+}
+
+function applyAbilityOptionDeclineEffect(
+  pending: AbilityOptionPending,
+  game: GameState,
+  log: string[],
+): PendingResolution | null {
+  switch (pending.cardId) {
+    case "JTL_049": {
+      const l337Unit = unitByPlayId(game, pending.sourcePlayId!);
+      let nextPending: PendingResolution | null = pending.continuation ?? null;
+      if (l337Unit) {
+        const defeatPending = defeatUnit(game, log, l337Unit, true);
+        if (defeatPending) {
+          type WithContinuation = { continuation?: PendingResolution | null };
+          let tail: WithContinuation = defeatPending as unknown as WithContinuation;
+          while (tail.continuation != null) tail = tail.continuation as unknown as WithContinuation;
+          tail.continuation = nextPending;
+          nextPending = defeatPending;
+        }
+      }
+      updateDefeatedPlayers(game);
+      return nextPending;
+    }
+    default:
+      return pending.continuation ?? null;
   }
 }
 
@@ -2104,14 +1993,16 @@ function handleChooseOption(
     if (option === "Yes") {
       const nextPending = pending.onYes ?? null;
       if (nextPending) {
-        // Ambush: ready the unit before it attacks so it can exhaust normally during combat.
         if (nextPending.type === "attack-target" && nextPending.source === "ambush") {
           const ambushUnit = unitByPlayId(game, nextPending.attackerPlayId);
           if (ambushUnit) ambushUnit.ready = true;
         }
         return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
       }
-      // onYes resolved with no further pending — drain any remaining triggers before returning.
+      // onYes is null — apply inline effect by cardId
+      const effectResult = applyAbilityOptionEffect(pending, game, log);
+      if (effectResult?.type === "resolve-attack") return handleResolveAttack(game, log, effectResult);
+      if (effectResult) return { response: resolutionResponse(pendingToResolution(effectResult, game)), pending: effectResult, stateChanged: false };
       const bagPendingYes = drainTriggerBag(game, log);
       if (bagPendingYes) {
         return { response: resolutionResponse(pendingToResolution(bagPendingYes, game)), pending: bagPendingYes, stateChanged: false };
@@ -2119,15 +2010,14 @@ function handleChooseOption(
       updateDefeatedPlayers(game);
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
-    // "No" — skip the ability, return to continuation
-    const nextPending = pending.continuation;
+    // "No" — apply decline effect
+    const nextPending = applyAbilityOptionDeclineEffect(pending, game, log);
     if (nextPending?.type === "resolve-attack") {
       return handleResolveAttack(game, log, nextPending);
     }
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
     }
-    // No continuation — drain any remaining triggers before returning.
     const bagPendingNo = drainTriggerBag(game, log);
     if (bagPendingNo) {
       return { response: resolutionResponse(pendingToResolution(bagPendingNo, game)), pending: bagPendingNo, stateChanged: false };
@@ -2150,70 +2040,6 @@ function handleChooseOption(
       continuation: null,
     };
     return { response: resolutionResponse(pendingToResolution(indirectPending, game)), pending: indirectPending, stateChanged: false };
-  }
-
-  if (pending?.type === "pay-to-move-ground") {
-    if (option === "Yes") {
-      exhaustResources(game, pending.player, pending.cost);
-      const unit = unitByPlayId(game, pending.sourcePlayId);
-      if (unit) {
-        const pState = ps(game, unit.controller);
-        const spaceIdx = pState.spaceArena.findIndex(u => u.playId === unit.playId);
-        if (spaceIdx !== -1) {
-          pState.spaceArena.splice(spaceIdx, 1);
-          pState.groundArena.push(unit);
-        }
-        unit.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: unit.owner, controller: unit.controller });
-        unit.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: unit.owner, controller: unit.controller });
-        log.push(`${CardTitle(unit.cardId)} moved to the ground arena and gained 2 Experience tokens.`);
-      }
-    }
-    const nextPending = pending.continuation;
-    if (nextPending) {
-      if (nextPending.type === "attack-target" && nextPending.source === "ambush") {
-        const ambushUnit = unitByPlayId(game, nextPending.attackerPlayId);
-        if (ambushUnit) ambushUnit.ready = true;
-      }
-      return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
-    }
-    // Drain any remaining triggers (e.g. ambush still in bag after When Played resolved).
-    const bagPendingMove = drainTriggerBag(game, log);
-    if (bagPendingMove) {
-      return { response: resolutionResponse(pendingToResolution(bagPendingMove, game)), pending: bagPendingMove, stateChanged: false };
-    }
-    updateDefeatedPlayers(game);
-    return { response: stateResponse(game), pending: null, stateChanged: true };
-  }
-
-  if (pending?.type === "l337-replace") {
-    if (option === "Yes") {
-      const replacePending: L337ReplaceTargetPending = {
-        type: "l337-replace-target",
-        unitPlayId: pending.unitPlayId,
-        player: pending.player,
-        eligibleVehicles: pending.eligibleVehicles,
-        continuation: pending.continuation,
-      };
-      return { response: resolutionResponse(pendingToResolution(replacePending, game)), pending: replacePending, stateChanged: false };
-    }
-    // "No" — defeat L3-37 normally (bypass the replacement check to avoid re-triggering).
-    const l337Unit = unitByPlayId(game, pending.unitPlayId);
-    let nextPending: PendingResolution | null = pending.continuation ?? null;
-    if (l337Unit) {
-      const defeatPending = defeatUnit(game, log, l337Unit, true);
-      if (defeatPending) {
-        type WithCont = { continuation?: PendingResolution | null };
-        let tail: WithCont = defeatPending as unknown as WithCont;
-        while (tail.continuation != null) tail = tail.continuation as unknown as WithCont;
-        tail.continuation = nextPending;
-        nextPending = defeatPending;
-      }
-    }
-    updateDefeatedPlayers(game);
-    if (nextPending) return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
-    const bagL337No = drainTriggerBag(game, log);
-    if (bagL337No) return { response: resolutionResponse(pendingToResolution(bagL337No, game)), pending: bagL337No, stateChanged: false };
-    return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
   if (pending?.type === "on-attack-order") {
@@ -2254,7 +2080,7 @@ function handleChooseOption(
       return { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: false };
     };
 
-    switch (chosen.id) {
+    switch (chosen.cardId) {
       case "saboteur": {
         // Strip defender's shields now
         if (pending.continuation.target.type === "unit") {
@@ -2270,12 +2096,12 @@ function handleChooseOption(
         const contSab: ResolveAttackPending = { ...pending.continuation, saboteurApplied: true };
         return returnPending(buildRemaining(contSab), contSab);
       }
-      case "darksaber": {
+      case "SHD_126": {
         // Auto: give XP to other friendly Mandalorian units
         applyDarksaberOnAttack(attacker);
         return returnPending(buildRemaining(pending.continuation), pending.continuation);
       }
-      case "vambrace": {
+      case "SHD_177": {
         // Build VF option; wrap its continuation with remaining triggers
         const afterVF = buildRemaining(pending.continuation);
         const vfCont: ResolveAttackPending | PendingResolution = afterVF ?? pending.continuation;
@@ -2302,7 +2128,14 @@ function handleChooseOption(
         };
         return { response: resolutionResponse(pendingToResolution(vfOption, game)), pending: vfOption, stateChanged: false };
       }
-      case "native": {
+      case "SOR_121": {
+        // Resolve the native on-attack trigger with remaining triggers as the new continuation
+        const afterNative = buildRemaining(pending.continuation);
+        const nativeCont = (afterNative ?? pending.continuation) as ResolveAttackPending;
+        const nativePending = resolveOnAttackTrigger(attacker, nativeCont, { skipOrderingPrompt: true });
+        return returnPending(nativePending, pending.continuation);
+      }
+      default: {
         // Resolve the native on-attack trigger with remaining triggers as the new continuation
         const afterNative = buildRemaining(pending.continuation);
         const nativeCont = (afterNative ?? pending.continuation) as ResolveAttackPending;
@@ -2442,29 +2275,31 @@ function handleChooseOption(
 
   if (pending?.type === "bounty") {
     if (option === "Yes") {
-      if (pending.bountyEffect === "draw-card") {
-        drawCardForPlayer(game, log, pending.collectingPlayer);
-        const nextPending = pending.continuation ?? null;
-        updateDefeatedPlayers(game);
-        if (nextPending) {
-          return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+      switch (pending.cardId) {
+        case "SHD_027": {
+          drawCardForPlayer(game, log, pending.collectingPlayer);
+          const nextPending = pending.continuation ?? null;
+          updateDefeatedPlayers(game);
+          if (nextPending) {
+            return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+          }
+          return { response: stateResponse(game), pending: null, stateChanged: true };
         }
-        return { response: stateResponse(game), pending: null, stateChanged: true };
-      }
-      if (pending.bountyEffect === "give-shield") {
-        // Build a shield-target pending so the player chooses which unit gets the Shield token
-        const allUnits = [...game.player1.groundArena, ...game.player1.spaceArena,
-                          ...game.player2.groundArena, ...game.player2.spaceArena];
-        const eligiblePlayIds = allUnits
-          .filter(u => u.controller === pending.collectingPlayer)
-          .map(u => u.playId);
-        const shieldPending: BountyShieldTargetPending = {
-          type: "bounty-shield-target",
-          collectingPlayer: pending.collectingPlayer,
-          fromPlayIds: eligiblePlayIds,
-          continuation: pending.continuation ?? null,
-        };
-        return { response: resolutionResponse(pendingToResolution(shieldPending, game)), pending: shieldPending, stateChanged: false };
+        case "SHD_068": {
+          const allUnits = [...game.player1.groundArena, ...game.player1.spaceArena,
+                            ...game.player2.groundArena, ...game.player2.spaceArena];
+          const eligiblePlayIds = allUnits
+            .filter(u => u.controller === pending.collectingPlayer)
+            .map(u => u.playId);
+          const shieldPending: AbilityTargetPending = {
+            type: "ability-target",
+            cardId: "SHD_068",
+            player: pending.collectingPlayer,
+            fromPlayIds: eligiblePlayIds,
+            continuation: pending.continuation ?? null,
+          };
+          return { response: resolutionResponse(pendingToResolution(shieldPending, game)), pending: shieldPending, stateChanged: false };
+        }
       }
     }
     // "No" — skip this bounty, move to continuation
@@ -2801,7 +2636,7 @@ function resolveActionAbility(
         log.push(`${CardTitle("TWI_005")}: no Separatist cards in hand.`);
         return null;
       }
-      return { type: "dooku-leader-play", player } satisfies DookuLeaderPlayPending;
+      return { type: "play-from-hand", cardId: "TWI_005", player } satisfies PlayFromHandPending;
     }
     case "SOR_014": // Sabine Wren - Galvanized Revolutionary: Deal 1 damage to each base.
       game.player1.base.damage += 1;
@@ -3233,6 +3068,97 @@ function applyAbilityEffect(
         continuation: pending.continuation,
       };
       return spreadPending092;
+    }
+    case "TWI_128": {
+      if (!targetPlayId) break;
+      if (!pending.sourcePlayId) {
+        // Step 1: captor chosen — find eligible enemies in the same arena.
+        const captor = unitByPlayId(game.currentGameState, targetPlayId);
+        if (!captor) break;
+        const captorArena = (CardArena(captor.cardId) ?? "Ground") as "Ground" | "Space";
+        const enemyPlayer = otherPlayer(pending.player!);
+        const enemyArena = captorArena === "Ground"
+          ? (ps(game.currentGameState, enemyPlayer).groundArena as Unit[])
+          : (ps(game.currentGameState, enemyPlayer).spaceArena as Unit[]);
+        const eligible = enemyArena.filter(u => !CardIsLeader(u.cardId));
+        if (eligible.length === 0) break;
+        return {
+          type: "ability-target",
+          cardId: "TWI_128",
+          player: pending.player,
+          sourcePlayId: targetPlayId,
+          fromPlayIds: eligible.map(u => u.playId),
+          continuation: pending.continuation,
+        } satisfies AbilityTargetPending;
+      }
+      // Step 2: capture target chosen.
+      const twi128Target = unitByPlayId(game.currentGameState, targetPlayId);
+      const twi128Captor = unitByPlayId(game.currentGameState, pending.sourcePlayId);
+      if (!twi128Target || !twi128Captor) break;
+
+      removeFromArena(game.currentGameState, twi128Target.playId);
+
+      if (twi128Target.IsTokenUnit()) {
+        game.gameLog.push(`${CardTitle(twi128Target.cardId)} was captured and set aside (token).`);
+        updateDefeatedPlayers(game.currentGameState);
+        return pending.continuation;
+      }
+      const captureCollector: PlayerId = twi128Target.controller === 1 ? 2 : 1;
+      const twi128Bounty = collectBounties(twi128Target, captureCollector, pending.continuation ?? null);
+
+      twi128Target.damage = 0;
+      twi128Target.upgrades = [];
+      twi128Captor.captives.push(twi128Target);
+      game.gameLog.push(`${CardTitle(twi128Captor.cardId)} captured ${CardTitle(twi128Target.cardId)}.`);
+      game.currentGameState.roundState.cardsPlayedThisPhase = game.currentGameState.roundState.cardsPlayedThisPhase.filter(e => e.playId !== twi128Target.playId);
+      game.currentGameState.roundState.cardsEnteredPlayThisPhase = game.currentGameState.roundState.cardsEnteredPlayThisPhase.filter(e => e.playId !== twi128Target.playId);
+
+      updateDefeatedPlayers(game.currentGameState);
+      return twi128Bounty ?? pending.continuation;
+    }
+    case "SHD_068": {
+      if (!targetPlayId) break;
+      const targetSHD068 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!targetSHD068) break;
+      targetSHD068.upgrades.push({
+        cardId: "SOR_T02",
+        playId: nextPlayId(game.currentGameState),
+        owner: pending.player!,
+        controller: pending.player!,
+      });
+      game.gameLog.push(`Bounty collected: Shield token placed on ${CardTitle(targetSHD068.cardId)}.`);
+      return pending.continuation;
+    }
+    case "JTL_049": {
+      if (!targetPlayId || !pending.sourcePlayId) break;
+      const l3 = unitByPlayId(game.currentGameState, pending.sourcePlayId);
+      const vehicle = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!l3 || !vehicle) break;
+
+      removeFromArena(game.currentGameState, l3.playId);
+      for (const upg of l3.upgrades) {
+        game.gameLog.push(`${CardTitle(upg.cardId)} on L3-37 was defeated.`);
+      }
+      for (const captive of l3.captives ?? []) {
+        const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
+        const rescued = Unit.FromInterface({ ...captive, ready: false });
+        if (arena === "Ground") ps(game.currentGameState, captive.owner).groundArena.push(rescued);
+        else ps(game.currentGameState, captive.owner).spaceArena.push(rescued);
+        game.gameLog.push(`${CardTitle(captive.cardId)} was rescued from L3-37.`);
+      }
+      vehicle.upgrades.push({
+        cardId: "JTL_049",
+        playId: nextPlayId(game.currentGameState),
+        owner: pending.player!,
+        controller: pending.player!,
+      });
+      game.gameLog.push(`L3-37 attached as a pilot upgrade to ${CardTitle(vehicle.cardId)}.`);
+
+      updateDefeatedPlayers(game.currentGameState);
+      const nextPendingL3 = pending.continuation ?? null;
+      if (nextPendingL3) return nextPendingL3;
+      const bagL3 = drainTriggerBag(game.currentGameState, game.gameLog);
+      return bagL3 ?? null;
     }
     default:
       game.gameLog.push(`Ability effect for ${CardTitle(pending.cardId) ?? pending.cardId} applied.`);

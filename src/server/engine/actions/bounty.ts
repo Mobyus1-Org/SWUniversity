@@ -68,7 +68,6 @@ export function collectBounties(
       type: "bounty",
       cardId: effect.sourceCardId,
       collectingPlayer,
-      bountyEffect: effect.kind,
       continuation: chain,
     } satisfies BountyPending;
   }
