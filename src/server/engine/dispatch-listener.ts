@@ -27,7 +27,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { CardIsLeader, GetGame, GetUnitsForPlayer, SetGame, TraitContains, UnitAttackedThisPhase } from "@/server/engine/core-functions";
+import { CardIsLeader, drawCardForPlayer, GetGame, GetUnitsForPlayer, SetGame, TraitContains, UnitAttackedThisPhase } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -72,7 +72,7 @@ import type {
   UpgradeTargetPending,
 } from "@/server/engine/pending-resolution";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
-import { collectBounties, drawCardForPlayer } from "@/server/engine/actions/bounty";
+import { collectBounties } from "@/server/engine/actions/bounty";
 import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { resolveWhenPlayed } from "@/server/engine/actions/when-played";
@@ -1231,7 +1231,7 @@ function handleInitiateAttack(
   const attackerHasDarksaber = attacker.upgrades.some(u => u.cardId === "SHD_126");
   const attackerHasVambrace = attacker.upgrades.some(u => u.cardId === "SHD_177");
   const attackerHasHardpoint = attacker.upgrades.some(u => u.cardId === "SOR_121");
-  if (["SOR_010", "SOR_014", "SHD_012", "TWI_186"].includes(attacker.cardId) || attackerHasDarksaber || attackerHasVambrace || attackerHasHardpoint) {
+  if (["SOR_006", "SOR_010", "SOR_014", "SHD_012", "TWI_005", "TWI_186"].includes(attacker.cardId) || attackerHasDarksaber || attackerHasVambrace || attackerHasHardpoint) {
     game.triggerBag.push({ triggerType: "on-attack", cardId: attacker.cardId, fromPlayer: player });
   }
 
@@ -1384,7 +1384,7 @@ function handleChooseTarget(
 
     // For ability-initiated attacks (e.g. Rebel Assault, Precision Fire), the trigger bag may not
     // have been populated at initiate time, so fill it now if needed.
-    if (attacker && ["SOR_010", "SOR_014"].includes(attacker.cardId)) {
+    if (attacker && ["SOR_006", "SOR_010", "SOR_014", "TWI_005"].includes(attacker.cardId)) {
       const alreadyQueued = game.triggerBag.some(
         (t) => t.triggerType === "on-attack" && t.cardId === attacker.cardId,
       );
@@ -1718,6 +1718,20 @@ function handleChooseTarget(
         log.push(`Player ${pending.player} played ${CardTitle(cardId) ?? cardId} via Energy Conversion Lab.`);
         return completePlayCard(game, log, cardId, pending.player, {
           injectEffect: { cardId: "SOR_022", duration: "Phase", affectedPlayer: pending.player },
+        });
+      }
+      case "SHD_129": {
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Timely Intervention: chosen card is not a Unit."), pending, stateChanged: false };
+        const tiCost = playCost(game, pending.player, cardId);
+        const tiReady = ps(game, pending.player).resources.filter(r => r.ready).length;
+        if (tiReady < tiCost)
+          return { response: invalidResponse("Timely Intervention: not enough resources to play this unit."), pending, stateChanged: false };
+        exhaustResources(game, pending.player, tiCost);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId) ?? cardId} via Timely Intervention.`);
+        return completePlayCard(game, log, cardId, pending.player, {
+          injectEffect: { cardId: "SHD_129", duration: "Phase", affectedPlayer: pending.player },
         });
       }
       case "TWI_005": {
@@ -2638,6 +2652,17 @@ function resolveActionAbility(
       }
       return { type: "play-from-hand", cardId: "TWI_005", player } satisfies PlayFromHandPending;
     }
+    case "SOR_006": { // Emperor Palpatine - Galactic Ruler: Action [1 Resource, Exhaust, defeat a friendly unit]: Deal 1 damage to a unit and draw a card.
+      const friendlyUnits006 = [...ps(game, player).groundArena, ...ps(game, player).spaceArena];
+      if (friendlyUnits006.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_006",
+        player,
+        fromPlayIds: friendlyUnits006.map(u => u.playId),
+        continuation: null,
+      };
+    }
     case "SOR_014": // Sabine Wren - Galvanized Revolutionary: Deal 1 damage to each base.
       game.player1.base.damage += 1;
       game.player2.base.damage += 1;
@@ -2675,6 +2700,16 @@ function applyAbilityEffect(
   const game = GetGame();
   if(!game) throw new Error("Game not found in applyAbilityEffect.");
   switch (pending.cardId) {
+    case "SOR_033": //Death Trooper: Deal 2 damage to a friendly ground unit and 2 damage to an enemy ground unit.
+    case "SEC_030": {
+      if (!targetPlayId) break;
+      const targetUnit = unitByPlayId(game.currentGameState, targetPlayId);
+      if (targetUnit) {
+        targetUnit.damage += 2;
+        game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 2 damage to ${CardTitle(targetUnit.cardId)}.`);
+      }
+      break;
+    }
     case "SOR_108": { // Vanguard Infantry when-defeated: give Experience token to chosen unit
       if (!targetPlayId) break;
       const target108 = unitByPlayId(game.currentGameState, targetPlayId);
@@ -3079,6 +3114,73 @@ function applyAbilityEffect(
         continuation: pending.continuation,
       };
       return spreadPending092;
+    }
+    case "SOR_006": { // Action step 1: defeat the chosen friendly unit, then pick a unit to damage.
+      if (!targetPlayId) break;
+      const sacrifice = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!sacrifice) break;
+      defeatUnit(game.currentGameState, game.gameLog, sacrifice);
+      updateDefeatedPlayers(game.currentGameState);
+      const allAfterSacrifice = [
+        ...game.currentGameState.player1.groundArena, ...game.currentGameState.player1.spaceArena,
+        ...game.currentGameState.player2.groundArena, ...game.currentGameState.player2.spaceArena,
+      ];
+      game.gameLog.push(`${CardTitle(sacrifice.cardId)} was defeated as part of ${CardTitle("SOR_006")}'s action cost.`);
+      return {
+        type: "ability-target",
+        cardId: "SOR_006_A2",
+        player: pending.player,
+        fromPlayIds: allAfterSacrifice.map(u => u.playId),
+        continuation: pending.continuation,
+      } satisfies AbilityTargetPending;
+    }
+    case "SOR_006_A2": { // Action step 2: deal 1 damage to chosen unit and draw a card.
+      if (!targetPlayId) break;
+      const dmgTarget006 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (dmgTarget006) {
+        dmgTarget006.damage += 1;
+        game.gameLog.push(`${CardTitle("SOR_006")}: dealt 1 damage to ${CardTitle(dmgTarget006.cardId)}.`);
+      }
+      drawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "SOR_006_D": { // When Deployed: take control of chosen damaged non-leader unit.
+      if (!targetPlayId) break;
+      const controlTarget = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!controlTarget) break;
+      transferControl(game.currentGameState, game.gameLog, controlTarget, pending.player!);
+      return pending.continuation;
+    }
+    case "SOR_006_OA": { // On Attack step 1: defeat the chosen friendly unit.
+      if (!targetPlayId) break;
+      const sacrifice0A = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!sacrifice0A) break;
+      const whenDefeated0A = defeatUnit(game.currentGameState, game.gameLog, sacrifice0A);
+      updateDefeatedPlayers(game.currentGameState);
+      // Rebuild step-2 target list from current state (post-defeat) so the sacrificed unit is excluded.
+      const gs0A = game.currentGameState;
+      const liveUnits0A = [
+        ...gs0A.player1.groundArena, ...gs0A.player1.spaceArena,
+        ...gs0A.player2.groundArena, ...gs0A.player2.spaceArena,
+      ];
+      const step2: PendingResolution = {
+        type: "ability-target",
+        cardId: "SOR_006_OA2",
+        player: pending.player,
+        fromPlayIds: liveUnits0A.map(u => u.playId),
+        continuation: (pending.continuation as AbilityTargetPending | null)?.continuation ?? null,
+      };
+      return whenDefeated0A ? injectContinuation(whenDefeated0A, step2) : step2;
+    }
+    case "SOR_006_OA2": { // On Attack step 2: deal 1 damage to chosen unit and draw a card.
+      if (!targetPlayId) break;
+      const dmgTarget0A = unitByPlayId(game.currentGameState, targetPlayId);
+      if (dmgTarget0A) {
+        dmgTarget0A.damage += 1;
+        game.gameLog.push(`${CardTitle("SOR_006")}: dealt 1 damage to ${CardTitle(dmgTarget0A.cardId)}.`);
+      }
+      drawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
     case "TWI_128": {
       if (!targetPlayId) break;

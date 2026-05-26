@@ -47,7 +47,7 @@ export function resolveOnAttackTrigger(
   const hasDarksaber = attacker.upgrades.some(u => u.cardId === "SHD_126");
   const hasVambrace = attacker.upgrades.some(u => u.cardId === "SHD_177");
   const hasHardpointBlaster = attacker.upgrades.some(u => u.cardId === "SOR_121");
-  const hasNativeAbility = ["SOR_010", "SOR_014", "SHD_012", "TWI_005", "TWI_186"].includes(attacker.cardId);
+  const hasNativeAbility = ["SOR_006", "SOR_010", "SOR_014", "SHD_012", "TWI_005", "TWI_186"].includes(attacker.cardId);
   const hasOtherTrigger = hasDarksaber || hasVambrace || hasHardpointBlaster || hasNativeAbility;
 
   // When attacking a unit: if this attacker has Saboteur AND another on-attack trigger,
@@ -244,6 +244,39 @@ export function resolveOnAttackTrigger(
       });
       game.gameLog.push(`${CardTitle(attacker.cardId)}: The next Separatist card you play this phase gains Exploit 3.`);
       return continuation;
+    }
+    case "SOR_006": { // Emperor Palpatine — "On Attack: You may defeat another friendly unit. If you do, deal 1 damage to a unit and draw a card."
+      const game006 = GetGame();
+      if (!game006) return continuation;
+      const gs006 = game006.currentGameState;
+      const friendlies006 = (attacker.controller === 1
+        ? [...gs006.player1.groundArena, ...gs006.player1.spaceArena]
+        : [...gs006.player2.groundArena, ...gs006.player2.spaceArena]
+      ).filter(u => u.playId !== attacker.playId);
+      if (friendlies006.length === 0) return continuation;
+      const allUnits006 = [
+        ...gs006.player1.groundArena, ...gs006.player1.spaceArena,
+        ...gs006.player2.groundArena, ...gs006.player2.spaceArena,
+      ];
+      return {
+        type: "ability-option",
+        cardId: "SOR_006_OA",
+        helperText: "You may defeat another friendly unit. If you do, deal 1 damage to a unit and draw a card.",
+        onYes: {
+          type: "ability-target",
+          cardId: "SOR_006_OA",
+          player: attacker.controller,
+          fromPlayIds: friendlies006.map(u => u.playId),
+          continuation: {
+            type: "ability-target",
+            cardId: "SOR_006_OA2",
+            player: attacker.controller,
+            fromPlayIds: allUnits006.map(u => u.playId),
+            continuation,
+          },
+        },
+        continuation,
+      };
     }
     default:
       // If an upgrade-only trigger fired but no native ability, return continuation so combat proceeds.

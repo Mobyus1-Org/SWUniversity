@@ -1,11 +1,6 @@
-import type { GameState, PlayerState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import type { Unit } from "@/server/engine/unit";
 import type { BountyPending, PendingResolution } from "@/server/engine/pending-resolution";
-
-function ps(gs: GameState, player: PlayerId): PlayerState {
-  return player === 1 ? gs.player1 : gs.player2;
-}
 
 type BountyEffect = { kind: "draw-card" | "give-shield"; sourceCardId: string };
 
@@ -37,16 +32,6 @@ function getBountyEffects(unit: Unit): BountyEffect[] {
  * Draws one card from the top of `player`'s deck into their hand.
  * If deck is empty, logs and does nothing (empty-deck damage only applies during Regroup).
  */
-export function drawCardForPlayer(gs: GameState, log: string[], player: PlayerId): void {
-  const p = ps(gs, player);
-  if (p.deck.length > 0) {
-    const card = p.deck.pop()!;
-    p.hand.push(card);
-    log.push(`Player ${player} collected a bounty and drew a card.`);
-  } else {
-    log.push(`Player ${player} collected a bounty but their deck was empty.`);
-  }
-}
 
 /**
  * Builds a linked chain of BountyPending resolutions for all bounties on `unit`.

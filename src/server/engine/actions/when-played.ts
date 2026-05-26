@@ -3,7 +3,7 @@ import { GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/serve
 import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, GiveXpMultiplePending, ChooseIndirectTargetPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
-import { CardTitle } from "@/server/engine/card-db/generated";
+import { CardTitle, CardType } from "@/server/engine/card-db/generated";
 
 /**
  * When Played abilities for unit cards.
@@ -17,6 +17,25 @@ export function resolveWhenPlayed(
   const game = GetGame();
   if (!game) throw new Error("Game not found in resolveWhenPlayedAbility");
   switch (cardId) {
+    case "SOR_033": //Death Trooper "Deal 2 damage to a friendly ground unit and 2 damage to an enemy ground unit."
+    case "SEC_030": {// reprint of SOR_033
+      const friendlyGround = player === 1 ? game.currentGameState.player1.groundArena : game.currentGameState.player2.groundArena;
+      const enemyGround = player === 1 ? game.currentGameState.player2.groundArena : game.currentGameState.player1.groundArena;
+      if (friendlyGround.length === 0 || enemyGround.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: friendlyGround.map(u => u.playId),
+        continuation: {
+          type: "ability-target",
+          cardId,
+          player,
+          fromPlayIds: enemyGround.map(u => u.playId),
+          continuation: null,
+        },
+      };
+    }
     case "SOR_103": { //Rebel Assault "Attack with a Rebel unit. It gets +1/+0 for this attack. Then, attack with another Rebel unit. It gets +1/+0 for this attack."
       const rebelPlayIds = GetUnitsForPlayer(player, true).filter((u) =>
         TraitContains(u.cardId, "Rebel", u.controller, u.playId)).map((u) => u.playId);
@@ -33,7 +52,18 @@ export function resolveWhenPlayed(
         }
       };
     }
-
+    case "SHD_129": {//Timely Intervention: Play a unit from your hand. Give it Ambush for this phase.
+      const game129 = GetGame();
+      if (!game129) throw new Error("Game not found in SHD_129 resolution.");
+      const playerHand = player === 1 ? game129.currentGameState.player1.hand : game129.currentGameState.player2.hand;
+      const handUnits = playerHand.filter(c => CardType(c.cardId) === "Unit");
+      if (handUnits.length === 0) return null;
+      return {
+        type: "play-from-hand",
+        cardId,
+        player,
+      };
+    }
     case "SOR_162": //Disabling Fang Fighter: You may defeat an upgrade.
     case "SHD_166": //reprint of SOR_162
       if (!playId && !player) return null;

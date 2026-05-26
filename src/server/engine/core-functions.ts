@@ -1,6 +1,6 @@
 import { CardAspects, CardCost, CardIsUnique, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { Card, CardInPlay, CardTypes, CurrentEffect, Leader, PlayerId } from "@/lib/engine/core-models";
-import { Game } from "@/lib/engine/game";
+import { Game, GameState } from "@/lib/engine/game";
 import { Unit } from "@/server/engine/unit";
 import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
 
@@ -470,5 +470,16 @@ export function LeaderCanDeployAsPilot(cardId: string): boolean {
     case "JTL_018"://Kazuda Xiono
       return true;
     default: return false;
+  }
+}
+
+export function drawCardForPlayer(gs: GameState, log: string[], player: PlayerId): void {
+  const p = player === 1 ? gs.player1 : gs.player2;
+  if (p.deck.length > 0) {
+    p.hand.push(p.deck.pop()!);
+    log.push(`Player ${player} drew a card.`);
+  } else {
+    p.base.damage += 3;
+    log.push(`Player ${player} drew from an empty deck — 3 damage to their base.`);
   }
 }

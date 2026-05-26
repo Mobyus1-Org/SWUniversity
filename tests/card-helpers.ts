@@ -227,6 +227,7 @@ export const Cards = {
       emperorPalpatine: "SOR_135",
       vanguardInfantry: "SOR_108",
       generalTagge: "SOR_080",
+      deathTrooper: "SOR_033",
     },
     shd: {
       generalTagge: "SHD_081",
@@ -298,6 +299,7 @@ export const Cards = {
   },
   events: {
     shd: {
+      timelyIntervention: "SHD_129",
       chooseSides: "SHD_132",
     },
     sor: {

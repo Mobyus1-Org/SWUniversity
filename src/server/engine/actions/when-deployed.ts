@@ -1,12 +1,12 @@
 import { PendingResolution } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame } from "@/server/engine/core-functions";
+import { GetGame, CardIsLeader } from "@/server/engine/core-functions";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 
 export function resolveWhenDeployed(
   cardId: string,
-  _player: PlayerId,
+  player: PlayerId,
   log: string[],
 ): PendingResolution | null {
   switch (cardId) {
@@ -36,6 +36,26 @@ export function resolveWhenDeployed(
         }
       }
       return null;
+    }
+    case "SOR_006": { // Emperor Palpatine — "When Deployed: Take control of a damaged non-leader unit."
+      const game = GetGame();
+      if (!game) throw new Error("Game not found in resolveWhenDeployed");
+      const gs = game.currentGameState;
+      const eligible = [
+        ...gs.player1.groundArena, ...gs.player1.spaceArena,
+        ...gs.player2.groundArena, ...gs.player2.spaceArena,
+      ].filter(u => !CardIsLeader(u.cardId) && u.damage > 0);
+      if (eligible.length === 0) {
+        log.push(`${CardTitle(cardId)}: no damaged non-leader units to take control of.`);
+        return null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "SOR_006_D",
+        player,
+        fromPlayIds: eligible.map(u => u.playId),
+        continuation: null,
+      };
     }
     default:
       return null;
