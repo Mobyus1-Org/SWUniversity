@@ -23,7 +23,8 @@ There are three files you will touch, plus one for tests:
 |---|---|
 | `src/server/engine/actions/when-played.ts` | When Played abilities for units and events |
 | `src/server/engine/actions/when-defeated.ts` | When Defeated abilities |
-| `src/server/engine/actions/on-attack.ts` | On Attack abilities |
+| `src/server/engine/actions/on-attack.ts` | On Attack ability resolution |
+| `src/server/engine/core-functions.ts` | On Attack registration (`HasOnAttack` / `UpgradeGrantsOnAttack`) |
 | `src/server/engine/dispatch-listener.ts` | Effect resolution when a target is chosen (add a `case` in `applyAbilityEffect`) |
 | `tests/unit/<set>/` | Tests for your card |
 
@@ -76,7 +77,19 @@ The unit is already off the board when this runs. Use `unit.cardId` to switch, `
 
 ### `on-attack.ts` — `resolveOnAttackTrigger`
 
-On-attack effects fire after the attacker is chosen but before combat resolves. The last thing you return should chain through `continuation` (which is the `resolve-attack` pending). Always pass `continuation` through — never drop it.
+On-attack effects fire after the attacker is chosen but before combat resolves. Always pass `continuation` through — never drop it.
+
+`resolveOnAttackTrigger` has three sections in order:
+
+1. **Effect-granted** — a `for` loop over current effects with a `switch`. Add your case here if a current-effect card grants a temporary on-attack ability.
+2. **Upgrade-granted** — a `for` loop over `activeUpgrades` (pre-filtered by `UpgradeGrantsOnAttack`) with a `switch`. Add your case here for upgrade cards that grant on-attack abilities.
+3. **Innate** — a `switch` on `attacker.cardId`. Add your case here for unit/leader cards whose own text says "On Attack:".
+
+**Registration is required** — the engine only calls `resolveOnAttackTrigger` when the unit has an on-attack ability. You must register yours or it will never fire:
+
+- **Innate ability** (the card's own text): add the `cardId` to the `switch` in `HasOnAttack` in `core-functions.ts`.
+- **Upgrade-granted ability**: add the upgrade `cardId` to the `switch` in `UpgradeGrantsOnAttack` in `core-functions.ts`.
+- **Effect-granted ability**: add the effect `cardId` to `EffectGrantsOnAttack` in `core-functions.ts`.
 
 ### `dispatch-listener.ts` — `applyAbilityEffect`
 
@@ -314,7 +327,9 @@ Identify:
 
 **When Defeated** → `when-defeated.ts`, inside `resolveWhenDefeated`'s switch.
 
-**On Attack** → `on-attack.ts`, inside `resolveOnAttackTrigger`'s switch.
+**On Attack** → two steps:
+1. Register in `core-functions.ts`: add to `HasOnAttack` (innate), `UpgradeGrantsOnAttack` (upgrade), or `EffectGrantsOnAttack` (effect-granted).
+2. Add resolution logic in `on-attack.ts` inside the matching section of `resolveOnAttackTrigger` (innate switch, upgrade loop, or effect loop).
 
 **Leader Action** → `dispatch-listener.ts`, inside `resolveActionAbility`'s switch.
 

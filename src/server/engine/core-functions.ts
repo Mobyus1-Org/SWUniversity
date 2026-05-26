@@ -396,6 +396,31 @@ export function GetHand(player: PlayerId): Card[] {
   return playerObj.hand;
 }
 
+/**
+ * Returns true if the given card IDs collectively have at least the specified aspect icons.
+ * aspects may contain duplicates (e.g. ["Aggression", "Aggression"] requires two icons).
+ */
+export function CardsCanDisclose(cardIds: string[], aspects: string[]): boolean {
+  const required: Record<string, number> = {};
+  for (const a of aspects) required[a] = (required[a] ?? 0) + 1;
+  const available: Record<string, number> = {};
+  for (const id of cardIds) {
+    for (const a of CardAspects(id)) available[a] = (available[a] ?? 0) + 1;
+  }
+  for (const [aspect, count] of Object.entries(required)) {
+    if ((available[aspect] ?? 0) < count) return false;
+  }
+  return true;
+}
+
+/**
+ * Returns true if the player's hand collectively has at least the specified aspect icons.
+ * aspects may contain duplicates (e.g. ["Aggression", "Aggression"] requires two Aggression icons).
+ */
+export function CanDisclose(player: PlayerId, aspects: string[]): boolean {
+  return CardsCanDisclose(GetHand(player).map(c => c.cardId), aspects);
+}
+
 export function UnitWasDefeatedThisPhase(player: PlayerId, trait?: string): boolean {
   const game = GetGame();
   if (!game) {

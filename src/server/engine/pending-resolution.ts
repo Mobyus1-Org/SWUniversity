@@ -17,7 +17,10 @@ export interface AbilityOptionPending {
   type: "ability-option";
   cardId: string;
   sourcePlayId?: string;
+  player?: PlayerId;
   helperText: string;
+  yesLabel?: string;
+  noLabel?: string;
   onYes?: PendingResolution | null;
   continuation: PendingResolution | null;
 }
@@ -250,6 +253,22 @@ export interface GiveXpMultiplePending {
   continuation: PendingResolution | null;
 }
 
+/**
+ * Deck search: player picks any number of eligible cards from the top N of their deck,
+ * subject to a combined cost ceiling. Each chosen card is played for free; the rest
+ * return to the top of the deck in their original order.
+ */
+export interface VaderSearchPending {
+  type: "vader-search";
+  cardId: string;
+  player: PlayerId;
+  /** All top-N cards extracted from the deck (in original order, last = top). */
+  topCards: Array<{ tempId: string; cardId: string }>;
+  /** Subset of topCards that are eligible to pick (Villainy units with cost ≤ maxCombinedCost). */
+  eligibleChoices: Array<{ tempId: string; cardId: string; cost: number }>;
+  maxCombinedCost: number;
+}
+
 export type PendingResolution =
   | AttackTargetPending
   | AbilityOptionPending
@@ -274,7 +293,8 @@ export type PendingResolution =
   | GiveXpMultiplePending
   | ChooseIndirectTargetPending
   | IndirectDamagePending
-  | PlayFromHandPending;
+  | PlayFromHandPending
+  | VaderSearchPending;
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch

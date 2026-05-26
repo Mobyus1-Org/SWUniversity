@@ -19,6 +19,7 @@ import {
   CardHasWhenPlayed,
   CardHp,
   CardIsUnique,
+  CardSubtitle,
   CardTitle,
   CardTraits,
   CardType,
@@ -27,7 +28,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { CardIsLeader, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, SetGame, TraitContains, UnitAttackedThisPhase } from "@/server/engine/core-functions";
+import { CardIsLeader, CardsCanDisclose, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, SetGame, TraitContains, UnitAttackedThisPhase } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -36,6 +37,7 @@ import type {
   DispatchResponse,
   GameDispatch,
   InitiateAttackDispatchData,
+  NeedsDeckSearch,
   NeedsOption,
   NeedsPlot,
   NeedsSpreadDamage,
@@ -70,6 +72,7 @@ import type {
   SpreadDamagePending,
   TriggerOrderPending,
   UpgradeTargetPending,
+  VaderSearchPending,
 } from "@/server/engine/pending-resolution";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import { collectBounties } from "@/server/engine/actions/bounty";
@@ -83,7 +86,7 @@ import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/sab
 import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { HasAmbush } from "@/server/engine/card-db/keyword-dictionaries.ts/ambush";
-import { ActionAbilities } from "@/server/engine/actions/action-ability";
+import { ActionAbilities, ActionAbilityCost } from "@/server/engine/actions/action-ability";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { PilotingEligibleVehicles } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -91,6 +94,7 @@ import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dict
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
+import { CreateSpy } from "@/server/engine/token-helpers";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -366,6 +370,8 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
       type: "ability-option",
       cardId: trigger.cardId,
       helperText: `${CardTitle(trigger.cardId)} has Ambush — attack immediately?`,
+      yesLabel: "Attack",
+      noLabel: "Skip",
       onYes: { type: "attack-target", attackerPlayId: trigger.playId, source: "ambush" },
       continuation: null,
     };
@@ -382,6 +388,8 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
           type: "ability-option",
           cardId: "SHD_008",
           helperText: "Exhaust Boba Fett — give a friendly unit +1/+0 for this phase?",
+          yesLabel: "Exhaust",
+          noLabel: "Skip",
           onYes: {
             type: "ability-target",
             cardId: "SHD_008",
@@ -465,6 +473,8 @@ function defeatUnit(
         cardId: "JTL_049",
         sourcePlayId: unit.playId,
         helperText: "Attach L3-37 as an upgrade to a friendly Vehicle without a Pilot instead of being defeated?",
+        yesLabel: "Move Brain to Vehicle",
+        noLabel: "Defeat",
         onYes: null,
         continuation: null,
       };
@@ -794,6 +804,8 @@ function resolveWhenAttackEnds(
         type: "ability-option",
         cardId: "SOR_009",
         helperText: "Attack with another Rebel unit?",
+        yesLabel: "Attack",
+        noLabel: "Skip",
         onYes: {
           type: "ability-target",
           cardId: "SOR_009",
@@ -842,7 +854,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       } satisfies NeedsTarget;
     }
     case "ability-option":
-      return { type: "Option", helperText: pending.helperText, options: ["Yes", "No"] } satisfies NeedsOption;
+      return { type: "Option", helperText: pending.helperText, options: ["Yes", "No"], yesLabel: pending.yesLabel, noLabel: pending.noLabel } satisfies NeedsOption;
     case "ability-target":
       return {
         type: "Target",
@@ -961,6 +973,13 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         helperText: "Choose which On Attack ability to resolve first:",
         options: pending.triggers.map(t => t.label),
       } satisfies NeedsOption;
+    case "vader-search":
+      return {
+        type: "DeckSearch",
+        helperText: `Search top ${pending.topCards.length} — pick Villainy units (combined cost ≤ ${pending.maxCombinedCost}).`,
+        choices: pending.eligibleChoices,
+        maxCombinedCost: pending.maxCombinedCost,
+      } satisfies NeedsDeckSearch;
     default: throw new Error(`Unknown pending resolution type: ${pending.type}`);
   }
 }
@@ -991,10 +1010,11 @@ function completePlayCard(
   player: PlayerId,
   opts?: {
     injectEffect?: Omit<CurrentEffect, "targetPlayId">;
+    enterReady?: boolean;
   },
 ): HandlerResult {
   if (CardType(cardId) === "Unit") {
-    const unit = addToArena(game, player, cardId, false);
+    const unit = addToArena(game, player, cardId, opts?.enterReady ?? false);
     log.push(`${CardTitle(cardId) ?? cardId} entered the ${CardArena(cardId) ?? "ground"} arena.`);
     game.roundState.cardsPlayedThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId });
     game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId, reason: "played" });
@@ -1259,7 +1279,13 @@ function handleUseAbility(
     if (!abilities.includes(leader.cardId))
       return { response: invalidResponse("Leader has no available ability."), pending: null, stateChanged: false };
 
+    const abilityCost = ActionAbilityCost(leader.cardId);
+    const readyResources = ps(game, player).resources.filter(r => r.ready).length;
+    if (readyResources < abilityCost)
+      return { response: invalidResponse("Not enough resources to use leader ability."), pending: null, stateChanged: false };
+
     leader.ready = false;
+    exhaustResources(game, player, abilityCost);
     const nextPending = resolveActionAbility(game, log, player, leader.cardId);
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
@@ -1507,6 +1533,41 @@ function handleChooseTarget(
     const invalid = chosen.find(id => !pending.eligiblePlayIds.includes(id));
     if (invalid)
       return { response: invalidResponse(`Card ${invalid} is not eligible for return from discard.`), pending, stateChanged: false };
+
+    if (pending.cardId === "SOR_252") {
+      // Place chosen cards at the bottom of their owner's deck in a random order.
+      const toPlace: { cardId: string; ownerDeck: { cardId: string }[] }[] = [];
+      for (const playId of chosen.slice(0, pending.maxCount)) {
+        for (const pId of [1, 2] as PlayerId[]) {
+          const pState252 = ps(game, pId);
+          const idx = pState252.discard.findIndex(d => d.playId === playId);
+          if (idx !== -1) {
+            const card = pState252.discard.splice(idx, 1)[0];
+            toPlace.push({ cardId: card.cardId, ownerDeck: ps(game, card.owner as PlayerId).deck });
+            break;
+          }
+        }
+      }
+      for (let i = toPlace.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [toPlace[i], toPlace[j]] = [toPlace[j], toPlace[i]];
+      }
+      const titles252: string[] = [];
+      for (const { cardId: cId, ownerDeck } of toPlace) {
+        ownerDeck.unshift({ cardId: cId });
+        titles252.push(CardTitle(cId) ?? cId);
+      }
+      if (titles252.length > 0)
+        log.push(`${CardTitle("SOR_252")}: placed ${titles252.join(", ")} on the bottom of their owner's deck.`);
+      const next252 = pending.continuation;
+      if (next252)
+        return { response: resolutionResponse(pendingToResolution(next252, game)), pending: next252, stateChanged: false };
+      const bag252 = drainTriggerBag(game, log);
+      if (bag252)
+        return { response: resolutionResponse(pendingToResolution(bag252, game)), pending: bag252, stateChanged: false };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
     const playerState = ps(game, pending.player);
     const returned: string[] = [];
     for (const playId of chosen.slice(0, pending.maxCount)) {
@@ -1636,6 +1697,28 @@ function handleChooseTarget(
       }
     }
 
+    // Snapshot Reflexes: When Played — may attack with attached unit if it's ready.
+    if (pending.upgradeCardId === "SOR_215" || pending.upgradeCardId === "SHD_223") {
+      if (targetUnit.ready) {
+        const snapPending: AbilityOptionPending = {
+          type: "ability-option",
+          cardId: pending.upgradeCardId,
+          helperText: `Attack with ${CardTitle(targetUnit.cardId)}?`,
+          yesLabel: "Attack",
+          noLabel: "Skip",
+          onYes: {
+            type: "attack-target",
+            attackerPlayId: targetUnit.playId,
+            source: pending.upgradeCardId,
+            continuation: null,
+          },
+          continuation: null,
+        };
+        updateDefeatedPlayers(game);
+        return { response: resolutionResponse(pendingToResolution(snapPending, game)), pending: snapPending, stateChanged: true };
+      }
+    }
+
     updateDefeatedPlayers(game);
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
@@ -1733,6 +1816,86 @@ function handleChooseTarget(
         };
         return { response: resolutionResponse(pendingToResolution(exploitPending, game)), pending: exploitPending, stateChanged: false };
       }
+      case "SEC_062": { // Bardottan Ornithopter disclose: reveal must have Vigilance
+        if (!CardsCanDisclose([cardId], ["Vigilance"]))
+          return { response: invalidResponse("Disclose: revealed card does not have a Vigilance aspect."), pending, stateChanged: false };
+        log.push(`${CardTitle(pending.cardId)}: disclosed ${CardTitle(cardId)} (Vigilance).`);
+        DrawCardForPlayer(game, log, pending.player);
+        const bag062 = drainTriggerBag(game, log);
+        if (bag062) return { response: resolutionResponse(pendingToResolution(bag062, game)), pending: bag062, stateChanged: true };
+        return { response: stateResponse(game), pending: null, stateChanged: true };
+      }
+      case "SEC_181": { // Unauthorized Investigation disclose: reveal must have Aggression
+        if (!CardsCanDisclose([cardId], ["Aggression"]))
+          return { response: invalidResponse("Disclose: revealed card does not have an Aggression aspect."), pending, stateChanged: false };
+        log.push(`${CardTitle(pending.cardId)}: disclosed ${CardTitle(cardId)} (Aggression).`);
+        CreateSpy(game, pending.player);
+        log.push(`${CardTitle(pending.cardId)}: created another Spy token.`);
+        const bag181 = drainTriggerBag(game, log);
+        if (bag181) return { response: resolutionResponse(pendingToResolution(bag181, game)), pending: bag181, stateChanged: true };
+        return { response: stateResponse(game), pending: null, stateChanged: true };
+      }
+      case "SEC_182": { // Charged with Treason disclose pick 1: count Aggression icons
+        if (!CardsCanDisclose([cardId], ["Aggression"]))
+          return { response: invalidResponse("Disclose: revealed card does not have an Aggression aspect."), pending, stateChanged: false };
+        const aggrCount = CardAspects(cardId).filter(a => a === "Aggression").length;
+        log.push(`${CardTitle(pending.cardId)}: disclosed ${CardTitle(cardId)} (Aggression ×${aggrCount}).`);
+        if (aggrCount >= 2) {
+          // Requirement met — proceed to damage targeting
+          const allUnits182 = [...game.player1.groundArena, ...game.player1.spaceArena, ...game.player2.groundArena, ...game.player2.spaceArena];
+          if (allUnits182.length === 0) return { response: stateResponse(game), pending: null, stateChanged: true };
+          const dmgPending: AbilityTargetPending = { type: "ability-target", cardId: "SEC_182", player: pending.player, fromPlayIds: allUnits182.map(u => u.playId), continuation: null };
+          return { response: resolutionResponse(pendingToResolution(dmgPending, game)), pending: dmgPending, stateChanged: false };
+        }
+        // Only 1 Aggression — need one more card
+        const needsMore: PlayFromHandPending = { type: "play-from-hand", cardId: "SEC_182_2", player: pending.player };
+        return { response: resolutionResponse(pendingToResolution(needsMore, game)), pending: needsMore, stateChanged: false };
+      }
+      case "SEC_182_2": { // Charged with Treason disclose pick 2: need 1 more Aggression
+        if (!CardsCanDisclose([cardId], ["Aggression"]))
+          return { response: invalidResponse("Disclose: revealed card does not have an Aggression aspect."), pending, stateChanged: false };
+        log.push(`${CardTitle("SEC_182")}: disclosed ${CardTitle(cardId)} (Aggression) — requirement met.`);
+        const allUnits182b = [...game.player1.groundArena, ...game.player1.spaceArena, ...game.player2.groundArena, ...game.player2.spaceArena];
+        if (allUnits182b.length === 0) return { response: stateResponse(game), pending: null, stateChanged: true };
+        const dmgPending2: AbilityTargetPending = { type: "ability-target", cardId: "SEC_182", player: pending.player, fromPlayIds: allUnits182b.map(u => u.playId), continuation: null };
+        return { response: resolutionResponse(pendingToResolution(dmgPending2, game)), pending: dmgPending2, stateChanged: false };
+      }
+      case "SOR_176":
+      case "SEC_184": {
+        if (CardType(cardId) !== "Event")
+          return { response: invalidResponse("ISB Agent: chosen card is not an Event."), pending, stateChanged: false };
+        log.push(`${CardTitle(pending.cardId)}: revealed ${CardTitle(cardId) ?? cardId}.`);
+        const allUnitsIsb = [
+          ...game.player1.groundArena, ...game.player1.spaceArena,
+          ...game.player2.groundArena, ...game.player2.spaceArena,
+        ];
+        if (allUnitsIsb.length === 0)
+          return { response: stateResponse(game), pending: null, stateChanged: true };
+        const isbPending: AbilityTargetPending = {
+          type: "ability-target",
+          cardId: pending.cardId,
+          player: pending.player,
+          fromPlayIds: allUnitsIsb.map(u => u.playId),
+          continuation: null,
+        };
+        return { response: resolutionResponse(pendingToResolution(isbPending, game)), pending: isbPending, stateChanged: false };
+      }
+      case "SOR_219": {
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Sneak Attack: chosen card is not a Unit."), pending, stateChanged: false };
+        const fullCost219 = playCost(game, pending.player, cardId);
+        const reducedCost219 = Math.max(0, fullCost219 - 3);
+        const ready219 = ps(game, pending.player).resources.filter(r => r.ready).length;
+        if (ready219 < reducedCost219)
+          return { response: invalidResponse("Sneak Attack: not enough resources to play this unit."), pending, stateChanged: false };
+        exhaustResources(game, pending.player, reducedCost219);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Sneak Attack (cost reduced by 3, enters ready).`);
+        return completePlayCard(game, log, cardId, pending.player, {
+          enterReady: true,
+          injectEffect: { cardId: "SOR_219", duration: "UntilStartOfRegroup", affectedPlayer: pending.player },
+        });
+      }
       default:
         return { response: invalidResponse(`Unknown play-from-hand source: ${pending.cardId}`), pending, stateChanged: false };
     }
@@ -1825,6 +1988,54 @@ function handleChooseTarget(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
+  if (pending.type === "vader-search") {
+    const chosen = data.targetPlayIds ?? [];
+    const eligibleMap = new Map(pending.eligibleChoices.map(c => [c.tempId, c]));
+
+    for (const id of chosen) {
+      if (!eligibleMap.has(id))
+        return { response: invalidResponse(`Vader search: unknown selection "${id}".`), pending, stateChanged: false };
+    }
+    const combinedCost = chosen.reduce((sum, id) => sum + eligibleMap.get(id)!.cost, 0);
+    if (combinedCost > pending.maxCombinedCost)
+      return { response: invalidResponse(`Vader search: combined cost ${combinedCost} exceeds ${pending.maxCombinedCost}.`), pending, stateChanged: false };
+
+    // Remove top N from deck and return unchosen cards in original order
+    const pState = ps(game, pending.player);
+    pState.deck.splice(pState.deck.length - pending.topCards.length, pending.topCards.length);
+    const takenSet = new Set(chosen);
+    const unchosenCards = pending.topCards.filter(c => !takenSet.has(c.tempId)).map(c => ({ cardId: c.cardId }));
+    pState.deck.push(...unchosenCards);
+
+    if (chosen.length === 0) {
+      log.push(`${CardTitle(pending.cardId)}: no units selected.`);
+    } else {
+      // Place each chosen unit for free — queue all triggers then drain once
+      for (const tempId of chosen) {
+        const { cardId } = eligibleMap.get(tempId)!;
+        const unit = addToArena(game, pending.player, cardId, false);
+        log.push(`${CardTitle(pending.cardId)}: ${CardTitle(cardId)} entered the ${CardArena(cardId) ?? "ground"} arena.`);
+        game.roundState.cardsPlayedThisPhase.push({ fromPlayer: pending.player, cardId, playId: unit.playId });
+        game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: pending.player, cardId, playId: unit.playId, reason: "played" });
+        if (HasShielded(cardId, unit.playId, pending.player))
+          game.triggerBag.push({ triggerType: "shielded", cardId, fromPlayer: pending.player, playId: unit.playId });
+        const leaderState = pState.leader;
+        if (leaderState.cardId === "SHD_008" && !leaderState.deployed && leaderState.ready && HasKeyword(cardId, "Any", unit.playId, pending.player))
+          game.triggerBag.push({ triggerType: "leader-reaction", cardId: "SHD_008", fromPlayer: pending.player });
+        if (HasAmbush(cardId, unit.playId, "Deck", pending.player))
+          game.triggerBag.push({ triggerType: "ambush", cardId, fromPlayer: pending.player, playId: unit.playId });
+        if (CardHasWhenPlayed(cardId))
+          game.triggerBag.push({ triggerType: "when-played", cardId, fromPlayer: pending.player, playId: unit.playId });
+      }
+      log.push(`${CardTitle(pending.cardId)}: ${unchosenCards.length} card(s) returned to top of deck.`);
+    }
+
+    updateDefeatedPlayers(game);
+    const vsBag = drainTriggerBag(game, log);
+    if (vsBag) return { response: resolutionResponse(pendingToResolution(vsBag, game)), pending: vsBag, stateChanged: true };
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
   return { response: invalidResponse(`choose-target is not valid while pending: ${pending.type}.`), pending, stateChanged: false };
 }
 
@@ -1875,6 +2086,8 @@ function processSingleOnAttackTrigger(
         type: "ability-option",
         cardId: "SHD_177",
         helperText: "Deal 3 damage divided among enemy ground units?",
+        yesLabel: "Deal Damage",
+        noLabel: "Skip",
         onYes: spreadPending,
         continuation: cont,
       };
@@ -1891,6 +2104,8 @@ function processSingleOnAttackTrigger(
         type: "ability-option",
         cardId: "SOR_121",
         helperText: "Deal 2 damage to a unit in the defender's arena?",
+        yesLabel: "Deal Damage",
+        noLabel: "Skip",
         onYes: {
           type: "ability-target",
           cardId: "SOR_121",
@@ -1905,12 +2120,37 @@ function processSingleOnAttackTrigger(
   }
 }
 
+function thrawnsReveal(game: GameState, log: string[], deckOwner: PlayerId, thrawnPlayer: PlayerId): PendingResolution | null {
+  const deck = ps(game, deckOwner).deck;
+  if (deck.length === 0) {
+    log.push(`${CardTitle("SOR_016")}: Player ${deckOwner}'s deck is empty — no card to reveal.`);
+    return null;
+  }
+  const topCard = deck[deck.length - 1];
+  console.log("DEBUG topCard:", JSON.stringify(topCard), "deck length:", deck.length, "deck[0]:", JSON.stringify(deck[0]));
+  const revealedCost = CardCost(topCard.cardId) ?? 0;
+  const subtitle = CardSubtitle(topCard.cardId);
+  const cardLabel = subtitle ? `${CardTitle(topCard.cardId)} — ${subtitle}` : CardTitle(topCard.cardId);
+  log.push(`${CardTitle("SOR_016")}: revealed ${cardLabel} (cost ${revealedCost}) from Player ${deckOwner}'s deck.`);
+  const eligible = allUnits(game).filter(u => (CardCost(u.cardId) ?? 0) <= revealedCost);
+  if (eligible.length === 0) return null;
+  return {
+    type: "ability-target",
+    cardId: "SOR_016",
+    player: thrawnPlayer,
+    fromPlayIds: eligible.map(u => u.playId),
+    continuation: null,
+  } satisfies AbilityTargetPending;
+}
+
 function applyAbilityOptionEffect(
   pending: AbilityOptionPending,
   game: GameState,
   log: string[],
 ): PendingResolution | null {
   switch (pending.cardId) {
+    case "SOR_016": // Yes = reveal own deck
+      return thrawnsReveal(game, log, pending.player!, pending.player!);
     case "JTL_096": {
       const unit = unitByPlayId(game, pending.sourcePlayId!);
       if (unit) {
@@ -1952,6 +2192,8 @@ function applyAbilityOptionDeclineEffect(
   log: string[],
 ): PendingResolution | null {
   switch (pending.cardId) {
+    case "SOR_016": // No = reveal opponent's deck
+      return thrawnsReveal(game, log, otherPlayer(pending.player!), pending.player!);
     case "JTL_049": {
       const l337Unit = unitByPlayId(game, pending.sourcePlayId!);
       let nextPending: PendingResolution | null = pending.continuation ?? null;
@@ -2641,6 +2883,18 @@ function resolveActionAbility(
         continuation: null,
       };
     }
+    case "SOR_016": { // Grand Admiral Thrawn: Reveal top card of any player's deck. Exhaust a unit that costs ≤ that card.
+      return {
+        type: "ability-option",
+        cardId: "SOR_016",
+        player,
+        helperText: "Reveal the top card of which deck?",
+        yesLabel: "Yourself",
+        noLabel: "Opponent",
+        onYes: null,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
     case "SOR_014": // Sabine Wren - Galvanized Revolutionary: Deal 1 damage to each base.
       game.player1.base.damage += 1;
       game.player2.base.damage += 1;
@@ -2685,6 +2939,34 @@ function applyAbilityEffect(
       if (targetUnit) {
         targetUnit.damage += 2;
         game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 2 damage to ${CardTitle(targetUnit.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_016": { // Grand Admiral Thrawn — exhaust chosen unit
+      if (!targetPlayId) break;
+      const target016 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target016) {
+        target016.ready = false;
+        game.gameLog.push(`${CardTitle("SOR_016")}: exhausted ${CardTitle(target016.cardId)}.`);
+      }
+      break;
+    }
+    case "SEC_182": { // Charged with Treason — deal 5 damage to chosen unit
+      if (!targetPlayId) break;
+      const target182 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target182) {
+        target182.damage += 5;
+        game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 5 damage to ${CardTitle(target182.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_176":
+    case "SEC_184": { // ISB Agent — deal 1 damage to chosen unit
+      if (!targetPlayId) break;
+      const targetIsb = unitByPlayId(game.currentGameState, targetPlayId);
+      if (targetIsb) {
+        targetIsb.damage += 1;
+        game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 1 damage to ${CardTitle(targetIsb.cardId)}.`);
       }
       break;
     }
@@ -2787,6 +3069,27 @@ function applyAbilityEffect(
         type: "attack-target",
         attackerPlayId: targetPlayId,
         source: "SOR_168",
+        continuation: pending.continuation,
+      };
+    }
+    case "SOR_227": // Snowtrooper Lieutenant — if Imperial, give +2/+0 ForAttack, then attack
+    case "SHD_236": {
+      if (!targetPlayId) break;
+      const unit227 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit227) break;
+      if (TraitContains(unit227.cardId, "Imperial", unit227.controller, unit227.playId)) {
+        game.currentGameState.currentEffects.push({
+          cardId: pending.cardId,
+          duration: "ForAttack",
+          affectedPlayer: unit227.controller,
+          targetPlayId,
+        });
+        game.gameLog.push(`${CardTitle(pending.cardId)}: ${CardTitle(unit227.cardId)} gets +2/+0 for this attack.`);
+      }
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: pending.cardId,
         continuation: pending.continuation,
       };
     }

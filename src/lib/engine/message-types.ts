@@ -19,6 +19,10 @@ export interface NeedsOption {
   /** eg. "Do you want to collect the Bounty from {{cardId}}?" */
   helperText: string;
   options: string[]; // eg. ["Yes", "No"] or ["deal_base_damage=3", "opponent_discards_from_hand=1"]
+  /** Override display label for "Yes" option (dispatch value remains "Yes"). */
+  yesLabel?: string;
+  /** Override display label for "No" option (dispatch value remains "No"). */
+  noLabel?: string;
 }
 
 export interface NeedsPlayer {
@@ -51,7 +55,15 @@ export interface NeedsSpreadDamage {
   assigningPlayer?: PlayerId;
 }
 
-export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot | NeedsSpreadDamage;
+/** Deck-search prompt: player picks from a revealed subset with a combined cost ceiling. */
+export interface NeedsDeckSearch {
+  type: "DeckSearch";
+  helperText: string;
+  choices: Array<{ tempId: string; cardId: string; cost: number }>;
+  maxCombinedCost: number;
+}
+
+export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot | NeedsSpreadDamage | NeedsDeckSearch;
 
 // ---------------------------------------------------------------------------
 // Inbound: dispatch types and data payloads

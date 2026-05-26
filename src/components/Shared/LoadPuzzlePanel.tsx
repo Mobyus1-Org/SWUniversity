@@ -1,10 +1,10 @@
 import React from "react";
 import { globalBackgroundStyle } from "@/util/style-const";
 
-type PuzzleEntry = { id: string; name: string; description: string; difficulty: number };
+type PuzzleEntry = { id: string; name: string; description: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[] };
 
 type Props = {
-  onPuzzleLoaded: (id: string, meta: { name: string; description: string; difficulty: number }) => void;
+  onPuzzleLoaded: (id: string, meta: PuzzleEntry) => void;
 };
 
 function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
@@ -31,7 +31,6 @@ type SortDir = "asc" | "desc";
 export function LoadPuzzlePanel({ onPuzzleLoaded }: Props) {
   const [puzzles, setPuzzles] = React.useState<PuzzleEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [sortKey, setSortKey] = React.useState<SortKey>("difficulty");
   const [sortDir, setSortDir] = React.useState<SortDir>("asc");
@@ -45,8 +44,7 @@ export function LoadPuzzlePanel({ onPuzzleLoaded }: Props) {
   }, []);
 
   function handleLoad(entry: PuzzleEntry) {
-    setSelectedId(null);
-    onPuzzleLoaded(entry.id, { name: entry.name, description: entry.description, difficulty: entry.difficulty });
+    onPuzzleLoaded(entry.id, entry);
   }
 
   function handleSortClick(key: SortKey) {
@@ -96,33 +94,26 @@ export function LoadPuzzlePanel({ onPuzzleLoaded }: Props) {
         <ul className="h-7/8 space-y-2 overflow-y-auto pr-1">
           {sortedPuzzles.map((entry) => {
             const { id, name, description, difficulty } = entry;
-            const isSelected = selectedId === id;
             return (
               <li
                 key={id}
-                onClick={() => setSelectedId(isSelected ? null : id)}
-                className={`group ${globalBackgroundStyle} border rounded cursor-pointer p-3 flex flex-col gap-1 transition-all ${isSelected ? "ring-2 ring-primary" : ""}`}
+                onClick={() => handleLoad(entry)}
+                className={`group ${globalBackgroundStyle} border rounded cursor-pointer p-3 flex flex-col gap-1 transition-all hover:ring-2 hover:ring-primary/60`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-semibold truncate">{name}</span>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); handleLoad(entry); }}
-                    className={[
-                      "btn btn-primary btn-sm shrink-0",
-                      // mobile: only show when selected
-                      isSelected ? "" : "max-lg:hidden",
-                      // desktop: invisible by default, fade in on row hover
-                      "lg:opacity-0 lg:group-hover:opacity-100 lg:transition-opacity lg:duration-150",
-                    ].join(" ")}
-                  >
-                    Load
-                  </button>
                 </div>
                 <div className="flex items-center gap-2 text-sm opacity-70">
                   <DifficultyDots value={difficulty} />
                   {description ? <span className="truncate">{description}</span> : null}
                 </div>
+                {(entry.author || entry.inspiredBy) ? (
+                  <div className="text-xs text-white/40 truncate">
+                    {entry.author ? <span>By {entry.author}</span> : null}
+                    {entry.author && entry.inspiredBy ? <span className="mx-1">·</span> : null}
+                    {entry.inspiredBy ? <span>Inspired by {entry.inspiredBy}</span> : null}
+                  </div>
+                ) : null}
               </li>
             );
           })}

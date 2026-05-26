@@ -7,6 +7,9 @@ export type PuzzleDocument = {
   difficulty: number;
   initialGamestate: RawPuzzleGameState;
   deploy: boolean;
+  author: string;
+  inspiredBy?: string;
+  intendedSolution: string[];
 };
 
 const puzzleSchema = new Schema<PuzzleDocument>(
@@ -15,7 +18,10 @@ const puzzleSchema = new Schema<PuzzleDocument>(
     description: { type: String, default: "" },
     difficulty: { type: Number, required: true, min: 1.0, max: 5.0, set: (v: number) => parseFloat(String(v)) },
     initialGamestate: { type: Schema.Types.Mixed, required: true },
-    deploy: { type: Boolean, default: false }
+    deploy: { type: Boolean, default: false },
+    author: { type: String, default: "" },
+    inspiredBy: { type: String },
+    intendedSolution: { type: [String], default: [] },
   },
   { timestamps: true },
 );

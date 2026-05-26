@@ -4,6 +4,7 @@ import { getCardImageLink, getSWUDBImageLink } from "@/util/func";
 import { globalBackgroundStyle, lightsaberGlow } from "@/util/style-const";
 import { LoadPuzzlePanel } from "@/components/Shared/LoadPuzzlePanel";
 import { PuzzleBuilderPanel } from "@/components/Shared/PuzzleBuilderPanel";
+import { CardLinkText } from "@/components/Shared/CardLink";
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import type { DispatchResponse, DispatchType, DispatchData, GameDispatch, ResolutionRequest } from "@/lib/engine/message-types";
@@ -61,6 +62,7 @@ function formatStatus(status: GameStatus, resolutionNeeded: ResolutionRequest | 
   }
   if (resolutionNeeded?.type === "Trigger") return "Choose a trigger.";
   if (resolutionNeeded?.type === "Player") return "Choose a player.";
+  if (resolutionNeeded?.type === "DeckSearch") return resolutionNeeded.helperText;
   return "Choose an action — click a hand card, your leader, or a ready friendly unit.";
 }
 
@@ -342,9 +344,12 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   const [spreadDmgMap, setSpreadDmgMap] = React.useState<Record<string, number>>({});
   const [selectedPuzzleFilename, setSelectedPuzzleFilename] = React.useState<string | null>(null);
   const [puzzleName, setPuzzleName] = React.useState<string | null>(null);
+  const [puzzleMeta, setPuzzleMeta] = React.useState<{ name: string; author: string; inspiredBy?: string; intendedSolution: string[] } | null>(null);
+  const [showSolutionModal, setShowSolutionModal] = React.useState(false);
   const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
   const [showClosePuzzleConfirm, setShowClosePuzzleConfirm] = React.useState(false);
   const [leaderModalOpen, setLeaderModalOpen] = React.useState(false);
+  const [discardModalPlayer, setDiscardModalPlayer] = React.useState<1 | 2 | null>(null);
   const previewTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameLogRef = React.useRef<HTMLDivElement | null>(null);
   const [preview, setPreview] = React.useState<PreviewState | null>(null);
@@ -374,6 +379,20 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   }, [clearPreviewTimer, setPreview]);
   React.useEffect(() => () => { clearPreviewTimer(); }, [clearPreviewTimer]);
   React.useEffect(() => { setSelectedTargetPlayIds([]); setSpreadDmgMap({}); }, [resolutionNeeded]);
+
+  const [deckSearchSelected, setDeckSearchSelected] = React.useState<Set<string>>(new Set());
+  React.useEffect(() => { if (resolutionNeeded?.type !== "DeckSearch") setDeckSearchSelected(new Set()); }, [resolutionNeeded]);
+  React.useEffect(() => {
+    if (resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Discard")) {
+      setDiscardModalPlayer(1);
+    }
+  }, [resolutionNeeded]);
+  const deckSearchCost = resolutionNeeded?.type === "DeckSearch"
+    ? [...deckSearchSelected].reduce((sum, id) => {
+        const c = (resolutionNeeded.choices).find(ch => ch.tempId === id);
+        return sum + (c?.cost ?? 0);
+      }, 0)
+    : 0;
 
   // ---------------------------------------------------------------------------
   // Core dispatch — sends a GameDispatch to the puzzle API endpoint
@@ -504,6 +523,10 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     void sendDispatch(createDispatch("choose-target", { spreadDamageAssignments: assignments }));
   }, [sendDispatch]);
 
+  const handleDeckSearchConfirm = React.useCallback(() => {
+    void sendDispatch(createDispatch("choose-target", { targetPlayIds: [...deckSearchSelected] }));
+  }, [deckSearchSelected, sendDispatch]);
+
   const handleOptionChoice = React.useCallback((option: string) => {
     void sendDispatch(createDispatch("choose-option", { option }));
   }, [sendDispatch]);
@@ -623,6 +646,13 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     setPreviewImageSrc(previewPrimarySrc);
   }, [previewPrimarySrc, setPreviewImageSrc]);
 
+  // Show solution modal when puzzle is won
+  React.useEffect(() => {
+    if (gameState && deriveStatus(gameState) === "won" && puzzleMeta && puzzleMeta.intendedSolution.length > 0) {
+      setShowSolutionModal(true);
+    }
+  }, [gameState, puzzleMeta]);
+
   // Auto-scroll game log to bottom when entries change
   React.useEffect(() => {
     const el = gameLogRef.current;
@@ -659,6 +689,8 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
             onPuzzleLoaded={(filename, meta) => {
               setSelectedPuzzleFilename(filename);
               setPuzzleName(meta.name);
+              setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution });
+              setShowSolutionModal(false);
               void loadPuzzle(filename);
             }}
           />
@@ -727,7 +759,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
 
   const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[opponent.discard.length - 1] : null;
   const latestPlayerDiscard = player.discard.length > 0 ? player.discard[player.discard.length - 1] : null;
-  const hasPrompt = resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "Trigger" || resolutionNeeded?.type === "Player";
+  const hasPrompt = resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "Trigger" || resolutionNeeded?.type === "Player" || resolutionNeeded?.type === "DeckSearch";
   const hasPlotPrompt = resolutionNeeded?.type === "Plot";
   const getUnitGlowClass = (playId: string) =>
     isMultiSelectTarget && selectedTargetPlayIds.includes(playId)
@@ -775,6 +807,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       <div>
         <h1 className="text-2xl font-black uppercase tracking-[0.24em] text-white sm:text-3xl">{puzzleName ?? "Puzzle Mode"}</h1>
         {!puzzleName ? <p className="mt-1 text-xs text-white/65 sm:text-sm">Board-first tactical sandbox. Opponent already has initiative.</p> : null}
+        {puzzleMeta?.author ? <p className="mt-0.5 text-xs text-white/45">By {puzzleMeta.author}{puzzleMeta.inspiredBy ? <span className="ml-2 text-white/30">· Inspired by {puzzleMeta.inspiredBy}</span> : null}</p> : null}
       </div>
       {showClosePuzzleConfirm ? (
         <div className="flex items-center gap-2">
@@ -808,7 +841,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
             <span className="text-[10px] text-white/50">{gameLog.length}</span>
           </div>
           <div ref={gameLogRef} className="h-[23vh] space-y-1.5 overflow-y-auto pr-1 text-[10px] leading-4 text-white/80">
-            {gameLog.map((entry, index) => <div key={`${entry}-${index}`} className="rounded-md bg-black/25 px-1.5 py-1">{entry}</div>)}
+            {gameLog.map((entry, index) => <div key={`${entry}-${index}`} className="rounded-md bg-black/25 px-1.5 py-1"><CardLinkText text={entry} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} /></div>)}
           </div>
         </section>
         <SectionShell title="Actions" className="mt-2 rounded-lg p-2">
@@ -865,7 +898,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
               </div>
               <div className="rounded-lg bg-black/20 p-2">
                 <div className="mb-2 text-xs uppercase tracking-[0.2em] text-white/60">Discard</div>
-                {latestEnemyDiscard ? <div className="w-24">
+                {latestEnemyDiscard ? <button type="button" className="w-24 text-left" onClick={() => setDiscardModalPlayer(2)}>
                   <CardVisual
                     cardId={latestEnemyDiscard.cardId}
                     selectable={false}
@@ -874,7 +907,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                     compact
                     square
                   />
-                </div> : <div className="rounded-lg border border-dashed border-white/10 px-4 py-6 text-sm text-white/40">Empty</div>}
+                </button> : <div className="rounded-lg border border-dashed border-white/10 px-4 py-6 text-sm text-white/40">Empty</div>}
                 <div className="mt-2 text-xs text-white/70">{opponent.discard.length} total</div>
               </div>
             </div>
@@ -1442,52 +1475,16 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
               </div>
               <div className="rounded-lg bg-black/20 p-2">
                 <div className="mb-2 text-xs uppercase tracking-[0.2em] text-white/60">Discard</div>
-                {hasDiscardSelection ? (
-                  <div className="flex flex-col gap-1">
-                    {player.discard.filter(d => selectableDiscardPlayIds.has(d.playId)).map(d => (
-                      <button
-                        key={d.playId}
-                        type="button"
-                        disabled={isResolving}
-                        onClick={() => {
-                          if (isMultiSelectTarget) {
-                            setSelectedTargetPlayIds(prev =>
-                              prev.includes(d.playId)
-                                ? prev.filter(id => id !== d.playId)
-                                : prev.length < (resolutionNeeded?.type === "Target" ? (resolutionNeeded.maxTargets ?? Infinity) : Infinity)
-                                  ? [...prev, d.playId]
-                                  : prev
-                            );
-                          } else {
-                            void sendDispatch(createDispatch("choose-target", { targetPlayIds: [d.playId] }));
-                          }
-                        }}
-                        className="w-24 text-left"
-                        onMouseEnter={() => handlePreviewStart({ imageId: d.cardId, cardId: d.cardId, label: CardTitle(d.cardId) })}
-                        onMouseLeave={handlePreviewEnd}
-                      >
-                        <CardVisual
-                          cardId={d.cardId}
-                          selectable={!isResolving}
-                          customGlowClass={isMultiSelectTarget && selectedTargetPlayIds.includes(d.playId) ? "ring-2 ring-amber-400/80 shadow-[0_0_14px_rgba(251,191,36,0.5)]" : undefined}
-                          onPreviewStart={handlePreviewStart}
-                          onPreviewEnd={handlePreviewEnd}
-                          compact
-                          square
-                        />
-                      </button>
-                    ))}
-                  </div>
-                ) : latestPlayerDiscard ? <div className="w-24">
+                {latestPlayerDiscard ? <button type="button" className={`w-24 text-left${hasDiscardSelection ? " ring-2 ring-sky-400/60 rounded" : ""}`} onClick={() => setDiscardModalPlayer(1)}>
                   <CardVisual
                     cardId={latestPlayerDiscard.cardId}
-                    selectable={false}
+                    selectable={hasDiscardSelection}
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     compact
                     square
                   />
-                </div> : <div className="rounded-lg border border-dashed border-white/10 px-4 py-6 text-sm text-white/40">Empty</div>}
+                </button> : <div className="rounded-lg border border-dashed border-white/10 px-4 py-6 text-sm text-white/40">Empty</div>}
                 <div className="mt-2 text-xs text-white/70">{player.discard.length} total</div>
               </div>
             </div>
@@ -1553,7 +1550,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       <div className="mt-2 px-1 text-xs text-white/80">{preview.label ?? CardTitle(preview.cardId)}</div>
     </div> : null}
 
-    {isMultiSelectTarget ? <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-xl border border-amber-400/30 bg-[rgba(8,12,26,0.97)] px-5 py-3 shadow-2xl">
+    {isMultiSelectTarget && discardModalPlayer === null ? <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-xl border border-amber-400/30 bg-[rgba(8,12,26,0.97)] px-5 py-3 shadow-2xl">
       <span className="text-sm text-white/70">
         {selectedTargetPlayIds.length} / {resolutionNeeded?.maxTargets ?? "?"} selected
       </span>
@@ -1589,17 +1586,24 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     {hasPrompt ? <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
-          {resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : "Choose"}
+          {resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : resolutionNeeded?.type === "DeckSearch" ? "Deck Search" : "Choose"}
         </h3>
-        {resolutionNeeded?.type === "Option" ? <p className="-mt-2 mb-4 max-w-xs text-xs text-white/65">{resolutionNeeded.helperText}</p> : null}
+        {(resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "DeckSearch") ? <p className="-mt-2 mb-4 max-w-xs text-xs text-white/65">{resolutionNeeded.helperText}</p> : null}
         <div className="flex flex-col gap-3">
-          {resolutionNeeded?.type === "Option" ? resolutionNeeded.options.map((opt) => (
-            <button key={opt} type="button" disabled={isResolving}
-              onClick={() => handleOptionChoice(opt)}
-              className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/35 disabled:cursor-not-allowed disabled:opacity-40">
-              {formatOptionLabel(opt)}
-            </button>
-          )) : resolutionNeeded?.type === "Trigger" ? resolutionNeeded.fromCardIds.map((id) => (
+          {resolutionNeeded?.type === "Option" ? resolutionNeeded.options.map((opt) => {
+            const displayLabel = opt === "Yes" && resolutionNeeded.yesLabel
+              ? resolutionNeeded.yesLabel
+              : opt === "No" && resolutionNeeded.noLabel
+              ? resolutionNeeded.noLabel
+              : formatOptionLabel(opt);
+            return (
+              <button key={opt} type="button" disabled={isResolving}
+                onClick={() => handleOptionChoice(opt)}
+                className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/35 disabled:cursor-not-allowed disabled:opacity-40">
+                {displayLabel}
+              </button>
+            );
+          }) : resolutionNeeded?.type === "Trigger" ? resolutionNeeded.fromCardIds.map((id) => (
             <button key={id} type="button" disabled={isResolving}
               onClick={() => handleTriggerChoice(id)}
               className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/35 disabled:cursor-not-allowed disabled:opacity-40">
@@ -1611,8 +1615,130 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
               className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/35 disabled:cursor-not-allowed disabled:opacity-40">
               {p === 1 ? "Player" : "Opponent"}
             </button>
-          )) : null}
+          )) : resolutionNeeded?.type === "DeckSearch" ? (
+            <>
+              {resolutionNeeded.choices.map((c) => {
+                const selected = deckSearchSelected.has(c.tempId);
+                const wouldExceed = !selected && deckSearchCost + c.cost > resolutionNeeded.maxCombinedCost;
+                return (
+                  <button key={c.tempId} type="button" disabled={isResolving || wouldExceed}
+                    onClick={() => setDeckSearchSelected(prev => {
+                      const next = new Set(prev);
+                      if (next.has(c.tempId)) next.delete(c.tempId); else next.add(c.tempId);
+                      return next;
+                    })}
+                    className={`flex items-center justify-between rounded-lg border px-4 py-2 text-sm font-medium text-white transition ${
+                      selected
+                        ? "border-sky-400/80 bg-sky-500/40"
+                        : wouldExceed
+                        ? "cursor-not-allowed border-white/10 bg-white/5 opacity-40"
+                        : "border-sky-400/40 bg-sky-500/20 hover:bg-sky-500/35"
+                    } disabled:cursor-not-allowed`}>
+                    <span>{CardTitle(c.cardId)}</span>
+                    <span className="ml-4 text-white/55">Cost {c.cost}</span>
+                  </button>
+                );
+              })}
+              <div className="text-center text-xs text-white/45">Total cost: {deckSearchCost} / {resolutionNeeded.maxCombinedCost}</div>
+              <button type="button" disabled={isResolving} onClick={handleDeckSearchConfirm}
+                className="rounded-lg border border-emerald-400/40 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500/35 disabled:cursor-not-allowed disabled:opacity-40">
+                {deckSearchSelected.size === 0 ? "Take Nothing" : `Play ${deckSearchSelected.size} Unit${deckSearchSelected.size > 1 ? "s" : ""} for Free`}
+              </button>
+            </>
+          ) : null}
         </div>
+      </div>
+    </div> : null}
+
+    {discardModalPlayer !== null ? (() => {
+      const discardCards = discardModalPlayer === 1 ? player.discard : opponent.discard;
+      const ownerLabel = discardModalPlayer === 1 ? "Your" : "Opponent's";
+      return <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setDiscardModalPlayer(null)}>
+        <div className="max-h-[80vh] w-[min(90vw,640px)] overflow-y-auto rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/80">{ownerLabel} Discard ({discardCards.length})</h3>
+            <button type="button" onClick={() => setDiscardModalPlayer(null)} className="text-white/40 hover:text-white/80 text-lg leading-none">✕</button>
+          </div>
+          {discardCards.length === 0
+            ? <div className="py-8 text-center text-sm text-white/40">Empty</div>
+            : <div className="flex flex-wrap gap-2 justify-start">
+              {[...discardCards].reverse().map(d => {
+                const isSelectable = selectableDiscardPlayIds.has(d.playId);
+                const isSelected = selectedTargetPlayIds.includes(d.playId);
+                return <button
+                  key={d.playId}
+                  type="button"
+                  disabled={isResolving || (!isSelectable && selectableDiscardPlayIds.size > 0)}
+                  onClick={() => {
+                    if (!isSelectable) return;
+                    if (isMultiSelectTarget) {
+                      setSelectedTargetPlayIds(prev =>
+                        prev.includes(d.playId)
+                          ? prev.filter(id => id !== d.playId)
+                          : prev.length < (resolutionNeeded?.type === "Target" ? (resolutionNeeded.maxTargets ?? Infinity) : Infinity)
+                            ? [...prev, d.playId]
+                            : prev
+                      );
+                    } else {
+                      setDiscardModalPlayer(null);
+                      void sendDispatch(createDispatch("choose-target", { targetPlayIds: [d.playId] }));
+                    }
+                  }}
+                  className={`w-24 text-left${!isSelectable && selectableDiscardPlayIds.size > 0 ? " opacity-40" : ""}`}
+                  onMouseEnter={() => handlePreviewStart({ imageId: d.cardId, cardId: d.cardId, label: CardTitle(d.cardId) })}
+                  onMouseLeave={handlePreviewEnd}
+                >
+                  <CardVisual
+                    cardId={d.cardId}
+                    selectable={isSelectable && !isResolving}
+                    customGlowClass={isSelected ? "ring-2 ring-amber-400/80 shadow-[0_0_14px_rgba(251,191,36,0.5)]" : undefined}
+                    onPreviewStart={handlePreviewStart}
+                    onPreviewEnd={handlePreviewEnd}
+                    compact
+                    square
+                  />
+                </button>;
+              })}
+            </div>
+          }
+          {isMultiSelectTarget && selectableDiscardPlayIds.size > 0 && (
+            <button
+              type="button"
+              disabled={isResolving || selectedTargetPlayIds.length === 0}
+              onClick={() => {
+                setDiscardModalPlayer(null);
+                void sendDispatch(createDispatch("choose-target", { targetPlayIds: selectedTargetPlayIds }));
+              }}
+              className="mt-4 w-full rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/35 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Confirm ({selectedTargetPlayIds.length} / {resolutionNeeded?.type === "Target" ? (resolutionNeeded.maxTargets ?? "?") : "?"})
+            </button>
+          )}
+        </div>
+      </div>;
+    })() : null}
+
+    {showSolutionModal && puzzleMeta ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowSolutionModal(false)}>
+      <div className="w-[min(90vw,1080px)] rounded-xl border border-emerald-400/30 bg-[rgba(8,12,26,0.92)] p-12 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <h3 className="mb-3 text-base font-bold text-emerald-300">Congratulations! You&apos;ve solved the puzzle!</h3>
+        <div className="mb-4 border-b border-white/10 pb-4">
+          <p className="text-sm font-semibold text-white">{puzzleMeta.name || puzzleName}</p>
+          {puzzleMeta.author ? <p className="mt-0.5 text-xs text-white/50">By {puzzleMeta.author}</p> : null}
+          {puzzleMeta.inspiredBy ? <p className="mt-0.5 text-xs text-white/40">Inspired by {puzzleMeta.inspiredBy}</p> : null}
+        </div>
+        <p className="mb-3 text-sm text-white/60">Here&apos;s the author&apos;s intended solution:</p>
+        <ul className="mb-5 space-y-2">
+          {puzzleMeta.intendedSolution.map((step, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm text-white/90">
+              <img src="/assets/puzzle.svg" alt="" className="mt-1.25 h-2.5 w-2.5 shrink-0 brightness-0 invert" />
+              <span><CardLinkText text={step} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} /></span>
+            </li>
+          ))}
+        </ul>
+        <p className="mb-4 text-xs text-white/50">If your solution was different, feel free to let us know on our <a href="https://discord.gg/swuniversity" target="_blank" rel="noopener noreferrer" className="text-sky-400 underline hover:text-sky-300">Discord</a>!</p>
+        <button type="button" onClick={() => setShowSolutionModal(false)} className="w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/20">
+          Close
+        </button>
       </div>
     </div> : null}
 

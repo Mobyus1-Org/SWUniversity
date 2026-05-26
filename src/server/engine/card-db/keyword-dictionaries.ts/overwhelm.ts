@@ -34,10 +34,10 @@ export function HasOverwhelm(cardId: string,
           if (attackingUnit && CardCost(unit.cardId) <= 3) return true;
           break;
         case "TWI_009"://Maul Leader Unit
-          if(unit.playId !== playId && !LeaderAbilitiesIgnored()) return true;
+          if(u.playId !== playId && !LeaderAbilitiesIgnored()) return true;
           break;
         case "TWI_114"://Clone Commander Cody
-          if(unit.playId !== playId && IsCoordinateActive(player)) return true;
+          if(u.playId !== playId && IsCoordinateActive(player)) return true;
           break;
         case "JTL_161"://Captain Tarkin
           if(TraitContains(unit.cardId, "Vehicle", player)) return true;

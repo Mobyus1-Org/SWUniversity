@@ -1,9 +1,9 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
-import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, GiveXpMultiplePending, ChooseIndirectTargetPending } from "@/server/engine/pending-resolution";
+import { CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
+import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, GiveXpMultiplePending, ChooseIndirectTargetPending, VaderSearchPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
-import { CardTitle, CardType } from "@/server/engine/card-db/generated";
+import { CardAspects, CardCost, CardTitle, CardType } from "@/server/engine/card-db/generated";
 
 /**
  * When Played abilities for unit cards.
@@ -34,6 +34,27 @@ export function resolveWhenPlayed(
           fromPlayIds: enemyGround.map(u => u.playId),
           continuation: null,
         },
+      };
+    }
+    case "SOR_227": // Snowtrooper Lieutenant — You may attack with a unit. If Imperial, gets +2/+0 for this attack.
+    case "SHD_236": {
+      const readyFriendly = GetUnitsForPlayer(player, true).map(u => u.playId);
+      if (readyFriendly.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        sourcePlayId: playId,
+        helperText: "Attack with a unit? Imperial units get +2/+0.",
+        yesLabel: "Attack",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId,
+          player,
+          fromPlayIds: readyFriendly,
+          continuation: null,
+        },
+        continuation: null,
       };
     }
     case "SOR_103": { //Rebel Assault "Attack with a Rebel unit. It gets +1/+0 for this attack. Then, attack with another Rebel unit. It gets +1/+0 for this attack."
@@ -75,6 +96,8 @@ export function resolveWhenPlayed(
         cardId,
         sourcePlayId: playId,
         helperText: "Defeat an upgrade?",
+        yesLabel: "Defeat",
+        noLabel: "Skip",
         onYes: {
           type: "ability-target",
           cardId,
@@ -98,6 +121,8 @@ export function resolveWhenPlayed(
         cardId,
         sourcePlayId: playId,
         helperText: "Deal damage to a unit equal to the number of cards in your hand?",
+        yesLabel: "Deal Damage",
+        noLabel: "Skip",
         onYes: {
           type: "ability-target",
           cardId,
@@ -207,6 +232,91 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SOR_176":
+    case "SEC_184": { // ISB Agent — "When Played: You may reveal an event from your hand. If you do, deal 1 damage to a unit."
+      const pStateIsb = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+      const hasEvent = pStateIsb.hand.some(c => CardType(c.cardId) === "Event");
+      if (!hasEvent) return null;
+      const allUnitsIsb = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      if (allUnitsIsb.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        sourcePlayId: playId,
+        helperText: "Reveal an event from your hand to deal 1 damage to a unit?",
+        yesLabel: "Reveal",
+        noLabel: "Skip",
+        onYes: {
+          type: "play-from-hand",
+          cardId,
+          player,
+        },
+        continuation: null,
+      };
+    }
+    case "SOR_252": { // Restock — "Choose up to 4 cards in a discard pile. Put them on the bottom of their owner's deck in a random order."
+      const gs252 = game.currentGameState;
+      const combined = [...gs252.player1.discard, ...gs252.player2.discard];
+      if (combined.length === 0) return null;
+      return {
+        type: "return-from-discard",
+        cardId: "SOR_252",
+        player,
+        maxCount: 4,
+        eligiblePlayIds: combined.map(d => d.playId),
+        continuation: null,
+      } satisfies ReturnFromDiscardPending;
+    }
+    case "SEC_062": { // Bardottan Ornithopter — "When Played: You may disclose Vigilance. If you do, draw a card."
+      if (!CanDisclose(player, ["Vigilance"])) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        sourcePlayId: playId,
+        helperText: "Disclose Vigilance to draw a card?",
+        yesLabel: "Disclose",
+        noLabel: "Skip",
+        onYes: { type: "play-from-hand", cardId, player },
+        continuation: null,
+      };
+    }
+    case "SEC_181": { // Unauthorized Investigation — "Create a Spy token. You may disclose Aggression. If you do, create another Spy token."
+      const gs181 = game.currentGameState;
+      CreateSpy(gs181, player);
+      game.gameLog.push(`${CardTitle(cardId)}: created a Spy token.`);
+      if (!CanDisclose(player, ["Aggression"])) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        helperText: "Disclose Aggression to create another Spy token?",
+        yesLabel: "Disclose",
+        noLabel: "Skip",
+        onYes: { type: "play-from-hand", cardId, player },
+        continuation: null,
+      };
+    }
+    case "SEC_182": { // Charged with Treason — "You may disclose AggressionAggression. If you do, deal 5 damage to a unit."
+      if (!CanDisclose(player, ["Aggression", "Aggression"])) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        helperText: "Disclose AggressionAggression to deal 5 damage to a unit?",
+        yesLabel: "Disclose",
+        noLabel: "Skip",
+        onYes: { type: "play-from-hand", cardId, player },
+        continuation: null,
+      };
+    }
+    case "SOR_219": { // Sneak Attack — "Play a unit from your hand. It costs 3 less and enters play ready. At the start of the regroup phase, defeat it."
+      const pState219 = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+      const hasUnit219 = pState219.hand.some(c => CardType(c.cardId) === "Unit");
+      if (!hasUnit219) return null;
+      return {
+        type: "play-from-hand",
+        cardId: "SOR_219",
+        player,
+      };
+    }
     case "JTL_096": { // Blue Leader — "You may pay 2 resources. If you do, move this unit to the ground arena and give 2 Experience tokens to it."
       if (!playId) return null;
       return {
@@ -214,6 +324,8 @@ export function resolveWhenPlayed(
         cardId,
         sourcePlayId: playId,
         helperText: `Pay 2 resources to move ${CardTitle(cardId)} to the ground arena and give 2 Experience tokens?`,
+        yesLabel: "Pay 2",
+        noLabel: "Skip",
         onYes: null,
         continuation: null,
       };
@@ -410,6 +522,29 @@ export function resolveWhenPlayed(
         sourcePlayer: player,
         totalDamage: 5,
       } satisfies ChooseIndirectTargetPending;
+    case "SOR_087": { // Darth Vader — Search top 10 of deck for Villainy units with combined cost ≤ 3, play each for free.
+      const gs087 = game.currentGameState;
+      const deck087 = player === 1 ? gs087.player1.deck : gs087.player2.deck;
+      if (deck087.length === 0) return null;
+      const count087 = Math.min(10, deck087.length);
+      const top10 = deck087.slice(-count087);
+      const topCards = top10.map((c, i) => ({ tempId: `vs-${i}`, cardId: c.cardId }));
+      const eligibleChoices = topCards
+        .filter(c => CardType(c.cardId) === "Unit" && CardAspects(c.cardId).includes("Villainy") && (CardCost(c.cardId) ?? 0) <= 3)
+        .map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));
+      if (eligibleChoices.length === 0) {
+        game.gameLog.push(`${CardTitle("SOR_087")}: no eligible Villainy units in the top ${count087} cards.`);
+        return null;
+      }
+      return {
+        type: "vader-search",
+        cardId: "SOR_087",
+        player,
+        topCards,
+        eligibleChoices,
+        maxCombinedCost: 3,
+      } satisfies VaderSearchPending;
+    }
     default:
       return null;
   }

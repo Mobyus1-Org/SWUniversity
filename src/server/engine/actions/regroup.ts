@@ -1,5 +1,5 @@
 import type { GameState, PlayerState } from "@/lib/engine/game";
-import type { PlayerId } from "@/lib/engine/core-models";
+import type { DiscardedCard, PlayerId } from "@/lib/engine/core-models";
 import { CardTitle } from "@/server/engine/card-db/generated";
 
 function ps(gs: GameState, player: PlayerId): PlayerState {
@@ -11,6 +11,33 @@ export function executeRegroupDraw(gs: GameState, log: string[]): void {
   const revertEffects = gs.currentEffects.filter(e => e.duration === "UntilStartOfRegroup");
   for (const eff of revertEffects) {
     if (!eff.targetPlayId) continue;
+
+    if (eff.cardId === "SOR_219") {
+      // Sneak Attack: defeat the unit at start of regroup.
+      outer219: for (const pState of [gs.player1, gs.player2]) {
+        for (const zone of ["groundArena", "spaceArena"] as const) {
+          const idx = pState[zone].findIndex(u => u.playId === eff.targetPlayId);
+          if (idx !== -1) {
+            const [unit] = pState[zone].splice(idx, 1);
+            const ownerState = unit.owner === 1 ? gs.player1 : gs.player2;
+            const discarded: DiscardedCard = {
+              cardId: unit.cardId,
+              playId: unit.playId,
+              owner: unit.owner,
+              controller: unit.owner,
+              turnDiscarded: gs.currentRound,
+              discardEffect: "",
+            };
+            ownerState.discard.unshift(discarded);
+            gs.roundState.cardsLeftPlayThisPhase.push({ fromPlayer: unit.owner as PlayerId, cardId: unit.cardId, playId: unit.playId, reason: "defeated" });
+            log.push(`Sneak Attack: ${CardTitle(unit.cardId)} was defeated at start of regroup.`);
+            break outer219;
+          }
+        }
+      }
+      continue;
+    }
+
     const ownerPlayer = eff.affectedPlayer;
     const ownerState = ownerPlayer === 1 ? gs.player1 : gs.player2;
     outer: for (const pState of [gs.player1, gs.player2]) {

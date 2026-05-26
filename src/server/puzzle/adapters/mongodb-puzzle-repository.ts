@@ -17,7 +17,10 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
       description: doc.description ?? "",
       difficulty: doc.difficulty,
       initialGamestate: doc.initialGamestate as RawPuzzleGameState,
-      deploy: doc.deploy
+      deploy: doc.deploy,
+      author: doc.author ?? "",
+      inspiredBy: doc.inspiredBy,
+      intendedSolution: doc.intendedSolution ?? [],
     }))
     .filter((p) => p.deploy || process.env.NODE_ENV === "development");
   }
@@ -40,6 +43,9 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
           description: puzzle.description,
           difficulty: puzzle.difficulty,
           initialGamestate: puzzle.initialGamestate,
+          author: puzzle.author ?? "",
+          inspiredBy: puzzle.inspiredBy,
+          intendedSolution: puzzle.intendedSolution ?? [],
         },
         { new: true, lean: true },
       );
@@ -52,6 +58,9 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
       description: puzzle.description,
       difficulty: puzzle.difficulty,
       initialGamestate: puzzle.initialGamestate,
+      author: puzzle.author ?? "",
+      inspiredBy: puzzle.inspiredBy,
+      intendedSolution: puzzle.intendedSolution ?? [],
     });
     return { ...puzzle, id: doc._id.toString() };
   }

@@ -7,6 +7,9 @@ export type PuzzleData = {
   difficulty: number;
   initialGamestate: RawPuzzleGameState;
   deploy: boolean;
+  author: string;
+  inspiredBy?: string;
+  intendedSolution: string[];
 };
 
 export interface PuzzleRepository {

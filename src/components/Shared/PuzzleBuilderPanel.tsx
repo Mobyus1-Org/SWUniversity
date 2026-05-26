@@ -171,6 +171,7 @@ type PlayerBuilderState = {
   leaderEpicActionUsed: boolean;
   resources: ResourceEntry[];
   handCards: string[];
+  deck: string[];
   groundUnits: UnitEntry[];
   spaceUnits: UnitEntry[];
 };
@@ -192,7 +193,7 @@ function emptyPlayer(): PlayerBuilderState {
   return {
     baseCardId: "", baseDamage: 0, baseEpicActionUsed: false,
     leaderCardId: "", leaderReady: true, leaderDeployed: false, leaderEpicActionUsed: false,
-    resources: [], handCards: [], groundUnits: [], spaceUnits: [],
+    resources: [], handCards: [], deck: [], groundUnits: [], spaceUnits: [],
   };
 }
 
@@ -207,7 +208,10 @@ function initialBuilderState(): BuilderState {
     initiativePlayer: 2,
     initiativeClaimed: true,
     player1: emptyPlayer(),
-    player2: emptyPlayer(),
+    player2: {
+      ...emptyPlayer(),
+      deck: ["LOF_254", "LOF_254", "LOF_254", "LAW_260", "LAW_260"],
+    },
   };
 }
 
@@ -230,6 +234,7 @@ function parseRawPlayer(p: Record<string, unknown>): PlayerBuilderState {
   const space = (p.spaceArena ?? []) as Record<string, unknown>[];
   const resources = (p.resources ?? []) as Record<string, unknown>[];
   const hand = (p.hand ?? []) as Record<string, unknown>[];
+  const deck = (p.deck ?? []) as Record<string, unknown>[];
   return {
     baseCardId: String(base.cardId ?? ""),
     baseDamage: Number(base.damage ?? 0),
@@ -240,6 +245,7 @@ function parseRawPlayer(p: Record<string, unknown>): PlayerBuilderState {
     leaderEpicActionUsed: Boolean(leader.epicActionUsed),
     resources: resources.map((r) => ({ cardId: String(r.cardId ?? ""), ready: r.ready !== false })),
     handCards: hand.map((h) => String((h as Record<string, unknown>).cardId ?? "")),
+    deck: deck.map((d) => String(d.cardId ?? "")),
     groundUnits: ground.map((u) => ({
       cardId: String(u.cardId ?? ""), ready: u.ready !== false, damage: Number(u.damage ?? 0),
       upgrades: ((u.upgrades ?? []) as Record<string, unknown>[]).map((ug) => String(ug.cardId ?? "")),
@@ -293,7 +299,7 @@ function toRaw(s: BuilderState): RawPuzzleGameState {
         cardId: r.cardId, playId: "@", owner: playerId, controller: playerId, ready: r.ready,
       })),
       discard: [],
-      deck: [],
+      deck: p.deck.map((cardId) => ({ cardId })),
       hand: p.handCards.map((cardId) => ({ cardId })),
       supplemental: {},
     };

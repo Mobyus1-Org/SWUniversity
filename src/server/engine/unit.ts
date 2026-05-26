@@ -1,5 +1,5 @@
 import { CardInPlay, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, GetLeaderForPlayer, LeaderAbilitiesIgnored, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, GetLeaderForPlayer, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive } from "@/server/engine/core-functions";
 import { CardHp, CardPower, CardUpgradeHp, CardUpgradePower } from "@/server/engine/card-db/generated";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
@@ -140,6 +140,9 @@ export class Unit implements UnitInterface {
         case "SHD_008": //Boba Fett - Daimyo
           power += isOtherUnit && HasKeyword(this.cardId, "Any", this.playId, this.controller) ? 1 : 0;
           break;
+        case "TWI_114": //Clone Commander Cody - Commanding the 212th
+          power += IsCoordinateActive(this.controller) && isOtherUnit ? 1 : 0;
+          break;
         default: break;
       }
     }
@@ -153,6 +156,10 @@ export class Unit implements UnitInterface {
           break;
         case "SOR_168": //Precision Fire
           power += TraitContains(this.cardId, "Trooper", this.controller, this.playId) ? 2 : 0;
+          break;
+        case "SOR_227": // Snowtrooper Lieutenant
+        case "SHD_236":
+          power += 2;
           break;
         case "SHD_008": //Boba Fett - Daimyo
           power += 1;
@@ -204,6 +211,16 @@ export class Unit implements UnitInterface {
     let hp = CardHp(this.cardId) || 0;
     if (this.HasUpgrade("LOF_056")) { //Size Matters Not
       hp = 5;
+    }
+
+    for(const unit of GetUnitsForPlayer(this.controller)) {
+      const isOtherUnit = unit.playId !== this.playId;
+      switch (unit.cardId) {
+       case "TWI_114": //Clone Commander Cody - Commanding the 212th
+          hp += IsCoordinateActive(this.controller) && isOtherUnit ? 1 : 0;
+          break;
+        default: break;
+       }
     }
 
     for (const upgrade of this.upgrades) {
