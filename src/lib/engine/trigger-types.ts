@@ -21,6 +21,7 @@ export interface TriggerEntry {
   fromPlayer: PlayerId;
   playId?: string;  // the unit this trigger is about (e.g. for shielded)
   context?: TriggerContext;
+  nested?: boolean; // true when this trigger arose during resolution of another trigger (CR 7.6.11)
 }
 
 export type TriggerContext =

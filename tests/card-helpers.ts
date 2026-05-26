@@ -228,6 +228,7 @@ export const Cards = {
       vanguardInfantry: "SOR_108",
       generalTagge: "SOR_080",
       deathTrooper: "SOR_033",
+      delMeeko: "SOR_034",
     },
     shd: {
       generalTagge: "SHD_081",
@@ -270,6 +271,9 @@ export const Cards = {
     },
     sec: {
       cadBane: "SEC_034",
+      chancellorPalpatine: "SEC_082",
+      isbShuttle: "SEC_083",
+      viceAdmiralRampart: "SEC_085",
     },
   },
   upgrades: {
@@ -324,6 +328,7 @@ export const Cards = {
     jtl: {
       torpedoBarrage: "JTL_234",
       dedicatedWingmen: "JTL_254",
+      unityOfPurpose: "JTL_106",
     },
     sec: {
       iAmTheSenate: "SEC_092",

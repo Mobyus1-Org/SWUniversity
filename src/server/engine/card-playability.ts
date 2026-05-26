@@ -30,8 +30,15 @@ function aspectPenalty(game: GameState, player: PlayerId, cardId: string): numbe
   return missing * 2;
 }
 
+function delMeekoEventTax(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Event") return 0;
+  const oppState = player === 1 ? game.player2 : game.player1;
+  const oppUnits = [...oppState.groundArena, ...oppState.spaceArena];
+  return oppUnits.some(u => u.cardId === "SOR_034" && !Unit.FromInterface(u).LostAbilities()) ? 1 : 0;
+}
+
 function playCost(game: GameState, player: PlayerId, cardId: string): number {
-  return CardCost(cardId) + aspectPenalty(game, player, cardId);
+  return CardCost(cardId) + aspectPenalty(game, player, cardId) + delMeekoEventTax(game, player, cardId);
 }
 
 function aspectPenaltyForAspects(game: GameState, player: PlayerId, aspects: string[]): number {

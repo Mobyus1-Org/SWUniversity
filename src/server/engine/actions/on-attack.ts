@@ -1,6 +1,6 @@
 import { Unit } from "@/server/engine/unit";
-import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending } from "@/server/engine/pending-resolution";
-import { GetGame, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer } from "@/server/engine/core-functions";
+import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending } from "@/server/engine/pending-resolution";
+import { GetGame, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
@@ -260,6 +260,34 @@ export function resolveOnAttackTrigger(
             continuation,
           },
         },
+        continuation,
+      };
+    }
+    case "SEC_085": { // Vice Admiral Rampart — On Attack: You may disclose CommandCommandVillainy. If you do, give an Experience token to each of up to 2 other units.
+      if (!CanDisclose(attacker.controller, ["Command", "Command", "Villainy"])) return continuation;
+      const game085 = GetGame();
+      if (!game085) return continuation;
+      const gs085 = game085.currentGameState;
+      const otherUnits085 = [
+        ...gs085.player1.groundArena, ...gs085.player1.spaceArena,
+        ...gs085.player2.groundArena, ...gs085.player2.spaceArena,
+      ].filter(u => u.playId !== attacker.playId);
+      if (otherUnits085.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: attacker.cardId,
+        player: attacker.controller,
+        helperText: "Disclose CommandCommandVillainy to give an Experience token to each of up to 2 other units?",
+        yesLabel: "Disclose",
+        noLabel: "Skip",
+        onYes: {
+          type: "give-xp-multiple",
+          cardId: "SEC_085",
+          player: attacker.controller,
+          maxCount: 2,
+          eligiblePlayIds: otherUnits085.map(u => u.playId),
+          continuation,
+        } satisfies GiveXpMultiplePending,
         continuation,
       };
     }

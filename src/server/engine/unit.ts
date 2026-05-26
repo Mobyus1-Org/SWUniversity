@@ -176,6 +176,7 @@ export class Unit implements UnitInterface {
         case "SOR_092": // Overwhelming Barrage
           if (currentEffect.targetPlayId === this.playId) power += 2;
           break;
+        case "JTL_106": power += 1; break; // Unity of Purpose
         default: break;
       }
     }
@@ -240,6 +241,7 @@ export class Unit implements UnitInterface {
         case "SOR_092": // Overwhelming Barrage
           if (effect.targetPlayId === this.playId) hp += 2;
           break;
+        case "JTL_106": hp += 1; break; // Unity of Purpose
       }
     }
 

@@ -19,10 +19,13 @@ import {
   CardHasWhenPlayed,
   CardHp,
   CardIsUnique,
+  CardPower,
   CardSubtitle,
   CardTitle,
   CardTraits,
   CardType,
+  CardUpgradeHp,
+  CardUpgradePower,
 } from "@/server/engine/card-db/generated";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
@@ -72,7 +75,6 @@ import type {
   SpreadDamagePending,
   TriggerOrderPending,
   UpgradeTargetPending,
-  VaderSearchPending,
 } from "@/server/engine/pending-resolution";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import { collectBounties } from "@/server/engine/actions/bounty";
@@ -117,6 +119,29 @@ export function computeSentinelPlayIds(gs: GameState): string[] {
   return units
     .filter(u => { try { return HasSentinel(u.cardId, u.playId, u.controller); } catch { return false; } })
     .map(u => u.playId);
+}
+
+export function computeUnitBuffs(gs: GameState): Record<string, { power: number; hp: number }> {
+  const units = [
+    ...gs.player1.groundArena, ...gs.player1.spaceArena,
+    ...gs.player2.groundArena, ...gs.player2.spaceArena,
+  ];
+  const result: Record<string, { power: number; hp: number }> = {};
+  for (const u of units) {
+    try {
+      const unit = Unit.FromInterface(u);
+      const basePower = CardPower(u.cardId) || 0;
+      const baseHp = CardHp(u.cardId) || 0;
+      const upgPow = u.upgrades.reduce((sum, upg) => sum + (CardUpgradePower(upg.cardId) || 0), 0);
+      const upgHp = u.upgrades.reduce((sum, upg) => sum + (CardUpgradeHp(upg.cardId) || 0), 0);
+      const powBuff = unit.CurrentPower(false, false) - basePower - upgPow;
+      const hpBuff = unit.TotalHP() - baseHp - upgHp;
+      if (powBuff > 0 || hpBuff > 0) {
+        result[u.playId] = { power: powBuff, hp: hpBuff };
+      }
+    } catch { /* skip if unit state is inconsistent */ }
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -184,9 +209,17 @@ function aspectPenalty(game: GameState, player: PlayerId, cardId: string): numbe
   return missing * 2;
 }
 
+function delMeekoEventTax(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Event") return 0;
+  const opp = otherPlayer(player);
+  const oppUnits = [...ps(game, opp).groundArena, ...ps(game, opp).spaceArena];
+  return oppUnits.some(u => u.cardId === "SOR_034" && !Unit.FromInterface(u).LostAbilities()) ? 1 : 0;
+}
+
 function playCost(game: GameState, player: PlayerId, cardId: string): number {
   return CardCost(cardId)
     + aspectPenalty(game, player, cardId)
+    + delMeekoEventTax(game, player, cardId)
   ;
 }
 
@@ -409,9 +442,10 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
 
 function drainTriggerBag(game: GameState, log: string[]): PendingResolution | null {
   // When-Defeated triggers from Exploit (CR 16d): drain in order, skip units with no WD effect.
+  // Skip nested triggers here — they'll be prioritized by the nested-first block below.
   for (let i = 0; i < game.triggerBag.length; ) {
     const t = game.triggerBag[i];
-    if (t.triggerType !== "when-defeated") { i++; continue; }
+    if (t.triggerType !== "when-defeated" || t.nested) { i++; continue; }
     game.triggerBag.splice(i, 1);
     const wdCtx = t.context as { defeatedUnit?: UnitInterface } | undefined;
     if (!wdCtx?.defeatedUnit) continue;
@@ -421,6 +455,27 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
   }
 
   if (game.triggerBag.length === 0) return null;
+
+  // CR 7.6.11-12: nested triggers (arose during resolution of another trigger) must resolve
+  // before outer sibling triggers. Auto-prioritize them without offering an ordering choice.
+  const nestedTriggers = game.triggerBag.filter(t => t.nested);
+  const hasOuter = game.triggerBag.some(t => !t.nested);
+  if (nestedTriggers.length > 0 && hasOuter) {
+    if (nestedTriggers.length === 1) {
+      game.triggerBag.splice(game.triggerBag.indexOf(nestedTriggers[0]), 1);
+      return processSingleTrigger(nestedTriggers[0], game, log);
+    }
+    return {
+      type: "trigger-order",
+      triggers: nestedTriggers.map(t => ({
+        label: triggerLabel(t),
+        triggerType: t.triggerType,
+        cardId: t.cardId,
+        playId: t.playId,
+        fromPlayer: t.fromPlayer,
+      })),
+    } satisfies TriggerOrderPending;
+  }
 
   if (game.triggerBag.length >= 2) {
     const pending: TriggerOrderPending = {
@@ -829,7 +884,7 @@ function invalidResponse(reason: string): DispatchResponse {
 }
 
 function stateResponse(game: GameState): DispatchResponse {
-  return { dispatchResponseId: randomUUID(), newGameState: game, sentinelPlayIds: computeSentinelPlayIds(game) };
+  return { dispatchResponseId: randomUUID(), newGameState: game, sentinelPlayIds: computeSentinelPlayIds(game), unitBuffs: computeUnitBuffs(game) };
 }
 
 function resolutionResponse(resolution: ResolutionRequest): DispatchResponse {
@@ -1031,8 +1086,11 @@ function completePlayCard(
       }
     }
 
+    // Any triggers pushed while the bag is already non-empty are nested (CR 7.6.11).
+    const nested = game.triggerBag.length > 0;
+
     if (HasShielded(cardId, unit.playId, player)) {
-      game.triggerBag.push({ triggerType: "shielded", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
+      game.triggerBag.push({ triggerType: "shielded", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
     }
     if (opts?.injectEffect) {
       game.currentEffects.push({ ...opts.injectEffect, targetPlayId: unit.playId });
@@ -1045,24 +1103,25 @@ function completePlayCard(
       leaderState.ready &&
       HasKeyword(cardId, "Any", unit.playId, player)
     ) {
-      game.triggerBag.push({ triggerType: "leader-reaction", cardId: "SHD_008", fromPlayer: player });
+      game.triggerBag.push({ triggerType: "leader-reaction", cardId: "SHD_008", fromPlayer: player, nested });
     }
 
     const hasAmbush = HasAmbush(cardId, unit.playId, "Hand", player);
     if (hasAmbush) {
-      game.triggerBag.push({ triggerType: "ambush", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
+      game.triggerBag.push({ triggerType: "ambush", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
     }
 
     if (hasAmbush && CardHasWhenPlayed(unit.cardId)) {
       // Both Ambush and When Played — push both to bag so the player chooses ordering.
-      game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
+      game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
     } else if (!hasAmbush && CardHasWhenPlayed(unit.cardId)) {
       const whenPlayedPending = resolveWhenPlayed(unit.cardId, player, unit.playId);
       if (whenPlayedPending) {
+        // Interactive WP — return immediately; it implicitly takes priority over outer bag triggers.
         return { response: resolutionResponse(pendingToResolution(whenPlayedPending, game)), pending: whenPlayedPending, stateChanged: false };
       }
-      // Auto-resolving WP (returns null) — push to bag so it fires via processSingleTrigger.
-      game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId });
+      // Auto-resolving WP — push to bag, nested if outer triggers are already waiting.
+      game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
     }
   } else if (CardType(cardId) === "Upgrade") {
     const eligiblePlayIds = UpgradeEligibleTargets(cardId, game, player);
@@ -1519,10 +1578,6 @@ function handleChooseTarget(
     // still in the bag after a trigger-order put leader-reaction first).
     const bagAfterAbility = drainTriggerBag(game, log);
     if (bagAfterAbility) {
-      if (bagAfterAbility.type === "attack-target" && bagAfterAbility.source === "ambush") {
-        const ambushUnit = unitByPlayId(game, bagAfterAbility.attackerPlayId);
-        if (ambushUnit) ambushUnit.ready = true;
-      }
       return { response: resolutionResponse(pendingToResolution(bagAfterAbility, game)), pending: bagAfterAbility, stateChanged: false };
     }
     return { response: stateResponse(game), pending: null, stateChanged: true };
@@ -2227,10 +2282,6 @@ function handleChooseOption(
     if (option === "Yes") {
       const nextPending = pending.onYes ?? null;
       if (nextPending) {
-        if (nextPending.type === "attack-target" && nextPending.source === "ambush") {
-          const ambushUnit = unitByPlayId(game, nextPending.attackerPlayId);
-          if (ambushUnit) ambushUnit.ready = true;
-        }
         return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
       }
       // onYes is null — apply inline effect by cardId
@@ -2397,10 +2448,6 @@ function handleChooseOption(
     };
     const nextPending = processSingleTrigger(trigger, game, log);
     if (nextPending) {
-      if (nextPending.type === "attack-target" && nextPending.source === "ambush") {
-        const ambushUnit = unitByPlayId(game, nextPending.attackerPlayId);
-        if (ambushUnit) ambushUnit.ready = true;
-      }
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
     }
     // This trigger auto-resolved — drain the rest of the bag.

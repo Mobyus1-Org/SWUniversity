@@ -5,14 +5,14 @@ import { requireAdminApi } from "@/server/auth/guards";
 import { hydratePuzzleGame } from "@/server/puzzle/adapters/puzzle-runtime";
 import { MongoDBPuzzleRepository } from "@/server/puzzle/adapters/mongodb-puzzle-repository";
 import { SetGame } from "@/server/engine/core-functions";
-import { hydrateGame, computeSentinelPlayIds } from "@/server/engine/dispatch-listener";
+import { hydrateGame, computeSentinelPlayIds, computeUnitBuffs } from "@/server/engine/dispatch-listener";
 import type { PuzzleData } from "@/server/puzzle/puzzle-repository";
 import type { GameState, Game } from "@/lib/engine/game";
 
 const repo = new MongoDBPuzzleRepository();
 
 type ListResponse = { puzzles: PuzzleData[] };
-type LoadResponse = { gameState: GameState; sentinelPlayIds: string[] };
+type LoadResponse = { gameState: GameState; sentinelPlayIds: string[]; unitBuffs: Record<string, { power: number; hp: number }> };
 type ErrorResponse = { error: string };
 type ResponseBody = ListResponse | LoadResponse | PuzzleData | ErrorResponse;
 
@@ -31,8 +31,9 @@ export default async function handler(
         hydrateGame(tempGame);
         SetGame(tempGame);
         const sentinelPlayIds = computeSentinelPlayIds(tempGame.currentGameState);
+        const unitBuffs = computeUnitBuffs(tempGame.currentGameState);
         SetGame(null);
-        return response.status(200).json({ gameState, sentinelPlayIds });
+        return response.status(200).json({ gameState, sentinelPlayIds, unitBuffs });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Not found.";
         return response.status(404).json({ error: msg });

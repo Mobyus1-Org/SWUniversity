@@ -1,7 +1,7 @@
 import { CardTitle } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { CreateTieFighter } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateTieFighter } from "@/server/engine/token-helpers";
 
 /**
  * Resolves a single when-played trigger entry against the current game state.
@@ -25,6 +25,30 @@ export function resolveWhenPlayedTrigger(
       CreateTieFighter(gs, trigger.fromPlayer);
       log.push(`${CardTitle(trigger.cardId)}: TIE Fighter token created.`);
       break;
+    case "SEC_082": { // Chancellor Palpatine — When Played: If you control a leader unit, create 2 Spy tokens and give those tokens Sentinel for this phase.
+      const leader082 = trigger.fromPlayer === 1 ? gs.player1.leader : gs.player2.leader;
+      if (!leader082.deployed) break;
+      for (let i = 0; i < 2; i++) {
+        const spy = CreateSpy(gs, trigger.fromPlayer);
+        gs.currentEffects.push({
+          cardId: "SEC_082",
+          duration: "Phase",
+          affectedPlayer: trigger.fromPlayer,
+          targetPlayId: spy.playId,
+        });
+      }
+      log.push(`${CardTitle(trigger.cardId)}: created 2 Spy tokens with Sentinel.`);
+      break;
+    }
+    case "SEC_083": { // ISB Shuttle — When Played: If a friendly unit was defeated this phase, create a Spy token.
+      const wasDefeated = gs.roundState.cardsLeftPlayThisPhase.some(
+        c => c.fromPlayer === trigger.fromPlayer && (c.reason === "defeated" || c.reason === "token-defeated"),
+      );
+      if (!wasDefeated) break;
+      CreateSpy(gs, trigger.fromPlayer);
+      log.push(`${CardTitle(trigger.cardId)}: created a Spy token.`);
+      break;
+    }
     default:
       break;
   }

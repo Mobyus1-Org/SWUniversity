@@ -108,6 +108,7 @@ function CardVisual({
   cardScale90 = false,
   customGlowClass,
   epicUsed = false,
+  buff,
 }: {
   cardId: string;
   imageId?: string;
@@ -128,6 +129,7 @@ function CardVisual({
   cardScale90?: boolean;
   customGlowClass?: string;
   epicUsed?: boolean;
+  buff?: { power: number; hp: number };
 }) {
   const pattern = imageId ?? cardId;
   const primarySrc = square ? `/assets/cards/square/${pattern}.webp` : getCardImageLink(pattern);
@@ -176,6 +178,13 @@ function CardVisual({
         {typeof centerDamageBadge === "number" && centerDamageBadge > 0 ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-rose-200/25 bg-rose-800/55 text-sm font-black text-white shadow-[0_0_14px_rgba(127,29,29,0.45)]">
             {centerDamageBadge}
+          </span>
+        </div> : null}
+        {buff ? <div className="pointer-events-none absolute top-4 inset-x-0 flex items-center justify-center">
+          <span className="inline-flex w-[95%] items-center justify-center gap-2.5 rounded border border-sky-300/30 bg-sky-500/60 py-0.5 text-[0.6rem] font-black leading-none text-white shadow-[0_0_8px_rgba(14,165,233,0.4)]">
+            <span>+{buff.power}</span>
+            <span>/</span>
+            <span>+{buff.hp}</span>
           </span>
         </div> : null}
       </div>
@@ -334,6 +343,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
   // ---------------------------------------------------------------------------
   const [gameState, setGameState] = React.useState<GameState | null>(null);
   const [sentinelPlayIds, setSentinelPlayIds] = React.useState<string[]>([]);
+  const [unitBuffs, setUnitBuffs] = React.useState<Record<string, { power: number; hp: number }>>({});
   const [gameLog, setGameLog] = React.useState<string[]>([]);
   const [resolutionNeeded, setResolutionNeeded] = React.useState<ResolutionRequest | null>(null);
   const [isResolving, setIsResolving] = React.useState(false);
@@ -431,6 +441,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       // Always update from currentGameState so UI reflects card placement during pending resolutions
       setGameState(payload.currentGameState ?? payload.response.newGameState ?? null);
       if (payload.response.sentinelPlayIds !== undefined) setSentinelPlayIds(payload.response.sentinelPlayIds);
+      if (payload.response.unitBuffs !== undefined) setUnitBuffs(payload.response.unitBuffs);
       setGameLog(payload.gameLog);
       setHistoryLength(payload.historyLength);
       if (payload.response.invalidAction) {
@@ -575,12 +586,14 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
         gameLog: string[];
         historyLength: number;
         sentinelPlayIds: string[];
+        unitBuffs?: Record<string, { power: number; hp: number }>;
         context?: EngineContext;
       };
 
       if (payload.context) roundTripCtxRef.current = payload.context;
       setGameState(payload.gameState);
       setSentinelPlayIds(payload.sentinelPlayIds ?? []);
+      setUnitBuffs(payload.unitBuffs ?? {});
       setGameLog(payload.gameLog);
       setHistoryLength(payload.historyLength);
       setResolutionNeeded(null);
@@ -601,7 +614,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     try {
       const r = await fetch(`/api/puzzles?id=${encodeURIComponent(filename)}`);
       if (!r.ok) throw new Error(((await r.json()) as { error?: string }).error ?? "Load failed");
-      const { gameState: initialState, sentinelPlayIds: initialSentinelIds } = await r.json() as { gameState: GameState; sentinelPlayIds: string[] };
+      const { gameState: initialState, sentinelPlayIds: initialSentinelIds, unitBuffs: initialUnitBuffs } = await r.json() as { gameState: GameState; sentinelPlayIds: string[]; unitBuffs?: Record<string, { power: number; hp: number }> };
 
       if (USE_HTTP_TRANSPORT) {
         // Round-trip mode: seed the initial context locally; no server registration needed
@@ -630,6 +643,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
 
       setGameState(initialState);
       setSentinelPlayIds(initialSentinelIds ?? []);
+      setUnitBuffs(initialUnitBuffs ?? {});
       setGameLog([`Puzzle loaded.`]);
       setResolutionNeeded(null);
       setActionError(null);
@@ -930,6 +944,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       compact
                       arenaScale60
                       sentinel={sentinelPlayIds.includes(unit.playId)}
+                      buff={unitBuffs[unit.playId]}
                       square
                     />
                     {unit.upgrades.map((upgrade) => {
@@ -974,6 +989,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       compact
                       arenaScale60
                       sentinel={sentinelPlayIds.includes(unit.playId)}
+                      buff={unitBuffs[unit.playId]}
                       square
                     />
                     {unit.upgrades.map((upgrade) => {
@@ -1049,6 +1065,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       compact
                       arenaScale60
                       sentinel={sentinelPlayIds.includes(unit.playId)}
+                      buff={unitBuffs[unit.playId]}
                       square
                     />
                     {unit.upgrades.map((upgrade) => {
@@ -1148,6 +1165,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       compact
                       arenaScale60
                       sentinel={sentinelPlayIds.includes(unit.playId)}
+                      buff={unitBuffs[unit.playId]}
                       square
                     />
                     {unit.upgrades.map((upgrade) => {
@@ -1227,6 +1245,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       compact
                       arenaScale60
                       sentinel={sentinelPlayIds.includes(unit.playId)}
+                      buff={unitBuffs[unit.playId]}
                       square
                     />
                     {unit.upgrades.map((upgrade) => {
@@ -1274,6 +1293,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         compact
                         arenaScale60
                         sentinel={sentinelPlayIds.includes(unit.playId)}
+                        buff={unitBuffs[unit.playId]}
                         square
                       />
                       {unit.upgrades.map((upgrade) => {
@@ -1315,6 +1335,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                       compact
                       arenaScale60
                       sentinel={sentinelPlayIds.includes(unit.playId)}
+                      buff={unitBuffs[unit.playId]}
                       square
                     />
                     {unit.upgrades.map((upgrade) => {
@@ -1419,6 +1440,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
                         compact
                         arenaScale60
                         sentinel={sentinelPlayIds.includes(unit.playId)}
+                        buff={unitBuffs[unit.playId]}
                         square
                       />
                       {unit.upgrades.map((upgrade) => {

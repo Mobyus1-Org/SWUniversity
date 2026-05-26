@@ -171,4 +171,5 @@ export interface DispatchResponse {
   invalidAction?: boolean;
   invalidReason?: string;
   sentinelPlayIds?: string[];
+  unitBuffs?: Record<string, { power: number; hp: number }>;
 }

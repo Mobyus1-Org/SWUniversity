@@ -540,6 +540,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SHD_012": //Bo-Katan Kryze - Princess in Exile
     case "TWI_005": //Count Dooku - Face of the Confederacy
     case "TWI_186": //San Hill - Chairman of the Banking Clan
+    case "SEC_085": //Vice Admiral Rampart - On Schedule
       return true;
     default: break;
   }

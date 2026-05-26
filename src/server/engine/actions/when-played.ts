@@ -167,6 +167,9 @@ export function resolveWhenPlayed(
       game.gameLog.push(`${CardTitle(cardId)}: 2 X-Wing tokens created.`);
       return null;
     }
+    case "SEC_082": // Chancellor Palpatine — When Played: handled in when-played-trigger.ts
+    case "SEC_083": // ISB Shuttle — When Played: handled in when-played-trigger.ts
+      return null;
     case "SEC_092": { // I Am the Senate — "Create 5 Spy tokens."
       const gs092 = game.currentGameState;
       for (let i = 0; i < 5; i++) CreateSpy(gs092, player);
@@ -514,6 +517,23 @@ export function resolveWhenPlayed(
         eligiblePlayIds: troopers.map(u => u.playId),
         continuation: null,
       } satisfies GiveXpMultiplePending;
+    }
+    case "JTL_106": { // Unity of Purpose — For each friendly unit with a different name, give each unit you control +1/+1 for this phase.
+      const gs106 = game.currentGameState;
+      const friendlyUnits106 = player === 1
+        ? [...gs106.player1.groundArena, ...gs106.player1.spaceArena]
+        : [...gs106.player2.groundArena, ...gs106.player2.spaceArena];
+      const distinctCount106 = new Set(friendlyUnits106.map(u => u.cardId)).size;
+      if (distinctCount106 === 0) return null;
+      for (let i = 0; i < distinctCount106; i++) {
+        gs106.currentEffects.push({
+          cardId: "JTL_106",
+          duration: "Phase",
+          affectedPlayer: player,
+        });
+      }
+      game.gameLog.push(`${CardTitle(cardId)}: giving each friendly unit +${distinctCount106}/+${distinctCount106} for this phase.`);
+      return null;
     }
     case "JTL_234": // Torpedo Barrage — Deal 5 indirect damage to a player.
       return {

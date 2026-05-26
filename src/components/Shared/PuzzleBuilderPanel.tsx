@@ -210,7 +210,7 @@ function initialBuilderState(): BuilderState {
     player1: emptyPlayer(),
     player2: {
       ...emptyPlayer(),
-      deck: ["LOF_254", "LOF_254", "LOF_254", "LAW_260", "LAW_260"],
+      deck: ["LAW_260", "LAW_260", "LOF_254", "LOF_254", "LOF_254"],
     },
   };
 }
