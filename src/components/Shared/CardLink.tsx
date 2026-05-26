@@ -6,22 +6,27 @@ type PreviewHandlers = {
   onPreviewEnd: () => void;
 };
 
-// Strips "@[SET_XYZ]" wrapper if present, returning the raw card ID.
-function extractCardId(raw: string): string {
-  const match = /^@\[(.+)\]$/.exec(raw.trim());
-  return match ? match[1] : raw.trim();
+// Parses "@[SET_XYZ]" or "@[SET_XYZ-L]", returning the base cardId and whether
+// the leader unit side (back face) was requested via the "-L" suffix.
+function extractCardId(raw: string): { cardId: string; showLeaderUnit: boolean } {
+  const inner = (/^@\[(.+)\]$/.exec(raw.trim())?.[1] ?? raw.trim());
+  if (inner.endsWith("-L")) {
+    return { cardId: inner.slice(0, -2), showLeaderUnit: true };
+  }
+  return { cardId: inner, showLeaderUnit: false };
 }
 
 export function CardLink({ raw, ...handlers }: { raw: string } & PreviewHandlers) {
-  const cardId = extractCardId(raw);
+  const { cardId, showLeaderUnit } = extractCardId(raw);
   const title = CardTitle(cardId);
   const subtitle = CardSubtitle(cardId);
   const label = subtitle ? `${title} — ${subtitle}` : title;
+  const imageId = showLeaderUnit ? `${cardId}_BACK` : cardId;
 
   return (
     <span
       className="cursor-pointer underline decoration-dotted underline-offset-2 hover:text-sky-300 transition-colors"
-      onMouseEnter={() => handlers.onPreviewStart({ imageId: cardId, cardId, label })}
+      onMouseEnter={() => handlers.onPreviewStart({ imageId, cardId, label })}
       onMouseLeave={handlers.onPreviewEnd}
     >
       {label}

@@ -1536,7 +1536,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
       </div>
     </div>
 
-    {preview ? <div className="pointer-events-none fixed bottom-4 right-4 z-50 hidden w-[27rem] rounded-lg border border-white/15 bg-black/85 p-2 shadow-2xl backdrop-blur-sm lg:block">
+    {preview ? <div className="pointer-events-none fixed bottom-4 right-4 z-[60] hidden w-[27rem] rounded-lg border border-white/15 bg-black/85 p-2 shadow-2xl backdrop-blur-sm lg:block">
       <img
         src={previewImageSrc}
         alt={preview.label ?? preview.cardId}
