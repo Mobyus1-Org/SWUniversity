@@ -90,6 +90,7 @@ import { PilotingEligibleVehicles } from "@/server/engine/card-db/upgrade-attach
 import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dictionaries.ts/leader-pilot-deploy";
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
+import { applyDarksaberOnAttack } from "./on-attack-helper";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
