@@ -648,7 +648,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
 
   // Show solution modal when puzzle is won
   React.useEffect(() => {
-    if (gameState && deriveStatus(gameState) === "won" && puzzleMeta && puzzleMeta.intendedSolution.length > 0) {
+    if (gameState && deriveStatus(gameState) === "won" && puzzleMeta) {
       setShowSolutionModal(true);
     }
   }, [gameState, puzzleMeta]);
@@ -757,8 +757,8 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
     : new Set();
   const hasDiscardSelection = selectableDiscardPlayIds.size > 0;
 
-  const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[opponent.discard.length - 1] : null;
-  const latestPlayerDiscard = player.discard.length > 0 ? player.discard[player.discard.length - 1] : null;
+  const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[0] : null;
+  const latestPlayerDiscard = player.discard.length > 0 ? player.discard[0] : null;
   const hasPrompt = resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "Trigger" || resolutionNeeded?.type === "Player" || resolutionNeeded?.type === "DeckSearch";
   const hasPlotPrompt = resolutionNeeded?.type === "Plot";
   const getUnitGlowClass = (playId: string) =>
@@ -1662,7 +1662,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
           {discardCards.length === 0
             ? <div className="py-8 text-center text-sm text-white/40">Empty</div>
             : <div className="flex flex-wrap gap-2 justify-start">
-              {[...discardCards].reverse().map(d => {
+              {discardCards.map(d => {
                 const isSelectable = selectableDiscardPlayIds.has(d.playId);
                 const isSelected = selectedTargetPlayIds.includes(d.playId);
                 return <button
@@ -1726,19 +1726,26 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
           {puzzleMeta.author ? <p className="mt-0.5 text-xs text-white/50">By {puzzleMeta.author}</p> : null}
           {puzzleMeta.inspiredBy ? <p className="mt-0.5 text-xs text-white/40">Inspired by {puzzleMeta.inspiredBy}</p> : null}
         </div>
-        <p className="mb-3 text-sm text-white/60">Here&apos;s the author&apos;s intended solution:</p>
-        <ul className="mb-5 space-y-2">
-          {puzzleMeta.intendedSolution.map((step, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-white/90">
-              <img src="/assets/puzzle.svg" alt="" className="mt-1.25 h-2.5 w-2.5 shrink-0 brightness-0 invert" />
-              <span><CardLinkText text={step} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} /></span>
-            </li>
-          ))}
-        </ul>
+        {puzzleMeta.intendedSolution.length > 0 ? <>
+          <p className="mb-3 text-sm text-white/60">Here&apos;s the author&apos;s intended solution:</p>
+          <ul className="mb-5 space-y-2">
+            {puzzleMeta.intendedSolution.map((step, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-white/90">
+                <img src="/assets/puzzle.svg" alt="" className="mt-1.25 h-2.5 w-2.5 shrink-0 brightness-0 invert" />
+                <span><CardLinkText text={step} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} /></span>
+              </li>
+            ))}
+          </ul>
+        </> : null}
         <p className="mb-4 text-xs text-white/50">If your solution was different, feel free to let us know on our <a href="https://discord.gg/swuniversity" target="_blank" rel="noopener noreferrer" className="text-sky-400 underline hover:text-sky-300">Discord</a>!</p>
-        <button type="button" onClick={() => setShowSolutionModal(false)} className="w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/20">
-          Close
-        </button>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setShowSolutionModal(false)} className="flex-1 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/20">
+            Close
+          </button>
+          <button type="button" onClick={() => { setShowSolutionModal(false); setGameState(null); setPuzzleName(null); setPuzzleMeta(null); setActionError(null); }} className="flex-1 rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500/25">
+            Puzzle Home
+          </button>
+        </div>
       </div>
     </div> : null}
 
