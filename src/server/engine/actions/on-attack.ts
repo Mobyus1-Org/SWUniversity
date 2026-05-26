@@ -1,33 +1,9 @@
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending } from "@/server/engine/pending-resolution";
-import { GetGame, UnitAttackedThisPhase, TraitContains } from "@/server/engine/core-functions";
+import { GetGame, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { CardTitle } from "@/server/engine/card-db/generated";
-
-/**
- * Give an Experience token to each other friendly Mandalorian unit (Darksaber On Attack).
- * Safe to call when game singleton may not be set — returns silently if no game.
- */
-export function applyDarksaberOnAttack(attacker: Unit): void {
-  const game = GetGame();
-  if (!game) return;
-  const gs = game.currentGameState;
-  const player = attacker.controller;
-  const friendly = player === 1
-    ? [...gs.player1.groundArena, ...gs.player1.spaceArena]
-    : [...gs.player2.groundArena, ...gs.player2.spaceArena];
-  for (const unit of friendly) {
-    if (unit.playId === attacker.playId) continue;
-    if (TraitContains(unit.cardId, "Mandalorian", player, unit.playId)) {
-      unit.upgrades.push({
-        cardId: "SOR_T01",
-        playId: String(gs.nextPlayId++),
-        owner: player,
-        controller: player,
-      });
-    }
-  }
-}
+import { applyDarksaberOnAttack } from "../on-attack-helper";
 
 /**
  * On Attack abilities — called after the attack target is chosen.
@@ -44,11 +20,9 @@ export function resolveOnAttackTrigger(
   continuation: ResolveAttackPending,
   opts: { skipOrderingPrompt?: boolean } = {},
 ): PendingResolution | null {
-  const hasDarksaber = attacker.upgrades.some(u => u.cardId === "SHD_126");
-  const hasVambrace = attacker.upgrades.some(u => u.cardId === "SHD_177");
-  const hasHardpointBlaster = attacker.upgrades.some(u => u.cardId === "SOR_121");
-  const hasNativeAbility = ["SOR_006", "SOR_010", "SOR_014", "SHD_012", "TWI_005", "TWI_186"].includes(attacker.cardId);
-  const hasOtherTrigger = hasDarksaber || hasVambrace || hasHardpointBlaster || hasNativeAbility;
+  const activeUpgrades = attacker.upgrades.filter(u => UpgradeGrantsOnAttack(u.cardId, u.controller, u.playId));
+  const unitHasOnAttack = HasOnAttack(attacker.cardId, attacker.controller, attacker.playId);
+  const hasOtherTrigger = activeUpgrades.length > 0 || unitHasOnAttack;
 
   // When attacking a unit: if this attacker has Saboteur AND another on-attack trigger,
   // give the player ordering choice before resolving either.
@@ -60,11 +34,9 @@ export function resolveOnAttackTrigger(
     if (hasSab) {
       const triggers: OnAttackTriggerEntry[] = [
         { cardId: "saboteur", label: `${CardTitle(attacker.cardId)} — Saboteur` },
+        ...activeUpgrades.map(u => ({ cardId: u.cardId, label: `${CardTitle(u.cardId)} — On Attack` })),
       ];
-      if (hasVambrace) triggers.push({ cardId: "SHD_177", label: "Vambrace Flamethrower — On Attack" });
-      if (hasDarksaber) triggers.push({ cardId: "SHD_126", label: "The Darksaber — On Attack" });
-      if (hasHardpointBlaster) triggers.push({ cardId: "SOR_121", label: "Hardpoint Heavy Blaster — On Attack" });
-      if (hasNativeAbility) triggers.push({ cardId: attacker.cardId, label: `${CardTitle(attacker.cardId)} — On Attack` });
+      if (HasOnAttack(attacker.cardId)) triggers.push({ cardId: attacker.cardId, label: `${CardTitle(attacker.cardId)} — On Attack` });
       return {
         type: "on-attack-order",
         attackerPlayId: attacker.playId,
@@ -75,67 +47,80 @@ export function resolveOnAttackTrigger(
     }
   }
 
-  // Upgrade-granted: Darksaber — give XP to each other friendly Mandalorian (automatic, no player input)
-  if (hasDarksaber) {
-    applyDarksaberOnAttack(attacker);
-  }
-
-  // Upgrade-granted: Hardpoint Heavy Blaster — optionally deal 2 damage to a unit in the defender's arena
-  if (hasHardpointBlaster && continuation.target.type === "unit") {
-    const game121 = GetGame();
-    if (game121) {
-      const gs121 = game121.currentGameState;
-      const defenderPlayId = continuation.target.playId;
-      const inGround = [...gs121.player1.groundArena, ...gs121.player2.groundArena].some(u => u.playId === defenderPlayId);
-      const arenaUnits = inGround
-        ? [...gs121.player1.groundArena, ...gs121.player2.groundArena]
-        : [...gs121.player1.spaceArena, ...gs121.player2.spaceArena];
-      if (arenaUnits.length > 0) {
-        return {
-          type: "ability-option",
-          cardId: "SOR_121",
-          helperText: "Deal 2 damage to a unit in the defender's arena?",
-          onYes: {
-            type: "ability-target",
-            cardId: "SOR_121",
-            fromPlayIds: arenaUnits.map(u => u.playId),
-            continuation,
-          },
-          continuation,
-        };
-      }
+  // Effect-granted On Attack abilities
+  for(const currentEffect of GetCurrentEffectsForPlayer(attacker.controller)) {
+    if (currentEffect.targetPlayId && currentEffect.targetPlayId !== attacker.playId) continue;
+    switch (currentEffect.cardId) {
+      //TODO effects that grant on-attack triggers
     }
   }
 
-  // Upgrade-granted: Vambrace Flamethrower — optionally deal 3 damage split among enemy ground units
-  if (hasVambrace) {
-    const game = GetGame();
-    if (game) {
-      const gs = game.currentGameState;
-      const opponent = attacker.controller === 1 ? 2 : 1;
-      const enemyGround = (opponent === 1 ? gs.player1.groundArena : gs.player2.groundArena)
-        .map(u => u.playId);
-      if (enemyGround.length > 0) {
-        const spreadPending: SpreadDamagePending = {
-          type: "spread-damage",
-          cardId: "SHD_177",
-          player: attacker.controller,
-          totalDamage: 3,
-          optional: true,
-          eligiblePlayIds: enemyGround,
-          continuation,
-        };
-        return {
-          type: "ability-option",
-          cardId: "SHD_177",
-          helperText: "Deal 3 damage divided among enemy ground units?",
-          onYes: spreadPending,
-          continuation,
-        };
+  //Upgrade-granted On Attack abilities
+  for (const upgrade of activeUpgrades) {
+    switch (upgrade.cardId) {
+      case "SOR_121": { // Hardpoint Heavy Blaster
+        if (continuation.target.type === "unit") {
+          const game = GetGame();
+          if (game) {
+            const gs = game.currentGameState;
+            const defenderPlayId = continuation.target.playId;
+            const inGround = [...gs.player1.groundArena, ...gs.player2.groundArena].some(u => u.playId === defenderPlayId);
+            const arenaUnits = inGround
+              ? [...gs.player1.groundArena, ...gs.player2.groundArena]
+              : [...gs.player1.spaceArena, ...gs.player2.spaceArena];
+            if (arenaUnits.length > 0) {
+              return {
+                type: "ability-option",
+                cardId: "SOR_121",
+                helperText: "Deal 2 damage to a unit in the defender's arena?",
+                onYes: {
+                  type: "ability-target",
+                  cardId: "SOR_121",
+                  fromPlayIds: arenaUnits.map(u => u.playId),
+                  continuation,
+                },
+                continuation,
+              };
+            }
+          }
+        }
+        break;
+      }
+      case "SHD_126": { // The Darksaber
+        applyDarksaberOnAttack(attacker);
+        break;
+      }
+      case "SHD_177": { // Vambrace Flamethrower
+        const game = GetGame();
+        if (game) {
+          const gs = game.currentGameState;
+          const opponent = attacker.controller === 1 ? 2 : 1;
+          const enemyGround = (opponent === 1 ? gs.player1.groundArena : gs.player2.groundArena)
+            .map(u => u.playId);
+          if (enemyGround.length > 0) {
+            const spreadPending: SpreadDamagePending = {
+              type: "spread-damage",
+              cardId: "SHD_177",
+              player: attacker.controller,
+              totalDamage: 3,
+              optional: true,
+              eligiblePlayIds: enemyGround,
+              continuation,
+            };
+            return {
+              type: "ability-option",
+              cardId: "SHD_177",
+              helperText: "Deal 3 damage divided among enemy ground units?",
+              onYes: spreadPending,
+              continuation,
+            };
+          }
+        }
+        break;
       }
     }
   }
-
+  // innate On Attack abilities
   switch (attacker.cardId) {
     case "SOR_010": { // Darth Vader "On Attack: You may deal 2 damage to a unit."
       const game = GetGame();
@@ -280,6 +265,6 @@ export function resolveOnAttackTrigger(
     }
     default:
       // If an upgrade-only trigger fired but no native ability, return continuation so combat proceeds.
-      return (hasDarksaber || hasVambrace || hasHardpointBlaster) ? continuation : null;
+      return activeUpgrades.length > 0 ? continuation : null;
   }
 }

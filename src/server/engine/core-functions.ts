@@ -473,7 +473,7 @@ export function LeaderCanDeployAsPilot(cardId: string): boolean {
   }
 }
 
-export function drawCardForPlayer(gs: GameState, log: string[], player: PlayerId): void {
+export function DrawCardForPlayer(gs: GameState, log: string[], player: PlayerId): void {
   const p = player === 1 ? gs.player1 : gs.player2;
   if (p.deck.length > 0) {
     p.hand.push(p.deck.pop()!);
@@ -481,5 +481,70 @@ export function drawCardForPlayer(gs: GameState, log: string[], player: PlayerId
   } else {
     p.base.damage += 3;
     log.push(`Player ${player} drew from an empty deck — 3 damage to their base.`);
+  }
+}
+
+export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string): boolean {
+  if (player && playId) {
+    const unit = GetUnitInPlay(playId, player);
+    if (unit) {
+      if (unit.LostAbilities()) return false;
+      //current effects that grant on-attack abilities
+      for(const currentEffect of GetCurrentEffectsForPlayer(unit.controller)) {
+        if (currentEffect.targetPlayId && currentEffect.targetPlayId !== playId) continue;
+
+        if (EffectGrantsOnAttack(currentEffect.cardId)) {
+          return true;
+        }
+      }
+
+      //upgrades that grant on-attack abilities
+      for(const upgrade of unit.upgrades) {
+        if(UpgradeGrantsOnAttack(upgrade.cardId, player, upgrade.playId)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  //cards with innate on-attack abilities
+  switch (cardId) {
+    case "SOR_006": //Emperor Palpatine - Galactic Ruler
+    case "SOR_010": //Darth Vader - Dark Lord of the Sith
+    case "SOR_014": //Sabine Wren - Galvanized Revolutionary
+    case "SHD_012": //Bo-Katan Kryze - Princess in Exile
+    case "TWI_005": //Count Dooku - Face of the Confederacy
+    case "TWI_186": //San Hill - Chairman of the Banking Clan
+      return true;
+    default: break;
+  }
+
+  return false;
+}
+
+export function EffectGrantsOnAttack(cardId: string): boolean {
+  switch (cardId) {
+    case "JTL_156": //Trench Run
+    case "LOF_205": //Force Speed
+    case "LAW_169": //Payroll Heist
+      return true;
+    default: break;
+  }
+
+  return false;
+}
+
+export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?: string): boolean {
+  if (player && playId) {
+    //for conditional on-attack abilities granted by upgrades
+    //TODO: example Jedi Lightsaber
+  }
+
+  switch (cardId) {
+    case "SHD_126": //The Darksaber
+    case "SHD_177": //Vambrace Flamethrower
+    case "SOR_121": //Hardpoint Heavy Blaster
+      return true;
+    default: return false;
   }
 }

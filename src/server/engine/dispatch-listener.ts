@@ -27,7 +27,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { CardIsLeader, drawCardForPlayer, GetGame, GetUnitsForPlayer, SetGame, TraitContains, UnitAttackedThisPhase } from "@/server/engine/core-functions";
+import { CardIsLeader, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, SetGame, TraitContains, UnitAttackedThisPhase } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -78,7 +78,7 @@ import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-r
 import { resolveWhenPlayed } from "@/server/engine/actions/when-played";
 import { executeRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
 import { resolveWhenPlayedTrigger } from "@/server/engine/actions/when-played-trigger";
-import { resolveOnAttackTrigger, applyDarksaberOnAttack } from "@/server/engine/actions/on-attack";
+import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
@@ -436,23 +436,6 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
  * Returns a PendingResolution if the trigger requires player input (with
  * combat queued as continuation), or null if no on-attack triggers are present.
  */
-function drainOnAttackTriggerBag(
-  game: GameState,
-  attacker: Unit,
-  continuation: ResolveAttackPending,
-): PendingResolution | null {
-  const onAttackTriggers = game.triggerBag.filter(t => t.triggerType === "on-attack");
-  if (onAttackTriggers.length === 0) return null;
-
-  if (onAttackTriggers.length === 1) {
-    const triggerIndex = game.triggerBag.indexOf(onAttackTriggers[0]);
-    game.triggerBag.splice(triggerIndex, 1);
-    return resolveOnAttackTrigger(attacker, continuation);
-  }
-
-  // 2+ triggers: ordering needed (future) — skip for now
-  return null;
-}
 
 function updateDefeatedPlayers(game: GameState): void {
   const p1Max = CardHp(game.player1.base.cardId) || 30;
@@ -1226,12 +1209,7 @@ function handleInitiateAttack(
   if (!attacker.ready)
     return { response: invalidResponse(`Unit ${playId} is exhausted.`), pending: null, stateChanged: false };
 
-  // Check for optional On Attack abilities before picking the attack target
-  // On-attack triggers go into the bag here; they drain AFTER target is chosen.
-  const attackerHasDarksaber = attacker.upgrades.some(u => u.cardId === "SHD_126");
-  const attackerHasVambrace = attacker.upgrades.some(u => u.cardId === "SHD_177");
-  const attackerHasHardpoint = attacker.upgrades.some(u => u.cardId === "SOR_121");
-  if (["SOR_006", "SOR_010", "SOR_014", "SHD_012", "TWI_005", "TWI_186"].includes(attacker.cardId) || attackerHasDarksaber || attackerHasVambrace || attackerHasHardpoint) {
+  if (HasOnAttack(attacker.cardId, attacker.controller, attacker.playId)) {
     game.triggerBag.push({ triggerType: "on-attack", cardId: attacker.cardId, fromPlayer: player });
   }
 
@@ -1382,26 +1360,25 @@ function handleChooseTarget(
     if (!target)
       return { response: invalidResponse("choose-target must include targetPlayIds or targetZones containing 'Base'."), pending, stateChanged: false };
 
-    // For ability-initiated attacks (e.g. Rebel Assault, Precision Fire), the trigger bag may not
-    // have been populated at initiate time, so fill it now if needed.
-    if (attacker && ["SOR_006", "SOR_010", "SOR_014", "TWI_005"].includes(attacker.cardId)) {
-      const alreadyQueued = game.triggerBag.some(
-        (t) => t.triggerType === "on-attack" && t.cardId === attacker.cardId,
-      );
+    // Ability-initiated attacks (e.g. Rebel Assault, Precision Fire) skip handleAttack,
+    // so queue the on-attack trigger now if it wasn't already.
+    if (attacker && HasOnAttack(attacker.cardId, attacker.controller, attacker.playId)) {
+      const alreadyQueued = game.triggerBag.some(t => t.triggerType === "on-attack");
       if (!alreadyQueued) {
         game.triggerBag.push({ triggerType: "on-attack", cardId: attacker.cardId, fromPlayer: attacker.controller });
       }
     }
 
-    // Drain on-attack triggers; if any fire, queue combat as continuation.
     const resolveAttackPending: ResolveAttackPending = {
       type: "resolve-attack",
       attackerPlayId: pending.attackerPlayId,
       target,
       continuation: pending.continuation ?? null,
     };
-    const onAttackTriggerPending = attacker
-      ? drainOnAttackTriggerBag(game, attacker, resolveAttackPending)
+
+    const onAttackTriggerIndex = game.triggerBag.findIndex(t => t.triggerType === "on-attack");
+    const onAttackTriggerPending = attacker && onAttackTriggerIndex !== -1
+      ? (game.triggerBag.splice(onAttackTriggerIndex, 1), resolveOnAttackTrigger(attacker, resolveAttackPending))
       : null;
     if (onAttackTriggerPending) {
       if (onAttackTriggerPending.type === "resolve-attack") {
@@ -2291,7 +2268,7 @@ function handleChooseOption(
     if (option === "Yes") {
       switch (pending.cardId) {
         case "SHD_027": {
-          drawCardForPlayer(game, log, pending.collectingPlayer);
+          DrawCardForPlayer(game, log, pending.collectingPlayer);
           const nextPending = pending.continuation ?? null;
           updateDefeatedPlayers(game);
           if (nextPending) {
@@ -3141,7 +3118,7 @@ function applyAbilityEffect(
         dmgTarget006.damage += 1;
         game.gameLog.push(`${CardTitle("SOR_006")}: dealt 1 damage to ${CardTitle(dmgTarget006.cardId)}.`);
       }
-      drawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
+      DrawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
     case "SOR_006_D": { // When Deployed: take control of chosen damaged non-leader unit.
@@ -3179,7 +3156,7 @@ function applyAbilityEffect(
         dmgTarget0A.damage += 1;
         game.gameLog.push(`${CardTitle("SOR_006")}: dealt 1 damage to ${CardTitle(dmgTarget0A.cardId)}.`);
       }
-      drawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
+      DrawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
     case "TWI_128": {
