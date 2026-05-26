@@ -93,7 +93,7 @@ export function LoadPuzzlePanel({ onPuzzleLoaded }: Props) {
       ) : puzzles.length === 0 ? (
         <p className="text-sm opacity-60">No puzzles found.</p>
       ) : (
-        <ul className="h-128 space-y-2 overflow-y-auto pr-1">
+        <ul className="h-7/8 space-y-2 overflow-y-auto pr-1">
           {sortedPuzzles.map((entry) => {
             const { id, name, description, difficulty } = entry;
             const isSelected = selectedId === id;
