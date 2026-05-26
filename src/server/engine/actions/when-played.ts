@@ -266,6 +266,19 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SOR_078": // Vanquish — "Defeat a non-leader unit."
+    case "TWI_077": { // reprint of SOR_078
+      const eligible078 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+        .filter(u => !Unit.FromInterface(u).IsLeader());
+      if (eligible078.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: eligible078.map(u => u.playId),
+        continuation: null,
+      };
+    }
     case "SOR_135": { // Emperor Palpatine — When Played: Deal 6 damage divided as you choose among enemy units.
       const enemies135 = GetUnitsForPlayer(player === 1 ? 2 : 1);
       if (enemies135.length === 0) return null;

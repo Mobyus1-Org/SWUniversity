@@ -45,7 +45,13 @@ export class Unit implements UnitInterface {
   }
 
   IsLeader(): boolean {
-    return CardIsLeader(this.cardId);
+    return CardIsLeader(this.cardId) || this.HasPilotLeader();
+  }
+
+  HasPilotLeader(): boolean {
+    const exceptions = ["JTL_013"]//Poe Dameron - I Can Fly Anything
+
+    return this.upgrades.some(u => CardIsLeader(u.cardId) && !exceptions.includes(u.cardId));
   }
 
   IsTokenUnit(): boolean {

@@ -311,8 +311,10 @@ export const Cards = {
       attackPatternDelta: "SOR_106",
       takedown: "SOR_077",
       overwhelmingBarrage: "SOR_092",
+      vanquish: "SOR_078",
     },
     twi: {
+      vanquish: "TWI_077",
       droidDeployment: "TWI_237",
       dropIn: "TWI_251",
       takeCaptive: "TWI_128",

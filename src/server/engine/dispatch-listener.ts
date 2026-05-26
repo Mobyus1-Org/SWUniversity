@@ -2799,6 +2799,17 @@ function applyAbilityEffect(
       if (defeatPend077) return injectContinuation(defeatPend077, pending.continuation);
       return pending.continuation;
     }
+    case "SOR_078": // Vanquish — defeat a non-leader unit.
+    case "TWI_077": { // reprint of SOR_078
+      if (!targetPlayId) break;
+      const target078 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (!target078) break;
+      if (CardIsLeader(target078.cardId)) break;
+      const defeatPend078 = defeatUnit(game.currentGameState, game.gameLog, target078);
+      game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target078.cardId)}.`);
+      if (defeatPend078) return injectContinuation(defeatPend078, pending.continuation);
+      return pending.continuation;
+    }
     case "SEC_034": { // Cad Bane — defeat a unit with ≤2 remaining HP
       if (!targetPlayId) break;
       const target034 = unitByPlayId(game.currentGameState, targetPlayId);
