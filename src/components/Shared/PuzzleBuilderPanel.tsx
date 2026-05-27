@@ -180,6 +180,9 @@ type BuilderState = {
   name: string;
   description: string;
   difficulty: number;
+  author: string;
+  inspiredBy?: string;
+  intendedSolution: string[];
   activePlayer: 1 | 2;
   gamePhase: GamePhase;
   currentRound: number;
@@ -202,6 +205,9 @@ function initialBuilderState(): BuilderState {
     name: "",
     description: "",
     difficulty: 1,
+    author: "",
+    inspiredBy: "",
+    intendedSolution: [],
     activePlayer: 1,
     gamePhase: "ActionPhase" as GamePhase,
     currentRound: 1,
@@ -259,11 +265,14 @@ function parseRawPlayer(p: Record<string, unknown>): PlayerBuilderState {
   };
 }
 
-function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; difficulty: number }): BuilderState {
+function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[] }): BuilderState {
   return {
     name: meta.name,
     description: meta.description,
     difficulty: meta.difficulty,
+    author: meta.author ?? "",
+    inspiredBy: meta.inspiredBy ?? "",
+    intendedSolution: meta.intendedSolution ?? [],
     activePlayer: Number(raw.activePlayer) === 2 ? 2 : 1,
     gamePhase: resolvePhase(raw.gamePhase),
     currentRound: Number(raw.currentRound ?? 1),
@@ -757,9 +766,12 @@ function BoardPreview({ state, cards }: { state: BuilderState; cards: CardCatalo
 type Props = {
   onClose: () => void;
   onSaved: (id: string) => void;
+  onTest?: (data: { rawInitial?: unknown; gameState: unknown; sentinelPlayIds?: string[]; unitBuffs?: Record<string, { power: number; hp: number }> }) => void;
+  initialRaw?: unknown;
+  initialMeta?: { name?: string; description?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[] };
 };
 
-export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
+export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initialMeta }: Props) {
   const [cards, setCards] = React.useState<CardCatalogEntry[]>([]);
   const [cardsLoading, setCardsLoading] = React.useState(true);
   const [state, setState] = React.useState<BuilderState>(initialBuilderState);
@@ -777,13 +789,16 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
       try {
         const json = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
         let gamestate: Record<string, unknown>;
-        let meta = { name: "New Puzzle", description: "", difficulty: 1 };
+        let meta = { name: "New Puzzle", description: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [] as string[] };
         if (json.initialGamestate !== undefined) {
           gamestate = json.initialGamestate as Record<string, unknown>;
           meta = {
             name: String(json.name ?? "New Puzzle"),
             description: String(json.description ?? ""),
             difficulty: Number(json.difficulty ?? 1),
+            author: String(json.author ?? ""),
+            inspiredBy: String(json.inspiredBy ?? ""),
+            intendedSolution: Array.isArray(json.intendedSolution) ? json.intendedSolution.map(String) : [],
           };
         } else {
           gamestate = json;
@@ -804,6 +819,18 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
       .finally(() => setCardsLoading(false));
   }, []);
 
+  // Initialize from provided raw initial data when opening for editing a tested puzzle
+  React.useEffect(() => {
+    if (initialRaw) {
+      try {
+        const meta = initialMeta ?? { name: "Tested Puzzle", description: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [] };
+        setState(fromRaw(initialRaw as Record<string, unknown>, { name: String(meta.name ?? ""), description: String(meta.description ?? ""), difficulty: Number(meta.difficulty ?? 1), author: String((meta as any).author ?? ""), inspiredBy: String((meta as any).inspiredBy ?? ""), intendedSolution: (meta as any).intendedSolution ?? [] }));
+      } catch {
+        // ignore invalid initial raw
+      }
+    }
+  }, [initialRaw]);
+
   function patchGlobal(delta: Partial<BuilderState>) {
     setState((s) => ({ ...s, ...delta }));
   }
@@ -816,6 +843,9 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
       id: "",
       name: state.name.trim(),
       description: state.description.trim(),
+      author: state.author?.trim() ?? "",
+      inspiredBy: state.inspiredBy?.trim() ?? "",
+      intendedSolution: state.intendedSolution ?? [],
       difficulty: state.difficulty,
       initialGamestate: toRaw(state),
     };
@@ -833,6 +863,26 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
         setSaveError(err instanceof Error ? err.message : "Save failed."),
       )
       .finally(() => setSaving(false));
+  }
+
+  async function handleTest() {
+    setSaveError(null);
+    setSaving(true);
+    try {
+      const payload = { initialGamestate: toRaw(state) };
+      const res = await fetch("/api/puzzles/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Test failed");
+      const data = await res.json();
+      if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, ...data });
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Test failed.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -890,6 +940,24 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
                     value={state.description}
                     onChange={(e) => patchGlobal({ description: e.target.value })}
                     placeholder="Optional description…"
+                    className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
+                  />
+                </FieldRow>
+                <FieldRow label="Author">
+                  <input
+                    type="text"
+                    value={state.author ?? ""}
+                    onChange={(e) => patchGlobal({ author: e.target.value })}
+                    placeholder="Author name…"
+                    className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
+                  />
+                </FieldRow>
+                <FieldRow label="Inspired By">
+                  <input
+                    type="text"
+                    value={state.inspiredBy ?? ""}
+                    onChange={(e) => patchGlobal({ inspiredBy: e.target.value })}
+                    placeholder="Optional credit…"
                     className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
                   />
                 </FieldRow>
@@ -988,6 +1056,39 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
               {/* Preview */}
               <BoardPreview state={state} cards={cards} />
 
+              {/* Intended solution */}
+              <div className="rounded-lg bg-black/20 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Intended Solution</div>
+                  <button
+                    type="button"
+                    onClick={() => patchGlobal({ intendedSolution: [ ...(state.intendedSolution ?? []), "" ] })}
+                    className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20"
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {(state.intendedSolution ?? []).map((line, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={line}
+                        onChange={(e) => patchGlobal({ intendedSolution: (state.intendedSolution ?? []).map((l, j) => j === i ? e.target.value : l) })}
+                        className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => patchGlobal({ intendedSolution: (state.intendedSolution ?? []).filter((_, j) => j !== i) })}
+                        className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Save */}
               <div className="flex items-center gap-4">
                 <button
@@ -997,6 +1098,14 @@ export function PuzzleBuilderPanel({ onClose, onSaved }: Props) {
                   className="rounded-xl border border-emerald-400/40 bg-emerald-500/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500/30 disabled:opacity-40"
                 >
                   {saving ? "Saving…" : "Save Puzzle"}
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={handleTest}
+                  className="rounded-xl border border-sky-400/40 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/20 disabled:opacity-40"
+                >
+                  {saving ? "Testing…" : "Test"}
                 </button>
                 {saveError ? <span className="text-xs text-rose-300">{saveError}</span> : null}
               </div>

@@ -357,6 +357,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
   const [puzzleMeta, setPuzzleMeta] = React.useState<{ name: string; author: string; inspiredBy?: string; intendedSolution: string[] } | null>(null);
   const [showSolutionModal, setShowSolutionModal] = React.useState(false);
   const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
+  const [lastTestRaw, setLastTestRaw] = React.useState<any | null>(null);
+  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[] } | null>(null);
   const [showClosePuzzleConfirm, setShowClosePuzzleConfirm] = React.useState(false);
   const [leaderModalOpen, setLeaderModalOpen] = React.useState(false);
   const [discardModalPlayer, setDiscardModalPlayer] = React.useState<1 | 2 | null>(null);
@@ -686,17 +688,85 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
           onSaved={(_id) => {
             setShowBuilderPanelOpen(false);
           }}
+          initialRaw={lastTestRaw ?? undefined}
+          initialMeta={lastTestMeta ?? undefined}
+          onTest={async (payload: any) => {
+            // payload: { rawInitial, gameState, sentinelPlayIds, unitBuffs }
+            // remember raw for editing
+            const raw = payload.rawInitial ?? null;
+            setLastTestRaw(raw);
+            setLastTestMeta({ name: payload.name ?? undefined, description: payload.description ?? undefined, difficulty: payload.difficulty ?? undefined, author: payload.author ?? undefined, inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? undefined });
+
+            setIsResolving(true);
+            setActionError(null);
+            try {
+              const initialState = payload.gameState as typeof gameState;
+              const initialSentinelIds = payload.sentinelPlayIds ?? [];
+              const initialUnitBuffs = payload.unitBuffs ?? {};
+
+              if (USE_HTTP_TRANSPORT) {
+                roundTripCtxRef.current = {
+                  game: {
+                    id: globalThis.crypto.randomUUID(),
+                    currentGameState: initialState,
+                    gameStateHistory: [],
+                    gameLog: ["Puzzle test loaded."],
+                  },
+                  pending: null,
+                } as EngineContext;
+                gameIdRef.current = null;
+              } else {
+                const newGameRes = await fetch("/api/engine/new-game", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ withGameState: initialState }),
+                });
+                if (!newGameRes.ok) throw new Error("Failed to create game session.");
+                const { gameId } = await newGameRes.json() as { gameId: string };
+                gameIdRef.current = gameId;
+                roundTripCtxRef.current = null;
+              }
+
+              setGameState(initialState);
+              setSentinelPlayIds(initialSentinelIds);
+              setUnitBuffs(initialUnitBuffs);
+              setGameLog(["Puzzle test loaded."]);
+              setResolutionNeeded(null);
+              setActionError(null);
+              setHistoryLength(0);
+              // close builder and show puzzle UI immediately
+              setShowBuilderPanelOpen(false);
+              const title = payload.name ?? lastTestMeta?.name ?? "Tested Puzzle";
+              setPuzzleName(title);
+              setPuzzleMeta({ name: title, author: payload.author ?? "", inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? [] });
+            } catch (err) {
+              setActionError(err instanceof Error ? err.message : "Test failed.");
+            } finally {
+              setIsResolving(false);
+            }
+          }}
         />
       ) : null}
       <div className="mb-3 flex flex-col gap-3">
         {showBuilderTools ? (
-          <button
-            type="button"
-            onClick={() => setShowBuilderPanelOpen(true)}
-            className="self-start rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500/25"
-          >
-            Build New Puzzle
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => { setLastTestRaw(null); setShowBuilderPanelOpen(true); }}
+              className="self-start rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500/25"
+            >
+              Build New Puzzle
+            </button>
+            {lastTestRaw ? (
+              <button
+                type="button"
+                onClick={() => setShowBuilderPanelOpen(true)}
+                className="self-start rounded-xl border border-sky-400/30 bg-sky-500/10 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-500/20"
+              >
+                Edit Tested Puzzle
+              </button>
+            ) : null}
+          </div>
         ) : null}
         <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
           <LoadPuzzlePanel

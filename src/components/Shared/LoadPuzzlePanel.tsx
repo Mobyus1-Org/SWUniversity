@@ -29,7 +29,8 @@ function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
 type SortKey = "title" | "difficulty";
 type SortDir = "asc" | "desc";
 
-export function LoadPuzzlePanel({ onPuzzleLoaded, isAdmin = false }: Props) {
+export function LoadPuzzlePanel(props: Props) {
+  const { onPuzzleLoaded, isAdmin = false } = props;
   const [puzzles, setPuzzles] = React.useState<PuzzleEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
