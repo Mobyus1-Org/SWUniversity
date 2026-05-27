@@ -331,7 +331,7 @@ function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
   </div>;
 }
 
-function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean }) {
+function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilderTools?: boolean; isAdmin?: boolean }) {
   // ---------------------------------------------------------------------------
   // Engine communication refs (not React state — no re-render on change)
   // ---------------------------------------------------------------------------
@@ -707,6 +707,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
               setShowSolutionModal(false);
               void loadPuzzle(filename);
             }}
+            isAdmin={isAdmin}
           />
         </div>
       </div>
@@ -807,6 +808,7 @@ function PuzzlesPage({ showBuilderTools = false }: { showBuilderTools?: boolean 
             setPuzzleName(meta.name);
             void loadPuzzle(filename);
           }}
+          isAdmin={isAdmin}
         />
         <button
           type="button"

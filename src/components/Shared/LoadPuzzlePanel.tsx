@@ -1,10 +1,11 @@
 import React from "react";
 import { globalBackgroundStyle } from "@/util/style-const";
 
-type PuzzleEntry = { id: string; name: string; description: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[] };
+type PuzzleEntry = { id: string; name: string; description: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; deploy?: boolean };
 
 type Props = {
   onPuzzleLoaded: (id: string, meta: PuzzleEntry) => void;
+  isAdmin?: boolean;
 };
 
 function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
@@ -28,20 +29,41 @@ function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
 type SortKey = "title" | "difficulty";
 type SortDir = "asc" | "desc";
 
-export function LoadPuzzlePanel({ onPuzzleLoaded }: Props) {
+export function LoadPuzzlePanel({ onPuzzleLoaded, isAdmin = false }: Props) {
   const [puzzles, setPuzzles] = React.useState<PuzzleEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [sortKey, setSortKey] = React.useState<SortKey>("difficulty");
   const [sortDir, setSortDir] = React.useState<SortDir>("asc");
 
-  React.useEffect(() => {
+  const fetchList = React.useCallback(() => {
+    setLoading(true);
+    setError(null);
     fetch("/api/puzzles")
       .then((r) => r.json())
       .then((data: { puzzles: PuzzleEntry[] }) => setPuzzles(data.puzzles))
       .catch(() => setError("Failed to list puzzles."))
       .finally(() => setLoading(false));
   }, []);
+
+  React.useEffect(() => { fetchList(); }, [fetchList]);
+
+  async function toggleDeploy(id: string, current: boolean | undefined) {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/puzzles/deploy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, deploy: !current }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      await fetchList();
+    } catch (err) {
+      setError("Failed to update deploy flag.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   function handleLoad(entry: PuzzleEntry) {
     onPuzzleLoaded(entry.id, entry);
@@ -102,6 +124,25 @@ export function LoadPuzzlePanel({ onPuzzleLoaded }: Props) {
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-semibold truncate">{name}</span>
+                  {isAdmin ? (
+                    <label
+                      onClick={(e) => e.stopPropagation()}
+                      className="ml-2 inline-flex items-center cursor-pointer"
+                      aria-label={entry.deploy ? "Mark hidden" : "Mark deployed"}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={Boolean(entry.deploy)}
+                        onChange={() => void toggleDeploy(id, entry.deploy)}
+                        className="sr-only"
+                        aria-checked={Boolean(entry.deploy)}
+                      />
+                      <span className={`relative inline-block h-6 w-12 rounded-full transition-colors ${entry.deploy ? "bg-emerald-600" : "bg-white/10"}`}>
+                        <span className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.deploy ? "translate-x-6" : "translate-x-0"}`} />
+                      </span>
+                      <span className="ml-2 text-xs font-semibold text-white/90">{entry.deploy ? "Deployed" : "Hidden"}</span>
+                    </label>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2 text-sm opacity-70">
                   <DifficultyDots value={difficulty} />

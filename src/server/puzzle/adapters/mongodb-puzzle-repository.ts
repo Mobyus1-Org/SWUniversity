@@ -8,7 +8,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
     await connectToDatabase();
   }
 
-  async list(): Promise<PuzzleData[]> {
+  async list(showAll = false): Promise<PuzzleData[]> {
     await this.connect();
     const docs = await PuzzleModel.find().lean();
     return docs.map((doc) => ({
@@ -22,7 +22,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
       inspiredBy: doc.inspiredBy,
       intendedSolution: doc.intendedSolution ?? [],
     }))
-    .filter((p) => p.deploy || process.env.NODE_ENV === "development");
+    .filter((p) => showAll || p.deploy);
   }
 
   async load(id: string): Promise<RawPuzzleGameState> {
