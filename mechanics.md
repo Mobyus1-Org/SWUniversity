@@ -213,7 +213,7 @@
 | X-Wing token (space, 2/2) | ⚠️ | JTL_T02 recognized. |
 | Force token (base zone, special) | ⚠️ | `HasTheForce` and `supplemental.forceToken` exist. No dispatch creates/destroys Force token or enforces the "Use the Force" mechanic fully. |
 | Spy token | ⚠️ | SEC_T01 recognized as token. |
-| Token defeated → set aside (not discard) | ❌ | `defeatUnit` → `pushToDiscard` for all units. Tokens should be set aside, not placed in discard. |
+| Token defeated → set aside (not discard) | ✅ | `defeatUnit` guards with `!unit.IsTokenUnit()` before calling `pushToDiscard` (CR 7.6.1 comment in code). Token unit types also record reason `"token-defeated"` in `cardsLeftPlayThisPhase`. Token upgrades (Shield, Experience) disappear when their unit leaves play — also not placed in discard. Tested in `simple-token.test.ts` ("Token Unit Removal", "Token Upgrade Removal"). Tokens are infinitely available — no supply pool tracked. |
 
 ---
 
@@ -335,18 +335,58 @@
 
 ---
 
-## 14. Summary — Priority Gaps
+## 14. Summary — Mechanism Completeness
 
-These are the highest-impact missing pieces for a playable, rules-compliant engine:
+> Scores measure whether the **engine mechanism exists**, not whether every card exercising that mechanism is wired up. Card coverage is a separate concern.
 
-1. **When Defeated coverage** — K-2SO, Superlaser Technician, and Luke pilot-eject are handled; all other When Defeated cards are silently ignored.
-2. **Bounty card coverage** — `getBountyEffects` currently handles SHD_027 (draw a card) and SHD_068 (give shield). All other bounty cards in the set need entries.
-3. **Token set-aside rule** — tokens go to set-aside, not discard pile.
-4. **Upgrade-on-enemy-unit** — `UpgradeEligibleTargets` must optionally include enemy units.
-5. **Delayed effects system** — general "at start of regroup phase, …" pattern (beyond `UntilStartOfRegroup` revert).
-6. **Return to hand — broader coverage** — infrastructure exists (Waylay); other return-to-hand cards need wiring.
+### 14.1 Section-by-section (mechanism only)
+
+| Section | ✅ | ⚠️ | ❌ | Score |
+|---|---|---|---|---|
+| 1. Turn Structure & Flow | 10 | 2 | 1 | 11/13 — **85%** |
+| 2. Resources & Cost | 4 | 2 | 2 | 5/8 — **63%** |
+| 3. Playing Cards | 7 | 1 | 1 | 7.5/9 — **83%** |
+| 4. Combat | 9 | 0 | 3 | 9/12 — **75%** |
+| 5. Keywords (24 sub-items) | 20 | 4 | 0 | 22/24 — **92%** |
+| 6. Triggered Abilities | 6 | 3 | 2 | 7.5/11 — **68%** |
+| 7. Lasting Effects | 6 | 3 | 0 | 7.5/9 — **83%** |
+| 8. Tokens | 8 | 1 | 0 | 8.5/9 — **94%** |
+| 9. Leaders | 8 | 0 | 0 | 8/8 — **100%** |
+| 10. Upgrades | 3 | 1 | 3 | 3.5/7 — **50%** |
+| 11. Capture | 5 | 0 | 1 | 5/6 — **83%** |
+| 12. The Force | 1 | 1 | 1 | 1.5/3 — **50%** |
+| 13.1 Damage & Prevention | 1 | 1 | 2 | 1.5/4 — **38%** |
+| 13.2 Effect Language | 0 | 5 | 1 | 2.5/6 — **42%** |
+| 13.3 Play Restrictions | 1 | 1 | 3 | 1.5/5 — **30%** |
+| 13.4 Zone Mechanics | 3 | 2 | 0 | 4/5 — **80%** |
+| 13.5 State Tracking | 4 | 2 | 1 | 5/7 — **71%** |
+| 13.6 Dispatch Infrastructure | 0 | 3 | 2 | 1.5/5 — **30%** |
+| **TOTAL** | **96** | **32** | **23** | **109/151 — ~72%** |
+
+### 14.2 Priority mechanism gaps
+
+These are missing **engine mechanisms**, not missing card implementations:
+
+1. **Replacement effects / "instead"** — no broadcast-and-intercept system; Shield prevention is the only inline replacement. Affects §6 and §13.6.
+2. **Play restriction system** — no `playRestrictions[]` on game state; "can't play" effects (e.g. Regional Governor) have no enforcement path. Affects §13.3.
+3. **Negative power/HP modifiers** — `CurrentPower`/`TotalHP` don't handle minus values; "−2/−0" effects are silently ignored. Affects §7.
+4. **Upgrade defeated trigger** — upgrades vanish silently when their unit leaves play; no When Defeated fires for upgrades themselves. Affects §10.
+5. **When Unit is Attacked** — no defender-side trigger mechanism exists at all. Affects §6.
+6. **Unpreventable / prevent damage** — no `unpreventable` flag on damage sources; no general "prevent X damage" interception path. Affects §13.1.
+7. **Open vs. hidden information** — full `GameState` returned to both players; per-player state projection not implemented. Affects §13.5.
+8. **"For Each" simultaneous effects** — no general multi-target effect framework; each "for each X do Y" must be hardcoded. Affects §13.2.
+9. **Upgrade on enemy unit** — `UpgradeEligibleTargets` hardcoded to friendly only. Affects §10.
+10. **choose-player dispatch** — `NeedsPlayer` resolution type exists but the handler is a stub. Affects §13.6.
 
 ### Recently Completed
+
+### Recently Completed
+- ✅ **Token set-aside rule (CR 7.6.1)** — `defeatUnit` already guards with `!unit.IsTokenUnit()` before calling `pushToDiscard`. Token upgrades (Shield, Experience) also disappear correctly when their unit leaves play. Tokens are infinitely available (no supply pool). Confirmed by `simple-token.test.ts`.
+- ✅ **Deck search (CR 27)** — `DeckSearchPending` with `action: "play" | "draw"` and `costModifier`. Implemented for SOR_087 (Darth Vader), SOR_104 (U-Wing Reinforcement), SOR_123 (Recruit), TWI_193 (R2-D2 Full of Solutions). Unchosen cards returned to bottom in random order. TempIds are positional strings ("0", "1", …) — consumers echo choices from the response.
+- ✅ **Indirect damage (CR 8.36)** — `ChooseIndirectTargetPending` (source picks which player assigns) → `IndirectDamagePending` (target player assigns among own units/base). Shields not removed per CR 8.36.2. Per-unit cap enforced per CR 8.36.3. Implemented for JTL_234 (Torpedo Barrage).
+- ⚠️ **Disclose mechanic** — specific-card implementations for ISB Agent (SOR_176/SEC_184), Bardottan Ornithopter (SEC_062), Unauthorized Investigation (SEC_181), Charged with Treason (SEC_182). No general `NeedsReveal` dispatch type yet.
+
+
 - ✅ **Boba Fett leader reaction (SHD_008)** — `"leader-reaction"` TriggerType added. `completePlayCard` injects trigger when a keyword unit is played and leader is ready + undeployed. `processSingleTrigger` returns `ability-option` (exhaust Y/N); `applyAbilityEffect` exhausts leader and pushes a Phase `+1/+0` effect. Participates in trigger-bag ordering (tested with Ambush).
 - ✅ **Attack Pattern Delta (SOR_106)** — three-step mandatory ability-target chain via virtual card IDs `SOR_106_3/2/1`. Each step refreshes `fromPlayIds` to exclude already-chosen units. Phase effects grant +3/+3, +2/+2, +1/+1 tracked in `CurrentPower` and `TotalHP` loops. Fizzles gracefully when fewer than 3 friendly units exist.
 - ✅ **Trigger ordering** — `drainTriggerBag` returns `TriggerOrderPending` when 2+ triggers queue simultaneously. Resolved as `NeedsOption` via `handleChooseOption` with "Choose which trigger to resolve first:" prompt.

@@ -229,6 +229,8 @@ export const Cards = {
       generalTagge: "SOR_080",
       deathTrooper: "SOR_033",
       delMeeko: "SOR_034",
+      darthVader: "SOR_087",
+      cellBlockGuard: "SOR_229",
     },
     shd: {
       generalTagge: "SHD_081",
@@ -268,6 +270,7 @@ export const Cards = {
       infiltratingDemolisher: "TWI_182",
       admiralTrench: "TWI_086",
       sanHill: "TWI_186",
+      r2d2FullOfSolutions: "TWI_193",
     },
     sec: {
       cadBane: "SEC_034",
@@ -318,6 +321,8 @@ export const Cards = {
       takedown: "SOR_077",
       overwhelmingBarrage: "SOR_092",
       vanquish: "SOR_078",
+      recruit: "SOR_123",
+      uWingReinforcement: "SOR_104",
     },
     twi: {
       vanquish: "TWI_077",

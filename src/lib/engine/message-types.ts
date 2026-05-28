@@ -55,12 +55,15 @@ export interface NeedsSpreadDamage {
   assigningPlayer?: PlayerId;
 }
 
-/** Deck-search prompt: player picks from a revealed subset with a combined cost ceiling. */
+/** Deck-search prompt: player picks from a revealed subset with a combined cost ceiling or number of choices. */
 export interface NeedsDeckSearch {
   type: "DeckSearch";
   helperText: string;
   choices: Array<{ tempId: string; cardId: string; cost: number }>;
-  maxCombinedCost: number;
+  action: "play" | "draw";
+  maxChoices?: number; // maximum number of cards the player can choose, regardless of cost
+  maxCombinedCost?: number; // maximum total cost of chosen cards, regardless of number
+  costModifier?: "free" | number; // applied to each chosen card, usually to make them free or reduce cost by a certain amount
 }
 
 export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot | NeedsSpreadDamage | NeedsDeckSearch;

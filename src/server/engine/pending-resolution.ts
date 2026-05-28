@@ -32,6 +32,7 @@ export interface AbilityTargetPending {
   /** The player who initiated this ability (needed for take-control effects). */
   player?: PlayerId;
   fromPlayIds: string[];
+  fromChoices?: string[];
   continuation: PendingResolution | null;
 }
 
@@ -254,19 +255,26 @@ export interface GiveXpMultiplePending {
 }
 
 /**
- * Deck search: player picks any number of eligible cards from the top N of their deck,
- * subject to a combined cost ceiling. Each chosen card is played for free; the rest
- * return to the top of the deck in their original order.
+ * Deck search: player picks any number of eligible cards from the top N of their deck; the rest go to the bottom in a random order.
+ * Options include:
+ * maxChoices: maximum number of cards the player can choose, regardless of cost
+ * maxCombinedCost: maximum total cost of chosen cards, regardless of number (eg. SOR_087 or SOR_104)
+ * costModifier: Each chosen card is played for free (or at reduced cost) 'free' | number (usually less than 0)
  */
-export interface VaderSearchPending {
-  type: "vader-search";
+export interface DeckSearchPending {
+  type: "deck-search";
   cardId: string;
   player: PlayerId;
   /** All top-N cards extracted from the deck (in original order, last = top). */
   topCards: Array<{ tempId: string; cardId: string }>;
-  /** Subset of topCards that are eligible to pick (Villainy units with cost ≤ maxCombinedCost). */
+  /** Subset of topCards that are eligible to pick (eg. Villainy units with cost ≤ maxCombinedCost). */
   eligibleChoices: Array<{ tempId: string; cardId: string; cost: number }>;
-  maxCombinedCost: number;
+  maxChoices?: number;
+  maxCombinedCost?: number;
+  costModifier?: 'free' | number;
+  /** What happens to chosen cards: "play" = enter arena (cost driven by costModifier), "draw" = go to hand. */
+  action: "play" | "draw";
+  continuation?: PendingResolution | null;
 }
 
 export type PendingResolution =
@@ -294,7 +302,7 @@ export type PendingResolution =
   | ChooseIndirectTargetPending
   | IndirectDamagePending
   | PlayFromHandPending
-  | VaderSearchPending;
+  | DeckSearchPending;
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch

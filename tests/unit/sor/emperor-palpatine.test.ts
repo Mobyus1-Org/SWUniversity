@@ -18,21 +18,13 @@ describe("SOR_135 Emperor Palpatine — When Played", () => {
       .Build();
     g.loadNewState(state);
 
-    const enemy0 = state.player2.groundArena[0].playId;
-    const enemy1 = state.player2.groundArena[1].playId;
-
     await g.playCardFromHandAsync(1, 0);
+    await g.spreadDamageAsync(1, [
+      [2, "Ground", 0, 3],
+      [2, "Ground", 1, 3],
+    ])
 
-    await g.dispatchAsync(1, "choose-target", {
-      spreadDamageAssignments: [
-        { playId: enemy0, damage: 3 },
-        { playId: enemy1, damage: 3 },
-      ],
-    });
-
-    // Battlefield Marines are 3/3 — 3 damage defeats them
-    expect(g.state.player2.groundArena.find(u => u.playId === enemy0)).toBeUndefined();
-    expect(g.state.player2.groundArena.find(u => u.playId === enemy1)).toBeUndefined();
+    expect(g.state.player2.groundArena.length).toBe(0);
   });
 
   it("fizzles when no enemy units exist", async () => {

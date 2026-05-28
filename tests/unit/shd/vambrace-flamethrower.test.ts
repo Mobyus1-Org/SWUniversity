@@ -20,22 +20,13 @@ describe("SHD_177 Vambrace Flamethrower — On Attack", () => {
       .Build();
     g.loadNewState(state);
 
-    const enemy0 = state.player2.groundArena[0].playId;
-    const enemy1 = state.player2.groundArena[1].playId;
-
     await g.attackWithGroundUnitAsync(1, 0);
     await g.chooseBaseAsync(1, 2);
-
-    // On-attack trigger fires: "you may deal 3 damage" — choose Yes
     await g.chooseYesAsync(1);
-
-    // Spread: 2 to enemy0, 1 to enemy1
-    await g.dispatchAsync(1, "choose-target", {
-      spreadDamageAssignments: [
-        { playId: enemy0, damage: 2 },
-        { playId: enemy1, damage: 1 },
-      ],
-    });
+    await g.spreadDamageAsync(1, [
+      [2, "Ground", 0, 2],
+      [2, "Ground", 1, 1],
+    ]);
 
     expect(g.state.player2.groundArena[0].damage).toBe(2);
     expect(g.state.player2.groundArena[1].damage).toBe(1);
@@ -74,14 +65,12 @@ describe("SHD_177 Vambrace Flamethrower — On Attack", () => {
       .WithUpgradesOnGroundUnitForPlayer(1, 0, [
         GameStateBuilder.Upgrade(Cards.upgrades.shd.vambraceFlamethrower, 1),
       ])
-      // No enemy ground units
       .Build();
     g.loadNewState(state);
 
     await g.attackWithGroundUnitAsync(1, 0);
     await g.chooseBaseAsync(1, 2);
 
-    // No prompt — attack resolves directly
-    expect(g.state.player2.base.damage).toBeGreaterThan(0);
+    expect(g.state.player2.base.damage).toBe(4);
   });
 });

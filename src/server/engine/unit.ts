@@ -189,6 +189,10 @@ export class Unit implements UnitInterface {
       power += 1;
     }
 
+    if (this.cardId === "JTL_249" && !this.LostAbilities()) {
+      power += this.upgrades.filter(upg => TraitContains(upg.cardId, "Pilot")).length;
+    }
+
     if (HasGrit(this.cardId, this.playId, this.controller) && !this.LostAbilities()) {
       power += this.damage;
     }

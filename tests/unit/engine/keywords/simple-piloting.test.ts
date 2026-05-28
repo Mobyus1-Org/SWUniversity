@@ -28,7 +28,7 @@ describe("PilotingEligibleVehicles", () => {
       .TheirLeader(Cards.leaders.sor.darthVader)
       .WithSpaceUnitForPlayer(1, Cards.units.jtl.rebelliousHammerhead)
       .WithUpgradesOnSpaceUnitForPlayer(1, 0, [
-        { cardId: Cards.units.jtl.lukeSkywalker, playId: "99", owner: 1, controller: 1 },
+        GameStateBuilder.Upgrade(Cards.units.jtl.lukeSkywalker, 1),
       ])
       .Build();
 
@@ -59,7 +59,7 @@ describe("PilotingEligibleVehicles", () => {
       .TheirLeader(Cards.leaders.sor.darthVader)
       .WithSpaceUnitForPlayer(1, Cards.units.jtl.millenniumFalcon)
       .WithUpgradesOnSpaceUnitForPlayer(1, 0, [
-        { cardId: Cards.units.jtl.lukeSkywalker, playId: "99", owner: 1, controller: 1 },
+        GameStateBuilder.Upgrade(Cards.units.jtl.lukeSkywalker, 1),
       ])
       .Build();
 
@@ -77,8 +77,8 @@ describe("PilotingEligibleVehicles", () => {
       .TheirLeader(Cards.leaders.sor.darthVader)
       .WithSpaceUnitForPlayer(1, Cards.units.jtl.millenniumFalcon)
       .WithUpgradesOnSpaceUnitForPlayer(1, 0, [
-        { cardId: Cards.units.jtl.lukeSkywalker, playId: "98", owner: 1, controller: 1 },
-        { cardId: Cards.units.jtl.snapWexley, playId: "99", owner: 1, controller: 1 },
+        GameStateBuilder.Upgrade(Cards.units.jtl.lukeSkywalker, 1),
+        GameStateBuilder.Upgrade(Cards.units.jtl.snapWexley, 1),
       ])
       .Build();
 
@@ -95,7 +95,7 @@ describe("PilotingEligibleVehicles", () => {
       .TheirLeader(Cards.leaders.sor.darthVader)
       .WithSpaceUnitForPlayer(1, Cards.units.jtl.rebelliousHammerhead)
       .WithUpgradesOnSpaceUnitForPlayer(1, 0, [
-        { cardId: Cards.units.jtl.r2d2, playId: "99", owner: 1, controller: 1 },
+        GameStateBuilder.Upgrade(Cards.units.jtl.r2d2, 1),
       ])
       .Build();
 
@@ -112,8 +112,8 @@ describe("PilotingEligibleVehicles", () => {
       .TheirLeader(Cards.leaders.sor.darthVader)
       .WithSpaceUnitForPlayer(1, Cards.units.jtl.rebelliousHammerhead)
       .WithUpgradesOnSpaceUnitForPlayer(1, 0, [
-        { cardId: Cards.units.jtl.r2d2, playId: "98", owner: 1, controller: 1 },
-        { cardId: Cards.units.jtl.snapWexley, playId: "99", owner: 1, controller: 1 },
+        GameStateBuilder.Upgrade(Cards.units.jtl.r2d2, 1),
+        GameStateBuilder.Upgrade(Cards.units.jtl.snapWexley, 1),
       ])
       .Build();
 
@@ -130,7 +130,7 @@ describe("PilotingEligibleVehicles", () => {
       .TheirLeader(Cards.leaders.sor.darthVader)
       .WithSpaceUnitForPlayer(1, Cards.units.jtl.millenniumFalcon)
       .WithUpgradesOnSpaceUnitForPlayer(1, 0, [
-        { cardId: Cards.units.jtl.r2d2, playId: "99", owner: 1, controller: 1 },
+        GameStateBuilder.Upgrade(Cards.units.jtl.r2d2, 1),
       ])
       .Build();
 
@@ -147,9 +147,9 @@ describe("PilotingEligibleVehicles", () => {
       .TheirLeader(Cards.leaders.sor.darthVader)
       .WithSpaceUnitForPlayer(1, Cards.units.jtl.millenniumFalcon)
       .WithUpgradesOnSpaceUnitForPlayer(1, 0, [
-        { cardId: Cards.units.jtl.r2d2, playId: "97", owner: 1, controller: 1 },
-        { cardId: Cards.units.jtl.lukeSkywalker, playId: "98", owner: 1, controller: 1 },
-        { cardId: Cards.units.jtl.snapWexley, playId: "99", owner: 1, controller: 1 },
+        GameStateBuilder.Upgrade(Cards.units.jtl.r2d2, 1),
+        GameStateBuilder.Upgrade(Cards.units.jtl.lukeSkywalker, 1),
+        GameStateBuilder.Upgrade(Cards.units.jtl.snapWexley, 1),
       ])
       .Build();
 
@@ -166,7 +166,7 @@ describe("PilotingEligibleVehicles", () => {
       .TheirLeader(Cards.leaders.sor.darthVader)
       .WithSpaceUnitForPlayer(1, Cards.units.jtl.rebelliousHammerhead)
       .WithUpgradesOnSpaceUnitForPlayer(1, 0, [
-        { cardId: Cards.leaders.jtl.poeDameron, playId: "99", owner: 1, controller: 1 },
+        GameStateBuilder.Upgrade(Cards.leaders.jtl.poeDameron, 1),
       ])
       .Build();
 
@@ -380,7 +380,7 @@ describe("Piloting — play as pilot", () => {
         .WithCardInHandForPlayer(1, Cards.units.jtl.lukeSkywalker)
         .WithSpaceUnitForPlayer(1, Cards.units.jtl.millenniumFalcon)
         .WithUpgradesOnSpaceUnitForPlayer(1, 0, [
-          { cardId: Cards.units.jtl.snapWexley, playId: "99", owner: 1, controller: 1 },
+          GameStateBuilder.Upgrade(Cards.units.jtl.snapWexley, 1),
         ])
         .Build(),
     );
@@ -409,7 +409,7 @@ describe("Piloting — play as pilot", () => {
         .WithCardInHandForPlayer(1, Cards.units.jtl.lukeSkywalker)
         .WithSpaceUnitForPlayer(1, Cards.units.jtl.rebelliousHammerhead)
         .WithUpgradesOnSpaceUnitForPlayer(1, 0, [
-          { cardId: Cards.leaders.jtl.poeDameron, playId: "99", owner: 1, controller: 1 },
+          GameStateBuilder.Upgrade(Cards.leaders.jtl.poeDameron, 1),
         ])
         .Build(),
     );

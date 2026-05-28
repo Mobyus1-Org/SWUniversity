@@ -344,6 +344,9 @@ function PlayerSection({ label, state, cards, onChange }: PlayerSectionProps) {
   const [newResourceCardId, setNewResourceCardId] = React.useState("");
   const [newResourceCount, setNewResourceCount] = React.useState(1);
   const [newResourceReady, setNewResourceReady] = React.useState(true);
+  const [newDeckCardId, setNewDeckCardId] = React.useState("");
+  const [newDeckCount, setNewDeckCount] = React.useState(1);
+  const [showDeck, setShowDeck] = React.useState(false);
 
   const unitCards = React.useMemo(
     () => cards.filter((c) => c.type === "Unit" || c.type === "Leader"),
@@ -481,6 +484,74 @@ function PlayerSection({ label, state, cards, onChange }: PlayerSectionProps) {
                 >×</button>
               </span>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Deck */}
+      <div className="rounded-lg bg-black/20 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Deck ({state.deck.length})</div>
+          <div className="flex items-center gap-2">
+            {state.deck.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowDeck((v) => !v)}
+                className="text-[10px] text-white/40 hover:text-white/70 underline-offset-2 underline"
+              >
+                {showDeck ? "Hide" : "See Deck"}
+              </button>
+            )}
+            {state.deck.length > 0 && (
+              <button
+                type="button"
+                onClick={() => patch({ deck: [] })}
+                className="text-[10px] text-white/30 hover:text-rose-300"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="grid grid-cols-[1fr_4rem_auto] items-center gap-2">
+          <CardPicker cards={cards} value={newDeckCardId} onChange={setNewDeckCardId} placeholder="Card…" />
+          <input
+            type="number"
+            min={1}
+            max={60}
+            value={newDeckCount}
+            onChange={(e) => setNewDeckCount(Math.max(1, Math.min(60, Number(e.target.value))))}
+            className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none"
+          />
+          <button
+            type="button"
+            disabled={!newDeckCardId}
+            onClick={() => {
+              const added = Array.from({ length: newDeckCount }, () => newDeckCardId);
+              patch({ deck: [...state.deck, ...added] });
+              setNewDeckCardId("");
+              setNewDeckCount(1);
+            }}
+            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20 disabled:opacity-40"
+          >
+            Add
+          </button>
+        </div>
+        {showDeck && state.deck.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            {[...state.deck].reverse().map((cardId, i) => {
+              const originalIndex = state.deck.length - 1 - i;
+              return (
+                <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/70">
+                  {cards.find((c) => c.cardId === cardId)?.label ?? cardId}
+                  <button
+                    type="button"
+                    onClick={() => patch({ deck: state.deck.filter((_, j) => j !== originalIndex) })}
+                    className="ml-0.5 text-white/40 hover:text-white/70"
+                  >×</button>
+                </span>
+              );
+            })}
           </div>
         )}
       </div>
@@ -732,6 +803,12 @@ function BoardPreview({ state, cards }: { state: BuilderState; cards: CardCatalo
             ? `${p.resources.filter((r) => r.ready).length} ready / ${p.resources.length} total`
             : "0"}
         </div>
+        {p.deck.length > 0 && (
+          <div className="text-[11px] text-white/70">
+            <span className="text-white/40">Deck: </span>
+            {p.deck.length} card{p.deck.length !== 1 ? "s" : ""}
+          </div>
+        )}
         {p.handCards.length > 0 && (
           <div className="text-[11px] text-white/70">
             <span className="text-white/40">Hand: </span>

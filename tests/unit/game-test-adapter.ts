@@ -168,6 +168,23 @@ export class GameTestAdapter {
     return this.dispatchAsync(player, "choose-target", { targetPlayIds: [] });
   }
 
+  //
+  async spreadDamageAsync(player: PlayerId, assignments: [number, string, number, number][]): Promise<GameTestAdapter> {
+    const spreadDamageAssignments = assignments.map(([playerId, arena, unitIndex, damage]) => ({ playId: this.getPlayId(playerId, arena, unitIndex), damage }));
+
+    return this.dispatchAsync(player, "choose-target", { spreadDamageAssignments });
+  }
+
+  getPlayId(playerId: number, arena: string, unitIndex: number): string {
+    const pState = playerId === 1 ? this.state.player1 : this.state.player2;
+
+    if (arena === "Ground") {
+      return pState.groundArena[unitIndex].playId;
+    } else {
+      return pState.spaceArena[unitIndex].playId;
+    }
+  }
+
   /**
    * Targets an upgrade (by position) on a unit in the given arena.
    * fromPlayer = who dispatches choose-target.
@@ -177,6 +194,11 @@ export class GameTestAdapter {
     const pState = unitPlayer === 1 ? this.state.player1 : this.state.player2;
     const upgradePlayId = pState.groundArena[unitIndex].upgrades[upgradeIndex].playId;
     return this.dispatchAsync(fromPlayer, "choose-target", { targetPlayIds: [upgradePlayId] });
+  }
+
+  /** Submits deck-search choices using tempIds from the DeckSearch resolution. Pass [] to pass/skip. */
+  async chooseDeckSearchAsync(player: PlayerId, tempIds: string[]): Promise<GameTestAdapter> {
+    return this.dispatchAsync(player, "choose-target", { targetPlayIds: tempIds });
   }
 
   async chooseUpgradeOnSpaceUnitAsync(fromPlayer: PlayerId, unitPlayer: PlayerId, unitIndex: number, upgradeIndex = 0): Promise<GameTestAdapter> {

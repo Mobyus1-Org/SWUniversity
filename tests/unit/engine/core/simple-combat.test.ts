@@ -86,9 +86,6 @@ describe("Simple Combat with Sentinels", () => {
       .TheirLeader(Cards.leaders.sor.sabineWren)
       .WithGroundUnitForPlayer(1, Cards.units.sor.fightersForFreedom)
       .WithGroundUnitForPlayer(2, Cards.units.sor.echoBaseDefender)
-      .WithUpgradesOnGroundUnitForPlayer(1, 0, [
-
-      ])
       .Build()
     ;
     g.loadNewState(s);

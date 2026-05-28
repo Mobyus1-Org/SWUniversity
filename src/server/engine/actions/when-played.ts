@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
-import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, GiveXpMultiplePending, ChooseIndirectTargetPending, VaderSearchPending } from "@/server/engine/pending-resolution";
+import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, GiveXpMultiplePending, ChooseIndirectTargetPending, DeckSearchPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
 import { CardAspects, CardCost, CardTitle, CardType } from "@/server/engine/card-db/generated";
@@ -547,23 +547,113 @@ export function resolveWhenPlayed(
       const deck087 = player === 1 ? gs087.player1.deck : gs087.player2.deck;
       if (deck087.length === 0) return null;
       const count087 = Math.min(10, deck087.length);
-      const top10 = deck087.slice(-count087);
-      const topCards = top10.map((c, i) => ({ tempId: `vs-${i}`, cardId: c.cardId }));
-      const eligibleChoices = topCards
+      const top10_087 = deck087.slice(-count087);
+      const topCards087 = top10_087.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
+      const eligibleChoices087 = topCards087
         .filter(c => CardType(c.cardId) === "Unit" && CardAspects(c.cardId).includes("Villainy") && (CardCost(c.cardId) ?? 0) <= 3)
         .map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));
-      if (eligibleChoices.length === 0) {
+      if (eligibleChoices087.length === 0) {
         game.gameLog.push(`${CardTitle("SOR_087")}: no eligible Villainy units in the top ${count087} cards.`);
         return null;
       }
       return {
-        type: "vader-search",
+        type: "deck-search",
         cardId: "SOR_087",
         player,
-        topCards,
-        eligibleChoices,
+        topCards: topCards087,
+        eligibleChoices: eligibleChoices087,
         maxCombinedCost: 3,
-      } satisfies VaderSearchPending;
+        costModifier: 'free',
+        action: "play",
+        continuation: null,
+      } satisfies DeckSearchPending;
+    }
+    case "SOR_104": { // U-Wing Reinforcement — Search top 10 of deck for up to 3 units with combined cost ≤ 7, play each for free.
+      const gs104 = game.currentGameState;
+      const deck104 = player === 1 ? gs104.player1.deck : gs104.player2.deck;
+      if (deck104.length === 0) return null;
+      const count104 = Math.min(10, deck104.length);
+      const top10_104 = deck104.slice(-count104);
+      const topCards104 = top10_104.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
+      const eligibleChoices104 = topCards104
+        .filter(c => CardType(c.cardId) === "Unit" && (CardCost(c.cardId) ?? 0) <= 7)
+        .map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));
+      if (eligibleChoices104.length === 0) {
+        game.gameLog.push(`${CardTitle("SOR_104")}: no eligible units in the top ${count104} cards.`);
+        return null;
+      }
+      return {
+        type: "deck-search",
+        cardId: "SOR_104",
+        player,
+        topCards: topCards104,
+        eligibleChoices: eligibleChoices104,
+        maxChoices: 3,
+        maxCombinedCost: 7,
+        costModifier: 'free',
+        action: "play",
+        continuation: null,
+      } satisfies DeckSearchPending;
+    }
+    case "SOR_123": { // Recruit — Search top 5 of deck for a unit, reveal it, and draw it.
+      const gs123 = game.currentGameState;
+      const deck123 = player === 1 ? gs123.player1.deck : gs123.player2.deck;
+      if (deck123.length === 0) return null;
+      const count123 = Math.min(5, deck123.length);
+      const top5_123 = deck123.slice(-count123);
+      const topCards123 = top5_123.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
+      const eligibleChoices123 = topCards123
+        .filter(c => CardType(c.cardId) === "Unit")
+        .map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));
+      if (eligibleChoices123.length === 0) {
+        game.gameLog.push(`${CardTitle("SOR_123")}: no units in the top ${count123} cards.`);
+        return null;
+      }
+      return {
+        type: "deck-search",
+        cardId: "SOR_123",
+        player,
+        topCards: topCards123,
+        eligibleChoices: eligibleChoices123,
+        maxChoices: 1,
+        action: "draw",
+        continuation: null,
+      } satisfies DeckSearchPending;
+    }
+    case "TWI_193": { // R2-D2 (Full of Solutions) — You may discard a card. If you do, search top 3 and draw a card.
+      const pState193 = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+      if (pState193.hand.length === 0) return null;
+      const deck193 = pState193.deck;
+      if (deck193.length === 0) return null;
+      const count193 = Math.min(3, deck193.length);
+      const top3_193 = deck193.slice(-count193);
+      const topCards193 = top3_193.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
+      const eligibleChoices193 = topCards193.map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));
+      const deckSearchCont: DeckSearchPending = {
+        type: "deck-search",
+        cardId: "TWI_193",
+        player,
+        topCards: topCards193,
+        eligibleChoices: eligibleChoices193,
+        maxChoices: 1,
+        action: "draw",
+        continuation: null,
+      };
+      return {
+        type: "ability-option",
+        cardId: "TWI_193",
+        sourcePlayId: playId,
+        helperText: "Discard a card from your hand to search the top 3 cards of your deck and draw a card?",
+        yesLabel: "Discard",
+        noLabel: "Skip",
+        onYes: {
+          type: "discard-from-hand",
+          targetPlayer: player,
+          count: 1,
+          continuation: deckSearchCont,
+        },
+        continuation: null,
+      };
     }
     default:
       return null;

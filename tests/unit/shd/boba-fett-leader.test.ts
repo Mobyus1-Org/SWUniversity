@@ -184,7 +184,7 @@ describe("SHD_008 Boba Fett — Leader Trigger", () => {
     expect(triggerPrompt.helperText).toContain("Choose which trigger");
 
     // Resolve leader-reaction first
-    await g.chooseOptionAsync(1, "Boba Fett — leader-reaction");
+    await g.chooseOptionAsync(1, "Boba Fett — Leader Ability");
     expect(g.lastDispatchResponse!.resolutionNeeded?.type).toBe("Option"); // Yes/No for Boba
     await g.chooseYesAsync(1);
 

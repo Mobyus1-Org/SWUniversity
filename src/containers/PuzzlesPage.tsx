@@ -29,6 +29,9 @@ const USE_HTTP_TRANSPORT = true;
 
 const PLAYER: PlayerId = 1;
 
+const LS_TEST_RAW = "puzzle_builder_test_raw";
+const LS_TEST_META = "puzzle_builder_test_meta";
+
 type GameStatus = "playing" | "won" | "lost" | "draw";
 
 function createDispatch(type: DispatchType, data: DispatchData): GameDispatch {
@@ -357,8 +360,20 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
   const [puzzleMeta, setPuzzleMeta] = React.useState<{ name: string; author: string; inspiredBy?: string; intendedSolution: string[] } | null>(null);
   const [showSolutionModal, setShowSolutionModal] = React.useState(false);
   const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
-  const [lastTestRaw, setLastTestRaw] = React.useState<any | null>(null);
-  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[] } | null>(null);
+  const [lastTestRaw, setLastTestRaw] = React.useState<any | null>(() => {
+    try { const s = localStorage.getItem(LS_TEST_RAW); return s ? JSON.parse(s) : null; } catch { return null; }
+  });
+  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[] } | null>(() => {
+    try { const s = localStorage.getItem(LS_TEST_META); return s ? JSON.parse(s) : null; } catch { return null; }
+  });
+  React.useEffect(() => {
+    if (lastTestRaw != null) localStorage.setItem(LS_TEST_RAW, JSON.stringify(lastTestRaw));
+    else localStorage.removeItem(LS_TEST_RAW);
+  }, [lastTestRaw]);
+  React.useEffect(() => {
+    if (lastTestMeta != null) localStorage.setItem(LS_TEST_META, JSON.stringify(lastTestMeta));
+    else localStorage.removeItem(LS_TEST_META);
+  }, [lastTestMeta]);
   const [showClosePuzzleConfirm, setShowClosePuzzleConfirm] = React.useState(false);
   const [leaderModalOpen, setLeaderModalOpen] = React.useState(false);
   const [discardModalPlayer, setDiscardModalPlayer] = React.useState<1 | 2 | null>(null);
@@ -1678,7 +1693,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
     )}
 
     {hasPrompt ? <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl">
+      <div className={`rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl${resolutionNeeded?.type === "DeckSearch" ? " w-[min(90vw,700px)]" : ""}`}>
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
           {resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : resolutionNeeded?.type === "DeckSearch" ? "Deck Search" : "Choose"}
         </h3>
@@ -1711,32 +1726,42 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
             </button>
           )) : resolutionNeeded?.type === "DeckSearch" ? (
             <>
-              {resolutionNeeded.choices.map((c) => {
-                const selected = deckSearchSelected.has(c.tempId);
-                const wouldExceed = !selected && deckSearchCost + c.cost > resolutionNeeded.maxCombinedCost;
-                return (
-                  <button key={c.tempId} type="button" disabled={isResolving || wouldExceed}
-                    onClick={() => setDeckSearchSelected(prev => {
-                      const next = new Set(prev);
-                      if (next.has(c.tempId)) next.delete(c.tempId); else next.add(c.tempId);
-                      return next;
-                    })}
-                    className={`flex items-center justify-between rounded-lg border px-4 py-2 text-sm font-medium text-white transition ${
-                      selected
-                        ? "border-sky-400/80 bg-sky-500/40"
-                        : wouldExceed
-                        ? "cursor-not-allowed border-white/10 bg-white/5 opacity-40"
-                        : "border-sky-400/40 bg-sky-500/20 hover:bg-sky-500/35"
-                    } disabled:cursor-not-allowed`}>
-                    <span>{CardTitle(c.cardId)}</span>
-                    <span className="ml-4 text-white/55">Cost {c.cost}</span>
-                  </button>
-                );
-              })}
-              <div className="text-center text-xs text-white/45">Total cost: {deckSearchCost} / {resolutionNeeded.maxCombinedCost}</div>
+              <div className="flex flex-wrap gap-3 justify-center mb-1">
+                {resolutionNeeded.choices.map((c) => {
+                  const selected = deckSearchSelected.has(c.tempId);
+                  const atMaxChoices = !selected && resolutionNeeded.maxChoices != null && deckSearchSelected.size >= resolutionNeeded.maxChoices;
+                  const wouldExceed = !selected && resolutionNeeded.maxCombinedCost != null && deckSearchCost + c.cost > resolutionNeeded.maxCombinedCost;
+                  const disabled = isResolving || atMaxChoices || wouldExceed;
+                  return (
+                    <button key={c.tempId} type="button" disabled={disabled}
+                      onClick={() => setDeckSearchSelected(prev => {
+                        const next = new Set(prev);
+                        if (next.has(c.tempId)) next.delete(c.tempId); else next.add(c.tempId);
+                        return next;
+                      })}
+                      className={`w-[4.5rem] text-left transition${disabled && !selected ? " opacity-40 cursor-not-allowed" : ""}`}>
+                      <CardVisual
+                        cardId={c.cardId}
+                        selectable={!disabled && !isResolving}
+                        customGlowClass={selected ? "ring-2 ring-amber-400/80 shadow-[0_0_14px_rgba(251,191,36,0.5)]" : undefined}
+                        onPreviewStart={handlePreviewStart}
+                        onPreviewEnd={handlePreviewEnd}
+                        compact
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+              {resolutionNeeded.action === "play" && resolutionNeeded.maxCombinedCost != null
+                ? <div className="text-center text-xs text-white/45">Total cost: {deckSearchCost} / {resolutionNeeded.maxCombinedCost}</div>
+                : null}
               <button type="button" disabled={isResolving} onClick={handleDeckSearchConfirm}
                 className="rounded-lg border border-emerald-400/40 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500/35 disabled:cursor-not-allowed disabled:opacity-40">
-                {deckSearchSelected.size === 0 ? "Take Nothing" : `Play ${deckSearchSelected.size} Unit${deckSearchSelected.size > 1 ? "s" : ""} for Free`}
+                {deckSearchSelected.size === 0
+                  ? "Take Nothing"
+                  : resolutionNeeded.action === "draw"
+                    ? `Draw ${deckSearchSelected.size} Card${deckSearchSelected.size > 1 ? "s" : ""}`
+                    : `Play ${deckSearchSelected.size} Unit${deckSearchSelected.size > 1 ? "s" : ""} for Free`}
               </button>
             </>
           ) : null}

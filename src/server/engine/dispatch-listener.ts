@@ -355,6 +355,27 @@ function l337EligibleVehicles(game: GameState, player: PlayerId, l337PlayId: str
 }
 
 /**
+ * Adds a unit to the arena from a deck-search "play" action — enters exhausted,
+ * queues Shielded/Ambush/When-Played triggers into the bag for later drain.
+ */
+function addUnitFromSearch(game: GameState, log: string[], cardId: string, player: PlayerId): void {
+  const unit = addToArena(game, player, cardId, false);
+  log.push(`${CardTitle(cardId) ?? cardId} entered play for free.`);
+  game.roundState.cardsPlayedThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId });
+  game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId, reason: "played" });
+  const nested = game.triggerBag.length > 0;
+  if (HasShielded(cardId, unit.playId, player)) {
+    game.triggerBag.push({ triggerType: "shielded", cardId, fromPlayer: player, playId: unit.playId, nested });
+  }
+  if (HasAmbush(cardId, unit.playId, "Hand", player)) {
+    game.triggerBag.push({ triggerType: "ambush", cardId, fromPlayer: player, playId: unit.playId, nested });
+  }
+  if (CardHasWhenPlayed(cardId)) {
+    game.triggerBag.push({ triggerType: "when-played", cardId, fromPlayer: player, playId: unit.playId, nested });
+  }
+}
+
+/**
  * Drains the trigger bag after an action resolves.
  * - 0 triggers: no-op
  * - 1 trigger: auto-resolve without player input
@@ -366,6 +387,7 @@ function triggerLabel(t: TriggerEntry): string {
     case "ambush":     return `${name} — Ambush`;
     case "when-played": return `${name} — When Played`;
     case "shielded":   return `${name} — Shielded`;
+    case "leader-reaction": return `${name} — Leader Ability`;
     default:           return `${name} — ${t.triggerType}`;
   }
 }
@@ -1028,12 +1050,31 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         helperText: "Choose which On Attack ability to resolve first:",
         options: pending.triggers.map(t => t.label),
       } satisfies NeedsOption;
-    case "vader-search":
+    case "deck-search":
+      let helperText = `Search top ${pending.topCards.length} cards of your deck`;
+      if (pending.maxChoices === 1) helperText += " and choose 1.";
+      else if (pending.maxChoices && pending.maxChoices > 1) helperText += ` and choose up to ${pending.maxChoices}.`;
+
+      if (pending.maxCombinedCost && pending.maxCombinedCost > 0) {
+        helperText += ` Chosen cards must have combined cost ${pending.maxCombinedCost} or less.`;
+      }
+
+      if (pending.costModifier) {
+        if (pending.costModifier === 'free') {
+          helperText += " Chosen cards will be played for free.";
+        } else {
+          helperText += ` Costs are ${pending.costModifier < 0 ? 'reduced' : 'increased'} by ${pending.costModifier}.`;
+        }
+      }
+
       return {
         type: "DeckSearch",
-        helperText: `Search top ${pending.topCards.length} — pick Villainy units (combined cost ≤ ${pending.maxCombinedCost}).`,
+        helperText,
         choices: pending.eligibleChoices,
+        action: pending.action,
+        maxChoices: pending.maxChoices,
         maxCombinedCost: pending.maxCombinedCost,
+        costModifier: pending.costModifier,
       } satisfies NeedsDeckSearch;
     default: throw new Error(`Unknown pending resolution type: ${pending.type}`);
   }
@@ -2043,51 +2084,71 @@ function handleChooseTarget(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
-  if (pending.type === "vader-search") {
+  if (pending.type === "deck-search") {
     const chosen = data.targetPlayIds ?? [];
     const eligibleMap = new Map(pending.eligibleChoices.map(c => [c.tempId, c]));
 
     for (const id of chosen) {
       if (!eligibleMap.has(id))
-        return { response: invalidResponse(`Vader search: unknown selection "${id}".`), pending, stateChanged: false };
+        return { response: invalidResponse(`Deck search: unknown selection "${id}".`), pending, stateChanged: false };
     }
-    const combinedCost = chosen.reduce((sum, id) => sum + eligibleMap.get(id)!.cost, 0);
-    if (combinedCost > pending.maxCombinedCost)
-      return { response: invalidResponse(`Vader search: combined cost ${combinedCost} exceeds ${pending.maxCombinedCost}.`), pending, stateChanged: false };
-
-    // Remove top N from deck and return unchosen cards in original order
+    if (pending.maxCombinedCost) {
+      const combinedCost = chosen.reduce((sum, id) => sum + eligibleMap.get(id)!.cost, 0);
+      if (combinedCost > pending.maxCombinedCost)
+        return { response: invalidResponse(`Deck search: combined cost ${combinedCost} exceeds ${pending.maxCombinedCost}.`), pending, stateChanged: false };
+    }
+    // Remove top N from deck and return unchosen cards to the bottom in a random order
     const pState = ps(game, pending.player);
     pState.deck.splice(pState.deck.length - pending.topCards.length, pending.topCards.length);
     const takenSet = new Set(chosen);
     const unchosenCards = pending.topCards.filter(c => !takenSet.has(c.tempId)).map(c => ({ cardId: c.cardId }));
-    pState.deck.push(...unchosenCards);
-
-    if (chosen.length === 0) {
-      log.push(`${CardTitle(pending.cardId)}: no units selected.`);
-    } else {
-      // Place each chosen unit for free — queue all triggers then drain once
-      for (const tempId of chosen) {
-        const { cardId } = eligibleMap.get(tempId)!;
-        const unit = addToArena(game, pending.player, cardId, false);
-        log.push(`${CardTitle(pending.cardId)}: ${CardTitle(cardId)} entered the ${CardArena(cardId) ?? "ground"} arena.`);
-        game.roundState.cardsPlayedThisPhase.push({ fromPlayer: pending.player, cardId, playId: unit.playId });
-        game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: pending.player, cardId, playId: unit.playId, reason: "played" });
-        if (HasShielded(cardId, unit.playId, pending.player))
-          game.triggerBag.push({ triggerType: "shielded", cardId, fromPlayer: pending.player, playId: unit.playId });
-        const leaderState = pState.leader;
-        if (leaderState.cardId === "SHD_008" && !leaderState.deployed && leaderState.ready && HasKeyword(cardId, "Any", unit.playId, pending.player))
-          game.triggerBag.push({ triggerType: "leader-reaction", cardId: "SHD_008", fromPlayer: pending.player });
-        if (HasAmbush(cardId, unit.playId, "Deck", pending.player))
-          game.triggerBag.push({ triggerType: "ambush", cardId, fromPlayer: pending.player, playId: unit.playId });
-        if (CardHasWhenPlayed(cardId))
-          game.triggerBag.push({ triggerType: "when-played", cardId, fromPlayer: pending.player, playId: unit.playId });
-      }
-      log.push(`${CardTitle(pending.cardId)}: ${unchosenCards.length} card(s) returned to top of deck.`);
+    for (let i = unchosenCards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [unchosenCards[i], unchosenCards[j]] = [unchosenCards[j], unchosenCards[i]];
     }
 
+    pState.deck.unshift(...unchosenCards);
+
+    if (chosen.length === 0) {
+      log.push(`${CardTitle(pending.cardId)}: no cards selected. ${unchosenCards.length} card(s) returned to the bottom of deck.`);
+      const contNone = pending.continuation ?? null;
+      if (contNone) return { response: resolutionResponse(pendingToResolution(contNone, game)), pending: contNone, stateChanged: false };
+      const bagNone = drainTriggerBag(game, log);
+      if (bagNone) return { response: resolutionResponse(pendingToResolution(bagNone, game)), pending: bagNone, stateChanged: false };
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    log.push(`${CardTitle(pending.cardId)}: ${unchosenCards.length} card(s) returned to the bottom of deck.`);
+
+    if (pending.action === "draw") {
+      const drawnTitles: string[] = [];
+      for (const tempId of chosen) {
+        const choice = eligibleMap.get(tempId)!;
+        pState.hand.push({ cardId: choice.cardId });
+        drawnTitles.push(CardTitle(choice.cardId) ?? choice.cardId);
+      }
+      log.push(`${CardTitle(pending.cardId)}: drew ${drawnTitles.join(", ")}.`);
+      const contDraw = pending.continuation ?? null;
+      if (contDraw) return { response: resolutionResponse(pendingToResolution(contDraw, game)), pending: contDraw, stateChanged: false };
+      const bagDraw = drainTriggerBag(game, log);
+      if (bagDraw) return { response: resolutionResponse(pendingToResolution(bagDraw, game)), pending: bagDraw, stateChanged: false };
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    // action === "play": enter each chosen unit into the arena (exhausted), queue triggers
+    for (const tempId of chosen) {
+      addUnitFromSearch(game, log, eligibleMap.get(tempId)!.cardId, pending.player);
+    }
     updateDefeatedPlayers(game);
-    const vsBag = drainTriggerBag(game, log);
-    if (vsBag) return { response: resolutionResponse(pendingToResolution(vsBag, game)), pending: vsBag, stateChanged: true };
+    const contPlay = pending.continuation ?? null;
+    const bagPlay = drainTriggerBag(game, log);
+    if (bagPlay) {
+      const chained = contPlay ? injectContinuation(bagPlay, contPlay) : bagPlay;
+      return { response: resolutionResponse(pendingToResolution(chained, game)), pending: chained, stateChanged: true };
+    }
+    if (contPlay) return { response: resolutionResponse(pendingToResolution(contPlay, game)), pending: contPlay, stateChanged: true };
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
