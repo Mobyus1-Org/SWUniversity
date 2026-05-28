@@ -6,10 +6,10 @@
 
 | Status | Count |
 |--------|-------|
-| Implemented | 78 |
+| Implemented | 99 |
 | Partially Implemented | 41 |
 | Keywords Only (auto-handled) | 23 |
-| Unimplemented – Simple | 1 |
+| Unimplemented – Simple | 2 |
 | Unimplemented – Complex | 70 |
 | **Total** | **214** |
 
@@ -19,120 +19,15 @@
 
 These cards can be implemented with existing engine mechanics.
 
-### SOR_039 — AT-AT Suppressor (Unit)
-**Card Text:** When Played: Exhaust all ground units.
-
-**Notes:** Needs implementation: When Played: Exhaust all ground units.
-
 ### SOR_043 — Superlaser Blast (Event)
 **Card Text:** Defeat all units.
 
 **Notes:** Needs implementation: Defeat all units.
 
-### SOR_059 — 2-1B Surgical Droid (Unit)
-**Card Text:** On Attack: You may heal 2 damage from another unit.
-
-**Notes:** Needs implementation: On Attack: You may heal 2 damage from another unit.
-
-### SOR_060 — Distant Patroller (Unit)
-**Card Text:** When Defeated: You may give a Shield token to a [Vigilance] unit.
-
-**Notes:** Needs implementation: When Defeated: You may give a Shield token to a [Vigilance] unit.
-
-### SOR_076 — Make an Opening (Event)
-**Card Text:** Give a unit –2/–2 for this phase. Heal 2 damage from your base.
-
-**Notes:** Needs implementation: Give a unit –2/–2 for this phase. Heal 2 damage from your base.
-
-### SOR_111 — Patrolling V-Wing (Unit)
-**Card Text:** When Played: Draw a card.
-
-**Notes:** Needs implementation: When Played: Draw a card.
-
-### SOR_124 — Tactical Advantage (Event)
-**Card Text:** Give a unit +2/+2 for this phase.
-
-**Notes:** Needs implementation: Give a unit +2/+2 for this phase.
-
-### SOR_132 — Imperial Interceptor (Unit)
-**Card Text:** When Played: You may deal 3 damage to a space unit.
-
-**Notes:** Needs implementation: When Played: You may deal 3 damage to a space unit.
-
-### SOR_134 — Ruthless Raider (Unit)
-**Card Text:** When Played/When Defeated: Deal 2 damage to an enemy base and 2 damage to an enemy unit.
-
-**Notes:** Needs implementation: When Played/When Defeated: Deal 2 damage to an enemy base and 2 damage to an enemy unit.
-
-### SOR_151 — Karabast (Event)
-**Card Text:** A friendly unit deals damage to an enemy unit equal to the amount of damage on the friendly unit plus 1.
-
-**Notes:** Needs implementation: A friendly unit deals damage to an enemy unit equal to the amount of damage on the friendly unit pl
-
-### SOR_163 — Star Wing Scout (Unit)
-**Card Text:** When Defeated: If you have the initiative, draw 2 cards.
-
-**Notes:** Needs implementation: When Defeated: If you have the initiative, draw 2 cards.
-
-### SOR_169 — Keep Fighting (Event)
-**Card Text:** Ready a unit with 3 or less power.
-
-**Notes:** Needs implementation: Ready a unit with 3 or less power.
-
-### SOR_170 — Power Failure (Event)
-**Card Text:** Defeat any number of upgrades on a unit.
-
-**Notes:** Needs implementation: Defeat any number of upgrades on a unit.
-
-### SOR_171 — Mission Briefing (Event)
-**Card Text:** Choose a player. They draw 2 cards.
-
-**Notes:** Needs implementation: Choose a player. They draw 2 cards.
-
 ### SOR_172 — Open Fire (Event)
 **Card Text:** Deal 4 damage to a unit.
 
 **Notes:** Needs implementation: Deal 4 damage to a unit.
-
-### SOR_173 — Bombing Run (Event)
-**Card Text:** Choose an arena (ground or space). Deal 3 damage to each unit in that arena.
-
-**Notes:** Needs implementation: Choose an arena (ground or space). Deal 3 damage to each unit in that arena.
-
-### SOR_189 — Leia Organa (Unit)
-**Card Text:** When Played: Either ready a resource or exhaust a unit.
-
-**Notes:** Needs implementation: When Played: Either ready a resource or exhaust a unit.
-
-### SOR_202 — Cantina Bouncer (Unit)
-**Card Text:** When Played: You may return a non-leader unit to its owner's hand.
-
-**Notes:** Needs implementation: When Played: You may return a non-leader unit to its owner's hand.
-
-### SOR_206 — Mining Guild TIE Fighter (Unit)
-**Card Text:** On Attack: You may pay [2 resources]. If you do, draw a card.
-
-**Notes:** Needs implementation: On Attack: You may pay [2 resources]. If you do, draw a card.
-
-### SOR_216 — Disarm (Event)
-**Card Text:** Give an enemy unit –4/–0 for this phase.
-
-**Notes:** Needs implementation: Give an enemy unit –4/–0 for this phase.
-
-### SOR_220 — Surprise Strike (Event)
-**Card Text:** Attack with a unit. It gets +3/+0 for this attack.
-
-**Notes:** Needs implementation: Attack with a unit. It gets +3/+0 for this attack.
-
-### SOR_221 — Outmaneuver (Event)
-**Card Text:** Choose an arena (ground or space). Exhaust each unit in that arena.
-
-**Notes:** Needs implementation: Choose an arena (ground or space). Exhaust each unit in that arena.
-
-### SOR_240 — Fleet Lieutenant (Unit)
-**Card Text:** When Played: You may attack with a unit. If it's a Rebel unit, it gets +2/+0 for this attack.
-
-**Notes:** Needs implementation: When Played: You may attack with a unit. If it's a Rebel unit, it gets +2/+0 for this attack.
 
 ---
 
@@ -928,3 +823,24 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_249 | Frontier AT-RT | Unit | Has custom logic in engine keyword dictionaries or dispatch-listener |
 | SOR_251 | Confiscate | Event | Has custom logic in engine action files |
 | SOR_252 | Restock | Event | Has custom logic in engine action files |
+| SOR_039 | AT-AT Suppressor | Unit | Has custom logic in engine action files; test coverage added |
+| SOR_059 | 2-1B Surgical Droid | Unit | Has custom logic in engine action files; test coverage added |
+| SOR_060 | Distant Patroller | Unit | Has custom logic in engine action files; test coverage added |
+| SOR_076 | Make an Opening | Event | Has custom logic in engine action files; test coverage added |
+| SOR_111 | Patrolling V-Wing | Unit | Has custom logic in engine action files; test coverage added |
+| SOR_124 | Tactical Advantage | Event | Has custom logic in engine action files; test coverage added |
+| SOR_132 | Imperial Interceptor | Unit | Has custom logic in engine action files; test coverage added |
+| SOR_134 | Ruthless Raider | Unit | Has custom logic in engine action files; test coverage added |
+| SOR_151 | Karabast | Event | Has custom logic in engine action files; test coverage added |
+| SOR_163 | Star Wing Scout | Unit | Has custom logic in engine action files; test coverage added |
+| SOR_169 | Keep Fighting | Event | Has custom logic in engine action files; test coverage added |
+| SOR_170 | Power Failure | Event | Has custom logic in engine action files; test coverage added |
+| SOR_171 | Mission Briefing | Event | Has custom logic in engine action files; test coverage added |
+| SOR_173 | Bombing Run | Event | Has custom logic in engine action files; test coverage added |
+| SOR_189 | Leia Organa | Unit | Has custom logic in engine action files; test coverage added |
+| SOR_202 | Cantina Bouncer | Unit | Has custom logic in engine action files; test coverage added |
+| SOR_206 | Mining Guild TIE Fighter | Unit | Has custom logic in engine action files; test coverage added |
+| SOR_216 | Disarm | Event | Has custom logic in engine action files; test coverage added |
+| SOR_220 | Surprise Strike | Event | Has custom logic in engine action files; test coverage added |
+| SOR_221 | Outmaneuver | Event | Has custom logic in engine action files; test coverage added |
+| SOR_240 | Fleet Lieutenant | Unit | Has custom logic in engine action files; test coverage added |

@@ -896,6 +896,32 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "LOF_100": { // Kelleran Beq — Search the top 7 cards of your deck for a unit, reveal it, and play it. It costs 3 resources less.
+      const gs100 = game.currentGameState;
+      const deck100 = player === 1 ? gs100.player1.deck : gs100.player2.deck;
+      if (deck100.length === 0) return null;
+      const count100 = Math.min(7, deck100.length);
+      const top7_100 = deck100.slice(-count100);
+      const topCards100 = top7_100.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
+      const eligibleChoices100 = topCards100
+        .filter(c => CardType(c.cardId) === "Unit")
+        .map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));
+      if (eligibleChoices100.length === 0) {
+        game.gameLog.push(`${CardTitle("LOF_100")}: no eligible units in the top ${count100} cards.`);
+        return null;
+      }
+      return {
+        type: "deck-search",
+        cardId: "LOF_100",
+        player,
+        topCards: topCards100,
+        eligibleChoices: eligibleChoices100,
+        maxChoices: 1,
+        costModifier: -3,
+        action: "play",
+        continuation: null,
+      } satisfies DeckSearchPending;
+    }
     default:
       return null;
   }

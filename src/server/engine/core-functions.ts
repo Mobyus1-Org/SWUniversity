@@ -1,6 +1,6 @@
 import { CardAspects, CardCost, CardIsUnique, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { Card, CardInPlay, CardTypes, CurrentEffect, Leader, PlayerId } from "@/lib/engine/core-models";
-import { Game, GameState } from "@/lib/engine/game";
+import { Game, GameState, PlayerState } from "@/lib/engine/game";
 import { Unit } from "@/server/engine/unit";
 import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
 
@@ -583,5 +583,37 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
     case "SOR_121": //Hardpoint Heavy Blaster
       return true;
     default: return false;
+  }
+}
+
+export function GetPlayer(game: GameState, player: PlayerId): PlayerState {
+  return player === 1 ? game.player1 : game.player2;
+}
+
+export function GetOtherPlayer(player: PlayerId): PlayerId {
+  return player === 1 ? 2 : 1;
+}
+
+export function GetAllUnits(game: GameState): Unit[] {
+  return [
+    ...game.player1.groundArena,
+    ...game.player1.spaceArena,
+    ...game.player2.groundArena,
+    ...game.player2.spaceArena,
+  ] as Unit[];
+}
+
+export function GetUnitByPlayId(game: GameState, playId: string): Unit | null {
+  return GetAllUnits(game).find((u) => u.playId === playId) ?? null;
+}
+
+export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: string|undefined, amount: number, withLog?: string[]): void {
+  if (!targetPlayId) return;
+  const target = GetUnitByPlayId(gs, targetPlayId);
+  if (target) {
+    target.damage += 4;
+    if (withLog) {
+      withLog.push(`${CardTitle(cardId)}: dealt ${amount} damage to ${CardTitle(target.cardId)}.`);
+    }
   }
 }

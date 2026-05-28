@@ -31,7 +31,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { CardIsLeader, CardsCanDisclose, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, SetGame, TraitContains, UnitAttackedThisPhase } from "@/server/engine/core-functions";
+import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, GetUnitByPlayId } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -52,7 +52,7 @@ import type {
   UseAbilityDispatchData,
 } from "@/lib/engine/message-types";
 import { effectiveSmuggleCost } from "@/server/engine/card-playability";
-import type { Game, GameState, PlayerState } from "@/lib/engine/game";
+import type { Game, GameState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import type {
   AbilityOptionPending,
@@ -148,26 +148,9 @@ export function computeUnitBuffs(gs: GameState): Record<string, { power: number;
 // Helpers: game state accessors
 // ---------------------------------------------------------------------------
 
-function ps(game: GameState, player: PlayerId): PlayerState {
-  return player === 1 ? game.player1 : game.player2;
-}
-
-function otherPlayer(player: PlayerId): PlayerId {
-  return player === 1 ? 2 : 1;
-}
-
-function allUnits(game: GameState): Unit[] {
-  return [
-    ...game.player1.groundArena,
-    ...game.player1.spaceArena,
-    ...game.player2.groundArena,
-    ...game.player2.spaceArena,
-  ] as Unit[];
-}
-
 function sweepDeadUnits(gs: GameState, log: string[], continuation: PendingResolution | null): PendingResolution | null {
   let pending = continuation;
-  for (const unit of allUnits(gs)) {
+  for (const unit of GetAllUnits(gs)) {
     if (Unit.FromInterface(unit).CurrentHP() <= 0) {
       const defeatPend = defeatUnit(gs, log, unit);
       if (defeatPend) pending = injectContinuation(defeatPend, pending);
@@ -176,16 +159,12 @@ function sweepDeadUnits(gs: GameState, log: string[], continuation: PendingResol
   return pending;
 }
 
-function unitByPlayId(game: GameState, playId: string): Unit | null {
-  return allUnits(game).find((u) => u.playId === playId) ?? null;
-}
-
 // ---------------------------------------------------------------------------
 // Helpers: resources & cost
 // ---------------------------------------------------------------------------
 
 function aspectPenalty(game: GameState, player: PlayerId, cardId: string): number {
-  const playerState = ps(game, player);
+  const playerState = GetPlayer(game, player);
 
   // Darksaber: free aspect cost when a friendly Mandalorian non-Vehicle target exists
   if (cardId === "SHD_126") {
@@ -211,8 +190,8 @@ function aspectPenalty(game: GameState, player: PlayerId, cardId: string): numbe
 
 function delMeekoEventTax(game: GameState, player: PlayerId, cardId: string): number {
   if (CardType(cardId) !== "Event") return 0;
-  const opp = otherPlayer(player);
-  const oppUnits = [...ps(game, opp).groundArena, ...ps(game, opp).spaceArena];
+  const opp = GetOtherPlayer(player);
+  const oppUnits = [...GetPlayer(game, opp).groundArena, ...GetPlayer(game, opp).spaceArena];
   return oppUnits.some(u => u.cardId === "SOR_034" && !Unit.FromInterface(u).LostAbilities()) ? 1 : 0;
 }
 
@@ -224,13 +203,13 @@ function playCost(game: GameState, player: PlayerId, cardId: string): number {
 }
 
 function canAfford(game: GameState, player: PlayerId, cardId: string): boolean {
-  const ready = ps(game, player).resources.filter((r) => r.ready).length;
+  const ready = GetPlayer(game, player).resources.filter((r) => r.ready).length;
   return ready >= playCost(game, player, cardId);
 }
 
 function exhaustResources(game: GameState, player: PlayerId, count: number): void {
   let remaining = count;
-  for (const r of ps(game, player).resources) {
+  for (const r of GetPlayer(game, player).resources) {
     if (remaining <= 0) break;
     if (r.ready) {
       r.ready = false;
@@ -271,8 +250,8 @@ function addToArena(
     isClone,
   });
   const arena = (CardArena(cardId) ?? "Ground") as "Ground" | "Space";
-  if (arena === "Ground") ps(game, player).groundArena.push(unit);
-  else ps(game, player).spaceArena.push(unit);
+  if (arena === "Ground") GetPlayer(game, player).groundArena.push(unit);
+  else GetPlayer(game, player).spaceArena.push(unit);
   return unit;
 }
 
@@ -281,7 +260,7 @@ function removeFromArena(
   playId: string,
 ): { player: PlayerId; unit: Unit; zone: "groundArena" | "spaceArena" } | null {
   for (const player of [1, 2] as PlayerId[]) {
-    const p = ps(game, player);
+    const p = GetPlayer(game, player);
     for (const zone of ["groundArena", "spaceArena"] as const) {
       const idx = p[zone].findIndex((u) => u.playId === playId);
       if (idx !== -1) {
@@ -302,7 +281,7 @@ function pushToDiscard(game: GameState, player: PlayerId, unit: Unit): void {
     turnDiscarded: game.currentRound,
     discardEffect: "",
   };
-  ps(game, player).discard.unshift(discarded);
+  GetPlayer(game, player).discard.unshift(discarded);
 }
 
 function pushEventToDiscard(game: GameState, player: PlayerId, cardId: string): void {
@@ -314,11 +293,11 @@ function pushEventToDiscard(game: GameState, player: PlayerId, cardId: string): 
     turnDiscarded: game.currentRound,
     discardEffect: "",
   };
-  ps(game, player).discard.unshift(discarded);
+  GetPlayer(game, player).discard.unshift(discarded);
 }
 
 function dealBaseDamage(game: GameState, player: PlayerId, amount: number): void {
-  ps(game, player).base.damage += amount;
+  GetPlayer(game, player).base.damage += amount;
 }
 
 /**
@@ -329,7 +308,7 @@ function transferControl(game: GameState, log: string[], unit: Unit, newControll
   const removed = removeFromArena(game, unit.playId);
   unit.controller = newController;
   const zone = removed?.zone ?? ((CardArena(unit.cardId) ?? "Ground") === "Ground" ? "groundArena" : "spaceArena");
-  ps(game, newController)[zone].push(unit);
+  GetPlayer(game, newController)[zone].push(unit);
   log.push(`${CardTitle(unit.cardId)} is now controlled by Player ${newController}.`);
 }
 
@@ -339,7 +318,7 @@ function transferControl(game: GameState, log: string[], unit: Unit, newControll
  * which means NO pilots at all (R2-D2 is a pilot via PilotingCost=0 and counts).
  */
 function l337EligibleVehicles(game: GameState, player: PlayerId, l337PlayId: string): string[] {
-  const p = ps(game, player);
+  const p = GetPlayer(game, player);
   const friendly = [...p.groundArena, ...p.spaceArena] as Unit[];
   return friendly
     .filter(u => {
@@ -358,9 +337,16 @@ function l337EligibleVehicles(game: GameState, player: PlayerId, l337PlayId: str
  * Adds a unit to the arena from a deck-search "play" action — enters exhausted,
  * queues Shielded/Ambush/When-Played triggers into the bag for later drain.
  */
-function addUnitFromSearch(game: GameState, log: string[], cardId: string, player: PlayerId): void {
+function addUnitFromSearch(game: GameState, log: string[], cardId: string, player: PlayerId, costModifier?: 'free' | number): void {
+  let costDesc = 'for free';
+  if (costModifier !== undefined && costModifier !== 'free') {
+    const effectiveCost = Math.max(0, playCost(game, player, cardId) + costModifier);
+    exhaustResources(game, player, effectiveCost);
+    costDesc = `for ${effectiveCost} resources`;
+  }
+
   const unit = addToArena(game, player, cardId, false);
-  log.push(`${CardTitle(cardId) ?? cardId} entered play for free.`);
+  log.push(`${CardTitle(cardId) ?? cardId} entered play ${costDesc}.`);
   game.roundState.cardsPlayedThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId });
   game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId, reason: "played" });
   const nested = game.triggerBag.length > 0;
@@ -408,7 +394,7 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
   }
 
   if (trigger.triggerType === "shielded" && trigger.playId) {
-    const unit = unitByPlayId(game, trigger.playId);
+    const unit = GetUnitByPlayId(game, trigger.playId);
     if (unit) {
       unit.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: trigger.fromPlayer, controller: trigger.fromPlayer });
       log.push(`Shielded: ${CardTitle(trigger.cardId)} enters play with a Shield token.`);
@@ -417,7 +403,7 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
   }
 
   if (trigger.triggerType === "ambush" && trigger.playId) {
-    const unit = unitByPlayId(game, trigger.playId);
+    const unit = GetUnitByPlayId(game, trigger.playId);
     if (!unit) return null;
     const { unitPlayIds } = computeAttackTargets(game, unit as Unit);
     if (unitPlayIds.length === 0) return null; // no valid unit targets — fizzle
@@ -433,7 +419,7 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
   }
 
   if (trigger.triggerType === "leader-reaction") {
-    const leaderState = ps(game, trigger.fromPlayer).leader;
+    const leaderState = GetPlayer(game, trigger.fromPlayer).leader;
     if (leaderState.deployed || !leaderState.ready) return null;
     switch (trigger.cardId) {
       case "SHD_008": {
@@ -562,7 +548,7 @@ function defeatUnit(
   if (!removed) return null;
 
   if (CardIsLeader(unit.cardId)) {
-    const leader = ps(game, removed.player).leader;
+    const leader = GetPlayer(game, removed.player).leader;
     leader.deployed = false;
     leader.ready = false;
     leader.deployedPlayId = undefined;
@@ -588,8 +574,8 @@ function defeatUnit(
   for (const captive of unit.captives ?? []) {
     const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
     const rescued = Unit.FromInterface({ ...captive, ready: false });
-    if (arena === "Ground") ps(game, captive.owner).groundArena.push(rescued);
-    else ps(game, captive.owner).spaceArena.push(rescued);
+    if (arena === "Ground") GetPlayer(game, captive.owner).groundArena.push(rescued);
+    else GetPlayer(game, captive.owner).spaceArena.push(rescued);
     game.roundState.cardsEnteredPlayThisPhase.push({
       fromPlayer: captive.owner,
       cardId: captive.cardId,
@@ -629,7 +615,7 @@ function defeatForExploit(game: GameState, log: string[], unit: Unit): void {
   if (!removed) return;
 
   if (CardIsLeader(unit.cardId)) {
-    const leader = ps(game, removed.player).leader;
+    const leader = GetPlayer(game, removed.player).leader;
     leader.deployed = false;
     leader.ready = false;
     leader.deployedPlayId = undefined;
@@ -652,8 +638,8 @@ function defeatForExploit(game: GameState, log: string[], unit: Unit): void {
   for (const captive of unit.captives ?? []) {
     const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
     const rescued = Unit.FromInterface({ ...captive, ready: false });
-    if (arena === "Ground") ps(game, captive.owner).groundArena.push(rescued);
-    else ps(game, captive.owner).spaceArena.push(rescued);
+    if (arena === "Ground") GetPlayer(game, captive.owner).groundArena.push(rescued);
+    else GetPlayer(game, captive.owner).spaceArena.push(rescued);
     game.roundState.cardsEnteredPlayThisPhase.push({
       fromPlayer: captive.owner,
       cardId: captive.cardId,
@@ -685,8 +671,8 @@ function computeAttackTargets(
     game.player1.groundArena.some(u => u.playId === attacker.playId) ||
     game.player2.groundArena.some(u => u.playId === attacker.playId);
   const arena = inGround ? "Ground" : "Space";
-  const defenderPlayer = otherPlayer(attacker.controller);
-  const p = ps(game, defenderPlayer);
+  const defenderPlayer = GetOtherPlayer(attacker.controller);
+  const p = GetPlayer(game, defenderPlayer);
   const opposing = (arena === "Ground" ? p.groundArena : p.spaceArena) as Unit[];
 
   // Hidden: exclude units played/deployed/created this phase. Rescued units (returned-to-play)
@@ -729,13 +715,13 @@ function resolveAttack(
     | { type: "unit"; playId: string }
     | { type: "base"; player: PlayerId },
 ): PendingResolution | null {
-  const attacker = unitByPlayId(game, pending.attackerPlayId);
+  const attacker = GetUnitByPlayId(game, pending.attackerPlayId);
   if (!attacker) return null;
 
   // Restore fires as an On Attack trigger before combat damage
   const restoreAmount = RestoreAmount(attacker.cardId, attacker.playId, attacker.controller);
   if (restoreAmount > 0) {
-    const controllerBase = ps(game, attacker.controller).base;
+    const controllerBase = GetPlayer(game, attacker.controller).base;
     controllerBase.damage = Math.max(0, controllerBase.damage - restoreAmount);
     log.push(`Restore ${restoreAmount}: healed ${restoreAmount} damage from Player ${attacker.controller}'s base.`);
   }
@@ -767,7 +753,7 @@ function resolveAttack(
     }
     return whenAttackEnds;
   } else {
-    const defender = unitByPlayId(game, target.playId);
+    const defender = GetUnitByPlayId(game, target.playId);
     if (!defender) return null;
 
     const defPower = defender.CurrentPower();
@@ -819,7 +805,7 @@ function resolveAttack(
       ) {
         const excess = Math.max(atkPower - defHpBefore, 0);
         if (excess > 0) {
-          dealBaseDamage(game, otherPlayer(attacker.controller), excess);
+          dealBaseDamage(game, GetOtherPlayer(attacker.controller), excess);
           log.push(`Overwhelm: ${excess} excess damage dealt to the base.`);
         }
       }
@@ -870,7 +856,7 @@ function resolveWhenAttackEnds(
   continuation: PendingResolution | null,
 ): PendingResolution | null {
   // If attacker was defeated, no trigger fires
-  if (!unitByPlayId(game, attacker.playId)) return continuation;
+  if (!GetUnitByPlayId(game, attacker.playId)) return continuation;
 
   switch (attacker.cardId) {
     case "SOR_009": { // Leia Organa: You may attack with another Rebel unit
@@ -920,7 +906,7 @@ function resolutionResponse(resolution: ResolutionRequest): DispatchResponse {
 function pendingToResolution(pending: PendingResolution, game: GameState): ResolutionRequest {
   switch (pending.type) {
     case "attack-target": {
-      const attacker = unitByPlayId(game, pending.attackerPlayId);
+      const attacker = GetUnitByPlayId(game, pending.attackerPlayId);
       if (!attacker) return { type: "Target" } satisfies NeedsTarget;
       const { unitPlayIds, includesBase } = computeAttackTargets(game, attacker);
       const allowBase = includesBase && pending.source !== "ambush";
@@ -1116,7 +1102,7 @@ function completePlayCard(
     game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId, reason: "played" });
 
     if (CardIsUnique(cardId)) {
-      const controlled = [...ps(game, player).groundArena, ...ps(game, player).spaceArena] as Unit[];
+      const controlled = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena] as Unit[];
       const copies = controlled.filter(u => u.cardId === cardId);
       if (copies.length > 1) {
         const defeatCopyPending: DefeatCopyPending = {
@@ -1137,7 +1123,7 @@ function completePlayCard(
       game.currentEffects.push({ ...opts.injectEffect, targetPlayId: unit.playId });
     }
     // Leader-reaction: Boba Fett — when the active player plays a keyword unit
-    const leaderState = ps(game, player).leader;
+    const leaderState = GetPlayer(game, player).leader;
     if (
       leaderState.cardId === "SHD_008" &&
       !leaderState.deployed &&
@@ -1198,7 +1184,7 @@ function handlePlayCard(
 ): HandlerResult {
   const { cardId } = dispatch.dispatchData as PlayCardDispatchData;
   const player = dispatch.fromPlayer;
-  const hand = ps(game, player).hand;
+  const hand = GetPlayer(game, player).hand;
   const idx = hand.findIndex((c) => c.cardId === cardId);
 
   if (idx === -1)
@@ -1206,7 +1192,7 @@ function handlePlayCard(
 
   const fullCost = playCost(game, player, cardId);
   const exploitAmt = ExploitAmount(cardId, "hand", player, true); // report mode: peek without consuming
-  const readyCount = ps(game, player).resources.filter(r => r.ready).length;
+  const readyCount = GetPlayer(game, player).resources.filter(r => r.ready).length;
   const minCost = exploitAmt > 0 ? Math.max(0, fullCost - exploitAmt * 2) : fullCost;
 
   // --- Piloting branch (checked before the unit affordability guard) ---
@@ -1276,7 +1262,7 @@ function handlePlaySmuggle(
 ): HandlerResult {
   const { playId } = dispatch.dispatchData as PlaySmuggleDispatchData;
   const player = dispatch.fromPlayer;
-  const p = ps(game, player);
+  const p = GetPlayer(game, player);
 
   const resource = p.resources.find(r => r.playId === playId);
   if (!resource)
@@ -1322,7 +1308,7 @@ function handleInitiateAttack(
   const { playId } = dispatch.dispatchData as InitiateAttackDispatchData;
   const player = dispatch.fromPlayer;
 
-  const attacker = unitByPlayId(game, playId);
+  const attacker = GetUnitByPlayId(game, playId);
   if (!attacker)
     return { response: invalidResponse(`No unit with playId ${playId}.`), pending: null, stateChanged: false };
   if (attacker.controller !== player)
@@ -1359,7 +1345,7 @@ function handleUseAbility(
 ): HandlerResult {
   const data = dispatch.dispatchData as UseAbilityDispatchData;
   const player = dispatch.fromPlayer;
-  const leader = ps(game, player).leader;
+  const leader = GetPlayer(game, player).leader;
 
   // Leader card: deploy or use ability
   if (leader.cardId === data.cardId) {
@@ -1380,7 +1366,7 @@ function handleUseAbility(
       return { response: invalidResponse("Leader has no available ability."), pending: null, stateChanged: false };
 
     const abilityCost = ActionAbilityCost(leader.cardId);
-    const readyResources = ps(game, player).resources.filter(r => r.ready).length;
+    const readyResources = GetPlayer(game, player).resources.filter(r => r.ready).length;
     if (readyResources < abilityCost)
       return { response: invalidResponse("Not enough resources to use leader ability."), pending: null, stateChanged: false };
 
@@ -1396,7 +1382,7 @@ function handleUseAbility(
 
   // Unit action ability
   if (data.playId) {
-    const unit = unitByPlayId(game, data.playId);
+    const unit = GetUnitByPlayId(game, data.playId);
     if (!unit)
       return { response: invalidResponse(`No unit with playId ${data.playId}.`), pending: null, stateChanged: false };
     if (unit.controller !== player)
@@ -1411,7 +1397,7 @@ function handleUseAbility(
   }
 
   // Base epic action
-  const base = ps(game, player).base;
+  const base = GetPlayer(game, player).base;
   if (base.cardId === data.cardId) {
     return handleBaseEpicAction(game, log, player);
   }
@@ -1420,7 +1406,7 @@ function handleUseAbility(
 }
 
 function handleBaseEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
-  const base = ps(game, player).base;
+  const base = GetPlayer(game, player).base;
   if (base.epicActionUsed)
     return { response: invalidResponse("Base epic action already used this round."), pending: null, stateChanged: false };
   if (game.gamePhase !== "ActionPhase")
@@ -1433,10 +1419,10 @@ function handleBaseEpicAction(game: GameState, log: string[], player: PlayerId):
 }
 
 function resolveEclEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
-  ps(game, player).base.epicActionUsed = true;
+  GetPlayer(game, player).base.epicActionUsed = true;
 
-  const readyCount = ps(game, player).resources.filter(r => r.ready).length;
-  const eligible = ps(game, player).hand.filter(c =>
+  const readyCount = GetPlayer(game, player).resources.filter(r => r.ready).length;
+  const eligible = GetPlayer(game, player).hand.filter(c =>
     CardType(c.cardId) === "Unit" &&
     (CardCost(c.cardId) ?? 0) <= 6 &&
     playCost(game, player, c.cardId) <= readyCount
@@ -1470,12 +1456,12 @@ function handleChooseTarget(
     let attacker: Unit | null = null;
 
     if (data.targetZones?.includes("Base")) {
-      const atkController = unitByPlayId(game, pending.attackerPlayId)?.controller;
-      if (atkController != null) target = { type: "base", player: otherPlayer(atkController) };
-      attacker = unitByPlayId(game, pending.attackerPlayId);
+      const atkController = GetUnitByPlayId(game, pending.attackerPlayId)?.controller;
+      if (atkController != null) target = { type: "base", player: GetOtherPlayer(atkController) };
+      attacker = GetUnitByPlayId(game, pending.attackerPlayId);
     } else if (data.targetPlayIds?.[0]) {
       const chosen = data.targetPlayIds[0];
-      attacker = unitByPlayId(game, pending.attackerPlayId);
+      attacker = GetUnitByPlayId(game, pending.attackerPlayId);
       if (!attacker)
         return { response: invalidResponse("Attacker no longer in play."), pending: null, stateChanged: false };
       const { unitPlayIds } = computeAttackTargets(game, attacker);
@@ -1534,7 +1520,7 @@ function handleChooseTarget(
       updateDefeatedPlayers(game);
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
-    const playerState = ps(game, pending.player);
+    const playerState = GetPlayer(game, pending.player);
     const resourceIdx = playerState.resources.findIndex(r => r.playId === chosenPlayId);
     if (resourceIdx === -1)
       return { response: invalidResponse("Plot resource not found."), pending, stateChanged: false };
@@ -1635,11 +1621,11 @@ function handleChooseTarget(
       const toPlace: { cardId: string; ownerDeck: { cardId: string }[] }[] = [];
       for (const playId of chosen.slice(0, pending.maxCount)) {
         for (const pId of [1, 2] as PlayerId[]) {
-          const pState252 = ps(game, pId);
+          const pState252 = GetPlayer(game, pId);
           const idx = pState252.discard.findIndex(d => d.playId === playId);
           if (idx !== -1) {
             const card = pState252.discard.splice(idx, 1)[0];
-            toPlace.push({ cardId: card.cardId, ownerDeck: ps(game, card.owner as PlayerId).deck });
+            toPlace.push({ cardId: card.cardId, ownerDeck: GetPlayer(game, card.owner as PlayerId).deck });
             break;
           }
         }
@@ -1664,7 +1650,7 @@ function handleChooseTarget(
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
-    const playerState = ps(game, pending.player);
+    const playerState = GetPlayer(game, pending.player);
     const returned: string[] = [];
     for (const playId of chosen.slice(0, pending.maxCount)) {
       const idx = playerState.discard.findIndex(d => d.playId === playId);
@@ -1692,7 +1678,7 @@ function handleChooseTarget(
       return { response: invalidResponse(`Unit ${invalid} is not eligible for Experience token.`), pending, stateChanged: false };
     const gifted: string[] = [];
     for (const playId of chosen) {
-      const target = unitByPlayId(game, playId);
+      const target = GetUnitByPlayId(game, playId);
       if (target) {
         target.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: target.owner, controller: target.controller });
         gifted.push(CardTitle(target.cardId) ?? target.cardId);
@@ -1713,7 +1699,7 @@ function handleChooseTarget(
     const idx = data.targetIndices?.[0];
     if (idx == null)
       return { response: invalidResponse("Choose a card index to discard."), pending, stateChanged: false };
-    const playerHand = ps(game, pending.targetPlayer).hand;
+    const playerHand = GetPlayer(game, pending.targetPlayer).hand;
     if (idx < 0 || idx >= playerHand.length)
       return { response: invalidResponse("Invalid hand index."), pending, stateChanged: false };
     playerHand.splice(idx, 1);
@@ -1735,7 +1721,7 @@ function handleChooseTarget(
       return { response: invalidResponse("choose-target must include targetPlayIds to resolve uniqueness."), pending, stateChanged: false };
     if (!pending.eligiblePlayIds.includes(chosen))
       return { response: invalidResponse(`Unit ${chosen} is not a valid uniqueness choice.`), pending, stateChanged: false };
-    const unit = unitByPlayId(game, chosen);
+    const unit = GetUnitByPlayId(game, chosen);
     if (!unit)
       return { response: invalidResponse("Chosen unit not found."), pending, stateChanged: false };
     defeatUnit(game, log, unit);
@@ -1750,7 +1736,7 @@ function handleChooseTarget(
     if (!pending.fromPlayIds.includes(chosen))
       return { response: invalidResponse(`Unit ${chosen} is not a valid upgrade target.`), pending, stateChanged: false };
 
-    const targetUnit = unitByPlayId(game, chosen);
+    const targetUnit = GetUnitByPlayId(game, chosen);
     if (!targetUnit)
       return { response: invalidResponse("Target unit not found."), pending, stateChanged: false };
 
@@ -1763,7 +1749,7 @@ function handleChooseTarget(
     targetUnit.upgrades.push(upgradeInPlay);
     // If a leader deployed as a pilot, record the upgrade's playId as deployedPlayId
     if (CardIsLeader(pending.upgradeCardId)) {
-      ps(game, pending.player).leader.deployedPlayId = upgradeInPlay.playId;
+      GetPlayer(game, pending.player).leader.deployedPlayId = upgradeInPlay.playId;
     }
     const isPilot = PilotingCost(pending.upgradeCardId) >= 0;
     if (isPilot) {
@@ -1831,13 +1817,13 @@ function handleChooseTarget(
 
     // Defeat chosen units via Exploit (CR 16d: WD triggers fire after card enters play)
     for (const playId of chosen) {
-      const unit = unitByPlayId(game, playId);
+      const unit = GetUnitByPlayId(game, playId);
       if (unit) defeatForExploit(game, log, unit);
     }
 
     // Cost = fullCost − 2 per defeated unit, minimum 0
     const reducedCost = Math.max(0, pending.fullCost - chosen.length * 2);
-    const readyCount = ps(game, pending.playingPlayer).resources.filter(r => r.ready).length;
+    const readyCount = GetPlayer(game, pending.playingPlayer).resources.filter(r => r.ready).length;
     if (readyCount < reducedCost) {
       // Shouldn't normally happen (we validated before offering Exploit), but guard anyway
       return { response: invalidResponse(`Not enough resources after Exploit reduction.`), pending, stateChanged: false };
@@ -1855,7 +1841,7 @@ function handleChooseTarget(
     const idx = data.targetIndices?.[0];
     if (idx == null)
       return { response: invalidResponse("Choose a card from hand to play."), pending, stateChanged: false };
-    const hand = ps(game, pending.player).hand;
+    const hand = GetPlayer(game, pending.player).hand;
     if (idx < 0 || idx >= hand.length)
       return { response: invalidResponse("Invalid hand index."), pending, stateChanged: false };
     const cardId = hand[idx].cardId;
@@ -1867,7 +1853,7 @@ function handleChooseTarget(
         if ((CardCost(cardId) ?? 0) > 6)
           return { response: invalidResponse("ECL: chosen unit costs more than 6."), pending, stateChanged: false };
         const eclCost = playCost(game, pending.player, cardId);
-        const eclReady = ps(game, pending.player).resources.filter(r => r.ready).length;
+        const eclReady = GetPlayer(game, pending.player).resources.filter(r => r.ready).length;
         if (eclReady < eclCost)
           return { response: invalidResponse("ECL: not enough resources to play this unit."), pending, stateChanged: false };
         exhaustResources(game, pending.player, eclCost);
@@ -1881,7 +1867,7 @@ function handleChooseTarget(
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("Timely Intervention: chosen card is not a Unit."), pending, stateChanged: false };
         const tiCost = playCost(game, pending.player, cardId);
-        const tiReady = ps(game, pending.player).resources.filter(r => r.ready).length;
+        const tiReady = GetPlayer(game, pending.player).resources.filter(r => r.ready).length;
         if (tiReady < tiCost)
           return { response: invalidResponse("Timely Intervention: not enough resources to play this unit."), pending, stateChanged: false };
         exhaustResources(game, pending.player, tiCost);
@@ -1897,7 +1883,7 @@ function handleChooseTarget(
         const fullCost = playCost(game, pending.player, cardId);
         const cardExploit = ExploitAmount(cardId, undefined, undefined, true);
         const totalExploit = cardExploit + 1;
-        const dookuReady = ps(game, pending.player).resources.filter(r => r.ready).length;
+        const dookuReady = GetPlayer(game, pending.player).resources.filter(r => r.ready).length;
         const minCost = Math.max(0, fullCost - totalExploit * 2);
         if (dookuReady < minCost)
           return { response: invalidResponse("Not enough resources to play that card."), pending, stateChanged: false };
@@ -1981,7 +1967,7 @@ function handleChooseTarget(
           return { response: invalidResponse("Sneak Attack: chosen card is not a Unit."), pending, stateChanged: false };
         const fullCost219 = playCost(game, pending.player, cardId);
         const reducedCost219 = Math.max(0, fullCost219 - 3);
-        const ready219 = ps(game, pending.player).resources.filter(r => r.ready).length;
+        const ready219 = GetPlayer(game, pending.player).resources.filter(r => r.ready).length;
         if (ready219 < reducedCost219)
           return { response: invalidResponse("Sneak Attack: not enough resources to play this unit."), pending, stateChanged: false };
         exhaustResources(game, pending.player, reducedCost219);
@@ -2014,7 +2000,7 @@ function handleChooseTarget(
     }
 
     for (const assignment of assignments) {
-      const unit = unitByPlayId(game, assignment.playId);
+      const unit = GetUnitByPlayId(game, assignment.playId);
       if (!unit) continue;
       const shieldIdx = unit.upgrades.findIndex(u => u.cardId === "SOR_T02");
       if (shieldIdx !== -1) {
@@ -2055,7 +2041,7 @@ function handleChooseTarget(
 
     // Per-unit cap: cannot assign more than remaining HP (CR 8.36.3)
     for (const a of unitAssignments) {
-      const unit = unitByPlayId(game, a.playId);
+      const unit = GetUnitByPlayId(game, a.playId);
       if (!unit) continue;
       const remaining = Unit.FromInterface(unit).CurrentHP();
       if (a.damage > remaining)
@@ -2064,7 +2050,7 @@ function handleChooseTarget(
 
     // Apply unit damage — shields are NOT removed (CR 8.36.2)
     for (const a of unitAssignments) {
-      const unit = unitByPlayId(game, a.playId);
+      const unit = GetUnitByPlayId(game, a.playId);
       if (unit) unit.damage += a.damage;
     }
 
@@ -2098,7 +2084,7 @@ function handleChooseTarget(
         return { response: invalidResponse(`Deck search: combined cost ${combinedCost} exceeds ${pending.maxCombinedCost}.`), pending, stateChanged: false };
     }
     // Remove top N from deck and return unchosen cards to the bottom in a random order
-    const pState = ps(game, pending.player);
+    const pState = GetPlayer(game, pending.player);
     pState.deck.splice(pState.deck.length - pending.topCards.length, pending.topCards.length);
     const takenSet = new Set(chosen);
     const unchosenCards = pending.topCards.filter(c => !takenSet.has(c.tempId)).map(c => ({ cardId: c.cardId }));
@@ -2139,7 +2125,7 @@ function handleChooseTarget(
 
     // action === "play": enter each chosen unit into the arena (exhausted), queue triggers
     for (const tempId of chosen) {
-      addUnitFromSearch(game, log, eligibleMap.get(tempId)!.cardId, pending.player);
+      addUnitFromSearch(game, log, eligibleMap.get(tempId)!.cardId, pending.player, pending.costModifier);
     }
     updateDefeatedPlayers(game);
     const contPlay = pending.continuation ?? null;
@@ -2170,7 +2156,7 @@ function processSingleOnAttackTrigger(
   switch (trigger.cardId) {
     case "saboteur": {
       if (cont.target.type === "unit") {
-        const def = unitByPlayId(game, cont.target.playId);
+        const def = GetUnitByPlayId(game, cont.target.playId);
         if (def) {
           const before = def.upgrades.length;
           def.upgrades = def.upgrades.filter(u => u.cardId !== "SOR_T02");
@@ -2237,7 +2223,7 @@ function processSingleOnAttackTrigger(
 }
 
 function thrawnsReveal(game: GameState, log: string[], deckOwner: PlayerId, thrawnPlayer: PlayerId): PendingResolution | null {
-  const deck = ps(game, deckOwner).deck;
+  const deck = GetPlayer(game, deckOwner).deck;
   if (deck.length === 0) {
     log.push(`${CardTitle("SOR_016")}: Player ${deckOwner}'s deck is empty — no card to reveal.`);
     return null;
@@ -2248,7 +2234,7 @@ function thrawnsReveal(game: GameState, log: string[], deckOwner: PlayerId, thra
   const subtitle = CardSubtitle(topCard.cardId);
   const cardLabel = subtitle ? `${CardTitle(topCard.cardId)} — ${subtitle}` : CardTitle(topCard.cardId);
   log.push(`${CardTitle("SOR_016")}: revealed ${cardLabel} (cost ${revealedCost}) from Player ${deckOwner}'s deck.`);
-  const eligible = allUnits(game).filter(u => (CardCost(u.cardId) ?? 0) <= revealedCost);
+  const eligible = GetAllUnits(game).filter(u => (CardCost(u.cardId) ?? 0) <= revealedCost);
   if (eligible.length === 0) return null;
   return {
     type: "ability-target",
@@ -2268,10 +2254,10 @@ function applyAbilityOptionEffect(
     case "SOR_016": // Yes = reveal own deck
       return thrawnsReveal(game, log, pending.player!, pending.player!);
     case "JTL_096": {
-      const unit = unitByPlayId(game, pending.sourcePlayId!);
+      const unit = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (unit) {
         exhaustResources(game, unit.controller, 2);
-        const pState = ps(game, unit.controller);
+        const pState = GetPlayer(game, unit.controller);
         const spaceIdx = pState.spaceArena.findIndex(u => u.playId === unit.playId);
         if (spaceIdx !== -1) {
           pState.spaceArena.splice(spaceIdx, 1);
@@ -2284,7 +2270,7 @@ function applyAbilityOptionEffect(
       return pending.continuation ?? null;
     }
     case "JTL_049": {
-      const unit = unitByPlayId(game, pending.sourcePlayId!);
+      const unit = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (!unit) return pending.continuation ?? null;
       const eligible = l337EligibleVehicles(game, unit.controller, pending.sourcePlayId!);
       if (eligible.length === 0) return pending.continuation ?? null;
@@ -2311,7 +2297,7 @@ function applyAbilityOptionEffect(
       return pending.continuation ?? null;
     }
     case "SOR_206": { // Mining Guild TIE Yes: pay 2 resources, draw a card.
-      const unit206 = unitByPlayId(game, pending.sourcePlayId!);
+      const unit206 = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (unit206) {
         exhaustResources(game, unit206.controller, 2);
         DrawCardForPlayer(game, log, unit206.controller);
@@ -2338,9 +2324,9 @@ function applyAbilityOptionDeclineEffect(
 ): PendingResolution | null {
   switch (pending.cardId) {
     case "SOR_016": // No = reveal opponent's deck
-      return thrawnsReveal(game, log, otherPlayer(pending.player!), pending.player!);
+      return thrawnsReveal(game, log, GetOtherPlayer(pending.player!), pending.player!);
     case "JTL_049": {
-      const l337Unit = unitByPlayId(game, pending.sourcePlayId!);
+      const l337Unit = GetUnitByPlayId(game, pending.sourcePlayId!);
       let nextPending: PendingResolution | null = pending.continuation ?? null;
       if (l337Unit) {
         const defeatPending = defeatUnit(game, log, l337Unit, true);
@@ -2439,7 +2425,7 @@ function handleChooseOption(
   }
 
   if (pending?.type === "on-attack-order") {
-    const attacker = unitByPlayId(game, pending.attackerPlayId) as Unit | null;
+    const attacker = GetUnitByPlayId(game, pending.attackerPlayId) as Unit | null;
     if (!attacker) {
       return handleResolveAttack(game, log, pending.continuation);
     }
@@ -2480,7 +2466,7 @@ function handleChooseOption(
       case "saboteur": {
         // Strip defender's shields now
         if (pending.continuation.target.type === "unit") {
-          const defender = unitByPlayId(game, pending.continuation.target.playId);
+          const defender = GetUnitByPlayId(game, pending.continuation.target.playId);
           if (defender) {
             const before = defender.upgrades.length;
             defender.upgrades = defender.upgrades.filter(u => u.cardId !== "SOR_T02");
@@ -2611,7 +2597,7 @@ function handleChooseOption(
     if (optionType === "put_into_play_as_resource") {
       const cardId = parts[0];
       const owner = Number(parts[1]) as PlayerId;
-      ps(game, owner).resources.push({
+      GetPlayer(game, owner).resources.push({
         cardId,
         playId: nextPlayId(game),
         owner,
@@ -2705,10 +2691,10 @@ function handleChooseOption(
 
   if (pending?.type === "exploit-option") {
     if (option === "No") {
-      const readyCount = ps(game, pending.playingPlayer).resources.filter(r => r.ready).length;
+      const readyCount = GetPlayer(game, pending.playingPlayer).resources.filter(r => r.ready).length;
       if (readyCount < pending.fullCost) {
         // Can't afford without Exploit — return card to hand
-        ps(game, pending.playingPlayer).hand.push({ cardId: pending.cardId });
+        GetPlayer(game, pending.playingPlayer).hand.push({ cardId: pending.cardId });
         return { response: invalidResponse("Cannot afford this card without using Exploit."), pending: null, stateChanged: false };
       }
       exhaustResources(game, pending.playingPlayer, pending.fullCost);
@@ -2718,8 +2704,8 @@ function handleChooseOption(
     // "Yes" — prompt player to choose up to exploitAmount friendly units to defeat
     if (option === "Yes") {
       const friendlyUnits = [
-        ...ps(game, pending.playingPlayer).groundArena,
-        ...ps(game, pending.playingPlayer).spaceArena,
+        ...GetPlayer(game, pending.playingPlayer).groundArena,
+        ...GetPlayer(game, pending.playingPlayer).spaceArena,
       ] as Unit[];
       const exploitTargetPending: ExploitTargetPending = {
         type: "exploit-target",
@@ -2754,7 +2740,7 @@ function handleChooseOption(
   }
 
   if (pending?.type === "piloting-option" && pending.source === "leader") {
-    const leader = ps(game, pending.playingPlayer).leader;
+    const leader = GetPlayer(game, pending.playingPlayer).leader;
     if (option === "Deploy as Unit") {
       leader.deployed = true;
       const unit = addToArena(game, pending.playingPlayer, pending.cardId, true);
@@ -2900,7 +2886,7 @@ function advanceTurn(game: GameState, log: string[], wasPass: boolean): void {
 
 /** Returns playIds of Plot-eligible resources the player can currently afford (aspect penalties included). */
 function getAffordablePlotPlayIds(game: GameState, player: PlayerId): string[] {
-  return ps(game, player).resources
+  return GetPlayer(game, player).resources
     .filter(r => HasPlot(r.cardId) && canAfford(game, player, r.cardId))
     .map(r => r.playId);
 }
@@ -2925,14 +2911,14 @@ function injectContinuation(
 }
 
 function deployLeader(game: GameState, log: string[], player: PlayerId): HandlerResult {
-  const leader = ps(game, player).leader;
+  const leader = GetPlayer(game, player).leader;
   if (leader.deployed)
     return { response: invalidResponse("Leader is already deployed."), pending: null, stateChanged: false };
   if (leader.epicActionUsed)
     return { response: invalidResponse("Leader epic action already used this round."), pending: null, stateChanged: false };
 
   const deployCost = playCost(game, player, leader.cardId);
-  if (ps(game, player).resources.length < deployCost)
+  if (GetPlayer(game, player).resources.length < deployCost)
     return { response: invalidResponse("Not enough resources to deploy leader."), pending: null, stateChanged: false };
 
   // Check if this leader can also deploy as a pilot upgrade on a Vehicle
@@ -2995,7 +2981,7 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
 }
 
 function resolveLeaderAbility(game: GameState, log: string[], player: PlayerId): HandlerResult {
-  const leader = ps(game, player).leader;
+  const leader = GetPlayer(game, player).leader;
   leader.ready = false;
   const nextPending = resolveActionAbility(game, log, player, leader.cardId);
   if (nextPending) {
@@ -3023,7 +3009,7 @@ function resolveActionAbility(
 ): PendingResolution | null {
   switch (cardId) {
     case "TWI_005": { // Count Dooku — Action [Exhaust]: Play a Separatist card from your hand. It gains Exploit 1.
-      const separatistInHand = ps(game, player).hand.some(c => CardTraits(c.cardId).includes("Separatist"));
+      const separatistInHand = GetPlayer(game, player).hand.some(c => CardTraits(c.cardId).includes("Separatist"));
       if (!separatistInHand) {
         log.push(`${CardTitle("TWI_005")}: no Separatist cards in hand.`);
         return null;
@@ -3031,7 +3017,7 @@ function resolveActionAbility(
       return { type: "play-from-hand", cardId: "TWI_005", player } satisfies PlayFromHandPending;
     }
     case "SOR_006": { // Emperor Palpatine - Galactic Ruler: Action [1 Resource, Exhaust, defeat a friendly unit]: Deal 1 damage to a unit and draw a card.
-      const friendlyUnits006 = [...ps(game, player).groundArena, ...ps(game, player).spaceArena];
+      const friendlyUnits006 = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena];
       if (friendlyUnits006.length === 0) return null;
       return {
         type: "ability-target",
@@ -3093,7 +3079,7 @@ function applyAbilityEffect(
     case "SOR_033": //Death Trooper: Deal 2 damage to a friendly ground unit and 2 damage to an enemy ground unit.
     case "SEC_030": {
       if (!targetPlayId) break;
-      const targetUnit = unitByPlayId(game.currentGameState, targetPlayId);
+      const targetUnit = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (targetUnit) {
         targetUnit.damage += 2;
         game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 2 damage to ${CardTitle(targetUnit.cardId)}.`);
@@ -3102,7 +3088,7 @@ function applyAbilityEffect(
     }
     case "SOR_016": { // Grand Admiral Thrawn — exhaust chosen unit
       if (!targetPlayId) break;
-      const target016 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target016 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target016) {
         target016.ready = false;
         game.gameLog.push(`${CardTitle("SOR_016")}: exhausted ${CardTitle(target016.cardId)}.`);
@@ -3111,7 +3097,7 @@ function applyAbilityEffect(
     }
     case "SEC_182": { // Charged with Treason — deal 5 damage to chosen unit
       if (!targetPlayId) break;
-      const target182 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target182 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target182) {
         target182.damage += 5;
         game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 5 damage to ${CardTitle(target182.cardId)}.`);
@@ -3121,7 +3107,7 @@ function applyAbilityEffect(
     case "SOR_176":
     case "SEC_184": { // ISB Agent — deal 1 damage to chosen unit
       if (!targetPlayId) break;
-      const targetIsb = unitByPlayId(game.currentGameState, targetPlayId);
+      const targetIsb = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (targetIsb) {
         targetIsb.damage += 1;
         game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 1 damage to ${CardTitle(targetIsb.cardId)}.`);
@@ -3130,7 +3116,7 @@ function applyAbilityEffect(
     }
     case "SOR_108": { // Vanguard Infantry when-defeated: give Experience token to chosen unit
       if (!targetPlayId) break;
-      const target108 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target108 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target108) {
         target108.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target108.owner, controller: target108.controller });
         game.gameLog.push(`${CardTitle("SOR_108")}: gave an Experience token to ${CardTitle(target108.cardId)}.`);
@@ -3139,7 +3125,7 @@ function applyAbilityEffect(
     }
     case "SOR_121": { // Hardpoint Heavy Blaster on-attack: deal 2 damage to chosen unit in defender's arena
       if (!targetPlayId) break;
-      const target121 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target121 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target121) {
         target121.damage += 2;
         game.gameLog.push(`${CardTitle("SOR_121")}: dealt 2 damage to ${CardTitle(target121.cardId)}.`);
@@ -3148,7 +3134,7 @@ function applyAbilityEffect(
     }
     case "SOR_226": { // Admiral Motti when-defeated: ready chosen Villainy unit
       if (!targetPlayId) break;
-      const target226 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target226 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target226) {
         target226.ready = true;
         game.gameLog.push(`${CardTitle("SOR_226")}: readied ${CardTitle(target226.cardId)}.`);
@@ -3159,7 +3145,7 @@ function applyAbilityEffect(
     case "SHD_012_1": // Bo-Katan deployed on-attack: first 1-damage shot
     case "SHD_012_2": { // Bo-Katan deployed on-attack: second 1-damage shot (another Mandalorian attacked)
       if (!targetPlayId) break;
-      const target012 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target012 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target012) {
         target012.damage += 1;
         game.gameLog.push(`${CardTitle("SHD_012")}: dealt 1 damage to ${CardTitle(target012.cardId)}.`);
@@ -3168,7 +3154,7 @@ function applyAbilityEffect(
     }
     case "SOR_010": { // Darth Vader: deal 2 damage to chosen unit
       if (!targetPlayId) break;
-      const target = unitByPlayId(game.currentGameState, targetPlayId);
+      const target = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target) {
         target.damage += 2;
         game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 2 damage to ${CardTitle(target.cardId) ?? target.cardId}.`);
@@ -3186,7 +3172,7 @@ function applyAbilityEffect(
     }
     case "SOR_103": { // Rebel Assault: push ForAttack +1 on chosen Rebel unit, then initiate attack with it
       if (!targetPlayId) break;
-      const rebelUnit = unitByPlayId(game.currentGameState, targetPlayId);
+      const rebelUnit = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!rebelUnit) break;
       game.currentGameState.currentEffects.push({
         cardId: "SOR_103",
@@ -3214,7 +3200,7 @@ function applyAbilityEffect(
     }
     case "SOR_168": { // Precision Fire: push ForAttack Saboteur + Trooper bonus, then attack with chosen unit
       if (!targetPlayId) break;
-      const unit168 = unitByPlayId(game.currentGameState, targetPlayId);
+      const unit168 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!unit168) break;
       game.currentGameState.currentEffects.push({
         cardId: "SOR_168",
@@ -3233,7 +3219,7 @@ function applyAbilityEffect(
     case "SOR_227": // Snowtrooper Lieutenant — if Imperial, give +2/+0 ForAttack, then attack
     case "SHD_236": {
       if (!targetPlayId) break;
-      const unit227 = unitByPlayId(game.currentGameState, targetPlayId);
+      const unit227 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!unit227) break;
       if (TraitContains(unit227.cardId, "Imperial", unit227.controller, unit227.playId)) {
         game.currentGameState.currentEffects.push({
@@ -3252,11 +3238,11 @@ function applyAbilityEffect(
       };
     }
     case "JTL_153": { // Rebellious Hammerhead: deal damage equal to hand size to chosen unit
-      const sourceUnit = unitByPlayId(game.currentGameState, pending.sourcePlayId!);
+      const sourceUnit = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId!);
       if (!sourceUnit) break;
       const owner = sourceUnit.controller;
-      const handSize = ps(game.currentGameState, owner).hand.length;
-      const target = targetPlayId ? unitByPlayId(game.currentGameState, targetPlayId) : null;
+      const handSize = GetPlayer(game.currentGameState, owner).hand.length;
+      const target = targetPlayId ? GetUnitByPlayId(game.currentGameState, targetPlayId) : null;
       if (target) {
         target.damage += handSize;
         game.gameLog.push(`${CardTitle(pending.cardId)} dealt ${handSize} damage to ${CardTitle(target.cardId) ?? target.cardId}.`);
@@ -3265,7 +3251,7 @@ function applyAbilityEffect(
     }
     case "SOR_077": { // Takedown — defeat a unit with ≤5 remaining HP
       if (!targetPlayId) break;
-      const target077 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target077 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target077) break;
       if (Unit.FromInterface(target077).CurrentHP() > 5) break;
       const defeatPend077 = defeatUnit(game.currentGameState, game.gameLog, target077);
@@ -3276,7 +3262,7 @@ function applyAbilityEffect(
     case "SOR_078": // Vanquish — defeat a non-leader unit.
     case "TWI_077": { // reprint of SOR_078
       if (!targetPlayId) break;
-      const target078 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target078 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target078) break;
       if (CardIsLeader(target078.cardId)) break;
       const defeatPend078 = defeatUnit(game.currentGameState, game.gameLog, target078);
@@ -3286,7 +3272,7 @@ function applyAbilityEffect(
     }
     case "SEC_034": { // Cad Bane — defeat a unit with ≤2 remaining HP
       if (!targetPlayId) break;
-      const target034 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target034 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target034) break;
       const target034Unit = Unit.FromInterface(target034);
       if (target034Unit.CurrentHP() > 2) break;
@@ -3297,7 +3283,7 @@ function applyAbilityEffect(
     }
     case "SOR_224": { // Change of Heart — take control of a non-leader unit (reverts at start of regroup)
       if (!targetPlayId || !pending.player) break;
-      const unit224 = unitByPlayId(game.currentGameState, targetPlayId);
+      const unit224 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!unit224 || CardIsLeader(unit224.cardId)) break;
       const originalOwner = unit224.owner;
       transferControl(game.currentGameState, game.gameLog, unit224, pending.player);
@@ -3312,7 +3298,7 @@ function applyAbilityEffect(
     }
     case "SOR_073": { // Moment of Peace — "Give a Shield token to a unit."
       if (!targetPlayId) break;
-      const target073 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target073 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target073) break;
       target073.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target073.owner, controller: target073.controller });
       game.gameLog.push(`${CardTitle(pending.cardId)}: Shield token placed on ${CardTitle(target073.cardId)}.`);
@@ -3320,7 +3306,7 @@ function applyAbilityEffect(
     }
     case "SOR_241": { // Wing Leader — "Give 2 Experience tokens to another friendly REBEL unit."
       if (!targetPlayId) break;
-      const target241 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target241 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target241) break;
       target241.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target241.owner, controller: target241.controller });
       target241.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target241.owner, controller: target241.controller });
@@ -3338,7 +3324,7 @@ function applyAbilityEffect(
         break;
       }
       // Return unit to its owner's hand (without upgrades — they're defeated).
-      ps(game.currentGameState, bouncedUnit.owner).hand.push({ cardId: bouncedUnit.cardId });
+      GetPlayer(game.currentGameState, bouncedUnit.owner).hand.push({ cardId: bouncedUnit.cardId });
       game.gameLog.push(`Waylay: ${CardTitle(bouncedUnit.cardId)} returned to Player ${bouncedUnit.owner}'s hand.`);
       // Check for Luke Skywalker (JTL_094) as a pilot upgrade — his eject ability fires.
       const waylayLuke = bouncedUnit.upgrades.find(upg => upg.cardId === "JTL_094");
@@ -3363,7 +3349,7 @@ function applyAbilityEffect(
     }
     case "SHD_132": { // Choose Sides — step 1: chose friendly unit, now prompt for enemy non-leader
       if (!targetPlayId || !pending.player) break;
-      const enemyPlayer132 = otherPlayer(pending.player);
+      const enemyPlayer132 = GetOtherPlayer(pending.player);
       const enemyUnits132 = GetUnitsForPlayer(enemyPlayer132).filter(u => !CardIsLeader(u.cardId));
       if (enemyUnits132.length === 0) break;
       return {
@@ -3378,8 +3364,8 @@ function applyAbilityEffect(
     case "SHD_132_swap": { // Choose Sides — step 2: exchange control of both units (permanent)
       if (!targetPlayId || !pending.sourcePlayId || !pending.player) break;
       const gs132 = game.currentGameState;
-      const friendlyUnit = unitByPlayId(gs132, pending.sourcePlayId);
-      const enemyUnit = unitByPlayId(gs132, targetPlayId);
+      const friendlyUnit = GetUnitByPlayId(gs132, pending.sourcePlayId);
+      const enemyUnit = GetUnitByPlayId(gs132, targetPlayId);
       if (!friendlyUnit || !enemyUnit) break;
       const friendlyOriginalController = friendlyUnit.controller;
       const enemyOriginalController = enemyUnit.controller;
@@ -3389,7 +3375,7 @@ function applyAbilityEffect(
     }
     case "SOR_127": { // Strike True — step 1: chose friendly unit, now prompt for enemy target
       if (!targetPlayId || !pending.player) break;
-      const enemyPlayer127 = otherPlayer(pending.player);
+      const enemyPlayer127 = GetOtherPlayer(pending.player);
       const enemyUnits127 = GetUnitsForPlayer(enemyPlayer127);
       if (enemyUnits127.length === 0) break;
       return {
@@ -3403,8 +3389,8 @@ function applyAbilityEffect(
     }
     case "SOR_127_deal": { // Strike True — step 2: deal power damage to chosen enemy unit
       if (!targetPlayId || !pending.sourcePlayId) break;
-      const attacker127 = unitByPlayId(game.currentGameState, pending.sourcePlayId);
-      const target127 = unitByPlayId(game.currentGameState, targetPlayId);
+      const attacker127 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
+      const target127 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!attacker127 || !target127) break;
       const power127 = Unit.FromInterface(attacker127).CurrentPower();
       target127.damage += power127;
@@ -3415,7 +3401,7 @@ function applyAbilityEffect(
     case "SHD_166": //reprint of SOR_162
     case "SOR_251": { // Confiscate — defeat an upgrade
       if (!targetPlayId) break;
-      const allGameUnits = allUnits(game.currentGameState);
+      const allGameUnits = GetAllUnits(game.currentGameState);
       let lukeConfiscated: { cardId: string; playId: string; controller: number } | null = null;
       for (const u of allGameUnits) {
         const upgradeIdx = u.upgrades.findIndex(upg => upg.playId === targetPlayId);
@@ -3448,14 +3434,14 @@ function applyAbilityEffect(
     case "SHD_008": { // Boba Fett leader reaction: exhaust leader, give chosen unit +1/+0 for this phase
       if (!targetPlayId) break;
       const gs008 = game.currentGameState;
-      ps(gs008, pending.player!).leader.ready = false;
+      GetPlayer(gs008, pending.player!).leader.ready = false;
       gs008.currentEffects.push({
         cardId: "SHD_008",
         duration: "Phase",
         affectedPlayer: pending.player!,
         targetPlayId,
       });
-      const target008 = unitByPlayId(gs008, targetPlayId);
+      const target008 = GetUnitByPlayId(gs008, targetPlayId);
       game.gameLog.push(
         `Boba Fett: gave +1/+0 to ${CardTitle(target008?.cardId ?? "") ?? targetPlayId} for this phase.`
       );
@@ -3465,7 +3451,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const gs3 = game.currentGameState;
       gs3.currentEffects.push({ cardId: "SOR_106_3", duration: "Phase", affectedPlayer: pending.player!, targetPlayId });
-      const t3 = unitByPlayId(gs3, targetPlayId);
+      const t3 = GetUnitByPlayId(gs3, targetPlayId);
       game.gameLog.push(`Attack Pattern Delta: ${CardTitle(t3?.cardId ?? "") ?? targetPlayId} gets +3/+3 for this phase.`);
       // Rebuild step-2 fromPlayIds excluding the just-chosen unit
       const fresh2 = GetUnitsForPlayer(pending.player!).filter(u => u.playId !== targetPlayId).map(u => u.playId);
@@ -3488,7 +3474,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const gs2 = game.currentGameState;
       gs2.currentEffects.push({ cardId: "SOR_106_2", duration: "Phase", affectedPlayer: pending.player!, targetPlayId });
-      const t2 = unitByPlayId(gs2, targetPlayId);
+      const t2 = GetUnitByPlayId(gs2, targetPlayId);
       game.gameLog.push(`Attack Pattern Delta: ${CardTitle(t2?.cardId ?? "") ?? targetPlayId} gets +2/+2 for this phase.`);
       // Rebuild step-3 fromPlayIds excluding units already tagged (SOR_106_3) plus current pick
       const alreadyPicked = new Set(
@@ -3511,13 +3497,13 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const gs1 = game.currentGameState;
       gs1.currentEffects.push({ cardId: "SOR_106_1", duration: "Phase", affectedPlayer: pending.player!, targetPlayId });
-      const t1 = unitByPlayId(gs1, targetPlayId);
+      const t1 = GetUnitByPlayId(gs1, targetPlayId);
       game.gameLog.push(`Attack Pattern Delta: ${CardTitle(t1?.cardId ?? "") ?? targetPlayId} gets +1/+1 for this phase.`);
       break;
     }
     case "SOR_060": { // Distant Patroller WD: Give a Shield token to the chosen Vigilance unit.
       if (!targetPlayId) break;
-      const target060 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target060 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target060) {
         target060.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target060.owner, controller: target060.controller });
         game.gameLog.push(`${CardTitle("SOR_060")}: Shield token given to ${CardTitle(target060.cardId)}.`);
@@ -3526,7 +3512,7 @@ function applyAbilityEffect(
     }
     case "SOR_059": { // 2-1B Surgical Droid OA: Heal 2 from chosen unit, then proceed to combat.
       if (!targetPlayId) return pending.continuation;
-      const target059 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target059 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target059) {
         target059.damage = Math.max(0, target059.damage - 2);
         game.gameLog.push(`${CardTitle("SOR_059")}: healed 2 damage from ${CardTitle(target059.cardId)}.`);
@@ -3535,7 +3521,7 @@ function applyAbilityEffect(
     }
     case "SOR_132": { // Imperial Interceptor WP: Deal 3 damage to chosen space unit.
       if (!targetPlayId) break;
-      const target132 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target132 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target132) {
         target132.damage += 3;
         game.gameLog.push(`${CardTitle("SOR_132")}: dealt 3 damage to ${CardTitle(target132.cardId)}.`);
@@ -3544,7 +3530,7 @@ function applyAbilityEffect(
     }
     case "SOR_134": { // Ruthless Raider WP/WD: Deal 2 damage to chosen enemy unit.
       if (!targetPlayId) break;
-      const target134 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target134 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target134) {
         target134.damage += 2;
         game.gameLog.push(`${CardTitle("SOR_134")}: dealt 2 damage to ${CardTitle(target134.cardId)}.`);
@@ -3553,7 +3539,7 @@ function applyAbilityEffect(
     }
     case "SOR_076": { // Make an Opening: –2/–2 Phase to chosen unit + heal 2 from own base.
       if (!targetPlayId) break;
-      const target076 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target076 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target076) {
         game.currentGameState.currentEffects.push({ cardId: "SOR_076", duration: "Phase", affectedPlayer: target076.controller, targetPlayId });
         game.gameLog.push(`${CardTitle("SOR_076")}: gave –2/–2 to ${CardTitle(target076.cardId)} for this phase.`);
@@ -3565,7 +3551,7 @@ function applyAbilityEffect(
     }
     case "SOR_124": { // Tactical Advantage: +2/+2 Phase to chosen unit.
       if (!targetPlayId) break;
-      const target124 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target124 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target124) {
         game.currentGameState.currentEffects.push({ cardId: "SOR_124", duration: "Phase", affectedPlayer: target124.controller, targetPlayId });
         game.gameLog.push(`${CardTitle("SOR_124")}: gave +2/+2 to ${CardTitle(target124.cardId)} for this phase.`);
@@ -3583,9 +3569,9 @@ function applyAbilityEffect(
       const srcEffect151 = gs151.currentEffects.find(e => e.cardId === "SOR_151_src");
       const srcPlayId151 = srcEffect151?.targetPlayId;
       gs151.currentEffects = gs151.currentEffects.filter(e => e.cardId !== "SOR_151_src");
-      const src151 = srcPlayId151 ? unitByPlayId(gs151, srcPlayId151) : null;
+      const src151 = srcPlayId151 ? GetUnitByPlayId(gs151, srcPlayId151) : null;
       const dmg151 = src151 ? (src151.damage + Unit.FromInterface(src151).CurrentPower()) : 0;
-      const enemy151 = unitByPlayId(gs151, targetPlayId);
+      const enemy151 = GetUnitByPlayId(gs151, targetPlayId);
       if (enemy151 && dmg151 > 0) {
         enemy151.damage += dmg151;
         game.gameLog.push(`${CardTitle("SOR_151")}: dealt ${dmg151} damage to ${CardTitle(enemy151.cardId)}.`);
@@ -3594,7 +3580,7 @@ function applyAbilityEffect(
     }
     case "SOR_169": { // Keep Fighting: Ready the chosen unit.
       if (!targetPlayId) break;
-      const target169 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target169 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target169) {
         target169.ready = true;
         game.gameLog.push(`${CardTitle("SOR_169")}: readied ${CardTitle(target169.cardId)}.`);
@@ -3603,7 +3589,7 @@ function applyAbilityEffect(
     }
     case "SOR_170": { // Power Failure: Defeat all upgrades on the chosen unit.
       if (!targetPlayId) break;
-      const target170 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target170 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target170) {
         const count170 = target170.upgrades.length;
         target170.upgrades = [];
@@ -3612,12 +3598,7 @@ function applyAbilityEffect(
       break;
     }
     case "SOR_172": { // Open Fire: Deal 4 damage to the chosen unit.
-      if (!targetPlayId) break;
-      const target172 = unitByPlayId(game.currentGameState, targetPlayId);
-      if (target172) {
-        target172.damage += 4;
-        game.gameLog.push(`${CardTitle("SOR_172")}: dealt 4 damage to ${CardTitle(target172.cardId)}.`);
-      }
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 4, game.gameLog);
       break;
     }
     case "SOR_189_ready": { // Leia Organa yes path: ready the chosen resource.
@@ -3632,7 +3613,7 @@ function applyAbilityEffect(
     }
     case "SOR_189_exhaust": { // Leia Organa no path: exhaust the chosen unit.
       if (!targetPlayId) break;
-      const target189 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target189 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target189) {
         target189.ready = false;
         game.gameLog.push(`${CardTitle("SOR_189")}: exhausted ${CardTitle(target189.cardId)}.`);
@@ -3645,7 +3626,7 @@ function applyAbilityEffect(
       const bounced202 = removeFromArena(gs202, targetPlayId);
       if (bounced202) {
         if (!bounced202.unit.IsTokenUnit()) {
-          ps(gs202, bounced202.unit.owner).hand.push({ cardId: bounced202.unit.cardId });
+          GetPlayer(gs202, bounced202.unit.owner).hand.push({ cardId: bounced202.unit.cardId });
           game.gameLog.push(`${CardTitle("SOR_202")}: returned ${CardTitle(bounced202.unit.cardId)} to hand.`);
         }
       }
@@ -3653,7 +3634,7 @@ function applyAbilityEffect(
     }
     case "SOR_216": { // Disarm: –4/+0 Phase to chosen enemy unit.
       if (!targetPlayId) break;
-      const target216 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target216 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target216) {
         game.currentGameState.currentEffects.push({ cardId: "SOR_216", duration: "Phase", affectedPlayer: target216.controller, targetPlayId });
         game.gameLog.push(`${CardTitle("SOR_216")}: gave –4/+0 to ${CardTitle(target216.cardId)} for this phase.`);
@@ -3672,7 +3653,7 @@ function applyAbilityEffect(
     }
     case "SOR_240": { // Fleet Lieutenant: if Rebel +2/+0 ForAttack, then attack with chosen unit.
       if (!targetPlayId) break;
-      const chosen240 = unitByPlayId(game.currentGameState, targetPlayId);
+      const chosen240 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (chosen240 && TraitContains(chosen240.cardId, "Rebel", chosen240.controller, chosen240.playId)) {
         game.currentGameState.currentEffects.push({ cardId: "SOR_240", duration: "ForAttack", affectedPlayer: pending.player!, targetPlayId });
       }
@@ -3685,7 +3666,7 @@ function applyAbilityEffect(
     }
     case "SOR_092": { // Overwhelming Barrage — +2/+2 and spread power damage
       if (!targetPlayId) break;
-      const target092 = unitByPlayId(game.currentGameState, targetPlayId);
+      const target092 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target092) break;
 
       // Push +2/+2 current effect on the chosen unit
@@ -3724,7 +3705,7 @@ function applyAbilityEffect(
     }
     case "SOR_006": { // Action step 1: defeat the chosen friendly unit, then pick a unit to damage.
       if (!targetPlayId) break;
-      const sacrifice = unitByPlayId(game.currentGameState, targetPlayId);
+      const sacrifice = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!sacrifice) break;
       defeatUnit(game.currentGameState, game.gameLog, sacrifice);
       updateDefeatedPlayers(game.currentGameState);
@@ -3743,7 +3724,7 @@ function applyAbilityEffect(
     }
     case "SOR_006_A2": { // Action step 2: deal 1 damage to chosen unit and draw a card.
       if (!targetPlayId) break;
-      const dmgTarget006 = unitByPlayId(game.currentGameState, targetPlayId);
+      const dmgTarget006 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (dmgTarget006) {
         dmgTarget006.damage += 1;
         game.gameLog.push(`${CardTitle("SOR_006")}: dealt 1 damage to ${CardTitle(dmgTarget006.cardId)}.`);
@@ -3753,14 +3734,14 @@ function applyAbilityEffect(
     }
     case "SOR_006_D": { // When Deployed: take control of chosen damaged non-leader unit.
       if (!targetPlayId) break;
-      const controlTarget = unitByPlayId(game.currentGameState, targetPlayId);
+      const controlTarget = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!controlTarget) break;
       transferControl(game.currentGameState, game.gameLog, controlTarget, pending.player!);
       return pending.continuation;
     }
     case "SOR_006_OA": { // On Attack step 1: defeat the chosen friendly unit.
       if (!targetPlayId) break;
-      const sacrifice0A = unitByPlayId(game.currentGameState, targetPlayId);
+      const sacrifice0A = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!sacrifice0A) break;
       const whenDefeated0A = defeatUnit(game.currentGameState, game.gameLog, sacrifice0A);
       updateDefeatedPlayers(game.currentGameState);
@@ -3781,7 +3762,7 @@ function applyAbilityEffect(
     }
     case "SOR_006_OA2": { // On Attack step 2: deal 1 damage to chosen unit and draw a card.
       if (!targetPlayId) break;
-      const dmgTarget0A = unitByPlayId(game.currentGameState, targetPlayId);
+      const dmgTarget0A = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (dmgTarget0A) {
         dmgTarget0A.damage += 1;
         game.gameLog.push(`${CardTitle("SOR_006")}: dealt 1 damage to ${CardTitle(dmgTarget0A.cardId)}.`);
@@ -3793,13 +3774,13 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       if (!pending.sourcePlayId) {
         // Step 1: captor chosen — find eligible enemies in the same arena.
-        const captor = unitByPlayId(game.currentGameState, targetPlayId);
+        const captor = GetUnitByPlayId(game.currentGameState, targetPlayId);
         if (!captor) break;
         const captorArena = (CardArena(captor.cardId) ?? "Ground") as "Ground" | "Space";
-        const enemyPlayer = otherPlayer(pending.player!);
+        const enemyPlayer = GetOtherPlayer(pending.player!);
         const enemyArena = captorArena === "Ground"
-          ? (ps(game.currentGameState, enemyPlayer).groundArena as Unit[])
-          : (ps(game.currentGameState, enemyPlayer).spaceArena as Unit[]);
+          ? (GetPlayer(game.currentGameState, enemyPlayer).groundArena as Unit[])
+          : (GetPlayer(game.currentGameState, enemyPlayer).spaceArena as Unit[]);
         const eligible = enemyArena.filter(u => !CardIsLeader(u.cardId));
         if (eligible.length === 0) break;
         return {
@@ -3812,8 +3793,8 @@ function applyAbilityEffect(
         } satisfies AbilityTargetPending;
       }
       // Step 2: capture target chosen.
-      const twi128Target = unitByPlayId(game.currentGameState, targetPlayId);
-      const twi128Captor = unitByPlayId(game.currentGameState, pending.sourcePlayId);
+      const twi128Target = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      const twi128Captor = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
       if (!twi128Target || !twi128Captor) break;
 
       removeFromArena(game.currentGameState, twi128Target.playId);
@@ -3838,7 +3819,7 @@ function applyAbilityEffect(
     }
     case "SHD_068": {
       if (!targetPlayId) break;
-      const targetSHD068 = unitByPlayId(game.currentGameState, targetPlayId);
+      const targetSHD068 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!targetSHD068) break;
       targetSHD068.upgrades.push({
         cardId: "SOR_T02",
@@ -3851,8 +3832,8 @@ function applyAbilityEffect(
     }
     case "JTL_049": {
       if (!targetPlayId || !pending.sourcePlayId) break;
-      const l3 = unitByPlayId(game.currentGameState, pending.sourcePlayId);
-      const vehicle = unitByPlayId(game.currentGameState, targetPlayId);
+      const l3 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
+      const vehicle = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!l3 || !vehicle) break;
 
       removeFromArena(game.currentGameState, l3.playId);
@@ -3862,8 +3843,8 @@ function applyAbilityEffect(
       for (const captive of l3.captives ?? []) {
         const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
         const rescued = Unit.FromInterface({ ...captive, ready: false });
-        if (arena === "Ground") ps(game.currentGameState, captive.owner).groundArena.push(rescued);
-        else ps(game.currentGameState, captive.owner).spaceArena.push(rescued);
+        if (arena === "Ground") GetPlayer(game.currentGameState, captive.owner).groundArena.push(rescued);
+        else GetPlayer(game.currentGameState, captive.owner).spaceArena.push(rescued);
         game.gameLog.push(`${CardTitle(captive.cardId)} was rescued from L3-37.`);
       }
       vehicle.upgrades.push({

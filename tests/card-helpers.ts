@@ -271,6 +271,7 @@ export const Cards = {
       millenniumFalcon: "JTL_249",
     },
     lof: {
+      kelleranBeq: "LOF_100",
       gungi: "LOF_093",
       strikeship: "LOF_131",
       witchOfTheMist: "LOF_154",
