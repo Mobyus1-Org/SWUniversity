@@ -177,6 +177,11 @@ export class Unit implements UnitInterface {
           if (currentEffect.targetPlayId === this.playId) power += 2;
           break;
         case "JTL_106": power += 1; break; // Unity of Purpose
+        case "SOR_124": power += 2; break; // Tactical Advantage +2/+2 Phase
+        case "SOR_076": power -= 2; break; // Make an Opening –2/–2 Phase
+        case "SOR_216": power -= 4; break; // Disarm –4/+0 Phase
+        case "SOR_220": power += 3; break; // Surprise Strike +3/+0 ForAttack
+        case "SOR_240": power += 2; break; // Fleet Lieutenant +2/+0 ForAttack
         default: break;
       }
     }
@@ -245,6 +250,8 @@ export class Unit implements UnitInterface {
         case "SOR_092": // Overwhelming Barrage
           if (effect.targetPlayId === this.playId) hp += 2;
           break;
+        case "SOR_124": hp += 2; break; // Tactical Advantage +2/+2 Phase
+        case "SOR_076": hp -= 2; break; // Make an Opening –2/–2 Phase
         case "JTL_106": hp += 1; break; // Unity of Purpose
       }
     }

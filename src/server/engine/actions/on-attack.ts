@@ -291,6 +291,47 @@ export function resolveOnAttackTrigger(
         continuation,
       };
     }
+    case "SOR_059": { // 2-1B Surgical Droid — On Attack: You may heal 2 damage from another unit.
+      const game059 = GetGame();
+      if (!game059) return continuation;
+      const gs059 = game059.currentGameState;
+      const damagedOthers059 = [
+        ...gs059.player1.groundArena, ...gs059.player1.spaceArena,
+        ...gs059.player2.groundArena, ...gs059.player2.spaceArena,
+      ].filter(u => u.playId !== attacker.playId && u.damage > 0);
+      if (damagedOthers059.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: attacker.cardId,
+        sourcePlayId: attacker.playId,
+        helperText: "Heal 2 damage from another unit?",
+        yesLabel: "Heal 2",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: attacker.cardId,
+          fromPlayIds: damagedOthers059.map(u => u.playId),
+          continuation,
+        },
+        continuation,
+      };
+    }
+    case "SOR_206": { // Mining Guild TIE Fighter — On Attack: You may pay 2. If you do, draw a card.
+      const game206 = GetGame();
+      if (!game206) return continuation;
+      const pState206 = attacker.controller === 1 ? game206.currentGameState.player1 : game206.currentGameState.player2;
+      if (pState206.resources.filter(r => r.ready).length < 2) return continuation;
+      return {
+        type: "ability-option",
+        cardId: attacker.cardId,
+        sourcePlayId: attacker.playId,
+        helperText: "Pay 2 resources to draw a card?",
+        yesLabel: "Pay 2",
+        noLabel: "Skip",
+        onYes: null,
+        continuation,
+      };
+    }
     default:
       // If an upgrade-only trigger fired but no native ability, return continuation so combat proceeds.
       return activeUpgrades.length > 0 ? continuation : null;

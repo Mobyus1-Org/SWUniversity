@@ -2297,6 +2297,35 @@ function applyAbilityOptionEffect(
         continuation: pending.continuation ?? null,
       } satisfies AbilityTargetPending;
     }
+    case "SOR_171": { // Mission Briefing Yes: playing player draws 2 cards.
+      DrawCardForPlayer(game, log, pending.player!);
+      DrawCardForPlayer(game, log, pending.player!);
+      return pending.continuation ?? null;
+    }
+    case "SOR_173": { // Bombing Run Yes: deal 3 to each ground unit.
+      for (const u of [...game.player1.groundArena, ...game.player2.groundArena]) {
+        u.damage += 3;
+      }
+      log.push(`${CardTitle("SOR_173")}: dealt 3 damage to each ground unit.`);
+      updateDefeatedPlayers(game);
+      return pending.continuation ?? null;
+    }
+    case "SOR_206": { // Mining Guild TIE Yes: pay 2 resources, draw a card.
+      const unit206 = unitByPlayId(game, pending.sourcePlayId!);
+      if (unit206) {
+        exhaustResources(game, unit206.controller, 2);
+        DrawCardForPlayer(game, log, unit206.controller);
+        log.push(`${CardTitle("SOR_206")}: paid 2 resources and drew a card.`);
+      }
+      return pending.continuation ?? null;
+    }
+    case "SOR_221": { // Outmaneuver Yes: exhaust each ground unit.
+      for (const u of [...game.player1.groundArena, ...game.player2.groundArena]) {
+        u.ready = false;
+      }
+      log.push(`${CardTitle("SOR_221")}: exhausted all ground units.`);
+      return pending.continuation ?? null;
+    }
     default:
       return pending.continuation ?? null;
   }
@@ -2325,6 +2354,27 @@ function applyAbilityOptionDeclineEffect(
       }
       updateDefeatedPlayers(game);
       return nextPending;
+    }
+    case "SOR_171": { // Mission Briefing No: opponent draws 2 cards.
+      const opp171 = pending.player === 1 ? 2 : 1;
+      DrawCardForPlayer(game, log, opp171);
+      DrawCardForPlayer(game, log, opp171);
+      return pending.continuation ?? null;
+    }
+    case "SOR_173": { // Bombing Run No: deal 3 to each space unit.
+      for (const u of [...game.player1.spaceArena, ...game.player2.spaceArena]) {
+        u.damage += 3;
+      }
+      log.push(`${CardTitle("SOR_173")}: dealt 3 damage to each space unit.`);
+      updateDefeatedPlayers(game);
+      return pending.continuation ?? null;
+    }
+    case "SOR_221": { // Outmaneuver No: exhaust each space unit.
+      for (const u of [...game.player1.spaceArena, ...game.player2.spaceArena]) {
+        u.ready = false;
+      }
+      log.push(`${CardTitle("SOR_221")}: exhausted all space units.`);
+      return pending.continuation ?? null;
     }
     default:
       return pending.continuation ?? null;
@@ -3464,6 +3514,174 @@ function applyAbilityEffect(
       const t1 = unitByPlayId(gs1, targetPlayId);
       game.gameLog.push(`Attack Pattern Delta: ${CardTitle(t1?.cardId ?? "") ?? targetPlayId} gets +1/+1 for this phase.`);
       break;
+    }
+    case "SOR_060": { // Distant Patroller WD: Give a Shield token to the chosen Vigilance unit.
+      if (!targetPlayId) break;
+      const target060 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target060) {
+        target060.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target060.owner, controller: target060.controller });
+        game.gameLog.push(`${CardTitle("SOR_060")}: Shield token given to ${CardTitle(target060.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_059": { // 2-1B Surgical Droid OA: Heal 2 from chosen unit, then proceed to combat.
+      if (!targetPlayId) return pending.continuation;
+      const target059 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target059) {
+        target059.damage = Math.max(0, target059.damage - 2);
+        game.gameLog.push(`${CardTitle("SOR_059")}: healed 2 damage from ${CardTitle(target059.cardId)}.`);
+      }
+      return pending.continuation;
+    }
+    case "SOR_132": { // Imperial Interceptor WP: Deal 3 damage to chosen space unit.
+      if (!targetPlayId) break;
+      const target132 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target132) {
+        target132.damage += 3;
+        game.gameLog.push(`${CardTitle("SOR_132")}: dealt 3 damage to ${CardTitle(target132.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_134": { // Ruthless Raider WP/WD: Deal 2 damage to chosen enemy unit.
+      if (!targetPlayId) break;
+      const target134 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target134) {
+        target134.damage += 2;
+        game.gameLog.push(`${CardTitle("SOR_134")}: dealt 2 damage to ${CardTitle(target134.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_076": { // Make an Opening: –2/–2 Phase to chosen unit + heal 2 from own base.
+      if (!targetPlayId) break;
+      const target076 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target076) {
+        game.currentGameState.currentEffects.push({ cardId: "SOR_076", duration: "Phase", affectedPlayer: target076.controller, targetPlayId });
+        game.gameLog.push(`${CardTitle("SOR_076")}: gave –2/–2 to ${CardTitle(target076.cardId)} for this phase.`);
+      }
+      const ownBase076 = pending.player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+      ownBase076.base.damage = Math.max(0, ownBase076.base.damage - 2);
+      game.gameLog.push(`${CardTitle("SOR_076")}: healed 2 damage from your base.`);
+      break;
+    }
+    case "SOR_124": { // Tactical Advantage: +2/+2 Phase to chosen unit.
+      if (!targetPlayId) break;
+      const target124 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target124) {
+        game.currentGameState.currentEffects.push({ cardId: "SOR_124", duration: "Phase", affectedPlayer: target124.controller, targetPlayId });
+        game.gameLog.push(`${CardTitle("SOR_124")}: gave +2/+2 to ${CardTitle(target124.cardId)} for this phase.`);
+      }
+      break;
+    }
+    case "SOR_151": { // Karabast step 1: track chosen friendly unit, proceed to pick enemy.
+      if (!targetPlayId) break;
+      game.currentGameState.currentEffects.push({ cardId: "SOR_151_src", duration: "Phase", affectedPlayer: pending.player!, targetPlayId });
+      return pending.continuation;
+    }
+    case "SOR_151_deal": { // Karabast step 2: deal power+damage of stored friendly to chosen enemy.
+      if (!targetPlayId) break;
+      const gs151 = game.currentGameState;
+      const srcEffect151 = gs151.currentEffects.find(e => e.cardId === "SOR_151_src");
+      const srcPlayId151 = srcEffect151?.targetPlayId;
+      gs151.currentEffects = gs151.currentEffects.filter(e => e.cardId !== "SOR_151_src");
+      const src151 = srcPlayId151 ? unitByPlayId(gs151, srcPlayId151) : null;
+      const dmg151 = src151 ? (src151.damage + Unit.FromInterface(src151).CurrentPower()) : 0;
+      const enemy151 = unitByPlayId(gs151, targetPlayId);
+      if (enemy151 && dmg151 > 0) {
+        enemy151.damage += dmg151;
+        game.gameLog.push(`${CardTitle("SOR_151")}: dealt ${dmg151} damage to ${CardTitle(enemy151.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_169": { // Keep Fighting: Ready the chosen unit.
+      if (!targetPlayId) break;
+      const target169 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target169) {
+        target169.ready = true;
+        game.gameLog.push(`${CardTitle("SOR_169")}: readied ${CardTitle(target169.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_170": { // Power Failure: Defeat all upgrades on the chosen unit.
+      if (!targetPlayId) break;
+      const target170 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target170) {
+        const count170 = target170.upgrades.length;
+        target170.upgrades = [];
+        game.gameLog.push(`${CardTitle("SOR_170")}: defeated ${count170} upgrade(s) on ${CardTitle(target170.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_172": { // Open Fire: Deal 4 damage to the chosen unit.
+      if (!targetPlayId) break;
+      const target172 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target172) {
+        target172.damage += 4;
+        game.gameLog.push(`${CardTitle("SOR_172")}: dealt 4 damage to ${CardTitle(target172.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_189_ready": { // Leia Organa yes path: ready the chosen resource.
+      if (!targetPlayId) break;
+      const pState189 = pending.player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+      const resource189 = pState189.resources.find(r => r.playId === targetPlayId);
+      if (resource189) {
+        resource189.ready = true;
+        game.gameLog.push(`${CardTitle("SOR_189")}: readied a resource.`);
+      }
+      break;
+    }
+    case "SOR_189_exhaust": { // Leia Organa no path: exhaust the chosen unit.
+      if (!targetPlayId) break;
+      const target189 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target189) {
+        target189.ready = false;
+        game.gameLog.push(`${CardTitle("SOR_189")}: exhausted ${CardTitle(target189.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_202": { // Cantina Bouncer: Return chosen non-leader unit to owner's hand.
+      if (!targetPlayId) break;
+      const gs202 = game.currentGameState;
+      const bounced202 = removeFromArena(gs202, targetPlayId);
+      if (bounced202) {
+        if (!bounced202.unit.IsTokenUnit()) {
+          ps(gs202, bounced202.unit.owner).hand.push({ cardId: bounced202.unit.cardId });
+          game.gameLog.push(`${CardTitle("SOR_202")}: returned ${CardTitle(bounced202.unit.cardId)} to hand.`);
+        }
+      }
+      break;
+    }
+    case "SOR_216": { // Disarm: –4/+0 Phase to chosen enemy unit.
+      if (!targetPlayId) break;
+      const target216 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (target216) {
+        game.currentGameState.currentEffects.push({ cardId: "SOR_216", duration: "Phase", affectedPlayer: target216.controller, targetPlayId });
+        game.gameLog.push(`${CardTitle("SOR_216")}: gave –4/+0 to ${CardTitle(target216.cardId)} for this phase.`);
+      }
+      break;
+    }
+    case "SOR_220": { // Surprise Strike: +3/+0 ForAttack then attack with chosen unit.
+      if (!targetPlayId) break;
+      game.currentGameState.currentEffects.push({ cardId: "SOR_220", duration: "ForAttack", affectedPlayer: pending.player!, targetPlayId });
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "SOR_220",
+        continuation: null,
+      };
+    }
+    case "SOR_240": { // Fleet Lieutenant: if Rebel +2/+0 ForAttack, then attack with chosen unit.
+      if (!targetPlayId) break;
+      const chosen240 = unitByPlayId(game.currentGameState, targetPlayId);
+      if (chosen240 && TraitContains(chosen240.cardId, "Rebel", chosen240.controller, chosen240.playId)) {
+        game.currentGameState.currentEffects.push({ cardId: "SOR_240", duration: "ForAttack", affectedPlayer: pending.player!, targetPlayId });
+      }
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "SOR_240",
+        continuation: null,
+      };
     }
     case "SOR_092": { // Overwhelming Barrage — +2/+2 and spread power damage
       if (!targetPlayId) break;

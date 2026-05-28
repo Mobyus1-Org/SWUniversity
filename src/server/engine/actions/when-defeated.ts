@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { AbilityOptionPending, PendingResolution, SpreadDamagePending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, GetUnitsForPlayer } from "@/server/engine/core-functions";
+import { DrawCardForPlayer, GetGame, GetUnitsForPlayer, InitiativePlayer } from "@/server/engine/core-functions";
 import { CardAspects, CardTitle } from "@/server/engine/card-db/generated";
 import { CreateBattleDroid } from "@/server/engine/token-helpers";
 
@@ -111,6 +111,57 @@ export function resolveWhenDefeated(
       if (!game229) return null;
       CreateBattleDroid(game229.currentGameState, player);
       game229.gameLog.push(`${CardTitle("TWI_229")}: Battle Droid token created.`);
+      return null;
+    }
+    case "SOR_060": { // Distant Patroller — When Defeated: You may give a Shield token to a [Vigilance] unit.
+      const game060 = GetGame();
+      if (!game060) return null;
+      const gs060 = game060.currentGameState;
+      const vigilanceUnits060 = [
+        ...gs060.player1.groundArena, ...gs060.player1.spaceArena,
+        ...gs060.player2.groundArena, ...gs060.player2.spaceArena,
+      ].filter(u => CardAspects(u.cardId).includes("Vigilance"));
+      if (vigilanceUnits060.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId: "SOR_060",
+        helperText: "Give a Shield token to a [Vigilance] unit?",
+        yesLabel: "Give Shield",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "SOR_060",
+          player,
+          fromPlayIds: vigilanceUnits060.map(u => u.playId),
+          continuation: null,
+        },
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "SOR_134": { // Ruthless Raider — When Defeated: Deal 2 to enemy base + 2 to an enemy unit.
+      const game134 = GetGame();
+      if (!game134) return null;
+      const gs134 = game134.currentGameState;
+      const oppState134 = player === 1 ? gs134.player2 : gs134.player1;
+      oppState134.base.damage += 2;
+      game134.gameLog.push(`${CardTitle("SOR_134")}: dealt 2 damage to opponent's base.`);
+      const enemyUnits134 = [...oppState134.groundArena, ...oppState134.spaceArena];
+      if (enemyUnits134.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_134",
+        player,
+        fromPlayIds: enemyUnits134.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_163": { // Star Wing Scout — When Defeated: If you have the initiative, draw 2 cards.
+      if (InitiativePlayer() !== player) return null;
+      const game163 = GetGame();
+      if (!game163) return null;
+      DrawCardForPlayer(game163.currentGameState, game163.gameLog, player);
+      DrawCardForPlayer(game163.currentGameState, game163.gameLog, player);
+      game163.gameLog.push(`${CardTitle("SOR_163")}: drew 2 cards.`);
       return null;
     }
     default:

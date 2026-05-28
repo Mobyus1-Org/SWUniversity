@@ -2,40 +2,20 @@ import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "../../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { Cards } from "../../../card-helpers";
-
-// SOR_122 Traitorous (Upgrade, cost 5, Command):
-//   When attached to non-leader unit (cost ≤ 3): Take control.
-//   When unattached: That unit's owner takes control.
-//
-// SOR_224 Change of Heart (Event, cost 6, Cunning):
-//   Take control of a non-leader unit.
-//   At the start of the regroup phase, its owner takes control of it.
-//
-// SOR_251 Confiscate (Event, cost 1, Law):
-//   Defeat an upgrade.
-//
-// green30HP (SOR_023) base = Command aspect → covers Traitorous (cost 5, no penalty).
-// yellow30HP (SOR_029) base = Cunning aspect → covers Change of Heart (cost 6, no penalty).
-// Law aspect is not on any standard base → Confiscate costs 1 + 2 penalty = 3 resources.
+import { CommonSetup } from "../../../test-helpers";
 
 function traitorousSetup() {
-  return new GameStateBuilder()
-    .MyBase(Cards.bases.common.green30HP)       // Command → covers SOR_122
-    .MyLeader(Cards.leaders.sor.sabineWren)
-    .TheirBase(Cards.bases.common.green30HP)
-    .TheirLeader(Cards.leaders.sor.sabineWren, false)
-    .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 5)  // 5 ready for cost 5
-    .WithCardInHandForPlayer(1, Cards.upgrades.sor.traitorous);
+  return CommonSetup(new GameStateBuilder(), "grw", "grw", {
+    my: { resourceCount: 5, handCardIds: [Cards.upgrades.sor.traitorous] },
+    their: {},
+  })
 }
 
 function changeOfHeartSetup() {
-  return new GameStateBuilder()
-    .MyBase(Cards.bases.common.yellow30HP)      // Cunning → covers SOR_224
-    .MyLeader(Cards.leaders.sor.sabineWren)
-    .TheirBase(Cards.bases.common.yellow30HP)
-    .TheirLeader(Cards.leaders.sor.sabineWren, false)
-    .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 6)  // 6 ready for cost 6
-    .WithCardInHandForPlayer(1, Cards.events.sor.changeOfHeart);
+  return CommonSetup(new GameStateBuilder(), "yrw", "yrw", {
+    my: { resourceCount: 6, handCardIds: [Cards.events.sor.changeOfHeart] },
+    their: {},
+  })
 }
 
 describe("Take Control — Traitorous (SOR_122)", () => {

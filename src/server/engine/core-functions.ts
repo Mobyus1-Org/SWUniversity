@@ -543,6 +543,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "SOR_059": //2-1B Surgical Droid
+    case "SOR_206": //Mining Guild TIE Fighter
     case "SOR_006": //Emperor Palpatine - Galactic Ruler
     case "SOR_010": //Darth Vader - Dark Lord of the Sith
     case "SOR_014": //Sabine Wren - Galvanized Revolutionary

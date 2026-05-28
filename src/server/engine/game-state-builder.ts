@@ -243,7 +243,7 @@ export class GameStateBuilder {
   }
 
   // ---------------------------------------------------------------------------
-  // Helpers
+  // Static Helpers
   // ---------------------------------------------------------------------------
 
   static Upgrade(cardId: string, player: PlayerId, owner: PlayerId = player): CardInPlay {

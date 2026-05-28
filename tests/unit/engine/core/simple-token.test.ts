@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "../../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { Cards } from "../../../card-helpers";
+import { CommonSetup } from "../../../test-helpers";
 
 describe("Token Creation", () => {
   // ---------------------------------------------------------------------------
@@ -10,13 +11,10 @@ describe("Token Creation", () => {
 
   it("should create 2 Battle Droid tokens when Droid Deployment is played", async () => {
     const g = new GameTestAdapter();
-    const s = new GameStateBuilder()
-      .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sor.sabineWren)
-      .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sor.sabineWren)
-      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 4)  // cost 2 + Villainy penalty 2
-      .WithCardInHandForPlayer(1, Cards.events.twi.droidDeployment)
+    const s = CommonSetup(new GameStateBuilder(), "ryk", "ryk", {
+        my: { resourceCount: 2, handCardIds: [Cards.events.twi.droidDeployment] },
+        their: {},
+      })
       .Build();
     g.loadNewState(s);
 
@@ -67,13 +65,10 @@ describe("Token Creation", () => {
 
   it("should create 5 Spy tokens when I Am The Senate is played", async () => {
     const g = new GameTestAdapter();
-    const s = new GameStateBuilder()
-      .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sor.sabineWren)
-      .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sor.sabineWren)
-      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 8)  // cost 6 + Command,Villainy penalty 2
-      .WithCardInHandForPlayer(1, Cards.events.sec.iAmTheSenate)
+    const s = CommonSetup(new GameStateBuilder(), "ggk", "ggk", {
+        my: { resourceCount: 8, handCardIds: [Cards.events.sec.iAmTheSenate] },
+        their: {},
+      })
       .Build();
     g.loadNewState(s);
 
@@ -89,13 +84,10 @@ describe("Token Creation", () => {
 
   it("should create 1 TIE Fighter token when Kijimi Patrollers is played", async () => {
     const g = new GameTestAdapter();
-    const s = new GameStateBuilder()
-      .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sor.sabineWren)
-      .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sor.sabineWren)
-      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 4)  // cost 2 + Villainy penalty 2
-      .WithCardInHandForPlayer(1, Cards.units.jtl.kijimiPatrollers)
+    const s = CommonSetup(new GameStateBuilder(), "ggk", "ggk", {
+        my: { resourceCount: 2, handCardIds: [Cards.units.jtl.kijimiPatrollers] },
+        their: {},
+      })
       .Build();
     g.loadNewState(s);
 
@@ -113,13 +105,10 @@ describe("Token Creation", () => {
 
   it("should give a Shield token to the chosen unit when Moment of Peace is played", async () => {
     const g = new GameTestAdapter();
-    const s = new GameStateBuilder()
-      .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sor.sabineWren)
-      .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sor.sabineWren)
-      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 3)  // cost 1 + Vigilance penalty 2
-      .WithCardInHandForPlayer(1, Cards.events.sor.momentOfPeace)
+    const s = CommonSetup(new GameStateBuilder(), "rbw", "gbw", {
+        my: { resourceCount: 1, handCardIds: [Cards.events.sor.momentOfPeace] },
+        their: {},
+      })
       .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
       .Build();
     g.loadNewState(s);
@@ -138,21 +127,18 @@ describe("Token Creation", () => {
 
   it("should give 2 Experience tokens to the chosen friendly Rebel unit when Wing Leader is played", async () => {
     const g = new GameTestAdapter();
-    const s = new GameStateBuilder()
-      .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(Cards.leaders.sor.sabineWren)
-      .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sor.sabineWren)
-      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 3)
-      .WithCardInHandForPlayer(1, Cards.units.sor.wingLeader)
-      .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)  // Rebel unit at index 0
+    const s = CommonSetup(new GameStateBuilder(), "rgw", "rgw", {
+        my: { resourceCount: 3, handCardIds: [Cards.units.sor.wingLeader] },
+        their: {},
+      })
+      .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
       .Build();
     g.loadNewState(s);
 
     await g.playCardFromHandAsync(1, 0);
-    // Wing Leader itself enters at index 1; battlefieldMarine (Rebel) is at index 0
     await g.chooseGroundUnitAsync(1, 0);
 
+    expect(g.state.player1.spaceArena.length).toBe(1);
     const target = g.state.player1.groundArena[0];
     expect(target.upgrades.length).toBe(2);
     expect(target.upgrades.every(u => u.cardId === Cards.upgrades.token.experience)).toBe(true);

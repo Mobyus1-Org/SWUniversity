@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
+import { CanDisclose, DrawCardForPlayer, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
 import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, GiveXpMultiplePending, ChooseIndirectTargetPending, DeckSearchPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
@@ -619,6 +619,247 @@ export function resolveWhenPlayed(
         action: "draw",
         continuation: null,
       } satisfies DeckSearchPending;
+    }
+    case "SOR_039": // AT-AT Suppressor — When Played: Exhaust all ground units. (auto-resolves in when-played-trigger)
+      return null;
+    case "SOR_111": // Patrolling V-Wing — When Played: Draw a card. (auto-resolves in when-played-trigger)
+      return null;
+    case "SOR_132": { // Imperial Interceptor — When Played: You may deal 3 damage to a space unit.
+      const gs132 = game.currentGameState;
+      const spaceUnits132 = [...gs132.player1.spaceArena, ...gs132.player2.spaceArena];
+      if (spaceUnits132.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        sourcePlayId: playId,
+        helperText: "Deal 3 damage to a space unit?",
+        yesLabel: "Deal 3",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId,
+          player,
+          fromPlayIds: spaceUnits132.map(u => u.playId),
+          continuation: null,
+        },
+        continuation: null,
+      };
+    }
+    case "SOR_134": { // Ruthless Raider — When Played/When Defeated: Deal 2 to enemy base + 2 to an enemy unit.
+      const gs134 = game.currentGameState;
+      const oppState134 = player === 1 ? gs134.player2 : gs134.player1;
+      oppState134.base.damage += 2;
+      game.gameLog.push(`${CardTitle(cardId)}: dealt 2 damage to opponent's base.`);
+      const enemyUnits134 = [...oppState134.groundArena, ...oppState134.spaceArena];
+      if (enemyUnits134.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: enemyUnits134.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_189": { // Leia Organa — When Played: Either ready a resource or exhaust a unit.
+      const pState189 = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+      const exhaustedResources189 = pState189.resources.filter(r => !r.ready);
+      const allReadyUnits189 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].filter(u => u.ready);
+      return {
+        type: "ability-option",
+        cardId,
+        sourcePlayId: playId,
+        helperText: "Ready a resource (Yes) or exhaust a unit (No)?",
+        yesLabel: "Ready a resource",
+        noLabel: "Exhaust a unit",
+        onYes: exhaustedResources189.length > 0 ? {
+          type: "ability-target",
+          cardId: "SOR_189_ready",
+          player,
+          fromPlayIds: exhaustedResources189.map(r => r.playId),
+          continuation: null,
+        } : null,
+        continuation: allReadyUnits189.length > 0 ? {
+          type: "ability-target",
+          cardId: "SOR_189_exhaust",
+          player,
+          fromPlayIds: allReadyUnits189.map(u => u.playId),
+          continuation: null,
+        } : null,
+      };
+    }
+    case "SOR_202": { // Cantina Bouncer — When Played: You may return a non-leader unit to its owner's hand.
+      const nonLeaders202 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+        .filter(u => !CardIsLeader(u.cardId));
+      if (nonLeaders202.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        sourcePlayId: playId,
+        helperText: "Return a non-leader unit to its owner's hand?",
+        yesLabel: "Bounce",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId,
+          player,
+          fromPlayIds: nonLeaders202.map(u => u.playId),
+          continuation: null,
+        },
+        continuation: null,
+      };
+    }
+    case "SOR_076": { // Make an Opening — Give a unit –2/–2 for this phase. Heal 2 from own base.
+      const allUnits076 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      if (allUnits076.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: allUnits076.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_124": { // Tactical Advantage — Give a unit +2/+2 for this phase.
+      const allUnits124 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      if (allUnits124.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: allUnits124.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_151": { // Karabast — A friendly unit deals damage equal to damage on it + its power to an enemy unit.
+      const friendlyUnits151 = GetUnitsForPlayer(player);
+      const enemyUnits151 = GetUnitsForPlayer(player === 1 ? 2 : 1);
+      if (friendlyUnits151.length === 0 || enemyUnits151.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: friendlyUnits151.map(u => u.playId),
+        continuation: {
+          type: "ability-target",
+          cardId: "SOR_151_deal",
+          player,
+          fromPlayIds: enemyUnits151.map(u => u.playId),
+          continuation: null,
+        },
+      };
+    }
+    case "SOR_169": { // Keep Fighting — Ready a unit with 3 or less power.
+      const eligible169 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+        .filter(u => new Unit(u.cardId, u.playId, u.controller).CurrentPower() <= 3);
+      if (eligible169.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: eligible169.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_170": { // Power Failure — Defeat any number of upgrades on a unit.
+      const unitsWithUpgrades170 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+        .filter(u => u.upgrades.length > 0);
+      if (unitsWithUpgrades170.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: unitsWithUpgrades170.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_171": { // Mission Briefing — Choose a player. They draw 2 cards.
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        helperText: "Who draws 2 cards?",
+        yesLabel: "You draw 2",
+        noLabel: "Opponent draws 2",
+        onYes: null,
+        continuation: null,
+      };
+    }
+    case "SOR_172": { // Open Fire — Deal 4 damage to a unit.
+      const allUnits172 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      if (allUnits172.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: allUnits172.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_173": { // Bombing Run — Choose an arena. Deal 3 damage to each unit in that arena.
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        helperText: "Choose an arena: Ground (Yes) or Space (No)?",
+        yesLabel: "Ground",
+        noLabel: "Space",
+        onYes: null,
+        continuation: null,
+      };
+    }
+    case "SOR_216": { // Disarm — Give an enemy unit –4/–0 for this phase.
+      const enemyUnits216 = GetUnitsForPlayer(player === 1 ? 2 : 1);
+      if (enemyUnits216.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: enemyUnits216.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_220": { // Surprise Strike — Attack with a unit. It gets +3/+0 for this attack.
+      const readyFriendly220 = GetUnitsForPlayer(player, true);
+      if (readyFriendly220.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: readyFriendly220.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_221": { // Outmaneuver — Choose an arena. Exhaust each unit in that arena.
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        helperText: "Choose an arena: Ground (Yes) or Space (No)?",
+        yesLabel: "Ground",
+        noLabel: "Space",
+        onYes: null,
+        continuation: null,
+      };
+    }
+    case "SOR_240": { // Fleet Lieutenant — When Played: You may attack with a unit. Rebels get +2/+0.
+      const readyFriendly240 = GetUnitsForPlayer(player, true);
+      if (readyFriendly240.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        sourcePlayId: playId,
+        helperText: "Attack with a unit? Rebel units get +2/+0.",
+        yesLabel: "Attack",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId,
+          player,
+          fromPlayIds: readyFriendly240.map(u => u.playId),
+          continuation: null,
+        },
+        continuation: null,
+      };
     }
     case "TWI_193": { // R2-D2 (Full of Solutions) — You may discard a card. If you do, search top 3 and draw a card.
       const pState193 = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;

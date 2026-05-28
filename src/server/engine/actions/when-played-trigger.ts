@@ -1,6 +1,7 @@
 import { CardTitle } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
+import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { CreateSpy, CreateTieFighter } from "@/server/engine/token-helpers";
 
 /**
@@ -16,6 +17,13 @@ export function resolveWhenPlayedTrigger(
   log: string[],
 ): void {
   switch (trigger.cardId) {
+    case "SOR_039": // AT-AT Suppressor — When Played: Exhaust all ground units.
+      for (const u of [...gs.player1.groundArena, ...gs.player2.groundArena]) u.ready = false;
+      log.push(`${CardTitle(trigger.cardId)}: all ground units exhausted.`);
+      break;
+    case "SOR_111": // Patrolling V-Wing — When Played: Draw a card.
+      DrawCardForPlayer(gs, log, trigger.fromPlayer);
+      break;
     case "SHD_160": // Reckless Gunslinger — When Played: Deal 1 damage to each base.
       gs.player1.base.damage += 1;
       gs.player2.base.damage += 1;
