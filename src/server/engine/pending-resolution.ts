@@ -272,8 +272,8 @@ export interface DeckSearchPending {
   maxChoices?: number;
   maxCombinedCost?: number;
   costModifier?: 'free' | number;
-  /** What happens to chosen cards: "play" = enter arena, "draw" = go to hand, "put-bottom" = selected go to bottom of deck, unchosen stay on top. */
-  action: "play" | "draw" | "put-bottom";
+  /** What happens to chosen cards: "play" = enter arena, "draw" = go to hand, "scry" = selected go to bottom of deck, unchosen stay on top. */
+  action: "play" | "draw" | "scry";
   continuation?: PendingResolution | null;
 }
 

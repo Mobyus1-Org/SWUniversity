@@ -170,7 +170,7 @@ export function resolveWhenDefeated(
         player,
         topCards: topCards031,
         eligibleChoices: eligible031,
-        action: "put-bottom",
+        action: "scry",
         continuation: null,
       } satisfies DeckSearchPending;
     }

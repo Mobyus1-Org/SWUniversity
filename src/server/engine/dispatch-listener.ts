@@ -2133,8 +2133,8 @@ function handleChooseTarget(
     pState.deck.splice(pState.deck.length - pending.topCards.length, pending.topCards.length);
     const takenSet = new Set(chosen);
 
-    // "put-bottom": chosen cards go to bottom, unchosen cards go back to top in original deck order.
-    if (pending.action === "put-bottom") {
+    // "scry": chosen cards go to bottom, unchosen cards go back to top in original deck order.
+    if (pending.action === "scry") {
       const bottomCards = chosen.map(id => ({ cardId: eligibleMap.get(id)!.cardId }));
       const topReturnCards = pending.topCards.filter(c => !takenSet.has(c.tempId)).map(c => ({ cardId: c.cardId }));
       pState.deck.unshift(...bottomCards);

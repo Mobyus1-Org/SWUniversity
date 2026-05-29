@@ -244,6 +244,7 @@ export const Cards = {
       cantinaBouncer: "SOR_202",
       miningGuildTIE: "SOR_206",
       fleetLieutenant: "SOR_240",
+      r2d2: "SOR_236",
     },
     shd: {
       doctorPershing: "SHD_028",

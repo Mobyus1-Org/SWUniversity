@@ -60,7 +60,7 @@ export interface NeedsDeckSearch {
   type: "DeckSearch";
   helperText: string;
   choices: Array<{ tempId: string; cardId: string; cost: number }>;
-  action: "play" | "draw" | "put-bottom";
+  action: "play" | "draw" | "scry";
   maxChoices?: number; // maximum number of cards the player can choose, regardless of cost
   maxCombinedCost?: number; // maximum total cost of chosen cards, regardless of number
   costModifier?: "free" | number; // applied to each chosen card, usually to make them free or reduce cost by a certain amount

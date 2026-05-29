@@ -896,6 +896,22 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SOR_236": { // R2-D2 — When Played/On Attack: Scry 1.
+      const gs236 = game.currentGameState;
+      const deck236 = player === 1 ? gs236.player1.deck : gs236.player2.deck;
+      if (deck236.length === 0) return null;
+      const top236 = deck236.slice(-1);
+      const topCards236 = top236.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
+      return {
+        type: "deck-search",
+        cardId: "SOR_236",
+        player,
+        topCards: topCards236,
+        eligibleChoices: topCards236.map(c => ({ ...c, cost: 0 })),
+        action: "scry",
+        continuation: null,
+      } satisfies DeckSearchPending;
+    }
     case "SOR_031": { // Inferno Four — When Played/When Defeated: Look at top 2, put any on bottom, rest on top.
       const gs031 = game.currentGameState;
       const deck031 = player === 1 ? gs031.player1.deck : gs031.player2.deck;
@@ -910,7 +926,7 @@ export function resolveWhenPlayed(
         player,
         topCards: topCards031,
         eligibleChoices: eligible031,
-        action: "put-bottom",
+        action: "scry",
         continuation: null,
       } satisfies DeckSearchPending;
     }

@@ -1,5 +1,5 @@
 import { Unit } from "@/server/engine/unit";
-import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending } from "@/server/engine/pending-resolution";
+import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, DeckSearchPending } from "@/server/engine/pending-resolution";
 import { GetGame, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { CardTitle } from "@/server/engine/card-db/generated";
@@ -122,6 +122,25 @@ export function resolveOnAttackTrigger(
   }
   // innate On Attack abilities
   switch (attacker.cardId) {
+    case "SOR_236": { // R2-D2 — On Attack: Scry 1.
+      const game236 = GetGame();
+      if (!game236) return continuation;
+      const deck236 = attacker.controller === 1
+        ? game236.currentGameState.player1.deck
+        : game236.currentGameState.player2.deck;
+      if (deck236.length === 0) return continuation;
+      const top236 = deck236.slice(-1);
+      const topCards236 = top236.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
+      return {
+        type: "deck-search",
+        cardId: "SOR_236",
+        player: attacker.controller,
+        topCards: topCards236,
+        eligibleChoices: topCards236.map(c => ({ ...c, cost: 0 })),
+        action: "scry",
+        continuation,
+      } satisfies DeckSearchPending;
+    }
     case "SOR_010": { // Darth Vader "On Attack: You may deal 2 damage to a unit."
       const game = GetGame();
       if (!game) return null;
