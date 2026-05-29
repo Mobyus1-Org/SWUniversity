@@ -328,6 +328,7 @@ export const Cards = {
       chooseSides: "SHD_132",
     },
     sor: {
+      superlaserBlast: "SOR_043",
       momentOfPeace: "SOR_073",
       rebelAssault: "SOR_103",
       strikeTrue: "SOR_127",
@@ -355,6 +356,7 @@ export const Cards = {
       sparkOfRebellion: "SOR_200",
     },
     twi: {
+      christophsis: "TWI_078",
       vanquish: "TWI_077",
       droidDeployment: "TWI_237",
       dropIn: "TWI_251",

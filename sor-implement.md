@@ -6,23 +6,14 @@
 
 | Status | Count |
 |--------|-------|
-| Implemented | 106 |
+| Implemented | 107 |
 | Partially Implemented | 41 |
 | Keywords Only (auto-handled) | 23 |
-| Unimplemented – Simple | 1 |
+| Unimplemented – Simple | 0 |
 | Unimplemented – Complex | 63 |
 | **Total** | **214** |
 
 ---
-
-## Unimplemented – SIMPLE (agent can tackle without human help)
-
-These cards can be implemented with existing engine mechanics.
-
-### SOR_043 — Superlaser Blast (Event)
-**Card Text:** Defeat all units.
-
-**Notes:** Needs implementation: Defeat all units.
 
 ---
 
@@ -789,6 +780,7 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_251 | Confiscate | Event | Has custom logic in engine action files |
 | SOR_252 | Restock | Event | Has custom logic in engine action files |
 | SOR_031 | Inferno Four | Unit | When Played/When Defeated: Scry 2; test coverage added |
+| SOR_043 | Superlaser Blast | Event | Defeat all units (board wipe); test coverage added |
 | SOR_036 | Gideon Hask | Unit | When an enemy unit is defeated: Experience token; test coverage added |
 | SOR_039 | AT-AT Suppressor | Unit | Has custom logic in engine action files; test coverage added |
 | SOR_059 | 2-1B Surgical Droid | Unit | Has custom logic in engine action files; test coverage added |

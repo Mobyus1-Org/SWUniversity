@@ -508,7 +508,16 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
     } satisfies TriggerOrderPending;
   }
 
-  if (game.triggerBag.length >= 2) {
+  // Trigger-order for multiple triggers from different sources: player picks resolution order.
+  // Auto-drain when all remaining triggers share the same cardId + triggerType (board-wipe
+  // scenario where Iden/Gideon fires N times for N simultaneous deaths — ordering irrelevant).
+  const allSameSource =
+    game.triggerBag.length >= 2 &&
+    game.triggerBag.every(
+      t => t.cardId === game.triggerBag[0].cardId && t.triggerType === game.triggerBag[0].triggerType
+    );
+
+  if (game.triggerBag.length >= 2 && !allSameSource) {
     const pending: TriggerOrderPending = {
       type: "trigger-order",
       triggers: game.triggerBag.map(t => ({
@@ -522,8 +531,13 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
     return pending;
   }
 
-  const [trigger] = game.triggerBag.splice(0, 1);
-  return processSingleTrigger(trigger, game, log);
+  // Single trigger or all-same-source: process in order, auto-drain nulls, stop at interactive.
+  while (game.triggerBag.length > 0) {
+    const [trigger] = game.triggerBag.splice(0, 1);
+    const pending = processSingleTrigger(trigger, game, log);
+    if (pending !== null) return pending;
+  }
+  return null;
 }
 
 /**
@@ -713,6 +727,80 @@ function defeatForExploit(game: GameState, log: string[], unit: Unit): void {
 // ---------------------------------------------------------------------------
 // Helpers: attack target computation
 // ---------------------------------------------------------------------------
+
+/**
+ * Defeats a list of units as part of a board-wipe effect (CR simultaneous defeat).
+ * Uses pre-snapshotted trigger-holder arrays so both players' Iden/Gideon triggers
+ * fire correctly even though those units are themselves being wiped.
+ */
+function boardWipeDefeat(
+  game: GameState,
+  log: string[],
+  unitsToDefeat: Unit[],
+  holdersP1: Unit[],
+  holdersP2: Unit[],
+): void {
+  const ENEMY_DEF_CARDS = ["SOR_002", "SOR_036", "LOF_130", "SEC_051", "ASH_052"];
+  for (const unit of unitsToDefeat) {
+    const removed = removeFromArena(game, unit.playId);
+    if (!removed) continue;
+
+    // Fire enemy-unit-defeated triggers for ALL unit types (including leaders) using
+    // the pre-wipe snapshot, so units that are themselves being wiped still trigger.
+    const otherPlayer: PlayerId = removed.player === 1 ? 2 : 1;
+    for (const holder of (otherPlayer === 1 ? holdersP1 : holdersP2)) {
+      if (ENEMY_DEF_CARDS.includes(holder.cardId)) {
+        game.triggerBag.push({
+          triggerType: "enemy-unit-defeated",
+          cardId: holder.cardId,
+          fromPlayer: otherPlayer,
+          playId: holder.playId,
+        });
+      }
+    }
+
+    if (CardIsLeader(unit.cardId)) {
+      const leader = GetPlayer(game, removed.player).leader;
+      leader.deployed = false;
+      leader.ready = false;
+      leader.deployedPlayId = undefined;
+      log.push(`${CardTitle(unit.cardId)} was defeated and returned to the leader zone.`);
+      continue; // leaders have no when-defeated effect and go to leader zone, not discard
+    }
+
+    if (!unit.IsTokenUnit()) pushToDiscard(game, removed.player, unit);
+    game.roundState.cardsLeftPlayThisPhase.push({
+      fromPlayer: removed.player,
+      cardId: unit.cardId,
+      playId: unit.playId,
+      reason: unit.IsTokenUnit() ? "token-defeated" : "defeated",
+    });
+
+    for (const captive of unit.captives ?? []) {
+      const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
+      const rescued = Unit.FromInterface({ ...captive, ready: false });
+      if (arena === "Ground") GetPlayer(game, captive.owner).groundArena.push(rescued);
+      else GetPlayer(game, captive.owner).spaceArena.push(rescued);
+      game.roundState.cardsEnteredPlayThisPhase.push({
+        fromPlayer: captive.owner,
+        cardId: captive.cardId,
+        playId: captive.playId,
+        reason: "returned-to-play",
+      });
+      log.push(`${CardTitle(captive.cardId)} was rescued.`);
+    }
+
+    log.push(`${CardTitle(unit.cardId)} was defeated.`);
+
+    game.triggerBag.push({
+      triggerType: "when-defeated",
+      cardId: unit.cardId,
+      fromPlayer: removed.player,
+      playId: unit.playId,
+      context: { defeatedUnit: unit },
+    });
+  }
+}
 
 function computeAttackTargets(
   game: GameState,
@@ -1230,9 +1318,20 @@ function completePlayCard(
     pushEventToDiscard(game, player, cardId);
     log.push(`${CardTitle(cardId) ?? cardId} resolved and placed in the discard.`);
 
-    const nextPending = resolveWhenPlayed(cardId, player);
-    if (nextPending) {
-      return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+    if (cardId === "SOR_043" || cardId === "TWI_078") {
+      const otherPlayer: PlayerId = player === 1 ? 2 : 1;
+      // Snapshot trigger-holders before any unit is removed so wiped units still trigger.
+      const holdersP1 = GetUnitsForPlayer(1);
+      const holdersP2 = GetUnitsForPlayer(2);
+      const toDefeat = cardId === "SOR_043"
+        ? [...GetUnitsForPlayer(otherPlayer), ...GetUnitsForPlayer(player)]
+        : [...GetUnitsForPlayer(otherPlayer)];
+      boardWipeDefeat(game, log, toDefeat, holdersP1, holdersP2);
+    } else {
+      const nextPending = resolveWhenPlayed(cardId, player);
+      if (nextPending) {
+        return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+      }
     }
   }
 
