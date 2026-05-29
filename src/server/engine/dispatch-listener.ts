@@ -31,7 +31,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, GetUnitByPlayId } from "@/server/engine/core-functions";
+import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -421,19 +421,24 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
   }
 
   if (trigger.triggerType === "enemy-unit-defeated") {
-    // Gideon Hask (SOR_036): give an Experience token to a friendly unit
-    if (trigger.cardId === "SOR_036") {
-      const friendlyUnits = GetUnitsForPlayer(trigger.fromPlayer);
-      if (friendlyUnits.length === 0) return null;
-      return {
-        type: "ability-target",
-        cardId: "SOR_036",
-        player: trigger.fromPlayer,
-        fromPlayIds: friendlyUnits.map(u => u.playId),
-        continuation: null,
-      };
+    switch (trigger.cardId) {
+      case "SOR_002": //Iden Versio - When an enemy unit is defeated: Heal 1 damage from your base.
+        const base = trigger.fromPlayer === 1 ? game.player1.base : game.player2.base;
+        base.damage = Math.max(0, base.damage - 1);
+        return null;
+      case "SOR_036": //Gideon Hask — When an enemy unit is defeated: Give an Experience token to a friendly unit.
+        const friendlyUnits = GetUnitsForPlayer(trigger.fromPlayer);
+        if (friendlyUnits.length === 0) return null;
+        return {
+          type: "ability-target",
+          cardId: trigger.cardId,
+          player: trigger.fromPlayer,
+          fromPlayIds: friendlyUnits.map(u => u.playId),
+          continuation: null,
+        };
+      default:
+        return null;
     }
-    return null;
   }
 
   if (trigger.triggerType === "leader-reaction") {
@@ -603,13 +608,25 @@ function defeatUnit(
     log.push(`${CardTitle(captive.cardId)} was rescued and returned to Player ${captive.owner}'s arena exhausted.`);
   }
 
-  // Gideon Hask (SOR_036): when an enemy unit is defeated, fire his trigger for the opponent.
-  const gideonPlayer: PlayerId = removed.player === 1 ? 2 : 1;
-  const gideonArena = GetPlayer(game, gideonPlayer).groundArena;
-  const gideonUnit = gideonArena.find(u => u.cardId === "SOR_036");
-  if (gideonUnit) {
-    const nested = game.triggerBag.length > 0;
-    game.triggerBag.push({ triggerType: "enemy-unit-defeated", cardId: "SOR_036", fromPlayer: gideonPlayer, playId: gideonUnit.playId, nested });
+  // When an enemy unit is defeated
+  const otherPlayer: PlayerId = removed.player === 1 ? 2 : 1;
+  for (const unit of GetUnitsForPlayer(otherPlayer)) {
+    switch (unit.cardId) {
+      case "SOR_002": //Iden Versio
+      case "SOR_036": //Gideon Hask
+      case "LOF_130": //HK-47
+      case "SEC_051": //Bo-Katan Kryze
+      case "ASH_052": //Chimaera
+      {
+        game.triggerBag.push({
+          triggerType: "enemy-unit-defeated",
+          cardId: unit.cardId,
+          fromPlayer: otherPlayer,
+          playId: unit.playId,
+        });
+        break;
+      }
+    }
   }
 
   // When-Defeated triggers fire after bounty collection (CR 13c).
@@ -3062,6 +3079,10 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
   const unit = addToArena(game, player, leader.cardId, true);
   leader.deployedPlayId = unit.playId;
   log.push(`Player ${player} deployed ${CardTitle(leader.cardId) ?? leader.cardId}.`);
+  const nested = game.triggerBag.length > 0;
+  if (HasShielded(leader.cardId, unit.playId, player)) {
+    game.triggerBag.push({ triggerType: "shielded", cardId: leader.cardId, fromPlayer: player, playId: unit.playId, nested });
+  }
 
   const plotPlayIds = getAffordablePlotPlayIds(game, player);
   const hasWD = leaderHasWhenDeployed(leader.cardId);
@@ -3092,6 +3113,10 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
   updateDefeatedPlayers(game);
   if (whenDeployedPending) {
     return { response: resolutionResponse(pendingToResolution(whenDeployedPending, game)), pending: whenDeployedPending, stateChanged: true };
+  }
+  const triggerPending = drainTriggerBag(game, log);
+  if (triggerPending) {
+    return { response: resolutionResponse(pendingToResolution(triggerPending, game)), pending: triggerPending, stateChanged: true };
   }
   return { response: stateResponse(game), pending: null, stateChanged: true };
 }
@@ -3124,6 +3149,17 @@ function resolveActionAbility(
   //playId?: string,
 ): PendingResolution | null {
   switch (cardId) {
+    case "SOR_002": { // Iden Versio — Action [Exhaust]: If an enemy unit was defeated this phase, heal 1 damage from your base.
+      const otherPlayer002: PlayerId = player === 1 ? 2 : 1;
+      if (!UnitWasDefeatedThisPhase(otherPlayer002)) {
+        log.push(`${CardTitle("SOR_002")}: no enemy unit defeated this phase — soft pass.`);
+        return null;
+      }
+      const base002 = GetPlayer(game, player).base;
+      base002.damage = Math.max(0, base002.damage - 1);
+      log.push(`${CardTitle("SOR_002")}: healed 1 damage from your base.`);
+      return null;
+    }
     case "TWI_005": { // Count Dooku — Action [Exhaust]: Play a Separatist card from your hand. It gains Exploit 1.
       const separatistInHand = GetPlayer(game, player).hand.some(c => CardTraits(c.cardId).includes("Separatist"));
       if (!separatistInHand) {

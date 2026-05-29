@@ -9,10 +9,10 @@ export function resolveWhenDeployed(
   player: PlayerId,
   log: string[],
 ): PendingResolution | null {
+  const game = GetGame();
+  if (!game) throw new Error("Game not found in resolveWhenDeployed");
   switch (cardId) {
     case "SHD_002": { // Qi'ra — heal all damage from each unit, then deal floor(TotalHP/2) to each
-      const game = GetGame();
-      if (!game) throw new Error("Game not found in resolveWhenDeployed");
       const gs = game.currentGameState;
       const allUnits = [
         ...gs.player1.groundArena,
@@ -38,8 +38,6 @@ export function resolveWhenDeployed(
       return null;
     }
     case "SOR_006": { // Emperor Palpatine — "When Deployed: Take control of a damaged non-leader unit."
-      const game = GetGame();
-      if (!game) throw new Error("Game not found in resolveWhenDeployed");
       const gs = game.currentGameState;
       const eligible = [
         ...gs.player1.groundArena, ...gs.player1.spaceArena,

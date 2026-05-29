@@ -6,11 +6,11 @@
 
 | Status | Count |
 |--------|-------|
-| Implemented | 99 |
+| Implemented | 106 |
 | Partially Implemented | 41 |
 | Keywords Only (auto-handled) | 23 |
-| Unimplemented – Simple | 2 |
-| Unimplemented – Complex | 70 |
+| Unimplemented – Simple | 1 |
+| Unimplemented – Complex | 63 |
 | **Total** | **214** |
 
 ---
@@ -24,26 +24,11 @@ These cards can be implemented with existing engine mechanics.
 
 **Notes:** Needs implementation: Defeat all units.
 
-### SOR_172 — Open Fire (Event)
-**Card Text:** Deal 4 damage to a unit.
-
-**Notes:** Needs implementation: Deal 4 damage to a unit.
-
 ---
 
 ## Unimplemented – COMPLEX (requires senior dev consultation)
 
 These cards need new engine features or unusual interactions.
-
-### SOR_031 — Inferno Four (Unit)
-**Card Text:** When Played/When Defeated: Look at the top 2 cards of your deck. Put any number of them on the bottom of your deck and the rest on top in any order.
-
-**Notes:** Needs implementation: When Played/When Defeated: Look at the top 2 cards of your deck. Put any number of them on the botto
-
-### SOR_036 — Gideon Hask (Unit)
-**Card Text:** When an enemy unit is defeated: Give an Experience token to a friendly unit.
-
-**Notes:** Needs implementation: When an enemy unit is defeated: Give an Experience token to a friendly unit.
 
 ### SOR_074 — Repair (Event)
 **Card Text:** Heal 3 damage from a unit or base.
@@ -142,7 +127,7 @@ Defe
 ### SOR_096 — Mon Mothma (Unit)
 **Card Text:** When Played: Search the top 5 cards of your deck for a REBEL card, reveal it, and draw it. (Put the other cards on the bottom of your deck in a random order.)
 
-**Notes:** Needs implementation: When Played: Search the top 5 cards of your deck for a REBEL card, reveal it, and draw it. (Put the 
+**Notes:** Needs implementation: When Played: Search the top 5 cards of your deck for a REBEL card, reveal it, and draw it. (Put the
 
 ### SOR_105 — General Krell (Unit)
 **Card Text:** Each other friendly unit gains: "When Defeated: You may draw a card."
@@ -177,7 +162,7 @@ Defe
 ### SOR_125 — Prepare for Takeoff (Event)
 **Card Text:** Search the top 8 cards of your deck for up to 2 Vehicle units, reveal them, and draw them. (Put the other cards on the bottom of your deck in a random order.)
 
-**Notes:** Needs implementation: Search the top 8 cards of your deck for up to 2 Vehicle units, reveal them, and draw them. (Put the 
+**Notes:** Needs implementation: Search the top 8 cards of your deck for up to 2 Vehicle units, reveal them, and draw them. (Put the
 
 ### SOR_126 — Resupply (Event)
 **Card Text:** Put this event into play as a resource.
@@ -190,11 +175,11 @@ Defe
 **Notes:** Needs implementation: Action [exhaust]: Play an Imperial unit from your hand (paying its cost). It enters play ready. Each
 
 ### SOR_139 — Force Choke (Event)
-**Card Text:** If you control a FORCE unit, this event costs [1 resource] less to play. 
+**Card Text:** If you control a FORCE unit, this event costs [1 resource] less to play.
 
 Deal 5 damage to a non-VEHICLE unit. That unit's controller draws a card.
 
-**Notes:** Needs implementation: If you control a FORCE unit, this event costs [1 resource] less to play. 
+**Notes:** Needs implementation: If you control a FORCE unit, this event costs [1 resource] less to play.
 
 Deal 5 damage to a non-
 
@@ -208,7 +193,7 @@ On Attack: You may deal 1 damage to the defender or to a base.
 ### SOR_146 — Zeb Orrelios (Unit)
 **Card Text:** When this unit completes an attack: If the defender was defeated, you may deal 4 damage to a ground unit.
 
-**Notes:** Needs implementation: When this unit completes an attack: If the defender was defeated, you may deal 4 damage to a ground 
+**Notes:** Needs implementation: When this unit completes an attack: If the defender was defeated, you may deal 4 damage to a ground
 
 ### SOR_147 — Black One (Unit)
 **Card Text:** When Played/When Defeated: You may discard your hand. If you do, draw 3 cards.
@@ -271,11 +256,11 @@ De
 **Notes:** Needs implementation: On Attack: If this unit is attacking an exhausted unit that didn't enter play this round, deal 3 dam
 
 ### SOR_181 — Jabba the Hutt (Unit)
-**Card Text:** Each TRICK event you play costs [1 resource] less. 
+**Card Text:** Each TRICK event you play costs [1 resource] less.
 
 When Played: Search the top 8 cards of your deck for a TRICK event, reveal it, and draw it. (Put the other cards on the bottom of your deck in a random order.)
 
-**Notes:** Needs implementation: Each TRICK event you play costs [1 resource] less. 
+**Notes:** Needs implementation: Each TRICK event you play costs [1 resource] less.
 
 When Played: Search the top 8 cards of your d
 
@@ -323,26 +308,16 @@ When you ready cards during the regroup phase: Either pay [1 resource] or return
 When you ready cards during the regroup phase: Either pay [1 resource]
 
 ### SOR_199 — Bamboozle (Event)
-**Card Text:** You may discard a [Cunning] card from your hand instead of paying this event's cost. 
+**Card Text:** You may discard a [Cunning] card from your hand instead of paying this event's cost.
 Exhaust a unit and return each upgrade on it to its owner's hand.
 
-**Notes:** Needs implementation: You may discard a [Cunning] card from your hand instead of paying this event's cost. 
+**Notes:** Needs implementation: You may discard a [Cunning] card from your hand instead of paying this event's cost.
 Exhaust a uni
-
-### SOR_200 — Spark of Rebellion (Event)
-**Card Text:** Look at an opponent's hand and discard a card from it.
-
-**Notes:** Needs implementation: Look at an opponent's hand and discard a card from it.
-
-### SOR_201 — Bodhi Rook (Unit)
-**Card Text:** When Played: Look at an opponent's hand and discard a non-unit card from it.
-
-**Notes:** Needs implementation: When Played: Look at an opponent's hand and discard a non-unit card from it.
 
 ### SOR_204 — Greedo (Unit)
 **Card Text:** When Defeated: You may discard a card from your deck. If it's not a unit, deal 2 damage to a ground unit.
 
-**Notes:** Needs implementation: When Defeated: You may discard a card from your deck. If it's not a unit, deal 2 damage to a ground 
+**Notes:** Needs implementation: When Defeated: You may discard a card from your deck. If it's not a unit, deal 2 damage to a ground
 
 ### SOR_212 — Strafing Gunship (Unit)
 **Card Text:** This unit can attack units in the ground arena. While this unit is attacking a ground unit, the defender gets –2/–0.
@@ -375,12 +350,7 @@ Give a Shield token to a friendly unit that costs 3 or less.
 ### SOR_223 — Don't Get Cocky (Event)
 **Card Text:** Choose a unit. One at a time, reveal cards from your deck until you choose to stop or have revealed 7 cards. If the combined cost of the revealed cards is 7 or less, deal that much damage to the chosen unit. Put the revealed cards on the bottom of your deck in a random order.
 
-**Notes:** Needs implementation: Choose a unit. One at a time, reveal cards from your deck until you choose to stop or have revealed 
-
-### SOR_228 — Viper Probe Droid (Unit)
-**Card Text:** When Played: Look at an opponent's hand.
-
-**Notes:** Needs implementation: When Played: Look at an opponent's hand.
+**Notes:** Needs implementation: Choose a unit. One at a time, reveal cards from your deck until you choose to stop or have revealed
 
 ### SOR_230 — General Veers (Unit)
 **Card Text:** Other friendly Imperial units get +1/+1.
@@ -411,15 +381,10 @@ Then, another friendly Imperi
 
 **Notes:** Needs implementation: Play a non-[Heroism] unit from your hand for free. Deal damage to your base equal to its cost.
 
-### SOR_236 — R2-D2 (Unit)
-**Card Text:** When Played/On Attack: Look at the top card of your deck. You may put it on the bottom of your deck. (Otherwise, leave it on top of your deck.)
-
-**Notes:** Needs implementation: When Played/On Attack: Look at the top card of your deck. You may put it on the bottom of your deck
-
 ### SOR_238 — C-3PO (Unit)
 **Card Text:** When Played/On Attack: Choose a number, then look at the top card of your deck. If its cost is the chosen number, you may reveal and draw it. (Otherwise, leave it on top of your deck.)
 
-**Notes:** Needs implementation: When Played/On Attack: Choose a number, then look at the top card of your deck. If its cost is the 
+**Notes:** Needs implementation: When Played/On Attack: Choose a number, then look at the top card of your deck. If its cost is the
 
 ### SOR_242 — General Dodonna (Unit)
 **Card Text:** Other friendly Rebel units get +1/+1.
@@ -533,7 +498,7 @@ When Played: If you control another [Vigilance] unit, heal 4 damage from your ba
 **Notes:** Shielded implemented; 'When Played: If you control another [Vigilance] unit, heal 4 damage from your base' NOT implemented
 
 ### SOR_071 — Electrostaff (Upgrade) [COMPLEX]
-**Card Text:** Attach to a non-VEHICLE unit. 
+**Card Text:** Attach to a non-VEHICLE unit.
 
 While attached unit is defending, the attacker gets –1/–0.
 
@@ -610,7 +575,7 @@ When Played: If attached unit is Darth Vader, you may deal 4 damage to a ground 
 **Notes:** Attach restriction implemented (non-Vehicle); When Played Darth Vader deal 4 damage NOT implemented
 
 ### SOR_137 — Fallen Lightsaber (Upgrade) [COMPLEX]
-**Card Text:** Attach to a non-Vehicle unit. 
+**Card Text:** Attach to a non-Vehicle unit.
 
 If attached unit is a Force unit, it gains: 'On Attack: Deal 1 damage to each ground unit the defending player controls.'
 
@@ -636,7 +601,7 @@ Each other friendly [Heroism] unit gains Raid 1.
 **Notes:** Raid 1 implemented; 'Each other friendly [Heroism] unit gains Raid 1' (dynamic keyword grant) NOT implemented
 
 ### SOR_148 — Chewbacca (Unit) [SIMPLE]
-**Card Text:** Grit (This unit gets +1/+0 for each damage on it.)  
+**Card Text:** Grit (This unit gets +1/+0 for each damage on it.)
 
 When Played: If a base has 15 or more damage on it, ready this unit.
 
@@ -823,6 +788,8 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_249 | Frontier AT-RT | Unit | Has custom logic in engine keyword dictionaries or dispatch-listener |
 | SOR_251 | Confiscate | Event | Has custom logic in engine action files |
 | SOR_252 | Restock | Event | Has custom logic in engine action files |
+| SOR_031 | Inferno Four | Unit | When Played/When Defeated: Scry 2; test coverage added |
+| SOR_036 | Gideon Hask | Unit | When an enemy unit is defeated: Experience token; test coverage added |
 | SOR_039 | AT-AT Suppressor | Unit | Has custom logic in engine action files; test coverage added |
 | SOR_059 | 2-1B Surgical Droid | Unit | Has custom logic in engine action files; test coverage added |
 | SOR_060 | Distant Patroller | Unit | Has custom logic in engine action files; test coverage added |
@@ -836,11 +803,16 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_169 | Keep Fighting | Event | Has custom logic in engine action files; test coverage added |
 | SOR_170 | Power Failure | Event | Has custom logic in engine action files; test coverage added |
 | SOR_171 | Mission Briefing | Event | Has custom logic in engine action files; test coverage added |
+| SOR_172 | Open Fire | Event | Has custom logic in engine action files; test coverage added |
 | SOR_173 | Bombing Run | Event | Has custom logic in engine action files; test coverage added |
 | SOR_189 | Leia Organa | Unit | Has custom logic in engine action files; test coverage added |
+| SOR_200 | Spark of Rebellion | Event | When Played: look at opponent's hand and discard a card; test coverage added |
+| SOR_201 | Bodhi Rook | Unit | When Played: look at opponent's hand and discard a non-unit card; test coverage added |
 | SOR_202 | Cantina Bouncer | Unit | Has custom logic in engine action files; test coverage added |
 | SOR_206 | Mining Guild TIE Fighter | Unit | Has custom logic in engine action files; test coverage added |
 | SOR_216 | Disarm | Event | Has custom logic in engine action files; test coverage added |
 | SOR_220 | Surprise Strike | Event | Has custom logic in engine action files; test coverage added |
 | SOR_221 | Outmaneuver | Event | Has custom logic in engine action files; test coverage added |
+| SOR_228 | Viper Probe Droid | Unit | When Played: look at opponent's hand; test coverage added |
+| SOR_236 | R2-D2 | Unit | When Played/On Attack: Scry 1; test coverage added |
 | SOR_240 | Fleet Lieutenant | Unit | Has custom logic in engine action files; test coverage added |

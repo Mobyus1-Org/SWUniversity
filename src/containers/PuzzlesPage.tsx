@@ -79,12 +79,15 @@ function formatOptionLabel(option: string): string {
 
 // Leaders whose leader-side ability is an ACTION (not passive). Mirrors ActionAbilities() in action-ability.ts.
 const LEADERS_WITH_ACTION_ABILITY = new Set([
+  //Spark of Rebellion
   "SOR_002", "SOR_003", "SOR_004", "SOR_005", "SOR_006",
   "SOR_007", "SOR_009", "SOR_010", "SOR_011", "SOR_012",
   "SOR_013", "SOR_014", "SOR_016", "SOR_017", "SOR_018",
+  //Shadows of the Galaxy
   "SHD_002", "SHD_003", "SHD_004", "SHD_006", "SHD_007",
   "SHD_009", "SHD_010", "SHD_011", "SHD_012", "SHD_013",
   "SHD_016", "SHD_017",
+  //Twilight of the Republic
   "TWI_005",
 ]);
 
@@ -1736,9 +1739,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
     )}
 
     {hasPrompt ? <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className={`rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl${resolutionNeeded?.type === "DeckSearch" ? " w-[min(90vw,700px)]" : ""}`}>
+      <div className={`rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl${resolutionNeeded?.type === "DeckSearch" ? " w-[min(90vw,700px)]" : " w-[min(90vw,700px)]"}`}>
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
-          {resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry" ? "Look at the top cards" : resolutionNeeded?.type === "DeckSearch" ? "Deck Search" : resolutionNeeded?.type === "PeekHand" ? "Opponent's Hand" : "Choose"}
+          {resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry" ? "Look at the top cards" : resolutionNeeded?.type === "DeckSearch" ? "Deck Search" : "Choose"}
         </h3>
         {resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry"
           ? <p className="-mt-2 mb-4 max-w-xs text-xs text-white/65">Put each card on top or bottom of your deck.</p>
@@ -1778,7 +1781,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                   const dest = deckArrangeMap[c.tempId] ?? null;
                   return (
                     <div key={c.tempId} className="flex flex-col items-center gap-2">
-                      <div className="w-[4.5rem]">
+                      <div className="w-[5rem]">
                         <CardVisual
                           cardId={c.cardId}
                           selectable={false}
@@ -1824,7 +1827,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                         if (next.has(c.tempId)) next.delete(c.tempId); else next.add(c.tempId);
                         return next;
                       })}
-                      className={`w-[4.5rem] text-left transition${disabled && !selected ? " opacity-40 cursor-not-allowed" : ""}`}>
+                      className={`w-[5rem] text-left transition${disabled && !selected ? " opacity-40 cursor-not-allowed" : ""}`}>
                       <CardVisual
                         cardId={c.cardId}
                         selectable={!disabled && !isResolving}
@@ -1863,7 +1866,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                       onClick={() => resolutionNeeded.mustDiscard && eligible
                         ? void sendDispatch(createDispatch("choose-target", { targetIndices: [i] }))
                         : undefined}
-                      className={`w-[4.5rem] text-left transition${resolutionNeeded.mustDiscard && eligible ? "" : " opacity-60 cursor-default"}`}
+                      className={`w-[5rem] text-left transition${resolutionNeeded.mustDiscard && eligible ? "" : " opacity-60 cursor-default"}`}
                       onMouseEnter={() => handlePreviewStart({ imageId: card.cardId, cardId: card.cardId, label: CardTitle(card.cardId) })}
                       onMouseLeave={handlePreviewEnd}>
                       <CardVisual

@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { CanDisclose, DrawCardForPlayer, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
+import { CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
 import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, GiveXpMultiplePending, ChooseIndirectTargetPending, DeckSearchPending, PeekHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
@@ -956,7 +956,9 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies DeckSearchPending;
     }
-    case "SOR_228": { // Viper Probe Droid — When Played: Look at an opponent's hand.
+    case "SOR_228": // Viper Probe Droid — When Played: Look at an opponent's hand.
+    case "SEC_239": // reprint of SOR_228
+    {
       const opponent228: PlayerId = player === 1 ? 2 : 1;
       return {
         type: "peek-hand",
