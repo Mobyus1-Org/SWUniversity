@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { CanDisclose, DrawCardForPlayer, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
-import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, GiveXpMultiplePending, ChooseIndirectTargetPending, DeckSearchPending } from "@/server/engine/pending-resolution";
+import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, GiveXpMultiplePending, ChooseIndirectTargetPending, DeckSearchPending, PeekHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
 import { CardAspects, CardCost, CardTitle, CardType } from "@/server/engine/card-db/generated";
@@ -955,6 +955,42 @@ export function resolveWhenPlayed(
         action: "play",
         continuation: null,
       } satisfies DeckSearchPending;
+    }
+    case "SOR_228": { // Viper Probe Droid — When Played: Look at an opponent's hand.
+      const opponent228: PlayerId = player === 1 ? 2 : 1;
+      return {
+        type: "peek-hand",
+        peekingPlayer: player,
+        targetPlayer: opponent228,
+        mustDiscard: false,
+        continuation: null,
+      } satisfies PeekHandPending;
+    }
+    case "SOR_201": { // Bodhi Rook — When Played: Look at an opponent's hand and discard a non-unit card from it.
+      const opponent201: PlayerId = player === 1 ? 2 : 1;
+      const hand201 = player === 1 ? game.currentGameState.player2.hand : game.currentGameState.player1.hand;
+      const hasNonUnit = hand201.some(c => CardType(c.cardId) !== "Unit");
+      if (!hasNonUnit) return null;
+      return {
+        type: "peek-hand",
+        peekingPlayer: player,
+        targetPlayer: opponent201,
+        mustDiscard: true,
+        discardFilter: "non-unit",
+        continuation: null,
+      } satisfies PeekHandPending;
+    }
+    case "SOR_200": { // Spark of Rebellion (Event) — Look at an opponent's hand and discard a card from it.
+      const opponent200: PlayerId = player === 1 ? 2 : 1;
+      const hand200 = player === 1 ? game.currentGameState.player2.hand : game.currentGameState.player1.hand;
+      if (hand200.length === 0) return null;
+      return {
+        type: "peek-hand",
+        peekingPlayer: player,
+        targetPlayer: opponent200,
+        mustDiscard: true,
+        continuation: null,
+      } satisfies PeekHandPending;
     }
     default:
       return null;

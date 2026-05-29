@@ -245,6 +245,8 @@ export const Cards = {
       miningGuildTIE: "SOR_206",
       fleetLieutenant: "SOR_240",
       r2d2: "SOR_236",
+      viperProbeDroid: "SOR_228",
+      bodhiRook: "SOR_201",
     },
     shd: {
       doctorPershing: "SHD_028",
@@ -350,6 +352,7 @@ export const Cards = {
       disarm: "SOR_216",
       surpriseStrike: "SOR_220",
       outmaneuver: "SOR_221",
+      sparkOfRebellion: "SOR_200",
     },
     twi: {
       vanquish: "TWI_077",

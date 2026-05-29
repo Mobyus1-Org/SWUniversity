@@ -302,7 +302,21 @@ export type PendingResolution =
   | ChooseIndirectTargetPending
   | IndirectDamagePending
   | PlayFromHandPending
-  | DeckSearchPending;
+  | DeckSearchPending
+  | PeekHandPending;
+
+export interface PeekHandPending {
+  type: "peek-hand";
+  /** The player doing the peeking (choosing which card to discard, if applicable). */
+  peekingPlayer: PlayerId;
+  /** The player whose hand is being peeked. */
+  targetPlayer: PlayerId;
+  /** If true, the peeking player must choose one card from the target hand to discard. */
+  mustDiscard: boolean;
+  /** If set, only cards of this type are eligible to be discarded. */
+  discardFilter?: "non-unit";
+  continuation: PendingResolution | null;
+}
 
 // ---------------------------------------------------------------------------
 // Engine context — passed in and out of processDispatch

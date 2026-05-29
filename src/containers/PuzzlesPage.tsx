@@ -66,6 +66,7 @@ function formatStatus(status: GameStatus, resolutionNeeded: ResolutionRequest | 
   if (resolutionNeeded?.type === "Trigger") return "Choose a trigger.";
   if (resolutionNeeded?.type === "Player") return "Choose a player.";
   if (resolutionNeeded?.type === "DeckSearch") return resolutionNeeded.helperText;
+  if (resolutionNeeded?.type === "PeekHand") return resolutionNeeded.mustDiscard ? "Choose a card to discard from the opponent's hand." : "Look at the opponent's hand.";
   return "Choose an action — click a hand card, your leader, or a ready friendly unit.";
 }
 
@@ -901,7 +902,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
 
   const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[0] : null;
   const latestPlayerDiscard = player.discard.length > 0 ? player.discard[0] : null;
-  const hasPrompt = resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "Trigger" || resolutionNeeded?.type === "Player" || resolutionNeeded?.type === "DeckSearch";
+  const hasPrompt = resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "Trigger" || resolutionNeeded?.type === "Player" || resolutionNeeded?.type === "DeckSearch" || resolutionNeeded?.type === "PeekHand";
   const hasPlotPrompt = resolutionNeeded?.type === "Plot";
   const getUnitGlowClass = (playId: string) =>
     isMultiSelectTarget && selectedTargetPlayIds.includes(playId)
@@ -1737,7 +1738,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
     {hasPrompt ? <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className={`rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl${resolutionNeeded?.type === "DeckSearch" ? " w-[min(90vw,700px)]" : ""}`}>
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
-          {resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry" ? "Look at the top cards" : resolutionNeeded?.type === "DeckSearch" ? "Deck Search" : "Choose"}
+          {resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry" ? "Look at the top cards" : resolutionNeeded?.type === "DeckSearch" ? "Deck Search" : resolutionNeeded?.type === "PeekHand" ? "Opponent's Hand" : "Choose"}
         </h3>
         {resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry"
           ? <p className="-mt-2 mb-4 max-w-xs text-xs text-white/65">Put each card on top or bottom of your deck.</p>
@@ -1847,6 +1848,42 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                     ? `Draw ${deckSearchSelected.size} Card${deckSearchSelected.size > 1 ? "s" : ""}`
                     : `Play ${deckSearchSelected.size} Unit${deckSearchSelected.size > 1 ? "s" : ""} for Free`}
               </button>
+            </>
+          ) : resolutionNeeded?.type === "PeekHand" ? (
+            <>
+              <p className="-mt-2 mb-3 text-xs text-white/60">
+                {resolutionNeeded.mustDiscard ? "Choose a card to discard." : "Opponent's hand — no action required."}
+              </p>
+              <div className="flex flex-wrap gap-3 justify-center mb-3">
+                {(resolutionNeeded.targetPlayer === 2 ? opponent : player).hand.map((card, i) => {
+                  const eligible = resolutionNeeded.eligibleIndices.includes(i);
+                  return (
+                    <button key={i} type="button"
+                      disabled={isResolving || !resolutionNeeded.mustDiscard || !eligible}
+                      onClick={() => resolutionNeeded.mustDiscard && eligible
+                        ? void sendDispatch(createDispatch("choose-target", { targetIndices: [i] }))
+                        : undefined}
+                      className={`w-[4.5rem] text-left transition${resolutionNeeded.mustDiscard && eligible ? "" : " opacity-60 cursor-default"}`}
+                      onMouseEnter={() => handlePreviewStart({ imageId: card.cardId, cardId: card.cardId, label: CardTitle(card.cardId) })}
+                      onMouseLeave={handlePreviewEnd}>
+                      <CardVisual
+                        cardId={card.cardId}
+                        selectable={resolutionNeeded.mustDiscard && eligible}
+                        onPreviewStart={handlePreviewStart}
+                        onPreviewEnd={handlePreviewEnd}
+                        compact
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+              {!resolutionNeeded.mustDiscard ? (
+                <button type="button" disabled={isResolving}
+                  onClick={() => void sendDispatch(createDispatch("choose-target", { targetIndices: [] }))}
+                  className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20">
+                  Got it
+                </button>
+              ) : null}
             </>
           ) : null}
         </div>

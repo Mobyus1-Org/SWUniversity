@@ -45,6 +45,7 @@ import type {
   NeedsPlot,
   NeedsSpreadDamage,
   NeedsTarget,
+  NeedsPeekHand,
   PlayCardDispatchData,
   PlaySmuggleDispatchData,
   RegroupResourceDispatchData,
@@ -1095,6 +1096,22 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         maxCombinedCost: pending.maxCombinedCost,
         costModifier: pending.costModifier,
       } satisfies NeedsDeckSearch;
+    case "peek-hand": {
+      const targetHand = GetPlayer(game, pending.targetPlayer).hand;
+      const eligibleIndices = pending.mustDiscard
+        ? targetHand.reduce<number[]>((acc, card, i) => {
+            if (!pending.discardFilter) return [...acc, i];
+            if (pending.discardFilter === "non-unit" && CardType(card.cardId) !== "Unit") return [...acc, i];
+            return acc;
+          }, [])
+        : targetHand.map((_, i) => i);
+      return {
+        type: "PeekHand",
+        targetPlayer: pending.targetPlayer,
+        mustDiscard: pending.mustDiscard,
+        eligibleIndices,
+      } satisfies NeedsPeekHand;
+    }
     default: throw new Error(`Unknown pending resolution type: ${pending.type}`);
   }
 }
@@ -1737,6 +1754,39 @@ function handleChooseTarget(
     const bagAfterXp = drainTriggerBag(game, log);
     if (bagAfterXp)
       return { response: resolutionResponse(pendingToResolution(bagAfterXp, game)), pending: bagAfterXp, stateChanged: false };
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending.type === "peek-hand") {
+    if (!pending.mustDiscard) {
+      // Just a peek — no discard required, player dismisses with any dispatch
+      log.push(`Player ${pending.peekingPlayer} looked at Player ${pending.targetPlayer}'s hand.`);
+      const cont = pending.continuation ?? null;
+      if (cont) return { response: resolutionResponse(pendingToResolution(cont, game)), pending: cont, stateChanged: false };
+      const bag = drainTriggerBag(game, log);
+      if (bag) return { response: resolutionResponse(pendingToResolution(bag, game)), pending: bag, stateChanged: false };
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    const idx = data.targetIndices?.[0];
+    if (idx == null)
+      return { response: invalidResponse("Choose a card to discard from the opponent's hand."), pending, stateChanged: false };
+    const targetHand = GetPlayer(game, pending.targetPlayer).hand;
+    if (idx < 0 || idx >= targetHand.length)
+      return { response: invalidResponse("Invalid hand index."), pending, stateChanged: false };
+    // Validate filter
+    if (pending.discardFilter === "non-unit" && CardType(targetHand[idx].cardId) === "Unit")
+      return { response: invalidResponse("Only non-unit cards can be discarded here."), pending, stateChanged: false };
+
+    const [discarded] = targetHand.splice(idx, 1);
+    pushEventToDiscard(game, pending.targetPlayer, discarded.cardId);
+    log.push(`Player ${pending.peekingPlayer} discarded ${CardTitle(discarded.cardId)} from Player ${pending.targetPlayer}'s hand.`);
+    const cont = pending.continuation ?? null;
+    if (cont) return { response: resolutionResponse(pendingToResolution(cont, game)), pending: cont, stateChanged: false };
+    const bag = drainTriggerBag(game, log);
+    if (bag) return { response: resolutionResponse(pendingToResolution(bag, game)), pending: bag, stateChanged: false };
+    updateDefeatedPlayers(game);
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 

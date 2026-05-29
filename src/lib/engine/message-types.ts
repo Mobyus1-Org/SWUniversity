@@ -66,7 +66,16 @@ export interface NeedsDeckSearch {
   costModifier?: "free" | number; // applied to each chosen card, usually to make them free or reduce cost by a certain amount
 }
 
-export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot | NeedsSpreadDamage | NeedsDeckSearch;
+/** Hand-peek prompt: the active player sees the target hand and optionally discards a card. */
+export interface NeedsPeekHand {
+  type: "PeekHand";
+  targetPlayer: PlayerId;
+  mustDiscard: boolean;
+  /** Indices of cards in the target hand that are eligible to be discarded. */
+  eligibleIndices: number[];
+}
+
+export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot | NeedsSpreadDamage | NeedsDeckSearch | NeedsPeekHand;
 
 // ---------------------------------------------------------------------------
 // Inbound: dispatch types and data payloads
