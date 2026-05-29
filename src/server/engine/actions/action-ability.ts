@@ -94,6 +94,13 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
           abilities.push(cardId);
         }
         break;
+      case "SHD_028": { // Doctor Pershing — Action [Exhaust, deal 1 damage to a friendly unit]: Draw a card.
+        const friendlyUnits028 = GetUnitsForPlayer(player);
+        if (friendlyUnits028.length > 0) {
+          abilities.push(cardId);
+        }
+        break;
+      }
       default: break;
     }
   }

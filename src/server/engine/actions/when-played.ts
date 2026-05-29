@@ -896,6 +896,24 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SOR_031": { // Inferno Four — When Played/When Defeated: Look at top 2, put any on bottom, rest on top.
+      const gs031 = game.currentGameState;
+      const deck031 = player === 1 ? gs031.player1.deck : gs031.player2.deck;
+      if (deck031.length === 0) return null;
+      const count031 = Math.min(2, deck031.length);
+      const top031 = deck031.slice(-count031);
+      const topCards031 = top031.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
+      const eligible031 = topCards031.map(c => ({ ...c, cost: 0 }));
+      return {
+        type: "deck-search",
+        cardId: "SOR_031",
+        player,
+        topCards: topCards031,
+        eligibleChoices: eligible031,
+        action: "put-bottom",
+        continuation: null,
+      } satisfies DeckSearchPending;
+    }
     case "LOF_100": { // Kelleran Beq — Search the top 7 cards of your deck for a unit, reveal it, and play it. It costs 3 resources less.
       const gs100 = game.currentGameState;
       const deck100 = player === 1 ? gs100.player1.deck : gs100.player2.deck;

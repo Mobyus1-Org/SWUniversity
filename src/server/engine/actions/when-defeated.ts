@@ -1,5 +1,5 @@
 import { Unit } from "@/server/engine/unit";
-import { AbilityOptionPending, PendingResolution, SpreadDamagePending } from "@/server/engine/pending-resolution";
+import { AbilityOptionPending, DeckSearchPending, PendingResolution, SpreadDamagePending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
 import { DrawCardForPlayer, GetGame, GetUnitsForPlayer, InitiativePlayer } from "@/server/engine/core-functions";
 import { CardAspects, CardTitle } from "@/server/engine/card-db/generated";
@@ -154,6 +154,25 @@ export function resolveWhenDefeated(
         fromPlayIds: enemyUnits134.map(u => u.playId),
         continuation: null,
       };
+    }
+    case "SOR_031": { // Inferno Four — When Defeated: Look at top 2, put any on bottom, rest on top.
+      const game031 = GetGame();
+      if (!game031) return null;
+      const deck031 = player === 1 ? game031.currentGameState.player1.deck : game031.currentGameState.player2.deck;
+      if (deck031.length === 0) return null;
+      const count031 = Math.min(2, deck031.length);
+      const top031 = deck031.slice(-count031);
+      const topCards031 = top031.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
+      const eligible031 = topCards031.map(c => ({ ...c, cost: 0 }));
+      return {
+        type: "deck-search",
+        cardId: "SOR_031",
+        player,
+        topCards: topCards031,
+        eligibleChoices: eligible031,
+        action: "put-bottom",
+        continuation: null,
+      } satisfies DeckSearchPending;
     }
     case "SOR_163": { // Star Wing Scout — When Defeated: If you have the initiative, draw 2 cards.
       if (InitiativePlayer() !== player) return null;

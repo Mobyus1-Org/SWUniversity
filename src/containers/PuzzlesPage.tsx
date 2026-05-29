@@ -87,6 +87,12 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "TWI_005",
 ]);
 
+// Non-leader units with an Action ability. Maps cardId → short label for the modal button.
+// Mirrors the playId block of ActionAbilities() in action-ability.ts.
+const UNITS_WITH_ACTION_ABILITY: Record<string, string> = {
+  "SHD_028": "Draw a card",
+};
+
 const BASES_WITH_EPIC_ACTION = new Set([
   "SOR_022", "SOR_025", "SOR_028",
 ]);
@@ -376,6 +382,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
   }, [lastTestMeta]);
   const [showClosePuzzleConfirm, setShowClosePuzzleConfirm] = React.useState(false);
   const [leaderModalOpen, setLeaderModalOpen] = React.useState(false);
+  const [unitAbilityModal, setUnitAbilityModal] = React.useState<{ playId: string; cardId: string } | null>(null);
   const [discardModalPlayer, setDiscardModalPlayer] = React.useState<1 | 2 | null>(null);
   const previewTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameLogRef = React.useRef<HTMLDivElement | null>(null);
@@ -496,10 +503,30 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
       } else {
         void sendDispatch(createDispatch("choose-target", { targetPlayIds: [playId] }));
       }
-    } else if (!resolutionNeeded) {
-      void sendDispatch(createDispatch("initiate-attack", { playId }));
+    } else if (!resolutionNeeded && gameState) {
+      const unit =
+        [...gameState.player1.groundArena, ...gameState.player1.spaceArena].find(u => u.playId === playId);
+      if (unit && unit.ready && UNITS_WITH_ACTION_ABILITY[unit.cardId]) {
+        setUnitAbilityModal({ playId, cardId: unit.cardId });
+      } else {
+        void sendDispatch(createDispatch("initiate-attack", { playId }));
+      }
     }
-  }, [isResolving, isMultiSelectTarget, resolutionNeeded, sendDispatch]);
+  }, [isResolving, isMultiSelectTarget, resolutionNeeded, gameState, sendDispatch]);
+
+  const handleUnitAttack = React.useCallback(() => {
+    if (!unitAbilityModal) return;
+    const { playId } = unitAbilityModal;
+    setUnitAbilityModal(null);
+    void sendDispatch(createDispatch("initiate-attack", { playId }));
+  }, [unitAbilityModal, sendDispatch]);
+
+  const handleUnitAbility = React.useCallback(() => {
+    if (!unitAbilityModal) return;
+    const { playId, cardId } = unitAbilityModal;
+    setUnitAbilityModal(null);
+    void sendDispatch(createDispatch("use-ability", { cardId, playId }));
+  }, [unitAbilityModal, sendDispatch]);
 
   const handleBaseClick = React.useCallback((_player: PlayerId) => {
     if (isResolving) return;
@@ -723,7 +750,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                 roundTripCtxRef.current = {
                   game: {
                     id: globalThis.crypto.randomUUID(),
-                    currentGameState: initialState,
+                    currentGameState: initialState as unknown as GameState,
                     gameStateHistory: [],
                     gameLog: ["Puzzle test loaded."],
                   },
@@ -1885,6 +1912,27 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
             </button>
           ) : null}
           <button type="button" onClick={() => setLeaderModalOpen(false)}
+            className="rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/20">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div> : null}
+
+    {unitAbilityModal ? <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl">
+        <h3 className="mb-1 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">Unit Action</h3>
+        <p className="mb-4 text-xs text-white/50">{CardTitle(unitAbilityModal.cardId)}</p>
+        <div className="flex flex-col gap-3">
+          <button type="button" onClick={handleUnitAttack}
+            className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500/35">
+            Attack
+          </button>
+          <button type="button" onClick={handleUnitAbility}
+            className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/35">
+            Action: {UNITS_WITH_ACTION_ABILITY[unitAbilityModal.cardId]}
+          </button>
+          <button type="button" onClick={() => setUnitAbilityModal(null)}
             className="rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/20">
             Cancel
           </button>

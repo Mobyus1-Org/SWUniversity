@@ -370,11 +370,12 @@ function addUnitFromSearch(game: GameState, log: string[], cardId: string, playe
 function triggerLabel(t: TriggerEntry): string {
   const name = CardTitle(t.cardId) ?? t.cardId;
   switch (t.triggerType) {
-    case "ambush":     return `${name} — Ambush`;
-    case "when-played": return `${name} — When Played`;
-    case "shielded":   return `${name} — Shielded`;
-    case "leader-reaction": return `${name} — Leader Ability`;
-    default:           return `${name} — ${t.triggerType}`;
+    case "ambush":              return `${name} — Ambush`;
+    case "when-played":         return `${name} — When Played`;
+    case "shielded":            return `${name} — Shielded`;
+    case "leader-reaction":     return `${name} — Leader Ability`;
+    case "enemy-unit-defeated": return `${name} — When Enemy Defeated`;
+    default:                    return `${name} — ${t.triggerType}`;
   }
 }
 
@@ -416,6 +417,22 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
       onYes: { type: "attack-target", attackerPlayId: trigger.playId, source: "ambush" },
       continuation: null,
     };
+  }
+
+  if (trigger.triggerType === "enemy-unit-defeated") {
+    // Gideon Hask (SOR_036): give an Experience token to a friendly unit
+    if (trigger.cardId === "SOR_036") {
+      const friendlyUnits = GetUnitsForPlayer(trigger.fromPlayer);
+      if (friendlyUnits.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_036",
+        player: trigger.fromPlayer,
+        fromPlayIds: friendlyUnits.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    return null;
   }
 
   if (trigger.triggerType === "leader-reaction") {
@@ -585,6 +602,15 @@ function defeatUnit(
     log.push(`${CardTitle(captive.cardId)} was rescued and returned to Player ${captive.owner}'s arena exhausted.`);
   }
 
+  // Gideon Hask (SOR_036): when an enemy unit is defeated, fire his trigger for the opponent.
+  const gideonPlayer: PlayerId = removed.player === 1 ? 2 : 1;
+  const gideonArena = GetPlayer(game, gideonPlayer).groundArena;
+  const gideonUnit = gideonArena.find(u => u.cardId === "SOR_036");
+  if (gideonUnit) {
+    const nested = game.triggerBag.length > 0;
+    game.triggerBag.push({ triggerType: "enemy-unit-defeated", cardId: "SOR_036", fromPlayer: gideonPlayer, playId: gideonUnit.playId, nested });
+  }
+
   // When-Defeated triggers fire after bounty collection (CR 13c).
   const whenDefeated = resolveWhenDefeated(unit, removed.player);
   const collectingPlayer: PlayerId = removed.player === 1 ? 2 : 1;
@@ -647,6 +673,13 @@ function defeatForExploit(game: GameState, log: string[], unit: Unit): void {
       reason: "returned-to-play",
     });
     log.push(`${CardTitle(captive.cardId)} was rescued from Exploit-defeated unit.`);
+  }
+
+  // Gideon Hask (SOR_036): react to exploit-defeated enemy unit.
+  const gideonPlayerE: PlayerId = removed.player === 1 ? 2 : 1;
+  const gideonUnitE = GetPlayer(game, gideonPlayerE).groundArena.find(u => u.cardId === "SOR_036");
+  if (gideonUnitE) {
+    game.triggerBag.push({ triggerType: "enemy-unit-defeated", cardId: "SOR_036", fromPlayer: gideonPlayerE, playId: gideonUnitE.playId, nested: true });
   }
 
   // Defer when-defeated trigger to bag (CR 16d: fires after Play a Card completes)
@@ -1387,8 +1420,20 @@ function handleUseAbility(
       return { response: invalidResponse(`No unit with playId ${data.playId}.`), pending: null, stateChanged: false };
     if (unit.controller !== player)
       return { response: invalidResponse(`Unit ${data.playId} is not controlled by Player ${player}.`), pending: null, stateChanged: false };
+    if (!unit.ready)
+      return { response: invalidResponse(`${CardTitle(unit.cardId)} is exhausted.`), pending: null, stateChanged: false };
+    const unitAbilities = ActionAbilities(unit.cardId, player, data.playId);
+    if (!unitAbilities.includes(unit.cardId))
+      return { response: invalidResponse(`${CardTitle(unit.cardId)} has no available action ability.`), pending: null, stateChanged: false };
+    const unitAbilityCost = ActionAbilityCost(unit.cardId);
+    const readyResourceCount = GetPlayer(game, player).resources.filter(r => r.ready).length;
+    if (readyResourceCount < unitAbilityCost)
+      return { response: invalidResponse(`Not enough resources to use ${CardTitle(unit.cardId)}'s ability.`), pending: null, stateChanged: false };
 
-    const nextPending = resolveActionAbility(game, log, player, unit.cardId);//, unit.playId);
+    unit.ready = false;
+    exhaustResources(game, player, unitAbilityCost);
+
+    const nextPending = resolveActionAbility(game, log, player, unit.cardId);
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
     }
@@ -2083,10 +2128,31 @@ function handleChooseTarget(
       if (combinedCost > pending.maxCombinedCost)
         return { response: invalidResponse(`Deck search: combined cost ${combinedCost} exceeds ${pending.maxCombinedCost}.`), pending, stateChanged: false };
     }
-    // Remove top N from deck and return unchosen cards to the bottom in a random order
+    // Remove the top N cards from the deck — all actions share this first step.
     const pState = GetPlayer(game, pending.player);
     pState.deck.splice(pState.deck.length - pending.topCards.length, pending.topCards.length);
     const takenSet = new Set(chosen);
+
+    // "put-bottom": chosen cards go to bottom, unchosen cards go back to top in original deck order.
+    if (pending.action === "put-bottom") {
+      const bottomCards = chosen.map(id => ({ cardId: eligibleMap.get(id)!.cardId }));
+      const topReturnCards = pending.topCards.filter(c => !takenSet.has(c.tempId)).map(c => ({ cardId: c.cardId }));
+      pState.deck.unshift(...bottomCards);
+      pState.deck.push(...topReturnCards);
+      if (bottomCards.length > 0) {
+        log.push(`${CardTitle(pending.cardId)}: put ${bottomCards.length} card(s) on the bottom of the deck.`);
+      } else {
+        log.push(`${CardTitle(pending.cardId)}: left all cards on top of the deck.`);
+      }
+      const contBottom = pending.continuation ?? null;
+      if (contBottom) return { response: resolutionResponse(pendingToResolution(contBottom, game)), pending: contBottom, stateChanged: true };
+      const bagBottom = drainTriggerBag(game, log);
+      if (bagBottom) return { response: resolutionResponse(pendingToResolution(bagBottom, game)), pending: bagBottom, stateChanged: true };
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    // For "draw" and "play": unchosen cards go to the bottom in random order.
     const unchosenCards = pending.topCards.filter(c => !takenSet.has(c.tempId)).map(c => ({ cardId: c.cardId }));
     for (let i = unchosenCards.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -3059,6 +3125,17 @@ function resolveActionAbility(
         continuation: null,
       };
     }
+    case "SHD_028": { // Doctor Pershing — Action [Exhaust, deal 1 damage to a friendly unit]: Draw a card.
+      const friendly028 = GetUnitsForPlayer(player);
+      if (friendly028.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SHD_028",
+        player,
+        fromPlayIds: friendly028.map(u => u.playId),
+        continuation: null,
+      };
+    }
     default:
       return null;
   }
@@ -3111,6 +3188,25 @@ function applyAbilityEffect(
       if (targetIsb) {
         targetIsb.damage += 1;
         game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 1 damage to ${CardTitle(targetIsb.cardId)}.`);
+      }
+      break;
+    }
+    case "SHD_028": { // Doctor Pershing: deal 1 damage to chosen friendly unit, draw a card.
+      if (!targetPlayId) break;
+      const target028 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target028) {
+        target028.damage += 1;
+        game.gameLog.push(`${CardTitle("SHD_028")}: dealt 1 damage to ${CardTitle(target028.cardId)}.`);
+      }
+      DrawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
+      break;
+    }
+    case "SOR_036": { // Gideon Hask: give Experience token to chosen friendly unit
+      if (!targetPlayId) break;
+      const target036 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target036) {
+        target036.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target036.owner, controller: target036.controller });
+        game.gameLog.push(`${CardTitle("SOR_036")}: gave an Experience token to ${CardTitle(target036.cardId)}.`);
       }
       break;
     }

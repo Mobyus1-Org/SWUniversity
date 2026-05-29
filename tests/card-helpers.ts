@@ -211,6 +211,8 @@ export const Cards = {
       spy: "SEC_T01",
     },
     sor: {
+      infernoFour: "SOR_031",
+      gideonHask: "SOR_036",
       wingLeader: "SOR_241",
       systemPatrolCraft: "SOR_066",
       battlefieldMarine: "SOR_095",
@@ -244,6 +246,7 @@ export const Cards = {
       fleetLieutenant: "SOR_240",
     },
     shd: {
+      doctorPershing: "SHD_028",
       generalTagge: "SHD_081",
       sundariPeaceKeeper: "SHD_098",
       recklessGunslinger: "SHD_160",
