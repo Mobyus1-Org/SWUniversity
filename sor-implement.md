@@ -6,11 +6,11 @@
 
 | Status | Count |
 |--------|-------|
-| Implemented | 111 |
+| Implemented | 115 |
 | Partially Implemented | 40 |
 | Keywords Only (auto-handled) | 23 |
 | Unimplemented – Simple | 0 |
-| Unimplemented – Complex | 60 |
+| Unimplemented – Complex | 56 |
 | **Total** | **214** |
 
 ---
@@ -21,15 +21,6 @@
 
 These cards need new engine features or unusual interactions.
 
-### SOR_042 — Search Your Feelings (Event)
-**Card Text:** Search your deck for a card and draw it. (Then, shuffle your deck.)
-
-**Notes:** Needs implementation: Search your deck for a card and draw it. (Then, shuffle your deck.)
-
-### SOR_047 — Kanan Jarrus (Unit)
-**Card Text:** On Attack: You may discard 1 card from the defending player's deck for each friendly SPECTRE unit. Heal 1 damage from your base for each different aspect among the discarded cards.
-
-**Notes:** Needs implementation: On Attack: You may discard 1 card from the defending player's deck for each friendly SPECTRE unit. Hea
 
 ### SOR_055 — The Force Is With Me (Event)
 **Card Text:** Choose a friendly unit and give 2 Experience tokens to it. If you control a FORCE unit, also give a Shield token to the chosen unit. You may attack with the chosen unit.
@@ -60,10 +51,6 @@ Defe
 
 **Notes:** Needs implementation: When Played: Name a card. While this unit is in play, opponents can't play the named card.
 
-### SOR_075 — It Binds All Things (Event)
-**Card Text:** Heal up to 3 damage from a unit. If you control a FORCE unit, you may deal that much damage to another unit.
-
-**Notes:** Needs implementation: Heal up to 3 damage from a unit. If you control a FORCE unit, you may deal that much damage to anoth
 
 ### SOR_081 — Seasoned Shoretrooper (Unit)
 **Card Text:** While you control 6 or more resources, this unit gets +2/+0.
@@ -290,10 +277,6 @@ Exhaust a unit and return each upgrade on it to its owner's hand.
 **Notes:** Needs implementation: You may discard a [Cunning] card from your hand instead of paying this event's cost.
 Exhaust a uni
 
-### SOR_204 — Greedo (Unit)
-**Card Text:** When Defeated: You may discard a card from your deck. If it's not a unit, deal 2 damage to a ground unit.
-
-**Notes:** Needs implementation: When Defeated: You may discard a card from your deck. If it's not a unit, deal 2 damage to a ground
 
 ### SOR_212 — Strafing Gunship (Unit)
 **Card Text:** This unit can attack units in the ground arena. While this unit is attacking a ground unit, the defender gets –2/–0.
@@ -790,3 +773,7 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_040 | Avenger | Unit | When Played/On Attack: opponent chooses non-leader unit to defeat; uses chooseAndDefeatUnit helper; test coverage added |
 | SOR_041 | Power of the Dark Side | Event | Opponent chooses any unit (incl. leader) to defeat; uses chooseAndDefeatUnit helper; test coverage added |
 | SOR_052 | Redemption | Unit | Sentinel + When Played: spread heal up to 8 across units/bases, deal total to self; uses SpreadHealPending; test coverage added |
+| SOR_042 | Search Your Feelings | Event | When Played: search entire deck for any card and draw it (dontReveal); test coverage added |
+| SOR_047 | Kanan Jarrus | Unit | On Attack: mill N cards from defending player's deck (N = friendly Spectre count); heal base by distinct aspects among milled cards; uses MillPending + MillResultPending; test coverage added |
+| SOR_075 | It Binds All Things | Event | Heal up to 3 from a unit; if you control a Force unit, may deal that much to another unit; uses SpreadHealPending with afterHeal; test coverage added |
+| SOR_204 | Greedo | Unit | When Defeated: may discard top card of own deck; if non-unit, deal 2 damage to a ground unit; uses MillPending + MillResultPending; test coverage added |
