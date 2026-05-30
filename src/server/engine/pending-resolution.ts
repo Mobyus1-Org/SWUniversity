@@ -210,18 +210,23 @@ export interface SpreadDamagePending {
 }
 
 /**
- * Spread up to N heal across any eligible units and/or bases.
- * Each target can receive at most its current damage. Total ≤ maxHeal.
- * If the continuation is a SpreadDamagePending, the resolver mutates its totalDamage
- * to the actual healed total before advancing — use this to implement rebound effects
- * like SOR_052 Redemption without coupling rebound logic into this type.
+ * A side effect applied after the heal total is known.
+ * "deal-healed-to-self" — deal the healed amount to a predetermined target (e.g. Redemption rebounding damage to itself).
+ * "deal-healed-to-unit" — surface a SpreadDamage prompt so the player picks where to deal the healed amount.
  */
+export type AfterHealEffect =
+  | { type: "deal-healed-to-self"; targetPlayId: string }
+  | { type: "deal-healed-to-unit"; eligiblePlayIds: string[]; optional: boolean };
+
+/** Spread up to N heal across any eligible units and/or bases. Each target can receive at most its current damage. Total ≤ maxHeal. */
 export interface SpreadHealPending {
   type: "spread-heal";
   cardId: string;
   player: PlayerId;
   maxHeal: number;
   eligiblePlayIds: string[];
+  /** When set, applied after the heal total is resolved (e.g. deal healed amount somewhere). */
+  afterHeal?: AfterHealEffect;
   continuation: PendingResolution | null;
 }
 

@@ -29,13 +29,11 @@ export function resolveWhenPlayed(
   switch (cardId) {
     case "SOR_042": // Search Your Feelings — Search your deck for a card and draw it. (Then, shuffle your deck.)
       return searchDeck(cardId, player, -1, "draw", { maxChoices: 1, dontReveal: true });
-    case "SOR_041": { // Power of the Dark Side — opponent chooses any unit they control to defeat (leaders included).
+    case "SOR_041": // Power of the Dark Side — opponent chooses any unit they control to defeat (leaders included).
       return chooseAndDefeatUnit(cardId, player, true);
-    }
-    case "SOR_040": { // Avenger When Played — opponent chooses a non-leader unit they control to defeat.
+    case "SOR_040": // Avenger When Played — opponent chooses a non-leader unit they control to defeat.
       return chooseAndDefeatUnit(cardId, player, false);
-    }
-    case "SOR_052": { // Redemption — Heal up to 8 total damage from any units/bases; deal that much to self.
+    case "SOR_052": // Redemption — Heal up to 8 total damage from any units/bases; deal that much to self.
       if (!playId) return null;
       return {
         type: "spread-heal",
@@ -43,17 +41,9 @@ export function resolveWhenPlayed(
         player,
         maxHeal: 8,
         eligiblePlayIds: allUnitsAndBasesPlayIds(),
-        continuation: {
-          type: "spread-damage",
-          cardId,
-          player,
-          totalDamage: 0, // mutated to actual healed total by spread-heal resolver
-          eligiblePlayIds: [playId],
-          optional: false,
-          continuation: null,
-        } satisfies SpreadDamagePending,
+        afterHeal: { type: "deal-healed-to-self", targetPlayId: playId },
+        continuation: null,
       } satisfies SpreadHealPending;
-    }
     case "SOR_033": //Death Trooper "Deal 2 damage to a friendly ground unit and 2 damage to an enemy ground unit."
     case "SEC_030": {// reprint of SOR_033
       const friendlyGround = player === 1 ? game.currentGameState.player1.groundArena : game.currentGameState.player2.groundArena;
@@ -592,24 +582,16 @@ export function resolveWhenPlayed(
     }
     case "SOR_075": { // It Binds All Things — Heal up to 3 from a unit. If Force unit, may deal that much to another unit.
       const allUnits075 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].map(u => u.playId);
-      const hasForceContinuation = PlayerHasUnitWithTraitInPlay(player, "Force")
-        ? {
-            type: "spread-damage" as const,
-            cardId,
-            player,
-            totalDamage: 0, // mutated to actual healed total by spread-heal resolver
-            eligiblePlayIds: allUnits075,
-            optional: true,
-            continuation: null,
-          } satisfies SpreadDamagePending
-        : null;
       return {
         type: "spread-heal",
         cardId,
         player,
         maxHeal: 3,
         eligiblePlayIds: allUnits075,
-        continuation: hasForceContinuation,
+        afterHeal: PlayerHasUnitWithTraitInPlay(player, "Force")
+          ? { type: "deal-healed-to-unit", eligiblePlayIds: allUnits075, optional: true }
+          : undefined,
+        continuation: null,
       } satisfies SpreadHealPending;
     }
     case "SOR_074": // Repair — Heal 3 damage from a unit or base.

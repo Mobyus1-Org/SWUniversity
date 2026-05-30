@@ -2322,28 +2322,26 @@ function handleChooseTarget(
       healTarget(game, assignment.playId, assignment.damage, log, pending.cardId);
     }
 
-    // Mutate a spread-damage continuation with the actual healed total, then either
-    // auto-apply it (single predetermined target, e.g. Redemption) or surface it to
-    // the client for target selection (multiple eligible targets, e.g. LOF_246/SOR_075).
-    if (pending.continuation?.type === "spread-damage") {
-      const rebound = pending.continuation;
-      if (total > 0) {
-        if (rebound.eligiblePlayIds.length === 1) {
-          // Auto-apply: single predetermined target — no client round-trip needed
-          DealDamageToUnit(game, rebound.cardId, rebound.eligiblePlayIds[0], total, log);
-          pending.continuation = rebound.continuation ?? null;
-        } else {
-          // Player picks target: surface as pending with the mutated totalDamage
-          pending.continuation = { ...rebound, totalDamage: total };
-        }
-      } else {
-        // Nothing healed — skip the damage step entirely
-        pending.continuation = rebound.continuation ?? null;
+    let nextPending: PendingResolution | null = pending.continuation;
+    if (pending.afterHeal && total > 0) {
+      const effect = pending.afterHeal;
+      if (effect.type === "deal-healed-to-self") {
+        DealDamageToUnit(game, pending.cardId, effect.targetPlayId, total, log);
+      } else { // "deal-healed-to-unit"
+        nextPending = {
+          type: "spread-damage",
+          cardId: pending.cardId,
+          player: pending.player,
+          totalDamage: total,
+          eligiblePlayIds: effect.eligiblePlayIds,
+          optional: effect.optional,
+          continuation: pending.continuation,
+        } satisfies SpreadDamagePending;
       }
     }
 
     updateDefeatedPlayers(game);
-    const afterSweepH = sweepDeadUnits(game, log, pending.continuation ?? null);
+    const afterSweepH = sweepDeadUnits(game, log, nextPending);
     if (afterSweepH) {
       if (afterSweepH.type === "resolve-attack") return handleResolveAttack(game, log, afterSweepH);
       return { response: resolutionResponse(pendingToResolution(afterSweepH, game)), pending: afterSweepH, stateChanged: true };
@@ -3404,15 +3402,8 @@ function resolveActionAbility(
         player,
         maxHeal: 2,
         eligiblePlayIds: allUnits246,
-        continuation: {
-          type: "spread-damage",
-          cardId: "LOF_246",
-          player,
-          totalDamage: 0, // mutated to actual healed total by spread-heal resolver
-          eligiblePlayIds: allUnits246,
-          optional: false,
-          continuation: null,
-        } satisfies SpreadDamagePending,
+        afterHeal: { type: "deal-healed-to-unit", eligiblePlayIds: allUnits246, optional: false },
+        continuation: null,
       } satisfies SpreadHealPending;
     }
     default:
