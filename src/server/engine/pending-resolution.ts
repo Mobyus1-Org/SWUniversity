@@ -209,6 +209,22 @@ export interface SpreadDamagePending {
   continuation: PendingResolution | null;
 }
 
+/**
+ * Spread up to N heal across any eligible units and/or bases.
+ * Each target can receive at most its current damage. Total ≤ maxHeal.
+ * If the continuation is a SpreadDamagePending, the resolver mutates its totalDamage
+ * to the actual healed total before advancing — use this to implement rebound effects
+ * like SOR_052 Redemption without coupling rebound logic into this type.
+ */
+export interface SpreadHealPending {
+  type: "spread-heal";
+  cardId: string;
+  player: PlayerId;
+  maxHeal: number;
+  eligiblePlayIds: string[];
+  continuation: PendingResolution | null;
+}
+
 /** Return up to N units from the discard pile to hand (e.g. Admiral Trench TWI_086). */
 export interface ReturnFromDiscardPending {
   type: "return-from-discard";
@@ -272,6 +288,8 @@ export interface DeckSearchPending {
   maxChoices?: number;
   maxCombinedCost?: number;
   costModifier?: 'free' | number;
+  /** When true, chosen cards are NOT revealed before being drawn/played. Default behaviour is to reveal. */
+  dontReveal?: boolean;
   /** What happens to chosen cards: "play" = enter arena, "draw" = go to hand, "scry" = selected go to bottom of deck, unchosen stay on top. */
   action: "play" | "draw" | "scry";
   continuation?: PendingResolution | null;
@@ -301,6 +319,7 @@ export type PendingResolution =
   | GiveXpMultiplePending
   | ChooseIndirectTargetPending
   | IndirectDamagePending
+  | SpreadHealPending
   | PlayFromHandPending
   | DeckSearchPending
   | PeekHandPending;

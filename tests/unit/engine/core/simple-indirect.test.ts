@@ -3,8 +3,6 @@ import { GameTestAdapter } from "../../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { Cards } from "../../../card-helpers";
 
-const BASE = "__base__";
-
 describe("Simple Indirect Damage Test", () => {
   it("should assign indirect damage all to the base", async () => {
     const g = new GameTestAdapter();
@@ -29,7 +27,7 @@ describe("Simple Indirect Damage Test", () => {
 
     expect(g.lastDispatchResponse?.resolutionNeeded?.type).toBe("SpreadDamage");
     await g.dispatchAsync(1, "choose-target", {
-      spreadDamageAssignments: [{ playId: BASE, damage: 5 }],
+      spreadDamageAssignments: [{ playId: 'player1.base', damage: 5 }],
     });
 
     expect(g.state.player1.base.damage).toBe(5);
@@ -64,7 +62,7 @@ describe("Simple Indirect Damage Test", () => {
     expect(g.lastDispatchResponse?.resolutionNeeded?.type).toBe("SpreadDamage");
     await g.dispatchAsync(1, "choose-target", {
       spreadDamageAssignments: [
-        { playId: BASE, damage: 2 },
+        { playId: 'player1.base', damage: 2 },
         { playId: marinePlayId, damage: 1 },
         { playId: brightHopePlayId, damage: 2 },
       ],
@@ -105,7 +103,7 @@ describe("Simple Indirect Damage Test", () => {
     expect(g.lastDispatchResponse?.resolutionNeeded?.type).toBe("SpreadDamage");
     await g.dispatchAsync(1, "choose-target", {
       spreadDamageAssignments: [
-        { playId: BASE, damage: 4 },
+        { playId: 'player1.base', damage: 4 },
         { playId: marinePlayId, damage: 1 },
       ],
     });
@@ -146,7 +144,7 @@ describe("Simple Indirect Damage Test", () => {
     expect(g.lastDispatchResponse?.resolutionNeeded?.type).toBe("SpreadDamage");
     await g.dispatchAsync(1, "choose-target", {
       spreadDamageAssignments: [
-        { playId: BASE, damage: 3 },
+        { playId: 'player1.base', damage: 3 },
         { playId: marinePlayId, damage: 2 },
       ],
     });

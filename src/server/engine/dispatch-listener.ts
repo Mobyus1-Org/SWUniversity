@@ -1154,6 +1154,15 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         optional: pending.optional,
         eligiblePlayIds: pending.eligiblePlayIds,
       } satisfies NeedsSpreadDamage;
+    case "spread-heal":
+      return {
+        type: "SpreadDamage",
+        totalDamage: pending.maxHeal,
+        optional: true,
+        eligiblePlayIds: pending.eligiblePlayIds,
+        includesBase: pending.eligiblePlayIds.some(id => /^player[12]\.base$/.test(id)),
+        mode: "heal",
+      } satisfies NeedsSpreadDamage;
     case "choose-indirect-target":
       return {
         type: "Option",
@@ -1200,6 +1209,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         maxChoices: pending.maxChoices,
         maxCombinedCost: pending.maxCombinedCost,
         costModifier: pending.costModifier,
+        dontReveal: pending.dontReveal,
       } satisfies NeedsDeckSearch;
     case "peek-hand": {
       const targetHand = GetPlayer(game, pending.targetPlayer).hand;
@@ -2122,8 +2132,7 @@ function handleChooseTarget(
         if (!CardsCanDisclose([cardId], ["Aggression"]))
           return { response: invalidResponse("Disclose: revealed card does not have an Aggression aspect."), pending, stateChanged: false };
         log.push(`${CardTitle(pending.cardId)}: disclosed ${CardTitle(cardId)} (Aggression).`);
-        CreateSpy(game, pending.player);
-        log.push(`${CardTitle(pending.cardId)}: created another Spy token.`);
+        CreateSpy(game, pending.player, log, pending.cardId);
         const bag181 = drainTriggerBag(game, log);
         if (bag181) return { response: resolutionResponse(pendingToResolution(bag181, game)), pending: bag181, stateChanged: true };
         return { response: stateResponse(game), pending: null, stateChanged: true };
@@ -2237,10 +2246,10 @@ function handleChooseTarget(
   }
 
   if (pending.type === "indirect-damage") {
-    const BASE_SENTINEL = "__base__";
+    const basePlayId = `player${pending.targetPlayer}.base`;
     const assignments = data.spreadDamageAssignments ?? [];
-    const baseDamage = assignments.find(a => a.playId === BASE_SENTINEL)?.damage ?? 0;
-    const unitAssignments = assignments.filter(a => a.playId !== BASE_SENTINEL && a.damage > 0);
+    const baseDamage = assignments.find(a => a.playId === basePlayId)?.damage ?? 0;
+    const unitAssignments = assignments.filter(a => a.playId !== basePlayId && a.damage > 0);
 
     const invalidUnit = unitAssignments.find(a => !pending.eligibleUnitPlayIds.includes(a.playId));
     if (invalidUnit)
@@ -2278,6 +2287,53 @@ function handleChooseTarget(
     }
     const bagI = drainTriggerBag(game, log);
     if (bagI) return { response: resolutionResponse(pendingToResolution(bagI, game)), pending: bagI, stateChanged: true };
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending.type === "spread-heal") {
+    const assignments = (data.spreadDamageAssignments ?? []).filter(a => a.damage > 0);
+    const total = assignments.reduce((sum, a) => sum + a.damage, 0);
+
+    if (total > pending.maxHeal)
+      return { response: invalidResponse(`Cannot heal more than ${pending.maxHeal} total damage.`), pending, stateChanged: false };
+
+    for (const assignment of assignments) {
+      if (!pending.eligiblePlayIds.includes(assignment.playId))
+        return { response: invalidResponse(`${assignment.playId} is not an eligible heal target.`), pending, stateChanged: false };
+      const baseMatch = assignment.playId.match(/^player([12])\.base$/);
+      if (baseMatch) {
+        const pNum = Number(baseMatch[1]) as PlayerId;
+        const pState = GetPlayer(game, pNum);
+        if (assignment.damage > pState.base.damage)
+          return { response: invalidResponse(`Cannot heal more than ${pState.base.damage} damage from player ${pNum}'s base.`), pending, stateChanged: false };
+      } else {
+        const unit = GetUnitByPlayId(game, assignment.playId);
+        if (unit && assignment.damage > unit.damage)
+          return { response: invalidResponse(`Cannot heal more than ${unit.damage} damage from ${CardTitle(unit.cardId)}.`), pending, stateChanged: false };
+      }
+    }
+
+    for (const assignment of assignments) {
+      healTarget(game, assignment.playId, assignment.damage, log, pending.cardId);
+    }
+
+    // Mutate the continuation's totalDamage to the actual healed total so that
+    // rebound effects (e.g. SOR_052 Redemption) receive the right amount.
+    // If nothing was healed, skip the rebound continuation entirely.
+    if (pending.continuation?.type === "spread-damage") {
+      pending.continuation = total > 0
+        ? { ...pending.continuation, totalDamage: total }
+        : pending.continuation.continuation ?? null;
+    }
+
+    updateDefeatedPlayers(game);
+    const afterSweepH = sweepDeadUnits(game, log, pending.continuation ?? null);
+    if (afterSweepH) {
+      if (afterSweepH.type === "resolve-attack") return handleResolveAttack(game, log, afterSweepH);
+      return { response: resolutionResponse(pendingToResolution(afterSweepH, game)), pending: afterSweepH, stateChanged: true };
+    }
+    const bagH = drainTriggerBag(game, log);
+    if (bagH) return { response: resolutionResponse(pendingToResolution(bagH, game)), pending: bagH, stateChanged: true };
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
@@ -3327,6 +3383,32 @@ function resolveActionAbility(
 }
 
 /**
+ * Heals `amount` damage from the target identified by `targetPlayId`.
+ * Accepts unit play IDs as well as the base identifiers "player1.base" / "player2.base".
+ */
+function healTarget(
+  game: GameState,
+  targetPlayId: string,
+  amount: number,
+  log: string[],
+  sourceCardId: string,
+): void {
+  const baseMatch = targetPlayId.match(/^player([12])\.base$/);
+  if (baseMatch) {
+    const playerNum = Number(baseMatch[1]) as PlayerId;
+    const playerState = GetPlayer(game, playerNum);
+    playerState.base.damage = Math.max(0, playerState.base.damage - amount);
+    log.push(`${CardTitle(sourceCardId)}: healed ${amount} damage from player ${playerNum}'s base.`);
+  } else {
+    const unit = GetUnitByPlayId(game, targetPlayId);
+    if (unit) {
+      unit.damage = Math.max(0, unit.damage - amount);
+      log.push(`${CardTitle(sourceCardId)}: healed ${amount} damage from ${CardTitle(unit.cardId)}.`);
+    }
+  }
+}
+
+/**
  * Applies an ability effect once the player has selected a target.
  * Returns the next pending state if further input is required.
  */
@@ -3338,14 +3420,16 @@ function applyAbilityEffect(
   const game = GetGame();
   if(!game) throw new Error("Game not found in applyAbilityEffect.");
   switch (pending.cardId) {
+    case "SOR_074": // Repair — Heal 3 damage from a unit or base.
+    case "JTL_075": {
+      if (!targetPlayId) break;
+      healTarget(game.currentGameState, targetPlayId, 3, game.gameLog, pending.cardId);
+      break;
+    }
     case "SOR_033": //Death Trooper: Deal 2 damage to a friendly ground unit and 2 damage to an enemy ground unit.
     case "SEC_030": {
       if (!targetPlayId) break;
-      const targetUnit = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (targetUnit) {
-        targetUnit.damage += 2;
-        game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 2 damage to ${CardTitle(targetUnit.cardId)}.`);
-      }
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
       break;
     }
     case "SOR_016": { // Grand Admiral Thrawn — exhaust chosen unit
@@ -3359,30 +3443,18 @@ function applyAbilityEffect(
     }
     case "SEC_182": { // Charged with Treason — deal 5 damage to chosen unit
       if (!targetPlayId) break;
-      const target182 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target182) {
-        target182.damage += 5;
-        game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 5 damage to ${CardTitle(target182.cardId)}.`);
-      }
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 5, game.gameLog);
       break;
     }
     case "SOR_176":
     case "SEC_184": { // ISB Agent — deal 1 damage to chosen unit
       if (!targetPlayId) break;
-      const targetIsb = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (targetIsb) {
-        targetIsb.damage += 1;
-        game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 1 damage to ${CardTitle(targetIsb.cardId)}.`);
-      }
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 1, game.gameLog);
       break;
     }
     case "SHD_028": { // Doctor Pershing: deal 1 damage to chosen friendly unit, draw a card.
       if (!targetPlayId) break;
-      const target028 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target028) {
-        target028.damage += 1;
-        game.gameLog.push(`${CardTitle("SHD_028")}: dealt 1 damage to ${CardTitle(target028.cardId)}.`);
-      }
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 1, game.gameLog);
       DrawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
       break;
     }
@@ -3406,11 +3478,7 @@ function applyAbilityEffect(
     }
     case "SOR_121": { // Hardpoint Heavy Blaster on-attack: deal 2 damage to chosen unit in defender's arena
       if (!targetPlayId) break;
-      const target121 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target121) {
-        target121.damage += 2;
-        game.gameLog.push(`${CardTitle("SOR_121")}: dealt 2 damage to ${CardTitle(target121.cardId)}.`);
-      }
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
       return pending.continuation;
     }
     case "SOR_226": { // Admiral Motti when-defeated: ready chosen Villainy unit
@@ -3426,20 +3494,12 @@ function applyAbilityEffect(
     case "SHD_012_1": // Bo-Katan deployed on-attack: first 1-damage shot
     case "SHD_012_2": { // Bo-Katan deployed on-attack: second 1-damage shot (another Mandalorian attacked)
       if (!targetPlayId) break;
-      const target012 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target012) {
-        target012.damage += 1;
-        game.gameLog.push(`${CardTitle("SHD_012")}: dealt 1 damage to ${CardTitle(target012.cardId)}.`);
-      }
+      DealDamageToUnit(game.currentGameState, "SHD_012", targetPlayId, 1, game.gameLog);
       break;
     }
     case "SOR_010": { // Darth Vader: deal 2 damage to chosen unit
       if (!targetPlayId) break;
-      const target = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target) {
-        target.damage += 2;
-        game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 2 damage to ${CardTitle(target.cardId) ?? target.cardId}.`);
-      }
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
       break;
     }
     case "SOR_009": { // Leia Organa: chosen Rebel unit attacks (no buff)
@@ -3519,16 +3579,22 @@ function applyAbilityEffect(
       };
     }
     case "JTL_153": { // Rebellious Hammerhead: deal damage equal to hand size to chosen unit
+      if (!targetPlayId) break;
       const sourceUnit = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId!);
       if (!sourceUnit) break;
-      const owner = sourceUnit.controller;
-      const handSize = GetPlayer(game.currentGameState, owner).hand.length;
-      const target = targetPlayId ? GetUnitByPlayId(game.currentGameState, targetPlayId) : null;
-      if (target) {
-        target.damage += handSize;
-        game.gameLog.push(`${CardTitle(pending.cardId)} dealt ${handSize} damage to ${CardTitle(target.cardId) ?? target.cardId}.`);
-      }
+      const handSize = GetPlayer(game.currentGameState, sourceUnit.controller).hand.length;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, handSize, game.gameLog);
       break;
+    }
+    case "SOR_041": // Power of the Dark Side — defeat the chosen unit (any, including leaders).
+    case "SOR_040": { // Avenger WP/OA — defeat the chosen non-leader unit (fromPlayIds already filtered).
+      if (!targetPlayId) break;
+      const targetToDefeat = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!targetToDefeat) break;
+      const defeatPend = defeatUnit(game.currentGameState, game.gameLog, targetToDefeat);
+      game.gameLog.push(`${CardTitle(pending.cardId)}: defeated ${CardTitle(targetToDefeat.cardId)}.`);
+      if (defeatPend) return injectContinuation(defeatPend, pending.continuation);
+      return pending.continuation;
     }
     case "SOR_077": { // Takedown — defeat a unit with ≤5 remaining HP
       if (!targetPlayId) break;
@@ -3671,11 +3737,9 @@ function applyAbilityEffect(
     case "SOR_127_deal": { // Strike True — step 2: deal power damage to chosen enemy unit
       if (!targetPlayId || !pending.sourcePlayId) break;
       const attacker127 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
-      const target127 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (!attacker127 || !target127) break;
+      if (!attacker127) break;
       const power127 = Unit.FromInterface(attacker127).CurrentPower();
-      target127.damage += power127;
-      game.gameLog.push(`Strike True: ${CardTitle(attacker127.cardId)} dealt ${power127} damage to ${CardTitle(target127.cardId)}.`);
+      DealDamageToUnit(game.currentGameState, "Strike True", targetPlayId, power127, game.gameLog);
       break;
     }
     case "SOR_162": //Disabling Fang Fighter
@@ -3793,29 +3857,17 @@ function applyAbilityEffect(
     }
     case "SOR_059": { // 2-1B Surgical Droid OA: Heal 2 from chosen unit, then proceed to combat.
       if (!targetPlayId) return pending.continuation;
-      const target059 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target059) {
-        target059.damage = Math.max(0, target059.damage - 2);
-        game.gameLog.push(`${CardTitle("SOR_059")}: healed 2 damage from ${CardTitle(target059.cardId)}.`);
-      }
+      healTarget(game.currentGameState, targetPlayId, 2, game.gameLog, "SOR_059");
       return pending.continuation;
     }
     case "SOR_132": { // Imperial Interceptor WP: Deal 3 damage to chosen space unit.
       if (!targetPlayId) break;
-      const target132 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target132) {
-        target132.damage += 3;
-        game.gameLog.push(`${CardTitle("SOR_132")}: dealt 3 damage to ${CardTitle(target132.cardId)}.`);
-      }
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog);
       break;
     }
     case "SOR_134": { // Ruthless Raider WP/WD: Deal 2 damage to chosen enemy unit.
       if (!targetPlayId) break;
-      const target134 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target134) {
-        target134.damage += 2;
-        game.gameLog.push(`${CardTitle("SOR_134")}: dealt 2 damage to ${CardTitle(target134.cardId)}.`);
-      }
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
       break;
     }
     case "SOR_076": { // Make an Opening: –2/–2 Phase to chosen unit + heal 2 from own base.
@@ -3825,9 +3877,8 @@ function applyAbilityEffect(
         game.currentGameState.currentEffects.push({ cardId: "SOR_076", duration: "Phase", affectedPlayer: target076.controller, targetPlayId });
         game.gameLog.push(`${CardTitle("SOR_076")}: gave –2/–2 to ${CardTitle(target076.cardId)} for this phase.`);
       }
-      const ownBase076 = pending.player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
-      ownBase076.base.damage = Math.max(0, ownBase076.base.damage - 2);
-      game.gameLog.push(`${CardTitle("SOR_076")}: healed 2 damage from your base.`);
+      const ownBaseId076 = `player${pending.player}.base`;
+      healTarget(game.currentGameState, ownBaseId076, 2, game.gameLog, "SOR_076");
       break;
     }
     case "SOR_124": { // Tactical Advantage: +2/+2 Phase to chosen unit.
@@ -3852,10 +3903,8 @@ function applyAbilityEffect(
       gs151.currentEffects = gs151.currentEffects.filter(e => e.cardId !== "SOR_151_src");
       const src151 = srcPlayId151 ? GetUnitByPlayId(gs151, srcPlayId151) : null;
       const dmg151 = src151 ? (src151.damage + Unit.FromInterface(src151).CurrentPower()) : 0;
-      const enemy151 = GetUnitByPlayId(gs151, targetPlayId);
-      if (enemy151 && dmg151 > 0) {
-        enemy151.damage += dmg151;
-        game.gameLog.push(`${CardTitle("SOR_151")}: dealt ${dmg151} damage to ${CardTitle(enemy151.cardId)}.`);
+      if (dmg151 > 0) {
+        DealDamageToUnit(gs151, "SOR_151", targetPlayId, dmg151, game.gameLog);
       }
       break;
     }
@@ -4005,11 +4054,7 @@ function applyAbilityEffect(
     }
     case "SOR_006_A2": { // Action step 2: deal 1 damage to chosen unit and draw a card.
       if (!targetPlayId) break;
-      const dmgTarget006 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (dmgTarget006) {
-        dmgTarget006.damage += 1;
-        game.gameLog.push(`${CardTitle("SOR_006")}: dealt 1 damage to ${CardTitle(dmgTarget006.cardId)}.`);
-      }
+      DealDamageToUnit(game.currentGameState, "SOR_006", targetPlayId, 1, game.gameLog);
       DrawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
@@ -4043,11 +4088,7 @@ function applyAbilityEffect(
     }
     case "SOR_006_OA2": { // On Attack step 2: deal 1 damage to chosen unit and draw a card.
       if (!targetPlayId) break;
-      const dmgTarget0A = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (dmgTarget0A) {
-        dmgTarget0A.damage += 1;
-        game.gameLog.push(`${CardTitle("SOR_006")}: dealt 1 damage to ${CardTitle(dmgTarget0A.cardId)}.`);
-      }
+      DealDamageToUnit(game.currentGameState, "SOR_006", targetPlayId, 1, game.gameLog);
       DrawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }

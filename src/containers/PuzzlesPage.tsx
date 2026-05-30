@@ -370,12 +370,13 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
   const [puzzleMeta, setPuzzleMeta] = React.useState<{ name: string; author: string; inspiredBy?: string; intendedSolution: string[] } | null>(null);
   const [showSolutionModal, setShowSolutionModal] = React.useState(false);
   const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
-  const [lastTestRaw, setLastTestRaw] = React.useState<any | null>(() => {
-    try { const s = localStorage.getItem(LS_TEST_RAW); return s ? JSON.parse(s) : null; } catch { return null; }
-  });
-  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[] } | null>(() => {
-    try { const s = localStorage.getItem(LS_TEST_META); return s ? JSON.parse(s) : null; } catch { return null; }
-  });
+  const [lastTestRaw, setLastTestRaw] = React.useState<any | null>(null);
+  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[] } | null>(null);
+  // Read from localStorage only on the client to avoid SSR hydration mismatch.
+  React.useEffect(() => {
+    try { const s = localStorage.getItem(LS_TEST_RAW); if (s) setLastTestRaw(JSON.parse(s)); } catch { /* localStorage unavailable */ }
+    try { const s = localStorage.getItem(LS_TEST_META); if (s) setLastTestMeta(JSON.parse(s)); } catch { /* localStorage unavailable */ }
+  }, []);
   React.useEffect(() => {
     if (lastTestRaw != null) localStorage.setItem(LS_TEST_RAW, JSON.stringify(lastTestRaw));
     else localStorage.removeItem(LS_TEST_RAW);
@@ -741,6 +742,20 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
     }
   }, [gameLog]);
 
+  const isHealMode = resolutionNeeded?.type === "SpreadDamage" && resolutionNeeded.mode === "heal";
+  // Must be declared before the early return so the hook call order is stable.
+  const healCapMap = React.useMemo<Record<string, number>>(() => {
+    if (!isHealMode || !gameState) return {};
+    const map: Record<string, number> = {};
+    for (const u of [...gameState.player1.groundArena, ...gameState.player1.spaceArena,
+                      ...gameState.player2.groundArena, ...gameState.player2.spaceArena]) {
+      map[u.playId] = u.damage;
+    }
+    map["player1.base"] = gameState.player1.base.damage;
+    map["player2.base"] = gameState.player2.base.damage;
+    return map;
+  }, [isHealMode, gameState]);
+
   if (!gameState) {
     return <div className="relative z-10 mx-auto w-full max-w-[1920px] px-3 py-4 text-white sm:px-4 lg:px-6">
       {showBuilderPanelOpen && showBuilderTools ? (
@@ -878,8 +893,32 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
     : new Set();
   const spreadAssigned = Object.values(spreadDmgMap).reduce((s, v) => s + v, 0);
   const spreadCanConfirm = resolutionNeeded?.type === "SpreadDamage"
-    ? (resolutionNeeded.optional ? spreadAssigned === 0 || spreadAssigned === resolutionNeeded.totalDamage : spreadAssigned === resolutionNeeded.totalDamage)
+    ? isHealMode
+      ? spreadAssigned <= resolutionNeeded.totalDamage
+      : (resolutionNeeded.optional ? spreadAssigned === 0 || spreadAssigned === resolutionNeeded.totalDamage : spreadAssigned === resolutionNeeded.totalDamage)
     : false;
+
+  const isSpreadIncrementDisabled = (playId: string): boolean => {
+    if (resolutionNeeded?.type !== "SpreadDamage") return true;
+    if (spreadAssigned >= resolutionNeeded.totalDamage) return true;
+    if (isHealMode && (spreadDmgMap[playId] ?? 0) >= (healCapMap[playId] ?? 0)) return true;
+    return false;
+  };
+
+  const spreadBtnClass = isHealMode
+    ? "rounded bg-sky-700 px-1.5 text-xs font-bold text-white hover:bg-sky-600 disabled:opacity-30"
+    : "rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30";
+  const spreadValueClass = isHealMode
+    ? "min-w-[1.4rem] text-center text-xs font-bold text-sky-300"
+    : "min-w-[1.4rem] text-center text-xs font-bold text-rose-300";
+  const spreadBaseControls = (basePlayId: string) =>
+    spreadEligiblePlayIds.has(basePlayId) ? (
+      <div className="mt-1 flex items-center justify-center gap-0.5">
+        <button type="button" onClick={() => handleSpreadDecrement(basePlayId)} disabled={(spreadDmgMap[basePlayId] ?? 0) <= 0} className={spreadBtnClass}>−</button>
+        <span className={spreadValueClass}>{spreadDmgMap[basePlayId] ?? 0}</span>
+        <button type="button" onClick={() => handleSpreadIncrement(basePlayId)} disabled={isSpreadIncrementDisabled(basePlayId)} className={spreadBtnClass}>+</button>
+      </div>
+    ) : null;
 
   const selectableBaseForPlayer: PlayerId[] = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Base")
     ? [2]
@@ -1096,9 +1135,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                     {spreadEligiblePlayIds.has(unit.playId) && (
                       <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
-                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">−</button>
-                        <span className="min-w-[1.4rem] text-center text-xs font-bold text-rose-300">{spreadDmgMap[unit.playId] ?? 0}</span>
-                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={spreadAssigned >= (resolutionNeeded?.type === "SpreadDamage" ? resolutionNeeded.totalDamage : 0)} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">+</button>
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className={spreadBtnClass}>−</button>
+                        <span className={spreadValueClass}>{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={isSpreadIncrementDisabled(unit.playId)} className={spreadBtnClass}>+</button>
                       </div>
                     )}
                   </div>)}
@@ -1141,9 +1180,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                     {spreadEligiblePlayIds.has(unit.playId) && (
                       <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
-                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">−</button>
-                        <span className="min-w-[1.4rem] text-center text-xs font-bold text-rose-300">{spreadDmgMap[unit.playId] ?? 0}</span>
-                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={spreadAssigned >= (resolutionNeeded?.type === "SpreadDamage" ? resolutionNeeded.totalDamage : 0)} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">+</button>
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className={spreadBtnClass}>−</button>
+                        <span className={spreadValueClass}>{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={isSpreadIncrementDisabled(unit.playId)} className={spreadBtnClass}>+</button>
                       </div>
                     )}
                   </div>)}
@@ -1175,7 +1214,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                     square
                     centerDamageBadge={opponent.base.damage}
                     epicUsed={opponent.base.epicActionUsed}
-                  /></div>
+                  />{spreadBaseControls("player2.base")}</div>
                 </div>
               </div>
             </div>
@@ -1217,9 +1256,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                     {spreadEligiblePlayIds.has(unit.playId) && (
                       <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
-                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">−</button>
-                        <span className="min-w-[1.4rem] text-center text-xs font-bold text-rose-300">{spreadDmgMap[unit.playId] ?? 0}</span>
-                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={spreadAssigned >= (resolutionNeeded?.type === "SpreadDamage" ? resolutionNeeded.totalDamage : 0)} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">+</button>
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className={spreadBtnClass}>−</button>
+                        <span className={spreadValueClass}>{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={isSpreadIncrementDisabled(unit.playId)} className={spreadBtnClass}>+</button>
                       </div>
                     )}
                   </div>)}
@@ -1251,7 +1290,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                     square
                     centerDamageBadge={opponent.base.damage}
                     epicUsed={opponent.base.epicActionUsed}
-                  /></div>
+                  />{spreadBaseControls("player2.base")}</div>
                 </div>
                 <div className="hidden xl:space-y-2 xl:block">
                   {!opponent.leader.deployed ? <CardVisual
@@ -1267,17 +1306,20 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                   /> : <div className="rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
                     Leader deployed to Ground Arena
                   </div>}
-                  <CardVisual
-                    cardId={opponent.base.cardId}
-                    selectable={selectableBaseForPlayer.includes(2)}
-                    onClick={selectableBaseForPlayer.includes(2) ? () => handleBaseClick(2) : undefined}
-                    onPreviewStart={handlePreviewStart}
-                    onPreviewEnd={handlePreviewEnd}
-                    compact
-                    cardScale90
-                    centerDamageBadge={opponent.base.damage}
-                    epicUsed={opponent.base.epicActionUsed}
-                  />
+                  <div className="relative">
+                    <CardVisual
+                      cardId={opponent.base.cardId}
+                      selectable={selectableBaseForPlayer.includes(2)}
+                      onClick={selectableBaseForPlayer.includes(2) ? () => handleBaseClick(2) : undefined}
+                      onPreviewStart={handlePreviewStart}
+                      onPreviewEnd={handlePreviewEnd}
+                      compact
+                      cardScale90
+                      centerDamageBadge={opponent.base.damage}
+                      epicUsed={opponent.base.epicActionUsed}
+                    />
+                    {spreadBaseControls("player2.base")}
+                  </div>
                 </div>
               </div>
 
@@ -1317,9 +1359,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                     {spreadEligiblePlayIds.has(unit.playId) && (
                       <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
-                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">−</button>
-                        <span className="min-w-[1.4rem] text-center text-xs font-bold text-rose-300">{spreadDmgMap[unit.playId] ?? 0}</span>
-                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={spreadAssigned >= (resolutionNeeded?.type === "SpreadDamage" ? resolutionNeeded.totalDamage : 0)} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">+</button>
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className={spreadBtnClass}>−</button>
+                        <span className={spreadValueClass}>{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={isSpreadIncrementDisabled(unit.playId)} className={spreadBtnClass}>+</button>
                       </div>
                     )}
                   </div>)}
@@ -1356,7 +1398,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                     square
                     centerDamageBadge={player.base.damage}
                     epicUsed={player.base.epicActionUsed}
-                  /></div>
+                  />{spreadBaseControls("player1.base")}</div>
                 </div>
               </div>
 
@@ -1397,9 +1439,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                     {spreadEligiblePlayIds.has(unit.playId) && (
                       <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
-                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">−</button>
-                        <span className="min-w-[1.4rem] text-center text-xs font-bold text-rose-300">{spreadDmgMap[unit.playId] ?? 0}</span>
-                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={spreadAssigned >= (resolutionNeeded?.type === "SpreadDamage" ? resolutionNeeded.totalDamage : 0)} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">+</button>
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className={spreadBtnClass}>−</button>
+                        <span className={spreadValueClass}>{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={isSpreadIncrementDisabled(unit.playId)} className={spreadBtnClass}>+</button>
                       </div>
                     )}
                   </div>)}
@@ -1487,9 +1529,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
                     {spreadEligiblePlayIds.has(unit.playId) && (
                       <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
-                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">−</button>
-                        <span className="min-w-[1.4rem] text-center text-xs font-bold text-rose-300">{spreadDmgMap[unit.playId] ?? 0}</span>
-                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={spreadAssigned >= (resolutionNeeded?.type === "SpreadDamage" ? resolutionNeeded.totalDamage : 0)} className="rounded bg-rose-700 px-1.5 text-xs font-bold text-white hover:bg-rose-600 disabled:opacity-30">+</button>
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className={spreadBtnClass}>−</button>
+                        <span className={spreadValueClass}>{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={isSpreadIncrementDisabled(unit.playId)} className={spreadBtnClass}>+</button>
                       </div>
                     )}
                   </div>)}
@@ -1522,20 +1564,23 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
                     square
                     centerDamageBadge={player.base.damage}
                     epicUsed={player.base.epicActionUsed}
-                  /></div>
+                  />{spreadBaseControls("player1.base")}</div>
                 </div>
                 <div className="hidden xl:space-y-2 xl:block">
-                  <CardVisual
-                    cardId={player.base.cardId}
-                    selectable={uiCanClickBase || selectableBaseForPlayer.includes(1)}
-                    onClick={uiCanClickBase || selectableBaseForPlayer.includes(1) ? () => handleBaseClick(1) : undefined}
-                    onPreviewStart={handlePreviewStart}
-                    onPreviewEnd={handlePreviewEnd}
-                    compact
-                    cardScale90
-                    centerDamageBadge={player.base.damage}
-                    epicUsed={player.base.epicActionUsed}
-                  />
+                  <div className="relative">
+                    <CardVisual
+                      cardId={player.base.cardId}
+                      selectable={uiCanClickBase || selectableBaseForPlayer.includes(1)}
+                      onClick={uiCanClickBase || selectableBaseForPlayer.includes(1) ? () => handleBaseClick(1) : undefined}
+                      onPreviewStart={handlePreviewStart}
+                      onPreviewEnd={handlePreviewEnd}
+                      compact
+                      cardScale90
+                      centerDamageBadge={player.base.damage}
+                      epicUsed={player.base.epicActionUsed}
+                    />
+                    {spreadBaseControls("player1.base")}
+                  </div>
                   {!player.leader.deployed ? <CardVisual
                     cardId={player.leader.cardId}
                     selectable={uiCanClickLeader}
@@ -1720,11 +1765,11 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
     </div> : null}
 
     {resolutionNeeded?.type === "SpreadDamage" && (
-      <div className="fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-rose-400/30 bg-[rgba(8,12,26,0.97)] px-5 py-3 shadow-2xl">
+      <div className={`fixed bottom-20 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border bg-[rgba(8,12,26,0.97)] px-5 py-3 shadow-2xl ${isHealMode ? "border-sky-400/30" : "border-rose-400/30"}`}>
         <span className="text-sm text-white/70">
-          {spreadAssigned} / {resolutionNeeded.totalDamage} dmg assigned
+          {spreadAssigned} / {resolutionNeeded.totalDamage} {isHealMode ? "healed" : "dmg assigned"}
         </span>
-        {resolutionNeeded.optional && (
+        {!isHealMode && resolutionNeeded.optional && (
           <button type="button" onClick={() => handleSpreadConfirm([])}
             className="rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white hover:bg-white/20">
             Skip
@@ -1732,7 +1777,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
         )}
         <button type="button" disabled={!spreadCanConfirm}
           onClick={() => handleSpreadConfirm(Object.entries(spreadDmgMap).filter(([, v]) => v > 0).map(([playId, damage]) => ({ playId, damage })))}
-          className="rounded-lg bg-rose-700 px-4 py-1.5 text-sm font-semibold text-white hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40">
+          className={`rounded-lg px-4 py-1.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 ${isHealMode ? "bg-sky-700 hover:bg-sky-600" : "bg-rose-700 hover:bg-rose-600"}`}>
           Confirm
         </button>
       </div>

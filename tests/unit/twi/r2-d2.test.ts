@@ -55,6 +55,31 @@ describe("TWI_193 R2-D2 (Full of Solutions) — When Played deck search", () => 
     expect(g.state.player1.deck.length).toBe(1);
   });
 
+  it("presents the deck search with dontReveal: true", async () => {
+    const g = new GameTestAdapter();
+    const state = new GameStateBuilder()
+      .MyBase(Cards.bases.common.green30HP)
+      .MyLeader(Cards.leaders.sor.grandMoffTarkin)
+      .TheirBase(Cards.bases.common.green30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 6)
+      .WithCardInDeckForPlayer(1, Cards.units.sor.cellBlockGuard)
+      .WithCardInHandForPlayer(1, Cards.units.sor.battlefieldMarine)
+      .WithCardInHandForPlayer(1, Cards.units.twi.r2d2FullOfSolutions)
+      .Build();
+    g.loadNewState(state);
+
+    await g.playCardFromHandAsync(1, 1);
+    await g.chooseYesAsync(1);
+    await g.chooseCardFromHandAsync(1, 0); // discard — deck search pending is now active
+
+    const resolution = g.lastDispatchResponse?.resolutionNeeded;
+    expect(resolution?.type).toBe("DeckSearch");
+    if (resolution?.type === "DeckSearch") {
+      expect(resolution.dontReveal).toBe(true);
+    }
+  });
+
   it("is a continuation — R2-D2 enters play before the deck search fires", async () => {
     const g = new GameTestAdapter();
     const state = new GameStateBuilder()

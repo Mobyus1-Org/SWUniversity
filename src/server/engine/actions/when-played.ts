@@ -1,9 +1,19 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader } from "@/server/engine/core-functions";
-import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, GiveXpMultiplePending, ChooseIndirectTargetPending, DeckSearchPending, PeekHandPending } from "@/server/engine/pending-resolution";
+import { CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, searchDeck } from "@/server/engine/core-functions";
+import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
-import { CardAspects, CardCost, CardTitle, CardType } from "@/server/engine/card-db/generated";
+import { CardTitle, CardType } from "@/server/engine/card-db/generated";
+
+/** Returns playIds for all units on both sides plus both base identifiers. */
+function allUnitsAndBasesPlayIds(): string[] {
+  return [
+    ...GetUnitsForPlayer(1).map(u => u.playId),
+    ...GetUnitsForPlayer(2).map(u => u.playId),
+    "player1.base",
+    "player2.base",
+  ];
+}
 
 /**
  * When Played abilities for unit cards.
@@ -17,6 +27,33 @@ export function resolveWhenPlayed(
   const game = GetGame();
   if (!game) throw new Error("Game not found in resolveWhenPlayedAbility");
   switch (cardId) {
+    case "SOR_042": // Search Your Feelings — Search your deck for a card and draw it. (Then, shuffle your deck.)
+      return searchDeck(cardId, player, -1, "draw", { maxChoices: 1, dontReveal: true });
+    case "SOR_041": { // Power of the Dark Side — opponent chooses any unit they control to defeat (leaders included).
+      return chooseAndDefeatUnit(cardId, player, true);
+    }
+    case "SOR_040": { // Avenger When Played — opponent chooses a non-leader unit they control to defeat.
+      return chooseAndDefeatUnit(cardId, player, false);
+    }
+    case "SOR_052": { // Redemption — Heal up to 8 total damage from any units/bases; deal that much to self.
+      if (!playId) return null;
+      return {
+        type: "spread-heal",
+        cardId,
+        player,
+        maxHeal: 8,
+        eligiblePlayIds: allUnitsAndBasesPlayIds(),
+        continuation: {
+          type: "spread-damage",
+          cardId,
+          player,
+          totalDamage: 0, // mutated to actual healed total by spread-heal resolver
+          eligiblePlayIds: [playId],
+          optional: false,
+          continuation: null,
+        } satisfies SpreadDamagePending,
+      } satisfies SpreadHealPending;
+    }
     case "SOR_033": //Death Trooper "Deal 2 damage to a friendly ground unit and 2 damage to an enemy ground unit."
     case "SEC_030": {// reprint of SOR_033
       const friendlyGround = player === 1 ? game.currentGameState.player1.groundArena : game.currentGameState.player2.groundArena;
@@ -144,36 +181,42 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SHD_054": { // Midnight Repairs — Heal up to 8 total damage from any number of units. (No rebound, no bases.)
+      const allUnits054 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].map(u => u.playId);
+      return {
+        type: "spread-heal",
+        cardId,
+        player,
+        maxHeal: 8,
+        eligiblePlayIds: allUnits054,
+        continuation: null,
+      } satisfies SpreadHealPending;
+    }
     case "SHD_160": //Reckless Gunslinger "When Played: Deal 1 damage to each base."
       return null;
     case "TWI_237": { // Droid Deployment — "Create 2 Battle Droid tokens."
       const gs237 = game.currentGameState;
-      CreateBattleDroid(gs237, player);
-      CreateBattleDroid(gs237, player);
-      game.gameLog.push(`${CardTitle(cardId)}: 2 Battle Droid tokens created.`);
+      CreateBattleDroid(gs237, player, game.gameLog, cardId);
+      CreateBattleDroid(gs237, player, game.gameLog, cardId);
       return null;
     }
     case "TWI_251": { // Drop In — "Create 2 Clone Trooper tokens."
       const gs251 = game.currentGameState;
-      CreateCloneTrooper(gs251, player);
-      CreateCloneTrooper(gs251, player);
-      game.gameLog.push(`${CardTitle(cardId)}: 2 Clone Trooper tokens created.`);
+      CreateCloneTrooper(gs251, player, game.gameLog, cardId);
+      CreateCloneTrooper(gs251, player, game.gameLog, cardId);
       return null;
     }
     case "JTL_254": { // Dedicated Wingmen — "Create 2 X-Wing tokens."
       const gs254 = game.currentGameState;
-      CreateXWing(gs254, player);
-      CreateXWing(gs254, player);
-      game.gameLog.push(`${CardTitle(cardId)}: 2 X-Wing tokens created.`);
+      CreateXWing(gs254, player, game.gameLog, cardId);
+      CreateXWing(gs254, player, game.gameLog, cardId);
       return null;
     }
     case "SEC_082": // Chancellor Palpatine — When Played: handled in when-played-trigger.ts
     case "SEC_083": // ISB Shuttle — When Played: handled in when-played-trigger.ts
       return null;
     case "SEC_092": { // I Am the Senate — "Create 5 Spy tokens."
-      const gs092 = game.currentGameState;
-      for (let i = 0; i < 5; i++) CreateSpy(gs092, player);
-      game.gameLog.push(`${CardTitle(cardId)}: 5 Spy tokens created.`);
+      for (let i = 0; i < 5; i++) CreateSpy(game.currentGameState, player, game.gameLog, cardId);
       return null;
     }
     case "SOR_073": { // Moment of Peace — "Give a Shield token to a unit."
@@ -284,9 +327,7 @@ export function resolveWhenPlayed(
       };
     }
     case "SEC_181": { // Unauthorized Investigation — "Create a Spy token. You may disclose Aggression. If you do, create another Spy token."
-      const gs181 = game.currentGameState;
-      CreateSpy(gs181, player);
-      game.gameLog.push(`${CardTitle(cardId)}: created a Spy token.`);
+      CreateSpy(game.currentGameState, player, game.gameLog, cardId);
       if (!CanDisclose(player, ["Aggression"])) return null;
       return {
         type: "ability-option",
@@ -439,19 +480,17 @@ export function resolveWhenPlayed(
     }
     case "TWI_229": { // Battle Droid Escort — "When Played: Create a Battle Droid token."
       const gs229 = game.currentGameState;
-      CreateBattleDroid(gs229, player);
-      game.gameLog.push(`${CardTitle(cardId)}: Battle Droid token created.`);
+      CreateBattleDroid(gs229, player, game.gameLog, cardId);
       return null;
     }
     case "TWI_190": { // On the Doorstep — "Create 3 Battle Droid tokens and ready them."
       const gs190 = game.currentGameState;
-      const d1 = CreateBattleDroid(gs190, player);
-      const d2 = CreateBattleDroid(gs190, player);
-      const d3 = CreateBattleDroid(gs190, player);
+      const d1 = CreateBattleDroid(gs190, player, game.gameLog, cardId);
+      const d2 = CreateBattleDroid(gs190, player, game.gameLog, cardId);
+      const d3 = CreateBattleDroid(gs190, player, game.gameLog, cardId);
       d1.ready = true;
       d2.ready = true;
       d3.ready = true;
-      game.gameLog.push(`${CardTitle(cardId)}: 3 Battle Droid tokens created and readied.`);
       return null;
     }
     case "TWI_086": { // Admiral Trench — "When Played: Return up to 3 units that were defeated this phase from your discard pile to your hand."
@@ -542,84 +581,12 @@ export function resolveWhenPlayed(
         sourcePlayer: player,
         totalDamage: 5,
       } satisfies ChooseIndirectTargetPending;
-    case "SOR_087": { // Darth Vader — Search top 10 of deck for Villainy units with combined cost ≤ 3, play each for free.
-      const gs087 = game.currentGameState;
-      const deck087 = player === 1 ? gs087.player1.deck : gs087.player2.deck;
-      if (deck087.length === 0) return null;
-      const count087 = Math.min(10, deck087.length);
-      const top10_087 = deck087.slice(-count087);
-      const topCards087 = top10_087.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
-      const eligibleChoices087 = topCards087
-        .filter(c => CardType(c.cardId) === "Unit" && CardAspects(c.cardId).includes("Villainy") && (CardCost(c.cardId) ?? 0) <= 3)
-        .map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));
-      if (eligibleChoices087.length === 0) {
-        game.gameLog.push(`${CardTitle("SOR_087")}: no eligible Villainy units in the top ${count087} cards.`);
-        return null;
-      }
-      return {
-        type: "deck-search",
-        cardId: "SOR_087",
-        player,
-        topCards: topCards087,
-        eligibleChoices: eligibleChoices087,
-        maxCombinedCost: 3,
-        costModifier: 'free',
-        action: "play",
-        continuation: null,
-      } satisfies DeckSearchPending;
-    }
-    case "SOR_104": { // U-Wing Reinforcement — Search top 10 of deck for up to 3 units with combined cost ≤ 7, play each for free.
-      const gs104 = game.currentGameState;
-      const deck104 = player === 1 ? gs104.player1.deck : gs104.player2.deck;
-      if (deck104.length === 0) return null;
-      const count104 = Math.min(10, deck104.length);
-      const top10_104 = deck104.slice(-count104);
-      const topCards104 = top10_104.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
-      const eligibleChoices104 = topCards104
-        .filter(c => CardType(c.cardId) === "Unit" && (CardCost(c.cardId) ?? 0) <= 7)
-        .map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));
-      if (eligibleChoices104.length === 0) {
-        game.gameLog.push(`${CardTitle("SOR_104")}: no eligible units in the top ${count104} cards.`);
-        return null;
-      }
-      return {
-        type: "deck-search",
-        cardId: "SOR_104",
-        player,
-        topCards: topCards104,
-        eligibleChoices: eligibleChoices104,
-        maxChoices: 3,
-        maxCombinedCost: 7,
-        costModifier: 'free',
-        action: "play",
-        continuation: null,
-      } satisfies DeckSearchPending;
-    }
-    case "SOR_123": { // Recruit — Search top 5 of deck for a unit, reveal it, and draw it.
-      const gs123 = game.currentGameState;
-      const deck123 = player === 1 ? gs123.player1.deck : gs123.player2.deck;
-      if (deck123.length === 0) return null;
-      const count123 = Math.min(5, deck123.length);
-      const top5_123 = deck123.slice(-count123);
-      const topCards123 = top5_123.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
-      const eligibleChoices123 = topCards123
-        .filter(c => CardType(c.cardId) === "Unit")
-        .map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));
-      if (eligibleChoices123.length === 0) {
-        game.gameLog.push(`${CardTitle("SOR_123")}: no units in the top ${count123} cards.`);
-        return null;
-      }
-      return {
-        type: "deck-search",
-        cardId: "SOR_123",
-        player,
-        topCards: topCards123,
-        eligibleChoices: eligibleChoices123,
-        maxChoices: 1,
-        action: "draw",
-        continuation: null,
-      } satisfies DeckSearchPending;
-    }
+    case "SOR_087": // Darth Vader — Search top 10 of deck for Villainy units with combined cost ≤ 3, play each for free.
+      return searchDeck(cardId, player, 10, "play", { filter: { type: "Unit", aspect: "Villainy", maxCost: 3 }, maxCombinedCost: 3, costModifier: "free" });
+    case "SOR_104": // U-Wing Reinforcement — Search top 10 of deck for up to 3 units with combined cost ≤ 7, play each for free.
+      return searchDeck(cardId, player, 10, "play", { filter: { type: "Unit", maxCost: 7 }, maxChoices: 3, maxCombinedCost: 7, costModifier: "free" });
+    case "SOR_123": // Recruit — Search top 5 of deck for a unit, reveal it, and draw it.
+      return searchDeck(cardId, player, 5, "draw", { filter: { type: "Unit" }, maxChoices: 1 });
     case "SOR_039": // AT-AT Suppressor — When Played: Exhaust all ground units. (auto-resolves in when-played-trigger)
       return null;
     case "SOR_111": // Patrolling V-Wing — When Played: Draw a card. (auto-resolves in when-played-trigger)
@@ -705,6 +672,16 @@ export function resolveWhenPlayed(
           fromPlayIds: nonLeaders202.map(u => u.playId),
           continuation: null,
         },
+        continuation: null,
+      };
+    }
+    case "SOR_074": // Repair — Heal 3 damage from a unit or base.
+    case "JTL_075": {
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: allUnitsAndBasesPlayIds(),
         continuation: null,
       };
     }
@@ -864,22 +841,8 @@ export function resolveWhenPlayed(
     case "TWI_193": { // R2-D2 (Full of Solutions) — You may discard a card. If you do, search top 3 and draw a card.
       const pState193 = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
       if (pState193.hand.length === 0) return null;
-      const deck193 = pState193.deck;
-      if (deck193.length === 0) return null;
-      const count193 = Math.min(3, deck193.length);
-      const top3_193 = deck193.slice(-count193);
-      const topCards193 = top3_193.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
-      const eligibleChoices193 = topCards193.map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));
-      const deckSearchCont: DeckSearchPending = {
-        type: "deck-search",
-        cardId: "TWI_193",
-        player,
-        topCards: topCards193,
-        eligibleChoices: eligibleChoices193,
-        maxChoices: 1,
-        action: "draw",
-        continuation: null,
-      };
+      const deckSearchCont193 = searchDeck(cardId, player, 3, "draw", { maxChoices: 1, dontReveal: true });
+      if (!deckSearchCont193) return null;
       return {
         type: "ability-option",
         cardId: "TWI_193",
@@ -891,71 +854,17 @@ export function resolveWhenPlayed(
           type: "discard-from-hand",
           targetPlayer: player,
           count: 1,
-          continuation: deckSearchCont,
+          continuation: deckSearchCont193,
         },
         continuation: null,
       };
     }
-    case "SOR_236": { // R2-D2 — When Played/On Attack: Scry 1.
-      const gs236 = game.currentGameState;
-      const deck236 = player === 1 ? gs236.player1.deck : gs236.player2.deck;
-      if (deck236.length === 0) return null;
-      const top236 = deck236.slice(-1);
-      const topCards236 = top236.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
-      return {
-        type: "deck-search",
-        cardId: "SOR_236",
-        player,
-        topCards: topCards236,
-        eligibleChoices: topCards236.map(c => ({ ...c, cost: 0 })),
-        action: "scry",
-        continuation: null,
-      } satisfies DeckSearchPending;
-    }
-    case "SOR_031": { // Inferno Four — When Played/When Defeated: Look at top 2, put any on bottom, rest on top.
-      const gs031 = game.currentGameState;
-      const deck031 = player === 1 ? gs031.player1.deck : gs031.player2.deck;
-      if (deck031.length === 0) return null;
-      const count031 = Math.min(2, deck031.length);
-      const top031 = deck031.slice(-count031);
-      const topCards031 = top031.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
-      const eligible031 = topCards031.map(c => ({ ...c, cost: 0 }));
-      return {
-        type: "deck-search",
-        cardId: "SOR_031",
-        player,
-        topCards: topCards031,
-        eligibleChoices: eligible031,
-        action: "scry",
-        continuation: null,
-      } satisfies DeckSearchPending;
-    }
-    case "LOF_100": { // Kelleran Beq — Search the top 7 cards of your deck for a unit, reveal it, and play it. It costs 3 resources less.
-      const gs100 = game.currentGameState;
-      const deck100 = player === 1 ? gs100.player1.deck : gs100.player2.deck;
-      if (deck100.length === 0) return null;
-      const count100 = Math.min(7, deck100.length);
-      const top7_100 = deck100.slice(-count100);
-      const topCards100 = top7_100.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
-      const eligibleChoices100 = topCards100
-        .filter(c => CardType(c.cardId) === "Unit")
-        .map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));
-      if (eligibleChoices100.length === 0) {
-        game.gameLog.push(`${CardTitle("LOF_100")}: no eligible units in the top ${count100} cards.`);
-        return null;
-      }
-      return {
-        type: "deck-search",
-        cardId: "LOF_100",
-        player,
-        topCards: topCards100,
-        eligibleChoices: eligibleChoices100,
-        maxChoices: 1,
-        costModifier: -3,
-        action: "play",
-        continuation: null,
-      } satisfies DeckSearchPending;
-    }
+    case "SOR_236": // R2-D2 — When Played/On Attack: Scry 1.
+      return searchDeck(cardId, player, 1, "scry");
+    case "SOR_031": // Inferno Four — When Played/When Defeated: Look at top 2, put any on bottom, rest on top.
+      return searchDeck(cardId, player, 2, "scry");
+    case "LOF_100": // Kelleran Beq — Search the top 7 cards of your deck for a unit, reveal it, and play it. It costs 3 resources less.
+      return searchDeck(cardId, player, 7, "play", { filter: { type: "Unit" }, maxChoices: 1, costModifier: -3 });
     case "SOR_228": // Viper Probe Droid — When Played: Look at an opponent's hand.
     case "SEC_239": // reprint of SOR_228
     {

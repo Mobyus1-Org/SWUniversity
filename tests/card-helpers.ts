@@ -235,6 +235,8 @@ export const Cards = {
       cellBlockGuard: "SOR_229",
       atAtSuppressor: "SOR_039",
       surgicalDroid: "SOR_059",
+      redemption: "SOR_052",
+      avenger: "SOR_040",
       distantPatroller: "SOR_060",
       patrollingVWing: "SOR_111",
       imperialInterceptor: "SOR_132",
@@ -295,6 +297,7 @@ export const Cards = {
       chancellorPalpatine: "SEC_082",
       isbShuttle: "SEC_083",
       viceAdmiralRampart: "SEC_085",
+      nalaSe: "SEC_065",
     },
   },
   upgrades: {
@@ -326,9 +329,13 @@ export const Cards = {
     shd: {
       timelyIntervention: "SHD_129",
       chooseSides: "SHD_132",
+      midnightRepairs: "SHD_054",
     },
     sor: {
+      searchYourFeelings: "SOR_042",
       superlaserBlast: "SOR_043",
+      repair: "SOR_074",
+      powerOfTheDarkSide: "SOR_041",
       momentOfPeace: "SOR_073",
       rebelAssault: "SOR_103",
       strikeTrue: "SOR_127",
@@ -363,6 +370,7 @@ export const Cards = {
       takeCaptive: "TWI_128",
     },
     jtl: {
+      repair: "JTL_075",
       torpedoBarrage: "JTL_234",
       dedicatedWingmen: "JTL_254",
       unityOfPurpose: "JTL_106",

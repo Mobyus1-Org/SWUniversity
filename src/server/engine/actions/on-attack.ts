@@ -1,6 +1,6 @@
 import { Unit } from "@/server/engine/unit";
-import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, DeckSearchPending } from "@/server/engine/pending-resolution";
-import { GetGame, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose } from "@/server/engine/core-functions";
+import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending } from "@/server/engine/pending-resolution";
+import { GetGame, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, searchDeck } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
@@ -122,24 +122,10 @@ export function resolveOnAttackTrigger(
   }
   // innate On Attack abilities
   switch (attacker.cardId) {
-    case "SOR_236": { // R2-D2 — On Attack: Scry 1.
-      const game236 = GetGame();
-      if (!game236) return continuation;
-      const deck236 = attacker.controller === 1
-        ? game236.currentGameState.player1.deck
-        : game236.currentGameState.player2.deck;
-      if (deck236.length === 0) return continuation;
-      const top236 = deck236.slice(-1);
-      const topCards236 = top236.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
-      return {
-        type: "deck-search",
-        cardId: "SOR_236",
-        player: attacker.controller,
-        topCards: topCards236,
-        eligibleChoices: topCards236.map(c => ({ ...c, cost: 0 })),
-        action: "scry",
-        continuation,
-      } satisfies DeckSearchPending;
+    case "SOR_236": // R2-D2 — On Attack: Scry 1.
+      return searchDeck("SOR_236", attacker.controller, 1, "scry", { continuation }) ?? continuation;
+    case "SOR_040": { // Avenger On Attack — opponent chooses a non-leader unit they control to defeat.
+      return chooseAndDefeatUnit("SOR_040", attacker.controller, false, continuation);
     }
     case "SOR_010": { // Darth Vader "On Attack: You may deal 2 damage to a unit."
       const game = GetGame();
@@ -279,6 +265,34 @@ export function resolveOnAttackTrigger(
             continuation,
           },
         },
+        continuation,
+      };
+    }
+    case "SEC_065": { // Nala Se — On Attack: You may disclose Vigilance×Vigilance. If you do, heal up to 4 from other units.
+      if (!CanDisclose(attacker.controller, ["Vigilance", "Vigilance"])) return continuation;
+      const game065 = GetGame();
+      if (!game065) return continuation;
+      const gs065 = game065.currentGameState;
+      const otherUnits065 = [
+        ...gs065.player1.groundArena, ...gs065.player1.spaceArena,
+        ...gs065.player2.groundArena, ...gs065.player2.spaceArena,
+      ].filter(u => u.playId !== attacker.playId).map(u => u.playId);
+      if (otherUnits065.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: attacker.cardId,
+        player: attacker.controller,
+        helperText: "Disclose Vigilance×Vigilance to heal up to 4 damage from other units?",
+        yesLabel: "Disclose",
+        noLabel: "Skip",
+        onYes: {
+          type: "spread-heal",
+          cardId: "SEC_065",
+          player: attacker.controller,
+          maxHeal: 4,
+          eligiblePlayIds: otherUnits065,
+          continuation,
+        } satisfies SpreadHealPending,
         continuation,
       };
     }

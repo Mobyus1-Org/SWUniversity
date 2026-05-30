@@ -6,11 +6,11 @@
 
 | Status | Count |
 |--------|-------|
-| Implemented | 107 |
-| Partially Implemented | 41 |
+| Implemented | 111 |
+| Partially Implemented | 40 |
 | Keywords Only (auto-handled) | 23 |
 | Unimplemented – Simple | 0 |
-| Unimplemented – Complex | 63 |
+| Unimplemented – Complex | 60 |
 | **Total** | **214** |
 
 ---
@@ -20,21 +20,6 @@
 ## Unimplemented – COMPLEX (requires senior dev consultation)
 
 These cards need new engine features or unusual interactions.
-
-### SOR_074 — Repair (Event)
-**Card Text:** Heal 3 damage from a unit or base.
-
-**Notes:** Needs base-targeting support — engine's ability-target only handles unit playIds. The target can be any unit OR either player's base, which requires a new targeting mode or a multi-step choice flow.
-
-### SOR_040 — Avenger (Unit)
-**Card Text:** When Played/On Attack: An opponent chooses a non‑leader unit they control. Defeat that unit.
-
-**Notes:** Needs implementation: When Played/On Attack: An opponent chooses a non‑leader unit they control. Defeat that unit.
-
-### SOR_041 — Power of the Dark Side (Event)
-**Card Text:** An opponent chooses a unit they control. Defeat that unit.
-
-**Notes:** Needs implementation: An opponent chooses a unit they control. Defeat that unit.
 
 ### SOR_042 — Search Your Feelings (Event)
 **Card Text:** Search your deck for a card and draw it. (Then, shuffle your deck.)
@@ -447,13 +432,6 @@ When Played: Give an enemy unit –3/–3 for this phase. If a friendly unit was
 
 **Notes:** Restore 3 implemented; 'When Played: Give an enemy unit -3/-3; if a friendly unit was defeated this phase, give that unit an Experience token' NOT implemented
 
-### SOR_052 — Redemption (Unit) [COMPLEX]
-**Card Text:** Sentinel (Units in this arena can't attack your non-Sentinel units or your base.)
-
-When Played: Heal up to 8 total damage from any number of units and/or bases. Deal that much damage to this unit.
-
-**Notes:** Sentinel implemented; 'When Played: Heal up to 8 total damage from any number of units and/or bases' (distributed choice) NOT implemented
-
 ### SOR_053 — Luke's Lightsaber (Upgrade) [SIMPLE]
 **Card Text:** Attach to a non-Vehicle unit.
 
@@ -808,3 +786,7 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_228 | Viper Probe Droid | Unit | When Played: look at opponent's hand; test coverage added |
 | SOR_236 | R2-D2 | Unit | When Played/On Attack: Scry 1; test coverage added |
 | SOR_240 | Fleet Lieutenant | Unit | Has custom logic in engine action files; test coverage added |
+| SOR_074 | Repair | Event | Heal 3 damage from a unit or base; uses healTarget + allUnitsAndBasesPlayIds helpers; test coverage added |
+| SOR_040 | Avenger | Unit | When Played/On Attack: opponent chooses non-leader unit to defeat; uses chooseAndDefeatUnit helper; test coverage added |
+| SOR_041 | Power of the Dark Side | Event | Opponent chooses any unit (incl. leader) to defeat; uses chooseAndDefeatUnit helper; test coverage added |
+| SOR_052 | Redemption | Unit | Sentinel + When Played: spread heal up to 8 across units/bases, deal total to self; uses SpreadHealPending; test coverage added |

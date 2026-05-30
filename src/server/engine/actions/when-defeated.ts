@@ -19,8 +19,7 @@ export function resolveWhenDefeated(
     const game = GetGame();
     if (game) {
       for (let i = 0; i < droidCohortCount; i++) {
-        CreateBattleDroid(game.currentGameState, player);
-        game.gameLog.push(`Droid Cohort: Battle Droid token created for ${CardTitle(unit.cardId)}.`);
+        CreateBattleDroid(game.currentGameState, player, game.gameLog, "TWI_218");
       }
     }
   }
@@ -109,8 +108,7 @@ export function resolveWhenDefeated(
     case "TWI_229": { // Battle Droid Escort — "When Defeated: Create a Battle Droid token."
       const game229 = GetGame();
       if (!game229) return null;
-      CreateBattleDroid(game229.currentGameState, player);
-      game229.gameLog.push(`${CardTitle("TWI_229")}: Battle Droid token created.`);
+      CreateBattleDroid(game229.currentGameState, player, game229.gameLog, "TWI_229");
       return null;
     }
     case "SOR_060": { // Distant Patroller — When Defeated: You may give a Shield token to a [Vigilance] unit.

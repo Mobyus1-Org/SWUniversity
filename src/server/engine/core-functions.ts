@@ -3,6 +3,8 @@ import { Card, CardInPlay, CardTypes, CurrentEffect, Leader, PlayerId } from "@/
 import { Game, GameState, PlayerState } from "@/lib/engine/game";
 import { Unit } from "@/server/engine/unit";
 import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
+import { HasKeyword } from "@/server/engine/card-db/dictionaries";
+import { AbilityTargetPending, DeckSearchPending, PendingResolution } from "@/server/engine/pending-resolution";
 
 let activeGame: Game | null = null;
 
@@ -543,6 +545,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "SOR_040": //Avenger - Hunting Star Destroyer
     case "SOR_059": //2-1B Surgical Droid
     case "SOR_236": //R2-D2 - Ignoring Protocol
     case "SOR_206": //Mining Guild TIE Fighter
@@ -553,6 +556,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "TWI_005": //Count Dooku - Face of the Confederacy
     case "TWI_186": //San Hill - Chairman of the Banking Clan
     case "SEC_085": //Vice Admiral Rampart - On Schedule
+    case "SEC_065": //Nala Se - Chief Medical Scientist
       return true;
     default: break;
   }
@@ -612,9 +616,107 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
   if (!targetPlayId) return;
   const target = GetUnitByPlayId(gs, targetPlayId);
   if (target) {
-    target.damage += 4;
+    target.damage += amount;
     if (withLog) {
       withLog.push(`${CardTitle(cardId)}: dealt ${amount} damage to ${CardTitle(target.cardId)}.`);
     }
   }
+}
+
+/** Builds a pending where the opponent of `player` chooses one of their own units to defeat. */
+export function chooseAndDefeatUnit(
+  cardId: string,
+  player: PlayerId,
+  includeLeaders: boolean,
+  continuation: PendingResolution | null = null,
+): AbilityTargetPending | null {
+  const game = GetGame();
+  if (!game) throw new Error("Game not found in chooseAndDefeatUnit");
+  const opponent = GetOtherPlayer(player);
+  const opponentUnits = GetUnitsForPlayer(opponent);
+  const eligible = includeLeaders ? opponentUnits : opponentUnits.filter(u => !CardIsLeader(u.cardId));
+  if (eligible.length === 0) return null;
+  return {
+    type: "ability-target",
+    cardId,
+    player,
+    fromPlayIds: eligible.map(u => u.playId),
+    continuation,
+  };
+}
+
+export interface SearchDeckFilter {
+  type?: string;
+  aspect?: string;
+  trait?: string;
+  keyword?: string;
+  maxCost?: number;
+}
+
+export interface SearchDeckOpts {
+  filter?: SearchDeckFilter;
+  dontReveal?: boolean;
+  maxChoices?: number;
+  maxCombinedCost?: number;
+  costModifier?: 'free' | number;
+  continuation?: PendingResolution | null;
+}
+
+/**
+ * Builds a DeckSearchPending for any deck-search effect.
+ * topN = -1 searches the entire deck. Returns null if the deck is empty or no cards pass the filter.
+ */
+export function searchDeck(
+  cardId: string,
+  player: PlayerId,
+  topN: number,
+  action: "draw" | "play" | "scry",
+  opts?: SearchDeckOpts,
+): DeckSearchPending | null {
+  const game = GetGame();
+  if (!game) throw new Error("Game not found in searchDeck");
+  const gs = game.currentGameState;
+  const deck = player === 1 ? gs.player1.deck : gs.player2.deck;
+  if (deck.length === 0) return null;
+
+  const n = topN === -1 ? deck.length : Math.min(topN, deck.length);
+  const slice = deck.slice(-n);
+  const topCards = slice.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId }));
+
+  const filter = opts?.filter;
+  let eligibleChoices: Array<{ tempId: string; cardId: string; cost: number }>;
+
+  if (filter) {
+    eligibleChoices = topCards
+      .filter(c => {
+        if (filter.type && CardType(c.cardId) !== filter.type) return false;
+        if (filter.aspect && !CardAspects(c.cardId).includes(filter.aspect)) return false;
+        if (filter.trait && !CardTraits(c.cardId).includes(filter.trait)) return false;
+        if (filter.keyword && !HasKeyword(c.cardId, filter.keyword)) return false;
+        if (filter.maxCost !== undefined && (CardCost(c.cardId) ?? 0) > filter.maxCost) return false;
+        return true;
+      })
+      .map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));
+
+    if (eligibleChoices.length === 0) {
+      game.gameLog.push(`${CardTitle(cardId)}: no eligible cards in top ${n}.`);
+      return null;
+    }
+  } else {
+    eligibleChoices = topCards.map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));
+  }
+
+  return {
+    type: "deck-search",
+    cardId,
+    player,
+    topCards,
+    eligibleChoices,
+    ...(opts?.dontReveal && { dontReveal: true }),
+    ...(opts?.maxChoices !== undefined && { maxChoices: opts.maxChoices }),
+    ...(opts?.maxCombinedCost !== undefined && { maxCombinedCost: opts.maxCombinedCost }),
+    ...(opts?.costModifier !== undefined && { costModifier: opts.costModifier }),
+    action,
+    continuation: opts?.continuation ?? null,
+  } satisfies DeckSearchPending;
 }

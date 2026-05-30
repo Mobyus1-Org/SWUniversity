@@ -49,10 +49,12 @@ export interface NeedsSpreadDamage {
   /** true = "you may" — player can assign 0 OR all, never partial */
   optional: boolean;
   eligiblePlayIds: string[];
-  /** Indirect damage: base is also a valid target (use playId "__base__" in assignments) */
+  /** Indirect damage / spread heal: base is also a valid target (use playId "playerN.base" in assignments) */
   includesBase?: boolean;
   /** Indirect damage: the player who assigns (may differ from the active player) */
   assigningPlayer?: PlayerId;
+  /** "heal" = blue UI with +/- buttons and per-target heal caps; omit for standard damage */
+  mode?: "heal";
 }
 
 /** Deck-search prompt: player picks from a revealed subset with a combined cost ceiling or number of choices. */
@@ -64,6 +66,7 @@ export interface NeedsDeckSearch {
   maxChoices?: number; // maximum number of cards the player can choose, regardless of cost
   maxCombinedCost?: number; // maximum total cost of chosen cards, regardless of number
   costModifier?: "free" | number; // applied to each chosen card, usually to make them free or reduce cost by a certain amount
+  dontReveal?: boolean; // when true, chosen cards are not revealed to the opponent before being drawn/played
 }
 
 /** Hand-peek prompt: the active player sees the target hand and optionally discards a card. */

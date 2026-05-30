@@ -2,20 +2,12 @@ import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { Cards } from "../../card-helpers";
-
-const BASE = "__base__";
-
-// Fennec Shand (SHD_016) has Cunning — covers JTL_234's aspect at exact cost 3.
-const CUNNING_LEADER = Cards.leaders.shd.fennecShand;
+import { CommonSetup } from "../../test-helpers";
 
 describe("JTL_234 Torpedo Barrage", () => {
   it("prompts source player to choose a target player before assignment", async () => {
     const g = new GameTestAdapter();
-    const s = new GameStateBuilder()
-      .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(CUNNING_LEADER)
-      .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sor.grandMoffTarkin)
+    const s = CommonSetup(new GameStateBuilder(), 'yyw', 'yyk')
       .WithActivePlayer(1)
       .WithInitiativePlayerBeing(1)
       .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 3)
@@ -33,11 +25,7 @@ describe("JTL_234 Torpedo Barrage", () => {
 
   it("deals 5 indirect damage all to opponent's base", async () => {
     const g = new GameTestAdapter();
-    const s = new GameStateBuilder()
-      .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(CUNNING_LEADER)
-      .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sor.grandMoffTarkin)
+    const s = CommonSetup(new GameStateBuilder(), 'yyw', 'yyk')
       .WithActivePlayer(1)
       .WithInitiativePlayerBeing(1)
       .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 3)
@@ -49,7 +37,7 @@ describe("JTL_234 Torpedo Barrage", () => {
     await g.playCardFromHandAsync(1, 0);
     await g.dispatchAsync(1, "choose-option", { option: "Opponent" });
     await g.dispatchAsync(2, "choose-target", {
-      spreadDamageAssignments: [{ playId: BASE, damage: 5 }],
+      spreadDamageAssignments: [{ playId: 'player2.base', damage: 5 }],
     });
 
     expect(g.state.player2.base.damage).toBe(5);
@@ -58,11 +46,7 @@ describe("JTL_234 Torpedo Barrage", () => {
 
   it("should assign indirect damage to self to their Grit unit to buff it, then attacks for more", async () => {
     const g = new GameTestAdapter();
-    const s = new GameStateBuilder()
-      .MyBase(Cards.bases.common.yellow30HP)
-      .MyLeader(Cards.leaders.sor.grandMoffTarkin)
-      .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sor.grandMoffTarkin)
+    const s = CommonSetup(new GameStateBuilder(), 'yyk', 'ygw')
       .WithActivePlayer(1)
       .WithInitiativePlayerBeing(2)
       .WithInitiativeClaimed()
@@ -95,11 +79,7 @@ describe("JTL_234 Torpedo Barrage", () => {
   it("indirect damage can defeat a unit (no shield bypass applies here)", async () => {
     // Assign 3 of the 5 damage to a 3/3 Battlefield Marine → exactly lethal → unit is defeated
     const g = new GameTestAdapter();
-    const s = new GameStateBuilder()
-      .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(CUNNING_LEADER)
-      .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sor.grandMoffTarkin)
+    const s = CommonSetup(new GameStateBuilder(), 'yyw', 'yyk')
       .WithActivePlayer(1)
       .WithInitiativePlayerBeing(1)
       .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 3)
@@ -115,7 +95,7 @@ describe("JTL_234 Torpedo Barrage", () => {
     await g.dispatchAsync(2, "choose-target", {
       spreadDamageAssignments: [
         { playId: marinePlayId, damage: 3 },
-        { playId: BASE, damage: 2 },
+        { playId: 'player2.base', damage: 2 },
       ],
     });
 
@@ -125,11 +105,7 @@ describe("JTL_234 Torpedo Barrage", () => {
 
   it("rejects assigning more damage to a unit than its remaining HP", async () => {
     const g = new GameTestAdapter();
-    const s = new GameStateBuilder()
-      .MyBase(Cards.bases.common.green30HP)
-      .MyLeader(CUNNING_LEADER)
-      .TheirBase(Cards.bases.common.green30HP)
-      .TheirLeader(Cards.leaders.sor.grandMoffTarkin)
+    const s = CommonSetup(new GameStateBuilder(), 'ygw', 'yyk')
       .WithActivePlayer(1)
       .WithInitiativePlayerBeing(1)
       .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 3)
@@ -147,7 +123,7 @@ describe("JTL_234 Torpedo Barrage", () => {
     await g.dispatchAsync(2, "choose-target", {
       spreadDamageAssignments: [
         { playId: marinePlayId, damage: 4 },
-        { playId: BASE, damage: 1 },
+        { playId: 'player2.base', damage: 1 },
       ],
     });
 
