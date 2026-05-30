@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, searchDeck, PlayerHasUnitWithTraitInPlay } from "@/server/engine/core-functions";
+import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, PlayerHasUnitWithTraitInPlay } from "@/server/engine/core-functions";
 import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
@@ -125,25 +125,10 @@ export function resolveWhenPlayed(
     case "SOR_162": //Disabling Fang Fighter: You may defeat an upgrade.
     case "SHD_166": //reprint of SOR_162
       if (!playId && !player) return null;
-      const allUpgradePlayIds = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
-        .flatMap(u => u.upgrades.map(upg => upg.playId));
-      if (allUpgradePlayIds.length === 0) return null;
-      return {
-        type: "ability-option",
-        cardId,
-        sourcePlayId: playId,
-        helperText: "Defeat an upgrade?",
-        yesLabel: "Defeat",
-        noLabel: "Skip",
-        onYes: {
-          type: "ability-target",
-          cardId,
-          player,
-          fromPlayIds: allUpgradePlayIds,
-          continuation: null,
-        },
-        continuation: null,
-      }
+      const allUpgradePlayIds162 = AllUnits().flatMap(u => u.upgrades.map(upg => upg.playId));
+      if (allUpgradePlayIds162.length === 0) return null;
+      return optionalTarget(cardId, player, allUpgradePlayIds162,
+        "Defeat an upgrade?", { yesLabel: "Defeat", sourcePlayId: playId });
     case "SOR_168": //Precision Fire "Attack with a unit. It gains Saboteur for this attack. If it's a Trooper, it also gets +2/+0 for this attack. (Ignore Sentinel and defeat the defender's Shields.)"
       return {
         type: "ability-target",
@@ -164,22 +149,15 @@ export function resolveWhenPlayed(
           type: "ability-target",
           cardId,
           sourcePlayId: playId!,
-          // Populate all units from both players (including itself — it's already in the arena)
-          fromPlayIds: [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].map((u) => u.playId),
+          fromPlayIds: AllUnits().map(u => u.playId),
           continuation: null,
         },
         continuation: null,
       };
     case "SEC_034": { // Cad Bane — "When Played: You may defeat a unit with 2 or less remaining HP."
-      const allUnits = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
-      const eligible = allUnits.filter(u => Unit.FromInterface(u).CurrentHP() <= 2);
-      if (eligible.length === 0) return null;
-      return {
-        type: "ability-target",
-        cardId,
-        fromPlayIds: eligible.map(u => u.playId),
-        continuation: null,
-      };
+      const eligible034 = AllUnits().filter(u => Unit.FromInterface(u).CurrentHP() <= 2);
+      if (eligible034.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible034.map(u => u.playId));
     }
     case "SHD_054": { // Midnight Repairs — Heal up to 8 total damage from any number of units. (No rebound, no bases.)
       const allUnits054 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].map(u => u.playId);
@@ -220,15 +198,9 @@ export function resolveWhenPlayed(
       return null;
     }
     case "SOR_073": { // Moment of Peace — "Give a Shield token to a unit."
-      const allUnits073 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      const allUnits073 = AllUnits();
       if (allUnits073.length === 0) return null;
-      return {
-        type: "ability-target",
-        cardId,
-        player,
-        fromPlayIds: allUnits073.map(u => u.playId),
-        continuation: null,
-      };
+      return mandatoryTarget(cardId, player, allUnits073.map(u => u.playId));
     }
     case "SOR_241": { // Wing Leader — "When Played: Give 2 Experience tokens to another friendly REBEL unit."
       const friendlyRebels241 = GetUnitsForPlayer(player, true)
@@ -429,41 +401,20 @@ export function resolveWhenPlayed(
       };
     }
     case "SOR_251": { // Confiscate — "Defeat an upgrade."
-      const allUpgradePlayIds = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
-        .flatMap(u => u.upgrades.map(upg => upg.playId));
-      if (allUpgradePlayIds.length === 0) return null;
-      return {
-        type: "ability-target",
-        cardId,
-        player,
-        fromPlayIds: allUpgradePlayIds,
-        continuation: null,
-      };
+      const allUpgradePlayIds251 = AllUnits().flatMap(u => u.upgrades.map(upg => upg.playId));
+      if (allUpgradePlayIds251.length === 0) return null;
+      return mandatoryTarget(cardId, player, allUpgradePlayIds251);
     }
     case "SOR_077": { // Takedown — "Defeat a unit with 5 or less remaining HP."
-      const eligible077 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
-        .filter(u => Unit.FromInterface(u).CurrentHP() <= 5);
+      const eligible077 = AllUnits().filter(u => Unit.FromInterface(u).CurrentHP() <= 5);
       if (eligible077.length === 0) return null;
-      return {
-        type: "ability-target",
-        cardId,
-        player,
-        fromPlayIds: eligible077.map(u => u.playId),
-        continuation: null,
-      };
+      return mandatoryTarget(cardId, player, eligible077.map(u => u.playId));
     }
     case "SOR_078": // Vanquish — "Defeat a non-leader unit."
     case "TWI_077": { // reprint of SOR_078
-      const eligible078 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
-        .filter(u => !Unit.FromInterface(u).IsLeader());
+      const eligible078 = AllUnits().filter(u => !Unit.FromInterface(u).IsLeader());
       if (eligible078.length === 0) return null;
-      return {
-        type: "ability-target",
-        cardId,
-        player,
-        fromPlayIds: eligible078.map(u => u.playId),
-        continuation: null,
-      };
+      return mandatoryTarget(cardId, player, eligible078.map(u => u.playId));
     }
     case "SOR_135": { // Emperor Palpatine — When Played: Deal 6 damage divided as you choose among enemy units.
       const enemies135 = GetUnitsForPlayer(player === 1 ? 2 : 1);
@@ -540,13 +491,7 @@ export function resolveWhenPlayed(
     }
     case "SOR_080": // General Tagge — When Played: Give an Experience token to each of up to 3 TROOPER units.
     case "SHD_081": { // reprint of SOR_080
-      const game080 = GetGame();
-      if (!game080) return null;
-      const gs080 = game080.currentGameState;
-      const troopers = [
-        ...gs080.player1.groundArena, ...gs080.player1.spaceArena,
-        ...gs080.player2.groundArena, ...gs080.player2.spaceArena,
-      ].filter(u => TraitContains(u.cardId, "Trooper", u.controller, u.playId));
+      const troopers = AllUnits().filter(u => TraitContains(u.cardId, "Trooper", u.controller, u.playId));
       if (troopers.length === 0) return null;
       return {
         type: "give-xp-multiple",
@@ -592,25 +537,10 @@ export function resolveWhenPlayed(
     case "SOR_111": // Patrolling V-Wing — When Played: Draw a card. (auto-resolves in when-played-trigger)
       return null;
     case "SOR_132": { // Imperial Interceptor — When Played: You may deal 3 damage to a space unit.
-      const gs132 = game.currentGameState;
-      const spaceUnits132 = [...gs132.player1.spaceArena, ...gs132.player2.spaceArena];
+      const spaceUnits132 = AllSpaceUnits();
       if (spaceUnits132.length === 0) return null;
-      return {
-        type: "ability-option",
-        cardId,
-        sourcePlayId: playId,
-        helperText: "Deal 3 damage to a space unit?",
-        yesLabel: "Deal 3",
-        noLabel: "Skip",
-        onYes: {
-          type: "ability-target",
-          cardId,
-          player,
-          fromPlayIds: spaceUnits132.map(u => u.playId),
-          continuation: null,
-        },
-        continuation: null,
-      };
+      return optionalTarget(cardId, player, spaceUnits132.map(u => u.playId),
+        "Deal 3 damage to a space unit?", { yesLabel: "Deal 3", sourcePlayId: playId });
     }
     case "SOR_134": { // Ruthless Raider — When Played/When Defeated: Deal 2 to enemy base + 2 to an enemy unit.
       const gs134 = game.currentGameState;
@@ -655,25 +585,11 @@ export function resolveWhenPlayed(
       };
     }
     case "SOR_202": { // Cantina Bouncer — When Played: You may return a non-leader unit to its owner's hand.
-      const nonLeaders202 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
-        .filter(u => !CardIsLeader(u.cardId));
+      const nonLeaders202 = AllUnits().filter(u => !CardIsLeader(u.cardId));
       if (nonLeaders202.length === 0) return null;
-      return {
-        type: "ability-option",
-        cardId,
-        sourcePlayId: playId,
-        helperText: "Return a non-leader unit to its owner's hand?",
-        yesLabel: "Bounce",
-        noLabel: "Skip",
-        onYes: {
-          type: "ability-target",
-          cardId,
-          player,
-          fromPlayIds: nonLeaders202.map(u => u.playId),
-          continuation: null,
-        },
-        continuation: null,
-      };
+      return optionalTarget(cardId, player, nonLeaders202.map(u => u.playId),
+        "Return a non-leader unit to its owner's hand?",
+        { yesLabel: "Bounce", sourcePlayId: playId });
     }
     case "SOR_075": { // It Binds All Things — Heal up to 3 from a unit. If Force unit, may deal that much to another unit.
       const allUnits075 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].map(u => u.playId);
@@ -708,26 +624,14 @@ export function resolveWhenPlayed(
       };
     }
     case "SOR_076": { // Make an Opening — Give a unit –2/–2 for this phase. Heal 2 from own base.
-      const allUnits076 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      const allUnits076 = AllUnits();
       if (allUnits076.length === 0) return null;
-      return {
-        type: "ability-target",
-        cardId,
-        player,
-        fromPlayIds: allUnits076.map(u => u.playId),
-        continuation: null,
-      };
+      return mandatoryTarget(cardId, player, allUnits076.map(u => u.playId));
     }
     case "SOR_124": { // Tactical Advantage — Give a unit +2/+2 for this phase.
-      const allUnits124 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      const allUnits124 = AllUnits();
       if (allUnits124.length === 0) return null;
-      return {
-        type: "ability-target",
-        cardId,
-        player,
-        fromPlayIds: allUnits124.map(u => u.playId),
-        continuation: null,
-      };
+      return mandatoryTarget(cardId, player, allUnits124.map(u => u.playId));
     }
     case "SOR_151": { // Karabast — A friendly unit deals damage equal to damage on it + its power to an enemy unit.
       const friendlyUnits151 = GetUnitsForPlayer(player);
@@ -784,15 +688,9 @@ export function resolveWhenPlayed(
       };
     }
     case "SOR_172": { // Open Fire — Deal 4 damage to a unit.
-      const allUnits172 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      const allUnits172 = AllUnits();
       if (allUnits172.length === 0) return null;
-      return {
-        type: "ability-target",
-        cardId,
-        player,
-        fromPlayIds: allUnits172.map(u => u.playId),
-        continuation: null,
-      };
+      return mandatoryTarget(cardId, player, allUnits172.map(u => u.playId));
     }
     case "SOR_173": { // Bombing Run — Choose an arena. Deal 3 damage to each unit in that arena.
       return {
@@ -809,13 +707,7 @@ export function resolveWhenPlayed(
     case "SOR_216": { // Disarm — Give an enemy unit –4/–0 for this phase.
       const enemyUnits216 = GetUnitsForPlayer(player === 1 ? 2 : 1);
       if (enemyUnits216.length === 0) return null;
-      return {
-        type: "ability-target",
-        cardId,
-        player,
-        fromPlayIds: enemyUnits216.map(u => u.playId),
-        continuation: null,
-      };
+      return mandatoryTarget(cardId, player, enemyUnits216.map(u => u.playId));
     }
     case "SOR_220": { // Surprise Strike — Attack with a unit. It gets +3/+0 for this attack.
       const readyFriendly220 = GetUnitsForPlayer(player, true);

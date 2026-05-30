@@ -1,6 +1,6 @@
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending } from "@/server/engine/pending-resolution";
-import { GetGame, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, searchDeck } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, optionalTarget, searchDeck } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
@@ -60,28 +60,12 @@ export function resolveOnAttackTrigger(
     switch (upgrade.cardId) {
       case "SOR_121": { // Hardpoint Heavy Blaster
         if (continuation.target.type === "unit") {
-          const game = GetGame();
-          if (game) {
-            const gs = game.currentGameState;
-            const defenderPlayId = continuation.target.playId;
-            const inGround = [...gs.player1.groundArena, ...gs.player2.groundArena].some(u => u.playId === defenderPlayId);
-            const arenaUnits = inGround
-              ? [...gs.player1.groundArena, ...gs.player2.groundArena]
-              : [...gs.player1.spaceArena, ...gs.player2.spaceArena];
-            if (arenaUnits.length > 0) {
-              return {
-                type: "ability-option",
-                cardId: "SOR_121",
-                helperText: "Deal 2 damage to a unit in the defender's arena?",
-                onYes: {
-                  type: "ability-target",
-                  cardId: "SOR_121",
-                  fromPlayIds: arenaUnits.map(u => u.playId),
-                  continuation,
-                },
-                continuation,
-              };
-            }
+          const defenderPlayId = continuation.target.playId;
+          const inGround = AllGroundUnits().some(u => u.playId === defenderPlayId);
+          const arenaUnits = inGround ? AllGroundUnits() : AllSpaceUnits();
+          if (arenaUnits.length > 0) {
+            return optionalTarget("SOR_121", attacker.controller, arenaUnits.map(u => u.playId),
+              "Deal 2 damage to a unit in the defender's arena?", { continuation });
           }
         }
         break;
@@ -128,27 +112,8 @@ export function resolveOnAttackTrigger(
       return chooseAndDefeatUnit("SOR_040", attacker.controller, false, continuation);
     }
     case "SOR_010": { // Darth Vader "On Attack: You may deal 2 damage to a unit."
-      const game = GetGame();
-      if (!game) return null;
-      const gs = game.currentGameState;
-      const allUnitPlayIds = [
-        ...gs.player1.groundArena,
-        ...gs.player1.spaceArena,
-        ...gs.player2.groundArena,
-        ...gs.player2.spaceArena,
-      ].map(u => u.playId);
-      return {
-        type: "ability-option",
-        cardId: "SOR_010",
-        helperText: "You may deal 2 damage to a unit.",
-        onYes: {
-          type: "ability-target",
-          cardId: "SOR_010",
-          fromPlayIds: allUnitPlayIds,
-          continuation,
-        },
-        continuation,
-      };
+      return optionalTarget("SOR_010", attacker.controller, AllUnits().map(u => u.playId),
+        "You may deal 2 damage to a unit.", { continuation });
     }
     case "SOR_014": { // Sabine Wren "On Attack: Deal 1 damage to each enemy base."
       const game = GetGame();
@@ -160,15 +125,7 @@ export function resolveOnAttackTrigger(
       return continuation;
     }
     case "SHD_012": { // Bo-Katan Kryze (deployed) "On Attack: You may deal 1 damage to a unit. If you attacked with another Mandalorian unit this phase, you may deal 1 damage to a unit."
-      const game = GetGame();
-      if (!game) return null;
-      const gs = game.currentGameState;
-      const allUnitPlayIds = [
-        ...gs.player1.groundArena,
-        ...gs.player1.spaceArena,
-        ...gs.player2.groundArena,
-        ...gs.player2.spaceArena,
-      ].map(u => u.playId);
+      const allUnitPlayIds = AllUnits().map(u => u.playId);
 
       // "another Mandalorian" = a Mandalorian other than Bo-Katan herself
       const anotherMandalorianAttacked = UnitAttackedThisPhase(attacker.controller, "Mandalorian", true, attacker.playId);
@@ -236,18 +193,10 @@ export function resolveOnAttackTrigger(
       return continuation;
     }
     case "SOR_006": { // Emperor Palpatine — "On Attack: You may defeat another friendly unit. If you do, deal 1 damage to a unit and draw a card."
-      const game006 = GetGame();
-      if (!game006) return continuation;
-      const gs006 = game006.currentGameState;
-      const friendlies006 = (attacker.controller === 1
-        ? [...gs006.player1.groundArena, ...gs006.player1.spaceArena]
-        : [...gs006.player2.groundArena, ...gs006.player2.spaceArena]
-      ).filter(u => u.playId !== attacker.playId);
+      const friendlies006 = GetUnitsForPlayer(attacker.controller)
+        .filter(u => u.playId !== attacker.playId);
       if (friendlies006.length === 0) return continuation;
-      const allUnits006 = [
-        ...gs006.player1.groundArena, ...gs006.player1.spaceArena,
-        ...gs006.player2.groundArena, ...gs006.player2.spaceArena,
-      ];
+      const allUnits006 = AllUnits();
       return {
         type: "ability-option",
         cardId: "SOR_006_OA",
@@ -270,13 +219,8 @@ export function resolveOnAttackTrigger(
     }
     case "SEC_065": { // Nala Se — On Attack: You may disclose Vigilance×Vigilance. If you do, heal up to 4 from other units.
       if (!CanDisclose(attacker.controller, ["Vigilance", "Vigilance"])) return continuation;
-      const game065 = GetGame();
-      if (!game065) return continuation;
-      const gs065 = game065.currentGameState;
-      const otherUnits065 = [
-        ...gs065.player1.groundArena, ...gs065.player1.spaceArena,
-        ...gs065.player2.groundArena, ...gs065.player2.spaceArena,
-      ].filter(u => u.playId !== attacker.playId).map(u => u.playId);
+      const otherUnits065 = AllUnits()
+        .filter(u => u.playId !== attacker.playId).map(u => u.playId);
       if (otherUnits065.length === 0) return continuation;
       return {
         type: "ability-option",
@@ -298,13 +242,7 @@ export function resolveOnAttackTrigger(
     }
     case "SEC_085": { // Vice Admiral Rampart — On Attack: You may disclose CommandCommandVillainy. If you do, give an Experience token to each of up to 2 other units.
       if (!CanDisclose(attacker.controller, ["Command", "Command", "Villainy"])) return continuation;
-      const game085 = GetGame();
-      if (!game085) return continuation;
-      const gs085 = game085.currentGameState;
-      const otherUnits085 = [
-        ...gs085.player1.groundArena, ...gs085.player1.spaceArena,
-        ...gs085.player2.groundArena, ...gs085.player2.spaceArena,
-      ].filter(u => u.playId !== attacker.playId);
+      const otherUnits085 = AllUnits().filter(u => u.playId !== attacker.playId);
       if (otherUnits085.length === 0) return continuation;
       return {
         type: "ability-option",
@@ -325,29 +263,13 @@ export function resolveOnAttackTrigger(
       };
     }
     case "SOR_059": { // 2-1B Surgical Droid — On Attack: You may heal 2 damage from another unit.
-      const game059 = GetGame();
-      if (!game059) return continuation;
-      const gs059 = game059.currentGameState;
-      const damagedOthers059 = [
-        ...gs059.player1.groundArena, ...gs059.player1.spaceArena,
-        ...gs059.player2.groundArena, ...gs059.player2.spaceArena,
-      ].filter(u => u.playId !== attacker.playId && u.damage > 0);
+      const damagedOthers059 = AllUnits()
+        .filter(u => u.playId !== attacker.playId && u.damage > 0);
       if (damagedOthers059.length === 0) return continuation;
-      return {
-        type: "ability-option",
-        cardId: attacker.cardId,
-        sourcePlayId: attacker.playId,
-        helperText: "Heal 2 damage from another unit?",
-        yesLabel: "Heal 2",
-        noLabel: "Skip",
-        onYes: {
-          type: "ability-target",
-          cardId: attacker.cardId,
-          fromPlayIds: damagedOthers059.map(u => u.playId),
-          continuation,
-        },
-        continuation,
-      };
+      return optionalTarget(attacker.cardId, attacker.controller,
+        damagedOthers059.map(u => u.playId),
+        "Heal 2 damage from another unit?",
+        { yesLabel: "Heal 2", sourcePlayId: attacker.playId, continuation });
     }
     case "SOR_206": { // Mining Guild TIE Fighter — On Attack: You may pay 2. If you do, draw a card.
       const game206 = GetGame();

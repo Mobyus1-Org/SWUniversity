@@ -4,7 +4,7 @@ import { Game, GameState, PlayerState } from "@/lib/engine/game";
 import { Unit } from "@/server/engine/unit";
 import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
-import { AbilityTargetPending, DeckSearchPending, PendingResolution } from "@/server/engine/pending-resolution";
+import { AbilityOptionPending, AbilityTargetPending, DeckSearchPending, PendingResolution } from "@/server/engine/pending-resolution";
 
 let activeGame: Game | null = null;
 
@@ -14,6 +14,12 @@ export function SetGame(game: Game | null): void {
 
 export function GetGame(): Game | null {
   return activeGame;
+}
+
+export function GetGameState(): GameState {
+  const g = GetGame();
+  if (!g) throw new Error("Game not found");
+  return g.currentGameState;
 }
 
 export function WriteGameLog(message: string): void {
@@ -608,6 +614,28 @@ export function GetAllUnits(game: GameState): Unit[] {
   ] as Unit[];
 }
 
+/** All units from both arenas of both players. Requires active game singleton. */
+export function AllUnits(): Unit[] {
+  return GetAllUnits(GetGameState());
+}
+
+/** All ground units from both players. Requires active game singleton. */
+export function AllGroundUnits(): Unit[] {
+  const gs = GetGameState();
+  return [...gs.player1.groundArena, ...gs.player2.groundArena] as Unit[];
+}
+
+/** All space units from both players. Requires active game singleton. */
+export function AllSpaceUnits(): Unit[] {
+  const gs = GetGameState();
+  return [...gs.player1.spaceArena, ...gs.player2.spaceArena] as Unit[];
+}
+
+/** All units that have the given aspect (e.g. "Villainy", "Vigilance"). */
+export function UnitsWithAspect(aspect: string): Unit[] {
+  return AllUnits().filter(u => CardAspects(u.cardId).includes(aspect));
+}
+
 export function GetUnitByPlayId(game: GameState, playId: string): Unit | null {
   return GetAllUnits(game).find((u) => u.playId === playId) ?? null;
 }
@@ -643,6 +671,58 @@ export function chooseAndDefeatUnit(
     fromPlayIds: eligible.map(u => u.playId),
     continuation,
   };
+}
+
+/**
+ * Builds an ability-option → ability-target pending for "you may do X to a target" effects.
+ * Only use when onYes is a target-selection step. Cases where onYes has inline effects
+ * (no target needed) remain hand-written.
+ */
+export function optionalTarget(
+  cardId: string,
+  player: PlayerId,
+  fromPlayIds: string[],
+  helperText: string,
+  opts: {
+    yesLabel?: string;
+    noLabel?: string;
+    sourcePlayId?: string;
+    continuation?: PendingResolution | null;
+  } = {},
+): AbilityOptionPending {
+  return {
+    type: "ability-option",
+    cardId,
+    player,
+    sourcePlayId: opts.sourcePlayId,
+    helperText,
+    yesLabel: opts.yesLabel ?? "Yes",
+    noLabel: opts.noLabel ?? "Skip",
+    onYes: {
+      type: "ability-target",
+      cardId,
+      player,
+      fromPlayIds,
+      continuation: opts.continuation ?? null,
+    } satisfies AbilityTargetPending,
+    continuation: opts.continuation ?? null,
+  } satisfies AbilityOptionPending;
+}
+
+/** Builds a simple ability-target pending for mandatory target-selection effects. */
+export function mandatoryTarget(
+  cardId: string,
+  player: PlayerId,
+  fromPlayIds: string[],
+  continuation: PendingResolution | null = null,
+): AbilityTargetPending {
+  return {
+    type: "ability-target",
+    cardId,
+    player,
+    fromPlayIds,
+    continuation,
+  } satisfies AbilityTargetPending;
 }
 
 export interface SearchDeckFilter {
