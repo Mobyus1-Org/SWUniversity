@@ -430,8 +430,7 @@ export function resolveWhenPlayed(
       } satisfies SpreadDamagePending;
     }
     case "TWI_229": { // Battle Droid Escort — "When Played: Create a Battle Droid token."
-      const gs229 = game.currentGameState;
-      CreateBattleDroid(gs229, player, game.gameLog, cardId);
+      CreateBattleDroid(game.currentGameState, player, game.gameLog, cardId);
       return null;
     }
     case "TWI_190": { // On the Doorstep — "Create 3 Battle Droid tokens and ready them."

@@ -213,8 +213,11 @@ export const Cards = {
     sor: {
       infernoFour: "SOR_031",
       gideonHask: "SOR_036",
+      kananJarrus: "SOR_047",
+      theGhost: "SOR_050",
       wingLeader: "SOR_241",
       systemPatrolCraft: "SOR_066",
+      chopper: "SOR_188",
       battlefieldMarine: "SOR_095",
       echoBaseDefender: "SOR_098",
       brightHope: "SOR_099",

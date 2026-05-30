@@ -62,7 +62,6 @@ export function resolveWhenDefeated(
           player,
           millingPlayer: player,
           count: 1,
-          damageIfNotUnit: 2,
           continuation: null,
         } satisfies MillPending,
         continuation: null,

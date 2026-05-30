@@ -1,8 +1,9 @@
 import { Unit } from "@/server/engine/unit";
-import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending } from "@/server/engine/pending-resolution";
+import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
 import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, optionalTarget, searchDeck } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { CardTitle } from "@/server/engine/card-db/generated";
+import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 
 /**
@@ -106,6 +107,34 @@ export function resolveOnAttackTrigger(
   }
   // innate On Attack abilities
   switch (attacker.cardId) {
+    case "SOR_047": { // Kanan Jarrus — On Attack: You may discard 1 card from the defending player's deck
+      // for each friendly SPECTRE unit. Heal 1 damage from your base for each different aspect.
+      const game047 = GetGame();
+      if (!game047) return continuation;
+      const spectreCount = GetUnitsForPlayer(attacker.controller)
+        .filter(u => CardTraits(u.cardId).includes("Spectre")).length;
+      if (spectreCount === 0) return continuation;
+      const defenderPlayer = attacker.controller === 1 ? 2 : 1;
+      const defenderState = defenderPlayer === 1
+        ? game047.currentGameState.player1
+        : game047.currentGameState.player2;
+      if (defenderState.deck.length === 0) return continuation;
+      const millPending: MillPending = {
+        type: "mill",
+        cardId: attacker.cardId,
+        player: attacker.controller,
+        millingPlayer: defenderPlayer,
+        count: spectreCount,
+        continuation,
+      };
+      return {
+        type: "ability-option",
+        cardId: attacker.cardId,
+        helperText: `Discard ${spectreCount} card(s) from the defending player's deck and heal your base for each different aspect?`,
+        onYes: millPending,
+        continuation,
+      };
+    }
     case "SOR_236": // R2-D2 — On Attack: Scry 1.
       return searchDeck("SOR_236", attacker.controller, 1, "scry", { continuation }) ?? continuation;
     case "SOR_040": { // Avenger On Attack — opponent chooses a non-leader unit they control to defeat.

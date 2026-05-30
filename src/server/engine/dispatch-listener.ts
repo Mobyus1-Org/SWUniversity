@@ -74,6 +74,7 @@ import type {
   PlotWindowPending,
   ResolveAttackPending,
   MillPending,
+  MillResultPending,
   SpreadDamagePending,
   SpreadHealPending,
   TriggerOrderPending,
@@ -1229,7 +1230,8 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         eligibleIndices,
       } satisfies NeedsPeekHand;
     }
-    case "mill": throw new Error("MillPending should be processed inline and never reach the client.");
+    case "mill":
+    case "mill-result": throw new Error(`${pending.type} should be processed inline and never reach the client.`);
     default: throw new Error(`Unknown pending resolution type: ${pending.type}`);
   }
 }
@@ -3419,35 +3421,65 @@ function resolveActionAbility(
 }
 
 /**
- * Executes a MillPending inline — no client round-trip.
- * Returns the next pending (ability-target for conditional damage, or the mill's own continuation).
+ * Executes a MillPending inline — moves cards from deck to discard and
+ * returns a MillResultPending so card-specific post-mill effects are applied
+ * in processMillResult rather than here.
  */
 function processMill(game: GameState, log: string[], pending: MillPending): PendingResolution | null {
   const pState = GetPlayer(game, pending.millingPlayer);
-  let notUnitMilled = false;
+  const milledCardIds: string[] = [];
 
   for (let i = 0; i < pending.count; i++) {
     const top = pState.deck.pop();
     if (!top) break;
     pushEventToDiscard(game, pending.millingPlayer, top.cardId);
     log.push(`${CardTitle(pending.cardId)}: milled ${CardTitle(top.cardId)}.`);
-    if (CardType(top.cardId) !== "Unit") notUnitMilled = true;
+    milledCardIds.push(top.cardId);
   }
 
-  if (notUnitMilled && pending.damageIfNotUnit !== undefined) {
-    const groundUnits = AllGroundUnits();
-    if (groundUnits.length > 0) {
-      return {
-        type: "ability-target",
-        cardId: pending.cardId,
-        player: pending.player,
-        fromPlayIds: groundUnits.map(u => u.playId),
-        continuation: pending.continuation ?? null,
-      } satisfies AbilityTargetPending;
+  return processMillResult(game, log, {
+    type: "mill-result",
+    cardId: pending.cardId,
+    player: pending.player,
+    milledCardIds,
+    continuation: pending.continuation ?? null,
+  });
+}
+
+/**
+ * Applies card-specific post-mill effects given the set of cards that were milled.
+ * Processed inline — no client round-trip unless the effect itself requires targeting.
+ */
+function processMillResult(game: GameState, log: string[], pending: MillResultPending): PendingResolution | null {
+  switch (pending.cardId) {
+    case "SOR_204": { // Greedo — if any non-unit was milled, deal 2 damage to a ground unit
+      const nonUnitMilled = pending.milledCardIds.some((id: string) => CardType(id) !== "Unit");
+      if (nonUnitMilled) {
+        const groundUnits = AllGroundUnits();
+        if (groundUnits.length > 0) {
+          return {
+            type: "ability-target",
+            cardId: pending.cardId,
+            player: pending.player,
+            fromPlayIds: groundUnits.map(u => u.playId),
+            continuation: pending.continuation,
+          } satisfies AbilityTargetPending;
+        }
+      }
+      break;
+    }
+    case "SOR_047": { // Kanan Jarrus — heal base by number of distinct aspects among milled cards
+      const distinctAspects = new Set(pending.milledCardIds.flatMap((id: string) => CardAspects(id)));
+      const healAmount = distinctAspects.size;
+      if (healAmount > 0) {
+        const healPlayer = GetPlayer(game, pending.player);
+        healPlayer.base.damage = Math.max(0, healPlayer.base.damage - healAmount);
+        log.push(`${CardTitle(pending.cardId)}: healed ${healAmount} damage from player ${pending.player}'s base (${healAmount} distinct aspect(s)).`);
+      }
+      break;
     }
   }
-
-  return pending.continuation ?? null;
+  return pending.continuation;
 }
 
 /**
