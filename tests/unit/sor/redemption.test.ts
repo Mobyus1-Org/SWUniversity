@@ -20,18 +20,13 @@ describe("SOR_052 Redemption", () => {
     const marinePlayId = state.player1.groundArena[0].playId;
 
     await g.playCardFromHandAsync(1, 0);
-    // Step 1: heal the marine
     await g.dispatchAsync(1, "choose-target", {
       spreadDamageAssignments: [{ playId: marinePlayId, damage: 3 }],
-    });
-    // Step 2: rebound — deal 3 damage to Redemption
-    const redemptionPlayId = g.state.player1.spaceArena[0].playId;
-    await g.dispatchAsync(1, "choose-target", {
-      spreadDamageAssignments: [{ playId: redemptionPlayId, damage: 3 }],
     });
 
     expect(g.state.player1.groundArena[0].damage).toBe(0);
     expect(g.state.player1.spaceArena[0].damage).toBe(3);
+    expect(g.lastDispatchResponse?.resolutionNeeded).toBeUndefined();
   });
 
   it("heals a base and deals that amount back to itself", async () => {
@@ -51,10 +46,6 @@ describe("SOR_052 Redemption", () => {
     await g.playCardFromHandAsync(1, 0);
     await g.dispatchAsync(1, "choose-target", {
       spreadDamageAssignments: [{ playId: "player1.base", damage: 5 }],
-    });
-    const redemptionPlayId = g.state.player1.spaceArena[0].playId;
-    await g.dispatchAsync(1, "choose-target", {
-      spreadDamageAssignments: [{ playId: redemptionPlayId, damage: 5 }],
     });
 
     expect(g.state.player1.base.damage).toBe(0);
@@ -88,15 +79,11 @@ describe("SOR_052 Redemption", () => {
         { playId: "player1.base", damage: 3 },
       ],
     });
-    const redemptionPlayId = g.state.player1.spaceArena[0].playId;
-    await g.dispatchAsync(1, "choose-target", {
-      spreadDamageAssignments: [{ playId: redemptionPlayId, damage: 6 }],
-    });
 
     expect(g.state.player1.groundArena[0].damage).toBe(0);
     expect(g.state.player2.groundArena[0].damage).toBe(0);
     expect(g.state.player1.base.damage).toBe(0);
-    expect(g.state.player1.spaceArena[0].damage).toBe(6);
+    expect(g.state.player1.spaceArena[0].damage).toBe(6); // 2 + 1 + 3
   });
 
   it("rebound equals exactly what was healed, not the maximum", async () => {
@@ -118,14 +105,8 @@ describe("SOR_052 Redemption", () => {
     await g.dispatchAsync(1, "choose-target", {
       spreadDamageAssignments: [{ playId: marinePlayId, damage: 2 }],
     });
-    const redemptionPlayId = g.state.player1.spaceArena[0].playId;
-    // Must assign exactly 2, not up to 8
-    const result = await g.dispatchAsync(1, "choose-target", {
-      spreadDamageAssignments: [{ playId: redemptionPlayId, damage: 2 }],
-    });
 
-    expect(result.lastDispatchResponse?.invalidAction).toBeUndefined();
-    expect(g.state.player1.spaceArena[0].damage).toBe(2);
+    expect(g.state.player1.spaceArena[0].damage).toBe(2); // 2, not 8
   });
 
   it("rejects assigning more than current damage on a heal target", async () => {
@@ -152,7 +133,7 @@ describe("SOR_052 Redemption", () => {
     expect(g.state.player1.groundArena[0].damage).toBe(1); // unchanged
   });
 
-  it("no rebound when zero damage healed (pass)", async () => {
+  it("no rebound when zero damage healed", async () => {
     const g = new GameTestAdapter();
     const state = new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)
@@ -170,9 +151,7 @@ describe("SOR_052 Redemption", () => {
       spreadDamageAssignments: [],
     });
 
-    // No rebound step — game should be fully resolved
     expect(g.state.player1.groundArena[0].damage).toBe(2); // untouched
     expect(g.state.player1.spaceArena[0].damage).toBe(0);  // no rebound
-    expect(g.lastDispatchResponse?.resolutionNeeded).toBeUndefined();
   });
 });

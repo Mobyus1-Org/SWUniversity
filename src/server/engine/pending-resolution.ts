@@ -295,6 +295,24 @@ export interface DeckSearchPending {
   continuation?: PendingResolution | null;
 }
 
+/**
+ * Mill N cards from the top of millingPlayer's deck into their discard pile.
+ * Processed inline (no client round-trip). If a milled card is NOT a unit and
+ * damageIfNotUnit is set, returns an ability-target pending for the damage.
+ */
+export interface MillPending {
+  type: "mill";
+  cardId: string;
+  /** Player who controls the effect (chooses any follow-up damage target). */
+  player: PlayerId;
+  /** Player whose deck is milled. */
+  millingPlayer: PlayerId;
+  count: number;
+  /** When set, deal this damage to a player-chosen ground unit if any milled card is not a unit. */
+  damageIfNotUnit?: number;
+  continuation: PendingResolution | null;
+}
+
 export type PendingResolution =
   | AttackTargetPending
   | AbilityOptionPending
@@ -322,7 +340,8 @@ export type PendingResolution =
   | SpreadHealPending
   | PlayFromHandPending
   | DeckSearchPending
-  | PeekHandPending;
+  | PeekHandPending
+  | MillPending;
 
 export interface PeekHandPending {
   type: "peek-hand";

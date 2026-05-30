@@ -1,5 +1,5 @@
 import { Unit } from "@/server/engine/unit";
-import { AbilityOptionPending, DeckSearchPending, PendingResolution, SpreadDamagePending } from "@/server/engine/pending-resolution";
+import { AbilityOptionPending, DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
 import { DrawCardForPlayer, GetGame, GetUnitsForPlayer, InitiativePlayer } from "@/server/engine/core-functions";
 import { CardAspects, CardTitle } from "@/server/engine/card-db/generated";
@@ -44,6 +44,30 @@ export function resolveWhenDefeated(
         controlledBy: player,
         options: [`deal_base_damage=${opponent},3`, `player_discards_from_hand=${opponent},1`],
       };
+    }
+    case "SOR_204": { // Greedo — When Defeated: You may discard a card from your deck. If it's not a unit, deal 2 damage to a ground unit.
+      const game204 = GetGame();
+      if (!game204) return null;
+      const deck204 = player === 1 ? game204.currentGameState.player1.deck : game204.currentGameState.player2.deck;
+      if (deck204.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId: "SOR_204",
+        player,
+        helperText: "Discard the top card of your deck?",
+        yesLabel: "Discard",
+        noLabel: "Skip",
+        onYes: {
+          type: "mill",
+          cardId: "SOR_204",
+          player,
+          millingPlayer: player,
+          count: 1,
+          damageIfNotUnit: 2,
+          continuation: null,
+        } satisfies MillPending,
+        continuation: null,
+      } satisfies AbilityOptionPending;
     }
     case "LOF_213": { // The Legacy Run — When Defeated: Deal 6 damage divided as you choose among enemy units.
       const opponent213 = player === 1 ? 2 : 1;

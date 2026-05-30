@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, searchDeck } from "@/server/engine/core-functions";
+import { CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, searchDeck, PlayerHasUnitWithTraitInPlay } from "@/server/engine/core-functions";
 import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
@@ -674,6 +674,28 @@ export function resolveWhenPlayed(
         },
         continuation: null,
       };
+    }
+    case "SOR_075": { // It Binds All Things — Heal up to 3 from a unit. If Force unit, may deal that much to another unit.
+      const allUnits075 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].map(u => u.playId);
+      const hasForceContinuation = PlayerHasUnitWithTraitInPlay(player, "Force")
+        ? {
+            type: "spread-damage" as const,
+            cardId,
+            player,
+            totalDamage: 0, // mutated to actual healed total by spread-heal resolver
+            eligiblePlayIds: allUnits075,
+            optional: true,
+            continuation: null,
+          } satisfies SpreadDamagePending
+        : null;
+      return {
+        type: "spread-heal",
+        cardId,
+        player,
+        maxHeal: 3,
+        eligiblePlayIds: allUnits075,
+        continuation: hasForceContinuation,
+      } satisfies SpreadHealPending;
     }
     case "SOR_074": // Repair — Heal 3 damage from a unit or base.
     case "JTL_075": {

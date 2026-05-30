@@ -73,7 +73,9 @@ import type {
   PlotOrderPending,
   PlotWindowPending,
   ResolveAttackPending,
+  MillPending,
   SpreadDamagePending,
+  SpreadHealPending,
   TriggerOrderPending,
   UpgradeTargetPending,
 } from "@/server/engine/pending-resolution";
@@ -1227,6 +1229,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         eligibleIndices,
       } satisfies NeedsPeekHand;
     }
+    case "mill": throw new Error("MillPending should be processed inline and never reach the client.");
     default: throw new Error(`Unknown pending resolution type: ${pending.type}`);
   }
 }
@@ -2317,13 +2320,24 @@ function handleChooseTarget(
       healTarget(game, assignment.playId, assignment.damage, log, pending.cardId);
     }
 
-    // Mutate the continuation's totalDamage to the actual healed total so that
-    // rebound effects (e.g. SOR_052 Redemption) receive the right amount.
-    // If nothing was healed, skip the rebound continuation entirely.
+    // Mutate a spread-damage continuation with the actual healed total, then either
+    // auto-apply it (single predetermined target, e.g. Redemption) or surface it to
+    // the client for target selection (multiple eligible targets, e.g. LOF_246/SOR_075).
     if (pending.continuation?.type === "spread-damage") {
-      pending.continuation = total > 0
-        ? { ...pending.continuation, totalDamage: total }
-        : pending.continuation.continuation ?? null;
+      const rebound = pending.continuation;
+      if (total > 0) {
+        if (rebound.eligiblePlayIds.length === 1) {
+          // Auto-apply: single predetermined target — no client round-trip needed
+          DealDamageToUnit(game, rebound.cardId, rebound.eligiblePlayIds[0], total, log);
+          pending.continuation = rebound.continuation ?? null;
+        } else {
+          // Player picks target: surface as pending with the mutated totalDamage
+          pending.continuation = { ...rebound, totalDamage: total };
+        }
+      } else {
+        // Nothing healed — skip the damage step entirely
+        pending.continuation = rebound.continuation ?? null;
+      }
     }
 
     updateDefeatedPlayers(game);
@@ -2665,9 +2679,12 @@ function handleChooseOption(
 
   if (pending?.type === "ability-option") {
     if (option === "Yes") {
-      const nextPending = pending.onYes ?? null;
+      let nextPending = pending.onYes ?? null;
+      if (nextPending?.type === "mill") {
+        nextPending = processMill(game, log, nextPending);
+      }
       if (nextPending) {
-        return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+        return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: true };
       }
       // onYes is null — apply inline effect by cardId
       const effectResult = applyAbilityOptionEffect(pending, game, log);
@@ -3377,9 +3394,60 @@ function resolveActionAbility(
         continuation: null,
       };
     }
+    case "LOF_246": { // Grogu — Action [Exhaust]: Heal up to 2 from a unit. If you do, deal that much to a unit.
+      const allUnits246 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].map(u => u.playId);
+      return {
+        type: "spread-heal",
+        cardId: "LOF_246",
+        player,
+        maxHeal: 2,
+        eligiblePlayIds: allUnits246,
+        continuation: {
+          type: "spread-damage",
+          cardId: "LOF_246",
+          player,
+          totalDamage: 0, // mutated to actual healed total by spread-heal resolver
+          eligiblePlayIds: allUnits246,
+          optional: false,
+          continuation: null,
+        } satisfies SpreadDamagePending,
+      } satisfies SpreadHealPending;
+    }
     default:
       return null;
   }
+}
+
+/**
+ * Executes a MillPending inline — no client round-trip.
+ * Returns the next pending (ability-target for conditional damage, or the mill's own continuation).
+ */
+function processMill(game: GameState, log: string[], pending: MillPending): PendingResolution | null {
+  const pState = GetPlayer(game, pending.millingPlayer);
+  let notUnitMilled = false;
+
+  for (let i = 0; i < pending.count; i++) {
+    const top = pState.deck.pop();
+    if (!top) break;
+    pushEventToDiscard(game, pending.millingPlayer, top.cardId);
+    log.push(`${CardTitle(pending.cardId)}: milled ${CardTitle(top.cardId)}.`);
+    if (CardType(top.cardId) !== "Unit") notUnitMilled = true;
+  }
+
+  if (notUnitMilled && pending.damageIfNotUnit !== undefined) {
+    const groundUnits = [...game.player1.groundArena, ...game.player2.groundArena];
+    if (groundUnits.length > 0) {
+      return {
+        type: "ability-target",
+        cardId: pending.cardId,
+        player: pending.player,
+        fromPlayIds: groundUnits.map(u => u.playId),
+        continuation: pending.continuation ?? null,
+      } satisfies AbilityTargetPending;
+    }
+  }
+
+  return pending.continuation ?? null;
 }
 
 /**
@@ -3439,6 +3507,11 @@ function applyAbilityEffect(
         target016.ready = false;
         game.gameLog.push(`${CardTitle("SOR_016")}: exhausted ${CardTitle(target016.cardId)}.`);
       }
+      break;
+    }
+    case "SOR_204": { // Greedo mill: deal 2 damage to the chosen ground unit
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
       break;
     }
     case "SEC_182": { // Charged with Treason — deal 5 damage to chosen unit

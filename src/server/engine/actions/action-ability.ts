@@ -101,6 +101,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         }
         break;
       }
+      case "LOF_246": // Grogu — Action [Exhaust]: Heal up to 2 from a unit; if healed, deal that to a unit.
+        abilities.push(cardId);
+        break;
       default: break;
     }
   }

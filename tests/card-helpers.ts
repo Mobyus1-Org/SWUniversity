@@ -222,6 +222,7 @@ export const Cards = {
       fightersForFreedom: "SOR_143",
       k2so: "SOR_145",
       wampa: "SOR_164",
+      greedo: "SOR_204",
       craftySmuggler: "SOR_207",
       syndicateLackeys: "SOR_213",
       rebelPathfinder: "SOR_239",
@@ -280,6 +281,7 @@ export const Cards = {
     },
     lof: {
       kelleranBeq: "LOF_100",
+      grogu: "LOF_246",
       gungi: "LOF_093",
       strikeship: "LOF_131",
       witchOfTheMist: "LOF_154",
@@ -333,6 +335,7 @@ export const Cards = {
     },
     sor: {
       searchYourFeelings: "SOR_042",
+      itBindsAllThings: "SOR_075",
       superlaserBlast: "SOR_043",
       repair: "SOR_074",
       powerOfTheDarkSide: "SOR_041",
