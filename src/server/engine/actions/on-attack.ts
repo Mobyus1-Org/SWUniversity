@@ -1,6 +1,6 @@
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, optionalTarget, searchDeck } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, optionalTarget, searchDeck, DealDamageToUnit } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { CardTraits } from "@/server/engine/card-db/generated";
@@ -107,6 +107,23 @@ export function resolveOnAttackTrigger(
   }
   // innate On Attack abilities
   switch (attacker.cardId) {
+    case "SOR_179": { // Boba Fett — if attacking an exhausted unit that didn't enter play this round, deal 3 damage.
+      if (continuation.target.type !== "unit") return continuation;
+      const defPlayId179 = continuation.target.playId;
+      const game179 = GetGame();
+      if (!game179) return continuation;
+      const gs179 = game179.currentGameState;
+      const defender179 = gs179.player1.groundArena.find(u => u.playId === defPlayId179)
+        ?? gs179.player2.groundArena.find(u => u.playId === defPlayId179);
+      if (
+        defender179 &&
+        !defender179.ready &&
+        !gs179.roundState.cardsEnteredPlayThisPhase.some(c => c.playId === defender179.playId)
+      ) {
+        DealDamageToUnit(gs179, "SOR_179", defender179.playId, 3, game179.gameLog);
+      }
+      return continuation;
+    }
     case "SOR_119": { // Reinforcement Walker — look at top card; draw (Yes) or discard + heal 3 (No).
       const game119 = GetGame();
       if (!game119) return continuation;

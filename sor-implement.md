@@ -6,11 +6,11 @@
 
 | Status | Count |
 |--------|-------|
-| Implemented | 124 |
+| Implemented | 141 |
 | Partially Implemented | 40 |
 | Keywords Only (auto-handled) | 23 |
 | Unimplemented – Simple | 0 |
-| Unimplemented – Complex | 47 |
+| Unimplemented – Complex | 25 |
 | **Total** | **214** |
 
 ---
@@ -21,11 +21,6 @@
 
 These cards need new engine features or unusual interactions.
 
-
-### SOR_055 — The Force Is With Me (Event)
-**Card Text:** Choose a friendly unit and give 2 Experience tokens to it. If you control a FORCE unit, also give a Shield token to the chosen unit. You may attack with the chosen unit.
-
-**Notes:** Needs implementation: Choose a friendly unit and give 2 Experience tokens to it. If you control a FORCE unit, also give a S
 
 ### SOR_058 — Vigilance (Event)
 **Card Text:** Choose two, in any order:
@@ -65,27 +60,12 @@ Defe
 ### SOR_109 — Colonel Yularen (Unit)
 **Card Text:** When you play a [Command] unit (including this one): Heal 1 damage from your base.
 
-**Notes:** Needs implementation: When you play a [Command] unit (including this one): Heal 1 damage from your base.
+**Notes:** Needs reactive trigger: when any Command-aspect unit enters play, check if Yularen is in play and heal 1. Hook needed in completePlayCard (similar to Gideon Hask's enemy-unit-defeated pattern).
 
 ### SOR_110 — Frontline Shuttle (Unit)
 **Card Text:** Action [defeat this unit]: Attack with a unit, even if it's exhausted. It can't attack bases for this attack.
 
 **Notes:** Needs implementation: Action [defeat this unit]: Attack with a unit, even if it's exhausted. It can't attack bases for thi
-
-### SOR_119 — Reinforcement Walker (Unit)
-**Card Text:** When Played/On Attack: Look at the top card of your deck. Either draw that card or discard it and heal 3 damage from your base.
-
-**Notes:** Needs implementation: When Played/On Attack: Look at the top card of your deck. Either draw that card or discard it and he
-
-### SOR_125 — Prepare for Takeoff (Event)
-**Card Text:** Search the top 8 cards of your deck for up to 2 Vehicle units, reveal them, and draw them. (Put the other cards on the bottom of your deck in a random order.)
-
-**Notes:** Needs implementation: Search the top 8 cards of your deck for up to 2 Vehicle units, reveal them, and draw them. (Put the
-
-### SOR_126 — Resupply (Event)
-**Card Text:** Put this event into play as a resource.
-
-**Notes:** Needs implementation: Put this event into play as a resource.
 
 ### SOR_129 — Admiral Ozzel (Unit)
 **Card Text:** Action [exhaust]: Play an Imperial unit from your hand (paying its cost). It enters play ready. Each opponent may ready a unit.
@@ -107,16 +87,6 @@ Deal 5 damage to a non-
 On Attack: You may deal 1 damage to the defender or to a base.
 
 **Notes:** Needs implementation: While there are at least 3 aspects among other friendly units, this unit can't be attacked (unless s
-
-### SOR_146 — Zeb Orrelios (Unit)
-**Card Text:** When this unit completes an attack: If the defender was defeated, you may deal 4 damage to a ground unit.
-
-**Notes:** Needs implementation: When this unit completes an attack: If the defender was defeated, you may deal 4 damage to a ground
-
-### SOR_147 — Black One (Unit)
-**Card Text:** When Played/When Defeated: You may discard your hand. If you do, draw 3 cards.
-
-**Notes:** Needs implementation: When Played/When Defeated: You may discard your hand. If you do, draw 3 cards.
 
 ### SOR_152 — For a Cause I Believe In (Event)
 **Card Text:** Reveal the top 4 cards of your deck. For each [Heroism] card revealed this way, deal 1 damage to an enemy base. You may discard any of the revealed cards and put the rest back on top of your deck in any order.
@@ -143,11 +113,6 @@ Defeat up to 2 upgrades.
 Ready a unit with 3 or less power.
 De
 
-### SOR_161 — Ardent Sympathizer (Unit)
-**Card Text:** While you have the initiative, this unit gets +2/+0.
-
-**Notes:** Needs implementation: While you have the initiative, this unit gets +2/+0.
-
 ### SOR_167 — Force Throw (Event)
 **Card Text:** Choose a player. That player discards a card from their hand. Then, if you control a FORCE unit, you may deal damage to a unit equal to the cost of the discarded card.
 
@@ -162,16 +127,6 @@ De
 **Card Text:** Draw 2 cards. Each opponent whose base you've damaged this phase discards 2 cards from their hand.
 
 **Notes:** Needs implementation: Draw 2 cards. Each opponent whose base you've damaged this phase discards 2 cards from their hand.
-
-### SOR_178 — Cartel Spacer (Unit)
-**Card Text:** When Played: If you control another [Cunning] unit, exhaust an enemy unit that costs 4 or less.
-
-**Notes:** Needs implementation: When Played: If you control another [Cunning] unit, exhaust an enemy unit that costs 4 or less.
-
-### SOR_179 — Boba Fett (Unit)
-**Card Text:** On Attack: If this unit is attacking an exhausted unit that didn't enter play this round, deal 3 damage to the defender.
-
-**Notes:** Needs implementation: On Attack: If this unit is attacking an exhausted unit that didn't enter play this round, deal 3 dam
 
 ### SOR_181 — Jabba the Hutt (Unit)
 **Card Text:** Each TRICK event you play costs [1 resource] less.
@@ -197,19 +152,12 @@ When Played: Search the top 8 cards of your d
 
 On Attack: Discard a card from the defending player's deck. If it's an event, exhaust a resource that player controls.
 
-**Notes:** Needs implementation: While you control another SPECTRE unit, this unit gains Raid 1.
-
-On Attack: Discard a card from th
+**Notes:** Conditional Raid 1: same pattern as SOR_113 Homestead Militia (conditional Sentinel) — add case to Raid keyword. On Attack mill: use MillPending + MillResultPending case — if milled card is an event, exhaust one of the defending player's resources.
 
 ### SOR_190 — Lothal Insurgent (Unit)
 **Card Text:** When Played: If you played another card this phase, each opponent draws a card then discards a random card from their hand.
 
-**Notes:** Needs implementation: When Played: If you played another card this phase, each opponent draws a card then discards a rando
-
-### SOR_191 — Vanguard Ace (Unit)
-**Card Text:** When Played: For each other card you played this phase, give an Experience token to this unit.
-
-**Notes:** Needs implementation: When Played: For each other card you played this phase, give an Experience token to this unit.
+**Notes:** Check cardsPlayedThisPhase — if another card was played, DrawCardForPlayer for each opponent then discard a random card from their hand. Random discard is the only new piece (pick a random hand index).
 
 ### SOR_192 — Ezra Bridger (Unit)
 **Card Text:** When this unit completes an attack: Look at the top card of your deck. You may play it, discard it, or leave it on top of your deck.
@@ -243,77 +191,50 @@ Exhaust a uni
 
 Attached unit gains: 'On Attack: Ready a resource.'
 
-**Notes:** Needs implementation: Attach to a VEHICLE unit.
-
-Attached unit gains: 'On Attack: Ready a resource.'
+**Notes:** Attach restriction (Vehicle only) needs enforcement. UpgradeGrantsOnAttack case → new On Attack handler: ready one of the controller's exhausted resources.
 
 ### SOR_217 — Shoot First (Event)
 **Card Text:** Attack with a unit. It gets +1/+0 for this attack and deals its combat damage before the defender. (If the defender is defeated, it deals no combat damage.)
 
 **Notes:** Needs implementation: Attack with a unit. It gets +1/+0 for this attack and deals its combat damage before the defender. (
 
-### SOR_218 — Asteroid Sanctuary (Event)
-**Card Text:** Exhaust an enemy unit.
-
-Give a Shield token to a friendly unit that costs 3 or less.
-
-**Notes:** Needs implementation: Exhaust an enemy unit.
-
-Give a Shield token to a friendly unit that costs 3 or less.
-
 ### SOR_223 — Don't Get Cocky (Event)
 **Card Text:** Choose a unit. One at a time, reveal cards from your deck until you choose to stop or have revealed 7 cards. If the combined cost of the revealed cards is 7 or less, deal that much damage to the chosen unit. Put the revealed cards on the bottom of your deck in a random order.
 
 **Notes:** Needs implementation: Choose a unit. One at a time, reveal cards from your deck until you choose to stop or have revealed
 
-### SOR_230 — General Veers (Unit)
-**Card Text:** Other friendly Imperial units get +1/+1.
-
-**Notes:** Needs implementation: Other friendly Imperial units get +1/+1.
-
-### SOR_231 — TIE Advanced (Unit)
-**Card Text:** When Played: Give 2 Experience tokens to another friendly IMPERIAL unit.
-
-**Notes:** Needs implementation: When Played: Give 2 Experience tokens to another friendly IMPERIAL unit.
-
 ### SOR_233 — I Am Your Father (Event)
 **Card Text:** Deal 7 damage to an enemy unit unless its controller says 'no.' If they do, draw 3 cards.
 
-**Notes:** Needs implementation: Deal 7 damage to an enemy unit unless its controller says 'no.' If they do, draw 3 cards.
+**Notes:** Target an enemy unit → present ability-option to that unit's controller (Yes = take 7 damage, No = attacker draws 3). Needs a two-player option pending where the non-active player responds.
 
 ### SOR_234 — Maximum Firepower (Event)
 **Card Text:** A friendly Imperial unit deals damage equal to its power to a unit.
 
 Then, another friendly Imperial unit deals damage equal to its power to the same unit.
 
-**Notes:** Needs implementation: A friendly Imperial unit deals damage equal to its power to a unit.
-
-Then, another friendly Imperi
+**Notes:** Two sequential ability-targets: pick first Imperial unit → deal its CurrentPower() to a chosen target; store target playId in pending.sourcePlayId; pick second Imperial unit → deal its CurrentPower() to the same target.
 
 ### SOR_235 — Galactic Ambition (Event)
 **Card Text:** Play a non-[Heroism] unit from your hand for free. Deal damage to your base equal to its cost.
 
-**Notes:** Needs implementation: Play a non-[Heroism] unit from your hand for free. Deal damage to your base equal to its cost.
+**Notes:** play-from-hand filtered to non-Heroism units with costModifier: 'free'. In the play-from-hand handler, after completePlayCard, deal CardCost(chosen) damage to the playing player's base.
 
 ### SOR_238 — C-3PO (Unit)
 **Card Text:** When Played/On Attack: Choose a number, then look at the top card of your deck. If its cost is the chosen number, you may reveal and draw it. (Otherwise, leave it on top of your deck.)
 
 **Notes:** Needs implementation: When Played/On Attack: Choose a number, then look at the top card of your deck. If its cost is the
 
-### SOR_242 — General Dodonna (Unit)
-**Card Text:** Other friendly Rebel units get +1/+1.
-
-**Notes:** Needs implementation: Other friendly Rebel units get +1/+1.
-
-### SOR_245 — Medal Ceremony (Event)
-**Card Text:** Give an Experience token to each of up to 3 REBEL units that attacked this phase.
-
-**Notes:** Needs implementation: Give an Experience token to each of up to 3 REBEL units that attacked this phase.
-
 ### SOR_246 — You're My Only Hope (Event)
 **Card Text:** Look at the top card of your deck. You may play it. It costs [5 resources] less. If your base has 5 or less remaining HP, you may play it for free instead.
 
-**Notes:** Needs implementation: Look at the top card of your deck. You may play it. It costs [5 resources] less. If your base has 5
+**Notes:** Same peek pattern as SOR_119 Reinforcement Walker. Yes path: play-from-hand for the top card with costModifier: -5 (or 'free' if base HP ≤ 5). No path: leave card on top (no-op).
+
+---
+
+## Unimplemented – Simple (implementable with existing engine patterns)
+
+All simple cards have been implemented.
 
 ---
 
@@ -651,7 +572,7 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_079 | Admiral Piett | Unit | Has custom logic in engine keyword dictionaries or dispatch-listener |
 | SOR_080 | General Tagge | Unit | Has custom logic in engine action files |
 | SOR_082 | Emperor's Royal Guard | Unit | Has custom logic in engine keyword dictionaries or dispatch-listener |
-| SOR_083 | Superlaser Technician | Unit | Has custom logic in engine action files |
+| SOR_083 | Superlaser Technician | Unit | When Defeated: may put into resources ready; reworked to ability-option pattern + discard cleanup; test coverage added |
 | SOR_087 | Darth Vader | Unit | Has custom logic in engine action files |
 | SOR_092 | Overwhelming Barrage | Event | Has custom logic in engine action files |
 | SOR_097 | Leia Organa | Unit | Has custom logic in engine action files |
@@ -695,6 +616,19 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_249 | Frontier AT-RT | Unit | Has custom logic in engine keyword dictionaries or dispatch-listener |
 | SOR_251 | Confiscate | Event | Has custom logic in engine action files |
 | SOR_252 | Restock | Event | Has custom logic in engine action files |
+| SOR_126 | Resupply | Event | When Played: put event into resources (exhausted); via when-played-trigger; test coverage added |
+| SOR_125 | Prepare for Takeoff | Event | Search top 8 for up to 2 Vehicle units, draw; test coverage added |
+| SOR_146 | Zeb Orrelios | Unit | When attack ends + defender defeated: may deal 4 to a ground unit; test coverage added |
+| SOR_147 | Black One | Unit | When Played/When Defeated: may discard hand, draw 3; test coverage added |
+| SOR_161 | Ardent Sympathizer | Unit | While controller has initiative: +2/+0; inline in unit.ts CurrentPower(); test coverage added |
+| SOR_178 | Cartel Spacer | Unit | When Played: if another Cunning unit, exhaust enemy unit cost ≤ 4; test coverage added |
+| SOR_179 | Boba Fett | Unit | On Attack: if defender exhausted and didn't enter this round, deal 3; test coverage added |
+| SOR_191 | Vanguard Ace | Unit | When Played: XP per other card played this phase; via when-played-trigger; test coverage added |
+| SOR_218 | Asteroid Sanctuary | Event | Exhaust enemy unit; give Shield to friendly unit cost ≤ 3; two-step ability-target; test coverage added |
+| SOR_230 | General Veers | Unit | Other friendly Imperial units +1/+1; loops in CurrentPower()/TotalHP(); test coverage added |
+| SOR_231 | TIE Advanced | Unit | When Played: give 2 XP to another friendly Imperial unit; test coverage added |
+| SOR_242 | General Dodonna | Unit | Other friendly Rebel units +1/+1; loops in CurrentPower()/TotalHP(); test coverage added |
+| SOR_245 | Medal Ceremony | Event | Give XP to up to 3 Rebel units that attacked this phase; GiveXpMultiplePending; test coverage added |
 | SOR_031 | Inferno Four | Unit | When Played/When Defeated: Scry 2; test coverage added |
 | SOR_043 | Superlaser Blast | Event | Defeat all units (board wipe); test coverage added |
 | SOR_036 | Gideon Hask | Unit | When an enemy unit is defeated: Experience token; test coverage added |
@@ -730,6 +664,8 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_052 | Redemption | Unit | Sentinel + When Played: spread heal up to 8 across units/bases, deal total to self; uses SpreadHealPending; test coverage added |
 | SOR_042 | Search Your Feelings | Event | When Played: search entire deck for any card and draw it (dontReveal); test coverage added |
 | SOR_047 | Kanan Jarrus | Unit | On Attack: mill N cards from defending player's deck (N = friendly Spectre count); heal base by distinct aspects among milled cards; uses MillPending + MillResultPending; test coverage added |
+| SOR_055 | The Force Is With Me | Event | Choose friendly unit: give 2 XP; if Force unit in play give Shield; may attack with it; test coverage added |
+| SOR_119 | Reinforcement Walker | Unit | When Played/On Attack: peek top card, Yes=draw it / No=discard+heal 3; uses ability-option Yes/No pattern; test coverage added |
 | SOR_075 | It Binds All Things | Event | Heal up to 3 from a unit; if you control a Force unit, may deal that much to another unit; uses SpreadHealPending with afterHeal; test coverage added |
 | SOR_204 | Greedo | Unit | When Defeated: may discard top card of own deck; if non-unit, deal 2 damage to a ground unit; uses MillPending + MillResultPending; test coverage added |
 | SOR_081 | Seasoned Shoretrooper | Unit | While 6+ resources: +2/+0 — conditional power in unit.ts CurrentPower() |

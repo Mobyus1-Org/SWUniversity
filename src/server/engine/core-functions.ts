@@ -551,6 +551,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "SOR_179": //Boba Fett - Disintegrator
     case "SOR_040": //Avenger - Hunting Star Destroyer
     case "SOR_047": //Kanan Jarrus
     case "SOR_119": //Reinforcement Walker

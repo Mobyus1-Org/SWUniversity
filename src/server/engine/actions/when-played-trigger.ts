@@ -56,6 +56,21 @@ export function resolveWhenPlayedTrigger(
       CreateSpy(gs, trigger.fromPlayer, log, trigger.cardId);
       break;
     }
+    case "SOR_191": { // Vanguard Ace — For each other card played this phase, give an XP to this unit.
+      const pState191 = trigger.fromPlayer === 1 ? gs.player1 : gs.player2;
+      const xpCount = gs.roundState.cardsPlayedThisPhase.filter(
+        c => c.fromPlayer === trigger.fromPlayer && c.playId !== trigger.playId
+      ).length;
+      if (xpCount === 0) break;
+      const unit191 = [...pState191.spaceArena, ...pState191.groundArena].find(u => u.playId === trigger.playId);
+      if (unit191) {
+        for (let i = 0; i < xpCount; i++) {
+          unit191.upgrades.push({ cardId: "SOR_T01", playId: String(gs.nextPlayId++), owner: unit191.owner, controller: unit191.controller });
+        }
+        log.push(`${CardTitle(trigger.cardId)}: gained ${xpCount} Experience token(s).`);
+      }
+      break;
+    }
     default:
       break;
   }

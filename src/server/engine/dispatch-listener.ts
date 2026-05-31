@@ -1004,6 +1004,27 @@ function resolveWhenAttackEnds(
   if (!GetUnitByPlayId(game, attacker.playId)) return continuation;
 
   switch (attacker.cardId) {
+    case "SOR_146": { // Zeb Orrelios — when completes attack and defeats defender: may deal 4 to a ground unit
+      if (!defDefeated) return continuation;
+      const allGround146 = AllGroundUnits();
+      if (allGround146.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: attacker.cardId,
+        player: attacker.controller,
+        helperText: "Deal 4 damage to a ground unit?",
+        yesLabel: "Deal 4",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: attacker.cardId,
+          player: attacker.controller,
+          fromPlayIds: allGround146.map(u => u.playId),
+          continuation,
+        },
+        continuation,
+      };
+    }
     case "SOR_088": { // Blizzard Assault AT-AT — when attacks and defeats: deal excess to an enemy ground unit
       if (!defDefeated || excessDamage === 0) return continuation;
       const enemyGround088 = AllGroundUnits().filter(u => u.controller !== attacker.controller);
@@ -2598,6 +2619,35 @@ function applyAbilityOptionEffect(
       }
       return pending.continuation ?? null;
     }
+    case "SOR_147": { // Black One Yes — discard hand, draw 3
+      const pState147 = pending.player === 1 ? game.player1 : game.player2;
+      const discarded147 = pState147.hand.splice(0);
+      for (const c of discarded147) {
+        pState147.discard.unshift({ cardId: c.cardId, playId: String(game.nextPlayId++), owner: pending.player!, controller: pending.player!, turnDiscarded: game.currentRound, discardEffect: "" });
+      }
+      DrawCardForPlayer(game, log, pending.player!);
+      DrawCardForPlayer(game, log, pending.player!);
+      DrawCardForPlayer(game, log, pending.player!);
+      log.push(`${CardTitle("SOR_147")}: discarded hand and drew 3 cards.`);
+      return pending.continuation ?? null;
+    }
+    case "SOR_083": { // Superlaser Technician Yes — remove from discard, put into resources ready
+      const pState083 = GetPlayer(game, pending.player!);
+      const discardIdx083 = pState083.discard.findIndex(d => d.playId === pending.sourcePlayId);
+      const playId083 = discardIdx083 >= 0
+        ? pState083.discard.splice(discardIdx083, 1)[0].playId
+        : nextPlayId(game);
+      pState083.resources.push({
+        cardId: "SOR_083",
+        playId: playId083,
+        owner: pending.player!,
+        controller: pending.player!,
+        ready: true,
+        stolen: false,
+      });
+      log.push(`${CardTitle("SOR_083")}: entered play as a ready resource.`);
+      return pending.continuation ?? null;
+    }
     case "SOR_016": // Yes = reveal own deck
       return thrawnsReveal(game, log, pending.player!, pending.player!);
     case "JTL_096": {
@@ -3602,6 +3652,52 @@ function applyAbilityEffect(
         target016.ready = false;
         game.gameLog.push(`${CardTitle("SOR_016")}: exhausted ${CardTitle(target016.cardId)}.`);
       }
+      break;
+    }
+    case "SOR_178": { // Cartel Spacer — exhaust chosen enemy unit
+      if (!targetPlayId) break;
+      const opp178 = pending.player === 1 ? game.currentGameState.player2 : game.currentGameState.player1;
+      const target178 = [...opp178.groundArena, ...opp178.spaceArena].find(u => u.playId === targetPlayId);
+      if (target178) {
+        target178.ready = false;
+        game.gameLog.push(`${CardTitle("SOR_178")}: exhausted ${CardTitle(target178.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_218": { // Asteroid Sanctuary step 1 — exhaust chosen enemy unit
+      if (!targetPlayId) break;
+      const opp218 = pending.player === 1 ? game.currentGameState.player2 : game.currentGameState.player1;
+      const target218 = [...opp218.groundArena, ...opp218.spaceArena].find(u => u.playId === targetPlayId);
+      if (target218) {
+        target218.ready = false;
+        game.gameLog.push(`${CardTitle("SOR_218")}: exhausted ${CardTitle(target218.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_218_shield": { // Asteroid Sanctuary step 2 — give Shield to chosen friendly unit
+      if (!targetPlayId) break;
+      const me218 = pending.player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+      const target218s = [...me218.groundArena, ...me218.spaceArena].find(u => u.playId === targetPlayId);
+      if (target218s) {
+        target218s.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target218s.owner, controller: target218s.controller });
+        game.gameLog.push(`${CardTitle("SOR_218")}: gave a Shield token to ${CardTitle(target218s.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_231": { // TIE Advanced — give 2 XP to chosen friendly Imperial unit
+      if (!targetPlayId) break;
+      const me231 = pending.player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+      const target231 = [...me231.groundArena, ...me231.spaceArena].find(u => u.playId === targetPlayId);
+      if (target231) {
+        target231.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target231.owner, controller: target231.controller });
+        target231.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target231.owner, controller: target231.controller });
+        game.gameLog.push(`${CardTitle("SOR_231")}: gave 2 Experience tokens to ${CardTitle(target231.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_146": { // Zeb Orrelios — deal 4 damage to chosen ground unit
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 4, game.gameLog);
       break;
     }
     case "SOR_088": { // Blizzard Assault AT-AT — deal stored excess damage to chosen enemy ground unit

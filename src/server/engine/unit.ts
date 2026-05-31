@@ -1,5 +1,5 @@
 import { CardInPlay, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer } from "@/server/engine/core-functions";
 import { CardHp, CardPower, CardUpgradeHp, CardUpgradePower } from "@/server/engine/card-db/generated";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
@@ -140,6 +140,12 @@ export class Unit implements UnitInterface {
         case "SHD_008": //Boba Fett - Daimyo
           power += isOtherUnit && HasKeyword(this.cardId, "Any", this.playId, this.controller) ? 1 : 0;
           break;
+        case "SOR_230": // General Veers — other friendly Imperial units get +1/+1
+          power += isOtherUnit && TraitContains(this.cardId, "Imperial", this.controller, this.playId) ? 1 : 0;
+          break;
+        case "SOR_242": // General Dodonna — other friendly Rebel units get +1/+1
+          power += isOtherUnit && TraitContains(this.cardId, "Rebel", this.controller, this.playId) ? 1 : 0;
+          break;
         case "TWI_114": //Clone Commander Cody - Commanding the 212th
           power += IsCoordinateActive(this.controller) && isOtherUnit ? 1 : 0;
           break;
@@ -205,6 +211,7 @@ export class Unit implements UnitInterface {
     if (!this.LostAbilities()) {
       if (this.cardId === "SOR_081" && GetResources(this.controller).length >= 6) power += 2; // Seasoned Shoretrooper
       if (this.cardId === "SOR_118") power += GetResources(this.controller).length; // 97th Legion
+      if (this.cardId === "SOR_161" && InitiativePlayer() === this.controller) power += 2; // Ardent Sympathizer
     }
 
     if (isAttacking) {
@@ -233,6 +240,12 @@ export class Unit implements UnitInterface {
       switch (unit.cardId) {
        case "TWI_114": //Clone Commander Cody - Commanding the 212th
           hp += IsCoordinateActive(this.controller) && isOtherUnit ? 1 : 0;
+          break;
+        case "SOR_230": // General Veers — other friendly Imperial units get +1/+1
+          hp += isOtherUnit && TraitContains(this.cardId, "Imperial", this.controller, this.playId) ? 1 : 0;
+          break;
+        case "SOR_242": // General Dodonna — other friendly Rebel units get +1/+1
+          hp += isOtherUnit && TraitContains(this.cardId, "Rebel", this.controller, this.playId) ? 1 : 0;
           break;
         default: break;
        }

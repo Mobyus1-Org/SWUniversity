@@ -1,9 +1,9 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, PlayerHasUnitWithTraitInPlay } from "@/server/engine/core-functions";
+import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
 import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
-import { CardTitle, CardType } from "@/server/engine/card-db/generated";
+import { CardTitle, CardType, CardCost } from "@/server/engine/card-db/generated";
 
 /** Returns playIds for all units on both sides plus both base identifiers. */
 function allUnitsAndBasesPlayIds(): string[] {
@@ -384,6 +384,17 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SOR_147": // Black One — "When Played/When Defeated: You may discard your hand. If you do, draw 3 cards."
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        helperText: "Discard your hand and draw 3 cards?",
+        yesLabel: "Discard & Draw 3",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: null,
+      };
     case "SOR_150": { // Heroic Sacrifice — "Draw a card, then attack with a unit. It gets +2/+0 and dies when it deals combat damage."
       const game150 = game!;
       const gs150 = game150.currentGameState;
@@ -426,6 +437,63 @@ export function resolveWhenPlayed(
         fromPlayIds: friendly092.map(u => u.playId),
         continuation: null,
       };
+    }
+    case "SOR_178": { // Cartel Spacer — If you control another Cunning unit, exhaust an enemy unit (cost ≤ 4).
+      if (!PlayerHasUnitWithAspectInPlay(player, "Cunning", true, playId)) return null;
+      const eligible178 = AllUnits().filter(u => u.controller !== player && (CardCost(u.cardId) ?? 0) <= 4);
+      if (eligible178.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible178.map(u => u.playId));
+    }
+    case "SOR_191": // Vanguard Ace — effect applied in resolveWhenPlayedTrigger
+      return null;
+    case "SOR_218": { // Asteroid Sanctuary — Exhaust an enemy unit; give Shield to a friendly unit (cost ≤ 3).
+      const enemies218 = AllUnits().filter(u => u.controller !== player);
+      if (enemies218.length === 0) return null;
+      const friendliesEligible218 = AllUnits().filter(u => u.controller === player && (CardCost(u.cardId) ?? 0) <= 3);
+      const shieldStep: PendingResolution = friendliesEligible218.length > 0
+        ? mandatoryTarget("SOR_218_shield", player, friendliesEligible218.map(u => u.playId))
+        : null as unknown as PendingResolution;
+      return { type: "ability-target", cardId, player, fromPlayIds: enemies218.map(u => u.playId), continuation: friendliesEligible218.length > 0 ? shieldStep : null };
+    }
+    case "SOR_231": { // TIE Advanced — Give 2 XP to another friendly Imperial unit.
+      const imperials231 = AllUnits().filter(u => u.controller === player && u.playId !== playId && TraitContains(u.cardId, "Imperial", player, u.playId));
+      if (imperials231.length === 0) return null;
+      return mandatoryTarget(cardId, player, imperials231.map(u => u.playId));
+    }
+    case "SOR_245": { // Medal Ceremony — Give XP to each of up to 3 Rebel units that attacked this phase.
+      const gs245 = game.currentGameState;
+      const rebellsAttacked = gs245.roundState.unitsAttackedThisPhase
+        .filter(a => a.fromPlayer === player && TraitContains(a.cardId, "Rebel", player, a.playId));
+      if (rebellsAttacked.length === 0) return null;
+      const pending245: GiveXpMultiplePending = {
+        type: "give-xp-multiple",
+        cardId,
+        player,
+        maxCount: 3,
+        eligiblePlayIds: rebellsAttacked.map(a => a.playId),
+        continuation: null,
+      };
+      return pending245;
+    }
+    case "SOR_125": // Prepare for Takeoff — Search top 8 for up to 2 Vehicle units, reveal and draw.
+      return searchDeck(cardId, player, 8, "draw", { filter: { type: "Unit", trait: "Vehicle" }, maxChoices: 2 });
+    case "SOR_126": { // Resupply — "Put this event into play as a resource."
+      const gs126 = game.currentGameState;
+      const pState126 = player === 1 ? gs126.player1 : gs126.player2;
+      const discardIdx126 = pState126.discard.findIndex(d => d.cardId === "SOR_126");
+      if (discardIdx126 >= 0) {
+        const discarded = pState126.discard.splice(discardIdx126, 1)[0];
+        pState126.resources.push({
+          cardId: discarded.cardId,
+          playId: discarded.playId,
+          owner: player,
+          controller: player,
+          ready: false,
+          stolen: false,
+        });
+        game.gameLog.push(`${CardTitle("SOR_126")} entered play as an exhausted resource.`);
+      }
+      return null;
     }
     case "SOR_127": { // Strike True — "A friendly unit deals damage equal to its power to an enemy unit."
       const friendlyUnits127 = GetUnitsForPlayer(player);
