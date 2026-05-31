@@ -29,6 +29,22 @@ export function resolveWhenPlayed(
   switch (cardId) {
     case "SOR_042": // Search Your Feelings — Search your deck for a card and draw it. (Then, shuffle your deck.)
       return searchDeck(cardId, player, -1, "draw", { maxChoices: 1, dontReveal: true });
+    case "SOR_119": { // Reinforcement Walker — look at top card, draw it (Yes) or discard + heal 3 (No).
+      const gs119 = game.currentGameState;
+      const deck119 = player === 1 ? gs119.player1.deck : gs119.player2.deck;
+      if (deck119.length === 0) return null;
+      const topCard = deck119[deck119.length - 1];
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        helperText: `Draw ${CardTitle(topCard.cardId)}? Or discard it and heal 3 from your base.`,
+        yesLabel: "Draw",
+        noLabel: "Discard + Heal 3",
+        onYes: null,
+        continuation: null,
+      };
+    }
     case "SOR_084": // Grand Moff Tarkin — Search top 5 for up to 2 Imperial cards, reveal and draw.
       return searchDeck(cardId, player, 5, "draw", { filter: { trait: "Imperial" }, maxChoices: 2 });
     case "SOR_091": { // The Emperor's Legion — Return each unit defeated this phase from discard to hand.

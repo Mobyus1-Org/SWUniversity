@@ -2589,6 +2589,15 @@ function applyAbilityOptionEffect(
   log: string[],
 ): PendingResolution | null {
   switch (pending.cardId) {
+    case "SOR_119": { // Reinforcement Walker Yes — draw the top card
+      const pState119 = GetPlayer(game, pending.player!);
+      const top119 = pState119.deck.pop();
+      if (top119) {
+        pState119.hand.push({ cardId: top119.cardId });
+        log.push(`${CardTitle(pending.cardId)}: drew ${CardTitle(top119.cardId)}.`);
+      }
+      return pending.continuation ?? null;
+    }
     case "SOR_016": // Yes = reveal own deck
       return thrawnsReveal(game, log, pending.player!, pending.player!);
     case "JTL_096": {
@@ -2661,6 +2670,17 @@ function applyAbilityOptionDeclineEffect(
   log: string[],
 ): PendingResolution | null {
   switch (pending.cardId) {
+    case "SOR_119": { // Reinforcement Walker No — discard top card and heal 3 from base
+      const pState119No = GetPlayer(game, pending.player!);
+      const top119No = pState119No.deck.pop();
+      if (top119No) {
+        pushEventToDiscard(game, pending.player!, top119No.cardId);
+        log.push(`${CardTitle(pending.cardId)}: discarded ${CardTitle(top119No.cardId)}.`);
+        pState119No.base.damage = Math.max(0, pState119No.base.damage - 3);
+        log.push(`${CardTitle(pending.cardId)}: healed 3 damage from player ${pending.player!}'s base.`);
+      }
+      return pending.continuation;
+    }
     case "SOR_088": // Declined — discard stored excess value
       game.currentEffects = game.currentEffects.filter(e => e.cardId !== "SOR_088_excess");
       return pending.continuation;

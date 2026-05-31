@@ -107,6 +107,25 @@ export function resolveOnAttackTrigger(
   }
   // innate On Attack abilities
   switch (attacker.cardId) {
+    case "SOR_119": { // Reinforcement Walker — look at top card; draw (Yes) or discard + heal 3 (No).
+      const game119 = GetGame();
+      if (!game119) return continuation;
+      const deck119 = attacker.controller === 1
+        ? game119.currentGameState.player1.deck
+        : game119.currentGameState.player2.deck;
+      if (deck119.length === 0) return continuation;
+      const topCard = deck119[deck119.length - 1];
+      return {
+        type: "ability-option",
+        cardId: attacker.cardId,
+        player: attacker.controller,
+        helperText: `Draw ${CardTitle(topCard.cardId)}? Or discard it and heal 3 from your base.`,
+        yesLabel: "Draw",
+        noLabel: "Discard + Heal 3",
+        onYes: null,
+        continuation,
+      };
+    }
     case "SOR_047": { // Kanan Jarrus — On Attack: You may discard 1 card from the defending player's deck
       // for each friendly SPECTRE unit. Heal 1 damage from your base for each different aspect.
       const game047 = GetGame();

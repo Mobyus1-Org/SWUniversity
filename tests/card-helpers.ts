@@ -223,6 +223,7 @@ export const Cards = {
       monMothmaUnit: "SOR_096",
       homesteadMilitia: "SOR_113",
       ninetySeventhLegion: "SOR_118",
+      reinforcementWalker: "SOR_119",
       wingLeader: "SOR_241",
       systemPatrolCraft: "SOR_066",
       chopper: "SOR_188",
