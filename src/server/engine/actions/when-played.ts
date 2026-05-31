@@ -29,6 +29,38 @@ export function resolveWhenPlayed(
   switch (cardId) {
     case "SOR_042": // Search Your Feelings — Search your deck for a card and draw it. (Then, shuffle your deck.)
       return searchDeck(cardId, player, -1, "draw", { maxChoices: 1, dontReveal: true });
+    case "SOR_084": // Grand Moff Tarkin — Search top 5 for up to 2 Imperial cards, reveal and draw.
+      return searchDeck(cardId, player, 5, "draw", { filter: { trait: "Imperial" }, maxChoices: 2 });
+    case "SOR_091": { // The Emperor's Legion — Return each unit defeated this phase from discard to hand.
+      const gs091 = game.currentGameState;
+      const pState091 = player === 1 ? gs091.player1 : gs091.player2;
+      const defeatedPlayIds = new Set(
+        gs091.roundState.cardsLeftPlayThisPhase
+          .filter(c => c.fromPlayer === player && (c.reason === "defeated" || c.reason === "token-defeated"))
+          .map(c => c.playId)
+      );
+      const toReturn = pState091.discard.filter(d => defeatedPlayIds.has(d.playId) && CardType(d.cardId) === "Unit");
+      for (const card of toReturn) {
+        pState091.hand.push({ cardId: card.cardId });
+        const idx = pState091.discard.findIndex(d => d.playId === card.playId);
+        if (idx >= 0) pState091.discard.splice(idx, 1);
+        game.gameLog.push(`${CardTitle(cardId)}: returned ${CardTitle(card.cardId)} to hand.`);
+      }
+      return null;
+    }
+    case "SOR_096": // Mon Mothma — Search top 5 for a Rebel card, reveal and draw.
+      return searchDeck(cardId, player, 5, "draw", { filter: { trait: "Rebel" }, maxChoices: 1 });
+    case "SOR_055": { // The Force Is With Me — Choose a friendly unit; give 2 XP; if Force unit in play, give Shield; may attack.
+      const friendlies055 = GetUnitsForPlayer(player).map(u => u.playId);
+      if (friendlies055.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: friendlies055,
+        continuation: null,
+      };
+    }
     case "SOR_041": // Power of the Dark Side — opponent chooses any unit they control to defeat (leaders included).
       return chooseAndDefeatUnit(cardId, player, true);
     case "SOR_040": // Avenger When Played — opponent chooses a non-leader unit they control to defeat.

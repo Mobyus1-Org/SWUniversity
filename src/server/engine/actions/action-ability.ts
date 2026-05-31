@@ -104,6 +104,14 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "LOF_246": // Grogu — Action [Exhaust]: Heal up to 2 from a unit; if healed, deal that to a unit.
         abilities.push(cardId);
         break;
+      case "SOR_093": // Alliance Dispatcher — Action [Exhaust]: Play a unit from hand at -1 cost.
+        if (PlayerHasUnitsInHand(player)) abilities.push(cardId);
+        break;
+      case "SOR_094": { // Bail Organa — Action [Exhaust]: Give an Experience token to another friendly unit.
+        const others094 = GetUnitsForPlayer(player).filter(u => u.playId !== playId);
+        if (others094.length > 0) abilities.push(cardId);
+        break;
+      }
       default: break;
     }
   }

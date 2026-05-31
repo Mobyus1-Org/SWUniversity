@@ -31,7 +31,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits } from "@/server/engine/core-functions";
+import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -934,6 +934,8 @@ function resolveAttack(
     }
     log.push(`${attackerName} attacked ${defenderName}.`);
 
+    const excessDamage = Math.max(atkPower - defHpBefore, 0);
+
     // Overwhelm: excess damage spills to base
     try {
       if (
@@ -945,10 +947,9 @@ function resolveAttack(
           defender.controller,
         )
       ) {
-        const excess = Math.max(atkPower - defHpBefore, 0);
-        if (excess > 0) {
-          dealBaseDamage(game, GetOtherPlayer(attacker.controller), excess);
-          log.push(`Overwhelm: ${excess} excess damage dealt to the base.`);
+        if (excessDamage > 0) {
+          dealBaseDamage(game, GetOtherPlayer(attacker.controller), excessDamage);
+          log.push(`Overwhelm: ${excessDamage} excess damage dealt to the base.`);
         }
       }
     } catch {
@@ -976,7 +977,7 @@ function resolveAttack(
     if (nextPending) {
       // Append resolveWhenAttackEnds at the tail of the pending chain.
       // defeatUnit returns BountyPending | WhenDefeatedChoicePending, both have continuation.
-      const whenAttackEnds = resolveWhenAttackEnds(game, attacker, pending.continuation ?? null);
+      const whenAttackEnds = resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage);
       type WithContinuation = { continuation: PendingResolution | null | undefined };
       let tail: WithContinuation = nextPending as unknown as WithContinuation;
       while (tail.continuation != null) tail = tail.continuation as unknown as WithContinuation;
@@ -984,7 +985,7 @@ function resolveAttack(
       return nextPending;
     }
 
-    return resolveWhenAttackEnds(game, attacker, pending.continuation ?? null);
+    return resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage);
   }
 }
 
@@ -996,11 +997,34 @@ function resolveWhenAttackEnds(
   game: GameState,
   attacker: Unit,
   continuation: PendingResolution | null,
+  defDefeated: boolean = false,
+  excessDamage: number = 0,
 ): PendingResolution | null {
   // If attacker was defeated, no trigger fires
   if (!GetUnitByPlayId(game, attacker.playId)) return continuation;
 
   switch (attacker.cardId) {
+    case "SOR_088": { // Blizzard Assault AT-AT — when attacks and defeats: deal excess to an enemy ground unit
+      if (!defDefeated || excessDamage === 0) return continuation;
+      const enemyGround088 = AllGroundUnits().filter(u => u.controller !== attacker.controller);
+      if (enemyGround088.length === 0) return continuation;
+      game.currentEffects.push({ cardId: "SOR_088_excess", duration: "Phase", affectedPlayer: attacker.controller, value: excessDamage });
+      return {
+        type: "ability-option",
+        cardId: attacker.cardId,
+        helperText: `Deal ${excessDamage} excess damage to an enemy ground unit?`,
+        yesLabel: `Deal ${excessDamage}`,
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: attacker.cardId,
+          player: attacker.controller,
+          fromPlayIds: enemyGround088.map(u => u.playId),
+          continuation,
+        },
+        continuation,
+      };
+    }
     case "SOR_009": { // Leia Organa: You may attack with another Rebel unit
       const rebelUnits = (GetUnitsForPlayer(attacker.controller) as Unit[])
         .filter(u => u.ready && TraitContains(u.cardId, "Rebel", attacker.controller, u.playId));
@@ -1581,7 +1605,7 @@ function handleUseAbility(
     unit.ready = false;
     exhaustResources(game, player, unitAbilityCost);
 
-    const nextPending = resolveActionAbility(game, log, player, unit.cardId);
+    const nextPending = resolveActionAbility(game, log, player, unit.cardId, unit.playId);
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
     }
@@ -2073,6 +2097,18 @@ function handleChooseTarget(
     const cardId = hand[idx].cardId;
 
     switch (pending.cardId) {
+      case "SOR_093": { // Alliance Dispatcher — play a unit from hand at -1 cost
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Alliance Dispatcher: chosen card is not a Unit."), pending, stateChanged: false };
+        const cost093 = Math.max(0, playCost(game, pending.player, cardId) - 1);
+        const ready093 = GetPlayer(game, pending.player).resources.filter(r => r.ready).length;
+        if (ready093 < cost093)
+          return { response: invalidResponse("Not enough resources to play this unit."), pending, stateChanged: false };
+        exhaustResources(game, pending.player, cost093);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Alliance Dispatcher (-1 cost).`);
+        return completePlayCard(game, log, cardId, pending.player);
+      }
       case "SOR_022": {
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("ECL: chosen card is not a Unit."), pending, stateChanged: false };
@@ -2625,6 +2661,9 @@ function applyAbilityOptionDeclineEffect(
   log: string[],
 ): PendingResolution | null {
   switch (pending.cardId) {
+    case "SOR_088": // Declined — discard stored excess value
+      game.currentEffects = game.currentEffects.filter(e => e.cardId !== "SOR_088_excess");
+      return pending.continuation;
     case "SOR_016": // No = reveal opponent's deck
       return thrawnsReveal(game, log, GetOtherPlayer(pending.player!), pending.player!);
     case "JTL_049": {
@@ -3318,7 +3357,7 @@ function resolveActionAbility(
   log: string[],
   player: PlayerId,
   cardId: string,
-  //playId?: string,
+  playId?: string,
 ): PendingResolution | null {
   switch (cardId) {
     case "SOR_002": { // Iden Versio — Action [Exhaust]: If an enemy unit was defeated this phase, heal 1 damage from your base.
@@ -3391,6 +3430,19 @@ function resolveActionAbility(
         cardId: "SHD_028",
         player,
         fromPlayIds: friendly028.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_093": // Alliance Dispatcher — Action [Exhaust]: Play a unit from hand at -1 cost.
+      return { type: "play-from-hand", cardId, player } satisfies PlayFromHandPending;
+    case "SOR_094": { // Bail Organa — Action [Exhaust]: Give an Experience token to another friendly unit.
+      const others094 = GetUnitsForPlayer(player).filter(u => u.playId !== playId);
+      if (others094.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: others094.map(u => u.playId),
         continuation: null,
       };
     }
@@ -3531,6 +3583,49 @@ function applyAbilityEffect(
         game.gameLog.push(`${CardTitle("SOR_016")}: exhausted ${CardTitle(target016.cardId)}.`);
       }
       break;
+    }
+    case "SOR_088": { // Blizzard Assault AT-AT — deal stored excess damage to chosen enemy ground unit
+      if (!targetPlayId) break;
+      const excessEffect = game.currentGameState.currentEffects.find(e => e.cardId === "SOR_088_excess");
+      const damage088 = excessEffect?.value ?? 0;
+      game.currentGameState.currentEffects = game.currentGameState.currentEffects.filter(e => e.cardId !== "SOR_088_excess");
+      if (damage088 > 0) DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, damage088, game.gameLog);
+      break;
+    }
+    case "SOR_094": { // Bail Organa — give XP to chosen friendly unit
+      if (!targetPlayId) break;
+      const target094 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target094) {
+        target094.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target094.owner, controller: target094.controller });
+        game.gameLog.push(`${CardTitle(pending.cardId)}: gave an Experience token to ${CardTitle(target094.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_055": { // The Force Is With Me — give 2 XP; if Force unit in play, give Shield; may attack.
+      if (!targetPlayId) break;
+      const target055 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target055) break;
+      target055.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target055.owner, controller: target055.controller });
+      target055.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target055.owner, controller: target055.controller });
+      game.gameLog.push(`${CardTitle(pending.cardId)}: gave 2 Experience tokens to ${CardTitle(target055.cardId)}.`);
+      if (PlayerHasUnitWithTraitInPlay(pending.player!, "Force")) {
+        target055.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target055.owner, controller: target055.controller });
+        game.gameLog.push(`${CardTitle(pending.cardId)}: gave a Shield token to ${CardTitle(target055.cardId)}.`);
+      }
+      return {
+        type: "ability-option",
+        cardId: pending.cardId,
+        helperText: `Attack with ${CardTitle(target055.cardId)}?`,
+        yesLabel: "Attack",
+        noLabel: "Skip",
+        onYes: {
+          type: "attack-target",
+          attackerPlayId: targetPlayId,
+          source: pending.cardId,
+          continuation: pending.continuation,
+        },
+        continuation: pending.continuation,
+      };
     }
     case "SOR_204": { // Greedo mill: deal 2 damage to the chosen ground unit
       if (!targetPlayId) break;

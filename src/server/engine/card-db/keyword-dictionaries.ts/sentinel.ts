@@ -72,7 +72,8 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
       //Spark of Rebellion
       case "SOR_211"://Gamorrean Guards
         return PlayerHasUnitWithAspectInPlay(player, "Cunning", true, playId);
-      case "JTL_113"://Homestead Militia
+      case "SOR_113"://Homestead Militia (SOR)
+      case "JTL_113"://Homestead Militia (JTL)
         return GetResources(player).length >= 6;
       case "SOR_048"://Vigilant Honor Guards
         return !unit.IsDamaged();

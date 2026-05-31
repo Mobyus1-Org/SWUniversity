@@ -80,4 +80,6 @@ export interface CurrentEffect {
   duration: EffectDuration;
   affectedPlayer: PlayerId;
   targetPlayId?: string;
+  /** Generic numeric payload — used to carry values like excess damage between trigger and resolution. */
+  value?: number;
 }

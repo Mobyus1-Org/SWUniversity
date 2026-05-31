@@ -6,11 +6,11 @@
 
 | Status | Count |
 |--------|-------|
-| Implemented | 115 |
+| Implemented | 124 |
 | Partially Implemented | 40 |
 | Keywords Only (auto-handled) | 23 |
 | Unimplemented – Simple | 0 |
-| Unimplemented – Complex | 56 |
+| Unimplemented – Complex | 47 |
 | **Total** | **214** |
 
 ---
@@ -52,45 +52,10 @@ Defe
 **Notes:** Needs implementation: When Played: Name a card. While this unit is in play, opponents can't play the named card.
 
 
-### SOR_081 — Seasoned Shoretrooper (Unit)
-**Card Text:** While you control 6 or more resources, this unit gets +2/+0.
-
-**Notes:** Needs implementation: While you control 6 or more resources, this unit gets +2/+0.
-
-### SOR_084 — Grand Moff Tarkin (Unit)
-**Card Text:** When Played: Search the top 5 cards of your deck for up to 2 Imperial cards, reveal them, and draw them. (Put the other cards on the bottom of your deck in a random order.)
-
-**Notes:** Needs implementation: When Played: Search the top 5 cards of your deck for up to 2 Imperial cards, reveal them, and draw the
-
-### SOR_088 — Blizzard Assault AT-AT (Unit)
-**Card Text:** When this unit attacks and defeats a unit: You may deal the excess damage from this attack to an enemy ground unit.
-
-**Notes:** Needs implementation: When this unit attacks and defeats a unit: You may deal the excess damage from this attack to an ene
-
 ### SOR_089 — Relentless (Unit)
 **Card Text:** The first event played by each opponent each round loses all abilities.
 
 **Notes:** Needs implementation: The first event played by each opponent each round loses all abilities.
-
-### SOR_091 — The Emperor's Legion (Event)
-**Card Text:** Return each unit in your discard pile that was defeated this phase to your hand.
-
-**Notes:** Needs implementation: Return each unit in your discard pile that was defeated this phase to your hand.
-
-### SOR_093 — Alliance Dispatcher (Unit)
-**Card Text:** Action [exhaust]: Play a unit from your hand. It costs [1 resource] less.
-
-**Notes:** Needs implementation: Action [exhaust]: Play a unit from your hand. It costs [1 resource] less.
-
-### SOR_094 — Bail Organa (Unit)
-**Card Text:** Action [Exhaust]: Give an Experience token to another friendly unit.
-
-**Notes:** Needs implementation: Action [Exhaust]: Give an Experience token to another friendly unit.
-
-### SOR_096 — Mon Mothma (Unit)
-**Card Text:** When Played: Search the top 5 cards of your deck for a REBEL card, reveal it, and draw it. (Put the other cards on the bottom of your deck in a random order.)
-
-**Notes:** Needs implementation: When Played: Search the top 5 cards of your deck for a REBEL card, reveal it, and draw it. (Put the
 
 ### SOR_105 — General Krell (Unit)
 **Card Text:** Each other friendly unit gains: "When Defeated: You may draw a card."
@@ -106,16 +71,6 @@ Defe
 **Card Text:** Action [defeat this unit]: Attack with a unit, even if it's exhausted. It can't attack bases for this attack.
 
 **Notes:** Needs implementation: Action [defeat this unit]: Attack with a unit, even if it's exhausted. It can't attack bases for thi
-
-### SOR_113 — Homestead Militia (Unit)
-**Card Text:** While you control 6 or more resources, this unit gains Sentinel. (Units in this arena can't attack your non-Sentinel units or your base.)
-
-**Notes:** Needs implementation: While you control 6 or more resources, this unit gains Sentinel. (Units in this arena can't attack y
-
-### SOR_118 — 97th Legion (Unit)
-**Card Text:** This unit gets +1/+1 for each resource you control.
-
-**Notes:** Needs implementation: This unit gets +1/+1 for each resource you control.
 
 ### SOR_119 — Reinforcement Walker (Unit)
 **Card Text:** When Played/On Attack: Look at the top card of your deck. Either draw that card or discard it and heal 3 damage from your base.
@@ -777,3 +732,12 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_047 | Kanan Jarrus | Unit | On Attack: mill N cards from defending player's deck (N = friendly Spectre count); heal base by distinct aspects among milled cards; uses MillPending + MillResultPending; test coverage added |
 | SOR_075 | It Binds All Things | Event | Heal up to 3 from a unit; if you control a Force unit, may deal that much to another unit; uses SpreadHealPending with afterHeal; test coverage added |
 | SOR_204 | Greedo | Unit | When Defeated: may discard top card of own deck; if non-unit, deal 2 damage to a ground unit; uses MillPending + MillResultPending; test coverage added |
+| SOR_081 | Seasoned Shoretrooper | Unit | While 6+ resources: +2/+0 — conditional power in unit.ts CurrentPower() |
+| SOR_084 | Grand Moff Tarkin | Unit | When Played: search top 5 for up to 2 Imperial cards; uses searchDeck with trait filter |
+| SOR_088 | Blizzard Assault AT-AT | Unit | When attacks and defeats: may deal excess damage to an enemy ground unit; excess stored via CurrentEffect.value |
+| SOR_091 | The Emperor's Legion | Event | Return each unit defeated this phase from discard to hand; inline in when-played using cardsLeftPlayThisPhase |
+| SOR_093 | Alliance Dispatcher | Unit | Action [Exhaust]: play a unit from hand at -1 cost; action-ability + play-from-hand handler |
+| SOR_094 | Bail Organa | Unit | Action [Exhaust]: give an Experience token to another friendly unit; action-ability + applyAbilityEffect |
+| SOR_096 | Mon Mothma | Unit | When Played: search top 5 for a Rebel card; uses searchDeck with trait filter |
+| SOR_113 | Homestead Militia | Unit | While 6+ resources: gains Sentinel — conditional in sentinel.ts alongside JTL_113 |
+| SOR_118 | 97th Legion | Unit | +1/+1 for each resource you control — dynamic in unit.ts CurrentPower() and TotalHP() |
