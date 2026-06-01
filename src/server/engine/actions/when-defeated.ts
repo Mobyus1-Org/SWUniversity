@@ -2,7 +2,7 @@ import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
 import { AllUnits, DrawCardForPlayer, GetGame, GetGameState, GetUnitsForPlayer, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget } from "@/server/engine/core-functions";
-import { CardTitle } from "@/server/engine/card-db/generated";
+import { CardAspects, CardTitle } from "@/server/engine/card-db/generated";
 import { CreateBattleDroid } from "@/server/engine/token-helpers";
 
 /**
@@ -157,6 +157,34 @@ export function resolveWhenDefeated(
       DrawCardForPlayer(game163.currentGameState, game163.gameLog, player);
       game163.gameLog.push(`${CardTitle("SOR_163")}: drew 2 cards.`);
       return null;
+    }
+    case "SOR_045": { // Yoda — When Defeated: Choose any number of players. They each draw a card.
+      const game045 = GetGame();
+      if (!game045) return null;
+      return {
+        type: "ability-option",
+        cardId: unit.cardId,
+        player,
+        helperText: "You draw a card?",
+        yesLabel: "Draw",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: {
+          type: "ability-option",
+          cardId: "SOR_045_opp",
+          player,
+          helperText: "Opponent draws a card?",
+          yesLabel: "Draw",
+          noLabel: "Skip",
+          onYes: null,
+          continuation: null,
+        },
+      };
+    }
+    case "SOR_049": { // Obi-Wan Kenobi — When Defeated: Give 2 XP to another friendly unit. If Force, draw a card.
+      const friendlies049 = GetUnitsForPlayer(player).filter(u => u.playId !== unit.playId);
+      if (friendlies049.length === 0) return null;
+      return mandatoryTarget(unit.cardId, player, friendlies049.map(u => u.playId));
     }
     default:
       return null;

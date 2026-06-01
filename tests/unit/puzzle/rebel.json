@@ -1,0 +1,199 @@
+{
+  "_id": {
+  },
+  "name": "A Rebel Assault",
+  "description": "Sabine vs Cad Bane with a little help from K-2SO",
+  "difficulty": 2.5,
+  "initialGamestate": {
+    "activePlayer": 1,
+    "gamePhase": 0,
+    "player1": {
+      "base": {
+        "cardId": "SOR_022",
+        "epicActionUsed": false,
+        "damage": 23,
+        "numUses": 0
+      },
+      "leader": {
+        "cardId": "SOR_014",
+        "epicActionUsed": false,
+        "ready": true,
+        "deployed": false
+      },
+      "spaceArena": [],
+      "groundArena": [
+        {
+          "cardId": "SOR_145",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true,
+          "damage": 0,
+          "upgrades": [],
+          "captives": []
+        },
+        {
+          "cardId": "SHD_160",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true,
+          "damage": 0,
+          "upgrades": [],
+          "captives": []
+        }
+      ],
+      "resources": [
+        {
+          "cardId": "SOR_141",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SOR_141",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SHD_153",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SHD_153",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SHD_153",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SHD_160",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "JTL_100",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "JTL_100",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        }
+      ],
+      "discard": [],
+      "deck": [],
+      "hand": [
+        {
+          "cardId": "JTL_153"
+        },
+        {
+          "cardId": "SOR_168"
+        },
+        {
+          "cardId": "SOR_103"
+        },
+        {
+          "cardId": "SOR_141"
+        },
+        {
+          "cardId": "SOR_150"
+        }
+      ],
+      "supplemental": {}
+    },
+    "player2": {
+      "base": {
+        "cardId": "SOR_025",
+        "epicActionUsed": false,
+        "damage": 11,
+        "numUses": 0
+      },
+      "leader": {
+        "cardId": "SHD_014",
+        "epicActionUsed": true,
+        "ready": true,
+        "deployed": false
+      },
+      "spaceArena": [],
+      "groundArena": [
+        {
+          "cardId": "SOR_211",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": false,
+          "damage": 0,
+          "upgrades": [],
+          "captives": []
+        },
+        {
+          "cardId": "TWI_187",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": false,
+          "damage": 0,
+          "upgrades": [],
+          "captives": []
+        }
+      ],
+      "resources": [],
+      "discard": [],
+      "deck": [
+        {
+          "cardId": "LOF_254"
+        },
+        {
+          "cardId": "LOF_254"
+        },
+        {
+          "cardId": "LOF_254"
+        },
+        {
+          "cardId": "LAW_260"
+        },
+        {
+          "cardId": "LAW_260"
+        }
+      ],
+      "hand": [],
+      "supplemental": {}
+    },
+    "currentEffects": [],
+    "currentRound": 7,
+    "initiativePlayer": 2,
+    "initiativeClaimed": true,
+    "triggerBag": []
+  },
+  "deploy": true,
+  "author": "Mobyus1",
+  "intendedSolution": [
+    "Use @[SOR_014]'s Leader Ability to ping 1 damage to each base",
+    "Play @[SOR_168] to give @[SHD_160] Saboteur and attack into base for 2 damage",
+    "Play @[JTL_153] to deal 3 damage to opponent's @[SOR_211]",
+    "Deploy @[SOR_014-L]",
+    "Play @[SOR_103], choosing @[SOR_145] first to defeat their Sentinel and deal 4 Overwhelm to base plus 3 more for When Defeated ability",
+    "Finish @[SOR_103] by choosing @[SOR_014-L] to deal the remaining 3 damage plus 1 from On Attack"
+  ]
+}

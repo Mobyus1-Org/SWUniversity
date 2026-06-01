@@ -1354,8 +1354,13 @@ function completePlayCard(
     }
 
     if (hasAmbush && CardHasWhenPlayed(unit.cardId)) {
-      // Both Ambush and When Played — push both to bag so the player chooses ordering.
-      game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
+      // Both Ambush and When Played — put both in bag for player to choose ordering,
+      // but only add WhenPlayed if it has interactive targets (non-null preview).
+      const whenPlayedPreview = resolveWhenPlayed(unit.cardId, player, unit.playId);
+      if (whenPlayedPreview !== null) {
+        game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
+      }
+      // If WhenPlayed has no targets, skip adding it — Ambush proceeds alone.
     } else if (!hasAmbush && CardHasWhenPlayed(unit.cardId)) {
       const whenPlayedPending = resolveWhenPlayed(unit.cardId, player, unit.playId);
       if (whenPlayedPending) {
@@ -1888,6 +1893,53 @@ function handleChooseTarget(
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
+    // SOR_102 Home One: play chosen Heroism unit from discard at cost -3.
+    if (pending.cardId === "SOR_102") {
+      const playId102 = chosen[0];
+      if (!playId102) {
+        const bag102a = drainTriggerBag(game, log);
+        if (bag102a) return { response: resolutionResponse(pendingToResolution(bag102a, game)), pending: bag102a, stateChanged: true };
+        return { response: stateResponse(game), pending: null, stateChanged: true };
+      }
+      const playerState102 = GetPlayer(game, pending.player);
+      const idx102 = playerState102.discard.findIndex(d => d.playId === playId102);
+      if (idx102 === -1)
+        return { response: invalidResponse("Home One: card not found in discard."), pending, stateChanged: false };
+      const cardId102 = playerState102.discard[idx102].cardId;
+      const reducedCost102 = Math.max(0, playCost(game, pending.player, cardId102) - 3);
+      const ready102 = playerState102.resources.filter(r => r.ready).length;
+      if (ready102 < reducedCost102)
+        return { response: invalidResponse(`Home One: not enough resources to play ${CardTitle(cardId102)} (needs ${reducedCost102}).`), pending, stateChanged: false };
+      playerState102.discard.splice(idx102, 1);
+      exhaustResources(game, pending.player, reducedCost102);
+      log.push(`${CardTitle("SOR_102")}: played ${CardTitle(cardId102)} from discard (cost -3 = ${reducedCost102}).`);
+      return completePlayCard(game, log, cardId102, pending.player);
+    }
+
+    // SOR_183 Bounty Hunter Crew (Han Solo): return an event from either player's discard to its owner's hand.
+    if (pending.cardId === "SOR_183") {
+      const returned183: string[] = [];
+      for (const rPlayId of chosen.slice(0, pending.maxCount)) {
+        for (const pId of [1, 2] as PlayerId[]) {
+          const pState183 = GetPlayer(game, pId);
+          const idx183 = pState183.discard.findIndex(d => d.playId === rPlayId);
+          if (idx183 !== -1) {
+            const card183 = pState183.discard.splice(idx183, 1)[0];
+            GetPlayer(game, card183.owner as PlayerId).hand.push({ cardId: card183.cardId });
+            returned183.push(CardTitle(card183.cardId) ?? card183.cardId);
+            break;
+          }
+        }
+      }
+      if (returned183.length > 0)
+        log.push(`${CardTitle("SOR_183")}: returned ${returned183.join(", ")} to hand.`);
+      const next183 = pending.continuation;
+      if (next183) return { response: resolutionResponse(pendingToResolution(next183, game)), pending: next183, stateChanged: false };
+      const bag183 = drainTriggerBag(game, log);
+      if (bag183) return { response: resolutionResponse(pendingToResolution(bag183, game)), pending: bag183, stateChanged: false };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
     const playerState = GetPlayer(game, pending.player);
     const returned: string[] = [];
     for (const playId of chosen.slice(0, pending.maxCount)) {
@@ -1914,6 +1966,28 @@ function handleChooseTarget(
     const invalid = chosen.find(id => !pending.eligiblePlayIds.includes(id));
     if (invalid)
       return { response: invalidResponse(`Unit ${invalid} is not eligible for Experience token.`), pending, stateChanged: false };
+
+    // SOR_197 Lando Calrissian: return chosen resources to hand (reuses give-xp-multiple multi-select UI)
+    if (pending.cardId === "SOR_197") {
+      const pState197 = GetPlayer(game, pending.player);
+      const returned197: string[] = [];
+      for (const rPlayId of chosen) {
+        const idx197 = pState197.resources.findIndex(r => r.playId === rPlayId);
+        if (idx197 !== -1) {
+          const card197 = pState197.resources.splice(idx197, 1)[0];
+          pState197.hand.push({ cardId: card197.cardId });
+          returned197.push(CardTitle(card197.cardId) ?? card197.cardId);
+        }
+      }
+      if (returned197.length > 0)
+        log.push(`${CardTitle("SOR_197")}: returned ${returned197.join(", ")} to hand.`);
+      const next197 = pending.continuation;
+      if (next197) return { response: resolutionResponse(pendingToResolution(next197, game)), pending: next197, stateChanged: false };
+      const bag197 = drainTriggerBag(game, log);
+      if (bag197) return { response: resolutionResponse(pendingToResolution(bag197, game)), pending: bag197, stateChanged: false };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
     const gifted: string[] = [];
     for (const playId of chosen) {
       const target = GetUnitByPlayId(game, playId);
@@ -2047,6 +2121,41 @@ function handleChooseTarget(
           controller: pending.player,
         });
         log.push(`Mandalorian Armor: Shield token given to ${CardTitle(targetUnit.cardId)}.`);
+      }
+    }
+
+    // SOR_053 Luke's Lightsaber: When Played — if attached unit is Luke Skywalker, heal all damage and give Shield.
+    if (pending.upgradeCardId === "SOR_053") {
+      if (CardTitle(targetUnit.cardId) === "Luke Skywalker") {
+        targetUnit.damage = 0;
+        targetUnit.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: targetUnit.owner, controller: targetUnit.controller });
+        log.push(`Luke's Lightsaber: healed all damage from ${CardTitle(targetUnit.cardId)} and gave a Shield token.`);
+      }
+    }
+
+    // SOR_136 Vader's Lightsaber: When Played — if attached unit is Darth Vader, may deal 4 damage to a ground unit.
+    if (pending.upgradeCardId === "SOR_136") {
+      if (CardTitle(targetUnit.cardId) === "Darth Vader") {
+        const groundUnits136 = [...game.player1.groundArena, ...game.player2.groundArena];
+        if (groundUnits136.length > 0) {
+          const vadersLightsaberPending: AbilityOptionPending = {
+            type: "ability-option",
+            cardId: "SOR_136",
+            helperText: "Deal 4 damage to a ground unit?",
+            yesLabel: "Deal 4",
+            noLabel: "Skip",
+            onYes: {
+              type: "ability-target",
+              cardId: "SOR_136",
+              player: pending.player,
+              fromPlayIds: groundUnits136.map(u => u.playId),
+              continuation: null,
+            } satisfies AbilityTargetPending,
+            continuation: null,
+          };
+          updateDefeatedPlayers(game);
+          return { response: resolutionResponse(pendingToResolution(vadersLightsaberPending, game)), pending: vadersLightsaberPending, stateChanged: true };
+        }
       }
     }
 
@@ -2679,6 +2788,17 @@ function applyAbilityOptionEffect(
         fromPlayIds: eligible,
         continuation: pending.continuation ?? null,
       } satisfies AbilityTargetPending;
+    }
+    case "SOR_045": { // Yoda When Defeated Yes: controller draws a card, then ask opponent.
+      DrawCardForPlayer(game, log, pending.player!);
+      log.push(`${CardTitle("SOR_045")}: Player ${pending.player!} drew a card.`);
+      return pending.continuation ?? null;
+    }
+    case "SOR_045_opp": { // Yoda When Defeated Yes (second prompt): opponent draws a card.
+      const opp045 = pending.player === 1 ? 2 : 1;
+      DrawCardForPlayer(game, log, opp045);
+      log.push(`${CardTitle("SOR_045")}: Player ${opp045} drew a card.`);
+      return pending.continuation ?? null;
     }
     case "SOR_171": { // Mission Briefing Yes: playing player draws 2 cards.
       DrawCardForPlayer(game, log, pending.player!);
@@ -4266,6 +4386,120 @@ function applyAbilityEffect(
           GetPlayer(gs202, bounced202.unit.owner).hand.push({ cardId: bounced202.unit.cardId });
           game.gameLog.push(`${CardTitle("SOR_202")}: returned ${CardTitle(bounced202.unit.cardId)} to hand.`);
         }
+      }
+      break;
+    }
+    case "SOR_038": // Count Dooku (Darth Tyranus) When Played: defeat chosen unit with ≤4 HP.
+    case "C24_001": {
+      if (!targetPlayId) break;
+      const defeated038 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!defeated038) break;
+      const defeatPend038 = defeatUnit(game.currentGameState, game.gameLog, defeated038);
+      game.gameLog.push(`${CardTitle(pending.cardId)}: defeated ${CardTitle(defeated038.cardId)}.`);
+      if (defeatPend038) return injectContinuation(defeatPend038, pending.continuation);
+      return pending.continuation;
+    }
+    case "SOR_050": { // The Ghost When Played/On Attack: give Shield to chosen Spectre unit.
+      if (!targetPlayId) break;
+      const target050 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target050) {
+        target050.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target050.owner, controller: target050.controller });
+        game.gameLog.push(`${CardTitle("SOR_050")}: gave a Shield token to ${CardTitle(target050.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_090": { // Devastator When Played: deal resources-count damage to chosen unit.
+      if (!targetPlayId) break;
+      const gs090d = game.currentGameState;
+      const resourceCount090 = (pending.player === 1 ? gs090d.player1 : gs090d.player2).resources.length;
+      DealDamageToUnit(gs090d, "SOR_090", targetPlayId, resourceCount090, game.gameLog);
+      break;
+    }
+    case "SOR_116": { // Steadfast Battalion On Attack: give chosen friendly unit +2/+2 for this phase.
+      if (!targetPlayId) break;
+      const target116 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target116) {
+        game.currentGameState.currentEffects.push({ cardId: "SOR_116", duration: "Phase", affectedPlayer: target116.controller, targetPlayId });
+        game.gameLog.push(`${CardTitle("SOR_116")}: gave +2/+2 to ${CardTitle(target116.cardId)} for this phase.`);
+      }
+      break;
+    }
+    case "SOR_140": { // SpecForce Soldier When Played: chosen unit loses Sentinel for this phase.
+      if (!targetPlayId) break;
+      const target140 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target140) {
+        game.currentGameState.currentEffects.push({ cardId: "SOR_140", duration: "Phase", affectedPlayer: target140.controller, targetPlayId });
+        game.gameLog.push(`${CardTitle("SOR_140")}: ${CardTitle(target140.cardId)} loses Sentinel for this phase.`);
+      }
+      break;
+    }
+    case "SOR_158": { // Jedha Agitator On Attack: deal 2 damage to chosen ground unit or base.
+      if (!targetPlayId) break;
+      if (targetPlayId === "player1.base") {
+        game.currentGameState.player1.base.damage += 2;
+        game.gameLog.push(`${CardTitle("SOR_158")}: dealt 2 damage to Player 1's base.`);
+      } else if (targetPlayId === "player2.base") {
+        game.currentGameState.player2.base.damage += 2;
+        game.gameLog.push(`${CardTitle("SOR_158")}: dealt 2 damage to Player 2's base.`);
+      } else {
+        DealDamageToUnit(game.currentGameState, "SOR_158", targetPlayId, 2, game.gameLog);
+      }
+      break;
+    }
+    case "SOR_208": { // Outer Rim Headhunter On Attack: exhaust chosen non-leader unit.
+      if (!targetPlayId) break;
+      const target208 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target208) {
+        target208.ready = false;
+        game.gameLog.push(`${CardTitle("SOR_208")}: exhausted ${CardTitle(target208.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_209": { // Pirated Starfighter When Played: return chosen friendly non-leader unit to hand.
+      if (!targetPlayId) break;
+      const gs209 = game.currentGameState;
+      const bounced209 = removeFromArena(gs209, targetPlayId);
+      if (bounced209 && !bounced209.unit.IsTokenUnit()) {
+        GetPlayer(gs209, bounced209.unit.owner).hand.push({ cardId: bounced209.unit.cardId });
+        game.gameLog.push(`${CardTitle("SOR_209")}: returned ${CardTitle(bounced209.unit.cardId)} to hand.`);
+      }
+      break;
+    }
+    case "SOR_244": { // Snowspeeder On Attack: exhaust chosen enemy Vehicle ground unit.
+      if (!targetPlayId) break;
+      const target244 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target244) {
+        target244.ready = false;
+        game.gameLog.push(`${CardTitle("SOR_244")}: exhausted ${CardTitle(target244.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_099": { // Home One When Played: return chosen friendly non-leader ground unit to hand and draw a card.
+      if (!targetPlayId) break;
+      const gs099 = game.currentGameState;
+      const bounced099 = removeFromArena(gs099, targetPlayId);
+      if (bounced099 && !bounced099.unit.IsTokenUnit()) {
+        GetPlayer(gs099, bounced099.unit.owner).hand.push({ cardId: bounced099.unit.cardId });
+        DrawCardForPlayer(gs099, game.gameLog, pending.player!);
+        game.gameLog.push(`${CardTitle("SOR_099")}: returned ${CardTitle(bounced099.unit.cardId)} to hand and drew a card.`);
+      }
+      break;
+    }
+    case "SOR_136": { // Vader's Lightsaber When Played: deal 4 damage to a ground unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "SOR_136", targetPlayId, 4, game.gameLog);
+      break;
+    }
+    case "SOR_049": { // Obi-Wan Kenobi When Defeated: give 2 XP to chosen friendly unit; if Force, draw a card.
+      if (!targetPlayId) break;
+      const target049 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target049) break;
+      target049.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target049.owner, controller: target049.controller });
+      target049.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target049.owner, controller: target049.controller });
+      game.gameLog.push(`${CardTitle("SOR_049")}: gave 2 Experience tokens to ${CardTitle(target049.cardId)}.`);
+      if (CardTraits(target049.cardId).includes("Force")) {
+        DrawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
+        game.gameLog.push(`${CardTitle("SOR_049")}: drew a card (Force unit).`);
       }
       break;
     }

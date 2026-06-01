@@ -6,6 +6,7 @@ type PuzzleEntry = { id: string; name: string; description: string; difficulty: 
 type Props = {
   onPuzzleLoaded: (id: string, meta: PuzzleEntry) => void;
   isAdmin?: boolean;
+  solvedPuzzleIds?: string[];
 };
 
 function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
@@ -30,7 +31,7 @@ type SortKey = "title" | "difficulty";
 type SortDir = "asc" | "desc";
 
 export function LoadPuzzlePanel(props: Props) {
-  const { onPuzzleLoaded, isAdmin = false } = props;
+  const { onPuzzleLoaded, isAdmin = false, solvedPuzzleIds = [] } = props;
   const [puzzles, setPuzzles] = React.useState<PuzzleEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -124,7 +125,14 @@ export function LoadPuzzlePanel(props: Props) {
                 className={`group ${globalBackgroundStyle} border rounded cursor-pointer p-3 flex flex-col gap-1 transition-all hover:ring-2 hover:ring-primary/60`}
               >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="font-semibold truncate">{name}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-semibold truncate">{name}</span>
+                    {solvedPuzzleIds.includes(id) ? (
+                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                        ✓ Solved
+                      </span>
+                    ) : null}
+                  </div>
                   {isAdmin ? (
                     <label
                       onClick={(e) => e.stopPropagation()}

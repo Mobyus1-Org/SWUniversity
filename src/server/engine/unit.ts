@@ -185,6 +185,7 @@ export class Unit implements UnitInterface {
         case "JTL_106": power += 1; break; // Unity of Purpose
         case "SOR_124": power += 2; break; // Tactical Advantage +2/+2 Phase
         case "SOR_076": power -= 2; break; // Make an Opening –2/–2 Phase
+        case "SOR_116": power += 2; break; // Steadfast Battalion +2/+2 Phase
         case "SOR_216": power -= 4; break; // Disarm –4/+0 Phase
         case "SOR_220": power += 3; break; // Surprise Strike +3/+0 ForAttack
         case "SOR_240": power += 2; break; // Fleet Lieutenant +2/+0 ForAttack
@@ -274,6 +275,7 @@ export class Unit implements UnitInterface {
           break;
         case "SOR_124": hp += 2; break; // Tactical Advantage +2/+2 Phase
         case "SOR_076": hp -= 2; break; // Make an Opening –2/–2 Phase
+        case "SOR_116": hp += 2; break; // Steadfast Battalion +2/+2 Phase
         case "JTL_106": hp += 1; break; // Unity of Purpose
       }
     }

@@ -1,0 +1,244 @@
+{
+  "_id": {
+  },
+  "name": "The Fight for Mandalore",
+  "description": "Bo-Katan must penetrate Gar Saxon's defenses to reclaim the throne",
+  "difficulty": 1.5,
+  "initialGamestate": {
+    "activePlayer": 1,
+    "gamePhase": "ActionPhase",
+    "nextPlayId": 1,
+    "currentRound": 8,
+    "initiativePlayer": 2,
+    "initiativeClaimed": true,
+    "player1": {
+      "base": {
+        "cardId": "TWI_020",
+        "damage": 29,
+        "epicActionUsed": false
+      },
+      "leader": {
+        "cardId": "SHD_012",
+        "ready": true,
+        "deployed": false,
+        "epicActionUsed": false
+      },
+      "groundArena": [
+        {
+          "cardId": "SHD_056",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true,
+          "damage": 0,
+          "upgrades": [],
+          "captives": []
+        },
+        {
+          "cardId": "SHD_147",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true,
+          "damage": 0,
+          "upgrades": [],
+          "captives": []
+        },
+        {
+          "cardId": "SHD_169",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true,
+          "damage": 4,
+          "upgrades": [],
+          "captives": []
+        }
+      ],
+      "spaceArena": [],
+      "resources": [
+        {
+          "cardId": "SHD_056",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SHD_056",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SHD_056",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SHD_056",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SHD_056",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SHD_056",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SHD_056",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        }
+      ],
+      "discard": [],
+      "deck": [],
+      "hand": [
+        {
+          "cardId": "SHD_073"
+        },
+        {
+          "cardId": "SHD_166"
+        },
+        {
+          "cardId": "SOR_072"
+        },
+        {
+          "cardId": "SOR_077"
+        },
+        {
+          "cardId": "SHD_126"
+        },
+        {
+          "cardId": "SHD_177"
+        }
+      ]
+    },
+    "player2": {
+      "base": {
+        "cardId": "SHD_026",
+        "damage": 15,
+        "epicActionUsed": false
+      },
+      "leader": {
+        "cardId": "SHD_001",
+        "ready": true,
+        "deployed": false,
+        "epicActionUsed": true
+      },
+      "groundArena": [
+        {
+          "cardId": "SHD_034",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": true,
+          "damage": 0,
+          "upgrades": [
+            {
+              "cardId": "SHD_073",
+              "playId": "@",
+              "owner": 2,
+              "controller": 2
+            },
+            {
+              "cardId": "SHD_073",
+              "playId": "@",
+              "owner": 2,
+              "controller": 2
+            },
+            {
+              "cardId": "SOR_T02",
+              "playId": "@",
+              "owner": 2,
+              "controller": 2
+            },
+            {
+              "cardId": "SOR_T02",
+              "playId": "@",
+              "owner": 2,
+              "controller": 2
+            },
+            {
+              "cardId": "SOR_T02",
+              "playId": "@",
+              "owner": 2,
+              "controller": 2
+            }
+          ],
+          "captives": []
+        },
+        {
+          "cardId": "SHD_028",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": true,
+          "damage": 3,
+          "upgrades": [],
+          "captives": []
+        }
+      ],
+      "spaceArena": [
+        {
+          "cardId": "SHD_035",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": false,
+          "damage": 0,
+          "upgrades": [],
+          "captives": []
+        }
+      ],
+      "resources": [],
+      "discard": [],
+      "deck": [
+        {
+          "cardId": "LOF_254"
+        },
+        {
+          "cardId": "LOF_254"
+        },
+        {
+          "cardId": "LOF_254"
+        },
+        {
+          "cardId": "LAW_260"
+        },
+        {
+          "cardId": "LAW_260"
+        }
+      ],
+      "hand": []
+    },
+    "currentEffects": [],
+    "triggerBag": []
+  },
+  "createdAt": {
+    "$date": "2026-05-24T15:21:20.147Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-24T15:21:20.147Z"
+  },
+  "__v": 0,
+  "deploy": true,
+  "author": "Mobyus1",
+  "intendedSolution": []
+}

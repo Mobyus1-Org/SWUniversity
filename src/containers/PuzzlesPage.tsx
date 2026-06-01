@@ -344,7 +344,7 @@ function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
   </div>;
 }
 
-function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilderTools?: boolean; isAdmin?: boolean }) {
+function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleIds: initialSolvedPuzzleIds = [] }: { showBuilderTools?: boolean; isAdmin?: boolean; solvedPuzzleIds?: string[] }) {
   // ---------------------------------------------------------------------------
   // Engine communication refs (not React state — no re-render on change)
   // ---------------------------------------------------------------------------
@@ -385,16 +385,25 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
     if (lastTestMeta != null) localStorage.setItem(LS_TEST_META, JSON.stringify(lastTestMeta));
     else localStorage.removeItem(LS_TEST_META);
   }, [lastTestMeta]);
+  const [solvedPuzzleIds, setSolvedPuzzleIds] = React.useState<string[]>(initialSolvedPuzzleIds);
   const [showClosePuzzleConfirm, setShowClosePuzzleConfirm] = React.useState(false);
   const [leaderModalOpen, setLeaderModalOpen] = React.useState(false);
   const [unitAbilityModal, setUnitAbilityModal] = React.useState<{ playId: string; cardId: string } | null>(null);
   const [discardModalPlayer, setDiscardModalPlayer] = React.useState<1 | 2 | null>(null);
   const previewTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewDismissTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameLogRef = React.useRef<HTMLDivElement | null>(null);
   const [preview, setPreview] = React.useState<PreviewState | null>(null);
   const previewPrimarySrc = preview ? getCardImageLink(preview.imageId) : "";
   const previewFallbackSrc = preview ? getSWUDBImageLink(preview.imageId) : "";
   const [previewImageSrc, setPreviewImageSrc] = React.useState(previewPrimarySrc);
+
+  const clearPreviewDismissTimer = React.useCallback(() => {
+    if (previewDismissTimerRef.current) {
+      clearTimeout(previewDismissTimerRef.current);
+      previewDismissTimerRef.current = null;
+    }
+  }, []);
 
   // Clear preview timer
   const clearPreviewTimer = React.useCallback(() => {
@@ -407,16 +416,21 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
   // Preview handlers
   const handlePreviewStart = React.useCallback((nextPreview: PreviewState) => {
     clearPreviewTimer();
+    clearPreviewDismissTimer();
     setPreview(null);
     previewTimerRef.current = setTimeout(() => {
       setPreview(nextPreview);
+      previewDismissTimerRef.current = setTimeout(() => {
+        setPreview(null);
+      }, 10000);
     }, 700);
-  }, [clearPreviewTimer, setPreview]);
+  }, [clearPreviewTimer, clearPreviewDismissTimer, setPreview]);
   const handlePreviewEnd = React.useCallback(() => {
     clearPreviewTimer();
+    clearPreviewDismissTimer();
     setPreview(null);
-  }, [clearPreviewTimer, setPreview]);
-  React.useEffect(() => () => { clearPreviewTimer(); }, [clearPreviewTimer]);
+  }, [clearPreviewTimer, clearPreviewDismissTimer, setPreview]);
+  React.useEffect(() => () => { clearPreviewTimer(); clearPreviewDismissTimer(); }, [clearPreviewTimer, clearPreviewDismissTimer]);
   React.useEffect(() => { setSelectedTargetPlayIds([]); setSpreadDmgMap({}); }, [resolutionNeeded]);
 
   const [deckSearchSelected, setDeckSearchSelected] = React.useState<Set<string>>(new Set());
@@ -724,12 +738,20 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
     setPreviewImageSrc(previewPrimarySrc);
   }, [previewPrimarySrc, setPreviewImageSrc]);
 
-  // Show solution modal when puzzle is won
+  // Show solution modal and mark solved when puzzle is won
   React.useEffect(() => {
     if (gameState && deriveStatus(gameState) === "won" && puzzleMeta) {
       setShowSolutionModal(true);
+      if (selectedPuzzleFilename) {
+        setSolvedPuzzleIds(prev => [...new Set([...prev, selectedPuzzleFilename])]);
+        void fetch("/api/puzzles/mark-solved", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ puzzleId: selectedPuzzleFilename }),
+        });
+      }
     }
-  }, [gameState, puzzleMeta]);
+  }, [gameState, puzzleMeta, selectedPuzzleFilename]);
 
   // Auto-scroll game log to bottom when entries change
   React.useEffect(() => {
@@ -854,6 +876,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
               void loadPuzzle(filename);
             }}
             isAdmin={isAdmin}
+            solvedPuzzleIds={solvedPuzzleIds}
           />
         </div>
       </div>
@@ -979,6 +1002,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false }: { showBuilde
             void loadPuzzle(filename);
           }}
           isAdmin={isAdmin}
+          solvedPuzzleIds={solvedPuzzleIds}
         />
         <button
           type="button"

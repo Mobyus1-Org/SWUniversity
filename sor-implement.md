@@ -6,8 +6,8 @@
 
 | Status | Count |
 |--------|-------|
-| Implemented | 141 |
-| Partially Implemented | 40 |
+| Implemented | 162 |
+| Partially Implemented | 19 |
 | Keywords Only (auto-handled) | 23 |
 | Unimplemented – Simple | 0 |
 | Unimplemented – Complex | 25 |
@@ -249,54 +249,12 @@ When Played: Reveal up to 4 [Vigilance] cards from your hand. For each card reve
 
 **Notes:** Sentinel implemented; 'When Played: Reveal up to 4 [Vigilance] cards from hand, give Experience for each revealed' NOT implemented
 
-### SOR_037 — Academy Defense Walker (Unit) [SIMPLE]
-**Card Text:** Sentinel (Units in this arena can't attack your non-Sentinel units or your base.)
-
-When Played: Give an Experience token to each friendly damaged unit.
-
-**Notes:** Sentinel implemented; 'When Played: Give an Experience token to each friendly damaged unit' NOT implemented
-
-### SOR_038 — Count Dooku (Unit) [SIMPLE]
-**Card Text:** Shielded (When you play this unit, give him a Shield token.)
-
-When Played: You may defeat a unit with 4 or less remaining HP.
-
-**Notes:** Shielded implemented; 'When Played: You may defeat a unit with 4 or less remaining HP' NOT implemented
-
-### SOR_045 — Yoda (Unit) [SIMPLE]
-**Card Text:** Restore 2 (When this unit attacks, heal 2 damage from your base.)
-
-When Defeated: Choose any number of players. They each draw a card.
-
-**Notes:** Restore 2 implemented; 'When Defeated: Choose any number of players. They each draw a card' NOT implemented
-
-### SOR_049 — Obi-Wan Kenobi (Unit) [SIMPLE]
-**Card Text:** Sentinel (Units in this arena can't attack your non-Sentinel units or your base.)
-
-When Defeated: Give 2 Experience tokens to another friendly unit. If it's a Force unit, draw a card.
-
-**Notes:** Sentinel implemented; 'When Defeated: Give 2 Experience tokens to another friendly unit; if FORCE unit, also deal 2 damage to a unit' NOT implemented
-
-### SOR_050 — The Ghost (Unit) [SIMPLE]
-**Card Text:** Shielded (When you play this unit, give a Shield token to it.)
-
-When Played/On Attack: You may give a Shield token to another SPECTRE unit.
-
-**Notes:** Shielded implemented; 'When Played/On Attack: You may give a Shield token to another SPECTRE unit' NOT implemented
-
 ### SOR_051 — Luke Skywalker (Unit) [COMPLEX]
 **Card Text:** Restore 3
 
 When Played: Give an enemy unit –3/–3 for this phase. If a friendly unit was defeated this phase, give that enemy unit –6/–6 for this phase instead.
 
 **Notes:** Restore 3 implemented; 'When Played: Give an enemy unit -3/-3; if a friendly unit was defeated this phase, give that unit an Experience token' NOT implemented
-
-### SOR_053 — Luke's Lightsaber (Upgrade) [SIMPLE]
-**Card Text:** Attach to a non-Vehicle unit.
-
-When Played: If attached unit is Luke Skywalker, heal all damage from him and give a Shield token to him.
-
-**Notes:** Attach restriction implemented (non-Vehicle); When Played Luke Skywalker heal+shield NOT implemented
 
 ### SOR_054 — Jedi Lightsaber (Upgrade) [COMPLEX]
 **Card Text:** Attach to a non-VEHICLE unit.
@@ -319,12 +277,6 @@ On Attack: If you control a leader unit, you may draw a card.
 
 **Notes:** Grit implemented; On Attack 'if you control a leader, deal 4 damage to non-leader unit' NOT implemented
 
-### SOR_068 — Lom Pyke (Unit) [SIMPLE]
-**Card Text:** Shielded (When you play this unit, give a Shield token to it.)
-When Played: If you control another [Vigilance] unit, heal 4 damage from your base.
-
-**Notes:** Shielded implemented; 'When Played: If you control another [Vigilance] unit, heal 4 damage from your base' NOT implemented
-
 ### SOR_071 — Electrostaff (Upgrade) [COMPLEX]
 **Card Text:** Attach to a non-VEHICLE unit.
 
@@ -344,49 +296,11 @@ When this unit deals combat damage to a non-leader unit while attacking: Defeat 
 
 **Notes:** Gives itself Sentinel in sentinel.ts; 'When Played: Give a unit Sentinel for this phase' (targeting another unit) NOT fully implemented
 
-### SOR_090 — Devastator (Unit) [SIMPLE]
-**Card Text:** Sentinel
-
-Overwhelm
-
-When Played: You may deal damage to a unit equal to the number of resources you control.
-
-**Notes:** Sentinel + Overwhelm implemented; 'When Played: You may deal damage to a unit equal to the number of resources you control' NOT implemented
-
-### SOR_099 — Home One (Unit) [SIMPLE]
-**Card Text:** Sentinel (Units in this arena can't attack your non-Sentinel units or your base.)
-
-When Played: You may return a friendly non-leader ground unit to its owner's hand. If you do, draw a card.
-
-**Notes:** Sentinel implemented; 'When Played: You may return a friendly non-leader ground unit to its owner's hand' NOT implemented
-
 ### SOR_100 — Wedge Antilles (Unit) [COMPLEX]
 **Card Text:** Each friendly VEHICLE unit gets +1/+1 and gains Ambush. (After you play that unit, it may ready and attack an enemy unit.)
 
 **Notes:** Ambush-granting for VEHICLE units implemented; '+1/+1 for all friendly VEHICLE units' stat buff NOT implemented
 
-### SOR_101 — Restored ARC-170 (Unit) [SIMPLE]
-**Card Text:** Ambush (After you play this unit, it may ready and attack an enemy unit.)
-
-When Played: Return a unit that costs 2 or less from your discard pile to your hand.
-
-**Notes:** Ambush implemented; 'When Played: Return a unit that costs 2 or less from your discard pile to your hand' NOT implemented
-
-### SOR_102 — Redemption (Unit) [COMPLEX]
-**Card Text:** Restore 2
-
-Each other friendly unit gains Restore 1.
-
-When Played: Play a [Heroism] unit from your discard pile. It costs [3 resources] less.
-
-**Notes:** Restore 2 implemented; 'Each other friendly unit gains Restore 1' and 'When Played: Play a [Heroism] unit from your discard pile' NOT implemented
-
-### SOR_116 — General Grievous (Unit) [SIMPLE]
-**Card Text:** Overwhelm (When attacking an enemy unit, deal excess damage to the opponent's base.)
-
-On Attack: If you control a leader unit, give a friendly unit +2/+2 for this phase.
-
-**Notes:** Overwhelm implemented; 'On Attack: If you control a leader unit, give a friendly unit +2/+2 for this phase' NOT implemented
 
 ### SOR_133 — Inferno Four (Unit) [COMPLEX]
 **Card Text:** Saboteur (When this unit attacks, ignore Sentinel and defeat the defender's Shields.)
@@ -395,24 +309,12 @@ When this unit deals combat damage to an opponent's base: You may deal 3 damage 
 
 **Notes:** Saboteur implemented; 'When this unit deals combat damage to an opponent's base: You may deal 3 damage to a unit' NOT implemented
 
-### SOR_136 — Vader's Lightsaber (Upgrade) [SIMPLE]
-**Card Text:** Attach to a non-Vehicle unit.
-
-When Played: If attached unit is Darth Vader, you may deal 4 damage to a ground unit.
-
-**Notes:** Attach restriction implemented (non-Vehicle); When Played Darth Vader deal 4 damage NOT implemented
-
 ### SOR_137 — Fallen Lightsaber (Upgrade) [COMPLEX]
 **Card Text:** Attach to a non-Vehicle unit.
 
 If attached unit is a Force unit, it gains: 'On Attack: Deal 1 damage to each ground unit the defending player controls.'
 
 **Notes:** Attach restriction implemented (non-Vehicle); conditional FORCE On Attack deal 1 damage ability NOT implemented
-
-### SOR_140 — SpecForce Soldier (Unit) [SIMPLE]
-**Card Text:** When Played: A unit loses Sentinel for this phase.
-
-**Notes:** Marked as not-having-sentinel in sentinel.ts; 'When Played: A unit loses Sentinel for this phase' NOT implemented
 
 ### SOR_143 — Sabine Wren (Unit) [COMPLEX]
 **Card Text:** Saboteur (When this unit attacks, ignore Sentinel and defeat the defender's Shields.)
@@ -428,26 +330,12 @@ Each other friendly [Heroism] unit gains Raid 1.
 
 **Notes:** Raid 1 implemented; 'Each other friendly [Heroism] unit gains Raid 1' (dynamic keyword grant) NOT implemented
 
-### SOR_148 — Chewbacca (Unit) [SIMPLE]
-**Card Text:** Grit (This unit gets +1/+0 for each damage on it.)
-
-When Played: If a base has 15 or more damage on it, ready this unit.
-
-**Notes:** Grit implemented; 'When Played: If a base has 15 or more damage on it, ready this unit' NOT implemented
-
 ### SOR_149 — Darth Maul (Unit) [COMPLEX]
 **Card Text:** Ambush
 
 When this unit attacks and defeats a unit: Ready him.
 
 **Notes:** Ambush implemented; 'When this unit attacks and defeats a unit: Ready him' NOT implemented
-
-### SOR_158 — Cassian Andor (Unit) [SIMPLE]
-**Card Text:** Saboteur (When this unit attacks, ignore Sentinel and defeat the defender's Shields.)
-
-On Attack: If you control a leader unit, deal 2 damage to a ground unit or a base.
-
-**Notes:** Saboteur implemented; 'On Attack: If you control a leader unit, deal 2 damage to a ground unit or base' NOT implemented
 
 ### SOR_160 — Concord Dawn Interceptors (Unit) [COMPLEX]
 **Card Text:** Saboteur (When this unit attacks, ignore Sentinel and defeat the defender's Shields.)
@@ -470,47 +358,12 @@ When you play an event: You may deal 2 damage to a unit.
 
 **Notes:** Ambush implemented; 'When you play an event: You may deal 2 damage to a unit' NOT implemented
 
-### SOR_183 — Han Solo (Unit) [SIMPLE]
-**Card Text:** Ambush (After you play this unit, it may ready and attack an enemy unit.)
-
-When Played: You may return an event from a discard pile to its owner's hand.
-
-**Notes:** Ambush implemented; 'When Played: You may return an event from a discard pile to its owner's hand' NOT implemented
-
 ### SOR_185 — Maz Kanata (Unit) [COMPLEX]
 **Card Text:** Shielded (When you play this unit, give a Shield token to it.)
 
 On Attack: Name a card. An opponent reveals their hand and discards a card with that name from it.
 
 **Notes:** Shielded implemented; 'On Attack: Name a card. Opponent reveals their hand and discards a card with that name if able' NOT implemented
-
-### SOR_197 — Lando Calrissian (Unit) [SIMPLE]
-**Card Text:** Saboteur (When this unit attacks, ignore Sentinel and defeat the defender's Shields.)
-
-When Played: Return up to 2 friendly resources to their owners' hands.
-
-**Notes:** Saboteur implemented; 'When Played: Return up to 2 friendly resources to their owners' hands' NOT implemented
-
-### SOR_208 — Swoop Racer (Unit) [SIMPLE]
-**Card Text:** Raid 1 (This unit gets +1/+0 while attacking.)
-
-On Attack: If you control a leader unit, you may exhaust a non-leader unit.
-
-**Notes:** Raid 1 implemented; 'On Attack: If you control a leader unit, you may exhaust a non-leader unit' NOT implemented
-
-### SOR_209 — Kylo Ren (Unit) [SIMPLE]
-**Card Text:** Raid 1 (This unit gets +1/+0 while attacking.)
-
-When Played: Return a friendly non-leader unit to its owner's hand.
-
-**Notes:** Raid 1 implemented; 'When Played: Return a friendly non-leader unit to its owner's hand' NOT implemented
-
-### SOR_244 — Concord Dawn Interceptors (Unit) [SIMPLE]
-**Card Text:** Ambush (After you play this unit, it may ready and attack an enemy unit.)
-
-On Attack: Exhaust an enemy Vehicle ground unit.
-
-**Notes:** Ambush implemented; 'On Attack: Exhaust an enemy Vehicle ground unit' NOT implemented
 
 ### SOR_248 — Rogue Squadron X-Wing (Unit) [COMPLEX]
 **Card Text:** Raid 1 (This unit gets +1/+0 while attacking.)
@@ -677,3 +530,24 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_096 | Mon Mothma | Unit | When Played: search top 5 for a Rebel card; uses searchDeck with trait filter |
 | SOR_113 | Homestead Militia | Unit | While 6+ resources: gains Sentinel — conditional in sentinel.ts alongside JTL_113 |
 | SOR_118 | 97th Legion | Unit | +1/+1 for each resource you control — dynamic in unit.ts CurrentPower() and TotalHP() |
+| SOR_037 | Academy Defense Walker | Unit | When Played: give XP to each friendly damaged unit; via when-played-trigger; test coverage added |
+| SOR_038 | Count Dooku | Unit | Shielded; When Played: defeat unit with ≤4 HP (Option prompt); test coverage added |
+| SOR_045 | Yoda | Unit | Restore 2; When Defeated: choose any players to each draw a card; test coverage added |
+| SOR_049 | Obi-Wan Kenobi | Unit | Sentinel; When Defeated: give 2 XP to friendly unit; if Force unit also draw a card; test coverage added |
+| SOR_050 | The Ghost | Unit | Shielded; When Played/On Attack: give Shield to another SPECTRE unit; test coverage added |
+| SOR_053 | Luke's Lightsaber | Upgrade | Attach non-Vehicle; When Played: if on Luke Skywalker, heal all damage and give Shield; test coverage added |
+| SOR_068 | Cargo Juggernaut (Lom Pyke) | Unit | Shielded; When Played: if another Vigilance unit, heal 4 from base; via when-played-trigger; test coverage added |
+| SOR_090 | Devastator | Unit | Sentinel+Overwhelm; When Played: deal damage to unit equal to resource count; test coverage added |
+| SOR_099 | Bright Hope | Unit | Sentinel; When Played: return friendly non-leader ground unit to hand; if so, draw a card; test coverage added |
+| SOR_101 | Rogue Squadron Skirmisher | Unit | Ambush; When Played: return unit cost ≤2 from discard to hand; test coverage added |
+| SOR_116 | Steadfast Battalion (General Grievous) | Unit | Overwhelm; On Attack: if leader in play, give friendly unit +2/+2 for phase; test coverage added |
+| SOR_136 | Vader's Lightsaber | Upgrade | Attach non-Vehicle; When Played: if on Darth Vader, deal 4 to a ground unit; test coverage added |
+| SOR_140 | SpecForce Soldier | Unit | When Played: chosen unit loses Sentinel for this phase; test coverage added |
+| SOR_148 | Guerilla Attack Pod (Chewbacca) | Unit | Grit; When Played: if any base has 15+ damage, ready this unit; via when-played-trigger; test coverage added |
+| SOR_158 | Jedha Agitator (Cassian Andor) | Unit | Saboteur; On Attack: if leader in play, deal 2 damage to ground unit or base; test coverage added |
+| SOR_183 | Bounty Hunter Crew (Han Solo) | Unit | Ambush; When Played: return an event from either discard pile to owner's hand; test coverage added |
+| SOR_197 | Lando Calrissian | Unit | Saboteur; When Played: return up to 2 friendly resources to hand; test coverage added |
+| SOR_208 | Outer Rim Headhunter (Swoop Racer) | Unit | Raid 1; On Attack: if leader in play, exhaust a non-leader unit; test coverage added |
+| SOR_209 | Pirated Starfighter (Kylo Ren) | Unit | Raid 1; When Played: return friendly non-leader unit to hand; test coverage added |
+| SOR_244 | Snowspeeder (Concord Dawn Interceptors) | Unit | Ambush; On Attack: exhaust enemy Vehicle ground unit; test coverage added |
+| SOR_102 | Home One | Unit | Restore 2; passive Restore 1 to all other friendly units; When Played: play Heroism unit from discard at -3 cost (pre-filtered by affordability incl. aspect penalty); AspectPenalty exported to core-functions; test coverage added |

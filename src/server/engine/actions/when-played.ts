@@ -1,9 +1,9 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
-import { PendingResolution, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending } from "@/server/engine/pending-resolution";
+import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty } from "@/server/engine/core-functions";
+import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
-import { CardTitle, CardType, CardCost } from "@/server/engine/card-db/generated";
+import { CardTitle, CardType, CardCost, CardAspects } from "@/server/engine/card-db/generated";
 
 /** Returns playIds for all units on both sides plus both base identifiers. */
 function allUnitsAndBasesPlayIds(): string[] {
@@ -913,6 +913,141 @@ export function resolveWhenPlayed(
         mustDiscard: true,
         continuation: null,
       } satisfies PeekHandPending;
+    }
+    case "SOR_037": // Academy Defense Walker — handled auto in resolveWhenPlayedTrigger
+      return null;
+    case "SOR_038": // Count Dooku (Darth Tyranus) — You may defeat a unit with 4 or less remaining HP.
+    case "C24_001": { // reprint
+      const eligible038 = AllUnits().filter(u => Unit.FromInterface(u).CurrentHP() <= 4);
+      if (eligible038.length === 0) return null;
+      return optionalTarget(cardId, player, eligible038.map(u => u.playId),
+        "Defeat a unit with 4 or less remaining HP?");
+    }
+    case "SOR_050": { // The Ghost — When Played: You may give a Shield token to another SPECTRE unit.
+      const spectres050 = GetUnitsForPlayer(player)
+        .filter(u => u.playId !== playId && TraitContains(u.cardId, "Spectre", player, u.playId));
+      if (spectres050.length === 0) return null;
+      return optionalTarget(cardId, player, spectres050.map(u => u.playId),
+        "Give a Shield token to another Spectre unit?",
+        { yesLabel: "Give Shield", sourcePlayId: playId });
+    }
+    case "SOR_068": // Cargo Juggernaut (Lom Pyke) — handled auto in resolveWhenPlayedTrigger
+      return null;
+    case "SOR_090": { // Devastator — You may deal damage to a unit equal to the number of resources you control.
+      const gs090 = game.currentGameState;
+      const resourceCount090 = (player === 1 ? gs090.player1 : gs090.player2).resources.length;
+      if (resourceCount090 === 0) return null;
+      const allUnits090 = AllUnits();
+      if (allUnits090.length === 0) return null;
+      return optionalTarget(cardId, player, allUnits090.map(u => u.playId),
+        `Deal ${resourceCount090} damage to a unit?`);
+    }
+    case "SOR_101": { // Rogue Squadron Skirmisher — Return a unit costing 2 or less from your discard to your hand.
+      const gs101 = game.currentGameState;
+      const pState101 = player === 1 ? gs101.player1 : gs101.player2;
+      const eligible101 = pState101.discard.filter(
+        d => CardType(d.cardId) === "Unit" && (CardCost(d.cardId) ?? 0) <= 2
+      );
+      if (eligible101.length === 0) return null;
+      return {
+        type: "return-from-discard",
+        cardId,
+        player,
+        maxCount: 1,
+        eligiblePlayIds: eligible101.map(d => d.playId),
+        continuation: null,
+      } satisfies ReturnFromDiscardPending;
+    }
+    case "SOR_099": { // Home One — You may return a friendly non-leader ground unit to hand; if you do, draw a card.
+      const game099 = GetGame();
+      if (!game099) return null;
+      const groundArena099 = player === 1 ? game099.currentGameState.player1.groundArena : game099.currentGameState.player2.groundArena;
+      const friendlyNonLeaderGround099 = groundArena099.filter(u => !CardIsLeader(u.cardId));
+      if (friendlyNonLeaderGround099.length === 0) return null;
+      return optionalTarget(cardId, player, friendlyNonLeaderGround099.map(u => u.playId),
+        "Return a friendly non-leader ground unit to hand?",
+        { yesLabel: "Return" });
+    }
+    case "SOR_102": { // Home One — Play a [Heroism] unit from your discard pile. It costs [3 resources] less.
+      const game102 = GetGame();
+      if (!game102) return null;
+      const gs102 = game102.currentGameState;
+      const playerState102 = player === 1 ? gs102.player1 : gs102.player2;
+      const readyResources102 = playerState102.resources.filter(r => r.ready).length;
+      const eligible102 = playerState102.discard.filter(d => {
+        if (CardType(d.cardId) !== "Unit") return false;
+        if (!CardAspects(d.cardId)?.includes("Heroism")) return false;
+        const effectiveCost = Math.max(0, CardCost(d.cardId) + AspectPenalty(gs102, player, d.cardId) - 3);
+        return effectiveCost <= readyResources102;
+      });
+      if (eligible102.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        helperText: "Play a Heroism unit from your discard pile? (costs 3 less)",
+        yesLabel: "Play",
+        noLabel: "Skip",
+        onYes: {
+          type: "return-from-discard",
+          cardId,
+          player,
+          maxCount: 1,
+          eligiblePlayIds: eligible102.map(d => d.playId),
+          continuation: null,
+        } satisfies ReturnFromDiscardPending,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "SOR_140": { // SpecForce Soldier — A unit loses Sentinel for this phase.
+      const all140 = AllUnits();
+      if (all140.length === 0) return null;
+      return mandatoryTarget(cardId, player, all140.map(u => u.playId));
+    }
+    case "SOR_148": // Guerilla Attack Pod — handled auto in resolveWhenPlayedTrigger
+      return null;
+    case "SOR_183": { // Bounty Hunter Crew (Han Solo) — Return an event from a discard pile to its owner's hand.
+      const gs183 = game.currentGameState;
+      const events183 = [
+        ...gs183.player1.discard.filter(d => CardType(d.cardId) === "Event"),
+        ...gs183.player2.discard.filter(d => CardType(d.cardId) === "Event"),
+      ];
+      if (events183.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        helperText: "Return an event from a discard pile to its owner's hand?",
+        yesLabel: "Return",
+        noLabel: "Skip",
+        onYes: {
+          type: "return-from-discard",
+          cardId,
+          player,
+          maxCount: 1,
+          eligiblePlayIds: events183.map(d => d.playId),
+          continuation: null,
+        } satisfies ReturnFromDiscardPending,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "SOR_197": { // Lando Calrissian (Responsible Businessman) — Return up to 2 friendly resources to hand.
+      const gs197 = game.currentGameState;
+      const friendlyResources197 = (player === 1 ? gs197.player1 : gs197.player2).resources;
+      if (friendlyResources197.length === 0) return null;
+      return {
+        type: "give-xp-multiple",
+        cardId,
+        player,
+        maxCount: 2,
+        eligiblePlayIds: friendlyResources197.map(r => r.playId),
+        continuation: null,
+      } satisfies GiveXpMultiplePending;
+    }
+    case "SOR_209": { // Pirated Starfighter (Kylo Ren) — Return a friendly non-leader unit to its owner's hand.
+      const friendlyNonLeaders209 = GetUnitsForPlayer(player).filter(u => !CardIsLeader(u.cardId));
+      if (friendlyNonLeaders209.length === 0) return null;
+      return mandatoryTarget(cardId, player, friendlyNonLeaders209.map(u => u.playId));
     }
     default:
       return null;

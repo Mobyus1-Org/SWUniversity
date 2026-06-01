@@ -21,6 +21,7 @@ export type UserProfile = {
   endlessModeStats: EndlessModeStats;
   badges: string[];
   badgeDetails: BadgeViewModel[];
+  solvedPuzzleIds: string[];
   createdAt?: string;
   updatedAt?: string;
 };

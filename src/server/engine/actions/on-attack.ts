@@ -1,6 +1,6 @@
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, optionalTarget, searchDeck, DealDamageToUnit } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, DealDamageToUnit } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { CardTraits } from "@/server/engine/card-db/generated";
@@ -351,6 +351,56 @@ export function resolveOnAttackTrigger(
         onYes: null,
         continuation,
       };
+    }
+    case "SOR_050": { // The Ghost — On Attack: You may give a Shield token to another SPECTRE unit.
+      const spectres050 = GetUnitsForPlayer(attacker.controller)
+        .filter(u => u.playId !== attacker.playId && TraitContains(u.cardId, "Spectre", attacker.controller, u.playId));
+      if (spectres050.length === 0) return continuation;
+      return optionalTarget(attacker.cardId, attacker.controller, spectres050.map(u => u.playId),
+        "Give a Shield token to another Spectre unit?",
+        { yesLabel: "Give Shield", sourcePlayId: attacker.playId, continuation });
+    }
+    case "SOR_116": { // Steadfast Battalion (General Grievous) — On Attack: If you control a leader unit, give a friendly unit +2/+2 for this phase.
+      const leader116 = GetLeaderForPlayer(attacker.controller);
+      if (!leader116.deployed) return continuation;
+      const friendlies116 = GetUnitsForPlayer(attacker.controller);
+      if (friendlies116.length === 0) return continuation;
+      return optionalTarget(attacker.cardId, attacker.controller, friendlies116.map(u => u.playId),
+        "Give a friendly unit +2/+2 for this phase?",
+        { yesLabel: "Give +2/+2", sourcePlayId: attacker.playId, continuation });
+    }
+    case "SOR_158": { // Jedha Agitator (Cassian Andor) — On Attack: If you control a leader unit, deal 2 damage to a ground unit or base.
+      const leader158 = GetLeaderForPlayer(attacker.controller);
+      if (!leader158.deployed) return continuation;
+      const game158 = GetGame();
+      if (!game158) return continuation;
+      const gs158 = game158.currentGameState;
+      const groundAndBases158 = [
+        ...gs158.player1.groundArena.map(u => u.playId),
+        ...gs158.player2.groundArena.map(u => u.playId),
+        "player1.base",
+        "player2.base",
+      ];
+      return mandatoryTarget(attacker.cardId, attacker.controller, groundAndBases158, continuation);
+    }
+    case "SOR_208": { // Outer Rim Headhunter (Swoop Racer) — On Attack: If you control a leader unit, you may exhaust a non-leader unit.
+      const leader208 = GetLeaderForPlayer(attacker.controller);
+      if (!leader208.deployed) return continuation;
+      const nonLeaders208 = AllUnits().filter(u => !CardIsLeader(u.cardId));
+      if (nonLeaders208.length === 0) return continuation;
+      return optionalTarget(attacker.cardId, attacker.controller, nonLeaders208.map(u => u.playId),
+        "Exhaust a non-leader unit?",
+        { yesLabel: "Exhaust", sourcePlayId: attacker.playId, continuation });
+    }
+    case "SOR_244": { // Snowspeeder (Concord Dawn Interceptors) — On Attack: Exhaust an enemy Vehicle ground unit.
+      const game244 = GetGame();
+      if (!game244) return continuation;
+      const gs244 = game244.currentGameState;
+      const opponentId244 = attacker.controller === 1 ? 2 : 1;
+      const enemyVehicles244 = (opponentId244 === 1 ? gs244.player1.groundArena : gs244.player2.groundArena)
+        .filter(u => TraitContains(u.cardId, "Vehicle", opponentId244, u.playId));
+      if (enemyVehicles244.length === 0) return continuation;
+      return mandatoryTarget(attacker.cardId, attacker.controller, enemyVehicles244.map(u => u.playId), continuation);
     }
     default:
       // If an upgrade-only trigger fired but no native ability, return continuation so combat proceeds.

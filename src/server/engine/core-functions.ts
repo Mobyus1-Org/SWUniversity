@@ -554,8 +554,13 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_179": //Boba Fett - Disintegrator
     case "SOR_040": //Avenger - Hunting Star Destroyer
     case "SOR_047": //Kanan Jarrus
+    case "SOR_050": //The Ghost - Spectre Home Base
     case "SOR_119": //Reinforcement Walker
     case "SOR_059": //2-1B Surgical Droid
+    case "SOR_116": //Steadfast Battalion (General Grievous)
+    case "SOR_158": //Jedha Agitator (Cassian Andor)
+    case "SOR_208": //Outer Rim Headhunter (Swoop Racer)
+    case "SOR_244": //Snowspeeder (Concord Dawn Interceptors)
     case "SOR_236": //R2-D2 - Ignoring Protocol
     case "SOR_206": //Mining Guild TIE Fighter
     case "SOR_006": //Emperor Palpatine - Galactic Ruler
@@ -802,4 +807,22 @@ export function searchDeck(
     action,
     continuation: opts?.continuation ?? null,
   } satisfies DeckSearchPending;
+}
+
+/** Aspect penalty (in resources) for a player playing a given card. +2 per uncovered aspect. */
+export function AspectPenalty(gs: GameState, player: PlayerId, cardId: string): number {
+  const playerState = player === 1 ? gs.player1 : gs.player2;
+  const provided = [
+    ...CardAspects(playerState.base.cardId),
+    ...CardAspects(playerState.leader.cardId),
+  ];
+  const counts = new Map<string, number>();
+  for (const a of provided) counts.set(a, (counts.get(a) ?? 0) + 1);
+  let missing = 0;
+  for (const a of CardAspects(cardId)) {
+    const rem = counts.get(a) ?? 0;
+    if (rem > 0) counts.set(a, rem - 1);
+    else missing++;
+  }
+  return missing * 2;
 }

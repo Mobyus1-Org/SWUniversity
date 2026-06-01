@@ -1,0 +1,257 @@
+{
+  "_id": {
+  },
+  "name": "The Most Power Weapon the Galaxy Has Ever Seen",
+  "description": "Director Krennic is preparing a strike against Luke Skywalker and the Rebels",
+  "difficulty": 1,
+  "initialGamestate": {
+    "activePlayer": 1,
+    "gamePhase": "ActionPhase",
+    "nextPlayId": 1,
+    "currentRound": 5,
+    "initiativePlayer": 2,
+    "initiativeClaimed": true,
+    "player1": {
+      "base": {
+        "cardId": "SOR_023",
+        "damage": 29,
+        "epicActionUsed": false
+      },
+      "leader": {
+        "cardId": "SOR_001",
+        "ready": true,
+        "deployed": false,
+        "epicActionUsed": true
+      },
+      "groundArena": [
+        {
+          "cardId": "SOR_032",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true,
+          "damage": 0,
+          "upgrades": [],
+          "captives": []
+        },
+        {
+          "cardId": "SOR_108",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true,
+          "damage": 0,
+          "upgrades": [],
+          "captives": []
+        }
+      ],
+      "spaceArena": [
+        {
+          "cardId": "SOR_225",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true,
+          "damage": 0,
+          "upgrades": [],
+          "captives": []
+        }
+      ],
+      "resources": [
+        {
+          "cardId": "SOR_059",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SOR_059",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SOR_059",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SOR_059",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SOR_059",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        },
+        {
+          "cardId": "SOR_059",
+          "playId": "@",
+          "owner": 1,
+          "controller": 1,
+          "ready": true
+        }
+      ],
+      "discard": [],
+      "deck": [],
+      "hand": [
+        {
+          "cardId": "SOR_077"
+        },
+        {
+          "cardId": "SHD_081"
+        },
+        {
+          "cardId": "SOR_092"
+        },
+        {
+          "cardId": "SOR_120"
+        },
+        {
+          "cardId": "SOR_121"
+        }
+      ]
+    },
+    "player2": {
+      "base": {
+        "cardId": "SOR_024",
+        "damage": 26,
+        "epicActionUsed": false
+      },
+      "leader": {
+        "cardId": "SOR_005",
+        "ready": true,
+        "deployed": false,
+        "epicActionUsed": true
+      },
+      "groundArena": [
+        {
+          "cardId": "SOR_063",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": false,
+          "damage": 0,
+          "upgrades": [],
+          "captives": []
+        },
+        {
+          "cardId": "SOR_063",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": false,
+          "damage": 1,
+          "upgrades": [],
+          "captives": []
+        }
+      ],
+      "spaceArena": [
+        {
+          "cardId": "JTL_064",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": false,
+          "damage": 0,
+          "upgrades": [],
+          "captives": []
+        },
+        {
+          "cardId": "JTL_064",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": false,
+          "damage": 1,
+          "upgrades": [],
+          "captives": []
+        }
+      ],
+      "resources": [
+        {
+          "cardId": "SOR_059",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": true
+        },
+        {
+          "cardId": "SOR_059",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": true
+        },
+        {
+          "cardId": "SOR_059",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": true
+        },
+        {
+          "cardId": "SOR_059",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": true
+        },
+        {
+          "cardId": "SOR_059",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": true
+        },
+        {
+          "cardId": "SOR_059",
+          "playId": "@",
+          "owner": 2,
+          "controller": 2,
+          "ready": true
+        }
+      ],
+      "discard": [],
+      "deck": [
+        {
+          "cardId": "LOF_254"
+        },
+        {
+          "cardId": "LOF_254"
+        },
+        {
+          "cardId": "LOF_254"
+        },
+        {
+          "cardId": "LAW_260"
+        },
+        {
+          "cardId": "LAW_260"
+        }
+      ],
+      "hand": []
+    },
+    "currentEffects": [],
+    "triggerBag": []
+  },
+  "createdAt": {
+    "$date": "2026-05-25T16:12:23.600Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-27T00:05:06.648Z"
+  },
+  "__v": 0,
+  "deploy": true,
+  "author": "Mobyus1",
+  "intendedSolution": []
+}

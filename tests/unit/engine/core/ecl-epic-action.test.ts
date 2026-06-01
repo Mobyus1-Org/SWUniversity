@@ -241,6 +241,7 @@ describe("ECL Epic Action", () => {
       .TheirLeader(Cards.leaders.sor.sabineWren)
       .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 4)
       .WithCardInHandForPlayer(1, Cards.units.sor.brightHope)
+      .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine) // WP target: When Played can return this unit
       .Build();
     g.loadNewState(state);
 

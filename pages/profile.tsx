@@ -1,8 +1,12 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import type { GetServerSideProps } from "next";
+import type { NextApiRequest } from "next";
 import type { UserProfile } from "@/util/profile-api";
 import { deriveProfileStats, type DerivedAppStats } from "@/util/profile-data";
+import { getSessionFromRequest } from "@/server/auth/session";
+import { connectToDatabase } from "@/server/db";
 
 type MeResponse = {
   user: {
@@ -37,7 +41,30 @@ function AppStatsSection({ title, stats }: { title: string; stats: DerivedAppSta
   );
 }
 
-export default function ProfilePage() {
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const request = context.req as NextApiRequest;
+  const session = await getSessionFromRequest(request);
+
+  if (!session) {
+    return { props: { canAccessPuzzles: false } };
+  }
+
+  if (session.user.role === "admin") {
+    return { props: { canAccessPuzzles: true } };
+  }
+
+  try {
+    const mongoose = await connectToDatabase();
+    const coll = mongoose.connection.collection("authz");
+    const authz = await coll.findOne({});
+    const previewUsers = authz && Array.isArray((authz as any).previewUsers) ? (authz as any).previewUsers : [];
+    return { props: { canAccessPuzzles: previewUsers.includes(session.user.username) } };
+  } catch {
+    return { props: { canAccessPuzzles: false } };
+  }
+};
+
+export default function ProfilePage({ canAccessPuzzles = false }: { canAccessPuzzles?: boolean }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -46,6 +73,10 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = React.useState("");
   const [message, setMessage] = React.useState("");
   const [error, setError] = React.useState("");
+  const [showResetPuzzleConfirm, setShowResetPuzzleConfirm] = React.useState(false);
+  const [resetPuzzleMessage, setResetPuzzleMessage] = React.useState("");
+  const [resetPuzzleError, setResetPuzzleError] = React.useState("");
+  const [isResettingPuzzles, setIsResettingPuzzles] = React.useState(false);
 
   const loadUser = React.useCallback(async () => {
     setIsLoading(true);
@@ -105,6 +136,29 @@ export default function ProfilePage() {
     }
   };
 
+  const onResetPuzzleCompletion = async () => {
+    setIsResettingPuzzles(true);
+    setResetPuzzleError("");
+    setResetPuzzleMessage("");
+    try {
+      const response = await fetch("/api/profile/reset-puzzle-completion", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = (await response.json()) as ApiResponse;
+      if (!response.ok) {
+        setResetPuzzleError(data.error || "Unable to reset puzzle completion.");
+        return;
+      }
+      setResetPuzzleMessage("Puzzle completion reset.");
+      setShowResetPuzzleConfirm(false);
+    } catch {
+      setResetPuzzleError("Unable to reset puzzle completion.");
+    } finally {
+      setIsResettingPuzzles(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="max-w-md mx-auto mt-8 p-6">Loading profile...</div>;
   }
@@ -153,6 +207,44 @@ export default function ProfilePage() {
             <p className="text-sm text-gray-300">No badges earned yet.</p>
           )}
         </div>
+
+        {canAccessPuzzles ? <div>
+          <h2 className="text-xl font-semibold">Puzzles</h2>
+          <div className="mt-4 space-y-3">
+            {showResetPuzzleConfirm ? (
+              <div className="rounded-lg border border-rose-400/30 bg-rose-500/10 p-4 space-y-3">
+                <p className="text-sm text-rose-200">This will clear all solved puzzle records. Are you sure?</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void onResetPuzzleCompletion()}
+                    disabled={isResettingPuzzles}
+                    className="btn btn-sm rounded-lg border border-rose-400/40 bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-500/35 disabled:opacity-50"
+                  >
+                    {isResettingPuzzles ? "Resetting..." : "Confirm"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPuzzleConfirm(false)}
+                    className="btn btn-sm rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setResetPuzzleMessage(""); setResetPuzzleError(""); setShowResetPuzzleConfirm(true); }}
+                className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+              >
+                Reset Puzzle Completion
+              </button>
+            )}
+            {resetPuzzleError && <p className="text-red-300 text-sm">{resetPuzzleError}</p>}
+            {resetPuzzleMessage && <p className="text-green-300 text-sm">{resetPuzzleMessage}</p>}
+          </div>
+        </div> : null}
 
         <div>
           <h2 className="text-xl font-semibold">Change Password</h2>

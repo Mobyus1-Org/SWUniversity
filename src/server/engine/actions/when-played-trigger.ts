@@ -1,7 +1,7 @@
 import { CardTitle } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { DrawCardForPlayer } from "@/server/engine/core-functions";
+import { DrawCardForPlayer, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
 import { CreateSpy, CreateTieFighter } from "@/server/engine/token-helpers";
 
 /**
@@ -68,6 +68,36 @@ export function resolveWhenPlayedTrigger(
           unit191.upgrades.push({ cardId: "SOR_T01", playId: String(gs.nextPlayId++), owner: unit191.owner, controller: unit191.controller });
         }
         log.push(`${CardTitle(trigger.cardId)}: gained ${xpCount} Experience token(s).`);
+      }
+      break;
+    }
+    case "SOR_037": { // Academy Defense Walker — Give an Experience token to each friendly damaged unit.
+      const pState037 = trigger.fromPlayer === 1 ? gs.player1 : gs.player2;
+      const friendlyUnits037 = [...pState037.groundArena, ...pState037.spaceArena];
+      for (const u of friendlyUnits037) {
+        if (u.damage > 0) {
+          u.upgrades.push({ cardId: "SOR_T01", playId: String(gs.nextPlayId++), owner: u.owner, controller: u.controller });
+          log.push(`${CardTitle(trigger.cardId)}: gave Experience to ${CardTitle(u.cardId)}.`);
+        }
+      }
+      break;
+    }
+    case "SOR_068": { // Cargo Juggernaut — If you control another Vigilance unit, heal 4 from base.
+      if (!PlayerHasUnitWithAspectInPlay(trigger.fromPlayer, "Vigilance", true, trigger.playId)) break;
+      const base068 = trigger.fromPlayer === 1 ? gs.player1.base : gs.player2.base;
+      base068.damage = Math.max(0, base068.damage - 4);
+      log.push(`${CardTitle(trigger.cardId)}: healed 4 damage from your base.`);
+      break;
+    }
+    case "SOR_148": { // Guerilla Attack Pod — If a base has 15+ damage, ready this unit.
+      if (gs.player1.base.damage < 15 && gs.player2.base.damage < 15) break;
+      if (!trigger.playId) break;
+      const self148 = [...gs.player1.groundArena, ...gs.player2.groundArena,
+                       ...gs.player1.spaceArena, ...gs.player2.spaceArena]
+        .find(u => u.playId === trigger.playId);
+      if (self148) {
+        self148.ready = true;
+        log.push(`${CardTitle(trigger.cardId)}: readied because a base has 15 or more damage.`);
       }
       break;
     }

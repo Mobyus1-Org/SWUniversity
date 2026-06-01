@@ -15,6 +15,7 @@ export type UserProfileDocument = {
   gamesCompleted: Array<Omit<GameCompletedEntry, "date"> & { date: Date }>;
   endlessModeStats: EndlessModeStats;
   badges: string[];
+  solvedPuzzleIds: string[];
   createdAt: Date;
   updatedAt: Date;
 };
@@ -132,6 +133,11 @@ const userProfileSchema = new Schema<UserProfileDocument>(
       default: createEmptyEndlessModeStats,
     },
     badges: {
+      type: [String],
+      required: true,
+      default: [],
+    },
+    solvedPuzzleIds: {
       type: [String],
       required: true,
       default: [],
