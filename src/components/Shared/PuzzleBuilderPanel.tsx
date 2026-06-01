@@ -2,6 +2,7 @@ import React from "react";
 import { globalBackgroundStyle } from "@/util/style-const";
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
 import type { GamePhase } from "@/lib/engine/core-models";
+import type { SolverResult } from "@/server/puzzle/solver";
 
 export type CardCatalogEntry = {
   cardId: string;
@@ -854,6 +855,9 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
   const [state, setState] = React.useState<BuilderState>(initialBuilderState);
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
+  const [solverResult, setSolverResult] = React.useState<SolverResult | null>(null);
+  const [solverError, setSolverError] = React.useState<string | null>(null);
+  const [showSolutions, setShowSolutions] = React.useState(false);
   const [importError, setImportError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -957,6 +961,49 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, ...data });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Test failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleExport() {
+    const doc = {
+      name: state.name.trim(),
+      description: state.description.trim(),
+      author: state.author?.trim() ?? "",
+      inspiredBy: state.inspiredBy?.trim() ?? "",
+      intendedSolution: state.intendedSolution ?? [],
+      difficulty: state.difficulty,
+      initialGamestate: toRaw(state),
+    };
+    const blob = new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const slug = state.name.trim()
+      ? state.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+      : "puzzle";
+    a.download = `${slug}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleSolve() {
+    setSolverResult(null);
+    setSolverError(null);
+    setShowSolutions(false);
+    setSaving(true);
+    try {
+      const res = await fetch("/api/puzzles/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ puzzle: toRaw(state) }),
+      });
+      if (!res.ok) throw new Error((await res.json() as { error?: string }).error ?? "Solver failed");
+      const data = await res.json() as SolverResult;
+      setSolverResult(data);
+    } catch (err) {
+      setSolverError(err instanceof Error ? err.message : "Solver failed.");
     } finally {
       setSaving(false);
     }
@@ -1184,8 +1231,65 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                 >
                   {saving ? "Testing…" : "Test"}
                 </button>
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                >
+                  Export JSON
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={handleSolve}
+                  className="rounded-xl border border-violet-400/40 bg-violet-500/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500/20 disabled:opacity-40"
+                >
+                  {saving ? "Checking…" : "Solvable?"}
+                </button>
                 {saveError ? <span className="text-xs text-rose-300">{saveError}</span> : null}
               </div>
+              {/* Solver result */}
+              {solverError && (
+                <p className="text-xs text-rose-300">✗ {solverError}</p>
+              )}
+              {solverResult && !solverError && (
+                <div className="flex flex-col gap-1">
+                  {solverResult.timedOut && (
+                    <p className="text-xs text-amber-300">⚠ Solver timed out — puzzle may still be solvable</p>
+                  )}
+                  {solverResult.solvable ? (
+                    <>
+                      <p className="text-xs text-emerald-300">
+                        ✓ Solvable — {solverResult.steps.length} solution(s) found
+                        {" "}
+                        <button
+                          type="button"
+                          onClick={() => setShowSolutions((v) => !v)}
+                          className="underline opacity-70 hover:opacity-100"
+                        >
+                          {showSolutions ? "hide" : "show"}
+                        </button>
+                      </p>
+                      {showSolutions && (
+                        <div className="mt-1 flex flex-col gap-3 text-xs text-white/70">
+                          {solverResult.steps.map((solution, si) => (
+                            <div key={si}>
+                              <p className="font-semibold text-white/50">Solution {si + 1}:</p>
+                              <ol className="ml-3 list-decimal">
+                                {solution.map((step, i) => (
+                                  <li key={i}>{step}</li>
+                                ))}
+                              </ol>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-rose-300">✗ No solution found</p>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
