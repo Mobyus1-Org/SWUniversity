@@ -364,6 +364,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
   const [lastActionMs, setLastActionMs] = React.useState<number | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [selectedTargetPlayIds, setSelectedTargetPlayIds] = React.useState<string[]>([]);
+  const [selectedTargetIndices, setSelectedTargetIndices] = React.useState<number[]>([]);
   const [spreadDmgMap, setSpreadDmgMap] = React.useState<Record<string, number>>({});
   const [selectedPuzzleFilename, setSelectedPuzzleFilename] = React.useState<string | null>(null);
   const [puzzleName, setPuzzleName] = React.useState<string | null>(null);
@@ -431,7 +432,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     setPreview(null);
   }, [clearPreviewTimer, clearPreviewDismissTimer, setPreview]);
   React.useEffect(() => () => { clearPreviewTimer(); clearPreviewDismissTimer(); }, [clearPreviewTimer, clearPreviewDismissTimer]);
-  React.useEffect(() => { setSelectedTargetPlayIds([]); setSpreadDmgMap({}); }, [resolutionNeeded]);
+  React.useEffect(() => { setSelectedTargetPlayIds([]); setSelectedTargetIndices([]); setSpreadDmgMap({}); }, [resolutionNeeded]);
 
   const [deckSearchSelected, setDeckSearchSelected] = React.useState<Set<string>>(new Set());
   React.useEffect(() => { if (resolutionNeeded?.type !== "DeckSearch") setDeckSearchSelected(new Set()); }, [resolutionNeeded]);
@@ -510,11 +511,16 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
   // ---------------------------------------------------------------------------
   const isMultiSelectTarget = resolutionNeeded?.type === "Target" &&
     ((resolutionNeeded.needsMultiple ?? false) || (resolutionNeeded.maxTargets ?? 1) > 1);
+  const isMultiSelectHand = isMultiSelectTarget && resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Hand");
 
   const handleConfirmTargets = React.useCallback(() => {
     if (isResolving) return;
-    void sendDispatch(createDispatch("choose-target", { targetPlayIds: selectedTargetPlayIds }));
-  }, [isResolving, selectedTargetPlayIds, sendDispatch]);
+    if (isMultiSelectHand) {
+      void sendDispatch(createDispatch("choose-target", { targetIndices: selectedTargetIndices }));
+    } else {
+      void sendDispatch(createDispatch("choose-target", { targetPlayIds: selectedTargetPlayIds }));
+    }
+  }, [isResolving, isMultiSelectHand, selectedTargetIndices, selectedTargetPlayIds, sendDispatch]);
 
   const handleUnitClick = React.useCallback((playId: string) => {
     if (isResolving) return;
@@ -566,11 +572,20 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
   const handleHandClick = React.useCallback((index: number, cardId: string) => {
     if (isResolving) return;
     if (resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Hand")) {
-      void sendDispatch(createDispatch("choose-target", { targetIndices: [index] }));
+      if (isMultiSelectHand) {
+        setSelectedTargetIndices(prev => {
+          if (prev.includes(index)) return prev.filter(i => i !== index);
+          const max = resolutionNeeded.maxTargets ?? Infinity;
+          if (prev.length >= max) return prev;
+          return [...prev, index];
+        });
+      } else {
+        void sendDispatch(createDispatch("choose-target", { targetIndices: [index] }));
+      }
     } else if (!resolutionNeeded) {
       void sendDispatch(createDispatch("play-card", { cardId, fromZone: "Hand" }));
     }
-  }, [isResolving, resolutionNeeded, sendDispatch]);
+  }, [isResolving, isMultiSelectHand, resolutionNeeded, sendDispatch]);
 
   const handleLeaderAbility = React.useCallback(() => {
     if (!gameState) return;
@@ -1726,6 +1741,10 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                 <div className="mx-auto flex w-max gap-2">
               {player.hand.map((card, index) => {
                 const selectable = selectableHandIndices.includes(index);
+                const handSelected = isMultiSelectHand && selectedTargetIndices.includes(index);
+                const handGlow = handSelected
+                  ? "ring-2 ring-amber-400/80 shadow-[0_0_14px_rgba(251,191,36,0.5)]"
+                  : "shadow-[0_0_10px_rgba(var(--lightsaber-r),var(--lightsaber-g),var(--lightsaber-b),0.55)]";
                 return <div key={`${card.cardId}-${index}`} className="relative w-[5rem] shrink-0 origin-bottom transition-transform duration-150 hover:z-30 hover:-translate-y-1 hover:scale-[1.3]">
                   <div className="xl:hidden">
                     <CardVisual
@@ -1735,7 +1754,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       square
-                      customGlowClass="shadow-[0_0_10px_rgba(var(--lightsaber-r),var(--lightsaber-g),var(--lightsaber-b),0.55)]"
+                      customGlowClass={handGlow}
                     />
                   </div>
                   <div className="hidden xl:block">
@@ -1746,7 +1765,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                       onPreviewStart={handlePreviewStart}
                       onPreviewEnd={handlePreviewEnd}
                       handScaleHalf
-                      customGlowClass="shadow-[0_0_10px_rgba(var(--lightsaber-r),var(--lightsaber-g),var(--lightsaber-b),0.55)]"
+                      customGlowClass={handGlow}
                     />
                   </div>
                 </div>;
@@ -1776,11 +1795,11 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
 
     {isMultiSelectTarget && discardModalPlayer === null ? <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-xl border border-amber-400/30 bg-[rgba(8,12,26,0.97)] px-5 py-3 shadow-2xl">
       <span className="text-sm text-white/70">
-        {selectedTargetPlayIds.length} / {resolutionNeeded?.maxTargets ?? "?"} selected
+        {isMultiSelectHand ? selectedTargetIndices.length : selectedTargetPlayIds.length} / {resolutionNeeded?.maxTargets ?? "?"} selected
       </span>
       <button type="button" disabled={isResolving} onClick={handleConfirmTargets}
         className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-sky-500/35 disabled:cursor-not-allowed disabled:opacity-40">
-        Confirm ({selectedTargetPlayIds.length})
+        Confirm ({isMultiSelectHand ? selectedTargetIndices.length : selectedTargetPlayIds.length})
       </button>
     </div> : null}
 

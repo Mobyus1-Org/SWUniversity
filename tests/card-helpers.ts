@@ -212,6 +212,7 @@ export const Cards = {
     },
     sor: {
       infernoFour: "SOR_031",
+      lieutenantChildsen: "SOR_035",
       gideonHask: "SOR_036",
       academyDefenseWalker: "SOR_037",
       countDooku: "SOR_038",

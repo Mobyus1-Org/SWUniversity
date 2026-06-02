@@ -358,7 +358,24 @@ export type PendingResolution =
   | DeckSearchPending
   | PeekHandPending
   | MillPending
-  | MillResultPending;
+  | MillResultPending
+  | RevealFromHandPending;
+
+/**
+ * Player selects up to maxCount cards (by hand index) from eligibleIndices to reveal.
+ * Each revealed card gives 1 XP to the unit at sourcePlayId.
+ */
+export interface RevealFromHandPending {
+  type: "reveal-from-hand";
+  cardId: string;
+  player: PlayerId;
+  /** Hand indices of cards eligible to reveal (filtered by required aspect). */
+  eligibleIndices: number[];
+  maxCount: number;
+  /** Play ID of the unit receiving XP tokens. */
+  sourcePlayId: string;
+  continuation: PendingResolution | null;
+}
 
 export interface PeekHandPending {
   type: "peek-hand";

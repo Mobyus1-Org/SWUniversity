@@ -113,6 +113,11 @@ export class GameTestAdapter {
     return this.dispatchAsync(player, "choose-target", { targetZones: ["Hand"], targetPlayers: [player], targetIndices: [handIndex] });
   }
 
+  /** Confirms a multi-select hand reveal (e.g. SOR_035 Lieutenant Childsen) with the given indices. */
+  async revealFromHandAsync(player: PlayerId, indices: number[]): Promise<GameTestAdapter> {
+    return this.dispatchAsync(player, "choose-target", { targetIndices: indices });
+  }
+
   /** Sends choose-target with multiple friendly ground unit playIds for Exploit resolution. */
   async exploitGroundUnitsAsync(player: PlayerId, unitIndices: number[]): Promise<GameTestAdapter> {
     const pState = player === 1 ? this.state.player1 : this.state.player2;

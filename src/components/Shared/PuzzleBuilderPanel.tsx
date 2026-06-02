@@ -917,7 +917,6 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
   }
 
   function handleSave() {
-    if (!state.name.trim()) { setSaveError("Puzzle name is required."); return; }
     setSaving(true);
     setSaveError(null);
     const puzzleData = {
@@ -1231,28 +1230,32 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                 >
                   {saving ? "Testing…" : "Test"}
                 </button>
-                <button
-                  type="button"
-                  onClick={handleExport}
-                  className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
-                >
-                  Export JSON
-                </button>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={handleSolve}
-                  className="rounded-xl border border-violet-400/40 bg-violet-500/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500/20 disabled:opacity-40"
-                >
-                  {saving ? "Checking…" : "Solvable?"}
-                </button>
+                {process.env.NODE_ENV === "development" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleExport}
+                      className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                    >
+                      Export JSON
+                    </button>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={handleSolve}
+                      className="rounded-xl border border-violet-400/40 bg-violet-500/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500/20 disabled:opacity-40"
+                    >
+                      {saving ? "Checking…" : "Solvable?"}
+                    </button>
+                  </>
+                )}
                 {saveError ? <span className="text-xs text-rose-300">{saveError}</span> : null}
               </div>
-              {/* Solver result */}
-              {solverError && (
+              {/* Solver result (dev only) */}
+              {process.env.NODE_ENV === "development" && solverError && (
                 <p className="text-xs text-rose-300">✗ {solverError}</p>
               )}
-              {solverResult && !solverError && (
+              {process.env.NODE_ENV === "development" && solverResult && !solverError && (
                 <div className="flex flex-col gap-1">
                   {solverResult.timedOut && (
                     <p className="text-xs text-amber-300">⚠ Solver timed out — puzzle may still be solvable</p>

@@ -242,12 +242,6 @@ All simple cards have been implemented.
 
 These cards have some engine coverage but one or more abilities are not yet implemented.
 
-### SOR_035 — Lieutenant Childsen (Unit) [COMPLEX]
-**Card Text:** Sentinel (Units in this arena can't attack your non-Sentinel units or your base.)
-
-When Played: Reveal up to 4 [Vigilance] cards from your hand. For each card revealed this way, give an Experience token to this unit.
-
-**Notes:** Sentinel implemented; 'When Played: Reveal up to 4 [Vigilance] cards from hand, give Experience for each revealed' NOT implemented
 
 ### SOR_051 — Luke Skywalker (Unit) [COMPLEX]
 **Card Text:** Restore 3
@@ -483,6 +477,7 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_242 | General Dodonna | Unit | Other friendly Rebel units +1/+1; loops in CurrentPower()/TotalHP(); test coverage added |
 | SOR_245 | Medal Ceremony | Event | Give XP to up to 3 Rebel units that attacked this phase; GiveXpMultiplePending; test coverage added |
 | SOR_031 | Inferno Four | Unit | When Played/When Defeated: Scry 2; test coverage added |
+| SOR_035 | Lieutenant Childsen | Unit | Sentinel; When Played: reveal up to 4 Vigilance hand cards, gain 1 XP per card (capped at 4); auto-resolved in resolveWhenPlayedTrigger; test coverage added |
 | SOR_043 | Superlaser Blast | Event | Defeat all units (board wipe); test coverage added |
 | SOR_036 | Gideon Hask | Unit | When an enemy unit is defeated: Experience token; test coverage added |
 | SOR_039 | AT-AT Suppressor | Unit | Has custom logic in engine action files; test coverage added |

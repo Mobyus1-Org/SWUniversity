@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty } from "@/server/engine/core-functions";
-import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending } from "@/server/engine/pending-resolution";
+import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
 import { CardTitle, CardType, CardCost, CardAspects } from "@/server/engine/card-db/generated";
@@ -443,6 +443,23 @@ export function resolveWhenPlayed(
       const eligible178 = AllUnits().filter(u => u.controller !== player && (CardCost(u.cardId) ?? 0) <= 4);
       if (eligible178.length === 0) return null;
       return mandatoryTarget(cardId, player, eligible178.map(u => u.playId));
+    }
+    case "SOR_035": { // Lieutenant Childsen — Reveal up to 4 Vigilance cards from hand; give 1 XP per revealed.
+      const pState035 = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+      const eligibleIndices035 = pState035.hand
+        .map((c, i) => ({ i, cardId: c.cardId }))
+        .filter(({ cardId }) => CardAspects(cardId).includes("Vigilance"))
+        .map(({ i }) => i);
+      if (eligibleIndices035.length === 0) return null;
+      return {
+        type: "reveal-from-hand",
+        cardId,
+        player,
+        eligibleIndices: eligibleIndices035,
+        maxCount: 4,
+        sourcePlayId: playId ?? "",
+        continuation: null,
+      } satisfies RevealFromHandPending;
     }
     case "SOR_191": // Vanguard Ace — effect applied in resolveWhenPlayedTrigger
       return null;

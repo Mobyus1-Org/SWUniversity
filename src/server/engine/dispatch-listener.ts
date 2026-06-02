@@ -75,6 +75,7 @@ import type {
   ResolveAttackPending,
   MillPending,
   MillResultPending,
+  RevealFromHandPending,
   SpreadDamagePending,
   SpreadHealPending,
   TriggerOrderPending,
@@ -1275,6 +1276,14 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         eligibleIndices,
       } satisfies NeedsPeekHand;
     }
+    case "reveal-from-hand":
+      return {
+        type: "Target",
+        fromZones: ["Hand"],
+        fromIndices: pending.eligibleIndices,
+        needsMultiple: true,
+        maxTargets: pending.maxCount,
+      } satisfies NeedsTarget;
     case "mill":
     case "mill-result": throw new Error(`${pending.type} should be processed inline and never reach the client.`);
     default: throw new Error(`Unknown pending resolution type: ${pending.type}`);
@@ -2057,6 +2066,26 @@ function handleChooseTarget(
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
     }
     updateDefeatedPlayers(game);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending.type === "reveal-from-hand") {
+    const chosenIndices = (data.targetIndices ?? []).filter(i => pending.eligibleIndices.includes(i)).slice(0, pending.maxCount);
+    const unit035 = GetUnitByPlayId(game, pending.sourcePlayId);
+    if (unit035 && chosenIndices.length > 0) {
+      const pHand035 = GetPlayer(game, pending.player).hand;
+      const revealedNames = chosenIndices.map(i => CardTitle(pHand035[i]?.cardId ?? "")).filter(Boolean);
+      for (let i = 0; i < chosenIndices.length; i++) {
+        unit035.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: unit035.owner, controller: unit035.controller });
+      }
+      log.push(`${CardTitle(pending.cardId)}: revealed ${revealedNames.join(", ")} — gained ${chosenIndices.length} Experience token(s).`);
+    } else if (chosenIndices.length === 0) {
+      log.push(`${CardTitle(pending.cardId)}: no Vigilance cards revealed.`);
+    }
+    const next035 = pending.continuation;
+    if (next035) return { response: resolutionResponse(pendingToResolution(next035, game)), pending: next035, stateChanged: false };
+    const bag035 = drainTriggerBag(game, log);
+    if (bag035) return { response: resolutionResponse(pendingToResolution(bag035, game)), pending: bag035, stateChanged: false };
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 

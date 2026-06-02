@@ -14,6 +14,10 @@ export default async function handler(
 ) {
   if (request.method !== "POST") return methodNotAllowed(response, "POST");
 
+  if (process.env.NODE_ENV !== "development") {
+    return response.status(404).json({ error: "Not found." });
+  }
+
   const session = await requireAdminApi(request, response);
   if (!session) return;
 

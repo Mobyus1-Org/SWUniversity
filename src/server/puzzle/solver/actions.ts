@@ -25,23 +25,26 @@ export function getTopLevelActions(gs: GameState): GameDispatch[] {
   const p = gs.player1;
   const dispatches: GameDispatch[] = [];
 
-  // initiate-attack: each ready unit — tried first so direct winning paths are found early
+  // use-ability: deploy leader first — deploy solutions are short paths; finding them before
+  // exploring attack sub-trees avoids exhausting the time budget on large attack+card-play trees
+  const leader = p.leader;
+  if (!leader.epicActionUsed && !leader.deployed) {
+    dispatches.push(
+      makeDispatch(1, "use-ability", { cardId: leader.cardId, deployLeader: true, epicAction: true }),
+    );
+  }
+
+  // initiate-attack: each ready unit — before card plays so combat paths are explored early
   for (const unit of [...p.groundArena, ...p.spaceArena]) {
     if (unit.ready) {
       dispatches.push(makeDispatch(1, "initiate-attack", { playId: unit.playId }));
     }
   }
 
-  // use-ability: leader (ability and/or deploy) — tried before card plays so deploy solutions
-  // are explored before the DFS dives into large card-play sub-trees
-  const leader = p.leader;
-  if (!leader.epicActionUsed) {
+  // use-ability: leader non-deploy ability — gated on ready+not-deployed, not on epicActionUsed,
+  // since epicActionUsed only prevents the deploy epic action, not the regular leader action ability.
+  if (!leader.deployed && leader.ready) {
     dispatches.push(makeDispatch(1, "use-ability", { cardId: leader.cardId }));
-    if (!leader.deployed) {
-      dispatches.push(
-        makeDispatch(1, "use-ability", { cardId: leader.cardId, deployLeader: true, epicAction: true }),
-      );
-    }
   }
 
   // use-ability: deployed leader unit (action ability)
@@ -92,18 +95,18 @@ export function getResolutionActions(resolution: ResolutionRequest, gs: GameStat
 
   switch (resolution.type) {
     case "Target": {
-      // Each fromPlayId as a single-target dispatch
-      for (const playId of resolution.fromPlayIds ?? []) {
-        dispatches.push(makeDispatch(1, "choose-target", { targetPlayIds: [playId] }));
-      }
-      // Zone-based targets
+      // Zone-based base targets — opponent's base first so DFS finds the kill blow quickly
       if (resolution.fromZones?.includes("Base")) {
-        dispatches.push(
-          makeDispatch(1, "choose-target", { targetZones: ["Base"], targetPlayers: [1] }),
-        );
         dispatches.push(
           makeDispatch(1, "choose-target", { targetZones: ["Base"], targetPlayers: [2] }),
         );
+        dispatches.push(
+          makeDispatch(1, "choose-target", { targetZones: ["Base"], targetPlayers: [1] }),
+        );
+      }
+      // Each fromPlayId as a single-target dispatch
+      for (const playId of resolution.fromPlayIds ?? []) {
+        dispatches.push(makeDispatch(1, "choose-target", { targetPlayIds: [playId] }));
       }
       if (resolution.fromZones?.includes("Leader")) {
         dispatches.push(
@@ -117,14 +120,20 @@ export function getResolutionActions(resolution: ResolutionRequest, gs: GameStat
       const handIndices =
         resolution.fromIndices ??
         (resolution.fromZones?.includes("Hand") ? gs.player1.hand.map((_, i) => i) : []);
-      for (const idx of handIndices) {
-        dispatches.push(
-          makeDispatch(1, "choose-target", {
-            targetZones: ["Hand"],
-            targetPlayers: [1],
-            targetIndices: [idx],
-          }),
-        );
+      if (resolution.needsMultiple && handIndices.length > 0) {
+        // Multi-select hand (e.g. reveal-from-hand): try reveal-all and reveal-none
+        dispatches.push(makeDispatch(1, "choose-target", { targetIndices: handIndices }));
+        dispatches.push(makeDispatch(1, "choose-target", { targetIndices: [] }));
+      } else {
+        for (const idx of handIndices) {
+          dispatches.push(
+            makeDispatch(1, "choose-target", {
+              targetZones: ["Hand"],
+              targetPlayers: [1],
+              targetIndices: [idx],
+            }),
+          );
+        }
       }
       break;
     }
