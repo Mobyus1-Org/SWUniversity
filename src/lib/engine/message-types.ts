@@ -10,6 +10,8 @@ export interface NeedsTarget {
   fromZones?: Zones[];
   fromPlayIds?: string[];
   fromIndices?: number[];
+  /** Arbitrary string choices (e.g. card titles for "Name a card" prompts). */
+  fromChoices?: string[];
   needsMultiple?: boolean;
   maxTargets?: number;
 }

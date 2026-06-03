@@ -62,6 +62,8 @@ export interface Unit extends CardInPlay {
   captives: Unit[];
   numUses: number;
   isClone: boolean;
+  /** Regional Governor (SOR_062): card title opponents can't play while this unit is in play. */
+  namedCardTitle?: string;
 }
 
 export interface Resource extends CardInPlay {

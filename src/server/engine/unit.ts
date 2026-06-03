@@ -17,6 +17,7 @@ export class Unit implements UnitInterface {
   captives: Unit[];
   numUses: number;
   isClone: boolean;
+  namedCardTitle?: string;
 
   constructor(cardId: string, playId: string, owner: PlayerId, isClone = false) {
     this.cardId = cardId;
@@ -40,7 +41,7 @@ export class Unit implements UnitInterface {
     newUnit.captives = unit.captives.map(c => Unit.FromInterface(c));
     newUnit.isClone = unit.isClone;
     newUnit.numUses = unit.numUses;
-
+    newUnit.namedCardTitle = unit.namedCardTitle;
     return newUnit;
   }
 

@@ -281,6 +281,8 @@ export const Cards = {
       redemption: "SOR_052",
       avenger: "SOR_040",
       distantPatroller: "SOR_060",
+      guardianOfTheWhills: "SOR_061",
+      regionalGovernor: "SOR_062",
       patrollingVWing: "SOR_111",
       imperialInterceptor: "SOR_132",
       ruthlessRaider: "SOR_134",
@@ -362,6 +364,7 @@ export const Cards = {
     shd: {
       legalAuthority: "SHD_124",
       publicEnemy: "SHD_068",
+      imprisoned: "SHD_072",
       hotshotBlaster: "SHD_174",
       theDarksaber: "SHD_126",
       mandalorianArmor: "SHD_073",

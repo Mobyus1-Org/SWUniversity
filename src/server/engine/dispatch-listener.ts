@@ -200,16 +200,40 @@ function delMeekoEventTax(game: GameState, player: PlayerId, cardId: string): nu
   return oppUnits.some(u => u.cardId === "SOR_034" && !Unit.FromInterface(u).LostAbilities()) ? 1 : 0;
 }
 
+function guardianOfTheWhillsDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Upgrade") return 0;
+  const p = GetPlayer(game, player);
+  const eligibleTargets = UpgradeEligibleTargets(cardId, game, player);
+  const hasEligibleGuardian = [...p.groundArena, ...p.spaceArena].some(u => {
+    if (u.cardId !== "SOR_061" && u.cardId !== "LOF_058") return false;
+    if (Unit.FromInterface(u).LostAbilities()) return false;
+    if (game.currentEffects.some(e => e.cardId === "SOR_061_firstUpgradeUsed" && e.targetPlayId === u.playId)) return false;
+    return eligibleTargets.includes(u.playId);
+  });
+  return hasEligibleGuardian ? 1 : 0;
+}
+
 function playCost(game: GameState, player: PlayerId, cardId: string): number {
   return CardCost(cardId)
     + aspectPenalty(game, player, cardId)
     + delMeekoEventTax(game, player, cardId)
+    - guardianOfTheWhillsDiscount(game, player, cardId)
   ;
 }
 
 function canAfford(game: GameState, player: PlayerId, cardId: string): boolean {
   const ready = GetPlayer(game, player).resources.filter((r) => r.ready).length;
   return ready >= playCost(game, player, cardId);
+}
+
+function regionalGovernorBlocks(game: GameState, player: PlayerId, cardId: string): boolean {
+  const title = CardTitle(cardId);
+  if (!title) return false;
+  const opp = GetOtherPlayer(player);
+  const oppState = GetPlayer(game, opp);
+  return [...oppState.groundArena, ...oppState.spaceArena].some(
+    u => u.cardId === "SOR_062" && !Unit.FromInterface(u).LostAbilities() && u.namedCardTitle === title,
+  );
 }
 
 function exhaustResources(game: GameState, player: PlayerId, count: number): void {
@@ -1110,6 +1134,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       return {
         type: "Target",
         fromPlayIds: pending.fromPlayIds.length > 0 ? pending.fromPlayIds : undefined,
+        fromChoices: pending.fromChoices && pending.fromChoices.length > 0 ? pending.fromChoices : undefined,
       } satisfies NeedsTarget;
     case "when-defeated-choice":
       return {
@@ -1429,6 +1454,9 @@ function handlePlayCard(
 
   if (idx === -1)
     return { response: invalidResponse(`Card ${cardId} not found in Player ${player}'s hand.`), pending: null, stateChanged: false };
+
+  if (regionalGovernorBlocks(game, player, cardId))
+    return { response: invalidResponse(`Regional Governor prevents playing ${CardTitle(cardId) ?? cardId}.`), pending: null, stateChanged: false };
 
   const fullCost = playCost(game, player, cardId);
   const exploitAmt = ExploitAmount(cardId, "hand", player, true); // report mode: peek without consuming
@@ -2130,6 +2158,12 @@ function handleChooseTarget(
       log.push(`${CardTitle(pending.upgradeCardId)} is piloting ${CardTitle(targetUnit.cardId)}.`);
     } else {
       log.push(`${CardTitle(pending.upgradeCardId)} attached to ${CardTitle(targetUnit.cardId)}.`);
+    }
+
+    // SOR_061 / LOF_058 Guardian of the Whills: mark first-upgrade-used for this round.
+    if ((targetUnit.cardId === "SOR_061" || targetUnit.cardId === "LOF_058")
+        && !game.currentEffects.some(e => e.cardId === "SOR_061_firstUpgradeUsed" && e.targetPlayId === targetUnit.playId)) {
+      game.currentEffects.push({ cardId: "SOR_061_firstUpgradeUsed", duration: "Round", affectedPlayer: pending.player, targetPlayId: targetUnit.playId });
     }
 
     // Traitorous (SOR_122): take control of the attached unit when it costs 3 or less.
@@ -3787,6 +3821,16 @@ function applyAbilityEffect(
   const game = GetGame();
   if(!game) throw new Error("Game not found in applyAbilityEffect.");
   switch (pending.cardId) {
+    case "SOR_062": { // Regional Governor — store the named card title on the governor unit.
+      if (!targetPlayId) break;
+      const gs062 = game.currentGameState;
+      const governor = GetUnitByPlayId(gs062, pending.sourcePlayId!);
+      if (governor) {
+        governor.namedCardTitle = CardTitle(targetPlayId) ?? targetPlayId;
+        game.gameLog.push(`Regional Governor: named "${governor.namedCardTitle}" — opponents can't play it while Regional Governor is in play.`);
+      }
+      break;
+    }
     case "SOR_074": // Repair — Heal 3 damage from a unit or base.
     case "JTL_075": {
       if (!targetPlayId) break;

@@ -1,6 +1,6 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId, Resource } from "@/lib/engine/core-models";
-import { CardAspects, CardCost, CardTraits, CardType } from "@/server/engine/card-db/generated";
+import { CardAspects, CardCost, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradeEligibleTargets, PilotingEligibleVehicles } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
@@ -37,8 +37,22 @@ function delMeekoEventTax(game: GameState, player: PlayerId, cardId: string): nu
   return oppUnits.some(u => u.cardId === "SOR_034" && !Unit.FromInterface(u).LostAbilities()) ? 1 : 0;
 }
 
+// SOR_061 / LOF_058 Guardian of the Whills: first upgrade played on this unit each round costs 1 less.
+function guardianOfTheWhillsDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Upgrade") return 0;
+  const p = player === 1 ? game.player1 : game.player2;
+  const eligibleTargets = UpgradeEligibleTargets(cardId, game, player);
+  const hasEligibleGuardian = [...p.groundArena, ...p.spaceArena].some(u => {
+    if (u.cardId !== "SOR_061" && u.cardId !== "LOF_058") return false;
+    if (Unit.FromInterface(u).LostAbilities()) return false;
+    if (game.currentEffects.some(e => e.cardId === "SOR_061_firstUpgradeUsed" && e.targetPlayId === u.playId)) return false;
+    return eligibleTargets.includes(u.playId);
+  });
+  return hasEligibleGuardian ? 1 : 0;
+}
+
 function playCost(game: GameState, player: PlayerId, cardId: string): number {
-  return CardCost(cardId) + aspectPenalty(game, player, cardId) + delMeekoEventTax(game, player, cardId);
+  return CardCost(cardId) + aspectPenalty(game, player, cardId) + delMeekoEventTax(game, player, cardId) - guardianOfTheWhillsDiscount(game, player, cardId);
 }
 
 function aspectPenaltyForAspects(game: GameState, player: PlayerId, aspects: string[]): number {
@@ -99,7 +113,19 @@ export function ResourceIsSmuggleable(
   return readyCount >= cost;
 }
 
+// SOR_062 Regional Governor: while in play, opponents can't play the card named on entry.
+function regionalGovernorBlocks(game: GameState, player: PlayerId, cardId: string): boolean {
+  const title = CardTitle(cardId);
+  if (!title) return false;
+  const opp = player === 1 ? game.player2 : game.player1;
+  return [...opp.groundArena, ...opp.spaceArena].some(
+    u => u.cardId === "SOR_062" && !Unit.FromInterface(u).LostAbilities() && u.namedCardTitle === title,
+  );
+}
+
 export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string): boolean {
+  if (regionalGovernorBlocks(game, player, cardId)) return false;
+
   const p = player === 1 ? game.player1 : game.player2;
   const readyResources = p.resources.filter(r => r.ready).length;
   const fullCost = playCost(game, player, cardId);

@@ -39,12 +39,12 @@ Defe
 ### SOR_061 — Guardian of the Whills (Unit)
 **Card Text:** The first upgrade you play on this unit each round costs [1 resource] less.
 
-**Notes:** Needs implementation: The first upgrade you play on this unit each round costs [1 resource] less.
+**Notes:** Implemented. `guardianOfTheWhillsDiscount` in `card-playability.ts` and `dispatch-listener.ts` reduces upgrade cost by 1 when an eligible Guardian (SOR_061 or LOF_058) is available. A `"SOR_061_firstUpgradeUsed"` Round-scoped `currentEffect` (keyed to the unit's playId) is pushed when the upgrade attaches to the guardian, preventing a second discount in the same round. Tests in `tests/unit/sor/guardian-of-the-whills.test.ts`.
 
 ### SOR_062 — Regional Governor (Unit)
 **Card Text:** When Played: Name a card. While this unit is in play, opponents can't play the named card.
 
-**Notes:** Needs implementation: When Played: Name a card. While this unit is in play, opponents can't play the named card.
+**Notes:** Implemented. When Played returns an `AbilityTargetPending`; the chosen card ID is resolved via `applyAbilityEffect` which stores `namedCardTitle` (looked up via `CardTitle`) on the governor unit. `regionalGovernorBlocks` in both `card-playability.ts` and `dispatch-listener.ts` blocks opponents from playing any card whose title matches. Blocking is by title (not card ID) so all reprints are covered. `namedCardTitle` is a new optional field on the `Unit` interface in `core-models.ts`. Tests in `tests/unit/sor/regional-governor.test.ts`.
 
 
 ### SOR_089 — Relentless (Unit)

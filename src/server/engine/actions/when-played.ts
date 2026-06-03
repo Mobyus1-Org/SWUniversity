@@ -3,7 +3,7 @@ import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, Trait
 import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
-import { CardTitle, CardType, CardCost, CardAspects } from "@/server/engine/card-db/generated";
+import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects } from "@/server/engine/card-db/generated";
 
 /** Returns playIds for all units on both sides plus both base identifiers. */
 function allUnitsAndBasesPlayIds(): string[] {
@@ -947,6 +947,17 @@ export function resolveWhenPlayed(
       return optionalTarget(cardId, player, spectres050.map(u => u.playId),
         "Give a Shield token to another Spectre unit?",
         { yesLabel: "Give Shield", sourcePlayId: playId });
+    }
+    case "SOR_062": { // Regional Governor — Name a card; opponents can't play it while this unit is in play.
+      return {
+        type: "ability-target",
+        cardId: "SOR_062",
+        sourcePlayId: playId,
+        player,
+        fromPlayIds: [],   // any card ID is valid; UI uses fromChoices for display
+        fromChoices: AllCardTitles(),
+        continuation: null,
+      };
     }
     case "SOR_068": // Cargo Juggernaut (Lom Pyke) — handled auto in resolveWhenPlayedTrigger
       return null;

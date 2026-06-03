@@ -26878,6 +26878,10 @@ export function GetAllCardIds(): string[] {
   return Object.keys(cardTitle);
 }
 
+export function AllCardTitles(): string[] {
+  return [...new Set(Object.values(cardTitle))].sort();
+}
+
 export const cardDbGenerationMetadata = {
   generatedAt: "2026-05-21T04:41:43.422Z",
   processedCards: 2057,
