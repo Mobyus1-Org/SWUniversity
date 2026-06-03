@@ -167,4 +167,65 @@ describe("SOR_061 Guardian of the Whills", () => {
     await g.dispatchAsync(1, "play-card", { cardId: Cards.upgrades.sor.entrenched, fromZone: "Hand" });
     expect(g.lastDispatchResponse?.invalidAction).toBe(true);
   });
+
+  it("AP upgrade on another unit then AP upgrade on GotW — second is still discounted", async () => {
+    // AP plays upgrade on marine (using GotW discount). GotW discount not consumed.
+    // Turn passes to NP. NP passes back. AP plays upgrade on GotW → discounted.
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      new GameStateBuilder()
+        .MyBase(Cards.bases.common.blue30HP)
+        .MyLeader(Cards.leaders.sor.grandMoffTarkin)
+        .TheirBase(Cards.bases.common.green30HP)
+        .TheirLeader(Cards.leaders.sor.grandMoffTarkin)
+        .WithGroundUnitForPlayer(1, Cards.units.sor.guardianOfTheWhills) // index 0
+        .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)   // index 1
+        .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 2)
+        .WithCardInHandForPlayer(1, Cards.upgrades.sor.entrenched)
+        .Build(),
+    );
+
+    // Play Entrenched on marine (discounted to 1 because guardian is eligible target). 1 resource left.
+    await g.dispatchAsync(1, "play-card", { cardId: Cards.upgrades.sor.entrenched, fromZone: "Hand" });
+    await g.chooseGroundUnitAsync(1, 1); // marine — guardian discount NOT consumed
+
+    // NP passes; turn returns to AP with 1 resource.
+    await g.dispatchAsync(2, "pass-action", {});
+
+    // AP plays Entrenched on GotW. Discount still fresh → costs 1. 1 resource → affordable.
+    g.state.player1.hand.push({ cardId: Cards.upgrades.sor.entrenched });
+    await g.dispatchAsync(1, "play-card", { cardId: Cards.upgrades.sor.entrenched, fromZone: "Hand" });
+    expect(g.lastDispatchResponse?.invalidAction).toBeUndefined();
+    await g.chooseGroundUnitAsync(1, 0); // guardian
+    expect(g.lastDispatchResponse?.invalidAction).toBeUndefined();
+  });
+
+  it("NP upgrade on AP's GotW does not consume AP's discount for the same guardian", async () => {
+    // NP (player 2) plays Entrenched on player 1's GotW (default targets = all units).
+    // AP then plays Entrenched on their own GotW → should still be discounted.
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      new GameStateBuilder()
+        .MyBase(Cards.bases.common.blue30HP)         // Vigilance for AP's aspect needs
+        .MyLeader(Cards.leaders.sor.grandMoffTarkin)
+        .TheirBase(Cards.bases.common.blue30HP)      // Vigilance so NP can play Entrenched
+        .TheirLeader(Cards.leaders.sor.grandMoffTarkin)
+        .WithGroundUnitForPlayer(1, Cards.units.sor.guardianOfTheWhills)
+        .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 1)
+        .FillResourcesForPlayer(2, Cards.units.sor.battlefieldMarine, 2)
+        .WithCardInHandForPlayer(2, Cards.upgrades.sor.entrenched)
+        .WithCardInHandForPlayer(1, Cards.upgrades.sor.entrenched)
+        .WithActivePlayer(2)
+        .Build(),
+    );
+
+    // NP (player 2) plays Entrenched on player 1's GotW.
+    await g.dispatchAsync(2, "play-card", { cardId: Cards.upgrades.sor.entrenched, fromZone: "Hand" });
+    await g.chooseGroundUnitAsync(1, 0); // GotW belongs to player 1
+
+    // Turn passes to player 1. AP has 1 resource + Entrenched in hand.
+    // GotW discount must still be available to player 1 (NP's attachment shouldn't consume it).
+    await g.dispatchAsync(1, "play-card", { cardId: Cards.upgrades.sor.entrenched, fromZone: "Hand" });
+    expect(g.lastDispatchResponse?.invalidAction).toBeUndefined();
+  });
 });

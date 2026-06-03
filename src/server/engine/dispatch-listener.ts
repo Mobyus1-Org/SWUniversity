@@ -207,7 +207,7 @@ function guardianOfTheWhillsDiscount(game: GameState, player: PlayerId, cardId: 
   const hasEligibleGuardian = [...p.groundArena, ...p.spaceArena].some(u => {
     if (u.cardId !== "SOR_061" && u.cardId !== "LOF_058") return false;
     if (Unit.FromInterface(u).LostAbilities()) return false;
-    if (game.currentEffects.some(e => e.cardId === "SOR_061_firstUpgradeUsed" && e.targetPlayId === u.playId)) return false;
+    if (game.currentEffects.some(e => e.cardId === "SOR_061_firstUpgradeUsed" && e.targetPlayId === u.playId && e.affectedPlayer === player)) return false;
     return eligibleTargets.includes(u.playId);
   });
   return hasEligibleGuardian ? 1 : 0;
@@ -2161,8 +2161,10 @@ function handleChooseTarget(
     }
 
     // SOR_061 / LOF_058 Guardian of the Whills: mark first-upgrade-used for this round.
+    // Only the guardian's controller benefits from the discount, so only their attachment consumes it.
     if ((targetUnit.cardId === "SOR_061" || targetUnit.cardId === "LOF_058")
-        && !game.currentEffects.some(e => e.cardId === "SOR_061_firstUpgradeUsed" && e.targetPlayId === targetUnit.playId)) {
+        && pending.player === targetUnit.controller
+        && !game.currentEffects.some(e => e.cardId === "SOR_061_firstUpgradeUsed" && e.targetPlayId === targetUnit.playId && e.affectedPlayer === pending.player)) {
       game.currentEffects.push({ cardId: "SOR_061_firstUpgradeUsed", duration: "Round", affectedPlayer: pending.player, targetPlayId: targetUnit.playId });
     }
 
@@ -3826,7 +3828,7 @@ function applyAbilityEffect(
       const gs062 = game.currentGameState;
       const governor = GetUnitByPlayId(gs062, pending.sourcePlayId!);
       if (governor) {
-        governor.namedCardTitle = CardTitle(targetPlayId) ?? targetPlayId;
+        governor.namedCardTitle = CardTitle(targetPlayId) || targetPlayId;
         game.gameLog.push(`Regional Governor: named "${governor.namedCardTitle}" — opponents can't play it while Regional Governor is in play.`);
       }
       break;

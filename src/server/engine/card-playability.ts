@@ -45,7 +45,7 @@ function guardianOfTheWhillsDiscount(game: GameState, player: PlayerId, cardId: 
   const hasEligibleGuardian = [...p.groundArena, ...p.spaceArena].some(u => {
     if (u.cardId !== "SOR_061" && u.cardId !== "LOF_058") return false;
     if (Unit.FromInterface(u).LostAbilities()) return false;
-    if (game.currentEffects.some(e => e.cardId === "SOR_061_firstUpgradeUsed" && e.targetPlayId === u.playId)) return false;
+    if (game.currentEffects.some(e => e.cardId === "SOR_061_firstUpgradeUsed" && e.targetPlayId === u.playId && e.affectedPlayer === player)) return false;
     return eligibleTargets.includes(u.playId);
   });
   return hasEligibleGuardian ? 1 : 0;

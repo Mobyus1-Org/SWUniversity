@@ -436,6 +436,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
 
   const [deckSearchSelected, setDeckSearchSelected] = React.useState<Set<string>>(new Set());
   React.useEffect(() => { if (resolutionNeeded?.type !== "DeckSearch") setDeckSearchSelected(new Set()); }, [resolutionNeeded]);
+  const [nameCardSearch, setNameCardSearch] = React.useState("");
+  React.useEffect(() => { setNameCardSearch(""); }, [resolutionNeeded]);
   // "scry" arrange state: maps tempId → "top" | "bottom"
   const [deckArrangeMap, setDeckArrangeMap] = React.useState<Record<string, "top" | "bottom">>({});
   React.useEffect(() => {
@@ -982,7 +984,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
 
   const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[0] : null;
   const latestPlayerDiscard = player.discard.length > 0 ? player.discard[0] : null;
-  const hasPrompt = resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "Trigger" || resolutionNeeded?.type === "Player" || resolutionNeeded?.type === "DeckSearch" || resolutionNeeded?.type === "PeekHand";
+  const isNameCardPrompt = resolutionNeeded?.type === "Target" && (resolutionNeeded.fromChoices?.length ?? 0) > 0;
+  const hasPrompt = resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "Trigger" || resolutionNeeded?.type === "Player" || resolutionNeeded?.type === "DeckSearch" || resolutionNeeded?.type === "PeekHand" || isNameCardPrompt;
   const hasPlotPrompt = resolutionNeeded?.type === "Plot";
   const getUnitGlowClass = (playId: string) =>
     isMultiSelectTarget && selectedTargetPlayIds.includes(playId)
@@ -1829,7 +1832,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     {hasPrompt ? <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className={`rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl${resolutionNeeded?.type === "DeckSearch" ? " w-[min(90vw,700px)]" : " w-[min(90vw,700px)]"}`}>
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
-          {resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry" ? "Look at the top cards" : resolutionNeeded?.type === "DeckSearch" ? "Deck Search" : "Choose"}
+          {isNameCardPrompt ? "Name a Card" : resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry" ? "Look at the top cards" : resolutionNeeded?.type === "DeckSearch" ? "Deck Search" : "Choose"}
         </h3>
         {resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry"
           ? <p className="-mt-2 mb-4 max-w-xs text-xs text-white/65">Put each card on top or bottom of your deck.</p>
@@ -1837,7 +1840,47 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             ? <p className="-mt-2 mb-4 max-w-xs text-xs text-white/65">{resolutionNeeded.helperText}</p>
             : null}
         <div className="flex flex-col gap-3">
-          {resolutionNeeded?.type === "Option" ? resolutionNeeded.options.map((opt) => {
+          {isNameCardPrompt && resolutionNeeded?.type === "Target" && resolutionNeeded.fromChoices ? (() => {
+            const q = nameCardSearch.trim().toLowerCase();
+            const filtered = q.length >= 1
+              ? resolutionNeeded.fromChoices.filter(t => t.toLowerCase().includes(q)).slice(0, 50)
+              : [];
+            return (
+              <>
+                <p className="-mt-2 mb-1 max-w-xs text-xs text-white/65">
+                  Opponents can&apos;t play that card while Regional Governor is in play.
+                </p>
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Type a card name…"
+                  value={nameCardSearch}
+                  onChange={e => setNameCardSearch(e.target.value)}
+                  className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/35 outline-none focus:border-sky-400/60 focus:bg-white/10"
+                />
+                {filtered.length > 0 && (
+                  <div className="max-h-64 overflow-y-auto rounded-lg border border-white/10 bg-black/40">
+                    {filtered.map(title => (
+                      <button
+                        key={title}
+                        type="button"
+                        disabled={isResolving}
+                        onClick={() => {
+                          void sendDispatch(createDispatch("choose-target", { targetPlayIds: [title] }));
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-white/85 transition hover:bg-sky-500/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {title}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {q.length >= 1 && filtered.length === 0 && (
+                  <p className="text-center text-xs text-white/40">No cards match &ldquo;{nameCardSearch}&rdquo;</p>
+                )}
+              </>
+            );
+          })() : resolutionNeeded?.type === "Option" ? resolutionNeeded.options.map((opt) => {
             const displayLabel = opt === "Yes" && resolutionNeeded.yesLabel
               ? resolutionNeeded.yesLabel
               : opt === "No" && resolutionNeeded.noLabel
