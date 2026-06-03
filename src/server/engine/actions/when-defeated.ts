@@ -24,6 +24,30 @@ export function resolveWhenDefeated(
     }
   }
 
+  // SOR_105 General Krell: each other friendly unit gains "When Defeated: You may draw a card."
+  // The dying unit is already removed from the arena before this runs, so any Krell found
+  // in GetUnitsForPlayer is a surviving unit — never the unit that just died.
+  const krellInPlay = GetUnitsForPlayer(player).some(u => u.cardId === "SOR_105");
+  if (krellInPlay) {
+    return {
+      type: "ability-option",
+      cardId: "SOR_105",
+      player,
+      helperText: `${CardTitle("SOR_105")}: draw a card?`,
+      yesLabel: "Draw",
+      noLabel: "Skip",
+      onYes: null,
+      continuation: resolveOwnWhenDefeated(unit, player),
+    };
+  }
+
+  return resolveOwnWhenDefeated(unit, player);
+}
+
+function resolveOwnWhenDefeated(
+  unit: Unit,
+  player: PlayerId
+): PendingResolution | null {
   switch (unit.cardId) {
     case "SOR_083": { // Superlaser Technician: "When Defeated: You may put this unit into play as a resource and ready it."
       return {

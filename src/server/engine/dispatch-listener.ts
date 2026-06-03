@@ -2818,6 +2818,11 @@ function applyAbilityOptionEffect(
         continuation: pending.continuation ?? null,
       } satisfies AbilityTargetPending;
     }
+    case "SOR_105": { // General Krell — granted "When Defeated: You may draw a card."
+      DrawCardForPlayer(game, log, pending.player!);
+      log.push(`${CardTitle("SOR_105")}: drew a card.`);
+      return pending.continuation ?? null;
+    }
     case "SOR_045": { // Yoda When Defeated Yes: controller draws a card, then ask opponent.
       DrawCardForPlayer(game, log, pending.player!);
       log.push(`${CardTitle("SOR_045")}: Player ${pending.player!} drew a card.`);

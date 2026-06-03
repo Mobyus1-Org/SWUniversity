@@ -270,6 +270,7 @@ export const Cards = {
       gamorreanGuards: "SOR_211",
       emperorPalpatine: "SOR_135",
       vanguardInfantry: "SOR_108",
+      generalKrell: "SOR_105",
       generalTagge: "SOR_080",
       deathTrooper: "SOR_033",
       delMeeko: "SOR_034",

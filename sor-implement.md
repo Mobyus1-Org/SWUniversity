@@ -55,7 +55,7 @@ Defe
 ### SOR_105 — General Krell (Unit)
 **Card Text:** Each other friendly unit gains: "When Defeated: You may draw a card."
 
-**Notes:** Needs implementation: Each other friendly unit gains: "When Defeated: You may draw a card."
+**Notes:** Implemented. Check in `when-defeated.ts` (Krell in-play check + `resolveOwnWhenDefeated` refactor) and `dispatch-listener.ts` (`applyAbilityOptionEffect` case). Tests in `tests/unit/sor/general-krell.test.ts`.
 
 ### SOR_109 — Colonel Yularen (Unit)
 **Card Text:** When you play a [Command] unit (including this one): Heal 1 damage from your base.
