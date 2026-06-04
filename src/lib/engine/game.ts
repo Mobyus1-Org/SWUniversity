@@ -60,6 +60,7 @@ export interface GameState {
     cardsEnteredPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: EntryReason }[];
     cardsLeftPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: ExitReason }[];
     unitsAttackedThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; }[];
+    baseDamagedThisPhase: { byPlayer: PlayerId; target: PlayerId }[];
     lastActionWasPass: boolean;
     regroupResourcedPlayers: PlayerId[];
   };

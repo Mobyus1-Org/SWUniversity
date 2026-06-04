@@ -300,6 +300,7 @@ export const Cards = {
       admiralOzzel: "SOR_129",
       explosivesArtist: "SOR_142",
       relentless: "SOR_089",
+      sawGerrera: "SOR_153",
     },
     shd: {
       doctorPershing: "SHD_028",
@@ -425,6 +426,10 @@ export const Cards = {
       surpriseStrike: "SOR_220",
       outmaneuver: "SOR_221",
       sparkOfRebellion: "SOR_200",
+      forceThrow: "SOR_167",
+      smokeAndCinders: "SOR_174",
+      forcedSurrender: "SOR_175",
+      noGoodToMeDead: "SOR_186",
     },
     twi: {
       christophsis: "TWI_078",

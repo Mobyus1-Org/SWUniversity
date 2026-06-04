@@ -6,11 +6,11 @@
 
 | Status | Count |
 |--------|-------|
-| Implemented | 173 |
+| Implemented | 178 |
 | Partially Implemented | 18 |
 | Keywords Only (auto-handled) | 23 |
 | Unimplemented – Simple | 0 |
-| Unimplemented – Complex | 24 |
+| Unimplemented – Complex | 19 |
 
 ---
 
@@ -34,11 +34,6 @@ Give a Shield token to a unit.
 
 **Notes:** Needs implementation: Reveal the top 4 cards of your deck. For each [Heroism] card revealed this way, deal 1 damage to an
 
-### SOR_153 — Saw Gerrera (Unit)
-**Card Text:** As an additional cost for each opponent to play an event, they must deal 2 damage to their base.
-
-**Notes:** Needs implementation: As an additional cost for each opponent to play an event, they must deal 2 damage to their base.
-
 ### SOR_155 — Aggression (Event)
 **Card Text:** Choose two, in any order:
 
@@ -54,21 +49,6 @@ Defeat up to 2 upgrades.
 Ready a unit with 3 or less power.
 De
 
-### SOR_167 — Force Throw (Event)
-**Card Text:** Choose a player. That player discards a card from their hand. Then, if you control a FORCE unit, you may deal damage to a unit equal to the cost of the discarded card.
-
-**Notes:** Needs implementation: Choose a player. That player discards a card from their hand. Then, if you control a FORCE unit, yo
-
-### SOR_174 — Smoke and Cinders (Event)
-**Card Text:** Each player discards all but 2 cards (of their choice) from their hand.
-
-**Notes:** Needs implementation: Each player discards all but 2 cards (of their choice) from their hand.
-
-### SOR_175 — Forced Surrender (Event)
-**Card Text:** Draw 2 cards. Each opponent whose base you've damaged this phase discards 2 cards from their hand.
-
-**Notes:** Needs implementation: Draw 2 cards. Each opponent whose base you've damaged this phase discards 2 cards from their hand.
-
 ### SOR_181 — Jabba the Hutt (Unit)
 **Card Text:** Each TRICK event you play costs [1 resource] less.
 
@@ -77,11 +57,6 @@ When Played: Search the top 8 cards of your deck for a TRICK event, reveal it, a
 **Notes:** Needs implementation: Each TRICK event you play costs [1 resource] less.
 
 When Played: Search the top 8 cards of your d
-
-### SOR_186 — No Good to Me Dead (Event)
-**Card Text:** Exhaust a unit. That unit can't ready this round (including during the regroup phase).
-
-**Notes:** Needs implementation: Exhaust a unit. That unit can't ready this round (including during the regroup phase).
 
 ### SOR_187 — I Had No Choice (Event)
 **Card Text:** Choose up to 2 non-leader units. An opponent chooses 1 of those units. Return that unit to its owner's hand and put the other on the bottom of its owner's deck.

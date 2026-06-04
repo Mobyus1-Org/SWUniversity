@@ -55,6 +55,8 @@ export interface DiscardFromHandPending {
   targetPlayer: PlayerId;
   count: number;
   continuation: PendingResolution | null;
+  /** SOR_167 Force Throw: if set, after discard capture cost and offer Force damage. */
+  forceThrowControllerPlayer?: PlayerId;
 }
 
 /**

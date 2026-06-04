@@ -334,8 +334,12 @@ function pushEventToDiscard(game: GameState, player: PlayerId, cardId: string): 
   GetPlayer(game, player).discard.unshift(discarded);
 }
 
-function dealBaseDamage(game: GameState, player: PlayerId, amount: number): void {
+function dealBaseDamage(game: GameState, player: PlayerId, amount: number, byPlayer?: PlayerId): void {
   GetPlayer(game, player).base.damage += amount;
+  if (byPlayer !== undefined) {
+    game.roundState.baseDamagedThisPhase ??= [];
+    game.roundState.baseDamagedThisPhase.push({ byPlayer, target: player });
+  }
 }
 
 /**
@@ -920,7 +924,7 @@ function resolveAttack(
   const attackerName = CardTitle(attacker.cardId);
 
   if (target.type === "base") {
-    dealBaseDamage(game, target.player, atkPower);
+    dealBaseDamage(game, target.player, atkPower, attacker.controller);
     log.push(`${attackerName} attacked the base for ${atkPower} damage.`);
     const willSacrifice = game.currentEffects.some(
       e => e.cardId === "SOR_150_sacrifice" && e.targetPlayId === attacker.playId,
@@ -1451,6 +1455,15 @@ function completePlayCard(
     const eventPlayId = GetPlayer(game, player).discard[0].playId;
     game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: eventPlayId, playedAs: "Event" });
 
+    // SOR_153 Saw Gerrera: opponent playing an event must deal 2 damage to their own base.
+    const sawGerreraOpp = GetOtherPlayer(player);
+    const sawGerreraActive = [...GetPlayer(game, sawGerreraOpp).groundArena, ...GetPlayer(game, sawGerreraOpp).spaceArena]
+      .some(u => u.cardId === "SOR_153" && !Unit.FromInterface(u).LostAbilities());
+    if (sawGerreraActive) {
+      dealBaseDamage(game, player, 2);
+      log.push(`${CardTitle("SOR_153")}: ${CardTitle(cardId)} cost 2 damage to Player ${player}'s base.`);
+    }
+
     const relentlessOpp = GetOtherPlayer(player);
     const relentlessActive = [...GetPlayer(game, relentlessOpp).groundArena, ...GetPlayer(game, relentlessOpp).spaceArena]
       .some(u => u.cardId === "SOR_089" && !Unit.FromInterface(u).LostAbilities());
@@ -1461,7 +1474,28 @@ function completePlayCard(
     } else {
       log.push(`${CardTitle(cardId) ?? cardId} resolved and placed in the discard.`);
 
-      if (cardId === "SOR_043" || cardId === "TWI_078") {
+      if (cardId === "SOR_175") {
+        // Forced Surrender — Draw 2 cards. Each opponent whose base you've damaged this phase discards 2 cards.
+        DrawCardForPlayer(game, log, player);
+        DrawCardForPlayer(game, log, player);
+        log.push(`${CardTitle("SOR_175")}: drew 2 cards.`);
+        const opp175: PlayerId = player === 1 ? 2 : 1;
+        const damagedOppBase = (game.roundState.baseDamagedThisPhase ?? []).some(
+          e => e.byPlayer === player && e.target === opp175,
+        );
+        if (damagedOppBase) {
+          const oppHandSize175 = GetPlayer(game, opp175).hand.length;
+          if (oppHandSize175 > 0) {
+            const discard175: DiscardFromHandPending = {
+              type: "discard-from-hand",
+              targetPlayer: opp175,
+              count: Math.min(2, oppHandSize175),
+              continuation: null,
+            };
+            return { response: resolutionResponse(pendingToResolution(discard175, game)), pending: discard175, stateChanged: false };
+          }
+        }
+      } else if (cardId === "SOR_043" || cardId === "TWI_078") {
         const otherPlayer: PlayerId = player === 1 ? 2 : 1;
         // Snapshot trigger-holders before any unit is removed so wiped units still trigger.
         const holdersP1 = GetUnitsForPlayer(1);
@@ -2143,12 +2177,38 @@ function handleChooseTarget(
     const playerHand = GetPlayer(game, pending.targetPlayer).hand;
     if (idx < 0 || idx >= playerHand.length)
       return { response: invalidResponse("Invalid hand index."), pending, stateChanged: false };
-    playerHand.splice(idx, 1);
+    const [discardedCard] = playerHand.splice(idx, 1);
+    const discardedCost = CardCost(discardedCard.cardId) ?? 0;
     log.push(`Player ${pending.targetPlayer} discarded a card.`);
     const remaining = pending.count - 1;
-    const nextPending: PendingResolution | null = remaining > 0
+    let nextPending: PendingResolution | null = remaining > 0
       ? { type: "discard-from-hand", targetPlayer: pending.targetPlayer, count: remaining, continuation: pending.continuation }
       : (pending.continuation ?? null);
+
+    // SOR_167 Force Throw: if a Force unit is in play for the controller, offer damage equal to discarded card's cost.
+    if (remaining === 0 && pending.forceThrowControllerPlayer !== undefined && discardedCost > 0) {
+      const allUnits167 = GetAllUnits(game);
+      if (allUnits167.length > 0) {
+        const damageOffer: AbilityOptionPending = {
+          type: "ability-option",
+          cardId: "SOR_167_damage_offer",
+          player: pending.forceThrowControllerPlayer,
+          helperText: `Deal ${discardedCost} damage to a unit?`,
+          yesLabel: `Deal ${discardedCost} damage`,
+          noLabel: "Skip",
+          onYes: {
+            type: "ability-target",
+            cardId: "SOR_167_damage",
+            player: pending.forceThrowControllerPlayer,
+            fromPlayIds: allUnits167.map(u => u.playId),
+            continuation: null,
+          },
+          continuation: null,
+        };
+        game.currentEffects.push({ cardId: "SOR_167_damage", duration: "Phase", affectedPlayer: pending.forceThrowControllerPlayer, value: discardedCost });
+        nextPending = damageOffer;
+      }
+    }
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
     }
@@ -2605,7 +2665,10 @@ function handleChooseTarget(
 
     // Apply base damage
     const targetState = pending.targetPlayer === 1 ? game.player1 : game.player2;
-    targetState.base.damage += baseDamage;
+    if (baseDamage > 0) {
+      targetState.base.damage += baseDamage;
+      game.roundState.baseDamagedThisPhase.push({ byPlayer: pending.sourcePlayer, target: pending.targetPlayer });
+    }
 
     log.push(`${CardTitle(pending.cardId)}: ${pending.totalDamage} indirect damage assigned by player ${pending.targetPlayer}.`);
     updateDefeatedPlayers(game);
@@ -4555,8 +4618,15 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target169 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target169) {
-        target169.ready = true;
-        game.gameLog.push(`${CardTitle("SOR_169")}: readied ${CardTitle(target169.cardId)}.`);
+        const prevented169 = game.currentGameState.currentEffects.some(
+          e => e.cardId === "SOR_186_no_ready" && e.targetPlayId === target169.playId,
+        );
+        if (!prevented169) {
+          target169.ready = true;
+          game.gameLog.push(`${CardTitle("SOR_169")}: readied ${CardTitle(target169.cardId)}.`);
+        } else {
+          game.gameLog.push(`${CardTitle("SOR_169")}: ${CardTitle(target169.cardId)} can't ready this round.`);
+        }
       }
       break;
     }
@@ -4572,6 +4642,29 @@ function applyAbilityEffect(
     }
     case "SOR_172": { // Open Fire: Deal 4 damage to the chosen unit.
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 4, game.gameLog);
+      break;
+    }
+    case "SOR_186": { // No Good to Me Dead — Exhaust the chosen unit; prevent it from readying this round.
+      const target186 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target186) {
+        target186.ready = false;
+        game.currentGameState.currentEffects.push({
+          cardId: "SOR_186_no_ready",
+          duration: "Round",
+          affectedPlayer: target186.controller,
+          targetPlayId: target186.playId,
+        });
+        game.gameLog.push(`${CardTitle("SOR_186")}: exhausted ${CardTitle(target186.cardId)} — it can't ready this round.`);
+      }
+      break;
+    }
+    case "SOR_167_damage": { // Force Throw bonus: deal stored damage (= discarded card's cost) to the chosen unit.
+      const effect167 = game.currentGameState.currentEffects.find(e => e.cardId === "SOR_167_damage");
+      const dmg167 = effect167?.value ?? 0;
+      game.currentGameState.currentEffects = game.currentGameState.currentEffects.filter(e => e.cardId !== "SOR_167_damage");
+      if (dmg167 > 0) {
+        DealDamageToUnit(game.currentGameState, "SOR_167", targetPlayId, dmg167, game.gameLog);
+      }
       break;
     }
     case "SOR_189_ready": { // Leia Organa yes path: ready the chosen resource.

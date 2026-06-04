@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty } from "@/server/engine/core-functions";
-import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending } from "@/server/engine/pending-resolution";
+import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
 import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits } from "@/server/engine/card-db/generated";
@@ -935,6 +935,53 @@ export function resolveWhenPlayed(
         mustDiscard: true,
         continuation: null,
       } satisfies PeekHandPending;
+    }
+    case "SOR_186": { // No Good to Me Dead — Exhaust a unit; it can't ready this round.
+      const allUnits186 = AllUnits();
+      if (allUnits186.length === 0) return null;
+      return mandatoryTarget(cardId, player, allUnits186.map(u => u.playId));
+    }
+    case "SOR_174": { // Smoke and Cinders — Each player discards all but 2 cards.
+      const gs174 = GetGame().currentGameState;
+      const p1Hand174 = gs174.player1.hand.length;
+      const p2Hand174 = gs174.player2.hand.length;
+      const p1Count = Math.max(0, p1Hand174 - 2);
+      const p2Count = Math.max(0, p2Hand174 - 2);
+      const p2Pending174: DiscardFromHandPending | null = p2Count > 0
+        ? { type: "discard-from-hand", targetPlayer: 2, count: p2Count, continuation: null }
+        : null;
+      if (p1Count > 0) {
+        return { type: "discard-from-hand", targetPlayer: 1, count: p1Count, continuation: p2Pending174 } satisfies DiscardFromHandPending;
+      }
+      return p2Pending174;
+    }
+    case "SOR_167": { // Force Throw — Choose a player to discard a card; if Force unit, may deal damage = discarded cost.
+      const opp167: PlayerId = player === 1 ? 2 : 1;
+      const hasForce167 = PlayerHasUnitWithTraitInPlay(player, "Force");
+      const oppDiscard: DiscardFromHandPending = {
+        type: "discard-from-hand",
+        targetPlayer: opp167,
+        count: 1,
+        forceThrowControllerPlayer: hasForce167 ? player : undefined,
+        continuation: null,
+      };
+      const selfDiscard: DiscardFromHandPending = {
+        type: "discard-from-hand",
+        targetPlayer: player,
+        count: 1,
+        forceThrowControllerPlayer: hasForce167 ? player : undefined,
+        continuation: null,
+      };
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        helperText: "Choose a player to discard a card from their hand.",
+        yesLabel: `Opponent (Player ${opp167}) discards`,
+        noLabel: `You (Player ${player}) discard`,
+        onYes: oppDiscard,
+        continuation: selfDiscard,
+      } satisfies AbilityOptionPending;
     }
     case "SOR_037": // Academy Defense Walker — handled auto in resolveWhenPlayedTrigger
       return null;

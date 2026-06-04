@@ -79,11 +79,14 @@ export function executeRegroupDraw(gs: GameState, log: string[]): void {
 }
 
 function executeRegroupReady(gs: GameState, log: string[]): void {
-  // Ready all units in all arenas for both players
+  // Ready all units in all arenas for both players (unless prevented by a Round-scoped effect)
   for (const player of [1, 2] as PlayerId[]) {
     const p = ps(gs, player);
     for (const unit of [...p.groundArena, ...p.spaceArena]) {
-      unit.ready = true;
+      const prevented = gs.currentEffects.some(
+        e => e.cardId === "SOR_186_no_ready" && e.targetPlayId === unit.playId,
+      );
+      if (!prevented) unit.ready = true;
     }
     p.leader.ready = true;
     for (const resource of p.resources) {
@@ -105,6 +108,7 @@ function executeRegroupReady(gs: GameState, log: string[]): void {
     cardsEnteredPlayThisPhase: [],
     cardsLeftPlayThisPhase: [],
     unitsAttackedThisPhase: [],
+    baseDamagedThisPhase: [],
     lastActionWasPass: false,
     regroupResourcedPlayers: [],
   };
