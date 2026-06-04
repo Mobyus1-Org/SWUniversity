@@ -68,6 +68,20 @@ Once the user approves an approach — **stop the brainstorming checklist here**
 
 ## What "Implement Directly" Means (per card)
 
+**Before writing any code**, use TodoWrite to create a task list that includes every card AND the tracker update step. Example for two cards:
+
+```
+[ ] Implement Card A (TDD)
+[ ] Implement Card B (TDD)
+[ ] Run full test suite
+[ ] Mark Card A done in sor-implement.md
+[ ] Mark Card B done in sor-implement.md
+```
+
+The tracker update task must be in the list from the start — not added later. This keeps it visible and prevents it from being skipped.
+
+Then per card:
+
 1. Add the card helper entry to `tests/card-helpers.ts` (if missing)
 2. Write failing tests in `tests/unit/<set>/<card-title>.test.ts`
 3. Implement the engine changes to make tests pass
@@ -77,7 +91,14 @@ Follow the conventions in memory: card test files go in `tests/unit/<set>/`, nam
 
 ## After Implementation
 
-Once all tests pass, check for a `<set>-implement.md` file in the project root — e.g., `SOR_105` → `sor-implement.md`. If it exists, find each implemented card's entry and mark it as done. If no such file exists, skip this step.
+Check for a `<set>-implement.md` file in the project root — e.g., `SOR_105` → `sor-implement.md`. For each implemented card:
+
+1. **Remove** the card's entire `###` entry block from its current section (e.g. "Unimplemented – COMPLEX").
+2. **Update the summary table** at the top: increment `Implemented` by 1, decrement the card's prior status count (e.g. `Unimplemented – Complex`) by 1.
+
+Do not just update the Notes text — the entry must be deleted and the counts must change. Mark the tracker todo complete.
+
+**This step is not optional.** It was already in your TodoWrite list — check it off.
 
 ## Red Flags
 

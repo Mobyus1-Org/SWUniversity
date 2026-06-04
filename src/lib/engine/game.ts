@@ -56,6 +56,7 @@ export interface GameState {
   initiativeClaimed: boolean;
   roundState: {
     cardsPlayedThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string }[];
+    cardsPlayedThisRound: { fromPlayer: PlayerId; cardId: string; playId: string; playedAs: "Unit" | "Upgrade" | "Event" | "Pilot" }[];
     cardsEnteredPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: EntryReason }[];
     cardsLeftPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: ExitReason }[];
     unitsAttackedThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; }[];

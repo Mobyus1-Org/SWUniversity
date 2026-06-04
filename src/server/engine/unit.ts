@@ -115,7 +115,7 @@ export class Unit implements UnitInterface {
     return false;
   }
 
-  CurrentPower(reportMode: boolean = false, isAttacking: boolean = false): number {
+  CurrentPower(isAttacking: boolean = false): number {
     let power = CardPower(this.cardId) || 0;
     if (this.HasUpgrade("LOF_056")) { //Size Matters Not
       power = 5;
@@ -218,10 +218,6 @@ export class Unit implements UnitInterface {
 
     if (isAttacking) {
       power += RaidAmount(this.cardId, this.playId, this.controller);
-    }
-
-    if(reportMode) {
-      console.log(`Base power for ${this.cardId} is ${power}`);
     }
 
     return power;

@@ -392,6 +392,15 @@ export function resolveOnAttackTrigger(
         "Exhaust a non-leader unit?",
         { yesLabel: "Exhaust", sourcePlayId: attacker.playId, continuation });
     }
+    case "SOR_142": { // Explosives Artist — On Attack: You may deal 1 damage to the defender or to a base.
+      const opponent142 = attacker.controller === 1 ? 2 : 1;
+      // Build eligible targets: the defender (unit or base) + any base
+      const targets142: string[] = [];
+      if (continuation.target.type === "unit") targets142.push(continuation.target.playId);
+      targets142.push(`player${opponent142}.base`, `player${attacker.controller}.base`);
+      return optionalTarget("SOR_142", attacker.controller, targets142,
+        "Deal 1 damage to the defender or a base?", { continuation });
+    }
     case "SOR_244": { // Snowspeeder (Concord Dawn Interceptors) — On Attack: Exhaust an enemy Vehicle ground unit.
       const game244 = GetGame();
       if (!game244) return continuation;

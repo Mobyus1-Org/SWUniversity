@@ -3,7 +3,7 @@ import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, Trait
 import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
-import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects } from "@/server/engine/card-db/generated";
+import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits } from "@/server/engine/card-db/generated";
 
 /** Returns playIds for all units on both sides plus both base identifiers. */
 function allUnitsAndBasesPlayIds(): string[] {
@@ -527,6 +527,11 @@ export function resolveWhenPlayed(
       const allUpgradePlayIds251 = AllUnits().flatMap(u => u.upgrades.map(upg => upg.playId));
       if (allUpgradePlayIds251.length === 0) return null;
       return mandatoryTarget(cardId, player, allUpgradePlayIds251);
+    }
+    case "SOR_139": { // Force Choke — Deal 5 damage to a non-Vehicle unit; that controller draws a card.
+      const eligible139 = AllUnits().filter(u => !CardTraits(u.cardId).includes("Vehicle"));
+      if (eligible139.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible139.map(u => u.playId));
     }
     case "SOR_077": { // Takedown — "Defeat a unit with 5 or less remaining HP."
       const eligible077 = AllUnits().filter(u => Unit.FromInterface(u).CurrentHP() <= 5);

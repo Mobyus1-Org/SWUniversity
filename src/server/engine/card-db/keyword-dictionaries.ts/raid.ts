@@ -75,7 +75,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
       case "TWI_180": amount += PlayerHasUnitWithTraitInPlay(player, "Separatist", true, playId) ? 2 : 0; break;//Separatist Commando
       case "JTL_081": amount += PlayerHasTokenUnitInPlay(player) ? 1 : 0; break;//First Order TIE Fighter
       case "JTL_257": amount += PlayerHasUnitWithTraitInPlay(player, "Fighter", true, playId) ? 2 : 0; break;//Flanking Fang Fighter
-      case "JTL_137": amount += (unit.CurrentPower(true) + amount) >= 6 ? 1 : 0; break;//Vonreg's TIE Interceptor
+      case "JTL_137": amount += (unit.CurrentPower() + amount) >= 6 ? 1 : 0; break;//Vonreg's TIE Interceptor
       case "LOF_212"://Life Wind Sage
         amount += GetUnitsForPlayer(otherPlayer).some(u => !u.ready) ? 2 : 0;
         break;

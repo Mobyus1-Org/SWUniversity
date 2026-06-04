@@ -88,7 +88,7 @@ export function HasOverwhelm(cardId: string,
       case "TWI_130"://Bo-Katan Kryze
         return PlayerHasUnitWithTraitInPlay(player, "Mandalorian", true, playId);
       case "JTL_137"://Vonreg's TIE Interceptor
-        return unit.CurrentPower(true) >= 4;
+        return unit.CurrentPower() >= 4;
       case "LOF_007"://Avar Kriss Leader unit
         return HasTheForce(player);
       case "LOF_105"://Oppo Rancisis

@@ -41,6 +41,22 @@ export function getTopLevelActions(gs: GameState): GameDispatch[] {
     }
   }
 
+  // play-card: each affordable card in hand — before leader/unit action abilities so card-play
+  // winning paths are found before the solver exhausts large leader-ability sub-trees.
+  // Deploy and attacks stay first (short paths); non-deploy leader ability is tried after cards.
+  for (const card of p.hand) {
+    if (CardIsPlayable(gs, 1, card.cardId)) {
+      dispatches.push(makeDispatch(1, "play-card", { cardId: card.cardId, fromZone: "Hand" }));
+    }
+  }
+
+  // play-smuggle: each smuggleable resource
+  for (const resource of p.resources) {
+    if (ResourceIsSmuggleable(gs, 1, resource)) {
+      dispatches.push(makeDispatch(1, "play-smuggle", { playId: resource.playId }));
+    }
+  }
+
   // use-ability: leader non-deploy ability — gated on ready+not-deployed, not on epicActionUsed,
   // since epicActionUsed only prevents the deploy epic action, not the regular leader action ability.
   if (!leader.deployed && leader.ready) {
@@ -64,21 +80,6 @@ export function getTopLevelActions(gs: GameState): GameDispatch[] {
   // use-ability: base
   if (!p.base.epicActionUsed) {
     dispatches.push(makeDispatch(1, "use-ability", { cardId: p.base.cardId }));
-  }
-
-  // play-card: each affordable card in hand — after attacks/abilities to avoid exhausting the
-  // time budget on large card-play sub-trees before simpler winning paths are found
-  for (const card of p.hand) {
-    if (CardIsPlayable(gs, 1, card.cardId)) {
-      dispatches.push(makeDispatch(1, "play-card", { cardId: card.cardId, fromZone: "Hand" }));
-    }
-  }
-
-  // play-smuggle: each smuggleable resource
-  for (const resource of p.resources) {
-    if (ResourceIsSmuggleable(gs, 1, resource)) {
-      dispatches.push(makeDispatch(1, "play-smuggle", { playId: resource.playId }));
-    }
   }
 
   // claim-initiative

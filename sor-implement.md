@@ -6,12 +6,11 @@
 
 | Status | Count |
 |--------|-------|
-| Implemented | 162 |
-| Partially Implemented | 19 |
+| Implemented | 173 |
+| Partially Implemented | 18 |
 | Keywords Only (auto-handled) | 23 |
 | Unimplemented – Simple | 0 |
-| Unimplemented – Complex | 25 |
-| **Total** | **214** |
+| Unimplemented – Complex | 24 |
 
 ---
 
@@ -29,64 +28,6 @@ Discard 6 cards from an opponent's deck.
 Heal 5 damage from a base.
 Defeat a unit with 3 or less remaining HP.
 Give a Shield token to a unit.
-
-**Notes:** Needs implementation: Choose two, in any order:
-
-Discard 6 cards from an opponent's deck.
-Heal 5 damage from a base.
-Defe
-
-### SOR_061 — Guardian of the Whills (Unit)
-**Card Text:** The first upgrade you play on this unit each round costs [1 resource] less.
-
-**Notes:** Implemented. `guardianOfTheWhillsDiscount` in `card-playability.ts` and `dispatch-listener.ts` reduces upgrade cost by 1 when an eligible Guardian (SOR_061 or LOF_058) is available. A `"SOR_061_firstUpgradeUsed"` Round-scoped `currentEffect` (keyed to the unit's playId) is pushed when the upgrade attaches to the guardian, preventing a second discount in the same round. Tests in `tests/unit/sor/guardian-of-the-whills.test.ts`.
-
-### SOR_062 — Regional Governor (Unit)
-**Card Text:** When Played: Name a card. While this unit is in play, opponents can't play the named card.
-
-**Notes:** Implemented. When Played returns an `AbilityTargetPending`; the chosen card ID is resolved via `applyAbilityEffect` which stores `namedCardTitle` (looked up via `CardTitle`) on the governor unit. `regionalGovernorBlocks` in both `card-playability.ts` and `dispatch-listener.ts` blocks opponents from playing any card whose title matches. Blocking is by title (not card ID) so all reprints are covered. `namedCardTitle` is a new optional field on the `Unit` interface in `core-models.ts`. Tests in `tests/unit/sor/regional-governor.test.ts`.
-
-
-### SOR_089 — Relentless (Unit)
-**Card Text:** The first event played by each opponent each round loses all abilities.
-
-**Notes:** Needs implementation: The first event played by each opponent each round loses all abilities.
-
-### SOR_105 — General Krell (Unit)
-**Card Text:** Each other friendly unit gains: "When Defeated: You may draw a card."
-
-**Notes:** Implemented. Check in `when-defeated.ts` (Krell in-play check + `resolveOwnWhenDefeated` refactor) and `dispatch-listener.ts` (`applyAbilityOptionEffect` case). Tests in `tests/unit/sor/general-krell.test.ts`.
-
-### SOR_109 — Colonel Yularen (Unit)
-**Card Text:** When you play a [Command] unit (including this one): Heal 1 damage from your base.
-
-**Notes:** Needs reactive trigger: when any Command-aspect unit enters play, check if Yularen is in play and heal 1. Hook needed in completePlayCard (similar to Gideon Hask's enemy-unit-defeated pattern).
-
-### SOR_110 — Frontline Shuttle (Unit)
-**Card Text:** Action [defeat this unit]: Attack with a unit, even if it's exhausted. It can't attack bases for this attack.
-
-**Notes:** Needs implementation: Action [defeat this unit]: Attack with a unit, even if it's exhausted. It can't attack bases for thi
-
-### SOR_129 — Admiral Ozzel (Unit)
-**Card Text:** Action [exhaust]: Play an Imperial unit from your hand (paying its cost). It enters play ready. Each opponent may ready a unit.
-
-**Notes:** Needs implementation: Action [exhaust]: Play an Imperial unit from your hand (paying its cost). It enters play ready. Each
-
-### SOR_139 — Force Choke (Event)
-**Card Text:** If you control a FORCE unit, this event costs [1 resource] less to play.
-
-Deal 5 damage to a non-VEHICLE unit. That unit's controller draws a card.
-
-**Notes:** Needs implementation: If you control a FORCE unit, this event costs [1 resource] less to play.
-
-Deal 5 damage to a non-
-
-### SOR_142 — Sabine Wren (Unit)
-**Card Text:** While there are at least 3 aspects among other friendly units, this unit can't be attacked (unless she gains Sentinel).
-
-On Attack: You may deal 1 damage to the defender or to a base.
-
-**Notes:** Needs implementation: While there are at least 3 aspects among other friendly units, this unit can't be attacked (unless s
 
 ### SOR_152 — For a Cause I Believe In (Event)
 **Card Text:** Reveal the top 4 cards of your deck. For each [Heroism] card revealed this way, deal 1 damage to an enemy base. You may discard any of the revealed cards and put the rest back on top of your deck in any order.
@@ -546,3 +487,11 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_209 | Pirated Starfighter (Kylo Ren) | Unit | Raid 1; When Played: return friendly non-leader unit to hand; test coverage added |
 | SOR_244 | Snowspeeder (Concord Dawn Interceptors) | Unit | Ambush; On Attack: exhaust enemy Vehicle ground unit; test coverage added |
 | SOR_102 | Home One | Unit | Restore 2; passive Restore 1 to all other friendly units; When Played: play Heroism unit from discard at -3 cost (pre-filtered by affordability incl. aspect penalty); AspectPenalty exported to core-functions; test coverage added |
+| SOR_061 | Guardian of the Whills | Unit | First upgrade played on this unit each round costs 1 less; discount tracked via `SOR_061_firstUpgradeUsed` CurrentEffect (Round duration) in card-playability.ts + dispatch-listener.ts; test coverage added |
+| SOR_062 | Regional Governor | Unit | When Played: name a card; opponents can't play that named card while this unit is in play; when-played.ts prompts for name; card-playability.ts blocks it; namedCardTitle stored on unit; test coverage added |
+| SOR_105 | General Krell | Unit | Each other friendly unit gains "When Defeated: may draw a card"; resolveOwnWhenDefeated refactor in when-defeated.ts + applyAbilityOptionEffect case in dispatch-listener.ts; test coverage added |
+| SOR_109 | Colonel Yularen | Unit | When a Command unit is played (including this one): heal 1 from your base; inline check in completePlayCard (dispatch-listener.ts); test coverage added |
+| SOR_110 | Frontline Shuttle | Unit | Action [defeat this unit]: attack with any friendly unit even if exhausted; that attack can't target bases; special-cased in action-ability.ts + dispatch-listener.ts with source: "SOR_110" base-attack block; test coverage added |
+| SOR_129 | Admiral Ozzel | Unit | Action [exhaust]: play Imperial unit from hand at cost, enters ready; each opponent may ready one of their units; play-from-hand handler in dispatch-listener.ts; test coverage added |
+| SOR_139 | Force Choke | Event | Costs 1 less if you control a Force unit (forceChokeDiscount in card-playability.ts + playCost); deal 5 to non-Vehicle unit; that unit's controller draws; test coverage added |
+| SOR_142 | Explosives Artist (Sabine Wren) | Unit | While 3+ distinct aspects among other friendlies: can't be attacked (unless Sentinel); On Attack: deal 1 to defender or base; computeAttackTargets filter + on-attack.ts + applyAbilityEffect; test coverage added |

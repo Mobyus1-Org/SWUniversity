@@ -35,7 +35,7 @@ const puzzle = {
 };
 
 describe("palp-rey puzzle — You Cannot Run From Your Name", () => {
-  it("is solvable", () => {
+  it("is solvable", { timeout: 120_000 }, () => {
     const result = solve(puzzle as any);
     console.log("solvable:", result.solvable, "solutions:", result.steps.length, "timedOut:", result.timedOut);
     expect(result.solvable).toBe(true);

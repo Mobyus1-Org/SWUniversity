@@ -571,6 +571,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "TWI_186": //San Hill - Chairman of the Banking Clan
     case "SEC_085": //Vice Admiral Rampart - On Schedule
     case "SEC_065": //Nala Se - Chief Medical Scientist
+    case "SOR_142": //Explosives Artist - Sabine Wren
       return true;
     default: break;
   }

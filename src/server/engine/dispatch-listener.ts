@@ -75,7 +75,6 @@ import type {
   ResolveAttackPending,
   MillPending,
   MillResultPending,
-  RevealFromHandPending,
   SpreadDamagePending,
   SpreadHealPending,
   TriggerOrderPending,
@@ -139,7 +138,7 @@ export function computeUnitBuffs(gs: GameState): Record<string, { power: number;
       const baseHp = CardHp(u.cardId) || 0;
       const upgPow = u.upgrades.reduce((sum, upg) => sum + (CardUpgradePower(upg.cardId) || 0), 0);
       const upgHp = u.upgrades.reduce((sum, upg) => sum + (CardUpgradeHp(upg.cardId) || 0), 0);
-      const powBuff = unit.CurrentPower(false, false) - basePower - upgPow;
+      const powBuff = unit.CurrentPower() - basePower - upgPow;
       const hpBuff = unit.TotalHP() - baseHp - upgHp;
       if (powBuff > 0 || hpBuff > 0) {
         result[u.playId] = { power: powBuff, hp: hpBuff };
@@ -213,11 +212,21 @@ function guardianOfTheWhillsDiscount(game: GameState, player: PlayerId, cardId: 
   return hasEligibleGuardian ? 1 : 0;
 }
 
+// SOR_139 Force Choke: costs 1 less if you control a Force unit.
+function forceChokeDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (cardId !== "SOR_139") return 0;
+  const p = GetPlayer(game, player);
+  return [...p.groundArena, ...p.spaceArena].some(
+    u => CardTraits(u.cardId).includes("Force") && !Unit.FromInterface(u).LostAbilities(),
+  ) ? 1 : 0;
+}
+
 function playCost(game: GameState, player: PlayerId, cardId: string): number {
   return CardCost(cardId)
     + aspectPenalty(game, player, cardId)
     + delMeekoEventTax(game, player, cardId)
     - guardianOfTheWhillsDiscount(game, player, cardId)
+    - forceChokeDiscount(game, player, cardId)
   ;
 }
 
@@ -849,11 +858,19 @@ function computeAttackTargets(
       .filter(e => e.reason !== "returned-to-play")
       .map(e => e.playId)
   );
-  const visible = opposing.filter(u =>
-    !HasHidden(u.cardId, u.playId, u.controller) ||
-    !enteredThisPhase.has(u.playId) ||
-    HasSentinel(u.cardId, u.playId, u.controller)
-  );
+  const visible = opposing.filter(u => {
+    if (HasHidden(u.cardId, u.playId, u.controller) && enteredThisPhase.has(u.playId) && !HasSentinel(u.cardId, u.playId, u.controller)) return false;
+    // Explosives Artist (SOR_142): can't be attacked if ≥3 distinct aspects among other friendlies (unless Sentinel).
+    if (u.cardId === "SOR_142" && !HasSentinel(u.cardId, u.playId, u.controller) && !Unit.FromInterface(u).LostAbilities()) {
+      const otherFriendlyAspects = new Set(
+        [...GetPlayer(game, u.controller).groundArena, ...GetPlayer(game, u.controller).spaceArena]
+          .filter(f => f.playId !== u.playId)
+          .flatMap(f => CardAspects(f.cardId))
+      );
+      if (otherFriendlyAspects.size >= 3) return false;
+    }
+    return true;
+  });
 
   const sentinels = visible.filter((u) => {
     try {
@@ -899,7 +916,7 @@ function resolveAttack(
     cardId: attacker.cardId,
     playId: attacker.playId,
   });
-  const atkPower = attacker.CurrentPower(false, true);
+  const atkPower = attacker.CurrentPower(true);
   const attackerName = CardTitle(attacker.cardId);
 
   if (target.type === "base") {
@@ -1121,7 +1138,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       const attacker = GetUnitByPlayId(game, pending.attackerPlayId);
       if (!attacker) return { type: "Target" } satisfies NeedsTarget;
       const { unitPlayIds, includesBase } = computeAttackTargets(game, attacker);
-      const allowBase = includesBase && pending.source !== "ambush";
+      const allowBase = includesBase && pending.source !== "ambush" && pending.source !== "SOR_110";
       return {
         type: "Target",
         fromPlayIds: unitPlayIds.length > 0 ? unitPlayIds : undefined,
@@ -1348,6 +1365,7 @@ function completePlayCard(
     const unit = addToArena(game, player, cardId, opts?.enterReady ?? false);
     log.push(`${CardTitle(cardId) ?? cardId} entered the ${CardArena(cardId) ?? "ground"} arena.`);
     game.roundState.cardsPlayedThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId });
+    game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: unit.playId, playedAs: "Unit" });
     game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId, reason: "played" });
 
     if (CardIsUnique(cardId)) {
@@ -1360,6 +1378,15 @@ function completePlayCard(
         };
         return { response: resolutionResponse(pendingToResolution(defeatCopyPending, game)), pending: defeatCopyPending, stateChanged: false };
       }
+    }
+
+    // Colonel Yularen (SOR_109): when a Command unit is played, heal 1 from base.
+    const yularenUnit = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
+      .find(u => u.cardId === "SOR_109" && !Unit.FromInterface(u).LostAbilities());
+    if (yularenUnit && CardAspects(cardId).includes("Command")) {
+      const yularenBase = GetPlayer(game, player).base;
+      yularenBase.damage = Math.max(0, yularenBase.damage - 1);
+      log.push(`${CardTitle("SOR_109")}: healed 1 damage from your base.`);
     }
 
     // Any triggers pushed while the bag is already non-empty are nested (CR 7.6.11).
@@ -1412,24 +1439,42 @@ function completePlayCard(
       player,
       fromPlayIds: eligiblePlayIds,
     };
+    game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: "", playedAs: "Upgrade" });
     return { response: resolutionResponse(pendingToResolution(upgradePending, game)), pending: upgradePending, stateChanged: false };
   } else {
-    pushEventToDiscard(game, player, cardId);
-    log.push(`${CardTitle(cardId) ?? cardId} resolved and placed in the discard.`);
+    // Event branch
+    const priorEventCount = game.roundState.cardsPlayedThisRound
+      .filter(e => e.fromPlayer === player && e.playedAs === "Event")
+      .length;
 
-    if (cardId === "SOR_043" || cardId === "TWI_078") {
-      const otherPlayer: PlayerId = player === 1 ? 2 : 1;
-      // Snapshot trigger-holders before any unit is removed so wiped units still trigger.
-      const holdersP1 = GetUnitsForPlayer(1);
-      const holdersP2 = GetUnitsForPlayer(2);
-      const toDefeat = cardId === "SOR_043"
-        ? [...GetUnitsForPlayer(otherPlayer), ...GetUnitsForPlayer(player)]
-        : [...GetUnitsForPlayer(otherPlayer)];
-      boardWipeDefeat(game, log, toDefeat, holdersP1, holdersP2);
+    pushEventToDiscard(game, player, cardId);
+    const eventPlayId = GetPlayer(game, player).discard[0].playId;
+    game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: eventPlayId, playedAs: "Event" });
+
+    const relentlessOpp = GetOtherPlayer(player);
+    const relentlessActive = [...GetPlayer(game, relentlessOpp).groundArena, ...GetPlayer(game, relentlessOpp).spaceArena]
+      .some(u => u.cardId === "SOR_089" && !Unit.FromInterface(u).LostAbilities());
+    const isEventBlanked = relentlessActive && priorEventCount === 0;
+
+    if (isEventBlanked) {
+      log.push(`${CardTitle(cardId) ?? cardId} lost all abilities (${CardTitle("SOR_089")}).`);
     } else {
-      const nextPending = resolveWhenPlayed(cardId, player);
-      if (nextPending) {
-        return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+      log.push(`${CardTitle(cardId) ?? cardId} resolved and placed in the discard.`);
+
+      if (cardId === "SOR_043" || cardId === "TWI_078") {
+        const otherPlayer: PlayerId = player === 1 ? 2 : 1;
+        // Snapshot trigger-holders before any unit is removed so wiped units still trigger.
+        const holdersP1 = GetUnitsForPlayer(1);
+        const holdersP2 = GetUnitsForPlayer(2);
+        const toDefeat = cardId === "SOR_043"
+          ? [...GetUnitsForPlayer(otherPlayer), ...GetUnitsForPlayer(player)]
+          : [...GetUnitsForPlayer(otherPlayer)];
+        boardWipeDefeat(game, log, toDefeat, holdersP1, holdersP2);
+      } else {
+        const nextPending = resolveWhenPlayed(cardId, player);
+        if (nextPending) {
+          return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+        }
       }
     }
   }
@@ -1478,6 +1523,7 @@ function handlePlayCard(
         // Only piloting is affordable — skip prompt, go straight to vehicle target
         exhaustResources(game, player, pilotCost);
         log.push(`Player ${player} is playing ${CardTitle(cardId) ?? cardId} as a Pilot.`);
+        game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: "", playedAs: "Pilot" });
         const upgradePending: UpgradeTargetPending = {
           type: "upgrade-target",
           upgradeCardId: cardId,
@@ -1553,7 +1599,7 @@ function handlePlaySmuggle(
   exhaustResources(game, player, Math.max(0, wasReady ? cost - 1 : cost));
 
   if (p.deck.length > 0) {
-    const topCard = p.deck.shift()!;
+    const topCard = p.deck.pop()!;
     p.resources.push({
       cardId: topCard.cardId,
       playId: String(game.nextPlayId++),
@@ -1665,6 +1711,16 @@ function handleUseAbility(
     if (readyResourceCount < unitAbilityCost)
       return { response: invalidResponse(`Not enough resources to use ${CardTitle(unit.cardId)}'s ability.`), pending: null, stateChanged: false };
 
+    // SOR_110 Frontline Shuttle: cost is defeating the unit, not exhausting it.
+    if (unit.cardId === "SOR_110") {
+      const nextPending110 = resolveActionAbility(game, log, player, unit.cardId, unit.playId);
+      if (nextPending110) {
+        return { response: resolutionResponse(pendingToResolution(nextPending110, game)), pending: nextPending110, stateChanged: false };
+      }
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
     unit.ready = false;
     exhaustResources(game, player, unitAbilityCost);
 
@@ -1736,6 +1792,9 @@ function handleChooseTarget(
     let attacker: Unit | null = null;
 
     if (data.targetZones?.includes("Base")) {
+      if (pending.source === "SOR_110") {
+        return { response: invalidResponse("Frontline Shuttle action: cannot attack a base."), pending, stateChanged: false };
+      }
       const atkController = GetUnitByPlayId(game, pending.attackerPlayId)?.controller;
       if (atkController != null) target = { type: "base", player: GetOtherPlayer(atkController) };
       attacker = GetUnitByPlayId(game, pending.attackerPlayId);
@@ -1813,7 +1872,7 @@ function handleChooseTarget(
     exhaustResources(game, pending.player, playCost(game, pending.player, resource.cardId));
     playerState.resources.splice(resourceIdx, 1);
     if (playerState.deck.length > 0) {
-      const topCard = playerState.deck.shift()!;
+      const topCard = playerState.deck.pop()!;
       playerState.resources.push({ cardId: topCard.cardId, playId: nextPlayId(game), owner: pending.player, controller: pending.player, ready: false, stolen: false });
     }
     log.push(`Player ${pending.player} played ${CardTitle(resource.cardId)} from resources via Plot.`);
@@ -2292,6 +2351,40 @@ function handleChooseTarget(
     const cardId = hand[idx].cardId;
 
     switch (pending.cardId) {
+      case "SOR_129": { // Admiral Ozzel — play an Imperial unit at normal cost, enters ready.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Admiral Ozzel: chosen card is not a Unit."), pending, stateChanged: false };
+        if (!CardTraits(cardId).includes("Imperial"))
+          return { response: invalidResponse("Admiral Ozzel: chosen unit is not Imperial."), pending, stateChanged: false };
+        const cost129 = playCost(game, pending.player, cardId);
+        const ready129 = GetPlayer(game, pending.player).resources.filter(r => r.ready).length;
+        if (ready129 < cost129)
+          return { response: invalidResponse("Not enough resources to play this unit."), pending, stateChanged: false };
+        exhaustResources(game, pending.player, cost129);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Admiral Ozzel (enters ready).`);
+        const result129 = completePlayCard(game, log, cardId, pending.player, { enterReady: true });
+        // After playing: each opponent may ready a unit.
+        const oppPlayer129: PlayerId = pending.player === 1 ? 2 : 1;
+        const oppUnits129 = GetUnitsForPlayer(oppPlayer129);
+        const ozzelContinuation: AbilityOptionPending = {
+          type: "ability-option",
+          cardId: "SOR_129",
+          player: oppPlayer129,
+          helperText: `Opponent: ready a unit?`,
+          yesLabel: "Ready a unit",
+          noLabel: "No",
+          onYes: oppUnits129.length > 0 ? {
+            type: "ability-target",
+            cardId: "SOR_129_ready",
+            player: oppPlayer129,
+            fromPlayIds: oppUnits129.map(u => u.playId),
+            continuation: result129.pending ?? null,
+          } satisfies AbilityTargetPending : result129.pending ?? null,
+          continuation: result129.pending ?? null,
+        };
+        return { response: resolutionResponse(pendingToResolution(ozzelContinuation, game)), pending: ozzelContinuation, stateChanged: false };
+      }
       case "SOR_093": { // Alliance Dispatcher — play a unit from hand at -1 cost
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("Alliance Dispatcher: chosen card is not a Unit."), pending, stateChanged: false };
@@ -2762,7 +2855,6 @@ function thrawnsReveal(game: GameState, log: string[], deckOwner: PlayerId, thra
     return null;
   }
   const topCard = deck[deck.length - 1];
-  console.log("DEBUG topCard:", JSON.stringify(topCard), "deck length:", deck.length, "deck[0]:", JSON.stringify(deck[0]));
   const revealedCost = CardCost(topCard.cardId) ?? 0;
   const subtitle = CardSubtitle(topCard.cardId);
   const cardLabel = subtitle ? `${CardTitle(topCard.cardId)} — ${subtitle}` : CardTitle(topCard.cardId);
@@ -3332,6 +3424,7 @@ function handleChooseOption(
     if (option === "Play as Pilot") {
       exhaustResources(game, pending.playingPlayer, pending.pilotingCost);
       log.push(`Player ${pending.playingPlayer} is playing ${CardTitle(pending.cardId)} as a Pilot.`);
+      game.roundState.cardsPlayedThisRound.push({ fromPlayer: pending.playingPlayer, cardId: pending.cardId, playId: "", playedAs: "Pilot" });
       const eligibleVehicles = PilotingEligibleVehicles(game, pending.playingPlayer);
       const upgradePending: UpgradeTargetPending = {
         type: "upgrade-target",
@@ -3693,6 +3786,24 @@ function resolveActionAbility(
         continuation: null,
       };
     }
+    case "SOR_110": { // Frontline Shuttle — Action [defeat this unit]: Attack with a unit, even if exhausted.
+      if (!playId) return null;
+      const shuttle110 = GetUnitByPlayId(game, playId);
+      if (!shuttle110) return null;
+      defeatUnit(game, log, shuttle110);
+      log.push(`${CardTitle("SOR_110")}: defeated as the action cost.`);
+      const friendlySpace110 = GetPlayer(game, player).spaceArena as Unit[];
+      if (friendlySpace110.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_110",
+        player,
+        fromPlayIds: friendlySpace110.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "SOR_129": // Admiral Ozzel — Action [Exhaust]: Play an Imperial unit from hand, it enters ready.
+      return { type: "play-from-hand", cardId, player } satisfies PlayFromHandPending;
     case "SOR_093": // Alliance Dispatcher — Action [Exhaust]: Play a unit from hand at -1 cost.
       return { type: "play-from-hand", cardId, player } satisfies PlayFromHandPending;
     case "SOR_094": { // Bail Organa — Action [Exhaust]: Give an Experience token to another friendly unit.
@@ -4103,6 +4214,14 @@ function applyAbilityEffect(
       if (defeatPend) return injectContinuation(defeatPend, pending.continuation);
       return pending.continuation;
     }
+    case "SOR_139": { // Force Choke — deal 5 damage to a non-Vehicle unit; controller draws a card.
+      if (!targetPlayId) break;
+      const target139 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target139) break;
+      DealDamageToUnit(game.currentGameState, "SOR_139", target139.playId, 5, game.gameLog);
+      DrawCardForPlayer(game.currentGameState, game.gameLog, target139.controller);
+      return pending.continuation;
+    }
     case "SOR_077": { // Takedown — defeat a unit with ≤5 remaining HP
       if (!targetPlayId) break;
       const target077 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -4362,6 +4481,23 @@ function applyAbilityEffect(
       }
       break;
     }
+    case "SOR_142": { // Explosives Artist OA: deal 1 damage to chosen unit or base, then proceed.
+      if (targetIsBase) {
+        const opp142: PlayerId = pending.player === 1 ? 2 : 1;
+        GetPlayer(game.currentGameState, opp142).base.damage += 1;
+        game.gameLog.push(`${CardTitle("SOR_142")}: dealt 1 damage to player ${opp142}'s base.`);
+      } else if (targetPlayId) {
+        const baseMatch142 = targetPlayId.match(/^player([12])\.base$/);
+        if (baseMatch142) {
+          const basePlayer142 = Number(baseMatch142[1]) as PlayerId;
+          GetPlayer(game.currentGameState, basePlayer142).base.damage += 1;
+          game.gameLog.push(`${CardTitle("SOR_142")}: dealt 1 damage to player ${basePlayer142}'s base.`);
+        } else {
+          DealDamageToUnit(game.currentGameState, "SOR_142", targetPlayId, 1, game.gameLog);
+        }
+      }
+      return pending.continuation;
+    }
     case "SOR_059": { // 2-1B Surgical Droid OA: Heal 2 from chosen unit, then proceed to combat.
       if (!targetPlayId) return pending.continuation;
       healTarget(game.currentGameState, targetPlayId, 2, game.gameLog, "SOR_059");
@@ -4601,6 +4737,24 @@ function applyAbilityEffect(
         source: "SOR_220",
         continuation: null,
       };
+    }
+    case "SOR_110": { // Frontline Shuttle: attack with the chosen space unit (no base allowed).
+      if (!targetPlayId) break;
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "SOR_110",
+        continuation: null,
+      };
+    }
+    case "SOR_129_ready": { // Admiral Ozzel: opponent chose a unit to ready.
+      if (!targetPlayId) break;
+      const readyTarget = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (readyTarget) {
+        readyTarget.ready = true;
+        game.gameLog.push(`${CardTitle("SOR_129")}: opponent readied ${CardTitle(readyTarget.cardId)}.`);
+      }
+      break;
     }
     case "SOR_240": { // Fleet Lieutenant: if Rebel +2/+0 ForAttack, then attack with chosen unit.
       if (!targetPlayId) break;

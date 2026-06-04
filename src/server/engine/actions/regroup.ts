@@ -101,6 +101,7 @@ function executeRegroupReady(gs: GameState, log: string[]): void {
   gs.activePlayer = gs.initiativePlayer;
   gs.roundState = {
     cardsPlayedThisPhase: [],
+    cardsPlayedThisRound: [],
     cardsEnteredPlayThisPhase: [],
     cardsLeftPlayThisPhase: [],
     unitsAttackedThisPhase: [],

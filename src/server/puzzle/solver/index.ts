@@ -9,7 +9,7 @@ import { getTopLevelActions, getResolutionActions } from "./actions";
 import { formatStep } from "./format";
 
 const MAX_DISPATCHES = 500;
-const TIMEOUT_MS = 55_000; // 5s buffer before the API-level 60s deadline
+const DEFAULT_TIMEOUT_MS = 55_000; // 5s buffer before the API-level 60s deadline
 
 export interface SolverResult {
   solvable: boolean;
@@ -51,8 +51,18 @@ function isPhaseTerminal(gs: GameState): boolean {
 // observable GameState change (attacker is not exhausted until resolveAttack),
 // so the post-dispatch state collides with the pre-dispatch state in the
 // visited set and all attack paths from that node get incorrectly pruned.
+//
+// cardsPlayedThisRound grows O(n) with each card played and would make each
+// sequence of plays unique, exploding the state space. Replace it with a
+// compact summary: for each player, whether they've played their first event
+// this round (the only bit Relentless needs). All other cardsPlayedThisRound
+// info is derivable from the rest of gs (discard, arenas, resources).
 function stateKey(gs: GameState, pending: unknown): string {
-  return JSON.stringify({ gs, p: pending });
+  const { roundState: { cardsPlayedThisRound, ...roundRest }, ...gsRest } = gs;
+  const firstEventPlayed = [1, 2].map(p =>
+    cardsPlayedThisRound.some(e => e.fromPlayer === p && e.playedAs === "Event"),
+  );
+  return JSON.stringify({ gs: { ...gsRest, roundState: { ...roundRest, _fep: firstEventPlayed } }, p: pending });
 }
 
 
@@ -127,8 +137,8 @@ function dfs(
   return false;
 }
 
-export function solve(rawPuzzle: RawPuzzleGameState): SolverResult {
-  const deadline = Date.now() + TIMEOUT_MS;
+export function solve(rawPuzzle: RawPuzzleGameState, timeoutMs = DEFAULT_TIMEOUT_MS): SolverResult {
+  const deadline = Date.now() + timeoutMs;
   const gs = hydratePuzzleGame(rawPuzzle);
   const context = buildInitialContext(gs);
 

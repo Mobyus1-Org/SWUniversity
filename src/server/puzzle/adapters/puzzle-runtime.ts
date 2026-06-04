@@ -147,6 +147,7 @@ export function hydratePuzzleGame(raw: RawPuzzleGameState): GameState {
     triggerBag: (raw.triggerBag as TriggerEntry[]) ?? [],
     roundState: (raw.roundState as GameState["roundState"]) ?? {
       cardsPlayedThisPhase: [],
+      cardsPlayedThisRound: [],
       cardsEnteredPlayThisPhase: [],
       cardsLeftPlayThisPhase: [],
       unitsAttackedThisPhase: [],

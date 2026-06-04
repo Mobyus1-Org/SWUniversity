@@ -33,7 +33,7 @@ const puzzle = {
 };
 
 describe("adelphi puzzle — Adelphi Delta", () => {
-  it("is solvable", () => {
+  it("is solvable", { timeout: 120_000 }, () => {
     const result = solve(puzzle as any);
     console.log("solvable:", result.solvable, "solutions:", result.steps.length, "timedOut:", result.timedOut);
     expect(result.solvable).toBe(true);

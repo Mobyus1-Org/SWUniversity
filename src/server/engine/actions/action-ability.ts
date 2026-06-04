@@ -112,6 +112,12 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         if (others094.length > 0) abilities.push(cardId);
         break;
       }
+      case "SOR_110": // Frontline Shuttle — Action [defeat this unit]: Attack with a unit, even if exhausted.
+        abilities.push(cardId);
+        break;
+      case "SOR_129": // Admiral Ozzel — Action [exhaust]: Play an Imperial unit from hand.
+        if (PlayerHasUnitsInHand(player, { trait: "Imperial" })) abilities.push(cardId);
+        break;
       default: break;
     }
   }

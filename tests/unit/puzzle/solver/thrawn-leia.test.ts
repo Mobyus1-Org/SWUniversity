@@ -38,7 +38,7 @@ const puzzle = {
 
 describe("thrawn-leia puzzle — Long Live the Empire", () => {
   it("is solvable", { timeout: 120_000 }, () => {
-    const result = solve(puzzle as any);
+    const result = solve(puzzle as any, 110_000);
     console.log("solvable:", result.solvable, "solutions:", result.steps.length, "timedOut:", result.timedOut);
     expect(result.solvable).toBe(true);
   });

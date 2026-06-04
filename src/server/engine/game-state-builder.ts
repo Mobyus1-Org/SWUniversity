@@ -33,6 +33,7 @@ export class GameStateBuilder {
       triggerBag: [],
       roundState: {
         cardsPlayedThisPhase: [],
+        cardsPlayedThisRound: [],
         cardsEnteredPlayThisPhase: [],
         cardsLeftPlayThisPhase: [],
         unitsAttackedThisPhase: [],

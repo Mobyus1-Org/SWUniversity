@@ -51,8 +51,18 @@ function guardianOfTheWhillsDiscount(game: GameState, player: PlayerId, cardId: 
   return hasEligibleGuardian ? 1 : 0;
 }
 
+// SOR_139 Force Choke: costs 1 less if you control a Force unit.
+function forceChokeDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (cardId !== "SOR_139") return 0;
+  const p = player === 1 ? game.player1 : game.player2;
+  const hasForceUnit = [...p.groundArena, ...p.spaceArena].some(
+    u => CardTraits(u.cardId).includes("Force") && !Unit.FromInterface(u).LostAbilities(),
+  );
+  return hasForceUnit ? 1 : 0;
+}
+
 function playCost(game: GameState, player: PlayerId, cardId: string): number {
-  return CardCost(cardId) + aspectPenalty(game, player, cardId) + delMeekoEventTax(game, player, cardId) - guardianOfTheWhillsDiscount(game, player, cardId);
+  return CardCost(cardId) + aspectPenalty(game, player, cardId) + delMeekoEventTax(game, player, cardId) - guardianOfTheWhillsDiscount(game, player, cardId) - forceChokeDiscount(game, player, cardId);
 }
 
 function aspectPenaltyForAspects(game: GameState, player: PlayerId, aspects: string[]): number {
