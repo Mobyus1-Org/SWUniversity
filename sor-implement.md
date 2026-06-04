@@ -6,11 +6,11 @@
 
 | Status | Count |
 |--------|-------|
-| Implemented | 178 |
+| Implemented | 179 |
 | Partially Implemented | 18 |
 | Keywords Only (auto-handled) | 23 |
 | Unimplemented – Simple | 0 |
-| Unimplemented – Complex | 19 |
+| Unimplemented – Complex | 18 |
 
 ---
 
@@ -28,11 +28,6 @@ Discard 6 cards from an opponent's deck.
 Heal 5 damage from a base.
 Defeat a unit with 3 or less remaining HP.
 Give a Shield token to a unit.
-
-### SOR_152 — For a Cause I Believe In (Event)
-**Card Text:** Reveal the top 4 cards of your deck. For each [Heroism] card revealed this way, deal 1 damage to an enemy base. You may discard any of the revealed cards and put the rest back on top of your deck in any order.
-
-**Notes:** Needs implementation: Reveal the top 4 cards of your deck. For each [Heroism] card revealed this way, deal 1 damage to an
 
 ### SOR_155 — Aggression (Event)
 **Card Text:** Choose two, in any order:

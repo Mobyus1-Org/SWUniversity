@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty } from "@/server/engine/core-functions";
-import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
+import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty } from "@/server/engine/core-functions";
+import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
 import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits } from "@/server/engine/card-db/generated";
@@ -769,6 +769,28 @@ export function resolveWhenPlayed(
           continuation: null,
         },
       };
+    }
+    case "SOR_152": { // For a Cause I Believe In — Reveal top 4. Deal 1 damage per Heroism card to enemy base. May discard any; rest return to top.
+      const game152 = GetGame();
+      if (!game152) return null;
+      const pState152 = GetPlayer(game152.currentGameState, player);
+      const opponent152 = player === 1 ? game152.currentGameState.player2 : game152.currentGameState.player1;
+      const n152 = Math.min(4, pState152.deck.length);
+      if (n152 === 0) return null;
+      const slice152 = pState152.deck.slice(-n152);
+      const heroismCount = slice152.filter(c => CardAspects(c.cardId).includes("Heroism")).length;
+      if (heroismCount > 0) {
+        opponent152.base.damage += heroismCount;
+        game152.gameLog.push(`${CardTitle(cardId)}: revealed ${heroismCount} Heroism card(s) — dealt ${heroismCount} damage to enemy base.`);
+      }
+      pState152.deck.splice(pState152.deck.length - n152, n152);
+      return {
+        type: "reveal-discard",
+        cardId,
+        player,
+        revealedCards: slice152.map((c, i) => ({ tempId: `${i}`, cardId: c.cardId })),
+        continuation: null,
+      } satisfies RevealDiscardPending;
     }
     case "SOR_169": { // Keep Fighting — Ready a unit with 3 or less power.
       const eligible169 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]

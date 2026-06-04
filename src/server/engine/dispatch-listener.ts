@@ -46,6 +46,7 @@ import type {
   NeedsSpreadDamage,
   NeedsTarget,
   NeedsPeekHand,
+  NeedsRevealDiscard,
   PlayCardDispatchData,
   PlaySmuggleDispatchData,
   RegroupResourceDispatchData,
@@ -1306,6 +1307,12 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         costModifier: pending.costModifier,
         dontReveal: pending.dontReveal,
       } satisfies NeedsDeckSearch;
+    case "reveal-discard":
+      return {
+        type: "RevealDiscard",
+        helperText: `${CardTitle(pending.cardId)}: choose any cards to discard. The rest return to the top of your deck.`,
+        choices: pending.revealedCards,
+      } satisfies NeedsRevealDiscard;
     case "peek-hand": {
       const targetHand = GetPlayer(game, pending.targetPlayer).hand;
       const eligibleIndices = pending.mustDiscard
@@ -2756,16 +2763,21 @@ function handleChooseTarget(
     pState.deck.splice(pState.deck.length - pending.topCards.length, pending.topCards.length);
     const takenSet = new Set(chosen);
 
-    // "scry": chosen cards go to bottom, unchosen cards go back to top in original deck order.
+    // "scry": chosen = top cards in player-chosen order (first = topmost); unchosen go to bottom in random order.
     if (pending.action === "scry") {
-      const bottomCards = chosen.map(id => ({ cardId: eligibleMap.get(id)!.cardId }));
-      const topReturnCards = pending.topCards.filter(c => !takenSet.has(c.tempId)).map(c => ({ cardId: c.cardId }));
+      const bottomCards = pending.topCards.filter(c => !takenSet.has(c.tempId)).map(c => ({ cardId: c.cardId }));
+      for (let i = bottomCards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [bottomCards[i], bottomCards[j]] = [bottomCards[j], bottomCards[i]];
+      }
+      // Push top cards in reverse so the first chosen ends up topmost (last pushed = top of deck)
+      const topCards = chosen.map(id => ({ cardId: eligibleMap.get(id)!.cardId }));
       pState.deck.unshift(...bottomCards);
-      pState.deck.push(...topReturnCards);
-      if (bottomCards.length > 0) {
-        log.push(`${CardTitle(pending.cardId)}: put ${bottomCards.length} card(s) on the bottom of the deck.`);
+      pState.deck.push(...[...topCards].reverse());
+      if (topCards.length > 0) {
+        log.push(`${CardTitle(pending.cardId)}: put ${topCards.length} card(s) on top, ${bottomCards.length} on the bottom.`);
       } else {
-        log.push(`${CardTitle(pending.cardId)}: left all cards on top of the deck.`);
+        log.push(`${CardTitle(pending.cardId)}: put all ${bottomCards.length} card(s) on the bottom.`);
       }
       const contBottom = pending.continuation ?? null;
       if (contBottom) return { response: resolutionResponse(pendingToResolution(contBottom, game)), pending: contBottom, stateChanged: true };
@@ -2824,6 +2836,38 @@ function handleChooseTarget(
       return { response: resolutionResponse(pendingToResolution(chained, game)), pending: chained, stateChanged: true };
     }
     if (contPlay) return { response: resolutionResponse(pendingToResolution(contPlay, game)), pending: contPlay, stateChanged: true };
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending.type === "reveal-discard") {
+    const chosen = new Set(data.targetPlayIds ?? []);
+    const cardMap = new Map(pending.revealedCards.map(c => [c.tempId, c]));
+
+    for (const id of chosen) {
+      if (!cardMap.has(id))
+        return { response: invalidResponse(`Reveal-discard: unknown selection "${id}".`), pending, stateChanged: false };
+    }
+
+    const pState = GetPlayer(game, pending.player);
+    const discarded = pending.revealedCards.filter(c => chosen.has(c.tempId));
+    const returned = pending.revealedCards.filter(c => !chosen.has(c.tempId));
+
+    for (const c of discarded) {
+      pState.discard.push({ cardId: c.cardId, playId: String(game.nextPlayId++), owner: pending.player, controller: pending.player, turnDiscarded: game.currentRound, discardEffect: "" });
+    }
+    pState.deck.push(...returned.map(c => ({ cardId: c.cardId })));
+
+    if (discarded.length > 0) {
+      log.push(`${CardTitle(pending.cardId)}: discarded ${discarded.length} card(s), returned ${returned.length} to top of deck.`);
+    } else {
+      log.push(`${CardTitle(pending.cardId)}: returned all ${returned.length} card(s) to top of deck.`);
+    }
+
+    updateDefeatedPlayers(game);
+    const cont = pending.continuation ?? null;
+    if (cont) return { response: resolutionResponse(pendingToResolution(cont, game)), pending: cont, stateChanged: true };
+    const bag = drainTriggerBag(game, log);
+    if (bag) return { response: resolutionResponse(pendingToResolution(bag, game)), pending: bag, stateChanged: true };
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 

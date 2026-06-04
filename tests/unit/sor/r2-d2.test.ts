@@ -21,27 +21,27 @@ describe("SOR_236 — R2-D2", () => {
       g.loadNewState(state);
 
       await g.playCardFromHandAsync(1, 0);
-      // Scry prompt — put top card on bottom
-      await g.chooseDeckSearchAsync(1, ["0"]);
+      // Scry prompt — send nothing to top; echoBaseDefender (tempId "0") goes to bottom
+      await g.chooseDeckSearchAsync(1, []);
 
       const deck = g.state.player1.deck;
       expect(deck[deck.length - 1].cardId).toBe(Cards.units.sor.battlefieldMarine); // stays on top
       expect(deck[0].cardId).toBe(Cards.units.sor.echoBaseDefender);                // moved to bottom
     });
 
-    it("leaves the top card on top when nothing is chosen", async () => {
+    it("leaves the top card on top when it is sent to top", async () => {
       const g = new GameTestAdapter();
       const gsb = new GameStateBuilder();
       const state = CommonSetup(gsb, "ggw", "rrk", { my: { resourceCount: 1 }, their: {} })
         .WithCardInDeckForPlayer(1, Cards.units.sor.battlefieldMarine)
-        .WithCardInDeckForPlayer(1, Cards.units.sor.echoBaseDefender)   // top
+        .WithCardInDeckForPlayer(1, Cards.units.sor.echoBaseDefender)   // top (tempId "0")
         .WithCardInHandForPlayer(1, Cards.units.sor.r2d2)
         .Build();
       g.loadNewState(state);
 
       await g.playCardFromHandAsync(1, 0);
-      // Scry prompt — leave on top (submit nothing)
-      await g.chooseDeckSearchAsync(1, []);
+      // Scry prompt — send echoBaseDefender (tempId "0") to top
+      await g.chooseDeckSearchAsync(1, ["0"]);
 
       const deck = g.state.player1.deck;
       expect(deck[deck.length - 1].cardId).toBe(Cards.units.sor.echoBaseDefender); // still on top
@@ -80,8 +80,8 @@ describe("SOR_236 — R2-D2", () => {
       await g.attackWithGroundUnitAsync(1, 0);
       await g.dispatchAsync(1, "choose-target", { targetPlayIds: [enemyPlayId] });
 
-      // Scry fires before combat resolves
-      await g.chooseDeckSearchAsync(1, ["0"]); // put top card on bottom
+      // Scry fires before combat resolves; send nothing to top → echoBaseDefender (tempId "0") goes to bottom
+      await g.chooseDeckSearchAsync(1, []);
 
       const deck = g.state.player1.deck;
       expect(deck[0].cardId).toBe(Cards.units.sor.echoBaseDefender); // moved to bottom

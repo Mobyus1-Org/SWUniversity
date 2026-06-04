@@ -64,6 +64,7 @@ export interface NeedsDeckSearch {
   type: "DeckSearch";
   helperText: string;
   choices: Array<{ tempId: string; cardId: string; cost: number }>;
+  /** "scry" = player chooses which cards go to top (in click order, first = topmost); unchosen go to bottom. "draw"/"play" = player picks cards to take. */
   action: "play" | "draw" | "scry";
   maxChoices?: number; // maximum number of cards the player can choose, regardless of cost
   maxCombinedCost?: number; // maximum total cost of chosen cards, regardless of number
@@ -80,7 +81,14 @@ export interface NeedsPeekHand {
   eligibleIndices: number[];
 }
 
-export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot | NeedsSpreadDamage | NeedsDeckSearch | NeedsPeekHand;
+/** Reveal-discard prompt: player chooses 0 or more of the revealed cards to discard; the rest return to top of deck. */
+export interface NeedsRevealDiscard {
+  type: "RevealDiscard";
+  helperText: string;
+  choices: Array<{ tempId: string; cardId: string }>;
+}
+
+export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot | NeedsSpreadDamage | NeedsDeckSearch | NeedsPeekHand | NeedsRevealDiscard;
 
 // ---------------------------------------------------------------------------
 // Inbound: dispatch types and data payloads

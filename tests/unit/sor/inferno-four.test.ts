@@ -11,29 +11,30 @@ import { Cards } from "../../card-helpers";
 
 describe("SOR_031 — Inferno Four", () => {
   describe("When Played", () => {
-    it("presents top 2 cards and puts selected card on bottom", async () => {
+    it("presents top 2 cards and puts the unchosen card on bottom", async () => {
       const g = new GameTestAdapter();
       const gsb = new GameStateBuilder();
-      // deck (top = last): [battlefieldMarine, echoBaseDefender]
+      // deck (top = last): [battlefieldMarine(tempId "0"), echoBaseDefender(tempId "1")]
       const state = CommonSetup(gsb, "bbk", "ggw", { my: { resourceCount: 2 }, their: {} })
-        .WithCardInDeckForPlayer(1, Cards.units.sor.battlefieldMarine)  // deeper
-        .WithCardInDeckForPlayer(1, Cards.units.sor.echoBaseDefender)   // top (tempId "1")
+        .WithCardInDeckForPlayer(1, Cards.units.sor.battlefieldMarine)  // tempId "0"
+        .WithCardInDeckForPlayer(1, Cards.units.sor.echoBaseDefender)   // tempId "1" (top)
         .WithCardInHandForPlayer(1, Cards.units.sor.infernoFour)
         .Build();
       g.loadNewState(state);
 
       await g.playCardFromHandAsync(1, 0);
-      // Put echoBaseDefender (tempId "1") on bottom; battlefieldMarine stays on top
-      await g.chooseDeckSearchAsync(1, ["1"]);
+      // Send top ids in desired order: battlefieldMarine ("0") on top, echoBaseDefender goes to bottom
+      await g.chooseDeckSearchAsync(1, ["0"]);
 
       const deck = g.state.player1.deck;
       expect(deck[deck.length - 1].cardId).toBe(Cards.units.sor.battlefieldMarine); // top
       expect(deck[0].cardId).toBe(Cards.units.sor.echoBaseDefender);                // bottom
     });
 
-    it("can choose to put no cards on bottom (all stay on top)", async () => {
+    it("puts top cards in player-chosen order (first sent = topmost)", async () => {
       const g = new GameTestAdapter();
       const gsb = new GameStateBuilder();
+      // deck: [battlefieldMarine(tempId "0"), echoBaseDefender(tempId "1", originally on top)]
       const state = CommonSetup(gsb, "bbk", "ggw", { my: { resourceCount: 2 }, their: {} })
         .WithCardInDeckForPlayer(1, Cards.units.sor.battlefieldMarine)
         .WithCardInDeckForPlayer(1, Cards.units.sor.echoBaseDefender)
@@ -42,16 +43,36 @@ describe("SOR_031 — Inferno Four", () => {
       g.loadNewState(state);
 
       await g.playCardFromHandAsync(1, 0);
-      // Put nothing on bottom — both cards stay on top in original order
-      await g.chooseDeckSearchAsync(1, []);
+      // Player picks battlefieldMarine ("0") first — it should end up on top even though it was deeper
+      await g.chooseDeckSearchAsync(1, ["0", "1"]);
 
       const deck = g.state.player1.deck;
       expect(deck.length).toBe(2);
-      expect(deck[deck.length - 1].cardId).toBe(Cards.units.sor.echoBaseDefender); // still on top
+      expect(deck[deck.length - 1].cardId).toBe(Cards.units.sor.battlefieldMarine); // "0" is topmost
+      expect(deck[deck.length - 2].cardId).toBe(Cards.units.sor.echoBaseDefender);  // "1" is beneath
+    });
+
+    it("returns all cards to top when none are sent to bottom", async () => {
+      const g = new GameTestAdapter();
+      const gsb = new GameStateBuilder();
+      const state = CommonSetup(gsb, "bbk", "ggw", { my: { resourceCount: 2 }, their: {} })
+        .WithCardInDeckForPlayer(1, Cards.units.sor.battlefieldMarine)  // tempId "0"
+        .WithCardInDeckForPlayer(1, Cards.units.sor.echoBaseDefender)   // tempId "1" (top)
+        .WithCardInHandForPlayer(1, Cards.units.sor.infernoFour)
+        .Build();
+      g.loadNewState(state);
+
+      await g.playCardFromHandAsync(1, 0);
+      // Both on top; send in order "1" first (topmost), "0" second
+      await g.chooseDeckSearchAsync(1, ["1", "0"]);
+
+      const deck = g.state.player1.deck;
+      expect(deck.length).toBe(2);
+      expect(deck[deck.length - 1].cardId).toBe(Cards.units.sor.echoBaseDefender); // "1" topmost
       expect(deck[deck.length - 2].cardId).toBe(Cards.units.sor.battlefieldMarine);
     });
 
-    it("can put both cards on bottom", async () => {
+    it("can send all cards to bottom", async () => {
       const g = new GameTestAdapter();
       const gsb = new GameStateBuilder();
       const state = CommonSetup(gsb, "bbk", "ggw", { my: { resourceCount: 2 }, their: {} })
@@ -62,7 +83,8 @@ describe("SOR_031 — Inferno Four", () => {
       g.loadNewState(state);
 
       await g.playCardFromHandAsync(1, 0);
-      await g.chooseDeckSearchAsync(1, ["0", "1"]);
+      // Send nothing to top — both go to bottom
+      await g.chooseDeckSearchAsync(1, []);
 
       const deck = g.state.player1.deck;
       expect(deck.length).toBe(2);
@@ -102,8 +124,8 @@ describe("SOR_031 — Inferno Four", () => {
       await g.attackWithSpaceUnitAsync(1, 0);
       await g.dispatchAsync(1, "choose-target", { targetPlayIds: [enemyPlayId] });
 
-      // When Defeated fires — player 1 gets scry prompt; put top card (tempId "1") on bottom
-      await g.chooseDeckSearchAsync(1, ["1"]);
+      // When Defeated fires — scry prompt: send battlefieldMarine ("0") as top, echoBaseDefender ("1") goes to bottom
+      await g.chooseDeckSearchAsync(1, ["0"]);
 
       const deck = g.state.player1.deck;
       expect(deck.length).toBe(2);

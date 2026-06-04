@@ -361,7 +361,8 @@ export type PendingResolution =
   | PeekHandPending
   | MillPending
   | MillResultPending
-  | RevealFromHandPending;
+  | RevealFromHandPending
+  | RevealDiscardPending;
 
 /**
  * Player selects up to maxCount cards (by hand index) from eligibleIndices to reveal.
@@ -376,6 +377,20 @@ export interface RevealFromHandPending {
   maxCount: number;
   /** Play ID of the unit receiving XP tokens. */
   sourcePlayId: string;
+  continuation: PendingResolution | null;
+}
+
+/**
+ * Reveal top N cards of the active player's deck. The player may discard any subset; the rest return to the top of the deck in their original order.
+ * The triggering effect (e.g. damage per Heroism card) is applied before this pending is created.
+ */
+export interface RevealDiscardPending {
+  type: "reveal-discard";
+  cardId: string;
+  player: PlayerId;
+  /** All revealed cards, in order from bottommost to topmost (last = top of deck). tempId = array index as string. */
+  revealedCards: Array<{ tempId: string; cardId: string }>;
+  /** Continuation fired after discard choices are resolved. */
   continuation: PendingResolution | null;
 }
 

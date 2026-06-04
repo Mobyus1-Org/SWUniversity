@@ -417,6 +417,7 @@ export const Cards = {
       makeAnOpening: "SOR_076",
       tacticalAdvantage: "SOR_124",
       karabast: "SOR_151",
+      forACauseIBelieveIn: "SOR_152",
       keepFighting: "SOR_169",
       powerFailure: "SOR_170",
       missionBriefing: "SOR_171",

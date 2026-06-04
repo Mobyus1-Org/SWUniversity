@@ -438,11 +438,13 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
   React.useEffect(() => { if (resolutionNeeded?.type !== "DeckSearch") setDeckSearchSelected(new Set()); }, [resolutionNeeded]);
   const [nameCardSearch, setNameCardSearch] = React.useState("");
   React.useEffect(() => { setNameCardSearch(""); }, [resolutionNeeded]);
-  // "scry" arrange state: maps tempId → "top" | "bottom"
-  const [deckArrangeMap, setDeckArrangeMap] = React.useState<Record<string, "top" | "bottom">>({});
+  // Scry state: ordered top tempIds + explicit bottom set; confirm enabled when all cards are assigned
+  const [scryTopOrder, setScryTopOrder] = React.useState<string[]>([]);
+  const [scryBottomSet, setScryBottomSet] = React.useState<Set<string>>(new Set());
   React.useEffect(() => {
     if (resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry") {
-      setDeckArrangeMap({});
+      setScryTopOrder([]);
+      setScryBottomSet(new Set());
     }
   }, [resolutionNeeded]);
   React.useEffect(() => {
@@ -625,13 +627,19 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     void sendDispatch(createDispatch("choose-target", { targetPlayIds: [...deckSearchSelected] }));
   }, [deckSearchSelected, sendDispatch]);
 
-  const handleDeckArrangeConfirm = React.useCallback(() => {
-    // Submit the tempIds assigned to "bottom"; unassigned or "top" cards stay on top.
-    const bottomIds = Object.entries(deckArrangeMap)
-      .filter(([, dest]) => dest === "bottom")
-      .map(([tempId]) => tempId);
-    void sendDispatch(createDispatch("choose-target", { targetPlayIds: bottomIds }));
-  }, [deckArrangeMap, sendDispatch]);
+  const handleScryTop = React.useCallback((tempId: string) => {
+    setScryBottomSet(prev => { const s = new Set(prev); s.delete(tempId); return s; });
+    setScryTopOrder(prev => prev.includes(tempId) ? prev.filter(id => id !== tempId) : [...prev, tempId]);
+  }, []);
+
+  const handleScryBottom = React.useCallback((tempId: string) => {
+    setScryTopOrder(prev => prev.filter(id => id !== tempId));
+    setScryBottomSet(prev => new Set([...prev, tempId]));
+  }, []);
+
+  const handleScryConfirm = React.useCallback(() => {
+    void sendDispatch(createDispatch("choose-target", { targetPlayIds: scryTopOrder }));
+  }, [scryTopOrder, sendDispatch]);
 
   const handleOptionChoice = React.useCallback((option: string) => {
     void sendDispatch(createDispatch("choose-option", { option }));
@@ -1834,9 +1842,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
           {isNameCardPrompt ? "Name a Card" : resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry" ? "Look at the top cards" : resolutionNeeded?.type === "DeckSearch" ? "Deck Search" : "Choose"}
         </h3>
-        {resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry"
-          ? <p className="-mt-2 mb-4 max-w-xs text-xs text-white/65">Put each card on top or bottom of your deck.</p>
-          : (resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "DeckSearch")
+        {(resolutionNeeded?.type === "Option" || (resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action !== "scry"))
             ? <p className="-mt-2 mb-4 max-w-xs text-xs text-white/65">{resolutionNeeded.helperText}</p>
             : null}
         <div className="flex flex-col gap-3">
@@ -1907,9 +1913,11 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             </button>
           )) : resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry" ? (
             <>
-              <div className="flex gap-4 justify-center mb-2">
+              <div className="flex gap-4 justify-center mb-3 flex-wrap">
                 {resolutionNeeded.choices.map((c) => {
-                  const dest = deckArrangeMap[c.tempId] ?? null;
+                  const topPos = scryTopOrder.indexOf(c.tempId);
+                  const isTop = topPos !== -1;
+                  const isBottom = scryBottomSet.has(c.tempId);
                   return (
                     <div key={c.tempId} className="flex flex-col items-center gap-2">
                       <div className="w-[5rem]">
@@ -1923,13 +1931,13 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                       </div>
                       <div className="flex gap-1">
                         <button type="button" disabled={isResolving}
-                          onClick={() => setDeckArrangeMap(prev => ({ ...prev, [c.tempId]: "top" }))}
-                          className={`rounded px-2 py-1 text-xs font-semibold transition ${dest === "top" ? "border border-sky-400/80 bg-sky-500/30 text-sky-200" : "border border-white/15 bg-white/10 text-white/60 hover:bg-white/20"}`}>
-                          Top
+                          onClick={() => handleScryTop(c.tempId)}
+                          className={`rounded px-2 py-1 text-xs font-semibold transition ${isTop ? "border border-sky-400/80 bg-sky-500/30 text-sky-200" : "border border-white/15 bg-white/10 text-white/60 hover:bg-white/20"}`}>
+                          {isTop ? `Top ${topPos + 1}` : "Top"}
                         </button>
                         <button type="button" disabled={isResolving}
-                          onClick={() => setDeckArrangeMap(prev => ({ ...prev, [c.tempId]: "bottom" }))}
-                          className={`rounded px-2 py-1 text-xs font-semibold transition ${dest === "bottom" ? "border border-rose-400/80 bg-rose-500/30 text-rose-200" : "border border-white/15 bg-white/10 text-white/60 hover:bg-white/20"}`}>
+                          onClick={() => handleScryBottom(c.tempId)}
+                          className={`rounded px-2 py-1 text-xs font-semibold transition ${isBottom ? "border border-rose-400/80 bg-rose-500/30 text-rose-200" : "border border-white/15 bg-white/10 text-white/60 hover:bg-white/20"}`}>
                           Bottom
                         </button>
                       </div>
@@ -1937,8 +1945,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                   );
                 })}
               </div>
-              <button type="button" disabled={isResolving || resolutionNeeded.choices.some(c => !deckArrangeMap[c.tempId])}
-                onClick={handleDeckArrangeConfirm}
+              <button type="button" disabled={isResolving || resolutionNeeded.choices.some(c => !scryTopOrder.includes(c.tempId) && !scryBottomSet.has(c.tempId))}
+                onClick={handleScryConfirm}
                 className="rounded-lg border border-emerald-400/40 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500/35 disabled:cursor-not-allowed disabled:opacity-40">
                 Confirm
               </button>
