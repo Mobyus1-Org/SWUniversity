@@ -56,6 +56,21 @@ export function resolveWhenPlayedTrigger(
       CreateSpy(gs, trigger.fromPlayer, log, trigger.cardId);
       break;
     }
+    case "SOR_190": { // Lothal Insurgent — If another card was played this phase: each opponent draws a card then discards a random card.
+      const playedThisPhase190 = gs.roundState.cardsPlayedThisPhase.filter(c => c.fromPlayer === trigger.fromPlayer);
+      if (playedThisPhase190.length <= 1) break; // only this card itself was played
+      const opp190 = trigger.fromPlayer === 1 ? 2 : 1;
+      DrawCardForPlayer(gs, log, opp190);
+      const oppState190 = opp190 === 1 ? gs.player1 : gs.player2;
+      const oppHand190 = oppState190.hand;
+      if (oppHand190.length > 0) {
+        const idx190 = Math.floor(Math.random() * oppHand190.length);
+        const [discarded190] = oppHand190.splice(idx190, 1);
+        oppState190.discard.push({ cardId: discarded190.cardId, playId: String(gs.nextPlayId++), owner: opp190, controller: opp190, turnDiscarded: gs.currentRound, discardEffect: "" });
+        log.push(`${CardTitle(trigger.cardId)}: opponent discarded ${CardTitle(discarded190.cardId)}.`);
+      }
+      break;
+    }
     case "SOR_191": { // Vanguard Ace — For each other card played this phase, give an XP to this unit.
       const pState191 = trigger.fromPlayer === 1 ? gs.player1 : gs.player2;
       const xpCount = gs.roundState.cardsPlayedThisPhase.filter(

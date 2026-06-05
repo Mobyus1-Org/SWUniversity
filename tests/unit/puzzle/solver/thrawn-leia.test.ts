@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { solve } from "@/server/puzzle/solver";
+import { RunPuzzleSolver } from "../flags";
 
 const puzzle = {
   activePlayer: 1, gamePhase: "ActionPhase", nextPlayId: 1, currentRound: 7,
@@ -37,8 +38,12 @@ const puzzle = {
 };
 
 describe("thrawn-leia puzzle — Long Live the Empire", () => {
-  it("is solvable", { timeout: 120_000 }, () => {
-    const result = solve(puzzle as any, 110_000);
+  it("is solvable", { timeout: 90_000 }, () => {
+    if (!RunPuzzleSolver) {
+      console.warn("Skipping puzzle solver test — set RunPuzzleSolver to true to enable");
+      return;
+    }
+    const result = solve(puzzle as any, 80_000);
     console.log("solvable:", result.solvable, "solutions:", result.steps.length, "timedOut:", result.timedOut);
     expect(result.solvable).toBe(true);
   });

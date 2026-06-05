@@ -71,6 +71,53 @@ export function resolveOnAttackTrigger(
         }
         break;
       }
+      case "SOR_214": { // Smuggling Compartment — On Attack: Ready a resource.
+        const game214 = GetGame();
+        if (game214) {
+          const pState214 = attacker.controller === 1 ? game214.currentGameState.player1 : game214.currentGameState.player2;
+          const exhausted214 = pState214.resources.find(r => !r.ready);
+          if (exhausted214) {
+            exhausted214.ready = true;
+            game214.gameLog.push(`${CardTitle("SOR_214")}: readied a resource.`);
+          }
+        }
+        break;
+      }
+      case "SOR_054": { // Jedi Lightsaber — if attached unit is Force, give defender -2/-2 for this phase
+        if (TraitContains(attacker.cardId, "Force", attacker.controller, attacker.playId)
+          && continuation.target.type === "unit") {
+          const defPlayId054 = continuation.target.playId;
+          const defender054 = AllUnits().find(u => u.playId === defPlayId054);
+          const game054 = GetGame();
+          if (defender054 && game054) {
+            game054.currentGameState.currentEffects.push({
+              cardId: "SOR_054",
+              duration: "Phase",
+              affectedPlayer: defender054.controller,
+              targetPlayId: defPlayId054,
+            });
+            game054.gameLog.push(`${CardTitle("SOR_054")}: defender gets –2/–2 for this phase.`);
+          }
+        }
+        break;
+      }
+      case "SOR_137": { // Fallen Lightsaber — if attached unit is Force, deal 1 damage to each defending player's ground unit
+        if (TraitContains(attacker.cardId, "Force", attacker.controller, attacker.playId)) {
+          const game137 = GetGame();
+          if (game137) {
+            const gs137 = game137.currentGameState;
+            const defPlayer137 = attacker.controller === 1 ? 2 : 1;
+            const defGround137 = [...(defPlayer137 === 1 ? gs137.player1.groundArena : gs137.player2.groundArena)];
+            for (const groundUnit of defGround137) {
+              DealDamageToUnit(gs137, "SOR_137", groundUnit.playId, 1, game137.gameLog);
+            }
+            if (defGround137.length > 0) {
+              game137.gameLog.push(`${CardTitle("SOR_137")}: dealt 1 damage to each of the defending player's ground units.`);
+            }
+          }
+        }
+        break;
+      }
       case "SHD_126": { // The Darksaber
         applyDarksaberOnAttack(attacker);
         break;
@@ -107,6 +154,32 @@ export function resolveOnAttackTrigger(
   }
   // innate On Attack abilities
   switch (attacker.cardId) {
+    case "SOR_067": { // Rugged Survivors — On Attack: if you control a leader unit, you may draw a card
+      const leader067 = GetLeaderForPlayer(attacker.controller);
+      if (!leader067.deployed) return continuation;
+      return {
+        type: "ability-option",
+        cardId: attacker.cardId,
+        player: attacker.controller,
+        helperText: "You may draw a card.",
+        yesLabel: "Draw",
+        noLabel: "Skip",
+        onYes: null,
+        continuation,
+      };
+    }
+    case "SOR_056": { // Bendu — next non-Heroism non-Villainy card you play this phase costs 2 less
+      const game056 = GetGame();
+      if (game056) {
+        game056.currentGameState.currentEffects.push({
+          cardId: "SOR_056",
+          duration: "Phase",
+          affectedPlayer: attacker.controller,
+        });
+        game056.gameLog.push(`${CardTitle("SOR_056")}: the next non-Heroism, non-Villainy card you play this phase costs 2 less.`);
+      }
+      return continuation;
+    }
     case "SOR_179": { // Boba Fett — if attacking an exhausted unit that didn't enter play this round, deal 3 damage.
       if (continuation.target.type !== "unit") return continuation;
       const defPlayId179 = continuation.target.playId;
@@ -142,6 +215,21 @@ export function resolveOnAttackTrigger(
         onYes: null,
         continuation,
       };
+    }
+    case "SOR_188": { // Chopper — On Attack: Discard 1 card from the defending player's deck; if event, exhaust a resource.
+      const game188 = GetGame();
+      if (!game188) return continuation;
+      const defenderPlayer188 = attacker.controller === 1 ? 2 : 1;
+      const defenderState188 = game188.currentGameState[`player${defenderPlayer188}` as "player1" | "player2"];
+      if (defenderState188.deck.length === 0) return continuation;
+      return {
+        type: "mill",
+        cardId: attacker.cardId,
+        player: attacker.controller,
+        millingPlayer: defenderPlayer188,
+        count: 1,
+        continuation,
+      } satisfies MillPending;
     }
     case "SOR_047": { // Kanan Jarrus — On Attack: You may discard 1 card from the defending player's deck
       // for each friendly SPECTRE unit. Heal 1 damage from your base for each different aspect.

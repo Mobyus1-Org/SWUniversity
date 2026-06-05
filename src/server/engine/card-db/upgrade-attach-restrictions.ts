@@ -80,6 +80,7 @@ export function UpgradeEligibleTargets(
 
     // "Attach to a VEHICLE unit."
     case "SOR_121": //Hardpoint Heavy Blaster
+    case "SOR_214": //Smuggling Compartment
       return everyone.filter(u => TraitContains(u.cardId, "Vehicle")).map(u => u.playId);
 
     // "Attach to a friendly non-Vehicle unit."

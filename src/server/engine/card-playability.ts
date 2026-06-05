@@ -51,6 +51,16 @@ function guardianOfTheWhillsDiscount(game: GameState, player: PlayerId, cardId: 
   return hasEligibleGuardian ? 1 : 0;
 }
 
+// SOR_181 Jabba the Hutt: each TRICK event costs 1 less.
+function jabbaTheTrickDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Event" || !CardTraits(cardId).includes("Trick")) return 0;
+  const p = player === 1 ? game.player1 : game.player2;
+  const hasJabba = [...p.groundArena, ...p.spaceArena].some(
+    u => u.cardId === "SOR_181" && !Unit.FromInterface(u).LostAbilities(),
+  );
+  return hasJabba ? 1 : 0;
+}
+
 // SOR_139 Force Choke: costs 1 less if you control a Force unit.
 function forceChokeDiscount(game: GameState, player: PlayerId, cardId: string): number {
   if (cardId !== "SOR_139") return 0;
@@ -61,8 +71,14 @@ function forceChokeDiscount(game: GameState, player: PlayerId, cardId: string): 
   return hasForceUnit ? 1 : 0;
 }
 
+// SOR_056 Bendu: next non-Heroism non-Villainy card costs 2 less (consumed on use).
+function benduDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardAspects(cardId).includes("Heroism") || CardAspects(cardId).includes("Villainy")) return 0;
+  return game.currentEffects.some(e => e.cardId === "SOR_056" && e.affectedPlayer === player) ? 2 : 0;
+}
+
 function playCost(game: GameState, player: PlayerId, cardId: string): number {
-  return CardCost(cardId) + aspectPenalty(game, player, cardId) + delMeekoEventTax(game, player, cardId) - guardianOfTheWhillsDiscount(game, player, cardId) - forceChokeDiscount(game, player, cardId);
+  return CardCost(cardId) + aspectPenalty(game, player, cardId) + delMeekoEventTax(game, player, cardId) - guardianOfTheWhillsDiscount(game, player, cardId) - forceChokeDiscount(game, player, cardId) - jabbaTheTrickDiscount(game, player, cardId) - benduDiscount(game, player, cardId);
 }
 
 function aspectPenaltyForAspects(game: GameState, player: PlayerId, aspects: string[]): number {
@@ -133,12 +149,23 @@ function regionalGovernorBlocks(game: GameState, player: PlayerId, cardId: strin
   );
 }
 
+// SOR_199 Bamboozle: playable via alternate cost if hand has another Cunning card.
+function bamboozleAltCostAvailable(game: GameState, player: PlayerId): boolean {
+  const p = player === 1 ? game.player1 : game.player2;
+  const allCunningCount = p.hand.filter(c => CardAspects(c.cardId).includes("Cunning")).length;
+  // Subtract the Bamboozle card itself being played — need at least one other Cunning card.
+  return allCunningCount - 1 > 0;
+}
+
 export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string): boolean {
   if (regionalGovernorBlocks(game, player, cardId)) return false;
 
   const p = player === 1 ? game.player1 : game.player2;
   const readyResources = p.resources.filter(r => r.ready).length;
   const fullCost = playCost(game, player, cardId);
+
+  // SOR_199 Bamboozle: can be played via alternate cost (discard a Cunning card from hand).
+  if (cardId === "SOR_199" && bamboozleAltCostAvailable(game, player)) return true;
   const exploitAmt = ExploitAmount(cardId, "hand", player, true);
   const numUnits = p.groundArena.length + p.spaceArena.length;
   const minUnitCost = Math.max(0, fullCost - Math.min(exploitAmt, numUnits) * 2);

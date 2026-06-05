@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty } from "@/server/engine/core-functions";
-import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending } from "@/server/engine/pending-resolution";
+import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
 import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits } from "@/server/engine/card-db/generated";
@@ -361,6 +361,12 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SOR_235": { // Galactic Ambition — "Play a non-Heroism unit from your hand for free. Deal damage to your base equal to its cost."
+      const pState235 = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+      const hasEligible235 = pState235.hand.some(c => CardType(c.cardId) === "Unit" && !CardAspects(c.cardId).includes("Heroism"));
+      if (!hasEligible235) return null;
+      return { type: "play-from-hand", cardId: "SOR_235", player };
+    }
     case "SOR_219": { // Sneak Attack — "Play a unit from your hand. It costs 3 less and enters play ready. At the start of the regroup phase, defeat it."
       const pState219 = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
       const hasUnit219 = pState219.hand.some(c => CardType(c.cardId) === "Unit");
@@ -461,6 +467,7 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies RevealFromHandPending;
     }
+    case "SOR_190": // Lothal Insurgent — auto-resolves in resolveWhenPlayedTrigger
     case "SOR_191": // Vanguard Ace — effect applied in resolveWhenPlayedTrigger
       return null;
     case "SOR_218": { // Asteroid Sanctuary — Exhaust an enemy unit; give Shield to a friendly unit (cost ≤ 3).
@@ -752,6 +759,21 @@ export function resolveWhenPlayed(
       if (allUnits124.length === 0) return null;
       return mandatoryTarget(cardId, player, allUnits124.map(u => u.playId));
     }
+    case "SOR_187": { // I Had No Choice — Choose up to 2 non-leader units; opponent picks 1 to return to hand; other goes to deck bottom.
+      const nonLeaders187 = AllUnits().filter(u => !CardIsLeader(u.cardId));
+      if (nonLeaders187.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: nonLeaders187.map(u => u.playId),
+        needsMultiple: true,
+        maxTargets: 2,
+        continuation: null,
+      };
+    }
+    case "SOR_181": // Jabba the Hutt — When Played: Search top 8 for a TRICK event, draw it.
+      return searchDeck(cardId, player, 8, "draw", { filter: { trait: "Trick" }, maxChoices: 1 });
     case "SOR_151": { // Karabast — A friendly unit deals damage equal to damage on it + its power to an enemy unit.
       const friendlyUnits151 = GetUnitsForPlayer(player);
       const enemyUnits151 = GetUnitsForPlayer(player === 1 ? 2 : 1);
@@ -849,6 +871,22 @@ export function resolveWhenPlayed(
       const enemyUnits216 = GetUnitsForPlayer(player === 1 ? 2 : 1);
       if (enemyUnits216.length === 0) return null;
       return mandatoryTarget(cardId, player, enemyUnits216.map(u => u.playId));
+    }
+    case "SOR_223": { // Don't Get Cocky — Choose a unit, reveal cards one at a time until stop/7.
+      const allUnits223 = AllUnits();
+      if (allUnits223.length === 0) return null;
+      return mandatoryTarget(cardId, player, allUnits223.map(u => u.playId));
+    }
+    case "SOR_217": { // Shoot First — Attack with a unit. It gets +1/+0 and deals damage first.
+      const readyFriendly217 = GetUnitsForPlayer(player, true);
+      if (readyFriendly217.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: readyFriendly217.map(u => u.playId),
+        continuation: null,
+      };
     }
     case "SOR_220": { // Surprise Strike — Attack with a unit. It gets +3/+0 for this attack.
       const readyFriendly220 = GetUnitsForPlayer(player, true);
@@ -1005,6 +1043,33 @@ export function resolveWhenPlayed(
         continuation: selfDiscard,
       } satisfies AbilityOptionPending;
     }
+    case "SOR_051": { // Luke Skywalker — Give an enemy unit –3/–3 (or –6/–6 if friendly died this phase).
+      const enemies051 = GetUnitsForPlayer(player === 1 ? 2 : 1);
+      if (enemies051.length === 0) return null;
+      return mandatoryTarget(cardId, player, enemies051.map(u => u.playId));
+    }
+    case "SOR_234": { // Maximum Firepower — step 1: pick first friendly Imperial unit.
+      const imperials234 = GetUnitsForPlayer(player)
+        .filter(u => TraitContains(u.cardId, "Imperial", player, u.playId));
+      if (imperials234.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_234",
+        player,
+        fromPlayIds: imperials234.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SOR_233": { // I Am Your Father — Deal 7 damage to an enemy unit unless its controller says 'no.'
+      const enemies233 = GetUnitsForPlayer(player === 1 ? 2 : 1);
+      if (enemies233.length === 0) return null;
+      return mandatoryTarget(cardId, player, enemies233.map(u => u.playId));
+    }
+    case "SOR_199": { // Bamboozle — Exhaust a unit and return each upgrade on it to its owner's hand.
+      const allUnits199 = AllUnits();
+      if (allUnits199.length === 0) return null;
+      return mandatoryTarget(cardId, player, allUnits199.map(u => u.playId));
+    }
     case "SOR_037": // Academy Defense Walker — handled auto in resolveWhenPlayedTrigger
       return null;
     case "SOR_038": // Count Dooku (Darth Tyranus) — You may defeat a unit with 4 or less remaining HP.
@@ -1101,6 +1166,11 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies AbilityOptionPending;
     }
+    case "SOR_086": { // Gladiator Star Destroyer — Give a unit Sentinel for this phase.
+      const all086 = AllUnits();
+      if (all086.length === 0) return null;
+      return mandatoryTarget(cardId, player, all086.map(u => u.playId));
+    }
     case "SOR_140": { // SpecForce Soldier — A unit loses Sentinel for this phase.
       const all140 = AllUnits();
       if (all140.length === 0) return null;
@@ -1151,6 +1221,38 @@ export function resolveWhenPlayed(
       if (friendlyNonLeaders209.length === 0) return null;
       return mandatoryTarget(cardId, player, friendlyNonLeaders209.map(u => u.playId));
     }
+    case "SOR_058": // Vigilance — Choose two, in any order (Discard 6 / Heal 5 base / Defeat ≤3HP / Give Shield)
+      return {
+        type: "choose-aspect-effect",
+        cardId,
+        player,
+        remainingEffects: ["mill_6_opponent_deck", "heal_5_base", "defeat_unit_3hp", "give_shield"],
+        continuation: null,
+      } satisfies ChooseAspectEffectPending;
+    case "SOR_107": // Command — Choose two, in any order (Give 2XP / Power damage / Play as resource / Return from discard)
+      return {
+        type: "choose-aspect-effect",
+        cardId,
+        player,
+        remainingEffects: ["give_2_xp", "power_damage_enemy", "play_as_resource", "return_from_discard"],
+        continuation: null,
+      } satisfies ChooseAspectEffectPending;
+    case "SOR_155": // Aggression — Choose two, in any order (Draw / Defeat upgrades / Ready ≤3 power / Deal 4 damage)
+      return {
+        type: "choose-aspect-effect",
+        cardId,
+        player,
+        remainingEffects: ["draw_card", "defeat_upgrades", "ready_unit_3pow", "deal_4_damage"],
+        continuation: null,
+      } satisfies ChooseAspectEffectPending;
+    case "SOR_203": // Cunning — Choose two, in any order (Bounce ≤4 power / +4/+0 / Exhaust 2 / Random discard)
+      return {
+        type: "choose-aspect-effect",
+        cardId,
+        player,
+        remainingEffects: ["bounce_unit_4pow", "buff_4_attack", "exhaust_2_units", "random_discard"],
+        continuation: null,
+      } satisfies ChooseAspectEffectPending;
     default:
       return null;
   }

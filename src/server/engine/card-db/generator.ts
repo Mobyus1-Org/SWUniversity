@@ -52,6 +52,7 @@ type SwuCardAttributes = {
   upgradeHp?: number | null;
   upgradePower?: number | null;
   text?: string | null;
+  epicAction?: string | null;
   deployBox?: string | null;
   unique?: boolean | null;
   rarity?: SwuRelation;
@@ -426,7 +427,7 @@ async function fetchCardsPage(page: number): Promise<SwuCardsResponse> {
 function populateDictionaries(cardId: string, attributes: SwuCardAttributes, dictionaries: CardDictionaries): void {
   assignStringValue(dictionaries.cardTitle, cardId, attributes.title ?? "");
   assignStringValue(dictionaries.cardSubtitle, cardId, attributes.subtitle ?? "");
-  assignStringValue(dictionaries.cardText, cardId, attributes.text ?? "");
+  assignStringValue(dictionaries.cardText, cardId, (attributes.text ?? "") + "\n" + (attributes.epicAction ?? ""));
   assignNumberValue(dictionaries.cardCost, cardId, attributes.cost);
   assignNumberValue(dictionaries.cardHp, cardId, attributes.hp);
   assignNumberValue(dictionaries.cardPower, cardId, attributes.power);
@@ -442,7 +443,7 @@ function populateDictionaries(cardId: string, attributes: SwuCardAttributes, dic
     dictionaries.cardIsUnique[cardId] = true;
   }
 
-  const cardText = attributes.text ?? "";
+  const cardText = (attributes.text ?? "") + "\n" + (attributes.epicAction ?? "");
   if (/When Played/i.test(cardText)) {
     dictionaries.cardHasWhenPlayed[cardId] = true;
   }

@@ -30,7 +30,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     for(const u of units){
       switch(u.cardId) {
         case "SOR_079"://Admiral Piett
-          if(CardCost(cardId)! >= 6 && CardType(cardId) === "Unit") return true;
+          if(CardCost(cardId) >= 6 && CardType(cardId) === "Unit") return true;
           break;
         case "SOR_100"://Wedge Antilles
           if(TraitContains(cardId, "Vehicle", player)) return true;

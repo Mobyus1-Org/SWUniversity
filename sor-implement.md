@@ -6,11 +6,11 @@
 
 | Status | Count |
 |--------|-------|
-| Implemented | 179 |
-| Partially Implemented | 18 |
+| Implemented | 208 |
+| Partially Implemented | 7 |
 | Keywords Only (auto-handled) | 23 |
 | Unimplemented – Simple | 0 |
-| Unimplemented – Complex | 18 |
+| Unimplemented – Complex | 0 |
 
 ---
 
@@ -21,115 +21,9 @@
 These cards need new engine features or unusual interactions.
 
 
-### SOR_058 — Vigilance (Event)
-**Card Text:** Choose two, in any order:
-
-Discard 6 cards from an opponent's deck.
-Heal 5 damage from a base.
-Defeat a unit with 3 or less remaining HP.
-Give a Shield token to a unit.
-
-### SOR_155 — Aggression (Event)
-**Card Text:** Choose two, in any order:
-
-Draw a card.
-Defeat up to 2 upgrades.
-Ready a unit with 3 or less power.
-Deal 4 damage to a unit.
-
-**Notes:** Needs implementation: Choose two, in any order:
-
-Draw a card.
-Defeat up to 2 upgrades.
-Ready a unit with 3 or less power.
-De
-
-### SOR_181 — Jabba the Hutt (Unit)
-**Card Text:** Each TRICK event you play costs [1 resource] less.
-
-When Played: Search the top 8 cards of your deck for a TRICK event, reveal it, and draw it. (Put the other cards on the bottom of your deck in a random order.)
-
-**Notes:** Needs implementation: Each TRICK event you play costs [1 resource] less.
-
-When Played: Search the top 8 cards of your d
-
-### SOR_187 — I Had No Choice (Event)
-**Card Text:** Choose up to 2 non-leader units. An opponent chooses 1 of those units. Return that unit to its owner's hand and put the other on the bottom of its owner's deck.
-
-**Notes:** Needs implementation: Choose up to 2 non-leader units. An opponent chooses 1 of those units. Return that unit to its owne
-
-### SOR_188 — Chopper (Unit)
-**Card Text:** While you control another SPECTRE unit, this unit gains Raid 1.
-
-On Attack: Discard a card from the defending player's deck. If it's an event, exhaust a resource that player controls.
-
-**Notes:** Conditional Raid 1: same pattern as SOR_113 Homestead Militia (conditional Sentinel) — add case to Raid keyword. On Attack mill: use MillPending + MillResultPending case — if milled card is an event, exhaust one of the defending player's resources.
-
-### SOR_190 — Lothal Insurgent (Unit)
-**Card Text:** When Played: If you played another card this phase, each opponent draws a card then discards a random card from their hand.
-
-**Notes:** Check cardsPlayedThisPhase — if another card was played, DrawCardForPlayer for each opponent then discard a random card from their hand. Random discard is the only new piece (pick a random hand index).
-
-### SOR_192 — Ezra Bridger (Unit)
-**Card Text:** When this unit completes an attack: Look at the top card of your deck. You may play it, discard it, or leave it on top of your deck.
-
-**Notes:** Needs implementation: When this unit completes an attack: Look at the top card of your deck. You may play it, discard it,
-
-### SOR_193 — Millennium Falcon (Unit)
-**Card Text:** This unit enters play ready.
-
-When you ready cards during the regroup phase: Either pay [1 resource] or return this unit to her owner's hand.
-
-**Notes:** Needs implementation: This unit enters play ready.
-
-When you ready cards during the regroup phase: Either pay [1 resource]
-
-### SOR_199 — Bamboozle (Event)
-**Card Text:** You may discard a [Cunning] card from your hand instead of paying this event's cost.
-Exhaust a unit and return each upgrade on it to its owner's hand.
-
-**Notes:** Needs implementation: You may discard a [Cunning] card from your hand instead of paying this event's cost.
-Exhaust a uni
 
 
-### SOR_212 — Strafing Gunship (Unit)
-**Card Text:** This unit can attack units in the ground arena. While this unit is attacking a ground unit, the defender gets –2/–0.
 
-**Notes:** Needs implementation: This unit can attack units in the ground arena. While this unit is attacking a ground unit, the defe
-
-### SOR_214 — Smuggling Compartment (Upgrade)
-**Card Text:** Attach to a VEHICLE unit.
-
-Attached unit gains: 'On Attack: Ready a resource.'
-
-**Notes:** Attach restriction (Vehicle only) needs enforcement. UpgradeGrantsOnAttack case → new On Attack handler: ready one of the controller's exhausted resources.
-
-### SOR_217 — Shoot First (Event)
-**Card Text:** Attack with a unit. It gets +1/+0 for this attack and deals its combat damage before the defender. (If the defender is defeated, it deals no combat damage.)
-
-**Notes:** Needs implementation: Attack with a unit. It gets +1/+0 for this attack and deals its combat damage before the defender. (
-
-### SOR_223 — Don't Get Cocky (Event)
-**Card Text:** Choose a unit. One at a time, reveal cards from your deck until you choose to stop or have revealed 7 cards. If the combined cost of the revealed cards is 7 or less, deal that much damage to the chosen unit. Put the revealed cards on the bottom of your deck in a random order.
-
-**Notes:** Needs implementation: Choose a unit. One at a time, reveal cards from your deck until you choose to stop or have revealed
-
-### SOR_233 — I Am Your Father (Event)
-**Card Text:** Deal 7 damage to an enemy unit unless its controller says 'no.' If they do, draw 3 cards.
-
-**Notes:** Target an enemy unit → present ability-option to that unit's controller (Yes = take 7 damage, No = attacker draws 3). Needs a two-player option pending where the non-active player responds.
-
-### SOR_234 — Maximum Firepower (Event)
-**Card Text:** A friendly Imperial unit deals damage equal to its power to a unit.
-
-Then, another friendly Imperial unit deals damage equal to its power to the same unit.
-
-**Notes:** Two sequential ability-targets: pick first Imperial unit → deal its CurrentPower() to a chosen target; store target playId in pending.sourcePlayId; pick second Imperial unit → deal its CurrentPower() to the same target.
-
-### SOR_235 — Galactic Ambition (Event)
-**Card Text:** Play a non-[Heroism] unit from your hand for free. Deal damage to your base equal to its cost.
-
-**Notes:** play-from-hand filtered to non-Heroism units with costModifier: 'free'. In the play-from-hand handler, after completePlayCard, deal CardCost(chosen) damage to the playing player's base.
 
 ### SOR_238 — C-3PO (Unit)
 **Card Text:** When Played/On Attack: Choose a number, then look at the top card of your deck. If its cost is the chosen number, you may reveal and draw it. (Otherwise, leave it on top of your deck.)
@@ -153,80 +47,6 @@ All simple cards have been implemented.
 
 These cards have some engine coverage but one or more abilities are not yet implemented.
 
-
-### SOR_051 — Luke Skywalker (Unit) [COMPLEX]
-**Card Text:** Restore 3
-
-When Played: Give an enemy unit –3/–3 for this phase. If a friendly unit was defeated this phase, give that enemy unit –6/–6 for this phase instead.
-
-**Notes:** Restore 3 implemented; 'When Played: Give an enemy unit -3/-3; if a friendly unit was defeated this phase, give that unit an Experience token' NOT implemented
-
-### SOR_054 — Jedi Lightsaber (Upgrade) [COMPLEX]
-**Card Text:** Attach to a non-VEHICLE unit.
-
-If attached unit is a FORCE unit, it gains: "On Attack: Give the defender –2/–2 for this phase."
-
-**Notes:** Attach restriction implemented (non-Vehicle); conditional FORCE On Attack -2/-2 ability NOT implemented
-
-### SOR_056 — Bendu (Unit) [COMPLEX]
-**Card Text:** Sentinel (Units in this arena can't attack your non-Sentinel units or your base.)
-
-On Attack: The next non-[Heroism], non-[Villainy] card you play this phase costs [2 resources] less.
-
-**Notes:** Sentinel implemented; 'On Attack: Next non-[Heroism] non-[Villainy] card you play this phase costs 0' NOT implemented
-
-### SOR_067 — Wampa (Unit) [COMPLEX]
-**Card Text:** Grit (This unit gets +1/+0 for each damage on it.)
-
-On Attack: If you control a leader unit, you may draw a card.
-
-**Notes:** Grit implemented; On Attack 'if you control a leader, deal 4 damage to non-leader unit' NOT implemented
-
-### SOR_071 — Electrostaff (Upgrade) [COMPLEX]
-**Card Text:** Attach to a non-VEHICLE unit.
-
-While attached unit is defending, the attacker gets –1/–0.
-
-**Notes:** Attach restriction implemented (non-Vehicle); 'While defending, attacker gets -1/-0' NOT implemented
-
-### SOR_085 — Death Star Stormtrooper (Unit) [COMPLEX]
-**Card Text:** Shielded (When you play this unit, give a Shield token to it.)
-
-When this unit deals combat damage to a non-leader unit while attacking: Defeat that unit.
-
-**Notes:** Shielded implemented; 'When this unit deals combat damage to a non-leader unit while attacking: Defeat the defender' NOT implemented
-
-### SOR_086 — Gladiator Star Destroyer (Unit) [COMPLEX]
-**Card Text:** When Played: Give a unit Sentinel for this phase. (Units in this arena can't attack your non-Sentinel units or your base.)
-
-**Notes:** Gives itself Sentinel in sentinel.ts; 'When Played: Give a unit Sentinel for this phase' (targeting another unit) NOT fully implemented
-
-### SOR_100 — Wedge Antilles (Unit) [COMPLEX]
-**Card Text:** Each friendly VEHICLE unit gets +1/+1 and gains Ambush. (After you play that unit, it may ready and attack an enemy unit.)
-
-**Notes:** Ambush-granting for VEHICLE units implemented; '+1/+1 for all friendly VEHICLE units' stat buff NOT implemented
-
-
-### SOR_133 — Inferno Four (Unit) [COMPLEX]
-**Card Text:** Saboteur (When this unit attacks, ignore Sentinel and defeat the defender's Shields.)
-
-When this unit deals combat damage to an opponent's base: You may deal 3 damage to a ground unit that opponent controls.
-
-**Notes:** Saboteur implemented; 'When this unit deals combat damage to an opponent's base: You may deal 3 damage to a unit' NOT implemented
-
-### SOR_137 — Fallen Lightsaber (Upgrade) [COMPLEX]
-**Card Text:** Attach to a non-Vehicle unit.
-
-If attached unit is a Force unit, it gains: 'On Attack: Deal 1 damage to each ground unit the defending player controls.'
-
-**Notes:** Attach restriction implemented (non-Vehicle); conditional FORCE On Attack deal 1 damage ability NOT implemented
-
-### SOR_143 — Sabine Wren (Unit) [COMPLEX]
-**Card Text:** Saboteur (When this unit attacks, ignore Sentinel and defeat the defender's Shields.)
-
-When you play another [Aggression] card: You may deal 1 damage to a base.
-
-**Notes:** Saboteur implemented; 'When you play another [Aggression] card: You may deal 1 damage to a base' NOT implemented
 
 ### SOR_144 — Saw's Renegades (Unit) [COMPLEX]
 **Card Text:** Raid 1 (This unit gets +1/+0 while attacking.)
@@ -337,7 +157,8 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_103 | Rebel Assault | Event | Has custom logic in engine action files |
 | SOR_104 | U-Wing Reinforcement | Event | Has custom logic in engine action files |
 | SOR_106 | Attack Pattern Delta | Event | Has custom logic in engine action files |
-| SOR_107 | Command | Event | Has custom logic in engine action files |
+| SOR_058 | Vigilance | Event | Choose-two aspect event; choose-aspect-effect pending; mill/heal/defeat/shield effects |
+| SOR_107 | Command | Event | Choose-two aspect event; choose-aspect-effect pending; XP/power-damage/resource/return effects |
 | SOR_108 | Vanguard Infantry | Unit | Has custom logic in engine action files |
 | SOR_112 | Consortium StarViper | Unit | Has custom logic in engine keyword dictionaries or dispatch-listener |
 | SOR_114 | Escort Skiff | Unit | Has custom logic in engine keyword dictionaries or dispatch-listener |
@@ -362,7 +183,8 @@ These cards have custom logic in the engine (overrides, keyword dictionaries, or
 | SOR_184 | Fett's Firespray | Unit | Has custom logic in engine action files |
 | SOR_196 | General Dodonna | Unit | Has custom logic in engine action files |
 | SOR_198 | Boba Fett | Unit | Has custom logic in engine action files |
-| SOR_203 | Cunning | Event | Has custom logic in engine action files |
+| SOR_155 | Aggression | Event | Choose-two aspect event; choose-aspect-effect pending; draw/upgrades/ready/damage effects |
+| SOR_203 | Cunning | Event | Choose-two aspect event; choose-aspect-effect pending; bounce/buff/exhaust/discard effects |
 | SOR_211 | Gamorrean Guards | Unit | Has custom logic in engine keyword dictionaries or dispatch-listener |
 | SOR_215 | Snapshot Reflexes | Upgrade | Has custom logic in engine keyword dictionaries or dispatch-listener |
 | SOR_219 | Sneak Attack | Event | Has custom logic in engine action files |

@@ -147,6 +147,9 @@ export class Unit implements UnitInterface {
         case "SOR_242": // General Dodonna — other friendly Rebel units get +1/+1
           power += isOtherUnit && TraitContains(this.cardId, "Rebel", this.controller, this.playId) ? 1 : 0;
           break;
+        case "SOR_100": // Wedge Antilles — each friendly VEHICLE unit gets +1/+1
+          power += TraitContains(this.cardId, "Vehicle", this.controller, this.playId) ? 1 : 0;
+          break;
         case "TWI_114": //Clone Commander Cody - Commanding the 212th
           power += IsCoordinateActive(this.controller) && isOtherUnit ? 1 : 0;
           break;
@@ -185,9 +188,12 @@ export class Unit implements UnitInterface {
           break;
         case "JTL_106": power += 1; break; // Unity of Purpose
         case "SOR_124": power += 2; break; // Tactical Advantage +2/+2 Phase
+        case "SOR_051": power -= (currentEffect.value ?? 3); break; // Luke Skywalker –3/–3 or –6/–6 Phase
         case "SOR_076": power -= 2; break; // Make an Opening –2/–2 Phase
+        case "SOR_054": power -= 2; break; // Jedi Lightsaber –2/–2 Phase (conditional Force On Attack)
         case "SOR_116": power += 2; break; // Steadfast Battalion +2/+2 Phase
         case "SOR_216": power -= 4; break; // Disarm –4/+0 Phase
+        case "SOR_217": power += 1; break; // Shoot First +1/+0 ForAttack
         case "SOR_220": power += 3; break; // Surprise Strike +3/+0 ForAttack
         case "SOR_240": power += 2; break; // Fleet Lieutenant +2/+0 ForAttack
         default: break;
@@ -245,6 +251,9 @@ export class Unit implements UnitInterface {
         case "SOR_242": // General Dodonna — other friendly Rebel units get +1/+1
           hp += isOtherUnit && TraitContains(this.cardId, "Rebel", this.controller, this.playId) ? 1 : 0;
           break;
+        case "SOR_100": // Wedge Antilles — each friendly VEHICLE unit gets +1/+1
+          hp += TraitContains(this.cardId, "Vehicle", this.controller, this.playId) ? 1 : 0;
+          break;
         default: break;
        }
     }
@@ -271,7 +280,9 @@ export class Unit implements UnitInterface {
           if (effect.targetPlayId === this.playId) hp += 2;
           break;
         case "SOR_124": hp += 2; break; // Tactical Advantage +2/+2 Phase
+        case "SOR_051": hp -= (effect.value ?? 3); break; // Luke Skywalker –3/–3 or –6/–6 Phase
         case "SOR_076": hp -= 2; break; // Make an Opening –2/–2 Phase
+        case "SOR_054": hp -= 2; break; // Jedi Lightsaber –2/–2 Phase
         case "SOR_116": hp += 2; break; // Steadfast Battalion +2/+2 Phase
         case "JTL_106": hp += 1; break; // Unity of Purpose
       }

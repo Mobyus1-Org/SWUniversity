@@ -33,6 +33,9 @@ export interface AbilityTargetPending {
   player?: PlayerId;
   fromPlayIds: string[];
   fromChoices?: string[];
+  /** Allow the player to select multiple targets at once. */
+  needsMultiple?: boolean;
+  maxTargets?: number;
   continuation: PendingResolution | null;
 }
 
@@ -331,7 +334,55 @@ export interface MillResultPending {
   continuation: PendingResolution | null;
 }
 
+/**
+ * Don't Get Cocky (SOR_223): player reveals cards one at a time, choosing to stop or continue up to 7.
+ * If combined cost ≤ 7, deal that damage to targetPlayId.
+ */
+export interface DontGetCockyPending {
+  type: "dont-get-cocky";
+  cardId: string;
+  player: PlayerId;
+  targetPlayId: string;
+  revealedCards: Array<{ tempId: string; cardId: string; cost: number }>;
+}
+
+/**
+ * Bamboozle (SOR_199) alternate-cost prompt: ask whether to discard a Cunning card
+ * instead of paying the event's resource cost.
+ */
+export interface BamboozleAltCostPending {
+  type: "bamboozle-alt-cost";
+  playingPlayer: PlayerId;
+  fullCost: number;
+  /** Hand indices of Cunning cards eligible for the alternate cost (after Bamboozle removed). */
+  cunningHandIndices: number[];
+}
+
+/**
+ * Second step when the player chooses the alternate cost: pick which Cunning card to discard.
+ */
+export interface BamboozleAltCostDiscardPending {
+  type: "bamboozle-alt-cost-discard";
+  playingPlayer: PlayerId;
+  /** Hand indices of the Cunning cards the player may discard (pre-validated). */
+  eligibleHandIndices: number[];
+}
+
+/**
+ * "Choose two, in any order" prompt for the four aspect event cards
+ * (SOR_058 Vigilance, SOR_107 Command, SOR_155 Aggression, SOR_203 Cunning).
+ * remainingEffects.length === 4 → first pick; === 3 → second pick.
+ */
+export interface ChooseAspectEffectPending {
+  type: "choose-aspect-effect";
+  cardId: string;
+  player: PlayerId;
+  remainingEffects: string[];
+  continuation: PendingResolution | null;
+}
+
 export type PendingResolution =
+  | DontGetCockyPending
   | AttackTargetPending
   | AbilityOptionPending
   | AbilityTargetPending
@@ -362,7 +413,10 @@ export type PendingResolution =
   | MillPending
   | MillResultPending
   | RevealFromHandPending
-  | RevealDiscardPending;
+  | RevealDiscardPending
+  | BamboozleAltCostPending
+  | BamboozleAltCostDiscardPending
+  | ChooseAspectEffectPending;
 
 /**
  * Player selects up to maxCount cards (by hand index) from eligibleIndices to reveal.

@@ -88,7 +88,15 @@ export interface NeedsRevealDiscard {
   choices: Array<{ tempId: string; cardId: string }>;
 }
 
-export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot | NeedsSpreadDamage | NeedsDeckSearch | NeedsPeekHand | NeedsRevealDiscard;
+export interface NeedsDontGetCocky {
+  type: "DontGetCocky";
+  targetPlayId: string;
+  revealedCards: Array<{ tempId: string; cardId: string; cost: number }>;
+  totalCost: number;
+  canReveal: boolean;
+}
+
+export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot | NeedsSpreadDamage | NeedsDeckSearch | NeedsPeekHand | NeedsRevealDiscard | NeedsDontGetCocky;
 
 // ---------------------------------------------------------------------------
 // Inbound: dispatch types and data payloads

@@ -553,6 +553,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
   switch (cardId) {
     case "SOR_179": //Boba Fett - Disintegrator
     case "SOR_040": //Avenger - Hunting Star Destroyer
+    case "SOR_188": //Chopper
     case "SOR_047": //Kanan Jarrus
     case "SOR_050": //The Ghost - Spectre Home Base
     case "SOR_119": //Reinforcement Walker
@@ -572,6 +573,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SEC_085": //Vice Admiral Rampart - On Schedule
     case "SEC_065": //Nala Se - Chief Medical Scientist
     case "SOR_142": //Explosives Artist - Sabine Wren
+    case "SOR_056": //Bendu
+    case "SOR_067": //Rugged Survivors
       return true;
     default: break;
   }
@@ -601,6 +604,9 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
     case "SHD_126": //The Darksaber
     case "SHD_177": //Vambrace Flamethrower
     case "SOR_121": //Hardpoint Heavy Blaster
+    case "SOR_214": //Smuggling Compartment
+    case "SOR_054": //Jedi Lightsaber (conditional: only fires if attached unit is Force)
+    case "SOR_137": //Fallen Lightsaber (conditional: only fires if attached unit is Force)
       return true;
     default: return false;
   }

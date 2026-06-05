@@ -68,6 +68,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
       //conditional raid
       case "SOR_159": amount += PlayerHasUnitWithAspectInPlay(player, "Aggression", true, playId) ? 2 : 0; break;//Partisan Insurgent
       case "SOR_131": amount += unit.TotalHP() - unit.CurrentHP(); break;//Fifth Brother
+      case "SOR_188": // Chopper (SOR)
       case "SEC_147": amount += PlayerHasUnitWithTraitInPlay(player, "Spectre", true, playId) ? 1 : 0; break;//Chopper
       case "SHD_168": amount += PlayerHasUnitWithAspectInPlay(player, "Aggression", true, playId) ? 2 : 0; break;//Hunting Nexu
       case "TWI_164": amount += IsCoordinateActive(player) ? 2 : 0; break;//Hevy
