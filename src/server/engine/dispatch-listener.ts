@@ -5497,6 +5497,7 @@ function applyAbilityEffect(
       break;
     }
     case "SOR_186": { // No Good to Me Dead — Exhaust the chosen unit; prevent it from readying this round.
+      if (!targetPlayId) break;
       const target186 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target186) {
         target186.ready = false;

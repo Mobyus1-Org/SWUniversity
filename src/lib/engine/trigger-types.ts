@@ -14,6 +14,7 @@ export type TriggerType =
   | "shielded"  // same timing window as when-played
   | "ambush"    // same timing window as when-played
   | "leader-reaction"
+  | "card-played-reaction"  // reaction triggered by playing a card
   | "enemy-unit-defeated"
 
 export interface TriggerEntry {

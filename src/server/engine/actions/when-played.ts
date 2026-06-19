@@ -1002,7 +1002,7 @@ export function resolveWhenPlayed(
       return mandatoryTarget(cardId, player, allUnits186.map(u => u.playId));
     }
     case "SOR_174": { // Smoke and Cinders — Each player discards all but 2 cards.
-      const gs174 = GetGame().currentGameState;
+      const gs174 = game.currentGameState;
       const p1Hand174 = gs174.player1.hand.length;
       const p2Hand174 = gs174.player2.hand.length;
       const p1Count = Math.max(0, p1Hand174 - 2);

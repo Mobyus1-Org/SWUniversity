@@ -39,7 +39,7 @@ export type DerivedAppStats = {
   total: number;
   difficultyBreakdown: DifficultyBreakdown;
   standardRunsCompleted: number;
-  ironManCompletions: number;
+  longestIronManRun: number;
 };
 
 export type DerivedProfileStats = {
@@ -134,7 +134,7 @@ function createEmptyDerivedAppStats(): DerivedAppStats {
     total: 0,
     difficultyBreakdown: createEmptyDifficultyBreakdown(),
     standardRunsCompleted: 0,
-    ironManCompletions: 0,
+    longestIronManRun: 0,
   };
 }
 
@@ -153,32 +153,20 @@ export function deriveProfileStats(profile: ProfileStatsSource | null): DerivedP
 
   for (const game of profile.gamesCompleted) {
     const target = game.app === "quiz" ? quiz : dykswu;
-    target.correct += game.correct;
-    target.total += game.total;
-    target.difficultyBreakdown = mergeDifficultyBreakdown(target.difficultyBreakdown, game.difficultyBreakdown);
 
+    // Stats only track questions answered in standard mode.
     if (game.mode === "standard") {
+      target.correct += game.correct;
+      target.total += game.total;
+      target.difficultyBreakdown = mergeDifficultyBreakdown(target.difficultyBreakdown, game.difficultyBreakdown);
       target.standardRunsCompleted += 1;
     }
 
-    if (game.mode === "iron-man" && game.correct === game.total) {
-      target.ironManCompletions += 1;
+    // Iron Man ends on the first miss, so the correct count is the run length.
+    if (game.mode === "iron-man") {
+      target.longestIronManRun = Math.max(target.longestIronManRun, game.correct);
     }
   }
-
-  quiz.correct += profile.endlessModeStats.quiz.correct;
-  quiz.total += profile.endlessModeStats.quiz.total;
-  quiz.difficultyBreakdown = mergeDifficultyBreakdown(
-    quiz.difficultyBreakdown,
-    profile.endlessModeStats.quiz.difficultyBreakdown,
-  );
-
-  dykswu.correct += profile.endlessModeStats.dykswu.correct;
-  dykswu.total += profile.endlessModeStats.dykswu.total;
-  dykswu.difficultyBreakdown = mergeDifficultyBreakdown(
-    dykswu.difficultyBreakdown,
-    profile.endlessModeStats.dykswu.difficultyBreakdown,
-  );
 
   return {
     totalAnswered: quiz.total + dykswu.total,

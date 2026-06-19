@@ -35,7 +35,7 @@ function AppStatsSection({ title, stats }: { title: string; stats: DerivedAppSta
         <p><span className="font-semibold">Knight:</span> {formatScore(stats.difficultyBreakdown.knight.correct)} / {formatScore(stats.difficultyBreakdown.knight.total)} ({stats.difficultyBreakdown.knight.total > 0 ? ((stats.difficultyBreakdown.knight.correct / stats.difficultyBreakdown.knight.total) * 100).toFixed(2) : "0"}%)</p>
         <p><span className="font-semibold">Master:</span> {formatScore(stats.difficultyBreakdown.master.correct)} / {formatScore(stats.difficultyBreakdown.master.total)} ({stats.difficultyBreakdown.master.total > 0 ? ((stats.difficultyBreakdown.master.correct / stats.difficultyBreakdown.master.total) * 100).toFixed(2) : "0"}%)</p>
         <p><span className="font-semibold">Standard Runs Completed:</span> {stats.standardRunsCompleted}</p>
-        <p><span className="font-semibold">Iron Man Completions:</span> {stats.ironManCompletions}</p>
+        <p><span className="font-semibold">Longest Iron Man Run:</span> {stats.longestIronManRun}</p>
       </div>
     </details>
   );
@@ -290,8 +290,8 @@ export default function ProfilePage({ canAccessPuzzles = false }: { canAccessPuz
           <p><span className="font-semibold">Total Questions Correct:</span> {formatScore(profileStats.totalCorrect)}</p>
           <p><span className="font-semibold">Overall Percent Accuracy:</span> {profileStats.totalAnswered > 0 ? ((profileStats.totalCorrect / profileStats.totalAnswered) * 100).toFixed(2) : "0"}%</p>
         </div>
-        <AppStatsSection title="Quiz Stats" stats={profileStats.quiz} />
-        <AppStatsSection title="Do You Know SWU Stats" stats={profileStats.dykswu} />
+        <AppStatsSection title="Quiz Standard Stats" stats={profileStats.quiz} />
+        <AppStatsSection title="Do You Know SWU Standard Stats" stats={profileStats.dykswu} />
       </div>
     </div>
   );
