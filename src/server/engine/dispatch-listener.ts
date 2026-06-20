@@ -68,6 +68,8 @@ import type {
   EngineContext,
   ExploitOptionPending,
   ExploitTargetPending,
+  CreditPaymentOptionPending,
+  CreditPaymentAmountPending,
   OnAttackOrderPending,
   OnAttackTriggerEntry,
   PendingResolution,
@@ -106,7 +108,7 @@ import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dict
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
-import { CreateSpy } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateCreditToken } from "@/server/engine/token-helpers";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -947,7 +949,11 @@ function computeAttackTargets(
     return { unitPlayIds: sentinels.map((u) => u.playId), includesBase: false };
   }
   const entrenchedUnit = attacker.upgrades.some(u => u.cardId === "SOR_072");
-  return { unitPlayIds: finalVisible.map((u) => u.playId), includesBase: !entrenchedUnit };
+  // Fly Casual (JTL_206): readied Vehicle can't attack bases for the phase.
+  const cantAttackBase = game.currentEffects.some(
+    e => e.cardId === "JTL_206_no_base" && e.targetPlayId === attacker.playId,
+  );
+  return { unitPlayIds: finalVisible.map((u) => u.playId), includesBase: !entrenchedUnit && !cantAttackBase };
 }
 
 // ---------------------------------------------------------------------------
@@ -1163,6 +1169,29 @@ function resolveWhenAttackEnds(
   // If attacker was defeated, no trigger fires
   if (!GetUnitByPlayId(game, attacker.playId)) return continuation;
 
+  // Upgrade-granted When-Attack-Ends abilities
+  for (const upgrade of attacker.upgrades) {
+    switch (upgrade.cardId) {
+      case "ASH_229": { // Camtono — When Attack Ends: look at top card; if it costs 2 or less, you may play it for free.
+        const pState229 = GetPlayer(game, attacker.controller);
+        if (pState229.deck.length === 0) break;
+        const top229 = pState229.deck[pState229.deck.length - 1];
+        if ((CardCost(top229.cardId) ?? 99) > 2) break;
+        return {
+          type: "ability-option",
+          cardId: "ASH_229",
+          player: attacker.controller,
+          helperText: `Play ${CardTitle(top229.cardId)} for free?`,
+          yesLabel: "Play Free",
+          noLabel: "Skip",
+          onYes: null,
+          continuation,
+        };
+      }
+      default: break;
+    }
+  }
+
   switch (attacker.cardId) {
     case "SOR_146": { // Zeb Orrelios — when completes attack and defeats defender: may deal 4 to a ground unit
       if (!defDefeated) return continuation;
@@ -1298,6 +1327,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         type: "Target",
         fromPlayIds: pending.fromPlayIds.length > 0 ? pending.fromPlayIds : undefined,
         fromChoices: pending.fromChoices && pending.fromChoices.length > 0 ? pending.fromChoices : undefined,
+        ...(pending.fromZones && pending.fromZones.length > 0 && { fromZones: pending.fromZones }),
         ...(pending.needsMultiple && { needsMultiple: true }),
         ...(pending.maxTargets !== undefined && { maxTargets: pending.maxTargets }),
       } satisfies NeedsTarget;
@@ -1333,6 +1363,22 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         type: "Option",
         helperText: `Use Exploit ${pending.exploitAmount} while playing ${CardTitle(pending.cardId)}?`,
         options: ["Yes", "No"],
+      } satisfies NeedsOption;
+    case "credit-payment-option":
+      return {
+        type: "Option",
+        helperText: pending.maxUseful === 1
+          ? `Use 1 Credit to pay 1 less for ${CardTitle(pending.cardId)}?`
+          : `Use Credits to pay less for ${CardTitle(pending.cardId)}?`,
+        options: ["Yes", "No"],
+        yesLabel: pending.maxUseful === 1 ? "Use 1 Credit" : "Use Credits",
+        noLabel: `Pay ${pending.fullCost}`,
+      } satisfies NeedsOption;
+    case "credit-payment-amount":
+      return {
+        type: "Option",
+        helperText: `Defeat how many Credits? (1–${pending.maxUseful})`,
+        options: Array.from({ length: pending.maxUseful }, (_, i) => String(i + 1)),
       } satisfies NeedsOption;
     case "bamboozle-alt-cost":
       return {
@@ -1536,6 +1582,58 @@ interface HandlerResult {
  * Finishes playing a card after cost has been paid and the card removed from hand.
  * Handles Unit placement, Upgrade targeting, Event resolution, and trigger draining.
  */
+/**
+ * Defeat `creditsToSpend` Credit tokens (each a {1R} discount), exhaust the
+ * reduced resource cost, then finish playing the card. Shared by the Yes/No and
+ * amount-picker steps of the Credit payment flow.
+ */
+function payWithCreditsAndComplete(
+  game: GameState,
+  log: string[],
+  pending: CreditPaymentOptionPending | CreditPaymentAmountPending,
+  creditsToSpend: number,
+): HandlerResult {
+  const { cardId, fullCost } = pending;
+  const player = pending.playingPlayer;
+  const reducedCost = Math.max(0, fullCost - creditsToSpend);
+  const readyCount = GetPlayer(game, player).resources.filter(r => r.ready).length;
+  if (readyCount < reducedCost) {
+    return { response: invalidResponse(`Player ${player} cannot afford ${cardId}.`), pending: null, stateChanged: false };
+  }
+  if (creditsToSpend > 0) {
+    const p = GetPlayer(game, player);
+    p.supplemental.creditTokens = (p.supplemental.creditTokens ?? 0) - creditsToSpend;
+    log.push(`Player ${player} defeated ${creditsToSpend} Credit token(s) to pay ${creditsToSpend} less.`);
+  }
+  exhaustResources(game, player, reducedCost);
+
+  const purpose = pending.purpose ?? { kind: "play-card" as const };
+  if (purpose.kind === "play-card") {
+    log.push(`Player ${player} played ${CardTitle(cardId) ?? cardId}.`);
+    return completePlayCard(game, log, cardId, player);
+  }
+  // sec264-base-damage: paid the cost; now choose a base to damage, then resume the attack.
+  log.push(`${CardTitle(cardId)}: paid ${fullCost} resource(s)/Credit(s).`);
+  const baseTarget = sec264BaseTargetPending(player, purpose.amount, purpose.attackContinuation);
+  return { response: resolutionResponse(pendingToResolution(baseTarget, game)), pending: baseTarget, stateChanged: false };
+}
+
+/** Builds the "choose a base to deal SEC_264 damage to" ability-target step. */
+function sec264BaseTargetPending(
+  player: PlayerId,
+  _amount: number,
+  attackContinuation: PendingResolution | null,
+): AbilityTargetPending {
+  return {
+    type: "ability-target",
+    cardId: "SEC_264",
+    player,
+    fromPlayIds: [],
+    fromZones: ["Base"],
+    continuation: attackContinuation,
+  };
+}
+
 function completePlayCard(
   game: GameState,
   log: string[],
@@ -1811,6 +1909,25 @@ function handlePlayCard(
     exhaustResources(game, player, fullCost);
     log.push(`Player ${player} played ${CardTitle(cardId) ?? cardId}.`);
     return completePlayCard(game, log, cardId, player);
+  }
+
+  // Credit tokens: while paying resources you may defeat Credits for a {1R}
+  // discount each. Offer this on the plain payment path (no Exploit) whenever the
+  // player controls a Credit worth spending and the play is affordable using them.
+  if (exploitAmt === 0) {
+    const creditsAvail = GetPlayer(game, player).supplemental.creditTokens ?? 0;
+    const maxUseful = Math.min(creditsAvail, fullCost);
+    if (maxUseful >= 1 && readyCount >= fullCost - maxUseful) {
+      hand.splice(idx, 1);
+      const creditOptionPending: CreditPaymentOptionPending = {
+        type: "credit-payment-option",
+        cardId,
+        playingPlayer: player,
+        fullCost,
+        maxUseful,
+      };
+      return { response: resolutionResponse(pendingToResolution(creditOptionPending, game)), pending: creditOptionPending, stateChanged: false };
+    }
   }
 
   if (readyCount < minCost)
@@ -2295,6 +2412,26 @@ function handleChooseTarget(
     const invalid = chosen.find(id => !pending.eligiblePlayIds.includes(id));
     if (invalid)
       return { response: invalidResponse(`Card ${invalid} is not eligible for return from discard.`), pending, stateChanged: false };
+
+    if (pending.cardId === "LAW_238") {
+      // Scavenging Sandcrawler: move the chosen card to the bottom of the deck, then create a Credit.
+      const player238 = pending.player;
+      const pState238 = GetPlayer(game, player238);
+      const playId238 = chosen[0];
+      const idx238 = pState238.discard.findIndex(d => d.playId === playId238);
+      if (idx238 !== -1) {
+        const card238 = pState238.discard.splice(idx238, 1)[0];
+        pState238.deck.unshift({ cardId: card238.cardId }); // bottom of deck (top is popped from the end)
+        CreateCreditToken(game, player238, log, "LAW_238");
+        log.push(`${CardTitle("LAW_238")}: put ${CardTitle(card238.cardId)} on the bottom of the deck.`);
+      }
+      const next238 = pending.continuation;
+      if (next238?.type === "resolve-attack") return handleResolveAttack(game, log, next238);
+      if (next238) return { response: resolutionResponse(pendingToResolution(next238, game)), pending: next238, stateChanged: false };
+      const bag238 = drainTriggerBag(game, log);
+      if (bag238) return { response: resolutionResponse(pendingToResolution(bag238, game)), pending: bag238, stateChanged: false };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
 
     if (pending.cardId === "SOR_252") {
       // Place chosen cards at the bottom of their owner's deck in a random order.
@@ -3277,6 +3414,44 @@ function processSingleOnAttackTrigger(
         continuation: cont,
       };
     }
+    case "LAW_238": { // Scavenging Sandcrawler native On Attack (resolved as a single chosen trigger)
+      const discard238 = GetPlayer(game, attacker.controller).discard;
+      if (discard238.length === 0) return cont;
+      return {
+        type: "ability-option",
+        cardId: "LAW_238",
+        player: attacker.controller,
+        helperText: "Put a card from your discard pile on the bottom of your deck and create a Credit token?",
+        yesLabel: "Yes",
+        noLabel: "Skip",
+        onYes: {
+          type: "return-from-discard",
+          cardId: "LAW_238",
+          player: attacker.controller,
+          maxCount: 1,
+          eligiblePlayIds: discard238.map(d => d.playId),
+          continuation: cont,
+        },
+        continuation: cont,
+      };
+    }
+    case "SEC_264": { // Clandestine Connections upgrade On Attack (resolved as a single chosen trigger)
+      const p264 = GetPlayer(game, attacker.controller);
+      const ready264 = p264.resources.filter(r => r.ready).length;
+      const credits264 = p264.supplemental.creditTokens ?? 0;
+      if (ready264 + credits264 < 2) return cont;
+      return {
+        type: "ability-option",
+        cardId: "SEC_264",
+        player: attacker.controller,
+        sourcePlayId: attacker.playId,
+        helperText: "Pay 2 to deal 2 damage to a base?",
+        yesLabel: "Pay 2",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: cont,
+      };
+    }
     default:
       return resolveOnAttackTrigger(attacker, cont, { skipOrderingPrompt: true });
   }
@@ -3310,6 +3485,46 @@ function applyAbilityOptionEffect(
   log: string[],
 ): PendingResolution | null {
   switch (pending.cardId) {
+    case "SEC_264": { // Clandestine Connections Yes — pay 2 (resources and/or Credits), then deal 2 to a base
+      const unit264 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      const player264 = unit264 ? unit264.controller : pending.player!;
+      const credits264 = GetPlayer(game, player264).supplemental.creditTokens ?? 0;
+      const maxUseful264 = Math.min(credits264, 2);
+      const purpose264 = { kind: "sec264-base-damage" as const, amount: 2, attackContinuation: pending.continuation ?? null };
+      if (maxUseful264 >= 1) {
+        // Offer the Credit discount; the payment flow handles the base-damage follow-up.
+        const creditPending264: CreditPaymentOptionPending = {
+          type: "credit-payment-option",
+          cardId: "SEC_264",
+          playingPlayer: player264,
+          fullCost: 2,
+          maxUseful: maxUseful264,
+          purpose: purpose264,
+        };
+        return creditPending264;
+      }
+      // No Credits — pay 2 resources outright, then choose a base.
+      exhaustResources(game, player264, 2);
+      log.push(`${CardTitle("SEC_264")}: paid 2 resources.`);
+      return sec264BaseTargetPending(player264, 2, pending.continuation ?? null);
+    }
+    case "LAW_233": { // Galen Erso Yes — an opponent takes control of Galen
+      const owner233 = pending.player!;
+      const opponent233: PlayerId = owner233 === 1 ? 2 : 1;
+      const galen233 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      if (galen233) transferControl(game, log, galen233, opponent233);
+      return pending.continuation ?? null;
+    }
+    case "ASH_229": { // Camtono Yes — play the top card of the deck for free
+      const player229 = pending.player!;
+      const pState229 = GetPlayer(game, player229);
+      const top229 = pState229.deck.pop();
+      if (!top229) return pending.continuation ?? null;
+      log.push(`${CardTitle("ASH_229")}: playing ${CardTitle(top229.cardId)} for free.`);
+      const result229 = completePlayCard(game, log, top229.cardId, player229);
+      if (result229.pending) return injectContinuation(result229.pending, pending.continuation ?? null);
+      return pending.continuation ?? null;
+    }
     case "SOR_119": { // Reinforcement Walker Yes — draw the top card
       const pState119 = GetPlayer(game, pending.player!);
       const top119 = pState119.deck.pop();
@@ -3598,6 +3813,36 @@ function handleChooseOption(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
+  if (pending?.type === "credit-payment-option") {
+    if (option === "No") {
+      return payWithCreditsAndComplete(game, log, pending, 0);
+    }
+    if (option !== "Yes") {
+      return { response: invalidResponse(`Unknown option: ${option}`), pending, stateChanged: false };
+    }
+    // "Yes" — single useful Credit auto-spends; otherwise ask how many.
+    if (pending.maxUseful === 1) {
+      return payWithCreditsAndComplete(game, log, pending, 1);
+    }
+    const amountPending: CreditPaymentAmountPending = {
+      type: "credit-payment-amount",
+      cardId: pending.cardId,
+      playingPlayer: pending.playingPlayer,
+      fullCost: pending.fullCost,
+      maxUseful: pending.maxUseful,
+      purpose: pending.purpose,
+    };
+    return { response: resolutionResponse(pendingToResolution(amountPending, game)), pending: amountPending, stateChanged: false };
+  }
+
+  if (pending?.type === "credit-payment-amount") {
+    const n = parseInt(option, 10);
+    if (Number.isNaN(n) || n < 1 || n > pending.maxUseful) {
+      return { response: invalidResponse(`Choose between 1 and ${pending.maxUseful} Credit(s).`), pending, stateChanged: false };
+    }
+    return payWithCreditsAndComplete(game, log, pending, n);
+  }
+
   if (pending?.type === "choose-indirect-target") {
     const targetPlayer: PlayerId = option === "Yourself" ? pending.sourcePlayer : (pending.sourcePlayer === 1 ? 2 : 1);
     const targetState = targetPlayer === 1 ? game.player1 : game.player2;
@@ -3708,11 +3953,12 @@ function handleChooseOption(
         return returnPending(nativePending, pending.continuation);
       }
       default: {
-        // Resolve the native on-attack trigger with remaining triggers as the new continuation
-        const afterNative = buildRemaining(pending.continuation);
-        const nativeCont = (afterNative ?? pending.continuation) as ResolveAttackPending;
-        const nativePending = resolveOnAttackTrigger(attacker, nativeCont, { skipOrderingPrompt: true });
-        return returnPending(nativePending, pending.continuation);
+        // Resolve the *chosen* trigger specifically (not "the first one found"), with the
+        // remaining triggers chained as its continuation so each resolves exactly once.
+        const afterChosen = buildRemaining(pending.continuation);
+        const chosenCont = (afterChosen ?? pending.continuation) as ResolveAttackPending;
+        const chosenPending = processSingleOnAttackTrigger(chosen, attacker, chosenCont, game, log);
+        return returnPending(chosenPending, pending.continuation);
       }
     }
   }
@@ -5022,6 +5268,26 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, handSize, game.gameLog);
       break;
     }
+    case "LAW_247": { // Backed by the Hutts: deal damage equal to friendly Credit count to chosen unit
+      if (!targetPlayId) break;
+      const credits247 = GetPlayer(game.currentGameState, pending.player!).supplemental.creditTokens ?? 0;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, credits247, game.gameLog);
+      break;
+    }
+    case "JTL_206": { // Fly Casual: ready the chosen Vehicle; it can't attack bases this phase
+      if (!targetPlayId) break;
+      const unit206 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit206) break;
+      unit206.ready = true;
+      game.currentGameState.currentEffects.push({
+        cardId: "JTL_206_no_base",
+        duration: "Phase",
+        affectedPlayer: pending.player!,
+        targetPlayId,
+      });
+      game.gameLog.push(`${CardTitle("JTL_206")}: readied ${CardTitle(unit206.cardId)} (can't attack bases this phase).`);
+      break;
+    }
     case "SOR_041": // Power of the Dark Side — defeat the chosen unit (any, including leaders).
     case "SOR_040": { // Avenger WP/OA — defeat the chosen non-leader unit (fromPlayIds already filtered).
       if (!targetPlayId) break;
@@ -6083,6 +6349,20 @@ function applyAbilityEffect(
       return pending.continuation;
     }
 
+    case "SEC_264": { // Clandestine Connections — deal 2 damage to the chosen base
+      const owner264 = pending.player!;
+      // UI sends targetZones:["Base"] (targetIsBase) for the enemy base; tests/back-ends may
+      // pass the base playId directly. Support both.
+      let basePlayer264: PlayerId | null = null;
+      if (targetIsBase) basePlayer264 = owner264 === 1 ? 2 : 1;
+      else if (targetPlayId === "player1.base") basePlayer264 = 1;
+      else if (targetPlayId === "player2.base") basePlayer264 = 2;
+      if (basePlayer264 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer264, 2, owner264);
+        game.gameLog.push(`${CardTitle("SEC_264")}: dealt 2 damage to player ${basePlayer264}'s base.`);
+      }
+      break;
+    }
     default:
       game.gameLog.push(`Ability effect for ${CardTitle(pending.cardId) ?? pending.cardId} applied.`);
       break;

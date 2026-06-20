@@ -25,26 +25,38 @@ export function resolveOnAttackTrigger(
   const unitHasOnAttack = HasOnAttack(attacker.cardId, attacker.controller, attacker.playId);
   const hasOtherTrigger = activeUpgrades.length > 0 || unitHasOnAttack;
 
-  // When attacking a unit: if this attacker has Saboteur AND another on-attack trigger,
-  // give the player ordering choice before resolving either.
+  // When attacking a unit with two or more simultaneous On-Attack triggers, give the active
+  // player an ordering choice before resolving any of them.
   if (!opts.skipOrderingPrompt && hasOtherTrigger && continuation.target.type === "unit") {
+    const targetPlayId = continuation.target.playId;
     const hasSab = (() => {
       try { return HasSaboteur(attacker.cardId, attacker.playId, attacker.controller); }
       catch { return false; }
     })();
     if (hasSab) {
-      const triggers: OnAttackTriggerEntry[] = [
-        { cardId: "saboteur", label: `${CardTitle(attacker.cardId)} — Saboteur` },
-        ...activeUpgrades.map(u => ({ cardId: u.cardId, label: `${CardTitle(u.cardId)} — On Attack` })),
-      ];
+      // Saboteur is a keyword, not a free-standing trigger. Its only *orderable* part is the
+      // triggered ability "defeat the defender's Shield tokens" — which does nothing, and so
+      // shouldn't appear in the ordering, unless the defender actually has Shields. (The
+      // Sentinel-ignoring half is a constant ability, handled at target selection.)
+      const defenderUnit = AllUnits().find(u => u.playId === targetPlayId);
+      const saboteurHasEffect = !!defenderUnit?.upgrades.some(u => u.cardId === "SOR_T02");
+
+      const triggers: OnAttackTriggerEntry[] = [];
+      if (saboteurHasEffect) triggers.push({ cardId: "saboteur", label: `${CardTitle(attacker.cardId)} — Saboteur` });
+      triggers.push(...activeUpgrades.map(u => ({ cardId: u.cardId, label: `${CardTitle(u.cardId)} — On Attack` })));
       if (HasOnAttack(attacker.cardId)) triggers.push({ cardId: attacker.cardId, label: `${CardTitle(attacker.cardId)} — On Attack` });
-      return {
-        type: "on-attack-order",
-        attackerPlayId: attacker.playId,
-        player: attacker.controller,
-        triggers,
-        continuation,
-      } satisfies OnAttackOrderPending;
+
+      // Only prompt when there is a genuine ordering choice (2+ triggers). With Saboteur
+      // excluded as a no-op, a lone remaining trigger just resolves normally below.
+      if (triggers.length >= 2) {
+        return {
+          type: "on-attack-order",
+          attackerPlayId: attacker.playId,
+          player: attacker.controller,
+          triggers,
+          continuation,
+        } satisfies OnAttackOrderPending;
+      }
     }
   }
 
@@ -118,6 +130,25 @@ export function resolveOnAttackTrigger(
         }
         break;
       }
+      case "SEC_264": { // Clandestine Connections — On Attack: You may pay 2 resources. If you do, deal 2 damage to a base.
+        const game264 = GetGame();
+        if (!game264) break;
+        const pState264 = attacker.controller === 1 ? game264.currentGameState.player1 : game264.currentGameState.player2;
+        const ready264 = pState264.resources.filter(r => r.ready).length;
+        const credits264 = pState264.supplemental.creditTokens ?? 0;
+        if (ready264 + credits264 < 2) break; // can't afford
+        return {
+          type: "ability-option",
+          cardId: "SEC_264",
+          player: attacker.controller,
+          sourcePlayId: attacker.playId,
+          helperText: "Pay 2 to deal 2 damage to a base?",
+          yesLabel: "Pay 2",
+          noLabel: "Skip",
+          onYes: null,
+          continuation,
+        };
+      }
       case "SHD_126": { // The Darksaber
         applyDarksaberOnAttack(attacker);
         break;
@@ -165,6 +196,30 @@ export function resolveOnAttackTrigger(
         yesLabel: "Draw",
         noLabel: "Skip",
         onYes: null,
+        continuation,
+      };
+    }
+    case "LAW_238": { // Scavenging Sandcrawler — On Attack: you may put a card from your discard on the bottom of your deck; if you do, create a Credit token.
+      const game238 = GetGame();
+      if (!game238) return continuation;
+      const gs238 = game238.currentGameState;
+      const discard238 = (attacker.controller === 1 ? gs238.player1 : gs238.player2).discard;
+      if (discard238.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: attacker.cardId,
+        player: attacker.controller,
+        helperText: "Put a card from your discard pile on the bottom of your deck and create a Credit token?",
+        yesLabel: "Yes",
+        noLabel: "Skip",
+        onYes: {
+          type: "return-from-discard",
+          cardId: "LAW_238",
+          player: attacker.controller,
+          maxCount: 1,
+          eligiblePlayIds: discard238.map(d => d.playId),
+          continuation,
+        },
         continuation,
       };
     }

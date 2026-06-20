@@ -6,7 +6,7 @@ import type { NextApiRequest } from "next";
 import type { UserProfile } from "@/util/profile-api";
 import { deriveProfileStats, type DerivedAppStats } from "@/util/profile-data";
 import { getSessionFromRequest } from "@/server/auth/session";
-import { connectToDatabase } from "@/server/db";
+import { canAccessPuzzles } from "@/server/auth/puzzle-access";
 
 type MeResponse = {
   user: {
@@ -44,24 +44,7 @@ function AppStatsSection({ title, stats }: { title: string; stats: DerivedAppSta
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const request = context.req as NextApiRequest;
   const session = await getSessionFromRequest(request);
-
-  if (!session) {
-    return { props: { canAccessPuzzles: false } };
-  }
-
-  if (session.user.role === "admin") {
-    return { props: { canAccessPuzzles: true } };
-  }
-
-  try {
-    const mongoose = await connectToDatabase();
-    const coll = mongoose.connection.collection("authz");
-    const authz = await coll.findOne({});
-    const previewUsers = authz && Array.isArray((authz as any).previewUsers) ? (authz as any).previewUsers : [];
-    return { props: { canAccessPuzzles: previewUsers.includes(session.user.username) } };
-  } catch {
-    return { props: { canAccessPuzzles: false } };
-  }
+  return { props: { canAccessPuzzles: await canAccessPuzzles(session) } };
 };
 
 export default function ProfilePage({ canAccessPuzzles = false }: { canAccessPuzzles?: boolean }) {

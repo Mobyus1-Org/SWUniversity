@@ -575,6 +575,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_142": //Explosives Artist - Sabine Wren
     case "SOR_056": //Bendu
     case "SOR_067": //Rugged Survivors
+    case "LAW_238": //Scavenging Sandcrawler
       return true;
     default: break;
   }
@@ -607,6 +608,7 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
     case "SOR_214": //Smuggling Compartment
     case "SOR_054": //Jedi Lightsaber (conditional: only fires if attached unit is Force)
     case "SOR_137": //Fallen Lightsaber (conditional: only fires if attached unit is Force)
+    case "SEC_264": //Clandestine Connections
       return true;
     default: return false;
   }

@@ -2,7 +2,7 @@ import { PlayerId } from "@/lib/engine/core-models";
 import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty } from "@/server/engine/core-functions";
 import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
-import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy } from "@/server/engine/token-helpers";
+import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy, CreateCreditToken } from "@/server/engine/token-helpers";
 import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits } from "@/server/engine/card-db/generated";
 
 /** Returns playIds for all units on both sides plus both base identifiers. */
@@ -192,6 +192,49 @@ export function resolveWhenPlayed(
         },
         continuation: null,
       };
+    case "JTL_206": { // Fly Casual — "Ready a Vehicle unit. It can't attack bases for this phase."
+      const vehicles206 = GetUnitsForPlayer(player).filter(u => TraitContains(u.cardId, "Vehicle", player, u.playId));
+      if (vehicles206.length === 0) return null;
+      return mandatoryTarget(cardId, player, vehicles206.map(u => u.playId));
+    }
+    case "LAW_233": { // Galen Erso — "When Played: You may have an opponent take control of this unit."
+      if (!playId) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        sourcePlayId: playId,
+        helperText: "Have an opponent take control of Galen Erso?",
+        yesLabel: "Give to Opponent",
+        noLabel: "Keep",
+        onYes: null,
+        continuation: null,
+      };
+    }
+    case "LAW_244": // Unmarked Credits — "Create a Credit token."
+      CreateCreditToken(game.currentGameState, player, game.gameLog, cardId);
+      return null;
+    case "LAW_247": { // Backed by the Hutts — "Create a Credit token. You may deal damage to a unit equal to the number of friendly Credit tokens."
+      CreateCreditToken(game.currentGameState, player, game.gameLog, cardId);
+      const units247 = AllUnits();
+      if (units247.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        helperText: "Deal damage to a unit equal to the number of friendly Credit tokens?",
+        yesLabel: "Deal Damage",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId,
+          player,
+          fromPlayIds: units247.map(u => u.playId),
+          continuation: null,
+        },
+        continuation: null,
+      };
+    }
     case "SEC_034": { // Cad Bane — "When Played: You may defeat a unit with 2 or less remaining HP."
       const eligible034 = AllUnits().filter(u => Unit.FromInterface(u).CurrentHP() <= 2);
       if (eligible034.length === 0) return null;

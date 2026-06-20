@@ -6,7 +6,7 @@ import type { CardCatalogEntry } from "@/components/Shared/PuzzleBuilderPanel";
 
 type Response = { cards: CardCatalogEntry[] } | { error: string };
 
-const ALLOWED_SETS = new Set(["SOR", "SHD", "TWI", "JTL", "LOF", "SEC", "IBH", "LAW", "TS26"]);
+const ALLOWED_SETS = new Set(["SOR", "SHD", "TWI", "JTL", "LOF", "SEC", "IBH", "LAW", "TS26", "ASH"]);
 
 // Token units available in the puzzle builder (ground / space)
 const TOKEN_UNIT_IDS = [

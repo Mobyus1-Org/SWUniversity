@@ -1,5 +1,5 @@
 import type { Game } from "@/lib/engine/game";
-import type { PlayerId } from "@/lib/engine/core-models";
+import type { PlayerId, Zones } from "@/lib/engine/core-models";
 
 // ---------------------------------------------------------------------------
 // Pending resolution variants
@@ -33,6 +33,8 @@ export interface AbilityTargetPending {
   player?: PlayerId;
   fromPlayIds: string[];
   fromChoices?: string[];
+  /** Zones (e.g. ["Base"]) the target may be chosen from, surfaced to the UI for clickability. */
+  fromZones?: Zones[];
   /** Allow the player to select multiple targets at once. */
   needsMultiple?: boolean;
   maxTargets?: number;
@@ -146,6 +148,46 @@ export interface ExploitTargetPending {
   fullCost: number;
   /** PlayIds of all friendly units eligible to be exploited. */
   fromPlayIds: string[];
+}
+
+/**
+ * What happens once a Credit-discounted cost is paid. "play-card" finishes
+ * playing the card; "sec264-base-damage" resolves Clandestine Connections'
+ * "deal 2 damage to a base", then resumes the attack.
+ */
+export type CreditPaymentPurpose =
+  | { kind: "play-card" }
+  | { kind: "sec264-base-damage"; amount: number; attackContinuation: PendingResolution | null };
+
+/**
+ * Step 1 of Credit payment: ask whether to defeat Credit tokens for a {1R}
+ * discount while paying a cost. Resolved via "choose-option" (Yes/No).
+ * When maxUseful === 1 this is the whole flow ("Use 1 Credit?" → auto-spend 1).
+ */
+export interface CreditPaymentOptionPending {
+  type: "credit-payment-option";
+  /** The card being played (already removed from hand) or the ability source. */
+  cardId: string;
+  playingPlayer: PlayerId;
+  /** Full resource cost before any Credit reduction. */
+  fullCost: number;
+  /** min(Credits controlled, fullCost) — the most Credits worth defeating. */
+  maxUseful: number;
+  /** Defaults to { kind: "play-card" } when omitted. */
+  purpose?: CreditPaymentPurpose;
+}
+
+/**
+ * Step 2 of Credit payment (only when maxUseful >= 2): pick how many Credits to
+ * defeat, 1..maxUseful. Resolved via "choose-option" with the number as a string.
+ */
+export interface CreditPaymentAmountPending {
+  type: "credit-payment-amount";
+  cardId: string;
+  playingPlayer: PlayerId;
+  fullCost: number;
+  maxUseful: number;
+  purpose?: CreditPaymentPurpose;
 }
 
 /** Plot mechanic step 1: ask whether to use Plot before or after When Deployed. */
@@ -395,6 +437,8 @@ export type PendingResolution =
   | BountyPending
   | ExploitOptionPending
   | ExploitTargetPending
+  | CreditPaymentOptionPending
+  | CreditPaymentAmountPending
   | PilotingOptionPending
   | PlotOrderPending
   | PlotWindowPending

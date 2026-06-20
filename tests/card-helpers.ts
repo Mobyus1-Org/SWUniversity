@@ -364,6 +364,10 @@ export const Cards = {
       viceAdmiralRampart: "SEC_085",
       nalaSe: "SEC_065",
     },
+    law: {
+      scavengingSandcrawler: "LAW_238",
+      galenErso: "LAW_233",
+    },
   },
   upgrades: {
     token: {
@@ -395,6 +399,13 @@ export const Cards = {
     lof: {
       bolsteredEndurance: "LOF_074",
       constructedLightsaber: "LOF_261",
+    },
+    ash: {
+      camtono: "ASH_229",
+      nowhereToHide: "ASH_198",
+    },
+    sec: {
+      clandestineConnections: "SEC_264",
     },
   },
   events: {
@@ -470,9 +481,14 @@ export const Cards = {
       torpedoBarrage: "JTL_234",
       dedicatedWingmen: "JTL_254",
       unityOfPurpose: "JTL_106",
+      flyCasual: "JTL_206",
     },
     sec: {
       iAmTheSenate: "SEC_092",
+    },
+    law: {
+      unmarkedCredits: "LAW_244",
+      backedByTheHutts: "LAW_247",
     },
   },
 }

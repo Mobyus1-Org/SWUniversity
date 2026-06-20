@@ -10,6 +10,9 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
     if (!unit) throw new Error("Unit not found for given playId and player in HasSaboteur");
     if (unit.LostAbilities()) return false;
 
+    // LAW_233 Galen Erso: enemy units (of Galen's controller) gain Saboteur.
+    if (GetPlayIdForUniqueUnitInPlay("LAW_233", otherPlayer) !== "0") return true;
+
     for(const currentEffect of GetCurrentEffectsForPlayer(player)) {
       if(currentEffect.targetPlayId && currentEffect.targetPlayId !== playId) continue;
 

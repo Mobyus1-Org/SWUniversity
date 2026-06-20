@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 import { methodNotAllowed } from "@/server/auth/http";
 import { getSessionFromRequest } from "@/server/auth/session";
+import { canAccessPuzzles } from "@/server/auth/puzzle-access";
 import { assertRequiredEnv } from "@/server/env";
 import { connectToDatabase } from "@/server/db";
 import { UserProfileModel } from "@/server/models/UserProfile";
@@ -28,6 +29,7 @@ export default async function handler(request: NextApiRequest, response: NextApi
         ...session.user,
         profile: serializeUserProfile(profile),
       },
+      canAccessPuzzles: await canAccessPuzzles(session),
     });
   } catch (error) {
     console.error("me error", error);

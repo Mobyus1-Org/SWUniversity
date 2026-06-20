@@ -8,6 +8,8 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     const unit = GetUnitInPlay(playId, player);
     if (!unit) return amount;
     if (unit.LostAbilities()) return 0;
+    // LAW_233 Galen Erso: enemy units (of Galen's controller) gain Raid 1.
+    if (GetPlayIdForUniqueUnitInPlay("LAW_233", player === 1 ? 2 : 1) !== "0") amount += 1;
     const units = GetUnitsForPlayer(player);
     for(const u of units) {
       switch(u.cardId)

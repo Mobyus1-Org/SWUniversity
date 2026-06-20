@@ -131,6 +131,25 @@ export class GameStateBuilder {
     return this;
   }
 
+  WithCreditsForPlayer(player: PlayerId, count: number): this {
+    const p = player === 1 ? this._raw.player1 : this._raw.player2;
+    p.supplemental.creditTokens = count;
+    return this;
+  }
+
+  WithCardInDiscardForPlayer(player: PlayerId, cardId: string): this {
+    const p = player === 1 ? this._raw.player1 : this._raw.player2;
+    p.discard.push({
+      cardId,
+      playId: String(this._raw.nextPlayId++),
+      owner: player,
+      controller: player,
+      turnDiscarded: 0,
+      discardEffect: "",
+    });
+    return this;
+  }
+
   // ---------------------------------------------------------------------------
   // Ground / Space units
   // arg order: player, cardId, ready = true, damage = 0, controller = player

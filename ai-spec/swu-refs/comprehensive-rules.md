@@ -1,7 +1,7 @@
 # Star Wars Unlimited Comprehensive Rules (Official PDF Extraction)
 
-Source PDF: https://cdn.starwarsunlimited.com//Star_Wars_Unlimited_Comp_Rules_6_0_d3d16e8da4.pdf
-Version shown in document: 10/31/25 - V 6.0
+Source PDF: https://cdn.starwarsunlimited.com//SWH_Comp_Rules_v7_0_dd71c7ab29.pdf
+Version shown in document: 3/6/26 - V 7.0
 
 Extraction note: Parsed from the official PDF and normalized for readability. Page headers and table-of-contents artifacts were removed; rule text was reflowed where lines wrapped in the PDF.
 
@@ -42,7 +42,7 @@ b. A card placed in a player’s resource zone is referred to as a “resource.�
 
 ### 2. Ownership and Control
 
-a. A player is the “owner” of a card that started the game in their deck. This includes the deck’s leader, base, and any events, units, and upgrades that started the game in that deck.
+a. A player is the “owner” of a card that started the game in their deck. This includes the deck’s leader, base, and any events, units, and upgrades that started the game in that deck. A player is also the owner of any non-upgrade token they create.
 b. A player is the “controller” of a card they put into play. This includes their base, their leader, resources in their resource zone, and any events, units, and non-token upgrades they play or put into play. A player keeps control of a card until either that card leaves play or their opponent takes control of it.
 c. While a player controls a card, they may resolve action abilities on the card, attack with the card if it is a unit, and affect it with abilities that affect “friendly” cards. A player also must resolve any triggered abilities on a card they control.
 d. If an ability instructs a player to “take control” of a card, that player will become that card’s controller, and remain so until either that card leaves play or their opponent takes control of that card. The unit maintains its ready or exhausted status, all damage counters on it, and all upgrades attached to it. Its new controller orients it in its arena to face them.
@@ -59,9 +59,9 @@ b. A card that a player’s opponent controls is considered “enemy” for that
 a. A card is considered “ready” when it is turned upright. A card is considered “exhausted” when it is turned sideways (rotated 90 degrees).
 b. Each non-leader unit and resource enters play exhausted. Upgrades are neither ready nor exhausted.
 c. Exhausted cards ready through certain card abilities, or during the regroup phase each round. See 5.5. Regroup Phase
-d. A ready unit must exhaust when starting an attack, or when paying the cost of an action ability on it that uses an  icon. An exhausted unit cannot attack or be used to pay costs that require it to exhaust.
+d. A ready unit must exhaust when starting an attack, or when paying the cost of an action ability on it that uses an icon. An exhausted unit cannot attack or be used to pay costs that require it to exhaust.
 e. A ready card can be chosen for a readying effect, but the chosen card does not change orientation and is not considered to have been readied for the purpose of “If you do” effects. An exhausted card can be chosen for an exhausting effect, but the chosen card does not change orientation and is not considered to have been exhausted for the purpose of “If you do” effects.
-f. When paying a card’s cost or the cost of an action ability that uses a  icon, the player must exhaust ready resources they control equal to the number indicated by the cost. An exhausted resource cannot be used to pay a cost.
+f. When paying a card’s cost or the cost of an action ability that uses a icon, the player must exhaust ready resources they control equal to the number indicated by the cost. An exhausted resource cannot be used to pay a cost.
 
 ### 5. Defeating Cards
 
@@ -74,35 +74,27 @@ f. A resource is defeated when an ability defeats it. When a resource is defeate
 
 ### 6. Aspects
 
-a. Aspects are colored icons on a card that represent different philosophies or motivations that card embodies. The six aspects are: Vigilance , Command , Aggression , Cunning , Villainy , and Heroism .
-b. A deck’s leader and base provide their aspect icons to that deck. Although a player can include units, events, and upgrades of any aspect in their deck, if they play a card with aspect icons beyond those provided by the deck’s leader and/or base, they will incur the aspect penalty: for each icon beyond those provided, the player must pay 2 additional resources in order to play that card. See 8.1. Aspect Penalty
-c. Most cards have one or two aspect icons, though a small number of cards have none. Cards with no aspect icons are considered “neutral” cards and are depicted with a gray border. Neutral cards do not incur the aspect penalty when played, as they have no aspect icons.
+a. Aspects are colored icons on a card that represent different philosophies or motivations that card embodies. The six aspects are: Vigilance , Command , Aggression , Cunning , Villainy , and Heroism .
+b. A deck’s leader and base provide their aspect icons to that deck. Although a player can include units, events, and upgrades of any aspect in their deck, if they play a card with aspect icons beyond those provided by the deck’s leader and/or base, they will incur aspect penalties: for each icon beyond those provided, the player must pay 2 additional resources in order to play that card. See 8.1. Aspect Penalties
+c. Cards with no aspect icons, or “neutral” cards, are depicted with a gray border. Neutral cards do not incur the aspect penalties when played, as they have no aspect icons.
 
 ## 6. Abilities
 
 1. An ability is special text on a card that explains how the card can affect the game. A card may have one or more abilities printed in its text box or gain an ability from other cards in play. If a card has multiple different abilities, each ability begins on a new line.
 2. When a player resolves an ability, they resolve as much of the ability as possible, and ignore any part of the ability that cannot be resolved.
-3. An ability that is able to be resolved must resolve, unless the ability includes the phrase “you may.” An ability that includes “you may” gives the player resolving the ability the option of whether or not to resolve that ability.
-
-For example, a unit with an ability that reads, “On Attack: You may deal 1 damage to another friendly unit and ready it,” allows the
-
-player to choose whether or not to deal 1 damage when the unit attacks.
+3. An ability that is able to be resolved must resolve, unless the ability includes the phrase “you may.” An ability that includes “you may” gives the player resolving the ability the option of whether or not to resolve that ability. For example, a unit with an ability that reads, “On Attack: You may deal 1 damage to another friendly unit and ready it,” allows the player to choose whether or not to deal 1 damage when the unit attacks.
 4. There are 5 types of abilities in the game: action abilities, constant abilities, event abilities, keyword abilities, and triggered abilities. See 7. Abilities and Effects
 
 ## 7. Resources
 
 1. A resource is a game object used to pay the costs of cards and certain abilities. A card becomes a resource when placed into a player’s resource zone.
-2. When paying a card’s cost or the cost of an ability that uses a  icon, a player must exhaust ready resources they control equal to the number indicated by the cost. An exhausted resource cannot be used to pay a cost.
+2. When paying a card’s cost or the cost of an ability that uses a icon, a player must exhaust ready resources they control equal to the number indicated by the cost. An exhausted resource cannot be used to pay a cost.
 3. Resources are placed facedown and remain facedown while in a player’s resource zone. A player may view facedown resources they control at any time.
 4. The number of ready and exhausted resources in a player’s resource zone is public information. The order of those resources does not need to be maintained; a player may rearrange their resources at any time up to the point of a specific resource being chosen as part of an action. Before rearranging, a player must announce to their opponent their intent to rearrange resources. A player may change which of their resources are ready or exhausted during a rearrangement, so long as the number of ready and exhausted resources is the same after a rearrangement as prior to that rearrangement. A player may rearrange their resources after another player declares their intent to interact with those resources, but not after that player chooses specific resources to interact with.
 5. If a player controls cards in their resource zone that are owned by an opponent, the ownership of those cards is open information.
 6. Players can choose to add a card from their hand to their resource zone during each regroup phase. See 5.5. Regroup Phase
-7. If an ability instructs a player to put a card into play as a resource, the card is placed facedown and exhausted in that player’s resource zone unless otherwise specified. The card is not considered “played” and no “When Played” abilities trigger.
-8. While a card is in play as a resource, it is considered a blank resource card. Its facedown side is considered out-of-play, and its printed attributes—including its name, aspects, traits, and abilities—are inactive and do not affect the game unless explicitly stated in the ability or the associated rules text (as with Smuggle).
-
-For example, a player can control one copy of a unique card faceup in an arena, as well as another copy of that unique card
-
-facedown as a resource, without needing to defeat one of those copies as per the rules of uniqueness.
+7. If an ability instructs a player to resource a card, the card is placed facedown and exhausted in that player’s resource zone unless otherwise specified. The card is not considered “played” and no “When Played” abilities trigger.
+8. While a card is in play as a resource, it is considered a blank resource card.Its facedown side is considered out-of-play, and its printed attributes—including its name, aspects, traits, and abilities—are inactive and do not affect the game unless explicitly stated in the ability or the associated rules text (as with Smuggle). For example, a player can control one copy of a unique card faceup in an arena, as well as another copy of that unique card facedown as a resource, without needing to defeat one of those copies as per the rules of uniqueness.
 
 ## 8. Cost
 
@@ -111,22 +103,10 @@ facedown as a resource, without needing to defeat one of those copies as per the
 3. Any modifiers to a card’s cost are cumulative. When calculating modified cost, any modifiers that increase cost are applied before any modifiers that decrease cost.
 4. A card’s cost cannot be modified below 0. If an ability would cause the cost of a card to be modified below 0, treat that card as having 0 cost instead.
 5. If an ability instructs a player to play a card “for free,” the player bypasses all modifiers to that card’s cost (including the aspect penalty), and does not pay any resources to play that card. The player must still pay any additional non-resource costs applied to the card.
-6. If an ability refers to the “cost” of a card, that ability always refers to the printed cost of the card. It does not take into account any modifiers to the card’s cost as it was played. See 8.16. Modifiers
-
-For example, Andre has Admiral Piett (SOR #079) in play, who has an ability that gives Ambush to friendly units that cost 6 or more.
-
-Andre plays Galactic Ambition (SOR #235) to play Relentless (SOR #089) for free. Although Andre didn’t spend any resources to play Relentless, its printed cost is still 9, which means that Admiral Piett will still give it Ambush.
+6. If an ability refers to the “cost” of a card, that ability always refers to the printed cost of the card. It does not take into account any modifiers to the card’s cost as it was played. See 8.16. Modifiers For example, Andre has Admiral Piett (SOR #079) in play, who has an ability that gives Ambush to friendly units that cost 6 or more. Andre plays Galactic Ambition (SOR #235) to play Relentless (SOR #089) for free. Although Andre didn’t spend any resources to play Relentless, its printed cost is still 9, which means that Admiral Piett will still give it Ambush.
 7. Each leader’s Leader Unit side has a printed cost, which is treated as the “cost” of that Leader Unit, even if no resources are spent to deploy it. Card abilities that affect cards with a specific cost can also affect a Leader Unit in play with that cost.
-8. Some abilities add an “additional cost” to play a card, applying a non-resource cost to that card. In order to play that card, a player must both pay the card’s cost in resources, and all additional costs applied to the card.
-
-For example, Saw Gerrera (SOR #153) has an ability that requires each opponent to pay an “additional cost” to play an event, dealing
-
-2 damage to their base. If Saw Gerrera is controlled by Ken’s opponent, and Ken wanted to play Vanquish (SOR #078), he would have to pay 5 resources and deal 2 damage to his base in order to play Vanquish.
-9. Some cards have action abilities with an ability cost, indicated in brackets following the word “Action.” In order to use such an ability, the player who controls the card with the ability must pay the cost in brackets. This cost may include various forms of payment such as spending resources, exhausting cards, or defeating friendly units. Resolving an action ability this way counts as the player’s action for the turn.
-
-For example, Emperor Palpatine: Galactic Ruler (SOR #006) has an action ability on his Leader side with an ability cost indicated
-
-in brackets. In order to use the ability, Palpatine’s controller must first pay the full cost of the ability: paying 1 resource, exhausting Palpatine, and defeating a friendly unit. After paying this cost, the controller resolves the ability’s effect.
+8. Some abilities add an “additional cost” to play a card, applying a non-resource cost to that card. In order to play that card, a player must both pay the card’s cost in resources, and all additional costs applied to the card. For example, Saw Gerrera (SOR #153) has an ability that requires each opponent to pay an “additional cost” to play an event, dealing 2 damage to their base. If Saw Gerrera is controlled by Ken’s opponent, and Ken wanted to play Vanquish (SOR #078), he would have to pay 5 resources and deal 2 damage to his base in order to play Vanquish.
+9. Some cards have action abilities with an ability cost, indicated in brackets following the word “Action.” In order to use such an ability, the player who controls the card with the ability must pay the cost in brackets. This cost may include various forms of payment such as spending resources, exhausting cards, or defeating friendly units. Resolving an action ability this way counts as the player’s action for the turn. For example, Emperor Palpatine: Galactic Ruler (SOR #006) has an action ability on his Leader side with an ability cost indicated in brackets. In order to use the ability, Palpatine’s controller must first pay the full cost of the ability: paying 1 resource, exhausting Palpatine, and defeating a friendly unit. After paying this cost, the controller resolves the ability’s effect.
 10. If a replacement effect replaces part or all of a cost with another effect, the cost is still considered paid as long as that other effect can be resolved. If a replacement effect can’t be resolved, the original cost must be paid in full.
 
 ## 9. Damage
@@ -140,11 +120,11 @@ in brackets. In order to use the ability, Palpatine’s controller must first pa
 7. If a base has damage on it equal to or greater than its HP value, its owner immediately loses the game, and their opponent wins the game.
 8. If an ability deals damage to multiple units, all damage is dealt simultaneously. If an ability deals multiple instances of damage to one unit, each instance of damage is dealt sequentially. Resolve any triggered abilities after all damage is dealt.
 9. If an ability prevents some amount of damage from being dealt to a unit or base, that damage is not considered dealt to that unit or base, and any abilities that would have triggered if that damage was dealt don’t trigger. If an ability says a unit “can’t be damaged,” prevent all damage that would be dealt to that unit.
-10. “Combat damage” is damage dealt during the second step of an attack. Combat damage is both the damage an attacker deals to a defender/base, and the damage a defender deals to an attacker. See 6.3. Attack With a Unit
-11. “Excess damage” refers to damage that would be dealt to a unit beyond the amount needed to defeat that unit. Abilities such as the Overwhelm keyword can affect excess damage. If a unit is defeated prior to being dealt combat damage by an attacker with Overwhelm, all combat damage that would have been dealt to the unit is considered excess damage.
+10. “Combat damage” is damage dealt during the “End attack” step of an attack. Combat damage is both the damage an attacker deals to a defending unit/base, and the damage a defending unit deals to an attacker. See 6.3. Attack With a Unit
+11. “Excess damage” refers to damage that would be dealt to a unit beyond the amount needed to defeat that unit. Abilities such as the Overwhelm keyword can affect excess damage. If a unit leaves play prior to being dealt combat damage by an attacker with Overwhelm, all combat damage that would have been dealt to the unit is considered excess damage.
 12. If a unit’s ability deals damage, that unit is considered to have dealt that damage.
 13. If damage is “unpreventable,” then that damage must be dealt. When dealing unpreventable damage, ignore any abilities that would prevent that damage, including abilities that say a unit “can’t be damaged.”
-14. Some abilities deal indirect damage to a player, which is unpreventable damage assigned by that player to their own units and/or base. See 8.36. Indirect Damage
+14. Some abilities deal indirect damage to a player, which is unpreventable damage assigned by that player to their own units and/or base.See 8.36. Indirect Damage
 
 ## 10. Power
 
@@ -153,24 +133,18 @@ in brackets. In order to use the ability, Palpatine’s controller must first pa
 a. If an ability changes a unit’s printed power, the unit is treated as though it has the new printed power for any ability or game action that references its power.
 3. A unit’s power can be modified by upgrades attached to it, or through certain card abilities. Any modifiers to a unit’s power are cumulative. When calculating modified power, any modifiers that increase power are applied before any modifiers that decrease power.
 4. A card’s power cannot be modified below 0. If a card’s power would be modified below 0, treat the card’s power as 0 instead.
-5. If an ability refers to the power of a card in play, include any modifiers to its power. If an ability refers to the power of a card in an outof-play zone, use the printed power of the card.
+5. If an ability refers to the power of a card in play, include any modifiers to its power. If an ability refers to the power of a card in an out- of-play zone, use the printed power of the card.
 6. If an ability refers to the “unit with the most/least power” in play, and multiple units are tied for the most/least power, any one of those units is a valid choice for the ability.
 
 ## 11. Hp
 
-1. HP, or Hit Points, represents the number of damage counters that can be placed on a card before it is defeated.
-
-For example, a unit with 3 HP is defeated when it has 3 or more damage on it.
-
+1. HP, or Hit Points, represents the number of damage counters that can be placed on a card before it is defeated. For example, a unit with 3 HP is defeated when it has 3 or more damage on it.
 2. Units and bases have HP values, indicated by a number in a blue box in a corner of the card art (bottom right for units, top left for bases). In rules text, this may be referred to as a card’s “printed HP.”
 a. If an ability changes a unit’s printed HP, the unit is treated as though it has the new printed HP for any ability or game action that references its HP or remaining HP.
 3. A unit’s HP can be modified by upgrades attached to it, or through certain card abilities. Any modifiers to a unit’s HP are cumulative. When calculating modified HP, any modifiers that increase HP are applied before any modifiers that decrease HP.
 4. A card’s HP cannot be modified below 0. If a card’s HP would be modified below 0, treat the card’s HP as 0 instead.
 5. A card cannot be healed in excess of its HP. If a card would be healed in excess of its HP, heal as much damage as possible instead. The player only is considered to have healed damage equal to the number of damage counters removed.
-6. A card’s “remaining HP” is calculated by subtracting the number of damage counters on it from its HP (accounting for any modifiers to its HP). If the remaining HP of a card is 0 or less, that card is defeated immediately.
-
-For example, a unit with 5 HP and 3 damage counters on it has 2 remaining HP.
-
+6. A card’s “remaining HP” is calculated by subtracting the number of damage counters on it from its HP (accounting for any modifiers to its HP). If the remaining HP of a card is 0 or less, that card is defeated immediately. For example, a unit with 5 HP and 3 damage counters on it has 2 remaining HP.
 7. If an ability refers to the “unit with the most/least remaining HP” in play, and multiple units are tied for the most/least remaining HP, any one of those units is a valid choice for the ability.
 
 ## 12. Counters
@@ -186,25 +160,13 @@ c. Some cards have abilities that depend on their controller having control of t
 ## 13. Drawing A Card
 
 1. To draw a card, a player takes the top card of their deck and adds it to their hand. Players draw cards during the regroup phase, or through certain abilities.
-2. When a player is instructed to draw multiple cards, those cards are considered to be drawn simultaneously, unless the draw effect specifies the cards are drawn “one at a time.”
-
-For example, when players are instructed to draw 2 cards during the regroup phase, these cards are considered added to that
-
-player’s hand at the same time.
+2. When a player is instructed to draw multiple cards, those cards are considered to be drawn simultaneously, unless the draw effect specifies the cards are drawn “one at a time.” For example, when players are instructed to draw 2 cards during the regroup phase, these cards are considered added to that player’s hand at the same time.
 3. If a card’s ability triggers when that card is drawn, the drawn card must be shown to all opponents before being added to the other cards in a player’s hand. This is not considered “revealing” this card for abilities. See 7.6.3A for more on abilities triggering from hidden zones
 
 ## 14. Discarding A Card
 
 1. To “discard” a card means to move it to its owner’s discard pile from another zone, usually from a player’s hand or deck. Certain abilities can cause a player to discard a card.
-2. When an ability discards one or more cards from a player’s hand, the player resolving the ability chooses which card(s) to discard, unless otherwise specified. In most cases, the player discarding from their own hand chooses, but some abilities have their opponent choose instead, usually after the opponent has looked at the player’s hand.
-
-For example, if Lin controls K-2S0 (SOR #145) and Becca defeats him, Lin can choose how to resolve K-2S0’s “When Defeated”
-
-ability, either dealing 3 damage to Becca’s base or making Becca discard a card from her hand. If Lin chooses the discard, Becca then chooses which card in her hand to discard; Lin does not choose for Becca.
-
-For another example, if Lin later played Spark of Rebellion (SOR #200), its ability instructs Lin to look at his opponent’s hand and
-
-discard a card from it. For this ability, Lin chooses which of Becca’s cards is discarded.
+2. When an ability discards one or more cards from a player’s hand, the player resolving the ability chooses which card(s) to discard, unless otherwise specified. In most cases, the player discarding from their own hand chooses, but some abilities have their opponent choose instead, usually after the opponent has looked at the player’s hand. For example, if Lin controls K-2S0 (SOR #145) and Becca defeats him, Lin can choose how to resolve K-2S0’s “When Defeated” ability, either dealing 3 damage to Becca’s base or making Becca discard a card from her hand. If Lin chooses the discard, Becca then chooses which card in her hand to discard; Lin does not choose for Becca. For another example, if Lin later played Spark of Rebellion (SOR #200), its ability instructs Lin to look at his opponent’s hand and discard a card from it. For this ability, Lin chooses which of Becca’s cards is discarded.
 3. Cards discarded from a deck are always discarded from the top of the deck.
 4. When an effect discards multiple cards, they are considered discarded simultaneously, unless the ability specifies “one at a time.”
 5. If a player has no cards in their hand, they cannot discard a card from their hand.
@@ -214,7 +176,7 @@ discard a card from it. For this ability, Lin chooses which of Becca’s cards i
 
 1. During the action phase, players take turns performing one of five actions: Play a Card, Attack With a Unit, Use an Action Ability, Take the Initiative, or Pass.
 2. To play a card, a player chooses a card in their hand, pays resources equal to the cost of the card (accounting for modifiers), then either puts it into play (if it is a unit or upgrade) or resolves its ability (if it is an event). A player may also play a card from a non-hand zone if that card explicitly allows it (for example, cards with Smuggle). See 6.2. Play a Card
-3. To attack with a unit, a player exhausts a unit they control (the “attacker”) and chooses what that unit is attacking: either an enemy unit in the same arena (the “defender”) or the opponent’s base. See 6.3. Attack With a Unit
+3. To attack with a unit, a player exhausts a unit they control (the “attacker”) and chooses what that unit is attacking: either an enemy unit in the same arena (the “defending unit”) or the opponent’s base. See 6.3. Attack With a Unit
 4. To use an action ability, a player chooses a card they control with an action ability. They pay the ability’s cost if it has one, then resolve the ability’s effect. A player may also use an action ability on a card in one of their out-of-play zones if the ability explicitly allows it. See 6.4. Use an Action Ability
 5. To take the initiative, a player takes the initiative counter (even if they already have it) and places it near them, showing they have control of it. Then they flip the initiative counter to its “taken” side (the side without text) to remind both players it cannot be taken again that phase. They flip it back to its “available” side (the side with text) at the start of the next action phase.
 a. Only one player can take this action each round. Once one player has taken the initiative, no other players may perform the Take the Initiative action.
@@ -225,7 +187,7 @@ d. If no player takes the initiative during the action phase, the player with th
 a. When a player passes, they are considered to have done nothing during their action.
 b. A player may pass even if there are other actions available for them to take.
 c. A player must notify their opponent when they pass (such as by saying “I pass” or making a clear gesture). Once the player does so, their opponent becomes the active player and takes a turn (unless both players have passed using consecutive actions, in which case the action phase ends).
-d. When each player has passed using consecutive actions (including when one player takes the initiative the action after their opponent passes), the action phase immediately ends and play proceeds to the regroup phase.
+d. When each player has passed using consecutive actions (including when one player takes the initiative the action after their opponent passes), the action phase immediately ends following the resolution of any waiting abilities and play proceeds to the regroup phase.
 
 ## 16. Game State
 
@@ -245,15 +207,7 @@ e. If a unit has 0 remaining HP, it is defeated.
 1. “Open information” refers to information that any player is entitled to know. Open information includes the attributes of faceup cards in play (units, upgrades, bases, and leaders), including any modifiers; the number of counters on cards; the number of cards in each player’s hand, deck, and discard pile; the attributes of cards in each player’s discard pile; and the attributes of the reverse side of each player’s leader and any captured cards. A player cannot refuse to disclose or attempt to prevent the access of open information by their opponent.
 2. “Hidden information” refers to information that has restrictions on when it can be known, and by whom. All information that is not open is considered hidden, such as the order of cards in each player’s deck. Certain information may be considered hidden information for only one player and not both players, such as cards in a player’s hand or a player’s resources.
 3. Players may only view cards considered hidden information to them when a card ability or effect specifically allows it.
-4. A player may choose to resolve an action or ability that involves information hidden to an opponent as though they have fewer options than they really do. That player still must do as much as they can when resolving such an ability, up to the point of hidden information being revealed. The player must still change the game state in some way for this to be considered an action.
-
-For example, Mon Mothma (SOR #096) has an ability that searches the top 5 cards of the player’s deck for a REBEL card, reveals
-
-it and draws it. A player must make the search upon playing Mon Mothma. However, regardless of if they find a REBEL card in the search or not, the player may choose to resolve the ability as though they did not find a REBEL card, reveal no card, and place all searched cards on the bottom of their deck.
-
-For another example, Chewbacca: Walking Carpet (SOR #003) has an action ability on his Leader side allowing the player to
-
-exhaust Chewbacca and play a unit that costs 3 or less from their hand. A player may pay the cost of the ability by exhausting Chewbacca, but may choose to resolve the ability as though they do not have a unit that costs 3 or less in hand, regardless of if they have one in their hand or not. They have still successfully changed the game state, as Chewbacca’s status has changed from ready to exhausted as part of the cost of his ability.
+4. A player may choose to resolve an action or ability that involves information hidden to an opponent as though they have fewer options than they really do. That player still must do as much as they can when resolving such an ability, up to the point of hidden information being revealed. The player must still change the game state in some way for this to be considered an action. For example, Mon Mothma (SOR #096) has an ability that searches the top 5 cards of the player’s deck for a REBEL card, reveals it and draws it. A player must make the search upon playing Mon Mothma. However, regardless of if they find a REBEL card in the search or not, the player may choose to resolve the ability as though they did not find a REBEL card, reveal no card, and place all searched cards on the bottom of their deck. For another example, Chewbacca: Walking Carpet (SOR #003) has an action ability on his Leader side allowing the player to exhaust Chewbacca and play a unit that costs 3 or less from their hand. A player may pay the cost of the ability by exhausting Chewbacca, but may choose to resolve the ability as though they do not have a unit that costs 3 or less in hand, regardless of if they have one in their hand or not. They have still successfully changed the game state, as Chewbacca’s status has changed from ready to exhausted as part of the cost of his ability.
 
 ## 18. Determining Responsibility
 
@@ -274,7 +228,7 @@ e. If the above does not apply, the active player is considered to have defeated
 
 1. A card’s name is located at the top of the card (an upgrade’s name is also reprinted on the bottom of the card). Each card has a name.
 2. Regardless of its printed language, a card’s name is considered to be the English version of its name.
-3. Some cards have a unique icon () before their names, indicating the card is unique. A unique card depicts an iconic Star Wars character, vehicle, or object. The unique icon is considered to be an attribute of the card. See 8.30. Unique, Unique Icon
+3. Some cards have a unique icon () before their names, indicating the card is unique. A unique card depicts an iconic Star Wars character, vehicle, or object. The unique icon is considered to be an attribute of the card. See 8.30. Unique, Unique Icon
 
 ## 3. Subtitle
 
@@ -295,7 +249,7 @@ e. If the above does not apply, the active player is considered to have defeated
 ## 7. Aspects
 
 1. If a card belongs to one or more aspects, those aspects are indicated by aspect icons located on one side of the card. Bases and both sides of leaders have aspect icons on the right, indicating that they provide those aspects to their deck. Units, events, and upgrades have aspect icons on the left, indicating that they incur those aspect penalties to play if not provided by a player’s leader or base. Each card has between 0 and 2 aspect icons. See 1.5.6. Aspects
-2. Aspects categorize cards into different themes and play styles. There are six aspects: Vigilance , Command , Aggression , Cunning , Villainy , and Heroism .
+2. Aspects categorize cards into different themes and play styles. There are six aspects: Vigilance , Command , Aggression , Cunning , Villainy , and Heroism .
 3. A card without any aspect icons does not belong to any aspect, and is considered a “neutral” card.
 
 ## 8. Power
@@ -375,52 +329,28 @@ b. If a leader flips and enters play through a non-deploy ability, it is not con
 
 ## 5. Unit
 
-1. A unit is a type of card depicting a Star Wars character or vehicle. Each unit has a name, cost, power, HP, trait(s), and arena type. A unit may also have a subtitle, aspect icons, abilities, and a unique icon () before its name.
+1. A unit is a type of card depicting a Star Wars character or vehicle. Each unit has a name, cost, power, HP, trait(s), and arena type. A unit may also have a subtitle, aspect icons, abilities, and a unique icon () before its name.
 2. To play a unit, pay its cost—following any additional costs or play restrictions in effect for that unit—and place the unit in its designated arena (ground or space). See 6.2. Play a Card
 3. A unit enters play exhausted and remains in play until it is defeated.
 4. A unit is defeated when it has no remaining HP or when an ability defeats it directly. When a unit is defeated, place it in its owner’s discard pile.
-5. A Leader Unit is a type of unit. Leader Units have the same rules as non-leader units, except that they are deployed instead of being played, and they are returned to the base zone instead of being discarded.
+5. A Leader Unit isa type of unit. Leader Units have the same rules as non-leader units, except that they are deployed instead of being played, and they are returned to the base zone instead of being discarded.
 6. Some units can also attach to units as upgrades. If an ability causes a unit in play to be attached as an upgrade, all damage is removed from that unit and all upgrades on that unit are defeated. While a unit is attached to another unit as an upgrade, it is considered an upgrade and not a unit for all purposes.
 
 ## 6. Upgrade
 
-1. An upgrade is a type of card that attaches to a unit. Each upgrade has a name, cost, trait(s), power modifier, and HP modifier. An upgrade may also have aspect icons, abilities, and a unique icon () before its name.
+1. An upgrade is a type of card that attaches to a unit. Each upgrade has a name, cost, trait(s), power modifier, and HP modifier. An upgrade may also have aspect icons, abilities, and a unique icon () before its name.
 2. To play an upgrade, pay the upgrade’s cost—following any additional costs or play restrictions in effect for that upgrade—and attach it to a unit in play. When attaching an upgrade, tuck the upgrade halfway under the unit so that the upgrade’s ability and modifiers can be seen clearly. See 6.2. Play a Card
 3. All upgrades have attachment restrictions that restrict how they can be played and attached. If an upgrade doesn’t have a printed attachment restriction, it inherently has the attachment restriction: “Attach to a unit.” An upgrade may have a more specific attachment restriction (e.g. “Attach to a friendly unit.”). An upgrade cannot be played if there is no unit in play to which the upgrade can attach.
 a. A unit is considered “eligible” for an upgrade if that upgrade can attach to it, accounting for its attachment restrictions. A unit’s eligibility is only checked as the upgrade is being played or attached. If an upgrade attaches to a unit that later becomes ineligible for that upgrade, the upgrade remains attached to that unit.
-b. While a non-upgrade card is attached as an upgrade, it is considered to have an attachment restriction including any attributes specified by the ability that attached it as an upgrade. If the card ceases to be in play as an upgrade, it loses this attachment restriction. For another unit to be considered “eligible” for that upgrade, it must account for this attachment restriction (i.e. the upgrade must have been able to attach to that unit via the original ability).
-
-For example, a card with Piloting specifies that if the card is played as an upgrade, it must be played on a friendly Vehicle unit.
-
-If a player uses Piloting to play a card as an upgrade, that upgrade has the attachment restriction: “Attach to a friendly Vehicle unit”.
-
-For another example, Phantom II (JTL #050) has an action ability that lets you attach it as an upgrade to The Ghost. If a player
-
-uses this ability to attach Phantom II as an upgrade, that upgrade has the attachment restriction: “Attach to The Ghost.”
-c. Some unit abilities may override an upgrade’s attachment restriction for the purposes of attaching that upgrade to that unit.
-
-For example, Millennium Falcon: Get Out and Push (JTL #249) has the ability: “You may play or deploy one additional Pilot on this
-
-unit.” This ability overrides the standard attachment restriction for Pilots that they must attach to a unit without a Pilot on it.
+b. While a non-upgrade card is attached as an upgrade, it is considered to have an attachment restriction including any attributes specified by the ability that attached it as an upgrade. If the card ceases to be in play as an upgrade, it loses this attachment restriction. For another unit to be considered “eligible” for that upgrade, it must account for this attachment restriction (i.e. the upgrade must have been able to attach to that unit via the original ability). For example, a card with Piloting specifies that if the card is played as an upgrade, it must be played on a friendly Vehicle unit. If a player uses Piloting to play a card as an upgrade, that upgrade has the attachment restriction: “Attach to a friendly Vehicle unit without a Pilot on it”. For another example, Phantom II (JTL #050) has an action ability that lets you attach it as an upgrade to The Ghost. If a player uses this ability to attach Phantom II as an upgrade, that upgrade has the attachment restriction: “Attach to The Ghost.”
+c. Some unit abilities may override an upgrade’s attachment restriction for the purposes of attaching that upgrade to that unit. For example, Millennium Falcon: Get Out and Push (JTL #249) has the ability: “You may play or deploy one additional Pilot on this unit.” This ability overrides the standard attachment restriction for Pilots that they must attach to a unit without a Pilot on it.
 4. There is no limit to the number of upgrades that can be attached to a unit. An upgrade can only attach to one unit at a time.
 5. Upgrades may be played on friendly units or enemy units. If a player plays an upgrade onto an enemy unit, that player still controls the upgrade. If that upgrade gives abilities to the attached unit, the unit’s controller resolves those abilities.
 6. When an upgrade is attached to a unit, the unit also is attached to that upgrade. If an upgrade detaches from a unit, the unit also detaches from that upgrade.
-7. Each upgrade has a power modifier and HP modifier. A unit’s power and HP are cumulatively modified by each upgrade attached to it.
-
-For example, if a unit originally has 1 power and 3 HP, then receives two Experience token upgrades, those upgrades will modify
-
-that unit’s power and HP positively, resulting in the unit having 3 power and 5 HP.
-8. Some upgrades give abilities to the unit they’re attached to. If an upgrade’s text box uses the phrase “attached unit gains _,” the text following “gains” is considered an ability that the attached unit has while the upgrade is attached to it, and such an ability can be lost, ignored, or affected by other abilities.
-
-For example, Protector (SOR #057) has the text “Attached unit gains Sentinel” in its text box. The unit Protector is attached to is
-
-considered to have the Sentinel keyword while Protector is attached to it. If Protector is defeated, the attached unit immediately loses Sentinel. Additionally, the attached unit’s opponent could play SpecForce Soldier (SOR #140) and cause the attached unit to lose Sentinel for the phase.
+7. Each upgrade has a power modifier and HP modifier. A unit’s power and HP are cumulatively modified by each upgrade attached to it. For example, if a unit originally has 1 power and 3 HP, then receives two Experience token upgrades, those upgrades will modify that unit’s power and HP positively, resulting in the unit having 3 power and 5 HP.
+8. Some upgrades give abilities to the unit they’re attached to. If an upgrade’s text box uses the phrase “attached unit gains _,” the text following “gains” is considered an ability that the attached unit has while the upgrade is attached to it, and such an ability can be lost, ignored, or affected by other abilities. For example, Protector (SOR #057) has the text “Attached unit gains Sentinel” in its text box. The unit Protector is attached to is considered to have the Sentinel keyword while Protector is attached to it. If Protector is defeated, the attached unit immediately loses Sentinel. Additionally, the attached unit’s opponent could play SpecForce Soldier (SOR #140) and cause the attached unit to lose Sentinel for the phase.
 9. If a unit has multiple attached upgrades that give the same ability, it gains that ability multiple times. Keyword abilities do not “stack” (meaning, the card does not gain any additional effects) unless those keywords are followed by a numeral.
-10. Some upgrades have abilities that affect the unit they’re attached to, but do not give the attached unit an ability. Such abilities refer to the attached unit but do not use the phrase “attached unit gains.”
-
-For example, Entrenched (SOR #072) has the ability: “Attached unit can’t attack bases.” This ability affects the attached unit,
-
-but it is not an ability given to the unit. If the attached unit loses all abilities (such as by Force Lightning, SOR #138), the ability on Entrenched would still be in effect.
+10. Some upgrades have abilities that affect the unit they’re attached to, but do not give the attached unit an ability. Such abilities refer to the attached unit but do not use the phrase “attached unit gains.” For example, Entrenched (SOR #072) has the ability: “Attached unit can’t attack bases.” This ability affects the attached unit, but it is not an ability given to the unit. If the attached unit loses all abilities (such as by Force Lightning, SOR #138), the ability on Entrenched would still be in effect.
 11. An upgrade is defeated when either the unit it is attached to leaves play, or when an ability defeats it directly. When an upgrade is defeated, the attached unit loses all power, HP, and abilities given to it by the upgrade, and the upgrade is placed in its owner’s discard pile.
 12. Some upgrades are also tokens and have the “token upgrade” card type. Token upgrades follow the same rules for upgrades outlined above, except that they are put into play differently and are set aside when defeated.
 13. A unit is considered “upgraded” while it has at least one upgrade attached to it.
@@ -436,11 +366,13 @@ a. Keywords can be given to token units and apply as they would to a normal unit
 5. An Experience token is a type of token upgrade. An Experience token is an upgrade with the LEARNED trait that gives the unit it is attached to +1 power and +1 HP. If a unit has multiple Experience tokens attached, it will receive bonus power and bonus HP from each Experience token. When an ability instructs a player to give an Experience token to a unit, they take an Experience token that has been set aside and attach it to that unit.
 6. A Shield token is a type of token upgrade. A Shield token is an upgrade with the ARMOR trait that gives the unit it is attached to +0 power and +0 HP and has the text: “If damage would be dealt to attached unit, prevent that damage. If you do, defeat a Shield token on it.” When an ability instructs a player to give a Shield token to a unit, they take a Shield token that has been set aside and attach it to that unit.
 a. If a unit has multiple Shield tokens attached to it, only one Shield token is defeated per instance of damage.
-7. A Battle Droid token is a type of token unit. A Battle Droid token is a ground unit with the SEPARATIST, DROID, and TROOPER traits that has a Villainy aspect icon (), 1 power, and 1 HP.
-8. A Clone Trooper token is a type of token unit. A Clone Trooper token is a ground unit with the REPUBLIC, CLONE, and TROOPER traits that has a Heroism aspect icon (), 2 power, and 2 HP.
-9. A TIE Fighter token is a type of token unit. A TIE Fighter token is a space unit with the VEHICLE and FIGHTER traits that has a Villainy aspect icon (), 1 power, and 1 HP.
-10. An X-Wing token is a type of token unit. An X-Wing token is a space unit with the VEHICLE and FIGHTER traits that has a Heroism aspect icon (), 2 power, and 2 HP.
+7. A Battle Droid token is a type of token unit. A Battle Droid token is a ground unit with the SEPARATIST, DROID, and TROOPER traits that has a Villainy aspect icon (), 1 power, and 1 HP.
+8. A Clone Trooper token is a type of token unit. A Clone Trooper token is a ground unit with the REPUBLIC, CLONE, and TROOPER traits that has a Heroism aspect icon (), 2 power, and 2 HP.
+9. A TIE Fighter token is a type of token unit. A TIE Fighter token is a space unit with the VEHICLE and FIGHTER traits that has a Villainy aspect icon (), 1 power, and 1 HP.
+10. An X-Wing token is a type of token unit. An X-Wing token is a space unit with the VEHICLE and FIGHTER traits that has a Heroism aspect icon (), 2 power, and 2 HP.
 11. A Force token is a type of token with name “The Force,” subtype “Force Token,” and no traits. A player’s Force token is created in their base zone. A player can’t control more than one Force token. See 8.38 The Force
+12. A Spy token is a type of token unit. A Spy token is a ground unit with the OFFICIAL trait that has no aspect icons, 0 power, 2 HP, and Raid 2.
+13. A Credit token is a type of token with name “Credit,” subtype “Credit Token,” the Supply trait, and ability “While paying resources, you may defeat this token. If you do, pay 1 less.” Credit tokens are created in a player’s resource zone but are not resources.
 
 ## 4. Zones
 
@@ -460,11 +392,7 @@ a. If a unit has multiple Shield tokens attached to it, only one Shield token is
 ## 3. Ground Arena
 
 1. The ground arena is a zone shared by players, located next to each player’s base zone. Each player’s ground units are played into this zone, and face their controller when they’re ready.
-2. The ground arena can be on either the left or right side of the base zone. The side is determined when a player plays the first unit of the game—that unit’s arena type (ground or space) establishes the matching arena on whichever side of the base zone that the unit was played in, and automatically establishes the opposite arena on the other side. These sides will remain the same for the rest of the game, even if there are no units in either arena later on.
-
-For example, if the first player plays Death Star Stormtrooper (SOR #128) on the left side of their base zone, they have established
-
-the shared ground arena on their left side and have established the shared space arena on their right side. (Note that their opponent’s perspective of the arenas will be mirrored, with the ground arena on their opponent’s right side.)
+2. The ground arena can be on either the left or right side of the base zone. The side is determined when a player plays the first unit of the game—that unit’s arena type (ground or space) establishes the matching arena on whichever side of the base zone that the unit was played in, and automatically establishes the opposite arena on the other side. These sides will remain the same for the rest of the game, even if there are no units in either arena later on. For example, if the first player plays Death Star Stormtrooper (SOR #128) on the left side of their base zone, they have established the shared ground arena on their left side and have established the shared space arena on their right side. (Note that their opponent’s perspective of the arenas will be mirrored, with the ground arena on their opponent’s right side.)
 3. Friendly ground units can attack enemy ground units in the ground arena, as well as the enemy base. They do not leave the ground arena when attacking the enemy base.
 4. Ground units cannot attack enemy units in the space arena unless an ability specifically allows it. However, ground units may be able to deal damage to units in the space arena through abilities.
 5. Units in the ground arena are considered ground units and not space units while in play, regardless of what their arena type is.
@@ -472,20 +400,17 @@ the shared ground arena on their left side and have established the shared space
 ## 4. Space Arena
 
 1. The space arena is a zone shared by players, located next to each player’s base zone. Each player’s space units are played into this zone, and face their controller when they’re ready.
-2. The space arena can be on either the left or right side of the base zone. The side is determined when a player plays the first unit of the game—that unit’s arena type (ground or space) establishes the matching arena on whichever side of the base zone that the unit was played in, and automatically establishes the opposite arena on the other side. These sides will remain the same for the rest of the game, even if there are no units in either arena later on.
-
-For example, if the first player plays Green Squadron A-Wing (SOR #141) on the left side of their base zone, they have established
-
-the shared space arena on their left side and have established the shared ground arena on their right side. (Note that their opponent’s perspective of the arenas will be mirrored, with the space arena on their opponent’s right side.)
+2. The space arena can be on either the left or right side of the base zone. The side is determined when a player plays the first unit of the game—that unit’s arena type (ground or space) establishes the matching arena on whichever side of the base zone that the unit was played in, and automatically establishes the opposite arena on the other side. These sides will remain the same for the rest of the game, even if there are no units in either arena later on. For example, if the first player plays Green Squadron A-Wing (SOR #141) on the left side of their base zone, they have established the shared space arena on their left side and have established the shared ground arena on their right side. (Note that their opponent’s perspective of the arenas will be mirrored, with the space arena on their opponent’s right side.)
 3. Friendly space units can attack enemy space units in the space arena, as well as the enemy base. They do not leave the space arena when attacking the enemy base.
 4. Space units cannot attack enemy units in the ground arena unless an ability specifically allows it. However, space units may be able to deal damage to units in the ground arena through abilities.
 5. Units in the space arena are considered space units and not ground units while in play, regardless of what their arena type is.
 
 ## 5. Resource Zone
 
-1. Each player has their own resource zone. Cards in a resource zone are called “resources,” which can be exhausted to pay the costs of other cards. See 1.7., Resources
+1. Each player has their own resource zone. Cards that are “resourced” are placed into the resource zone as “resources,” which can be exhausted to pay the costs of other cards. See 1.7., Resources
 2. Resources are placed facedown and remain facedown while in a resource zone. A player may view facedown resources they control at any time, returning them facedown when finished. Those cards are considered hidden information for that player’s opponent.
 3. Players can choose to add a card from their hand to their resource zone during each regroup phase.
+4. Credit tokens are created in the resource zone but are not resources.
 
 ## 6. Deck
 
@@ -509,11 +434,7 @@ the shared space arena on their left side and have established the shared ground
 ## 9. In-Play And Out-Of-Play
 
 1. There are four types of “in-play” zones: each player’s base zone, the ground arena, the space arena, and each player’s resource zone. The faceup sides of cards in these zones are considered “in play,” which means that by default they have the potential to affect the game through use of their abilities, power, and HP. The facedown sides of cards are considered out-of-play. A player controls the cards they play in these zones, or put into play in these zones.
-2. There are three types of “out-of-play” zones: each player’s deck, each player’s hand, and each player’s discard pile. Cards in these zones are considered “out of play,” which means that by default they cannot affect the game through use of their abilities, power, or HP. For an ability to resolve from an out-of-play zone or to affect a card in an out-of-play zone, the ability must either explicitly state the out-of-play zone it resolves from or affects, or it must be a type of ability that by default resolves from an out-of-play zone.
-
-For example, if a player played Waylay (SOR #222), they could only return a non-leader unit from play to its owner’s hand, as the
-
-ability does not specify it affects the discard pile. However, The Emperor’s Legion (SOR #091) does specifically return units from the discard pile.
+2. There are three types of “out-of-play” zones: each player’s deck, each player’s hand, and each player’s discard pile. Cards in these zones are considered “out of play,” which means that by default they cannot affect the game through use of their abilities, power, or HP. For an ability to resolve from an out-of-play zone or to affect a card in an out-of-play zone, the ability must either explicitly state the out-of-play zone it resolves from or affects, or it must be a type of ability that by default resolves from an out-of-play zone. For example, if a player played Waylay (SOR #222), they could only return a non-leader unit from play to its owner’s hand, as the ability does not specify it affects the discard pile. However, The Emperor’s Legion (SOR #091) does specifically return units from the discard pile.
 
 ## 10. Play Area
 
@@ -530,7 +451,7 @@ ability does not specify it affects the discard pile. However, The Emperor’s L
 
 ## 1. General
 
-1. A game consists of multiple rounds, and each round consists of an action phase and regroup phase. During the action phase, players take turns taking an action. During the regroup phase, players can put a resource into play and ready exhausted cards.
+1. A game consists of multiple rounds, and each round consists of an action phase and regroup phase. During the action phase, players take turns taking an action. During the regroup phase, players can resource a card from their hand and ready exhausted cards.
 2. Each step of setup and each step of both phases must be completed in full unless otherwise specified.
 3. Before starting the game, each player needs a deck, including a leader and base, and token cards matching any types that their decks create. Players also need damage counters and one initiative counter. (Counters and tokens may be represented by other objects, such as dice.)
 
@@ -563,7 +484,7 @@ c. End of the action phase. Any lasting effects that expire when the action phas
 1. The regroup phase consists of the following 5 steps, in order: Start of the regroup phase, Draw cards, Resource cards, Ready cards, End of the regroup phase.
 a. Start of the regroup phase. Any lasting effects that expire when the regroup phase starts expire now. Any abilities or effects that trigger at the start of the regroup phase trigger now.
 b. Draw cards. Each player draws 2 cards.
-c. Resource cards. Starting with the active player, each player may choose 1 card from their hand to put into play as a resource, facedown and exhausted. Players may choose not to resource a card.
+c. Resource cards. Starting with the active player, each player may choose 1 card from their hand to resource, facedown and exhausted. Players may choose not to resource a card.
 d. Ready cards. Each player readies all exhausted cards they control, including units, resources, and their leader.
 e. End of the regroup phase. Any lasting effects that expire when the regroup phase ends or when the round ends expire now (e.g. “for this phase” and “for this round”).
 2. After the regroup phase ends, a new round begins with the start of a new action phase.
@@ -592,11 +513,8 @@ d. Each time a player plays a card, that card enters play as a new copy of that 
 e. Some action, event, and triggered abilities allow a player to play a card. Unless otherwise specified by the ability, the card must be played from the player’s hand, and the player must pay all costs of the card when playing it this way. Any abilities that trigger while playing and/or resolving the card resolve only after the current ability finishes resolving. The player is not considered to have taken an additional action if they played a card due to an ability.
 f. Playing a Card consists of the following 5 steps in order, explained in detail below: Declare intent, Check restrictions, Determine cost(s), Pay cost(s), and Put card into play/discard. After playing the card, resolve any “When Played” abilities on the card and any other abilities that triggered while playing and/or resolving the card, including Ambush and Shielded. See 7.6. Triggered Abilities
 1. Declare intent. The player shows the card they intend to play from their hand, so that all other players can view it. Any abilities that are active “while playing” a card become active, including any abilities granted to the played card by a modified “Play a Card” action.
-a. When declaring intent, the player also declares how they intend to play the card, if it can be played as multiple card types. If performing a modified Play a Card action that specifies the type of card to play, the intent must be to play that card in that way.
-
-For example, a card with Piloting can be played as either a unit or an upgrade. If a player takes a modified Play a Card action that
-
-specifies they must “play a unit,” they must declare the intent to play a card as a unit, and cannot use the Piloting keyword to play that card as an upgrade.
+a. When declaring intent, the player also declares how they intend to play the card, if it can be played as multiple card types. If performing a modified Play a Card action that specifies the type of card to play, the intent must be to play that card in that way. For example, a card with Piloting can be played as either a unit or an upgrade. If a player takes a modified Play a Card action that specifies they must “play a unit,” they must declare the intent to play a card as a unit, and cannot use the Piloting keyword to play that card as an upgrade.
+b. If a modified “Play a Card” action grants an ability to the played card that is conditional on a below step, it grants that ability immediately once the condition is satisfied.
 2. Check restrictions. Determine if there are any active abilities, effects, or other play restrictions that would prevent the card from being played at this time. If there are any, the card cannot be played.
 a. Some abilities prevent the playing of a card or type of card. For example, Regional Governor (SOR #062) has an ability stating opponents “can’t play” a named card; this is considered a “play restriction” for the named card.
 b. If an upgrade uses the phrase “attach to,” the text following “attach to” indicates a type of unit that’s eligible for that upgrade; this is a “play restriction” for that upgrade. If there are no units in play, no upgrades can be played. If there is no eligible unit in play for the upgrade to attach to, the upgrade cannot be played.
@@ -624,28 +542,31 @@ d. The card is considered “played” as soon as it enters play or, in the case
 ### 0. General
 
 a. A player follows the steps below when they choose to take the Attack With a Unit action on their turn, or when they resolve any ability that lets them attack with a unit. See 1.15. Actions
-b. Only one unit may attack at a time, and only ready units may perform an attack, unless otherwise specified. A player may only attack with units they control and may only attack enemy units or enemy bases. If an attacking player loses control of the attacker or gains control of the defender during an attack, proceed directly to the completion of the attack (after resolving any abilities that have already triggered). These restrictions apply even if the attack is prompted by another ability. If an ability triggers multiple attacks, resolve them sequentially.
-c. “Combat damage” is damage dealt during the “Deal combat damage” step of an attack. Damage dealt outside of this step during an attack is not considered to be combat damage. Damage dealt by triggered abilities is not considered combat damage.
+b. Only one unit may attack at a time, and only ready units may perform an attack, unless otherwise specified. A player may only attack with units they control and may only attack enemy units or enemy bases. These restrictions apply even if the attack is prompted by another ability. If an ability triggers multiple attacks, resolve them sequentially.
+c. “Combat damage” refers explicitly to the damage dealt during the “End attack” step of an attack when units deal damage equal to their power to each other or to bases. Damage dealt outside of this step during an attack is not considered to be combat damage. Damage dealt by triggered abilities is not considered combat damage.
 d. Some action, event, and triggered abilities allow a player to attack with a unit. When resolving an ability that allows a player to attack with a unit, the player must make an attack if possible. The player is not considered to have taken an additional action if they attack due to an ability.
-e. Attacking With a Unit consists of the following 3 steps in order, explained in detail below: Declare the attack, Deal combat damage, and Complete the attack. After each step, resolve any abilities triggered during that step before proceeding to the next step in the attack. See 7.6. Triggered Abilities
-1. Declare the attack. The active player chooses and exhausts a ready unit they control and then chooses what to attack: either an enemy unit in the same arena as it or the opponent’s base. Any abilities that are active “while attacking” become active.
-a. If an ability prompts an attack, apply any “for this attack” lasting effects of the ability. If the effect impacts what the attacker can attack, the player must choose a eligible unit or base to attack. If no such choice can be made, the attack immediately ends. If an effect is contingent on which defender is chosen, the effect applies as soon as the defender is declared.
-b. Only exhaust the attacker if there is an enemy unit or base that it can attack. If there is nothing for the attacker to attack, cease the attack and return the game state to the way it was before this step.
-c. The active player becomes the “attacking player” and the opponent that controls the enemy unit or base being attacked becomes the “defending player” for this attack.
-d. The unit performing the attack becomes the “attacker” for this attack. If the attacker is attacking an enemy unit, that unit becomes the “defender” for this attack and the attacker is considered to be “attacking a unit” for the duration of this attack. If the attacker is attacking a base, there is no “defender” for this attack and the attacker is considered to be “attacking a base” for the duration of this attack.
-e. If the defending player has one or more units with Sentinel in the same arena as the attacker, one of those units must be chosen as the defender, unless the attacker has Saboteur, in which case it may ignore Sentinel.
-f. Any abilities that activate while an attack is occurring become active for the duration of the attack. This includes Raid, “While this unit is attacking,” and “While this unit is defending” abilities. If the ability is subject to a further conditional (e.g. “While this unit is attacking a damaged unit”), it is only active while all of its conditions are true.
-g. After declaring the attack, resolve any “On Attack” abilities on the attacker and any other abilities triggered during this step, including Restore, Saboteur, and “When this unit is attacked” abilities on the defender. See 7.6. Triggered Abilities
-2. Deal combat damage. If attacking a base, the attacker deals damage equal to its power to that base. If attacking a unit, the attacker and defender simultaneously deal damage equal to their power to each other.
-a. If the attacker is no longer in-play, no combat damage is dealt. Proceed directly to the next step of this attack.
-b. If the defender is no longer in-play, no combat damage is dealt unless the attacker has Overwhelm.
-c. If either unit that would be dealt damage has one or more Shield tokens attached to it, remove a Shield token from that unit and don’t deal it any combat damage.
-d. If the attacker has Overwhelm, deal its excess damage to the opponent’s base, unless the defender had a Shield token that prevented the damage. This excess damage is dealt immediately and is considered combat damage. See 1.9. Damage
-e. If the attacker has an ability where it deals combat damage before the defender, the defender must survive the dealt damage before it can deal combat damage back to the attacker. In such a case, if the defender has Grit, it will receive bonus power from the damage just dealt to it.
-f. Once combat damage is dealt, if a unit has no remaining HP, it is defeated immediately.
-g. After dealing all combat damage, resolve any “When Defeated” abilities on defeated units and any other abilities triggered during this step, including “When this unit deals combat damage” and “When a unit leaves play” abilities. See 7.6. Triggered Abilities
-3. Complete the attack. Any abilities or lasting effects that were active during the attack expire, including Raid and “While this unit is attacking” abilities.
-a. After completing the attack, resolve any “When this unit completes an attack” abilities (if the attacker is still in play) and any other abilities triggered during this step. See 7.6. Triggered Abilities
+e. Attacking With a Unit consists of the following 5 steps in order, explained in detail below: Declare intent, Check restrictions, Begin attack, Calculate combat damage, and End attack. After ending the attack, resolve any “When Attack Ends” abilities on the attacker and any other abilities that triggered while attacking, excluding abilities that already resolved in the “On Attack” step.See 7.6. Triggered Abilities
+1. Declare intent. The player initiating the attack chooses a unit they control to be the attacker and an enemy unit or an opponent’s base for that unit to attack. Any abilities granted to the chosen cards by a modified “Attack With a Unit” action are active.
+a. The player initiating the attack becomes the “attacking player” and the opponent that controls the enemy unit or base being attacked becomes the “defending player” for this attack.
+b. The unit performing the attack becomes the “attacker” for this attack. If the attacker is attacking an enemy unit, that unit becomes the “defending unit” for this attack and the attacker is considered to be “attacking a unit” for the duration of this attack. If the attacker is attacking a base, there is no “defending unit” for this attack and the attacker is considered to be “attacking a base” for the duration of this attack.
+2. Check restrictions. Determine if the chosen attacker and unit or base to be attacked are valid choices. Also check if there are any active abilities, effects, or other play restrictions that would prevent the attack from being made at this time. If there are any, the attack cannot be made.
+a. The attacker must be a ready unit, and must be in the same arena as the defending unit if attacking a unit. Abilities or modified Attack With a Unit actions may override these restrictions.
+b. If the defending player has one or more units with Sentinel in the same arena as the attacker, one of those units must be chosen as the defending unit, unless the attacker has Saboteur, in which case it may ignore Sentinel.
+c. If the attack declaration is invalid, return the game state to the way it was before the attack was declared.
+3. Begin attack. Exhaust the attacker. Any abilities that are active “while attacking” or “while defending” become active, including Raid. Then, trigger all “On Attack” abilities on the attacker, all “On Defense” abilities on the defending unit or base, and any other abilities that trigger during this step, including Restore and Saboteur. See 7.6. Triggered Abilities
+a. If a “while attacking” or “while defending” ability is subject to a further conditional (e.g. “While this unit is attacking a damaged unit”), it is only active while all of its conditions are true.
+b. All abilities that are waiting to resolve at this step in the attack resolve immediately before proceeding to the next step of the attack.
+c. If the attacker or defending unit are defeated or removed from play during this step, still proceed with the other steps of the attack.
+4. Calculate combat damage. Determine how much damage will be dealt by and to the attacker and the defending unit or base in the next step of the attack.
+a. If attacking a base, the attacker will damage equal to its current power to that base. If attacking a unit, the attacking and defending units will simultaneously deal damage equal to their current power to each other.
+b. If the attacker is no longer in-play, no combat damage is dealt. Proceed directly to the next step of this attack.
+c. If the defending unit is no longer in-play, no combat damage is dealt unless the attacker has Overwhelm.
+d. If the attacker has Overwhelm and is attacking a unit, it will deal an amount of damage to the defending unit necessary to defeat it, and all excess damage to the defending player’s base. If the defending unit would not be defeated by the attacker’s combat damage (such as through an ability or by having a Shield token attached), then there is no excess damage and no damage is dealt to the defending player’s base.
+5. End attack. Attacking and defending units deal combat damage, and all “When Attack Ends” abilities trigger. Any abilities that were active during the attack expire.
+a. Once combat damage is dealt, if a unit has no remaining HP, it is defeated immediately.
+b. If the attacker is defeated by combat damage, its “When Attack Ends” abilities still trigger.
+c. If an ability lets a unit deals combat damage before another unit, the unit that deals combat damage second must survive the dealt damage before it can deal combat damage back to the first unit. In such a case, if the second unit has Grit, it will receive bonus power from the damage just dealt to it. If multiple abilities let a unit deal combat damage before or after another unit, its controller decides which option to use.
+d. After dealing all combat damage, resolve any “When Defeated” abilities on defeated units and any other abilities triggered during this step, including “When Attack Ends” abilities. Any abilities that were active for the attack are no longer active while resolving these triggered abilities.See 7.6. Triggered Abilities
 
 ## 4. Use An Action Ability
 
@@ -656,23 +577,15 @@ b. Action abilities are abilities that begin with the bold word “Action” or 
 c. In order to use an action ability, a player must be able to pay the ability’s cost if it has one and change the game state through paying that ability’s cost and/or resolving that ability’s effect.
 d. A player may use an action ability whose effect does not change the game state, as long as paying the ability’s cost or resolving the ability changes the game state.
 e. A player may use an action ability that references a particular kind of unit even if no such unit is in play, as long as paying the ability’s cost or resolving the ability changes the game state.
-f. A player may use a conditional action ability even if the condition is false, as long as paying the ability’s cost or resolving the ability changes the game state.
-
-For example, Iden Versio: Inferno Squad Commander (SOR #002) has an action ability that says “If an enemy unit was defeated
-
-this phase, heal 1 damage from your base.” Iden’s controller may use this ability even if an enemy unit was not defeated this phase, since the cost of the ability is exhausting Iden, which changes the game state. They would not heal any damage from their base.
+f. A player may use a conditional action ability even if the condition is false, as long as paying the ability’s cost or resolving the ability changes the game state. For example, Iden Versio: Inferno Squad Commander (SOR #002) has an action ability that says “If an enemy unit was defeated this phase, heal 1 damage from your base.” Iden’s controller may use this ability even if an enemy unit was not defeated this phase, since the cost of the ability is exhausting Iden, which changes the game state. They would not heal any damage from their base.
 g. Using an Action Ability consists of the following 5 steps in order, explained in detail below: Declare intent, Check restrictions, Determine cost(s), Pay cost(s), and Resolve the ability. After using the action ability, resolve any abilities that triggered while using the action ability. See 7.6. Triggered Abilities
 1. Declare intent. The player indicates the ability they intend to resolve.
 2. Check restrictions. Determine if there are any active abilities or other restrictions that would prevent the action ability from resolving. If there are any, the action ability cannot be used.
 a. One such restriction is that paying the cost of an action ability and/or resolving the action ability must change the game state in some way. If neither would change the game state, the active player cannot attempt to use that ability and must take a different action. See 1.16. Game State
 3. Determine cost(s). If the ability has a cost, determine that cost at this step.
 a. If an action ability has a cost, it is found in brackets following the word “Action.”
-b. If an action ability cost uses the  icon, it means the card with the ability must exhaust in order to use the ability. If the cost does not use the  icon, the card may use the ability whether it is ready or exhausted.
-c. An action ability cost may include multiple parts, which are separated by commas within the brackets.
-
-For example, Luke Skywalker: Faithful Friend (SOR #005) has an Action ability that requires you to pay 1 resource and exhaust
-
-Luke. Paying 1 resource and exhausting Luke are both part of the ability’s cost, and both must be paid in order to use the ability.
+b. If an action ability cost uses the icon, it means the card with the ability must exhaust in order to use the ability. If the cost does not use the icon, the card may use the ability whether it is ready or exhausted.
+c. An action ability cost may include multiple parts, which are separated by commas within the brackets. For example, Luke Skywalker: Faithful Friend (SOR #005) has an Action ability that requires you to pay 1 resource and exhaust Luke. Paying 1 resource and exhausting Luke are both part of the ability’s cost, and both must be paid in order to use the ability.
 4. Pay cost(s). Pay the ability’s determined cost, if it has one. If the action ability doesn’t have a cost, skip this step.
 a. If any part of the cost cannot be paid, cease this process without paying any costs, and choose a different action to take.
 b. A player cannot pay resources in excess of an ability’s determined cost.
@@ -688,11 +601,7 @@ b. If the effect of the ability does not change the game state, it still counts 
 1. An ability is specialized game text that indicates how a card affects the game. If a card has any printed abilities, they are found in the text box of that card. An upgrade can give an ability to a unit if that upgrade indicates that the attached unit “gains” the ability; treat the unit as having the ability in its text box for as long as the upgrade is attached to it. Unless otherwise specified, a player controls the abilities on cards they play and control.
 2. There are five types of abilities: action abilities, constant abilities, event abilities, keyword abilities, and triggered abilities. Each type of ability has its own associated rules.
 3. An effect is a non-cost part of a card ability that has the potential to change the game state. Some effects resolve separately from the ability that created them, or replace the standard resolution of the ability that created them.
-4. If an ability that affects both players can be resolved simultaneously, resolve the ability simultaneously. Otherwise, the player that controls the card with the ability can choose the order in which each player is affected by the ability.
-
-For example, Grand Admiral Thrawn (SOR #016) has an ability where his controller looks at the top card of each player’s deck. This
-
-ability cannot be resolved simultaneously, so Thrawn’s controller chooses the order in which they look at the cards. They are not required to look at the cards in a specific order.
+4. If an ability that affects both players can be resolved simultaneously, resolve the ability simultaneously. Otherwise, the player that controls the card with the ability can choose the order in which each player is affected by the ability. For example, Grand Admiral Thrawn (SOR #016) has an ability where his controller looks at the top card of each player’s deck. This ability cannot be resolved simultaneously, so Thrawn’s controller chooses the order in which they look at the cards. They are not required to look at the cards in a specific order.
 5. When a player resolves an ability, they must resolve the effects of that ability in the order they are written. If an ability allows a player to choose some number of options, they may resolve those options in any order.
 
 ### 6. Abilities that Modify Actions
@@ -716,16 +625,8 @@ e. If an ability instructs a player to take a modified action, any abilities tri
 
 1. A constant ability is always in effect while the card it is on is in play. Constant abilities don’t have any special styling.
 2. A constant ability immediately comes into effect when the card it is on enters play and remains in effect while the card is in play.
-3. Some constant abilities continuously check the game for a specific condition to be met for their effects to apply to the game. These abilities usually include the word “while.”
-
-For example, Vigilant Honor Guards (SOR #48) has a constant ability: “While this unit is undamaged, it gains Sentinel.” Although
-
-Vigilant Honor Guards always has this ability text, the ability’s effect—giving this unit the Sentinel keyword--only applies if it is undamaged.
-a. If the conditions of multiple conditional constant abilities only are met by each other, they are not considered met.
-
-For example, Chloe controls two units that each have the ability: “While another friendly unit has Saboteur, this unit gains
-
-Saboteur.” If these are the only two units Chloe controls, neither has Saboteur.
+3. Some constant abilities continuously check the game for a specific condition to be met for their effects to apply to the game. These abilities usually include the word “while.” For example, Vigilant Honor Guards (SOR #48) has a constant ability: “While this unit is undamaged, it gains Sentinel.” Although Vigilant Honor Guards always has this ability text, the ability’s effect—giving this unit the Sentinel keyword--only applies if it is undamaged.
+a. If the conditions of multiple conditional constant abilities only are met by each other, they are not considered met. For example, Chloe controls two units that each have the ability: “While another friendly unit has Saboteur, this unit gains Saboteur.” If these are the only two units Chloe controls, neither has Saboteur.
 4. Constant abilities remain in effect even if the card they’re on is exhausted.
 
 ## 4. Event Abilities
@@ -757,51 +658,38 @@ f. An attack resulting from Ambush resolves during the same turn the unit with A
 a. “Grit” is a keyword whose effect is the same as the constant ability: “This unit gets +1/+0 for each damage on it.”
 b. Multiple instances of Grit do not stack. If a unit gains Grit when it already has Grit, the unit’s power does not change.
 c. When a unit with Grit deals and is dealt damage simultaneously (i.e. during combat), the unit with Grit does not get increased power from the new damage until after all damage is dealt. For example: if a 2/2 unit with Grit and no damage is defending against a 1/3 attacker, the unit with Grit only deals 2 damage to the attacker for that combat, even though it takes 1 combat damage in return and ends combat with 3 power and 1 remaining HP.
-d. If an attacker has an ability where it deals combat damage before the defender and attacks a defender with Grit, that defender will receive increased power from Grit immediately and before it deals combat damage back to the attacker. For example: the active player plays Shoot First (SOR #217) and attacks with their Battlefield Marine (SOR #095), choosing their opponent’s Baze Malbus (SOR #065) as the defender. Battlefield Marine deals its combat damage first, so 4 damage is placed on Baze. Because he has Grit, Baze gets +4/+0, and he deals 6 combat damage back to Battlefield Marine, defeating it.
+d. If an ability lets a unit deals combat damage before another unit, the unit that deals combat damage second must survive the dealt damage before it can deal combat damage back to the first unit. In such a case, if the second unit has Grit, it will receive bonus power from the damage just dealt to it. For example: the active player plays Shoot First (SOR #217) and attacks with their Battlefield Marine (SOR #095), choosing their opponent’s Baze Malbus (SOR #065) as the defending unit. Battlefield Marine deals its combat damage first, so 4 damage is placed on Baze. Because he has Grit, Baze gets +4/+0, and he deals 6 combat damage back to Battlefield Marine, defeating it.
 
 ### 7. Overwhelm
 
-a. “Overwhelm” is a keyword whose effect is the same as the constant ability: “While attacking, this unit deals its excess damage to the defending player’s base.”
-
-For example, if a unit with 5 power and Overwhelm attacks an enemy unit with 3 remaining HP, it defeats that unit and deals 2
-
-damage to the enemy base.
+a. “Overwhelm” is a keyword whose effect is the same as the constant ability: “While attacking, this unit deals its excess combat damage to the defending player’s base.” For example, if a unit with 5 power and Overwhelm attacks an enemy unit with 3 remaining HP, it defeats that unit and deals 2 damage to the enemy base.
 b. Multiple instances of Overwhelm do not stack.
-c. An attacker with Overwhelm deals combat damage to the defender and the enemy base simultaneously.
+c. An attacker with Overwhelm deals combat damage to the defending unit and the enemy base simultaneously. If the defending unit would not be defeated by this combat damage, no damage is assigned to the defending player’s base.
 d. When an attacker with Overwhelm deals excess damage to a base, it is considered to have dealt combat damage to the base, but it is not considered to have attacked that base.
-e. If an attacker with Overwhelm would deal combat damage to a defender that has a Shield token, the Shield token is defeated and no damage is dealt to the enemy base.
-f. If an attacker with Overwhelm does not defeat the defender while attacking, no damage is dealt to the enemy base.
-g. If the defender is defeated before an attacker with Overwhelm deals combat damage (e.g. by an “On Attack” ability), all of the attacker’s combat damage is considered excess damage and dealt to the enemy base, though the unit is not considered to have attacked that base.
+e. If a Shield token on a defending unit prevents combat damage from an attacker with Overwhelm, no damage is dealt to the enemy base.
+f. If the defending unit leaves play before an attacker with Overwhelm deals combat damage (e.g. by an “On Attack” ability), all of the attacker’s combat damage is considered excess damage and dealt to the enemy base, though the unit is not considered to have attacked that base.
 
 ### 8. Raid X
 
 a. “Raid” is a keyword whose effect is the same as the constant ability: “While attacking, this unit gets +X power,” where X is the number following “Raid.”
-b. Multiple instances of Raid stack. If a unit gains Raid when it already has Raid, the numerals following each instance of Raid are added together, and when the unit attacks, it gets bonus power equal to the total value.
-
-For example, if a unit has Raid 1 from one source and gains Raid 2 from a different source, the unit is considered to have Raid 3,
-
-and will get +3/+0 while attacking.
-c. An attacker gets bonus power from Raid during an attack and loses the bonus power when the attack completes, for the same duration as “While this unit is attacking” abilities.
+b. Multiple instances of Raid stack. If a unit gains Raid when it already has Raid, the numerals following each instance of Raid are added together, and when the unit attacks, it gets bonus power equal to the total value. For example, if a unit has Raid 1 from one source and gains Raid 2 from a different source, the unit is considered to have Raid 3, and will get +3/+0 while attacking.
+c. An attacker gets bonus power from Raid during an attack and loses the bonus power when the attack ends, for the same duration as “While this unit is attacking” abilities.
 d. If a unit gains or loses Raid during an attack, its power is immediately adjusted to match its current Raid value.
 
 ### 9. Restore X
 
 a. “Restore” is a keyword that resolves like the triggered ability: “On Attack: Heal X damage from your base,” where X is the number following “Restore.”
-b. Multiple instances of Restore stack. If a unit gains Restore when it already has Restore, the numerals following each instance of Restore are added together, and when the unit attacks it heals damage equal to the total value.
-
-For example, if a unit has Restore 1 from one source and gains Restore 2 from a different source, the unit is considered to have
-
-Restore 3, and will heal 3 damage from its controller’s base when attacking.
+b. Multiple instances of Restore stack. If a unit gains Restore when it already has Restore, the numerals following each instance of Restore are added together, and when the unit attacks it heals damage equal to the total value. For example, if a unit has Restore 1 from one source and gains Restore 2 from a different source, the unit is considered to have Restore 3, and will heal 3 damage from its controller’s base when attacking.
 
 ### 10. Saboteur
 
-a. “Saboteur” is a keyword whose effect encompasses two abilities: a constant ability and a triggered ability. Saboteur’s first effect is the same as the constant ability: “You may ignore Sentinel when choosing what this unit attacks.” Saboteur’s second effect resolves like the triggered ability: “On Attack: Defeat all Shield tokens attached to the defender.”
-b. To “ignore” Sentinel means to determine the defender or base being attacked as if no enemy units in the attacker’s arena have Sentinel. Enemy units do not lose Sentinel while Sentinel is ignored.
+a. “Saboteur” is a keyword whose effect encompasses two abilities: a constant ability and a triggered ability. Saboteur’s first effect is the same as the constant ability: “You may ignore Sentinel when choosing what this unit attacks.” Saboteur’s second effect resolves like the triggered ability: “On Attack: Defeat all Shield tokens attached to the defending unit.”
+b. To “ignore” Sentinel means to determine the unit or base being attacked as if no enemy units in the attacker’s arena have Sentinel. Enemy units do not lose Sentinel while Sentinel is ignored.
 
 ### 11. Sentinel
 
-a. “Sentinel” is a keyword whose effect is the same as the constant ability: “Units in this arena can’t attack your non-Sentinel units or your base. Abilities this unit has or gains can’t prevent this unit from being attacked.”
-b. When a player makes an attack, after exhausting the attacker, the player checks if there are any enemy units in the attacker’s arena with Sentinel. If there are one or more, the attacking player cannot choose a non-Sentinel unit as the defender (unless the attacker has Saboteur). If their opponent controls multiple units with Sentinel in that arena, the attacking player may choose any one of those units to be the defender.
+a. “Sentinel” is a keyword whose effect is the same as the constant ability: “Units in this arena can’t attack your non-Sentinel units or your base. Abilities this unit has orgains can’t prevent this unit from being attacked.”
+b. When a player makes an attack, after exhausting the attacker, the player checks if there are any enemy units in the attacker’s arena with Sentinel. If there are one or more, the attacking player cannot choose a non-Sentinel unit as the defending unit (unless the attacker has Saboteur). If their opponent controls multiple units with Sentinel in that arena, the attacking player may choose any one of those units to be the defending unit.
 c. If the attacker has the Saboteur keyword, its controller ignores the Sentinel keyword on enemy units in the attacker’s arena, and may choose to attack any unit in the same arena or the opponent’s base. (Enemy units do not lose Sentinel while Sentinel is ignored.)
 d. If a unit has Sentinel and an ability where it “can’t be attacked,” Sentinel overrides that ability, and that unit can be attacked.
 
@@ -813,13 +701,15 @@ b. Shielded resolves in the same window as any “When Played” abilities on th
 ### 13. Bounty
 
 a. “Bounty” is a keyword followed by a dash and ability text that resolves like the triggered ability: “When Defeated/When Captured: Resolve the following ability,” except that the triggered ability is considered controlled by an opponent.
-b. Each Bounty ability on a unit is considered an independent ability. A unit can have multiple Bounty abilities and can be given the same Bounty ability multiple times.
+b. Each Bounty ability on a unit is considered an independent ability. A unit can have multiple Bounty abilities and can be given the same Bountyability multiple times.
 c. Bounty resolves in the same window as any “When Defeated” or “When Captured” abilities on the unit.
 d. To “collect a Bounty” is to resolve a triggered Bounty ability.
 e. Resolving a Bounty ability is optional. If a player chooses not to resolve a Bounty ability, they are not considered to have collected that Bounty.
 f. Bounty abilities are always resolved by an opponent of the player who controls the unit with the Bounty ability. If a player defeats or captures their own unit that has a Bounty ability, they must choose an opponent to resolve its Bounty ability.
 g. If playing with more than two players, the opponent who defeats/captures a unit with Bounty must be chosen as the opponent who may collect that Bounty. See 11. Playing With More than Two Players
-14. Smuggle [Y]
+
+### 14. Smuggle[Y]
+
 a. “Smuggle” is a keyword whose effect is the same as the constant ability: “You may play this card from your resource zone by paying cost Y instead of its printed cost, replacing it with the top card of your deck. This ability is active while this card is a resource,” where Y is the cost in brackets following “Smuggle.” Paying this cost follows all normal rules for paying costs, including accounting for any aspect penalties that modify this cost.
 b. Each Smuggle ability on a unit is considered an independent ability. A unit can have multiple Smuggle abilities.
 c. Playing a card using Smuggle is considered a modified “Play a Card” action, overriding the restriction that the card must be played from hand.
@@ -840,13 +730,15 @@ c. A unit with Coordinate still is considered to have Coordinate while its contr
 
 a. “Exploit” is a keyword whose effect is the same as the constant ability: “While playing this card, you may defeat up to X friendly units. For each unit defeated this way, this card costs 2 less,“ where X is the number following Exploit.
 b. Multiple instances of Exploit stack. If a card gains Exploit when it already has Exploit, the numerals following each instance of Exploit are added together, and when the card is played, a number of friendly units may be defeated up to the total value.
-c. Exploit is used during Step 3 of the “Play a Card” action: Determine cost(s).
+c. Exploitis used during Step 3 of the “Play a Card” action: Determine cost(s).
 d. Abilities that trigger while defeating units using Exploit (e.g. “When Defeated” abilities) resolve only after the “Play a Card” action has finished resolving, at the same time that a unit’s “When Played” abilities resolve.
-17. Piloting [Y]
+
+### 17. Piloting [Y]
+
 a. “Piloting” is a keyword whose effect is the same as the constant ability: “You may play this unit as an upgrade on a friendly VEHICLE unit without a PILOT upgrade on it by paying cost Y instead of its printed cost,” where Y is the cost in brackets following “Piloting.” Paying this cost follows all normal rules for paying costs, including accounting for any aspect penalties that modify this cost.
 b. Each Piloting ability on a unit is considered an independent ability. A unit can have multiple Piloting abilities.
 c. A card with Piloting is considered an upgrade for the purpose of abilities that instruct a player to “play an upgrade.” If a player is instructed to “play an upgrade” or “play a non-unit card,” they may choose to play a unit with Piloting as an upgrade using Piloting. If a player is instructed to “play a unit,” they cannot choose to play a unit with Piloting as an upgrade (though they can play it as a unit). If a player is instructed to “play a card,” they may play a unit with Piloting as a unit or an upgrade.
-d. Units with Piloting are still considered units while in out-of-play zones. Abilities that interact specifically with upgrades in out-ofplay zones (e.g. “Search your deck for an upgrade and draw it”) do not interact with Piloting units, except as indicated above.
+d. Units with Piloting are still considered units while in out-of-play zones. Abilities that interact specifically with upgrades in out-of- play zones (e.g. “Search your deck for an upgrade and draw it”) do not interact with Piloting units, except as indicated above.
 
 ### 18. Hidden
 
@@ -864,40 +756,24 @@ d. A card with Plot must already be in the resource zone when a leader is deploy
 
 1. Triggered abilities have bold text indicating their triggering condition, starting with the word “When” or “On”, followed by a colon and an effect. Examples of triggered abilities are “When Played,” “When Defeated,” and “On Attack” abilities.
 2. If a triggered ability has a forward slash (‘/’) separating multiple triggering conditions, the ability triggers for each of those conditions. For example, an ability with a “When Played/When Defeated” condition triggers both when the card it is on is played and when the card is defeated. Such an ability is considered both a “When Played” and a “When Defeated” ability.
-3. For a triggered ability to resolve, the card with the ability must be in play when the triggering condition occurs, unless the ability specifies that it can be triggered from an out-of-play zone. Additionally, the triggered ability must resolve once triggered, even if the card with the ability leaves play before the triggered ability resolves.
-
-For example, “When Defeated” abilities on a card trigger when the card is put into a discard pile from play. The card is in the
-
-discard pile, an-out of-play zone, when the ability resolves.
+3. For a triggered ability to resolve, the card with the ability must be in play when the triggering condition occurs, unless the ability specifies that it can be triggered from an out-of-play zone. Additionally, the triggered ability must resolve once triggered, even if the card with the ability leaves play before the triggered ability resolves. For example, “When Defeated” abilities on a card trigger when the card is put into a discard pile from play. The card is in the discard pile, an-out of-play zone, when the ability resolves.
 a. If a card’s ability triggers from a hidden zone, the card must be shown to all opponents when it triggers to confirm the trigger exists. This is not considered “revealing” this card for abilities.
 4. Triggered abilities on a unit still trigger if the unit is defeated by the action that triggers the ability (though they only resolve after the action has finished resolving). Triggered abilities on a unit that trigger when other units are defeated still trigger if that unit is defeated simultaneously to the other units.
 5. A triggered ability is considered to resolve during the same turn or game step that it was triggered.
 6. Resolving a triggered ability is not the same as taking an action. A player can resolve a triggered ability outside of their turn.
 7. A triggered ability must resolve once its triggering condition is met unless the ability uses the phrase “you may.” Once triggered, these abilities must resolve at the next available opportunity.
-8. If an ability triggers during or as the result of a non-attack action, resolve that ability at the next available opportunity after that action is fully completed. If an ability triggers during an attack, resolve that ability at the appropriate timing point within that attack. Resolving a triggered ability never interrupts an action or ability that is currently resolving (other than the specified timing points during an attack), unless the currently resolving action or ability uses “after,” as described below. See 6.3. Attack With a Unit
-a. If an ability instructs a player to perform a modified action, resolve that action and any nested triggers before resolving any part of that ability that specifies it occurs “after” completing that action.
-
-For example, Barrel Roll (JTL #230) has the ability, “Attack with a space unit. After completing this attack, you may exhaust
-
-a space unit.” To resolve this ability, the active player attacks with a unit, resolving all triggered abilities associated with that attack. Only after there are no triggered abilities waiting to resolve, they may exhaust a space unit.
+8. If an ability triggers during or as the result of a non-attack action, resolve that ability at the next available opportunity after that action is fully completed. If an ability triggers during an attack, resolve that ability at the appropriate timing point within that attack. Resolving a triggered ability never interrupts an action or ability that is currently resolving (other than the specified timing points during an attack), unless the currently resolving action or ability uses “after,” as described below.See 6.3. Attack With a Unit
+a. If an ability instructs a player to perform a modified action, resolve that action and any nested triggers before resolving any part of that ability that specifies it occurs “after” completing that action. For example, Barrel Roll (JTL #230) has the ability, “Attack with a space unit. After completing this attack, you may exhaust a space unit.” To resolve this ability, the active player attacks with a unit, resolving all triggered abilities associated with that attack. Only after there are no triggered abilities waiting to resolve, they may exhaust a space unit.
 9. If a player must resolve multiple triggered abilities on cards they control at the same time, that player chooses the order in which to resolve those abilities.
-10. If both players must resolve triggered abilities on cards they control at the same time, the active player chooses one player at a time to resolve abilities. When chosen, that player resolves all abilities triggered on cards they control in the order of their choice, and once they finish, the other player does the same on cards they control.
-
-For example, if the active player Addy defeats Benji’s unit with an attack, and Addy then has 1 triggered ability to resolve while Benji
-
-has 2, Addy chooses whether she resolves her 1 ability first, or Benji resolves his 2 first. Addy can only choose which player resolves their abilities first; she cannot choose the order in which Benji resolves his 2 abilities.
+10. If both players must resolve triggered abilities on cards they control at the same time, the active player chooses one player at a time to resolve abilities. When chosen, that player resolves all abilities triggered on cards they control in the order of their choice, and once they finish, the other player does the same on cards they control. For example, if the active player Addy defeats Benji’s unit with an attack, and Addy then has 1 triggered ability to resolve while Benji has 2, Addy chooses whether she resolves her 1 ability first, or Benji resolves his 2 first. Addy can only choose which player resolves their abilities first; she cannot choose the order in which Benji resolves his 2 abilities.
 11. After resolving a triggered ability “A”, if any new abilities were triggered while resolving it, the new abilities are considered “nested abilities” and must be resolved before any other abilities triggered at the same time as ability “A”.
-12. Any abilities triggered while resolving a nested ability are likewise nested abilities, and must be resolved before other triggered abilities waiting to resolve. When resolving a series of nested abilities, each new layer of abilities must be fully resolved before returning to an earlier layer.
-
-For example, Grayson chooses to attack Mimi’s Vanguard Infantry (SOR #108) with his Greedo (SOR #204). Both units are defeated,
-
-simultaneously triggering the When Defeated abilities on each. Since Grayson is the active player, he gets to decide which player will resolve their triggers first. He chooses himself, and manages to use Greedo’s When Defeated ability to defeat another of Mimi’s units, Admiral Motti (SOR #226), that has its own When Defeated ability. Admiral Motti’s ability is a nested ability, since it triggered during the resolution of Greedo’s ability, so it must be resolved next. Only after readying a unit with Admiral Motti’s ability may Mimi resolve Vanguard Infantry’s When Defeated ability from the earlier ability layer.
+12. Any abilities triggered while resolving a nested ability are likewise nested abilities, and must be resolved before other triggered abilities waiting to resolve. When resolving a series of nested abilities, each new layer of abilities must be fully resolved before returning to an earlier layer. For example, Grayson chooses to attack Mimi’s Vanguard Infantry (SOR #108) with his Greedo (SOR #204). Both units are defeated, simultaneously triggering the When Defeated abilities on each. Since Grayson is the active player, he gets to decide which player will resolve their triggers first. He chooses himself, and manages to use Greedo’s When Defeated ability to defeat another of Mimi’s units, Admiral Motti (SOR #226), that has its own When Defeated ability. Admiral Motti’s ability is a nested ability, since it triggered during the resolution of Greedo’s ability, so it must be resolved next. Only after readying a unit with Admiral Motti’s ability may Mimi resolve Vanguard Infantry’s When Defeated ability from the earlier ability layer.
 
 ### 13. When Played
 
 a. Some triggered abilities are indicated with “When Played” in bold, followed by a colon and an effect. These abilities trigger when the card they’re on is played and resolve after the card’s cost is paid and it is put into play.
 b. “When Played” abilities, Ambush, and Shielded all resolve in the same timing window, in the order that the card’s controller chooses.
-c. Any triggered ability whose triggering condition begins with “When played” is considered a “When Played” ability (e.g. “When played using Smuggle“). Keywords that resolve like “When Played” abilities are not considered “When Played” abilities.
+c. Any triggered ability whose triggering condition begins with “When played” is considered a “When Played” ability (e.g. “When played usingSmuggle“). Keywords that resolve like “When Played” abilities are not considered “When Played” abilities.
 
 ### 14. When Defeated
 
@@ -905,12 +781,20 @@ a. Some triggered abilities are indicated with “When Defeated” in bold, foll
 b. A card’s “When Defeated” ability is resolved by the player that controlled the card when it was defeated.
 c. Any triggered ability whose triggering condition begins with “When defeated” is considered a “When Defeated” ability. Keywords that resolve like “When Defeated” abilities are not considered “When Defeated” abilities.
 
-### 15. On Attack
+### 15. On Attack, On Defense
 
-a. Some triggered abilities are indicated with “On Attack” in bold, followed by a colon and an effect. “On Attack“ abilities are resolved when the unit they’re on attacks, before that unit deals combat damage.
-b. If an “On Attack“ ability deals damage, that damage is not considered to be combat damage.
-c. “On Attack” abilities, “When a unit attacks,” and “When this unit is attacked” abilities all resolve in the same timing window.
-16. If a player is instructed to use a triggered ability outside of the normal conditions of its trigger (e.g. using a “When Defeated” ability while the unit is still in play), that player resolves as much of the ability as possible, ignoring any parts that are not relevant.
+a. Some triggered abilities are indicated with “On Attack” or “On Defense” in bold, followed by a colon and an effect. “On Attack“ abilities are resolved when the unit they’re on attacks, before that unit deals combat damage. “On Defense” abilities are resolved when the unit they’re on is attacked, before that unit deals combat damage. During an attack, the attacker’s “On Attack” and the defending unit’s “On Defense” abilities trigger at the same time.
+b. If an “On Attack“ or “On Defense” ability deals damage, that damage is not considered to be combat damage.
+c. “On Attack,” “On Defense,” “When a unit attacks,” and “When a unit is attacked” abilities all resolve in the same timing window.
+
+### 16. When Attack Ends
+
+a. Some triggered abilities are indicated with “When Attack Ends” in bold, followed by a colon and an effect. These abilities trigger when combat damage is dealt at the final step of an “Attack With a Unit” action.
+b. “When Attack Ends” abilities and “When Defeated” abilities of units that are defeated by combat damage all resolve in the same timing window.
+c. “When Attack Ends” abilities still trigger if the unit they’re on is defeated by combat damage.
+d. The attack has already ended when “When Attack Ends” abilities resolve. “While attacking” and “while defending” abilities are no longer active.
+e. By default, conditions in the text of “When Attack Ends” abilities refer to the attack which caused the ability to trigger.
+17. If a player is instructed to use a triggered ability outside of the normal conditions of its trigger (e.g. using a “When Defeated” ability while the unit is still in play), that player resolves as much of the ability as possible, ignoring any parts that are not relevant.
 
 ## 7. Effects
 
@@ -921,16 +805,8 @@ c. “On Attack” abilities, “When a unit attacks,” and “When this unit i
 
 a. A lasting effect is a part of an ability that affects the game for a specified duration of time. Most lasting effects include the phrase “for this phase” or “for this attack.” Examples of lasting effects include: “It gets +3/+0 for this attack,” (Surprise Strike, SOR #220) and “Bases can’t be healed for this phase” (Wolffe, SOR #160).
 b. A lasting effect persists beyond the resolution of the ability that created it and for the duration specified by the ability, even if the ability that created the effect was on a card that left play.
-c. Multiple lasting effects can apply to the same unit at the same time. If a new lasting effect conflicts with an existing lasting effect, the new effect takes precedence.
-
-For example, Rielle plays Gladiator Star Destroyer (SOR #086), using its ability to give a ground unit Sentinel for this phase. If her
-
-opponent then plays SpecForce Soldier (SOR #140) to make the same ground unit lose Sentinel for this phase, the unit no longer has Sentinel.
-d. By default, a lasting effect only applies to a card that’s in play at the time of the lasting effect’s creation. For a lasting effect to affect a card in an out-of-play zone, the ability that created that effect must explicitly state so.
-
-For example, Rallying Cry (SOR #154) gives each friendly unit Raid 2 for the phase. Only friendly units that were in play when
-
-Rallying Cry was played get Raid 2 for the phase; any units that enter play after this time do not get Raid 2.
+c. Multiple lasting effects can apply to the same unit at the same time. If a new lasting effect conflicts with an existing lasting effect, the new effect takes precedence. For example, Rielle plays Gladiator Star Destroyer (SOR #086), using its ability to give a ground unit Sentinel for this phase. If her opponent then plays SpecForce Soldier (SOR #140) to make the same ground unit lose Sentinel for this phase, the unit no longer has Sentinel.
+d. By default, a lasting effect only applies to a card that’s in play at the time of the lasting effect’s creation. For a lasting effect to affect a card in an out-of-play zone, the ability that created that effect must explicitly state so. For example, Rallying Cry (SOR #154) gives each friendly unit Raid 2 for the phase. Only friendly units that were in play when Rallying Cry was played get Raid 2 for the phase; any units that enter play after this time do not get Raid 2.
 e. Lasting effects expire immediately at the end of their specified duration. All lasting effects that expire at the same timing window expire simultaneously.
 
 ### 4. Delayed Effects
@@ -940,180 +816,108 @@ b. Delayed effects resolve automatically and immediately after their specified t
 c. Once created, a delayed effect will resolve at the specified timing point or condition, even if the ability that created it was on a card that left play.
 d. When a delayed effect resolves, it is not treated as a new triggered ability, even if the delayed effect was originally created by a triggered ability.
 e. If multiple delayed effects must be resolved at the same time, the player that controls the cards that created those delayed effects chooses the order in which those effects resolve. If both players have one or more delayed effects that must be resolved at the same time, the active player chooses one player at a time to resolve effects. When chosen, that player resolves all delayed effects created by cards they control in the order of their choice, and once they finish, the other player does the same for their effects.
-f. Some abilities create delayed effects that define the expiration of the ability. When the specified timing point or condition of expiration occurs, the delayed effect is immediately resolved. If an ability creates a delayed effect such that the only possible timing point or condition of expiration has already occurred, the effect resolves immediately upon creation.
-
-For example, Change of Heart (SOD #224) is an event with the ability, “Take control of a non-leader unit. At the start of the
-
-regroup phase, its owner takes control of it.” When the event is resolved, the player who played the event takes control of a nonleader unit. At the start of the next regroup phase, the unit’s owner retakes control of that unit.
-
-For another example, DJ: Blatant Thief (SHD #213) has the ability, “When played using Smuggle: Take control of an enemy
-
-resource. When this unit leaves play, that resource’s owner takes control of it.” If DJ has already left play when this ability is resolved, the delayed effect resolves immediately, and the chosen resource’s owner takes control of that resource.
+f. Some abilities create delayed effects that define the expiration of the ability. When the specified timing point or condition of expiration occurs, the delayed effect is immediately resolved. If an ability creates a delayed effect such that the only possible timing point or condition of expiration has already occurred, the effect resolves immediately upon creation. For example, Change of Heart (SOD #224) is an event with the ability, “Take control of a non-leader unit. At the start of the regroup phase, its owner takes control of it.” When the event is resolved, the player who played the event takes control of a non- leader unit. At the start of the next regroup phase, the unit’s owner retakes control of that unit. For another example, DJ: Blatant Thief (SHD #213) has the ability, “When played using Smuggle: Take control of an enemy resource. When this unit leaves play, that resource’s owner takes control of it.” If DJ has already left play when this ability is resolved, the delayed effect resolves immediately, and the chosen resource’s owner takes control of that resource.
 
 ### 5. Replacement Effects (Instead, Would)
 
 a. A replacement effect occurs when part or all of the standard resolution of a triggering condition, ability, or action step is replaced with an alternate resolution. This alternate resolution is the “replacement effect.”
-b. Replacement effects are indicated by the words “instead” or “would.”
-
-For example, Luke Skywalker: Jedi Knight (SOR #51) has the ability, “When Played: Give an enemy unit -3/-3 for this phase. If a
-
-friendly unit was defeated this phase, give that enemy unit -6/-6 for this phase instead.” The standard resolution of this ability is giving an enemy unit -3/-3 for the phase, and its replacement effect is giving the unit -6/-6 instead of -3/-3. The replacement effect resolves if the condition—a friendly unit being defeated that phase—is met.
-
-For another example, the text box on a Shield token reads as: “If damage would be dealt to attached unit, prevent that damage. If
-
-you do, defeat a Shield token on it.” The standard resolution is damage being dealt to the unit, while the replacement effect is the Shield being removed and no damage being dealt to the unit.
+b. Replacement effects are indicated by the words “instead” or “would.” For example, Luke Skywalker: Jedi Knight (SOR #51) has the ability, “When Played: Give an enemy unit -3/-3 for this phase. If a friendly unit was defeated this phase, give that enemy unit -6/-6 for this phase instead.” The standard resolution of this ability is giving an enemy unit -3/-3 for the phase, and its replacement effect is giving the unit -6/-6 instead of -3/-3. The replacement effect resolves if the condition—a friendly unit being defeated that phase—is met. For another example, the text box on a Shield token reads as: “If damage would be dealt to attached unit, prevent that damage. If you do, defeat a Shield token on it.” The standard resolution is damage being dealt to the unit, while the replacement effect is the Shield being removed and no damage being dealt to the unit.
 c. A replacement effect must be resolved immediately upon its condition being met, unless the effect uses the phrase “you may.” If the player cannot perform the replacement effect, they must resolve the original effect and ignore the replacement effect.
 d. If a replacement effect replaces all of the standard resolution of a condition, ability, or action step, the standard resolution does not resolve and is ignored. In such a case, abilities can only trigger off of the replacement effect, and not the standard resolution of the ability. If a replacement effect replaces part of the standard resolution of a condition, ability, or action step, the resolution of the replacement effect and unreplaced standard resolution occur simultaneously.
-e. If multiple replacement effects are prompted by the same condition, the player that controls the affected game object chooses to resolve effects in any order until the condition no longer applies. Once a particular effect has been replaced, other pending effects cannot replace that effect.
-
-For example, if Ricardo and Amy each control a Shield token on Ricardo’s unit and that unit would be dealt damage, Ricardo
-
-decides which Shield token will prevent the damage and be defeated, since he is the controller of the affected unit.
-
-For another example, Sage has a Tech (SHD #248) in play that grants each of their resources Smuggle. They play Bamboozle (SOR
-
-#199) from their resources using Smuggle. Smuggle replaces the normal cost of the card with the Smuggle cost, so Sage cannot use Bamboozle’s ability to replace the cost again by discarding a <Y> card from their hand.
-f. A replacement effect cannot replace itself.
-
-For example, if Sean has a unit in play with the ability “If you would deal damage to a unit, deal that much damage plus 1 instead”
-
-and plays Open Fire (SOR #172) to deal 4 damage to a unit, he deals 5 damage to that unit, not an infinite amount of damage.
+e. If multiple replacement effects are prompted by the same condition, the player that controls the affected game object chooses to resolve effects in any order until the condition no longer applies. Once a particular effect has been replaced, other pending effects cannot replace that effect. For example, Sage has a Tech (SHD #248) in play that grants each of their resources Smuggle. They play Bamboozle (SOR #199) from their resources using Smuggle. Smuggle replaces the normal cost of the card with the Smuggle cost, so Sage cannot use Bamboozle’s ability to replace the cost again by discarding a <Y> card from their hand.
+f. A replacement effect cannot replace itself. For example, if Sean has a unit in play with the ability “If you would deal damage to a unit, deal that much damage plus 1 instead” and plays Open Fire (SOR #172) to deal 4 damage to a unit, he deals 5 damage to that unit, not an infinite amount of damage.
 
 ## 8. Additional Rules
 
-## 1. Aspect Penalty
+## 1. Aspect Penalties
 
-1. The aspect penalty is a special modifier to a card’s cost. When a player attempts to play a card with aspect icons beyond those provided by that player’s leader and/or base, the player incurs the aspect penalty, and must pay 2 additional resources for each icon beyond those provided. If the player cannot pay these additional resources along with other costs, they cannot play the card.
+1. Aspect penalties are special modifiers to a card’s cost. When a player attempts to play a card with aspect icons beyond those provided by that player’s leader and/or base, the player incurs aspect penalties, and must pay 2 additional resources for each icon beyond those provided. If the player cannot pay these additional resources along with other costs, they cannot play the card. For example, a player that has a leader with and icons and a base with a icon could play any cards with 1 , , and/or icon without paying additional resources. If that player attempted to play a card with 1 icon, they’d have to pay 2 additional resources for that card, and if they attempted to play a card with and , they’d have to pay 4 additional resources for that card.
+2. Each aspect icon depicted on a leader or base provides only 1 icon of the given type. In order to play a card that has 2 of the same type of aspect icon without incurring aspect penalties, the player’s leader and base must together provide at least 2 icons that type. For example, Luke Skywalker: Faithful Friend (SOR #236) provides only 1 icon and 1 icon. If Luke’s player wants to play Protector (SOR #41)—a card with 2 icons--but doesn’t want to incur the aspect penalty, Luke’s player must build their deck using a base that provides a second icon, such as Capital City (SOR #20).
+3. If an ability instructs a player to play a card “for free,” the player bypasses all modifiers to that card’s cost, including aspect penalties, and does not pay any resources to play that card. The player must still pay any additional non-resource costs of the card.
 
-For example, a player that has a leader with  and  icons and a base with a  icon could play any cards with 1 , , and/or
-
- icon without paying additional resources. If that player attempted to play a card with 1  icon, they’d have to pay 2 additional resources for that card, and if they attempted to play a card with  and , they’d have to pay 4 additional resources for that card.
-2. Each aspect icon depicted on a leader or base provides only 1 icon of the given type. In order to play a card that has 2 of the same type of aspect icon without incurring the aspect penalty, the player’s leader and base must each have an icon of that type.
-
-For example, Luke Skywalker: Faithful Friend (SOR #236) provides only 1  icon and 1  icon. If Luke’s player wants to play
-
-Protector (SOR #41)—a card with 2  icons--but doesn’t want to incur the aspect penalty, Luke’s player must build their deck using a base that provides a second  icon, such as Capital City (SOR #20).
-3. If an ability instructs a player to play a card “for free,” the player bypasses all modifiers to that card’s cost, including the aspect penalty, and does not pay any resources to play that card. The player must still pay any additional non-resource costs of the card.
-2. “ATTACKS AND DEFEATS”
-1. If an ability has the triggering condition “When this unit attacks and defeats a unit,” it only triggers if the defender is defeated during the attack. Defeating other units during the attack does not trigger the ability.
-
-## 3. Attribute
+## 2. Attribute
 
 1. An attribute is a part of a card’s anatomy. Attributes include a card’s name, subtitle, card type, arena type, cost, aspect(s), power, power modifier, HP, HP modifier, trait(s), and text box. A card’s attributes can be modified through upgrades and abilities. See 2. Card Anatomy
-4. “CAN” AND “CAN’T”
-1. When “can” is used in a card ability, that ability adjusts or overrides a default rule of play. The player controlling a card with such an ability is able to choose whether to use that ability in the way specified or follow the default rule of play instead.
 
-For example, by default space units are unable attack ground units. However, Strafing Gunship (SOR #212) has an ability that
+## 3. “Can” And “Can’t”
 
-states, “This unit can attack units in the ground arena.” The “can” in the ability means that Strafing Gunship is able to do something that another space unit without the ability cannot do. That said, Strafing Gunship is still able to attack other space units, which is a default rule of play for space units. Its controller gets to choose which type of unit Strafing Gunship attacks.
+1. When “can” is used in a card ability, that ability adjusts or overrides a default rule of play. The player controlling a card with such an ability is able to choose whether to use that ability in the way specified or follow the default rule of play instead. For example, by default space units are unable attack ground units. However, Strafing Gunship (SOR #212) has an ability that states, “This unit can attack units in the ground arena.” The “can” in the ability means that Strafing Gunship is able to do something that another space unit without the ability cannot do. That said, Strafing Gunship is still able to attack other space units, which is a default rule of play for space units. Its controller gets to choose which type of unit Strafing Gunship attacks.
 2. When “can’t” is used in a card ability, that ability adjusts or overrides a default rule of play. The player controlling a card with such an ability must follow that ability over the default rule of play.
-3. Restrictive abilities override permissive abilities. If an ability with the word “may” or “can” directly contradicts an ability that uses the word “can’t”, then the ability that uses “can’t” takes precedence.
-
-For example, if an ability that was in effect stated that a unit “can attack a base this phase,” but a different ability that was in effect
-
-stated that unit “can’t attack bases,” the ability with “can’t” takes precedence, and the unit couldn’t attack a base that phase.
+3. Restrictive abilities override permissive abilities. If an ability with the word “may” or “can” directly contradicts an ability that uses the word “can’t”, then the ability that uses “can’t” takes precedence. For example, if an ability that was in effect stated that a unit “can attack a base this phase,” but a different ability that was in effect stated that unit “can’t attack bases,” the ability with “can’t” takes precedence, and the unit couldn’t attack a base that phase.
 a. Units with Sentinel can always be attacked, even if they also have a “can’t be attacked” ability or effect.
 b. Unpreventable damage is always dealt, even if a unit or base has a “can’t be damaged” ability or effect.
 
-## 5. Choose
+## 4. Choose
 
 1. When an ability instructs a player to “choose” a game object, they must choose a game object that matches the criteria specified by the ability.
 2. If instructed to “choose a unit,” that unit must be in play when resolving the ability, unless otherwise specified.
 3. If instructed to “choose a player,” either player in the game can be chosen, including the player resolving the ability.
 4. Some abilities instruct a player to “choose” a number of options from a bulleted list. When resolving these abilities, the player must choose a different bulleted option each time. A player chooses options one at a time, and may wait to see how one option resolves before choosing the next option.
 5. When an ability instructs a player to deal an amount of damage “divided as you choose” among eligible cards, the player chooses how much damage is placed on each eligible card, up to the number specified. The player must deal all damage specified by the ability, and can deal damage in excess of a card’s remaining HP. All damage dealt is applied simultaneously.
-6. When a player must choose “a number” or “any number,” they may choose any whole number they wish, including 0. If a player must divide damage among any number of units, they may choose to deal damage to 0 units.
+a. When a player must choose “a number” or “any number,” they may choose any whole number they wish, including 0. If a player must divide damage among any number of units, they may choose to deal damage to 0 units.
 
-## 6. Copy
+## 5. Copy
 
 1. A card is considered a “copy” of another card if both cards have all of the same printed attributes: the same name, subtitle, uniqueness, card type, arena type, cost, aspect(s), trait(s), power or power modifier, HP or HP modifier, and abilities. Disregard any reminder text when evaluating whether two cards are “copies” of one another.
 2. A card may have the same name as another card, but otherwise have one or more different printed attributes; these cards are not considered copies of each other.
 3. Printed attributes are what determine if a card is a copy of another card. Ignore any modifiers, abilities, or effects applied to a card when determining if it is a copy of another card. Effects that change what a card’s printed attributes are considered to be for abilities do not change them for the purpose of determining whether that card is a “copy” of another card.
-4. Whenever a card leaves and later re-enters play, it is considered a “new copy” of that card for the purposes of game rules and does not regain any modifiers or reapply any effects from when it was previously in play. It continues to be considered a new copy even if it changes zones.
-
-For example, Regional Governor (SOR #062) has an ability that says “When Played: Name a card. While this unit is in play,
-
-opponents can’t play the named card.” If Regional Governor is defeated and later replayed from the discard pile, its “When Played” ability would trigger again, but it would not resume preventing opponents from playing the originally chosen card.
+4. Whenever a card leaves and later re-enters play, it is considered a “new copy” of that card for the purposes of game rules and does not regain any modifiers or reapply any effects from when it was previously in play. It continues to be considered a new copy even if it changes zones. For example, Regional Governor (SOR #062) has an ability that says “When Played: Name a card. While this unit is in play, opponents can’t play the named card.” If Regional Governor is defeated and later replayed from the discard pile, its “When Played” ability would trigger again, but it would not resume preventing opponents from playing the originally chosen card.
 5. A player may have up to 3 copies of any non-leader, non-base card in their deck, regardless of if that card is unique or not.
 6. A player can only control 1 copy of each unique card at a given time. See 8.30 Unique, Unique Icon
 7. A player may control any number of copies of a non-unique card at a given time.
 
-## 7. Empty Deck
+## 6. Empty Deck
 
-1. If a player runs out of cards in their deck, they continue playing with the cards they have in play and in hand. If a player would draw a card from their empty deck, they instead deal 3 damage to their base for each card they would draw.
-
-For example, if a player with an empty deck would draw 2 cards during the regroup phase, they instead deal 6 damage to their
-
-base.
+1. If a player runs out of cards in their deck, they continue playing with the cards they have in play and in hand. If a player would draw a card from their empty deck, they instead deal 3 damage to their base for each card they would draw. For example, if a player with an empty deck would draw 2 cards during the regroup phase, they instead deal 6 damage to their base.
 2. If an ability would cause a player to shuffle, discard, search, reveal, or look at cards from an empty deck, they ignore that part of the ability.
 
-## 8. Enters Play
+## 7. Enters Play
 
 1. A card enters play when it moves from an out-of-play zone to an in-play zone or when it is turned faceup.
 2. Leaders begin the game with their Leader side in-play and their Leader Unit side out-of-play. When a leader is deployed, its Leader Unit side enters play. When a Leader Unit is defeated, its Leader side enters play.
 3. Whenever a card enters play, it is considered a “new copy” of that card. This includes cards played from the discard pile and cards that re-enter play after being rescued.
-9. FIRST, SECOND, ETC.
+
+## 8. First, Second, Etc.
+
 1. Abilities that refer to the “first” occurrence in a phase or round (e.g. “The first event played this phase”) always refer to the very first occurrence in that phase or round, not the first after an ability becomes active. Abilities that affect the “first” occurrence in a phase or round do not apply their effects retroactively if they become active after the first occurrence has already taken place.
 2. Abilities that refer to the “second” or later occurrence in a phase or round (e.g. “The second event played this phase”) likewise refer to the second or later occurrence that happens in that phase or round, regardless of when the ability becomes active. Abilities that affect the second or later occurrence in a phase or round do not apply their effects retroactively if they become active after the occurrence has already taken place.
-10. “IF YOU DO”
-1. Some abilities use the phrase “If you do” to make part of the ability conditional on another part of the ability resolving. If a player fulfills the “If you do” condition, they must resolve the conditional text following “If you do.” “If you do” only makes the rest of its sentence conditional.
 
-For example, ISB Agent (SOR #176) has an ability that reads, “When Played: You may reveal an event from your hand. If you do, deal
+## 9. “If You Do”
 
-1 damage to a unit.” If Evan controls ISB Agent, he can choose to resolve the ability and deal 1 damage by revealing an event from his hand. He must have an event in his hand to do this, and he must reveal it before dealing 1 damage. If he doesn’t reveal an event, he doesn’t deal damage.
+1. Some abilities use the phrase “If you do” to make part of the ability conditional on another part of the ability resolving. If a player fulfills the “If you do” condition, they must resolve the conditional text following “If you do.” “If you do” only makes the rest of its sentence conditional. For example, ISB Agent (SOR #176) has an ability that reads, “When Played: You may reveal an event from your hand. If you do, deal 1 damage to a unit.” If Evan controls ISB Agent, he can choose to resolve the ability and deal 1 damage by revealing an event from his hand. He must have an event in his hand to do this, and he must reveal it before dealing 1 damage. If he doesn’t reveal an event, he doesn’t deal damage.
 2. If a replacement effect replaces the resolution of the text before “If you do” with another effect, the controlling player is still considered to have resolved that text. That player still resolves the text after “If you do.”
 
-## 11. Ignore
+## 10. Ignore
 
-1. If a player is instructed to “ignore” a keyword ability, they treat that ability as inactive, as specified by the “ignore” effect.
+1. If a player is instructed to “ignore” a keyword ability, they treat that ability as inactive, as specified by the “ignore” effect. For example, the Saboteur keyword instructs the player to “ignore” the Sentinel keyword. An attacking unit with Saboteur is unaffected by an opponent’s unit with Sentinel in its arena; it may attack either a non-Sentinel unit in that arena controlled by that opponent, or that opponent’s base.
+2. If a player is instructed to “ignore” the aspect penalty for a card, they pay the cost of the card without adding an aspect penalty. The card is still considered to have those aspect icons while the aspect penalty is ignored, which may trigger other abilities that depend on aspects. If any other additional costs are being applied to that card, the player still pays those additional costs. For example, the leader card Hera Syndulla: Spectre Two (SOR #008) has the following ability on both sides: “Ignore the aspect penalty on SPECTRE cards you play.” When Hera’s owner plays a SPECTRE-traited card with aspect icons that don’t match the icons on Hera or their base, they do not incur the aspect penalty. They must still pay the card’s cost, including any other additional costs.
 
-For example, the Saboteur keyword instructs the player to “ignore” the Sentinel keyword. An attacking unit with Saboteur is
+## 11. Last Known Information
 
-unaffected by an opponent’s unit with Sentinel in its arena; it may attack either a non-Sentinel unit in that arena controlled by that opponent, or that opponent’s base.
-2. If a player is instructed to “ignore” the aspect penalty for a card, they pay the cost of the card without adding an aspect penalty. The card is still considered to have those aspect icons while the aspect penalty is ignored, which may trigger other abilities that depend on aspects. If any other additional costs are being applied to that card, the player still pays those additional costs.
-
-For example, the leader card Hera Syndulla: Spectre Two (SOR #008) has the following ability on both sides: “Ignore the aspect
-
-penalty on SPECTRE cards you play.” When Hera’s owner plays a SPECTRE-traited card with aspect icons that don’t match the icons on Hera or their base, they do not incur the aspect penalty. They must still pay the card’s cost, including any other additional costs.
-
-## 12. Last Known Information
-
-1. “Last Known Information” is information about a card that’s no longer in play that amounts to a snapshot of its status immediately before it left play. Last Known Information includes the attributes of the card, the controller of the card, the modifiers applied to that card, the card’s ready/exhausted status, upgrades attached to that card, and how the card was defeated or removed from play. Last Known Information is used primarily when resolving “When Defeated” abilities.
-
-For example, if a unit had a “When Defeated” ability that dealt damage equal to its power to a base, the damage dealt by the ability
-
-would account for any modifiers to that unit’s power at the time the ability was triggered.
+1. “Last Known Information” is information about a card that’s no longer in play that amounts to a snapshot of its status immediately before it left play. Last Known Information includes the attributes of the card, the controller of the card, the modifiers applied to that card, the card’s ready/exhausted status, upgrades attached to that card, and how the card was defeated or removed from play. Last Known Information is used primarily when resolving “When Defeated” abilities. For example, if a unit had a “When Defeated” ability that dealt damage equal to its power to a base, the damage dealt by the ability would account for any modifiers to that unit’s power at the time the ability was triggered.
 2. Last Known Information is only reference information. Other abilities that were on a card that left play are not active while resolving its “When Defeated” abilities.
 
-## 13. Leaves Play
+## 12. Leaves Play
 
 1. A card leaves play when it moves from an in-play zone to an out-of-play zone or when it is turned facedown. Defeating a unit or returning a unit to hand from play both cause the unit to leave play. If a unit leaves play, any upgrades attached to it are defeated, but lasting or delayed effects from its abilities remain active.
 2. When a leader is deployed, its Leader side leaves play. When a Leader Unit is defeated, its Leader Unit side leaves play and it is returned to the Base Zone exhausted, with its Leader side faceup.
 
-## 14. Look At
+## 13. Look At
 
 1. When a player is instructed to “look at” cards from a specific zone, the player picks up those cards and views them, keeping them secret from other players. The player cannot change the order of those cards. After viewing, the player returns the cards to the zone in the same order and orientation (faceup or facedown) as they were previously, unless otherwise specified.
 2. Looked-at cards are not considered to leave the zone they were originally in, unless otherwise specified.
 
-## 15. Lose, Loses
+## 14. Lose, Loses
 
-1. If an ability causes a unit to “lose” a keyword, the unit ceases to have the specified keyword and any abilities granting it that keyword when the “‘lose” effect is resolved cease granting the keyword for the duration of the “lose” effect. The unit cannot regain that keyword for the duration of the effect.
-
-For example, Samir plays SpecForce Soldier (SOR #140), which has the ability “When Played: A unit loses Sentinel for this phase.”
-
-Samir chooses to have Devi’s System Patrol Craft (SOR #066) lose Sentinel for the phase. If Devi then plays Protector (SOR #057) on her System Patrol Craft, it does not gain Sentinel until the phase is over.
+1. If an ability causes a unit to “lose” a keyword, the unit ceases to have the specified keyword and any abilities granting it that keyword when the “‘lose” effect is resolved cease granting the keyword for the duration of the “lose” effect. The unit cannot regain that keyword for the duration of the effect. For example, Samir plays SpecForce Soldier (SOR #140), which has the ability “When Played: A unit loses Sentinel for this phase.” Samir chooses to have Devi’s System Patrol Craft (SOR #066) lose Sentinel for the phase. If Devi then plays Protector (SOR #057) on her System Patrol Craft, it does not gain Sentinel until the phase is over.
 2. If an ability causes a card to “lose all abilities,” the card ceases to have any abilities, including abilities given to it by other cards, for the duration of the “lose” effect. The card cannot gain abilities for the duration of the effect.
 
-## 16. Modifiers
+## 15. Modifiers
 
 1. A “modifier” refers to a change of a printed value on a card through an ability applied to that card or an upgrade attached to that card. When a modifier is applied to a printed value, it creates a modified value, which in turn is used when resolving abilities or actions that depend on that value. The modified value of a card is considered open information to both players. An example of a modifier is “Give a unit +1/+1 for this phase,” which modifies a unit’s power and HP until the end of the phase.
 2. When calculating a modified value, start with the printed value, then apply any modifiers that increase that value before any modifiers that decrease that value.
 3. Modifiers are cumulative. Any time a new modifier is applied to a value, the value is recalculated immediately, accounting for the printed value and all active modifiers.
-4. A value cannot be modified below 0. If a value would be modified below 0, treat that value as 0 instead. However, any new modifiers applied after a value is treated as 0 will still account for any previous modifiers applied to that value.
-
-For example, Keith plays Make an Opening (SOR #076) and gives his opponent’s Cantina Braggart (SOR #157) -2/-2 for the phase.
-
-Cantina Braggart’s printed power is 0, and though its power was modified by -2, its power is still treated as 0. If Keith’s opponent then attacks with Cantina Braggart, its Raid 2 gives it +2/+0, but the -2/-2 applied to it that phase is still accounted for, and Cantina Braggart attacks with 0 total power.
+4. A value cannot be modified below 0. If a value would be modified below 0, treat that value as 0 instead. However, any new modifiers applied after a value is treated as 0 will still account for any previous modifiers applied to that value. For example, Keith plays Make an Opening (SOR #076) and gives his opponent’s Cantina Braggart (SOR #157) -2/-2 for the phase. Cantina Braggart’s printed power is 0, and though its power was modified by -2, its power is still treated as 0. If Keith’s opponent then attacks with Cantina Braggart, its Raid 2 gives it +2/+0, but the -2/-2 applied to it that phase is still accounted for, and Cantina Braggart attacks with 0 total power.
 
 ### 5. Modifying Cost
 
@@ -1121,11 +925,7 @@ a. A card’s cost can be modified through abilities. Any modifiers to a card’
 b. Modifiers to a card’s cost are only applied while a card is being played. At any other point in time, the card’s cost is equal to its printed value. See 6.2. Play A Card
 c. The aspect penalty is a special modifier to a card’s cost. When a player attempts to play a card with aspect icons beyond those provided by that player’s leader and/or base, the player incurs the aspect penalty and must pay 2 additional resources for each icon beyond those provided.
 d. Abilities that instruct a player to play a card “for free” bypass any modifiers to that card’s cost, including the aspect penalty. They must still pay any additional non-resource costs applied to the card.
-e. If an ability affects a card with a specific “cost,” that ability only refers to the printed cost of the card. It does not take into account any modifiers to the card’s cost as it was played.
-
-For example, the Chewbacca: Walking Carpet (SOR #003) leader has an action ability allowing his controller to play a unit that
-
-costs 3 or less from their hand and give it Sentinel. An eligible card for this ability is one that has a printed cost of 3 or less, not accounting for any modifiers that would be applied to that card as it is being played. Say Chewbacca’s controller intends to play Death Trooper (SOR #033), knowing they will incur an aspect penalty of 2 resources when playing it. They may exhaust Chewbacca, show their opponent Death Trooper, and pay its modified cost of 5 resources, then put it into play and give it Sentinel. This is allowed because abilities that check costs only account for a card’s printed cost, not its modified cost nor how many resources were spent on the card.
+e. If an ability affects a card with a specific “cost,” that ability only refers to the printed cost of the card. It does not take into account any modifiers to the card’s cost as it was played. For example, the Chewbacca: Walking Carpet (SOR #003) leader has an action ability allowing his controller to play a unit that costs 3 or less from their hand and give it Sentinel. An eligible card for this ability is one that has a printed cost of 3 or less, not accounting for any modifiers that would be applied to that card as it is being played. Say Chewbacca’s controller intends to play Death Trooper (SOR #033), knowing they will incur an aspect penalty of 2 resources when playing it. They may exhaust Chewbacca, show their opponent Death Trooper, and pay its modified cost of 5 resources, then put it into play and give it Sentinel. This is allowed because abilities that check costs only account for a card’s printed cost, not its modified cost nor how many resources were spent on the card.
 
 ### 6. Modifying Power
 
@@ -1140,82 +940,54 @@ b. When determining a card’s remaining HP, subtract the damage on that card fr
 c. Modifiers to a card’s HP only apply to the card while it is in play. If the card leaves play, it loses any modifiers to its HP.
 d. An upgrade modifies the attached unit’s HP as long as the upgrade is attached to that unit. If multiple upgrades are attached to a unit, each upgrade cumulatively modifies the unit’s HP.
 e. If the removal of an upgrade or the expiration of an effect causes a unit’s remaining HP to be 0 or less, immediately defeat that unit.
-17. “MUST”
+
+## 16. “Must”
+
 1. If a card ability states that an effect “must” happen or a specific choice “must” be made, the player has to resolve the ability as specified, as much as they are able.
 2. If a card ability with the word “must” directly contradicts a card ability that uses the word “can”, then the ability that uses “must” takes precedence. For example if an ability that was in effect stated that a unit “can ready and attack an enemy unit this round,” but a different ability that was in effect stated that the unit “must attack a base for its next attack this round,” the ability with “must” takes precedence and the unit only would be allowed to attack a base for the round.
-3. If a card ability with the word “must” directly contradicts a card ability that uses the word “can’t”, then the ability that uses “can’t” takes precedence.
+3. If a card ability with the word “must” directly contradicts a card ability that uses the word “can’t”, then the ability that uses “can’t” takes precedence. For example, if an ability in effect stated that a unit “must attack a base this round,” but a different ability in effect stated that unit “can’t attack bases,” the ability with “can’t” takes precedence, and the unit cannot attack a base.
 
-For example, if an ability in effect stated that a unit “must attack a base this round,” but a different ability in effect stated that unit
+## 17. “Name”
 
-“can’t attack bases,” the ability with “can’t” takes precedence, and the unit cannot attack a base.
-18. “NAME”
 1. If an ability instructs a player to “name a card,” that player clearly indicates the name of any card in Star Wars: Unlimited (such as by saying its name out loud), and applies the rest of the ability to any cards with that name in the game. These abilities do not account for subtitles or the unique icon; the player does not need to specify a subtitle or whether a card has a unique icon when naming a card.
 2. A card “shares a name” with another card if their full names are identical. A card does not need to share a subtitle with another card to share a name with it.
 
-## 19. Other, Another, Different
+## 18. Other, Another, Different
 
-1. A card with an ability that uses “other” or “another” cannot apply the effects of its ability to itself.
+1. A card with an ability that uses “other” or “another” cannot apply the effects of its ability to itself. For example, Bail Organa (SOR #094) has an action ability that gives an Experience token to “another” friendly unit. Bail’s controller cannot use this ability to give Bail the Experience; they must give the Experience to a different friendly unit.
+2. An ability may use “other,” “another,” or “different” to separate the first card it affects from the other card(s) that it affects. For example, Overwhelming Barrage (SOR #092) is an event that gives a friendly unit +2/+2 for the phase, and deals damage to any number of “other” units. The “other” in this ability means that the damage cannot be applied to the friendly unit given +2/+2.
 
-For example, Bail Organa (SOR #094) has an action ability that gives an Experience token to “another” friendly unit. Bail’s controller
-
-cannot use this ability to give Bail the Experience; they must give the Experience to a different friendly unit.
-2. An ability may use “other,” “another,” or “different” to separate the first card it affects from the other card(s) that it affects.
-
-For example, Overwhelming Barrage (SOR #092) is an event that gives a friendly unit +2/+2 for the phase, and deals damage to any
-
-number of “other” units. The “other” in this ability means that the damage cannot be applied to the friendly unit given +2/+2.
-
-## 20. Play Restrictions
+## 19. Play Restrictions
 
 1. A play restriction is a condition that prevents a card from being played. Play restrictions are checked before paying the costs to play a card.
-2. The phrase “attach to” is a play restriction found on some upgrades, indicating a specific type of unit that’s eligible for that upgrade. If there is no eligible unit in play for the upgrade to attach to, the upgrade cannot be played.
+2. The phrase “attach to” is a play restriction found on some upgrades, indicating a specific type of unit that’s eligible for that upgrade. If there is no eligible unit in play for the upgrade to attach to, the upgrade cannot be played. For example, Jedi Lightsaber (SOR #054) is an upgrade that has a play restriction: “Attach to a non-VEHICLE unit.” In order to play Jedi Lightsaber, there must be an eligible unit in play for it to attach to, which is any unit without the VEHICLE trait. If there are no units in play without the VEHICLE trait, Jedi Lightsaber cannot be played.
+3. The phrase “can’t play” is a play restriction used in certain card abilities. A player cannot play the specified type of card for as long as the ability is in effect. For example, Regional Governor (SOR #062) has the ability: “Name a card. While this unit is in play, opponents can’t play the named card.” This ability is a play restriction that prevents opponents from playing the named card while Regional Governor is in play.
 
-For example, Jedi Lightsaber (SOR #054) is an upgrade that has a play restriction: “Attach to a non-VEHICLE unit.” In order to play
-
-Jedi Lightsaber, there must be an eligible unit in play for it to attach to, which is any unit without the VEHICLE trait. If there are no units in play without the VEHICLE trait, Jedi Lightsaber cannot be played.
-3. The phrase “can’t play” is a play restriction used in certain card abilities. A player cannot play the specified type of card for as long as the ability is in effect.
-
-For example, Regional Governor (SOR #062) has the ability: “Name a card. While this unit is in play, opponents can’t play the named
-
-card.” This ability is a play restriction that prevents opponents from playing the named card while Regional Governor is in play.
-
-## 21. Prevent (Damage)
+## 20. Prevent (Damage)
 
 1. If an ability prevents all damage from being dealt to a unit or base, do not place any damage counters on that unit or base. Any abilities that would trigger when damage is dealt don’t trigger.
 2. If an ability prevents a specific amount of damage from being dealt to a unit or base, reduce the amount of damage counters placed on that unit or base by the prevented amount. If all damage is prevented in this way, any abilities that would trigger when damage is dealt don’t trigger.
 
-## 22. Printed
+## 21. Printed
 
 1. “Printed” is a term used in rules text to refer to an attribute physically printed on a card to differentiate that attribute from modifiers, abilities, and effects applied to the card. This term is used for rules clarification purposes, such as when explaining the steps of modifying a card’s cost.
 
-## 23. Random
+## 22. Random
 
 1. When you must choose randomly from a set of options or cards, any method agreed upon by both players is acceptable, so long as each option has an equal likelihood of being chosen by the method (such as flipping a coin to decide between two options).
 
-## 24. Referential Abilities
+## 23. Referential Abilities
 
 1. A referential ability is an ability that refers to a specific card by name.
-2. Most referential abilities have an effect that occurs if a player controls a card with the specified name. A referential ability only accounts for the name of the card, and does not account for that card’s subtitle or card type.
+2. Most referential abilities have an effect that occurs if a player controls a card with the specified name. A referential ability only accounts for the name of the card, and does not account for that card’s subtitle or card type. For example, Emperor’s Royal Guard (SOR #082) has the ability: “While you control Emperor Palpatine, this unit gets +0/+1.” This ability will give the Emperor’s Royal Guard increased HP if its controller also controls Emperor Palpatine as a leader or a unit.
+3. Some upgrades have referential abilities that specify an effect that occurs if the attached unit is the named unit. Such an upgrade can be attached to a unit that isn’t the named unit, but the part of the ability that references the named unit won’t resolve. For example, Vader’s Lightsaber (SOR #136) has a “When Played” ability: “If attached unit is Darth Vader, you may deal 4 damage to a ground unit.” A player can attach Vader’s Lightsaber to a non-VEHICLE unit other than Darth Vader, but they will only be able to deal the 4 damage if the attached unit is Darth Vader.
 
-For example, Emperor’s Royal Guard (SOR #082) has the ability: “While you control Emperor Palpatine, this unit gets +0/+1.” This
+## 24. Return
 
-ability will give the Emperor’s Royal Guard increased HP if its controller also controls Emperor Palpatine as a leader or a unit.
-3. Some upgrades have referential abilities that specify an effect that occurs if the attached unit is the named unit. Such an upgrade can be attached to a unit that isn’t the named unit, but the part of the ability that references the named unit won’t resolve.
-
-For example, Vader’s Lightsaber (SOR #136) has a “When Played” ability: “If attached unit is Darth Vader, you may deal 4 damage
-
-to a ground unit.” A player can attach Vader’s Lightsaber to a non-VEHICLE unit other than Darth Vader, but they will only be able to deal the 4 damage if the attached unit is Darth Vader.
-
-## 25. Return
-
-1. Some card abilities will “return” a specific type of card to its owner’s hand. By default, only cards that are in play can be returned this way; an ability must specify if it is returning a card from an out-of-play zone in order to do so. A card need not have been in a hand previously in order to be returned to a hand.
-
-For example, an ability that reads, “Return a non-leader unit to its owner’s hand,” can only return a unit that’s in play to its owner’s
-
-hand; the ability cannot return a unit from another zone. However, an ability that reads, “Return a unit from your discard pile to your hand,” specifically returns a unit from the discard pile.
+1. Some card abilities will “return” a specific type of card to its owner’s hand. By default, only cards that are in play can be returned this way; an ability must specify if it is returning a card from an out-of-play zone in order to do so. A card need not have been in a hand previously in order to be returned to a hand. For example, an ability that reads, “Return a non-leader unit to its owner’s hand,” can only return a unit that’s in play to its owner’s hand; the ability cannot return a unit from another zone. However, an ability that reads, “Return a unit from your discard pile to your hand,” specifically returns a unit from the discard pile.
 2. A card that is returned from play to its owner’s hand is not considered to have been defeated.
 
-## 26. Reveal
+## 25. Reveal
 
 1. To “reveal” a card means to make a card temporarily open information by showing it to both players. Abilities can cause a player to reveal cards from their deck, hand, or resource zone.
 2. When a player must reveal one or more cards from their hand, they choose which cards to reveal that match the ability’s specifications.
@@ -1224,7 +996,7 @@ hand; the ability cannot return a unit from another zone. However, an ability th
 5. If a player revealed a card to their opponent, the opponent cannot ask to view that card again once the card has returned to its zone and previous orientation. The opponent can only view that card if another ability causes the card to be revealed, or if that card is later faceup.
 6. When a player is instructed to reveal a resource, they show the faceup side of that card (the side with attributes) to both players.
 
-## 27. Search
+## 26. Search
 
 1. When an ability instructs a player to “search” a deck, that player looks at a number of cards from that deck to find one or more cards, often with a specified attribute. The player chooses one or more cards (as indicated by the ability) and returns the other cards to that deck as specified below. The ability then instructs the player on what to do with the card(s) they have chosen. The player may also choose to resolve the ability as though no appropriate card was found.
 2. If an ability searches the top X cards of a player’s deck, after searching, the player puts any cards not chosen with the ability on the bottom of that deck in a random order. If an ability searches a player’s entire deck, after searching, the deck’s owner shuffles that deck. If an ability searches another player’s hand, the searching player returns any cards not chosen to that player after completing the search.
@@ -1233,45 +1005,33 @@ hand; the ability cannot return a unit from another zone. However, an ability th
 5. If no cards have the attribute specified by the search, the player still resolves as much of the ability as possible.
 6. A player is not required to reveal hidden information in order to resolve a search ability. That player still must do as much as they can when resolving such an ability, up to the point of hidden information being revealed.
 7. Cards searched in a deck are not considered to leave the deck while searching. Cards chosen by a search are considered to be in the deck zone (but no longer in the deck) until they are put into a different zone by drawing, discarding, or playing them.
-8. When an ability instructs a player to play a card after finding it in a search, any restrictions on that search also apply to the modified “Play a Card” action taken. Any chosen cards that are unplayable or become unplayable due to changes in the game state must be returned to the bottom of the deck.
+8. When an ability instructs a player to play a card after finding it in a search, any restrictions on that search also apply to the modified “Play a Card” action taken. Any chosen cards that are unplayable or become unplayable due to changes in the game state must be returned to the bottom of the deck. For example, if an ability instructs a player to “search their deck for an upgrade and play it,” that player must play the chosen card as a upgrade. If there are no units in play when the player attempts to play the chosen card, the card is returned to the bottom of that player’s deck.
 
-For example, if an ability instructs a player to “search their deck for an upgrade and play it,” that player must play the chosen card
-
-as a upgrade. If there are no units in play when the player attempts to play the chosen card, the card is returned to the bottom of that player’s deck.
-
-## 28. Take Control
+## 27. Take Control
 
 1. If an ability instructs a player to “take control” of a card, that player will become that card’s controller, and remain so until either that card leaves play or their opponent takes control of that card.
 a. If the card is a unit, it maintains its ready or exhausted status and keeps all damage counters on it. All upgrades attached to it remain attached and keep their original controllers. Its new controller orients it in its arena to face them.
 b. If the card is an upgrade, it remains on the unit it is attached to unless specified otherwise.
 c. If the card is a resource, it maintains its ready or exhausted status and moves to its new controller’s resource zone.
 2. When a unit is defeated, it is placed in its owner’s discard pile, but any “When Defeated” abilities are resolved by whichever player controlled it when it was defeated.
-3. If control of a unit that is attacking or defending changes during an attack, that unit is no longer considered to be part of the attack, and is no longer considered to be either an attacker or defender.
-29. “THEN”
-1. If an ability contains two effects separated by “then,” the ability is resolved by resolving the first effect, followed by resolving the second effect. If the first effect can be resolved, it must be resolved as completely as possible before the effect following “then” can be resolved. If the first effect cannot be resolved, the second effect is still resolved.
+3. If control of a unit that is attacking or defending changes during an attack, that unit is no longer considered to be part of the attack, and is no longer considered to be either an attacking or defending unit.
 
-For example, Heroic Sacrifice (SOR #150) has the text: “Draw a card, then attack with a unit.” The player resolving the ability must
+## 28. “Then”
 
-draw the card, or attempt to draw the card, before making the attack.
+1. If an ability contains two effects separated by “then,” the ability is resolved by resolving the first effect, followed by resolving the second effect. If the first effect can be resolved, it must be resolved as completely as possible before the effect following “then” can be resolved. If the first effect cannot be resolved, the second effect is still resolved. For example, Heroic Sacrifice (SOR #150) has the text: “Draw a card, then attack with a unit.” The player resolving the ability must draw the card, or attempt to draw the card, before making the attack.
 2. Any abilities triggered by either effect are not resolved until both effects finish resolving. See 7.6. Triggered Abilities
-30. UNIQUE, UNIQUE ICON ()
-1. A unique card is indicated with a unique icon () before the card’s name. Unique cards represent iconic characters, objects, or ships in the Star Wars universe. “Uniqueness” refers to whether or not a card is unique.
+
+## 29. Unique, Unique Icon ()
+
+1. A unique card is indicated with a unique icon () before the card’s name. Unique cards represent iconic characters, objects, or ships in the Star Wars universe. “Uniqueness” refers to whether or not a card is unique.
 2. Each unique card has a subtitle to differentiate it from other unique cards with the same name.
-3. A player can only control one copy of each unique card with the same name and subtitle at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated.
-
-For example, Luke Skywalker: Faithful Friend (SOR #005) and Luke Skywalker: Jedi Knight (SOR #051) have different subtitles, so a
-
-player can have both of these cards under their control at the same time.
-a. The unique copy limit applies to all in-play copies of a unique card, regardless of how that card is in-play.
-
-For example, Hera Syndulla: We’ve Lost Enough (JTL #047) is a unique PILOT unit. If Aitor controls a copy of Hera Syndulla: We’ve
-
-Lost Enough attached to a VEHICLE space unit and plays another copy of Hera Syndulla: We’ve Lost Enough as a ground unit, he will have to defeat one of the copies according to the uniqueness rule.
+3. A player can only control one copy of each unique card with the same name and subtitle at a given time. If a player ever has more than one copy of a unique card in play under their control at a given time, they must defeat one of them. Defeating one of the copies occurs immediately and is not a triggered ability. The player still must resolve any abilities that trigger upon either copy being played or defeated. For example, Luke Skywalker: Faithful Friend (SOR #005) and Luke Skywalker: Jedi Knight (SOR #051) have different subtitles, so a player can have both of these cards under their control at the same time.
+a. The unique copy limit applies to all in-play copies of a unique card, regardless of how that card is in-play. For example, Hera Syndulla: We’ve Lost Enough (JTL #047) is a unique PILOT unit. If Aitor controls a copy of Hera Syndulla: We’ve Lost Enough attached to a VEHICLE space unit and plays another copy of Hera Syndulla: We’ve Lost Enough as a ground unit, he will have to defeat one of the copies according to the uniqueness rule.
 4. The unique copy limit only refers to unique cards in play, and does not affect cards in a player’s hand, deck, discard pile, or resource zone.
 5. The unique copy limit is player-specific. A player and their opponent can each control a copy of the same unique card with the same subtitle at the same time.
-6. Certain abilities check whether a card is unique. These abilities typically use the unique icon () to refer to unique cards.
+6. Certain abilities check whether a card is unique. These abilities typically use the unique icon () to refer to unique cards.
 
-## 31. Up To
+## 30. Up To
 
 1. When resolving an ability that uses the phrase “up to X” (where X is some number), the player chooses any integer between 0 and X to resolve the ability with.
 2. If a player is instructed to “defeat up to X” cards, but they defeat 0, they are not considered to have defeated any cards.
@@ -1279,40 +1039,32 @@ Lost Enough attached to a VEHICLE space unit and plays another copy of Hera Synd
 4. If a player is instructed to “heal up to X,” but they heal 0, they are not considered to have healed any damage.
 5. If a player is instructed to “attack with up to X units,” but they attack with 0, they are not considered to have made any attacks.
 
-## 32. You
+## 31. You
 
 1. Whenever a card refers to “you,” it refers to its controller.
 2. If a triggered ability’s condition references when “you” do something, such as “When you deal damage,” it refers to any cards you control or abilities you resolve.
-33. “YOU MAY”
+
+## 32. “You May”
+
 1. If an ability uses “you may,” a player may choose whether or not to resolve the ability in the way specified following “you may.” If the player chooses to resolve the text following “you may,” they must resolve as much of it as possible.
-2. Some abilities with “you may” are followed by the phrase “if you do.” If the player resolves the “you may” part of the ability in full, the player must then resolve the “if you do” part of the ability as well. If they don’t resolve the former in full, they ignore the latter.
+2. Some abilities with “you may” are followed by the phrase “if you do.” If the player resolves the “you may” part of the ability in full, the player must then resolve the “if you do” part of the ability as well. If they don’t resolve the former in full, they ignore the latter. For example, ISB Agent (SOR #176) has an ability that reads, “When Played: You may reveal an event from your hand. If you do, deal 1 damage to a unit.” If Evan controls ISB Agent, he can choose to resolve the ability and deal 1 damage by revealing an event from his hand. He must have an event in his hand to do this, and he must reveal it before dealing 1 damage. If he doesn’t reveal an event, he doesn’t deal damage.
+3. Some abilities with “you may” are followed by the phrase “Use this ability only once each round.” If a player chooses to resolve the text following “you may,” they may not choose to resolve that text again that round, even if the ability is triggered again. The ability is only considered “used” if the player resolving the ability chooses to resolve the text following “you may.” For example, Agent Kallus (SOR #115) has an ability that reads, “When another unique unit is defeated: You may draw a card. Use this ability only once each round.” If Saoirse controls Agent Kallus when another unique unit is defeated, she can choose to resolve the ability and draw a card. If she does, she cannot use the ability again until the next round. If she chooses not to draw a card, she may choose to resolve the ability and draw a card when a different unique unit is defeated later in the same round.
 
-For example, ISB Agent (SOR #176) has an ability that reads, “When Played: You may reveal an event from your hand. If you do, deal
+## 33. Capture
 
-1 damage to a unit.” If Evan controls ISB Agent, he can choose to resolve the ability and deal 1 damage by revealing an event from his hand. He must have an event in his hand to do this, and he must reveal it before dealing 1 damage. If he doesn’t reveal an event, he doesn’t deal damage.
-3. Some abilities with “you may” are followed by the phrase “Use this ability only once each round.” If a player chooses to resolve the text following “you may,” they may not choose to resolve that text again that round, even if the ability is triggered again. The ability is only considered “used” if the player resolving the ability chooses to resolve the text following “you may.”
-
-For example, Agent Kallus (SOR #115) has an ability that reads, “When another unique unit is defeated: You may draw a card. Use
-
-this ability only once each round.” If Saoirse controls Agent Kallus when another unique unit is defeated, she can choose to resolve the ability and draw a card. If she does, she cannot use the ability again until the next round. If she chooses not to draw a card, she may choose to resolve the ability and draw a card when a different unique unit is defeated later in the same round.
-
-## 34. Capture
-
-1. If an ability instructs a unit to “capture” another unit, place it facedown under the capturing unit, removing all damage counters from and defeating all upgrades on the unit being captured. A captured card leaves play when captured and is out-of-play while captured, but is still open information to all players.
+1. If an ability instructs a unit to “capture” another unit, place it facedown under the capturing unit, removing all damage counters from and defeating all upgrades on the unit being captured.A captured card leaves play when captured and is out-of-play while captured, but is still open information to all players.
 a. If a unit that is supposed to capture another unit is no longer in play when resolving a capture effect, ignore that part of the effect entirely.
 2. A unit that has captured one or more other units is “guarding” those units.
 3. If an ability instructs a player to “rescue” a captured unit, that unit is retrieved from under the unit guarding it, flipped faceup, and returned to play exhausted under its owner’s control. It is considered to enter play but is not played and does not trigger any “When Played” abilities.
 4. If a unit that is guarding any number of captured units leaves play, immediately rescue all captured cards that were guarded by that unit.
 5. If a token unit would be captured, set it aside. It is still considered to leave play.
-35. “FOR EACH”
-1. Abilities that use the phrase “for each” to create multiple effects are resolved by determining how each effect of the ability will be resolved, then resolving all effects simultaneously.
 
-For example, Calculated Lethality (SHD #039) is an event that reads, “Defeat a non-leader unit that costs 3 or less. For each
+## 34. “For Each”
 
-upgrade that was on that unit, give an Experience token to a friendly unit.” To resolve the second half of this ability, the player that played the event determines how many Experience tokens they will give and which units they will give them to, then gives all Experience tokens simultaneously.
+1. Abilities that use the phrase “for each” to create multiple effects are resolved by determining how each effect of the ability will be resolved, then resolving all effects simultaneously. For example, Calculated Lethality (SHD #039) is an event that reads, “Defeat a non-leader unit that costs 3 or less. For each upgrade that was on that unit, give an Experience token to a friendly unit.” To resolve the second half of this ability, the player that played the event determines how many Experience tokens they will give and which units they will give them to, then gives all Experience tokens simultaneously.
 a. If an ability that uses the phrase “for each” deals some amount of damage, all damage is calculated and dealt as one instance of damage.
 
-## 36. Indirect Damage
+## 35. Indirect Damage
 
 1. Some abilities instruct players to deal indirect damage to a player. To deal X indirect damage, choose a player. The player must assign X unpreventable damage, divided as they choose, among any number of their units or their base.
 2. Indirect damage is unpreventable, which means it ignores any effects that would prevent the chosen unit from being dealt damage, including Shield tokens and abilities such as “This unit can’t be damaged.”
@@ -1321,19 +1073,19 @@ a. If indirect damage is assigned to a unit with one or more Shield tokens on it
 4. Indirect damage is still considered dealt by the player who controlled the indirect damage ability, regardless of who assigns the damage. Indirect damage dealt by a unit’s ability is considered damage dealt by that unit.
 5. All indirect damage dealt by a single ability is considered to be dealt simultaneously.
 
-## 37. Move
+## 36. Move
 
 1. If an ability instructs a player to “move” a card to an arena, place that card into that arena as a unit. Any upgrades or damage on the unit remain on the unit and move with it. It maintains its ready/exhausted status.
 2. When a card moves to an arena as a unit, it is not considered to leave or enter play.
 
-## 38. The Force
+## 37. The Force
 
 1. “The Force” is a game mechanic that revolves around a special token: the Force token. This token is created in a player’s base zone. A player can only ever control one Force token at a time. If a player is instructed to create their Force token when they already control their Force token, they ignore that part of the ability.
 2. If an ability gives a player the instruction, “The Force is with you,” that player create their Force token.
 3. Some card abilities check whether “the Force is with you”; this statement is true for a player if that player currently controls their Force token.
 4. If an ability instructs a player to “Use the Force,” they may defeat their Force token. If they do, they are considered to have Used the Force. A player may not Use the Force if they do not control their Force token.
 
-## 39. Disclose
+## 38. Disclose
 
 1. If an ability instructs a player to “disclose” some number of aspect icons, that player reveals any number of cards from their hand. If the revealed cards collectively have at least the aspect icons specified by the ability, then the condition is fulfilled and the rest of the ability is resolved.
 2. A player may reveal more cards than necessary in order to fulfill a disclose requirement.
@@ -1445,24 +1197,16 @@ d. There is no limit to the number of copies of a single card (non-leader, non-b
 1. Once a player’s base has no remaining HP, that player is eliminated from the game and they cannot take any more actions. All cards they own are removed from play and any cards owned by other players in their play area are placed in their owners’ discard piles. Any of their triggered abilities still waiting to resolve are ignored.
 a. Cards removed from play when a player is defeated are not considered to be defeated or to have “left play” for the purpose of triggering abilities. However, any units captured by a unit that is removed from play in this way are returned to their owners’ control.
 2. An eliminated player cannot be brought back into play; their base cannot be healed, and they cannot be affected by abilities.
-3. If an eliminated player created a lasting effect or delayed effect earlier in the round they were eliminated, that effect remains active in the game, and the remaining players must resolve it as completely as possible.
-
-For example, if the eliminated player had played Make an Opening (SOR #076) during an earlier turn, the unit chosen for the ability
-
-still would have -2/-2 for the rest of the phase.
+3. If an eliminated player created a lasting effect or delayed effect earlier in the round they were eliminated, that effect remains active in the game, and the remaining players must resolve it as completely as possible. For example, if the eliminated player had played Make an Opening (SOR #076) during an earlier turn, the unit chosen for the ability still would have -2/-2 for the rest of the phase.
 4. If an eliminated player controlled the initiative counter, return the initiative counter to the center of the game area, “available” side faceup. It can then be taken by a different player.
 
 ## 4. Additional Clarifications
 
 1. There are no rules dictating how players may converse with one another in a game. Players may discuss potential actions, open information, and hidden information freely. Any deals made between players are not binding.
 2. For the purposes of card abilities, a player’s “opponent” is any one of the other players in the game, and a player’s “opponents” is each other player in the game. Even if a player makes a deal with another player, they are still “opponents” to each other for the purposes of card abilities that affect opponents. If a card ability only affects a single opponent, the player who played (for events) or controls (for unit abilities) the card chooses which opponent it affects.
-3. If an ability that affects multiple players can be resolved simultaneously, resolve that ability simultaneously. Otherwise, the player that controls the card with the ability can choose the order in which each player is affected by the ability.
-
-For example, Grand Admiral Thrawn (SOR #016) has an ability where his controller looks at the top card of each player’s deck. This
-
-ability cannot be resolved simultaneously, so Thrawn’s controller chooses the order in which they look at the cards. They are not required to look at the cards in a specific order.
+3. If an ability that affects multiple players can be resolved simultaneously, resolve that ability simultaneously. Otherwise, the player that controls the card with the ability can choose the order in which each player is affected by the ability. For example, Grand Admiral Thrawn (SOR #016) has an ability where his controller looks at the top card of each player’s deck. This ability cannot be resolved simultaneously, so Thrawn’s controller chooses the order in which they look at the cards. They are not required to look at the cards in a specific order.
 4. A unit with Sentinel only prevents units in the same arena from attacking its controller’s non-Sentinel units or base. It does not prevent one opponent’s units from attacking another opponent’s non-Sentinel units or base.
-5. During an attack, if the defending player loses control of the defender to a player other than the attacking player, the attack continues with the new controller becoming the defending player.
+5. During an attack, if the defending player loses control of the defending unit to a player other than the attacking player, the attack continues with the new controller becoming the defending player.
 
 ## 12. Twin Suns (Multiplayer Format)
 
@@ -1474,13 +1218,13 @@ ability cannot be resolved simultaneously, so Thrawn’s controller chooses the 
 ## 2. Deckbuilding
 
 1. The Twin Suns format features unique deckbuilding rules that allow players to put more than one leader into their deck.
-a. Each Twin Suns deck must include: • Exactly 2 different leaders whose faceup sides at the start of the game cannot have both the    and    aspects. • Exactly 1 base. • At least 80 other cards (consisting of units, events, and upgrades).
+a. Each Twin Suns deck must include: • Exactly 2 different leaders whose faceup sides at the start of the game cannot have both the and aspects. • Exactly 1 base. • At least 80 other cards (consisting of units, events, and upgrades).
 2. Players cannot have more than one copy of any card in their deck, unless otherwise specified. This limit applies to leaders as well as units, events, and upgrades.
 a. Though a player’s deck cannot start the game with more than one copy of any given card in their deck, a player still may control multiple copies of the same non-unique card through game effects.
 
 ## 3. Two Leaders
 
-1. Each player’s deck must contain two leaders, whose faceup sides at the start of the game cannot have both the  and  aspects. The leaders may have the same name, but must not be copies of each other, in order to avoid violating the uniqueness rule.
+1. Each player’s deck must contain two leaders, whose faceup sides at the start of the game cannot have both the and aspects. The leaders may have the same name, but must not be copies of each other, in order to avoid violating the uniqueness rule.
 2. Both leaders provide their aspect icons to the player’s deck.
 3. A player’s leaders can be exhausted, deployed, and defeated independently of each other. A player may have both of their leaders deployed at the same time.
 

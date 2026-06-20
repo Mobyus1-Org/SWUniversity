@@ -52,6 +52,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
         case "TWI_071"://Unshakeable Will
         case "JTL_058"://Academy Graduate
         case "JTL_003"://Lando Calrissian leader unit
+        case "ASH_198"://Nowhere to Hide
           hasSentinel = true;
           break;
         //conditional upgrade sentinel

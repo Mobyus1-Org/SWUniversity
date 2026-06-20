@@ -73,3 +73,19 @@ export function CreateSpy(gamestate: GameState, player: PlayerId, gameLog: strin
 
   return spawnToken(gamestate, player, "SEC_T01");
 }
+
+/**
+ * Credit tokens are not units — they live as a counter in the controller's
+ * supplemental state. While paying resources you may defeat any number of your
+ * Credits, each granting a {1R} discount.
+ */
+export function CreateCreditToken(game: GameState, player: PlayerId, gameLog: string[], fromCardId?: string): void {
+  const pState = player === 1 ? game.player1 : game.player2;
+  pState.supplemental.creditTokens = (pState.supplemental.creditTokens ?? 0) + 1;
+
+  if (fromCardId) {
+    gameLog.push(`${CardTitle(fromCardId)}: created a Credit token.`);
+  } else {
+    gameLog.push("Created a Credit token.");
+  }
+}

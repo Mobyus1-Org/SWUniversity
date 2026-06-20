@@ -30109,7 +30109,7 @@ export function AllCardTitles(): string[] {
 }
 
 export const cardDbGenerationMetadata = {
-  generatedAt: "2026-06-07T13:51:43.673Z",
+  generatedAt: "2026-06-20T00:32:34.298Z",
   processedCards: 2332,
   fetchedPages: 27,
   dictionaryCount: 19,
