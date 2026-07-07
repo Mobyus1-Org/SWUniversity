@@ -92,6 +92,9 @@ export default function ProfilePage({ canAccessPuzzles = false }: { canAccessPuz
   const [resetPuzzleMessage, setResetPuzzleMessage] = React.useState("");
   const [resetPuzzleError, setResetPuzzleError] = React.useState("");
   const [isResettingPuzzles, setIsResettingPuzzles] = React.useState(false);
+  const [resetPending, setResetPending] = React.useState<"quiz" | "dykswu" | null>(null);
+  const [isResettingStats, setIsResettingStats] = React.useState(false);
+  const [resetStatsError, setResetStatsError] = React.useState("");
 
   const loadUser = React.useCallback(async () => {
     setIsLoading(true);
@@ -174,6 +177,66 @@ export default function ProfilePage({ canAccessPuzzles = false }: { canAccessPuz
     }
   };
 
+  const onResetStats = async (app: "quiz" | "dykswu") => {
+    setIsResettingStats(true);
+    setResetStatsError("");
+    try {
+      const response = await fetch("/api/profile/reset-stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ app }),
+      });
+      const data = (await response.json()) as ApiResponse;
+      if (!response.ok) {
+        setResetStatsError(data.error || "Unable to reset stats.");
+        return;
+      }
+      setResetPending(null);
+      await loadUser();
+    } catch {
+      setResetStatsError("Unable to reset stats.");
+    } finally {
+      setIsResettingStats(false);
+    }
+  };
+
+  const renderResetStats = (app: "quiz" | "dykswu", label: string) => (
+    <div className="mt-4">
+      {resetPending === app ? (
+        <div className="rounded-lg border border-rose-400/30 bg-rose-500/10 p-3 space-y-2">
+          <p className="text-sm text-rose-200">This clears your {label} run history and endless stats. Databank Completion is kept. Are you sure?</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void onResetStats(app)}
+              disabled={isResettingStats}
+              className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-500/35 disabled:opacity-50"
+            >
+              {isResettingStats ? "Resetting..." : "Confirm"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setResetPending(null)}
+              className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
+            >
+              Cancel
+            </button>
+          </div>
+          {resetStatsError && <p className="text-red-300 text-sm">{resetStatsError}</p>}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => { setResetStatsError(""); setResetPending(app); }}
+          className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+        >
+          Reset {label} Stats
+        </button>
+      )}
+    </div>
+  );
+
   if (isLoading) {
     return <div className="max-w-md mx-auto mt-8 p-6">Loading profile...</div>;
   }
@@ -219,7 +282,7 @@ export default function ProfilePage({ canAccessPuzzles = false }: { canAccessPuz
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-300">No badges earned yet.</p>
+            <p className="text-sm text-gray-300">Badges coming soon!</p>
           )}
         </div>
 
@@ -304,12 +367,14 @@ export default function ProfilePage({ canAccessPuzzles = false }: { canAccessPuz
           <summary className="cursor-pointer text-lg font-semibold">Quiz Mode</summary>
           <div className="mt-4">
             <ModeStatsBoxes stats={profileStats.quiz} databank={user.profile?.databankCompletion?.quiz} />
+            {renderResetStats("quiz", "Quiz")}
           </div>
         </details>
         <details className="rounded border border-white/15 bg-black/20 p-4" open>
           <summary className="cursor-pointer text-lg font-semibold">Do You Know SWU Mode</summary>
           <div className="mt-4">
             <ModeStatsBoxes stats={profileStats.dykswu} databank={user.profile?.databankCompletion?.dykswu} />
+            {renderResetStats("dykswu", "DYKSWU")}
           </div>
         </details>
       </div>

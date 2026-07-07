@@ -69,7 +69,7 @@ export function ModeButtonItem({mode, title, description, modeSet, initModeId, i
           checked={notFinishedOnly}
           onChange={(e) => { sfx("click"); setNotFinishedOnly(e.target.checked); setAllFinishedMessage(false); }}
         />
-        Not Finished Only
+        Not Answered Only
       </label>
     }
     {
