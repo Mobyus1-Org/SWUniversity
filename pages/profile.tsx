@@ -205,7 +205,7 @@ export default function ProfilePage({ canAccessPuzzles = false }: { canAccessPuz
     <div className="mt-4">
       {resetPending === app ? (
         <div className="rounded-lg border border-rose-400/30 bg-rose-500/10 p-3 space-y-2">
-          <p className="text-sm text-rose-200">This clears your {label} run history and endless stats. Databank Completion is kept. Are you sure?</p>
+          <p className="text-sm text-rose-200">This clears your {label} run history and Ironman stats. Databank Completion is kept. Are you sure?</p>
           <div className="flex gap-2">
             <button
               type="button"
