@@ -21,9 +21,9 @@ export const slides: ICarouselData[] = [
   },
   {
     type: "paragraph",
-    title: "Iron Man Challenge Is Here!",
-    src: "/assets/rivals-fall-splash.png",
-    description: "We're excited to announce the launch of the Iron Man Challenge! Test your skills and see how many questions you can complete in a row without making any mistakes. This new mode is designed to push your knowledge and endurance to the limit.\n\nHaving fun on SWUniversity.net? Stay tuned for more unique ways to test yourself coming in the future!",
+    title: "Introducing User Profiles!",
+    src: "/assets/banners/profilesHomeImg.png",
+    description: "We're happy to finally bring SWUniversity's first major update since launch: User profiles!\n\nYou can now register for free in the top-right corner of the home page and track your progress and performance on SWUniversity!  Use this to not only see where you may want to spend more time studying, but also to challenge your friends!\n\nWith this year's Galactic Championship quickly approaching, there are more big things coming to SWUniversity right around the corner, so keep checking back!",
   },
   {
     type: "embed",
