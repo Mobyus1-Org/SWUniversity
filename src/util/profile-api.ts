@@ -5,6 +5,7 @@ import type {
   GameCompletedEntry,
   TrackedApp,
   TrackedGameMode,
+  DatabankCompletion,
 } from "@/util/profile-data";
 
 export type BadgeViewModel = {
@@ -22,6 +23,12 @@ export type UserProfile = {
   badges: string[];
   badgeDetails: BadgeViewModel[];
   solvedPuzzleIds: string[];
+  masteredQuizIds: string[];
+  masteredDykswuIds: string[];
+  databankCompletion?: {
+    quiz: DatabankCompletion;
+    dykswu: DatabankCompletion;
+  };
   createdAt?: string;
   updatedAt?: string;
 };
@@ -87,6 +94,90 @@ export async function updateEndlessModeStats(
   } catch (error) {
     console.error("Error updating endless mode stats:", error);
     return { success: false, error: "Network error" };
+  }
+}
+
+export async function masterQuestion(
+  app: TrackedApp,
+  key: string,
+): Promise<ProfileUpdateResponse> {
+  try {
+    const response = await fetch("/api/profile/master-question", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ app, key }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: data.error || "Failed to record mastered question" };
+    }
+
+    return { success: true, profile: data.profile };
+  } catch (error) {
+    console.error("Error recording mastered question:", error);
+    return { success: false, error: "Network error" };
+  }
+}
+
+export async function masterQuestions(
+  app: TrackedApp,
+  keys: string[],
+): Promise<ProfileUpdateResponse> {
+  if (keys.length === 0) {
+    return { success: true };
+  }
+  try {
+    const response = await fetch("/api/profile/master-question", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ app, keys }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: data.error || "Failed to record mastered questions" };
+    }
+
+    return { success: true, profile: data.profile };
+  } catch (error) {
+    console.error("Error recording mastered questions:", error);
+    return { success: false, error: "Network error" };
+  }
+}
+
+export async function getMasteredIds(): Promise<{
+  loggedIn: boolean;
+  masteredQuizIds: string[];
+  masteredDykswuIds: string[];
+}> {
+  try {
+    const response = await fetch("/api/profile/mastered", {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      return { loggedIn: false, masteredQuizIds: [], masteredDykswuIds: [] };
+    }
+
+    const data = await response.json();
+    return {
+      loggedIn: true,
+      masteredQuizIds: Array.isArray(data.masteredQuizIds) ? data.masteredQuizIds : [],
+      masteredDykswuIds: Array.isArray(data.masteredDykswuIds) ? data.masteredDykswuIds : [],
+    };
+  } catch (error) {
+    console.error("Error loading mastered questions:", error);
+    return { loggedIn: false, masteredQuizIds: [], masteredDykswuIds: [] };
   }
 }
 

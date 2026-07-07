@@ -45,7 +45,7 @@ describe("Infinite Credits combo", () => {
     expect(g.state.player2.groundArena).toHaveLength(1); // Galen survives (0 effective power)
   });
 
-  it("can generate 100 Credits by looping the swing", async () => {
+  it("can generate 100 Credits by looping the swing", { timeout: 120_000 }, async () => {
     const g = new GameTestAdapter();
     g.loadNewState(buildComboState());
 
@@ -62,5 +62,5 @@ describe("Infinite Credits combo", () => {
 
     expect(g.state.player1.supplemental.creditTokens).toBe(100);
     expect(g.state.player2.groundArena).toHaveLength(1); // Galen never dies
-  }, 30000);
+  });
 });

@@ -2,6 +2,8 @@ import React from "react";
 import { getDoYouKnowSWUDataAsync, getModeTitle, preloadCardImagesAsync, preloadDYKSWUImagesAsync, type AppModeSetEntry, type DoYouKnowSWUQuestion, type UserResponse } from "@/util/func";
 import { ModeButtons } from "@/components/Shared/ModeButtons";
 import { QuestionContent } from "@/components/DoYouKnowSWU/QuestionContent";
+import { getMasteredIds } from "@/util/profile-api";
+import { isDykswuCardFinished, modeDifficultyIndex } from "@/util/mastery-filter";
 import { globalBackgroundStyle } from "@/util/style-const";
 import { type AppModes, type ModeDescriptions } from "@/util/const";
 import { useRouter } from "next/router";
@@ -21,6 +23,8 @@ function DoYouKnowSWUPage() {
   const [userResponses, setUserResponses] = React.useState<UserResponse[]>([]);
   const [lastEndlessQuestions, setLastEndlessQuestions] = React.useState<number[]>([]);
   const [questionsEnded, setQuestionsEnded] = React.useState<boolean>(false);
+  const [loggedIn, setLoggedIn] = React.useState(false);
+  const [masteredDykswuIds, setMasteredDykswuIds] = React.useState<string[]>([]);
   //TODO: remove this once we go live
   const router = useRouter();
   const testId = router.query.Mobyus1hereisatestid as string | undefined;
@@ -57,6 +61,7 @@ function DoYouKnowSWUPage() {
     ? <p className="text-lg uwd:text-3xl 4k:text-5xl">Loading questions...</p>
     : <QuestionContent
       currentQuestionSet={currentQuestionSet}
+      allQuestions={allQuestions}
       currentQuestionId={currentQuestionId}
       questionMode={dykswuMode}
       questionsCompleted={questionsCompleted}
@@ -126,6 +131,28 @@ function DoYouKnowSWUPage() {
     "master": `Cards in this mode are very challenging!\n\nTotal Cards: ${dykswuSets.master.length}`,
   };
 
+  React.useEffect(() => {
+    getMasteredIds().then(({ loggedIn, masteredDykswuIds }) => {
+      setLoggedIn(loggedIn);
+      setMasteredDykswuIds(masteredDykswuIds);
+    });
+  }, []);
+
+  const masteredDykswuSet = React.useMemo(() => new Set(masteredDykswuIds), [masteredDykswuIds]);
+  const fullVariantsById = React.useMemo(() => {
+    const map = new Map<number, DoYouKnowSWUQuestion["variants"]>();
+    allQuestions.forEach((q) => map.set(q.id, q.variants));
+    return map;
+  }, [allQuestions]);
+  const isFinished = React.useCallback(
+    (entry: AppModeSetEntry, mode: AppModes) => {
+      const difficulty = modeDifficultyIndex(mode);
+      if (difficulty === null) return false;
+      return isDykswuCardFinished(entry.id, fullVariantsById.get(entry.id) ?? [], difficulty, masteredDykswuSet);
+    },
+    [fullVariantsById, masteredDykswuSet],
+  );
+
   return <div>
     <h1 className="text-center text-4xl font-bold md:text-4xl uwd:!text-5xl 4k:!text-7xl mb-4">{getModeTitle("dykswu", dykswuMode)}</h1>
     {
@@ -171,6 +198,8 @@ function DoYouKnowSWUPage() {
           setCurrentModeId={setCurrentQuestionId}
           setStandardModeLength={setStandardQuestionLength}
           setVariant={setCurrentVariant}
+          loggedIn={loggedIn}
+          isFinished={isFinished}
         />
         : renderQuestionContent()
     }

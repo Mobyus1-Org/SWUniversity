@@ -17,6 +17,8 @@ type UserProfileLike = {
   endlessModeStats?: EndlessModeStats;
   badges?: string[];
   solvedPuzzleIds?: string[];
+  masteredQuizIds?: string[];
+  masteredDykswuIds?: string[];
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -30,6 +32,8 @@ export type UserProfileResponse = {
   badges: BadgeId[];
   badgeDetails: BadgeViewModel[];
   solvedPuzzleIds: string[];
+  masteredQuizIds: string[];
+  masteredDykswuIds: string[];
   createdAt?: string;
   updatedAt?: string;
 };
@@ -92,6 +96,8 @@ export function serializeUserProfile(profile: UserProfileLike | null): UserProfi
     badges: badgeIds,
     badgeDetails: toBadgeDetails(profile.badges || []),
     solvedPuzzleIds: profile.solvedPuzzleIds || [],
+    masteredQuizIds: profile.masteredQuizIds || [],
+    masteredDykswuIds: profile.masteredDykswuIds || [],
     createdAt: profile.createdAt?.toISOString(),
     updatedAt: profile.updatedAt?.toISOString(),
   };

@@ -16,6 +16,8 @@ export type UserProfileDocument = {
   endlessModeStats: EndlessModeStats;
   badges: string[];
   solvedPuzzleIds: string[];
+  masteredQuizIds: string[];
+  masteredDykswuIds: string[];
   createdAt: Date;
   updatedAt: Date;
 };
@@ -138,6 +140,16 @@ const userProfileSchema = new Schema<UserProfileDocument>(
       default: [],
     },
     solvedPuzzleIds: {
+      type: [String],
+      required: true,
+      default: [],
+    },
+    masteredQuizIds: {
+      type: [String],
+      required: true,
+      default: [],
+    },
+    masteredDykswuIds: {
       type: [String],
       required: true,
       default: [],

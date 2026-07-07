@@ -3,7 +3,8 @@ import { renderDYKSWUChoiceTitle, renderItalicsAndBold, type DoYouKnowSWUQuestio
 import { AudioContext } from "@/util/context";
 import { globalBackgroundStyleNoShadow } from "@/util/style-const";
 import { type AppModes, type SWUniversityApp } from "@/util/const";
-import { awardBadge, logGameCompletion } from "@/util/profile-api";
+import { awardBadge, logGameCompletion, masterQuestions } from "@/util/profile-api";
+import { standardMasteryKeys } from "@/util/mastery-filter";
 import {
   createEmptyDifficultyBreakdown,
   difficultyIndexToKey,
@@ -133,10 +134,14 @@ export function ModeEndScreen({
 
     void logGameCompletion(app, trackedMode, points, totalQuestions, difficultyBreakdown);
 
+    if (trackedMode === "standard") {
+      void masterQuestions(app, standardMasteryKeys(app, userResponses));
+    }
+
     if (trackedMode === "iron-man" && points === totalQuestions) {
       void awardBadge(app === "quiz" ? "iron_man_quiz_2026" : "iron_man_dykswu_2026");
     }
-  }, [app, appMode, difficultyBreakdown, ironManFailed, points, totalQuestions, userResponses.length]);
+  }, [app, appMode, difficultyBreakdown, ironManFailed, points, totalQuestions, userResponses]);
 
   const renderPoints = () => {
     return <div>You've Reached the End!

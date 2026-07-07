@@ -5,11 +5,12 @@ import { DYKSWUChoices, type AppModes, type SfxType } from "@/util/const";
 import { renderItalicsAndBold, type UserResponse, type DoYouKnowSWUQuestion, getCardImageLink, getSWUDBImageLink, getDYKSWUImageLink, getDYKSWUImageLinkFallback, renderDYKSWUChoiceTitle, type DoYouKnowSWUVariant } from "@/util/func";
 import { ModeEndScreen } from "@/components/Shared/ModeEndScreen";
 import { AudioContext, UserSettingsContext } from "@/util/context";
-import { updateEndlessModeStats } from "@/util/profile-api";
+import { updateEndlessModeStats, masterQuestion } from "@/util/profile-api";
 import { difficultyIndexToKey } from "@/util/profile-data";
 
 interface IProps {
   currentQuestionSet: DoYouKnowSWUQuestion[];
+  allQuestions: DoYouKnowSWUQuestion[];
   currentQuestionId: number;
   questionMode: AppModes;
   questionsCompleted: number[];
@@ -38,6 +39,7 @@ interface IProps {
 
 export function QuestionContent({
   currentQuestionSet,
+  allQuestions,
   currentQuestionId,
   questionMode,
   questionsCompleted,
@@ -62,7 +64,15 @@ export function QuestionContent({
   setQuestionsEnded
 }: IProps) {
   const currentQuestion = currentQuestionSet.find(q => q.id === currentQuestionId)!;
+  const currentFullQuestion = allQuestions.find(q => q.id === currentQuestionId);
   const currentVariantQuestion = currentQuestion.variants[currentVariant];
+
+  const recordDykswuMastery = () => {
+    const fullVariants = currentFullQuestion?.variants ?? [];
+    const fullIndex = fullVariants.indexOf(currentVariantQuestion);
+    const variantIndex = fullIndex >= 0 ? fullIndex : currentVariant;
+    void masterQuestion("dykswu", `${currentQuestionId}:${variantIndex}`);
+  };
   const { sfx } = React.useContext(AudioContext) ?? { sfx: () => { } };
   const userSettings = React.useContext(UserSettingsContext);
   const [revealCard, setRevealCard] = React.useState(false);
@@ -180,6 +190,12 @@ export function QuestionContent({
                 ${followUpAnswer === "" ? "opacity-50 cursor-not-allowed" : ""}
               `}
               onClick={() => {
+                  if (questionMode !== "standard"
+                    && selectedAnswer === currentVariantQuestion.answer
+                    && currentVariantQuestion.followUp
+                    && followUpAnswer === currentVariantQuestion.followUp.answer) {
+                    recordDykswuMastery();
+                  }
                   setFollowUpSubmitted(true);
                   sfx("confirm");
               }}
@@ -244,6 +260,9 @@ export function QuestionContent({
         <form onSubmit={(e) => {
           e.preventDefault();
           if (selectedAnswer !== "") {
+            if (questionMode !== "standard" && !currentVariantQuestion.followUp && selectedAnswer === currentVariantQuestion.answer) {
+              recordDykswuMastery();
+            }
             onSubmitAnswer(selectedAnswer, setQuestionResult, sfx);
           }
         }}>

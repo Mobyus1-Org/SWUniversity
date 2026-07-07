@@ -5,7 +5,7 @@ import { renderItalicsAndBold, type Quiz, type UserResponse, getCardImageLink, g
 import { ModeEndScreen } from "@/components/Shared/ModeEndScreen";
 import { AudioContext, ModalContext, UserSettingsContext, type ModalContextProps } from "@/util/context";
 import { RelevantCardsPanel } from "@/components/Quiz/RelevantCardsPanel";
-import { updateEndlessModeStats } from "@/util/profile-api";
+import { updateEndlessModeStats, masterQuestion } from "@/util/profile-api";
 import { difficultyIndexToKey } from "@/util/profile-data";
 
 interface IProps {
@@ -158,6 +158,9 @@ export function QuizContent({
         <form onSubmit={(e) => {
           e.preventDefault();
           if (selectedAnswer !== "") {
+            if (quizMode !== "standard" && selectedAnswer === currentQuiz.answer) {
+              void masterQuestion("quiz", String(currentQuizId));
+            }
             onSubmitAnswer(selectedAnswer, setQuizResult, sfx);
           }
         }}>

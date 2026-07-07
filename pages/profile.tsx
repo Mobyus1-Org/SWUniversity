@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import type { GetServerSideProps } from "next";
 import type { NextApiRequest } from "next";
 import type { UserProfile } from "@/util/profile-api";
-import { deriveProfileStats, type DerivedAppStats } from "@/util/profile-data";
+import { deriveProfileStats, type DerivedAppStats, type DatabankCompletion } from "@/util/profile-data";
 import { getSessionFromRequest } from "@/server/auth/session";
 import { canAccessPuzzles } from "@/server/auth/puzzle-access";
 
@@ -26,18 +26,50 @@ function formatScore(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
-function AppStatsSection({ title, stats }: { title: string; stats: DerivedAppStats }) {
+function pct(correct: number, total: number): string {
+  return total > 0 ? ((correct / total) * 100).toFixed(2) : "0";
+}
+
+function DatabankRow({ label, stats }: { label: string; stats: { mastered: number; total: number } }) {
   return (
-    <details className="rounded border border-white/15 bg-black/20 p-4" open>
-      <summary className="cursor-pointer text-lg font-semibold">{title}</summary>
-      <div className="mt-4 space-y-2 text-sm text-gray-200">
-        <p><span className="font-semibold">Padawan:</span> {formatScore(stats.difficultyBreakdown.padawan.correct)} / {formatScore(stats.difficultyBreakdown.padawan.total)} ({stats.difficultyBreakdown.padawan.total > 0 ? ((stats.difficultyBreakdown.padawan.correct / stats.difficultyBreakdown.padawan.total) * 100).toFixed(2) : "0"}%)</p>
-        <p><span className="font-semibold">Knight:</span> {formatScore(stats.difficultyBreakdown.knight.correct)} / {formatScore(stats.difficultyBreakdown.knight.total)} ({stats.difficultyBreakdown.knight.total > 0 ? ((stats.difficultyBreakdown.knight.correct / stats.difficultyBreakdown.knight.total) * 100).toFixed(2) : "0"}%)</p>
-        <p><span className="font-semibold">Master:</span> {formatScore(stats.difficultyBreakdown.master.correct)} / {formatScore(stats.difficultyBreakdown.master.total)} ({stats.difficultyBreakdown.master.total > 0 ? ((stats.difficultyBreakdown.master.correct / stats.difficultyBreakdown.master.total) * 100).toFixed(2) : "0"}%)</p>
-        <p><span className="font-semibold">Standard Runs Completed:</span> {stats.standardRunsCompleted}</p>
-        <p><span className="font-semibold">Longest Iron Man Run:</span> {stats.longestIronManRun}</p>
+    <p>
+      <span className="font-semibold">{label}:</span> {stats.mastered} / {stats.total} ({pct(stats.mastered, stats.total)}%)
+    </p>
+  );
+}
+
+function ModeStatsBoxes({ stats, databank }: { stats: DerivedAppStats; databank?: DatabankCompletion }) {
+  return (
+    <div className="space-y-4 text-sm text-gray-200">
+      <div className="rounded border border-white/10 bg-black/20 p-3 space-y-1">
+        <p className="font-semibold text-base">Standard</p>
+        <p><span className="font-semibold">Runs Completed:</span> {stats.standardRunsCompleted}</p>
+        <p><span className="font-semibold">Total Questions Answered:</span> {formatScore(stats.total)}</p>
+        <p><span className="font-semibold">Total Questions Correct:</span> {formatScore(stats.correct)}</p>
+        <p><span className="font-semibold">Overall Percent Accuracy:</span> {pct(stats.correct, stats.total)}%</p>
+        <p><span className="font-semibold">Padawan:</span> {stats.difficultyBreakdown.padawan.correct} / {stats.difficultyBreakdown.padawan.total} ({pct(stats.difficultyBreakdown.padawan.correct, stats.difficultyBreakdown.padawan.total)}%)</p>
+        <p><span className="font-semibold">Knight:</span> {stats.difficultyBreakdown.knight.correct} / {stats.difficultyBreakdown.knight.total} ({pct(stats.difficultyBreakdown.knight.correct, stats.difficultyBreakdown.knight.total)}%)</p>
+        <p><span className="font-semibold">Master:</span> {stats.difficultyBreakdown.master.correct} / {stats.difficultyBreakdown.master.total} ({pct(stats.difficultyBreakdown.master.correct, stats.difficultyBreakdown.master.total)}%)</p>
       </div>
-    </details>
+      <div className="rounded border border-white/10 bg-black/20 p-3 space-y-1">
+        <p className="font-semibold text-base">Ironman</p>
+        <p><span className="font-semibold">Runs Attempted:</span> {stats.ironManRunsAttempted}</p>
+        <p><span className="font-semibold">Runs Completed:</span> {stats.ironManRunsCompleted}</p>
+        <p><span className="font-semibold">Longest Run:</span> {stats.longestIronManRun}</p>
+      </div>
+      <div className="rounded border border-white/10 bg-black/20 p-3 space-y-1">
+        <p className="font-semibold text-base">Databank Completion</p>
+        {databank ? (
+          <>
+            <DatabankRow label="Padawan" stats={databank.padawan} />
+            <DatabankRow label="Knight" stats={databank.knight} />
+            <DatabankRow label="Master" stats={databank.master} />
+          </>
+        ) : (
+          <p className="text-gray-400">Loading…</p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -268,13 +300,18 @@ export default function ProfilePage({ canAccessPuzzles = false }: { canAccessPuz
 
       <div className="border rounded-lg bg-black/30 p-6 space-y-4 h-fit">
         <h2 className="text-2xl font-semibold">Stats</h2>
-        <div className="rounded border border-white/15 bg-black/20 p-4 space-y-2 text-sm">
-          <p><span className="font-semibold">Total Questions Answered:</span> {formatScore(profileStats.totalAnswered)}</p>
-          <p><span className="font-semibold">Total Questions Correct:</span> {formatScore(profileStats.totalCorrect)}</p>
-          <p><span className="font-semibold">Overall Percent Accuracy:</span> {profileStats.totalAnswered > 0 ? ((profileStats.totalCorrect / profileStats.totalAnswered) * 100).toFixed(2) : "0"}%</p>
-        </div>
-        <AppStatsSection title="Quiz Standard Stats" stats={profileStats.quiz} />
-        <AppStatsSection title="Do You Know SWU Standard Stats" stats={profileStats.dykswu} />
+        <details className="rounded border border-white/15 bg-black/20 p-4" open>
+          <summary className="cursor-pointer text-lg font-semibold">Quiz Mode</summary>
+          <div className="mt-4">
+            <ModeStatsBoxes stats={profileStats.quiz} databank={user.profile?.databankCompletion?.quiz} />
+          </div>
+        </details>
+        <details className="rounded border border-white/15 bg-black/20 p-4" open>
+          <summary className="cursor-pointer text-lg font-semibold">Do You Know SWU Mode</summary>
+          <div className="mt-4">
+            <ModeStatsBoxes stats={profileStats.dykswu} databank={user.profile?.databankCompletion?.dykswu} />
+          </div>
+        </details>
       </div>
     </div>
   );

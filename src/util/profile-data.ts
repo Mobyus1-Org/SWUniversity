@@ -40,6 +40,8 @@ export type DerivedAppStats = {
   difficultyBreakdown: DifficultyBreakdown;
   standardRunsCompleted: number;
   longestIronManRun: number;
+  ironManRunsAttempted: number;
+  ironManRunsCompleted: number;
 };
 
 export type DerivedProfileStats = {
@@ -48,6 +50,21 @@ export type DerivedProfileStats = {
   quiz: DerivedAppStats;
   dykswu: DerivedAppStats;
 };
+
+export type DatabankDifficultyStats = {
+  mastered: number;
+  total: number;
+};
+
+export type DatabankCompletion = Record<DifficultyKey, DatabankDifficultyStats>;
+
+export function createEmptyDatabankCompletion(): DatabankCompletion {
+  return {
+    padawan: { mastered: 0, total: 0 },
+    knight: { mastered: 0, total: 0 },
+    master: { mastered: 0, total: 0 },
+  };
+}
 
 export function createEmptyDifficultyBreakdown(): DifficultyBreakdown {
   return {
@@ -135,6 +152,8 @@ function createEmptyDerivedAppStats(): DerivedAppStats {
     difficultyBreakdown: createEmptyDifficultyBreakdown(),
     standardRunsCompleted: 0,
     longestIronManRun: 0,
+    ironManRunsAttempted: 0,
+    ironManRunsCompleted: 0,
   };
 }
 
@@ -165,6 +184,10 @@ export function deriveProfileStats(profile: ProfileStatsSource | null): DerivedP
     // Iron Man ends on the first miss, so the correct count is the run length.
     if (game.mode === "iron-man") {
       target.longestIronManRun = Math.max(target.longestIronManRun, game.correct);
+      target.ironManRunsAttempted += 1;
+      if (game.total > 0 && game.correct === game.total) {
+        target.ironManRunsCompleted += 1;
+      }
     }
   }
 

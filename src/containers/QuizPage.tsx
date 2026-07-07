@@ -3,6 +3,8 @@ import { getModeTitle, getQuizDataAsync, preloadSWUDBImagesAsync } from "@/util/
 import type { AppModeSetEntry, Quiz, UserResponse } from "@/util/func";
 import { ModeButtons } from "@/components/Shared/ModeButtons";
 import { QuizContent } from "@/components/Quiz/QuizContent";
+import { getMasteredIds } from "@/util/profile-api";
+import { isQuizFinished } from "@/util/mastery-filter";
 import { globalBackgroundStyle } from "@/util/style-const";
 import { DiscordLink, type AppModes, type ModeDescriptions } from "@/util/const";
 import { useRouter } from "next/router";
@@ -21,6 +23,8 @@ function QuizPage() {
   const [standardQuizLength, setStandardQuizLength] = React.useState<number>(0);
   const [userResponses, setUserResponses] = React.useState<UserResponse[]>([]);
   const [quizEnded, setQuizEnded] = React.useState<boolean>(false);
+  const [loggedIn, setLoggedIn] = React.useState(false);
+  const [masteredQuizIds, setMasteredQuizIds] = React.useState<string[]>([]);
   //TODO: remove this once we go live
   const router = useRouter();
   const testId = router.query.Mobyus1hereisatestid as string | undefined;
@@ -43,6 +47,19 @@ function QuizPage() {
   React.useEffect(() => {
     setQuizEnded(false);
   }, [quizMode])
+
+  React.useEffect(() => {
+    getMasteredIds().then(({ loggedIn, masteredQuizIds }) => {
+      setLoggedIn(loggedIn);
+      setMasteredQuizIds(masteredQuizIds);
+    });
+  }, []);
+
+  const masteredQuizSet = React.useMemo(() => new Set(masteredQuizIds), [masteredQuizIds]);
+  const isFinished = React.useCallback(
+    (entry: AppModeSetEntry) => isQuizFinished(entry.id, masteredQuizSet),
+    [masteredQuizSet],
+  );
 
   const renderQuizContent = () => loading
     ? <p className="text-lg uwd:text-3xl 4k:text-5xl">Loading quizzes...</p>
@@ -143,6 +160,8 @@ function QuizPage() {
           setCurrentModeSet={setCurrentQuizSet as React.Dispatch<React.SetStateAction<AppModeSetEntry[]>>}
           setCurrentModeId={setCurrentQuizId}
           setStandardModeLength={setStandardQuizLength}
+          loggedIn={loggedIn}
+          isFinished={isFinished}
         />
         : renderQuizContent()
     }

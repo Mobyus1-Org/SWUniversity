@@ -21,13 +21,17 @@ interface IProps {
   setCurrentModeId: (id: number) => void;
   setStandardModeLength: (length: number) => void;
   setVariant?: (variant: number) => void;
+  loggedIn: boolean;
+  isFinished?: (entry: AppModeSetEntry, mode: AppModes) => boolean;
 }
 
 export function ModeButtons({mode, appModeSets, standardModeLength, modeDescriptions, initVariant,
-    setMode, setCurrentModeSet, setCurrentModeId, setStandardModeLength, setVariant}: IProps) {
+    setMode, setCurrentModeSet, setCurrentModeId, setStandardModeLength, setVariant, loggedIn, isFinished}: IProps) {
   const renderButtons = () => <div className="grid md:grid-cols-3 gap-4 uwd:gap-5 mb-8 h-full text-center">
     <ModeButtonItem
       mode="padawan"
+      loggedIn={loggedIn}
+      isFinished={isFinished}
       title="Padawan Mode"
       description={modeDescriptions["padawan"]}
       modeSet={appModeSets.padawan}
@@ -40,6 +44,8 @@ export function ModeButtons({mode, appModeSets, standardModeLength, modeDescript
     />
     <ModeButtonItem
       mode="knight"
+      loggedIn={loggedIn}
+      isFinished={isFinished}
       title="Jedi Knight Mode"
       description={modeDescriptions["knight"]}
       modeSet={appModeSets.knight}
@@ -52,6 +58,8 @@ export function ModeButtons({mode, appModeSets, standardModeLength, modeDescript
     />
     <ModeButtonItem
       mode="master"
+      loggedIn={loggedIn}
+      isFinished={isFinished}
       title="Jedi Master Mode"
       description={modeDescriptions["master"]}
       modeSet={appModeSets.master}
