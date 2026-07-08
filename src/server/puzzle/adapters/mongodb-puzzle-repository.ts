@@ -15,6 +15,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
       id: doc._id.toString(),
       name: doc.name,
       description: doc.description ?? "",
+      infoText: doc.infoText ?? "",
       difficulty: doc.difficulty,
       initialGamestate: doc.initialGamestate as RawPuzzleGameState,
       deploy: doc.deploy,
@@ -41,6 +42,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
         {
           name: puzzle.name,
           description: puzzle.description,
+          infoText: puzzle.infoText ?? "",
           difficulty: puzzle.difficulty,
           initialGamestate: puzzle.initialGamestate,
           author: puzzle.author ?? "",
@@ -56,6 +58,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
     const doc = await PuzzleModel.create({
       name: puzzle.name,
       description: puzzle.description,
+      infoText: puzzle.infoText ?? "",
       difficulty: puzzle.difficulty,
       initialGamestate: puzzle.initialGamestate,
       author: puzzle.author ?? "",

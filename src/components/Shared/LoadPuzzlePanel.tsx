@@ -1,12 +1,16 @@
 import React from "react";
 import { globalBackgroundStyle } from "@/util/style-const";
+import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
 
-type PuzzleEntry = { id: string; name: string; description: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; deploy?: boolean };
+type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; deploy?: boolean; initialGamestate: RawPuzzleGameState };
 
 type Props = {
   onPuzzleLoaded: (id: string, meta: PuzzleEntry) => void;
+  onEditPuzzle?: (entry: PuzzleEntry) => void;
   isAdmin?: boolean;
   solvedPuzzleIds?: string[];
+  /** Bump to force a re-fetch of the puzzle list (e.g. after a save/edit). */
+  refreshSignal?: number;
 };
 
 function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
@@ -31,7 +35,7 @@ type SortKey = "title" | "difficulty";
 type SortDir = "asc" | "desc";
 
 export function LoadPuzzlePanel(props: Props) {
-  const { onPuzzleLoaded, isAdmin = false, solvedPuzzleIds = [] } = props;
+  const { onPuzzleLoaded, onEditPuzzle, isAdmin = false, solvedPuzzleIds = [], refreshSignal } = props;
   const [puzzles, setPuzzles] = React.useState<PuzzleEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -48,7 +52,7 @@ export function LoadPuzzlePanel(props: Props) {
       .finally(() => setLoading(false));
   }, []);
 
-  React.useEffect(() => { fetchList(); }, [fetchList]);
+  React.useEffect(() => { fetchList(); }, [fetchList, refreshSignal]);
 
   async function toggleDeploy(id: string, current: boolean | undefined) {
     try {
@@ -134,23 +138,33 @@ export function LoadPuzzlePanel(props: Props) {
                     ) : null}
                   </div>
                   {isAdmin ? (
-                    <label
-                      onClick={(e) => e.stopPropagation()}
-                      className="ml-2 inline-flex items-center cursor-pointer"
-                      aria-label={entry.deploy ? "Mark hidden" : "Mark deployed"}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={Boolean(entry.deploy)}
-                        onChange={() => void toggleDeploy(id, entry.deploy)}
-                        className="sr-only"
-                        aria-checked={Boolean(entry.deploy)}
-                      />
-                      <span className={`relative inline-block h-6 w-12 rounded-full transition-colors ${entry.deploy ? "bg-emerald-600" : "bg-white/10"}`}>
-                        <span className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.deploy ? "translate-x-6" : "translate-x-0"}`} />
-                      </span>
-                      <span className="ml-2 text-xs font-semibold text-white/90">{entry.deploy ? "Deployed" : "Hidden"}</span>
-                    </label>
+                    <div className="ml-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      {onEditPuzzle ? (
+                        <button
+                          type="button"
+                          onClick={() => onEditPuzzle(entry)}
+                          className="rounded-md border border-sky-400/30 bg-sky-500/15 px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-sky-500/25"
+                        >
+                          Edit
+                        </button>
+                      ) : null}
+                      <label
+                        className="inline-flex items-center cursor-pointer"
+                        aria-label={entry.deploy ? "Mark hidden" : "Mark deployed"}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={Boolean(entry.deploy)}
+                          onChange={() => void toggleDeploy(id, entry.deploy)}
+                          className="sr-only"
+                          aria-checked={Boolean(entry.deploy)}
+                        />
+                        <span className={`relative inline-block h-6 w-12 rounded-full transition-colors ${entry.deploy ? "bg-emerald-600" : "bg-white/10"}`}>
+                          <span className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.deploy ? "translate-x-6" : "translate-x-0"}`} />
+                        </span>
+                        <span className="ml-2 text-xs font-semibold text-white/90">{entry.deploy ? "Deployed" : "Hidden"}</span>
+                      </label>
+                    </div>
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2 text-sm opacity-70">

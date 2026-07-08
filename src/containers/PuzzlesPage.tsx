@@ -368,11 +368,14 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
   const [spreadDmgMap, setSpreadDmgMap] = React.useState<Record<string, number>>({});
   const [selectedPuzzleFilename, setSelectedPuzzleFilename] = React.useState<string | null>(null);
   const [puzzleName, setPuzzleName] = React.useState<string | null>(null);
-  const [puzzleMeta, setPuzzleMeta] = React.useState<{ name: string; author: string; inspiredBy?: string; intendedSolution: string[] } | null>(null);
+  const [puzzleMeta, setPuzzleMeta] = React.useState<{ name: string; author: string; inspiredBy?: string; intendedSolution: string[]; infoText?: string; description?: string } | null>(null);
+  const [showInfoModal, setShowInfoModal] = React.useState(false);
   const [showSolutionModal, setShowSolutionModal] = React.useState(false);
   const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
   const [lastTestRaw, setLastTestRaw] = React.useState<any | null>(null);
-  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[] } | null>(null);
+  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[] } | null>(null);
+  const [editState, setEditState] = React.useState<{ id: string; raw: unknown; meta: { name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[] } } | null>(null);
+  const [puzzleListRefresh, setPuzzleListRefresh] = React.useState(0);
   // Read from localStorage only on the client to avoid SSR hydration mismatch.
   React.useEffect(() => {
     try { const s = localStorage.getItem(LS_TEST_RAW); if (s) setLastTestRaw(JSON.parse(s)); } catch { /* localStorage unavailable */ }
@@ -807,18 +810,21 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     return <div className="relative z-10 mx-auto w-full max-w-[1920px] px-3 py-4 text-white sm:px-4 lg:px-6">
       {showBuilderPanelOpen && showBuilderTools ? (
         <PuzzleBuilderPanel
-          onClose={() => setShowBuilderPanelOpen(false)}
+          onClose={() => { setShowBuilderPanelOpen(false); setEditState(null); }}
           onSaved={(_id) => {
             setShowBuilderPanelOpen(false);
+            setEditState(null);
+            setPuzzleListRefresh((n) => n + 1);
           }}
-          initialRaw={lastTestRaw ?? undefined}
-          initialMeta={lastTestMeta ?? undefined}
+          initialId={editState?.id}
+          initialRaw={editState?.raw ?? lastTestRaw ?? undefined}
+          initialMeta={editState?.meta ?? lastTestMeta ?? undefined}
           onTest={async (payload: any) => {
             // payload: { rawInitial, gameState, sentinelPlayIds, unitBuffs }
             // remember raw for editing
             const raw = payload.rawInitial ?? null;
             setLastTestRaw(raw);
-            setLastTestMeta({ name: payload.name ?? undefined, description: payload.description ?? undefined, difficulty: payload.difficulty ?? undefined, author: payload.author ?? undefined, inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? undefined });
+            setLastTestMeta({ name: payload.name ?? undefined, description: payload.description ?? undefined, infoText: payload.infoText ?? undefined, difficulty: payload.difficulty ?? undefined, author: payload.author ?? undefined, inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? undefined });
 
             setIsResolving(true);
             setActionError(null);
@@ -861,7 +867,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
               setShowBuilderPanelOpen(false);
               const title = payload.name ?? lastTestMeta?.name ?? "Tested Puzzle";
               setPuzzleName(title);
-              setPuzzleMeta({ name: title, author: payload.author ?? "", inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? [] });
+              setPuzzleMeta({ name: title, author: payload.author ?? "", inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? [], infoText: payload.infoText ?? undefined, description: payload.description ?? undefined });
+              setShowInfoModal(Boolean(payload.infoText && String(payload.infoText).trim()));
             } catch (err) {
               setActionError(err instanceof Error ? err.message : "Test failed.");
             } finally {
@@ -875,7 +882,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => { setLastTestRaw(null); setShowBuilderPanelOpen(true); }}
+              onClick={() => { setLastTestRaw(null); setEditState(null); setShowBuilderPanelOpen(true); }}
               className="self-start rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500/25"
             >
               Build New Puzzle
@@ -883,7 +890,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             {lastTestRaw ? (
               <button
                 type="button"
-                onClick={() => setShowBuilderPanelOpen(true)}
+                onClick={() => { setEditState(null); setShowBuilderPanelOpen(true); }}
                 className="self-start rounded-xl border border-sky-400/30 bg-sky-500/10 px-4 py-2 text-xs font-semibold text-white transition hover:bg-sky-500/20"
               >
                 Edit Tested Puzzle
@@ -896,12 +903,30 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             onPuzzleLoaded={(filename, meta) => {
               setSelectedPuzzleFilename(filename);
               setPuzzleName(meta.name);
-              setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution });
+              setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description });
               setShowSolutionModal(false);
+              setShowInfoModal(Boolean(meta.infoText && meta.infoText.trim()));
               void loadPuzzle(filename);
+            }}
+            onEditPuzzle={(entry) => {
+              setEditState({
+                id: entry.id,
+                raw: entry.initialGamestate,
+                meta: {
+                  name: entry.name,
+                  description: entry.description,
+                  infoText: entry.infoText,
+                  difficulty: entry.difficulty,
+                  author: entry.author,
+                  inspiredBy: entry.inspiredBy,
+                  intendedSolution: entry.intendedSolution,
+                },
+              });
+              setShowBuilderPanelOpen(true);
             }}
             isAdmin={isAdmin}
             solvedPuzzleIds={solvedPuzzleIds}
+            refreshSignal={puzzleListRefresh}
           />
         </div>
       </div>
@@ -1012,11 +1037,16 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
   return <div className="relative z-10 mx-auto w-full max-w-[1920px] px-3 py-4 text-white sm:px-4 lg:px-6">
     {showBuilderPanelOpen && showBuilderTools ? (
       <PuzzleBuilderPanel
-        onClose={() => setShowBuilderPanelOpen(false)}
+        onClose={() => { setShowBuilderPanelOpen(false); setEditState(null); }}
         onSaved={(_id) => {
           setShowBuilderPanelOpen(false);
+          setEditState(null);
+          setPuzzleListRefresh((n) => n + 1);
           setActionError(`Puzzle saved.`);
         }}
+        initialId={editState?.id}
+        initialRaw={editState?.raw ?? undefined}
+        initialMeta={editState?.meta ?? undefined}
       />
     ) : null}
     {showBuilderTools && !gameState ? (
@@ -1025,14 +1055,34 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
           onPuzzleLoaded={(filename, meta) => {
             setSelectedPuzzleFilename(filename);
             setPuzzleName(meta.name);
+            setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description });
+            setShowSolutionModal(false);
+            setShowInfoModal(Boolean(meta.infoText && meta.infoText.trim()));
             void loadPuzzle(filename);
+          }}
+          onEditPuzzle={(entry) => {
+            setEditState({
+              id: entry.id,
+              raw: entry.initialGamestate,
+              meta: {
+                name: entry.name,
+                description: entry.description,
+                infoText: entry.infoText,
+                difficulty: entry.difficulty,
+                author: entry.author,
+                inspiredBy: entry.inspiredBy,
+                intendedSolution: entry.intendedSolution,
+              },
+            });
+            setShowBuilderPanelOpen(true);
           }}
           isAdmin={isAdmin}
           solvedPuzzleIds={solvedPuzzleIds}
+          refreshSignal={puzzleListRefresh}
         />
         <button
           type="button"
-          onClick={() => setShowBuilderPanelOpen(true)}
+          onClick={() => { setEditState(null); setShowBuilderPanelOpen(true); }}
           className="shrink-0 self-start rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500/25"
         >
           Build New Puzzle
@@ -1050,7 +1100,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
           <span className="text-xs text-white/70">Close puzzle?</span>
           <button
             type="button"
-            onClick={() => { setGameState(null); setPuzzleName(null); setShowClosePuzzleConfirm(false); setActionError(null); }}
+            onClick={() => { setGameState(null); setPuzzleName(null); setPuzzleMeta(null); setShowInfoModal(false); setShowClosePuzzleConfirm(false); setActionError(null); }}
             className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-500/35"
           >OK</button>
           <button
@@ -1082,6 +1132,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
         </section>
         <SectionShell title="Actions" className="mt-2 rounded-lg p-2">
           <div className="mt-2 grid gap-1.5">
+            {puzzleMeta?.infoText && puzzleMeta.infoText.trim() ? (
+              <button type="button" onClick={() => setShowInfoModal(true)} className="rounded-lg border border-sky-400/30 bg-sky-500/15 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-sky-500/25">Puzzle Info</button>
+            ) : null}
             <button type="button" onClick={() => void handleUndo()} disabled={isResolving || historyLength === 0} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Undo</button>
             <button type="button" onClick={handlePass} disabled={isResolving || isGameOver || !!resolutionNeeded} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass</button>
             <button type="button" onClick={handleClaimInitiative} disabled={isResolving || gameState.initiativeClaimed || isGameOver || !!resolutionNeeded} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Initiative</button>
@@ -2100,6 +2153,19 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
       </div>;
     })() : null}
 
+    {showInfoModal && puzzleMeta ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowInfoModal(false)}>
+      <div className="w-[min(90vw,720px)] rounded-xl border border-sky-400/30 bg-[rgba(8,12,26,0.94)] p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="mb-4 border-b border-white/10 pb-4">
+          <h3 className="text-lg font-black uppercase tracking-[0.2em] text-white">{puzzleMeta.name || puzzleName}</h3>
+          {puzzleMeta.author ? <p className="mt-1 text-xs text-white/50">By {puzzleMeta.author}{puzzleMeta.inspiredBy ? <span className="ml-2 text-white/35">· Inspired by {puzzleMeta.inspiredBy}</span> : null}</p> : null}
+        </div>
+        <p className="whitespace-pre-wrap text-sm leading-6 text-white/85">{puzzleMeta.infoText}</p>
+        <button type="button" onClick={() => setShowInfoModal(false)} className="mt-6 w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/20">
+          Got it
+        </button>
+      </div>
+    </div> : null}
+
     {showSolutionModal && puzzleMeta ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowSolutionModal(false)}>
       <div className="w-[min(90vw,1080px)] rounded-xl border border-emerald-400/30 bg-[rgba(8,12,26,0.92)] p-12 shadow-2xl" onClick={e => e.stopPropagation()}>
         <h3 className="mb-3 text-base font-bold text-emerald-300">Congratulations! You&apos;ve solved the puzzle!</h3>
@@ -2124,7 +2190,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
           <button type="button" onClick={() => setShowSolutionModal(false)} className="flex-1 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/20">
             Close
           </button>
-          <button type="button" onClick={() => { setShowSolutionModal(false); setGameState(null); setPuzzleName(null); setPuzzleMeta(null); setActionError(null); }} className="flex-1 rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500/25">
+          <button type="button" onClick={() => { setShowSolutionModal(false); setGameState(null); setPuzzleName(null); setPuzzleMeta(null); setShowInfoModal(false); setActionError(null); }} className="flex-1 rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500/25">
             Puzzle Home
           </button>
         </div>
@@ -2217,6 +2283,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     <div className="mt-4 space-y-3 xl:hidden">
       <SectionShell title="Actions" className="rounded-lg p-3">
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {puzzleMeta?.infoText && puzzleMeta.infoText.trim() ? (
+            <button type="button" onClick={() => setShowInfoModal(true)} className="rounded-xl border border-sky-400/30 bg-sky-500/15 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-sky-500/25">Puzzle Info</button>
+          ) : null}
           <button type="button" onClick={() => void handleUndo()} disabled={isResolving || historyLength === 0} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Undo</button>
           <button type="button" onClick={handlePass} disabled={isResolving || isGameOver || !!resolutionNeeded} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass to Regroup Draw</button>
           <button type="button" onClick={handleClaimInitiative} disabled={isResolving || gameState.initiativeClaimed || isGameOver || !!resolutionNeeded} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Take Initiative</button>

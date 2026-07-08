@@ -180,6 +180,7 @@ type PlayerBuilderState = {
 type BuilderState = {
   name: string;
   description: string;
+  infoText: string;
   difficulty: number;
   author: string;
   inspiredBy?: string;
@@ -205,6 +206,7 @@ function initialBuilderState(): BuilderState {
   return {
     name: "",
     description: "",
+    infoText: "",
     difficulty: 1,
     author: "",
     inspiredBy: "",
@@ -266,10 +268,11 @@ function parseRawPlayer(p: Record<string, unknown>): PlayerBuilderState {
   };
 }
 
-function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[] }): BuilderState {
+function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; infoText?: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[] }): BuilderState {
   return {
     name: meta.name,
     description: meta.description,
+    infoText: meta.infoText ?? "",
     difficulty: meta.difficulty,
     author: meta.author ?? "",
     inspiredBy: meta.inspiredBy ?? "",
@@ -846,10 +849,11 @@ type Props = {
   onSaved: (id: string) => void;
   onTest?: (data: { rawInitial?: unknown; gameState: unknown; sentinelPlayIds?: string[]; unitBuffs?: Record<string, { power: number; hp: number }> }) => void;
   initialRaw?: unknown;
-  initialMeta?: { name?: string; description?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[] };
+  initialId?: string;
+  initialMeta?: { name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[] };
 };
 
-export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initialMeta }: Props) {
+export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initialMeta, initialId }: Props) {
   const [cards, setCards] = React.useState<CardCatalogEntry[]>([]);
   const [cardsLoading, setCardsLoading] = React.useState(true);
   const [state, setState] = React.useState<BuilderState>(initialBuilderState);
@@ -870,12 +874,13 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       try {
         const json = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
         let gamestate: Record<string, unknown>;
-        let meta = { name: "New Puzzle", description: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [] as string[] };
+        let meta = { name: "New Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [] as string[] };
         if (json.initialGamestate !== undefined) {
           gamestate = json.initialGamestate as Record<string, unknown>;
           meta = {
             name: String(json.name ?? "New Puzzle"),
             description: String(json.description ?? ""),
+            infoText: String(json.infoText ?? ""),
             difficulty: Number(json.difficulty ?? 1),
             author: String(json.author ?? ""),
             inspiredBy: String(json.inspiredBy ?? ""),
@@ -904,8 +909,8 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
   React.useEffect(() => {
     if (initialRaw) {
       try {
-        const meta = initialMeta ?? { name: "Tested Puzzle", description: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [] };
-        setState(fromRaw(initialRaw as Record<string, unknown>, { name: String(meta.name ?? ""), description: String(meta.description ?? ""), difficulty: Number(meta.difficulty ?? 1), author: String((meta as any).author ?? ""), inspiredBy: String((meta as any).inspiredBy ?? ""), intendedSolution: (meta as any).intendedSolution ?? [] }));
+        const meta = initialMeta ?? { name: "Tested Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [] };
+        setState(fromRaw(initialRaw as Record<string, unknown>, { name: String(meta.name ?? ""), description: String(meta.description ?? ""), infoText: String(meta.infoText ?? ""), difficulty: Number(meta.difficulty ?? 1), author: String(meta.author ?? ""), inspiredBy: String(meta.inspiredBy ?? ""), intendedSolution: meta.intendedSolution ?? [] }));
       } catch {
         // ignore invalid initial raw
       }
@@ -920,9 +925,10 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
     setSaving(true);
     setSaveError(null);
     const puzzleData = {
-      id: "",
+      id: initialId ?? "",
       name: state.name.trim(),
       description: state.description.trim(),
+      infoText: state.infoText,
       author: state.author?.trim() ?? "",
       inspiredBy: state.inspiredBy?.trim() ?? "",
       intendedSolution: state.intendedSolution ?? [],
@@ -957,7 +963,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Test failed");
       const data = await res.json();
-      if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, ...data });
+      if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, infoText: state.infoText, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, ...data });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Test failed.");
     } finally {
@@ -969,6 +975,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
     const doc = {
       name: state.name.trim(),
       description: state.description.trim(),
+      infoText: state.infoText,
       author: state.author?.trim() ?? "",
       inspiredBy: state.inspiredBy?.trim() ?? "",
       intendedSolution: state.intendedSolution ?? [],
@@ -1014,7 +1021,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
         <div className={`rounded-2xl border border-white/10 p-6 ${globalBackgroundStyle} space-y-6`}>
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black uppercase tracking-[0.24em] text-white">Build Puzzle</h2>
+            <h2 className="text-lg font-black uppercase tracking-[0.24em] text-white">{initialId ? "Edit Puzzle" : "Build Puzzle"}</h2>
             <div className="flex items-center gap-2">
               <input
                 ref={fileInputRef}
@@ -1064,6 +1071,15 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                     onChange={(e) => patchGlobal({ description: e.target.value })}
                     placeholder="Optional description…"
                     className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
+                  />
+                </FieldRow>
+                <FieldRow label="Info Text">
+                  <textarea
+                    value={state.infoText}
+                    onChange={(e) => patchGlobal({ infoText: e.target.value })}
+                    placeholder="Setup instructions & flavor shown to the player on load…"
+                    rows={4}
+                    className="w-full resize-y rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
                   />
                 </FieldRow>
                 <FieldRow label="Author">

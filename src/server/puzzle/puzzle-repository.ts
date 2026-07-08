@@ -4,6 +4,7 @@ export type PuzzleData = {
   id: string;
   name: string;
   description: string;
+  infoText: string;
   difficulty: number;
   initialGamestate: RawPuzzleGameState;
   deploy: boolean;
