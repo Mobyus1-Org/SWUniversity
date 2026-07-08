@@ -573,6 +573,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SEC_085": //Vice Admiral Rampart - On Schedule
     case "SEC_065": //Nala Se - Chief Medical Scientist
     case "SOR_142": //Explosives Artist - Sabine Wren
+    case "SOR_131": //Fifth Brother
     case "SOR_056": //Bendu
     case "SOR_067": //Rugged Survivors
     case "LAW_238": //Scavenging Sandcrawler

@@ -323,6 +323,21 @@ export function resolveOnAttackTrigger(
       return optionalTarget("SOR_010", attacker.controller, AllUnits().map(u => u.playId),
         "You may deal 2 damage to a unit.", { continuation });
     }
+    case "SOR_131": { // Fifth Brother "On Attack: You may deal 1 damage to this unit and 1 damage to another ground unit."
+      const otherGround131 = AllGroundUnits().filter(u => u.playId !== attacker.playId);
+      return {
+        type: "ability-option",
+        cardId: "SOR_131",
+        player: attacker.controller,
+        helperText: "Deal 1 damage to Fifth Brother and 1 damage to another ground unit?",
+        yesLabel: "Deal",
+        noLabel: "Skip",
+        onYes: otherGround131.length > 0
+          ? { type: "ability-target", cardId: "SOR_131", player: attacker.controller, sourcePlayId: attacker.playId, fromPlayIds: otherGround131.map(u => u.playId), continuation }
+          : { type: "ability-target", cardId: "SOR_131_self", player: attacker.controller, sourcePlayId: attacker.playId, fromPlayIds: [attacker.playId], continuation },
+        continuation,
+      };
+    }
     case "SOR_014": { // Sabine Wren "On Attack: Deal 1 damage to each enemy base."
       const game = GetGame();
       if (!game) return continuation;

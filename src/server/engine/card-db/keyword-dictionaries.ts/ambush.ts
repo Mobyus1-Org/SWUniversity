@@ -45,7 +45,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     switch (cardId) {
       //conditional ambush
       case "SOR_114"://Escort Skiff
-        return PlayerHasUnitWithAspectInPlay(player, "Cunning", true, playId);
+        return PlayerHasUnitWithAspectInPlay(player, "Command", true, playId);
       case "SOR_249"://Frontier AT-RT
         return PlayerHasUnitWithTraitInPlay(player, "Vehicle", true, playId);
       case "JTL_249"://Millennium Falcon

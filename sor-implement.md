@@ -6,8 +6,8 @@
 
 | Status | Count |
 |--------|-------|
-| Implemented | 208 |
-| Partially Implemented | 7 |
+| Implemented | 209 |
+| Partially Implemented | 6 |
 | Keywords Only (auto-handled) | 23 |
 | Unimplemented – Simple | 0 |
 | Unimplemented – Complex | 0 |
@@ -54,13 +54,6 @@ These cards have some engine coverage but one or more abilities are not yet impl
 Each other friendly [Heroism] unit gains Raid 1.
 
 **Notes:** Raid 1 implemented; 'Each other friendly [Heroism] unit gains Raid 1' (dynamic keyword grant) NOT implemented
-
-### SOR_149 — Darth Maul (Unit) [COMPLEX]
-**Card Text:** Ambush
-
-When this unit attacks and defeats a unit: Ready him.
-
-**Notes:** Ambush implemented; 'When this unit attacks and defeats a unit: Ready him' NOT implemented
 
 ### SOR_160 — Concord Dawn Interceptors (Unit) [COMPLEX]
 **Card Text:** Saboteur (When this unit attacks, ignore Sentinel and defeat the defender's Shields.)

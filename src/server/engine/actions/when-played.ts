@@ -1152,6 +1152,12 @@ export function resolveWhenPlayed(
       return optionalTarget(cardId, player, allUnits090.map(u => u.playId),
         `Deal ${resourceCount090} damage to a unit?`);
     }
+    case "SOR_097": { // Admiral Ackbar — When Played: You may deal damage to a unit equal to the number of units you control in its arena.
+      const allUnits097 = AllUnits();
+      if (allUnits097.length === 0) return null;
+      return optionalTarget(cardId, player, allUnits097.map(u => u.playId),
+        "Deal damage to a unit equal to the number of units you control in its arena?");
+    }
     case "SOR_101": { // Rogue Squadron Skirmisher — Return a unit costing 2 or less from your discard to your hand.
       const gs101 = game.currentGameState;
       const pState101 = player === 1 ? gs101.player1 : gs101.player2;

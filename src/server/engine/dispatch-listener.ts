@@ -1255,6 +1255,12 @@ function resolveWhenAttackEnds(
   }
 
   switch (attacker.cardId) {
+    case "SOR_149": { // Mace Windu — when attacks and defeats a unit: Ready him.
+      if (defDefeated && !Unit.FromInterface(attacker).LostAbilities()) {
+        attacker.ready = true;
+      }
+      return continuation;
+    }
     case "SOR_146": { // Zeb Orrelios — when completes attack and defeats defender: may deal 4 to a ground unit
       if (!defDefeated) return continuation;
       const allGround146 = AllGroundUnits();
@@ -5918,6 +5924,28 @@ function applyAbilityEffect(
       const gs090d = game.currentGameState;
       const resourceCount090 = (pending.player === 1 ? gs090d.player1 : gs090d.player2).resources.length;
       DealDamageToUnit(gs090d, "SOR_090", targetPlayId, resourceCount090, game.gameLog);
+      break;
+    }
+    case "SOR_131": { // Fifth Brother On Attack: deal 1 to himself + 1 to a chosen other ground unit.
+      if (!targetPlayId || !pending.sourcePlayId) break;
+      DealDamageToUnit(game.currentGameState, "SOR_131", pending.sourcePlayId, 1, game.gameLog); // this unit
+      DealDamageToUnit(game.currentGameState, "SOR_131", targetPlayId, 1, game.gameLog);         // another ground unit
+      break;
+    }
+    case "SOR_131_self": { // Fifth Brother On Attack: no other ground unit — deal 1 to himself only.
+      if (!pending.sourcePlayId) break;
+      DealDamageToUnit(game.currentGameState, "SOR_131", pending.sourcePlayId, 1, game.gameLog);
+      break;
+    }
+    case "SOR_097": { // Admiral Ackbar When Played: deal damage = friendly units in the target's arena.
+      if (!targetPlayId) break;
+      const gs097 = game.currentGameState;
+      const isGround097 = [...gs097.player1.groundArena, ...gs097.player2.groundArena].some(u => u.playId === targetPlayId);
+      const arena097 = isGround097
+        ? [...gs097.player1.groundArena, ...gs097.player2.groundArena]
+        : [...gs097.player1.spaceArena, ...gs097.player2.spaceArena];
+      const friendlyCount097 = arena097.filter(u => u.controller === pending.player).length;
+      DealDamageToUnit(gs097, "SOR_097", targetPlayId, friendlyCount097, game.gameLog);
       break;
     }
     case "SOR_116": { // Steadfast Battalion On Attack: give chosen friendly unit +2/+2 for this phase.
