@@ -22,7 +22,7 @@ export function RightSideTray({ authState, onLogout, setShowModal, setModalKey, 
           px-6 lg:px-9 uwd:!px-10 4k:!px-12"
       >
         <Link href="/login" className="underline text-sm lg:text-lg uwd:!text-2xl 4k:!text-4xl whitespace-nowrap">Login</Link>
-        <span>/</span>
+        <span>|</span>
         <Link href="/signup" className="underline text-sm lg:text-lg uwd:!text-2xl 4k:!text-4xl whitespace-nowrap">Sign Up</Link>
       </div>
     )}
@@ -34,6 +34,7 @@ export function RightSideTray({ authState, onLogout, setShowModal, setModalKey, 
           px-6 lg:px-9 uwd:!px-10 4k:!px-12"
       >
         <Link href="/profile" className="underline text-sm lg:text-lg uwd:!text-2xl 4k:!text-4xl whitespace-nowrap">Profile</Link>
+        <span>|</span>
         <button type="button" onClick={() => void onLogout()} className="underline text-sm lg:text-lg uwd:!text-2xl 4k:!text-4xl whitespace-nowrap">
           Logout
         </button>

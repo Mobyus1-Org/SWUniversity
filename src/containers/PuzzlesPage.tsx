@@ -229,13 +229,13 @@ function FaceDownResource({
   cardId: string;
   selectable?: boolean;
   exhausted?: boolean;
-  onPreviewStart: (preview: PreviewState) => void;
-  onPreviewEnd: () => void;
+  onPreviewStart?: (preview: PreviewState) => void;
+  onPreviewEnd?: () => void;
   onClick?: () => void;
 }) {
   return <div
     className={`overflow-hidden rounded-xl border border-white/10 bg-black/40 transition-transform duration-200 ${exhausted ? "rotate-90" : ""} ${selectable ? lightsaberGlow : ""} ${selectable ? "cursor-pointer" : ""}`}
-    onMouseEnter={() => onPreviewStart({ imageId: cardId, cardId, label: CardTitle(cardId) })}
+    onMouseEnter={onPreviewStart ? () => onPreviewStart({ imageId: cardId, cardId, label: CardTitle(cardId) }) : undefined}
     onMouseLeave={onPreviewEnd}
     onClick={onClick}
   >
@@ -1175,8 +1175,6 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                     key={resource.playId}
                     cardId={resource.cardId}
                     exhausted={!resource.ready}
-                    onPreviewStart={handlePreviewStart}
-                    onPreviewEnd={handlePreviewEnd}
                   />)}
                   {opponent.resources.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-6 text-sm text-white/40">No resources</div> : null}
                 </div>
