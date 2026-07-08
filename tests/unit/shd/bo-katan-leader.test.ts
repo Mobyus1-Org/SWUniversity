@@ -53,6 +53,37 @@ describe("SHD_012 Bo-Katan Kryze Leader", () => {
     expect(g.state.player2.groundArena[0].damage).toBe(0);
   });
 
+  it("defeats a Shield token instead of dealing damage to a shielded unit", async () => {
+    const g = new GameTestAdapter();
+    const state = new GameStateBuilder()
+      .MyBase(Cards.bases.common.green30HP)
+      .MyLeader(Cards.leaders.shd.boKatanKryze)
+      .TheirBase(Cards.bases.common.green30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 8)
+      .WithGroundUnitForPlayer(1, Cards.units.shd.sundariPeaceKeeper) // Mandalorian unit
+      .WithGroundUnitForPlayer(2, Cards.units.sor.battlefieldMarine)
+      .WithUpgradesOnGroundUnitForPlayer(2, 0, [
+        GameStateBuilder.Upgrade(Cards.upgrades.token.shield, 2),
+      ])
+      .WithInitiativePlayerBeing(2)
+      .WithInitiativeClaimed()
+      .Build();
+    g.loadNewState(state);
+
+    // Register a Mandalorian attack so Bo-Katan's ability is active
+    await g.attackWithGroundUnitAsync(1, 0);
+    await g.chooseBaseAsync(1, 2);
+
+    // Use Bo-Katan's leader ability on the shielded BFM
+    await g.useLeaderAbilityAsync(1);
+    await g.chooseGroundUnitAsync(2, 0);
+
+    // Shield absorbs the damage: token defeated, no damage dealt
+    expect(g.state.player2.groundArena[0].upgrades).toHaveLength(0);
+    expect(g.state.player2.groundArena[0].damage).toBe(0);
+  });
+
   it("defeats a unit when the 1 damage brings it to 0 HP", async () => {
     const g = new GameTestAdapter();
     const state = new GameStateBuilder()

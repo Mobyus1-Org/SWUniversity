@@ -330,6 +330,7 @@ export const Cards = {
       tobiasBeckett: "SHD_217",
       supercommandoSquad: "SHD_034",
       followerOfTheWay: "SHD_056",
+      ketsuOnyo: "SHD_147",
     },
     jtl: {
       kijimiPatrollers: "JTL_082",

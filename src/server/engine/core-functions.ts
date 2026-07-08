@@ -660,11 +660,20 @@ export function GetUnitByPlayId(game: GameState, playId: string): Unit | null {
 export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: string|undefined, amount: number, withLog?: string[]): void {
   if (!targetPlayId) return;
   const target = GetUnitByPlayId(gs, targetPlayId);
-  if (target) {
-    target.damage += amount;
+  if (!target) return;
+  if (amount <= 0) return;
+  // Shield token absorbs the entire instance of damage: prevent it and defeat one Shield token.
+  const shieldIdx = target.upgrades.findIndex(u => u.cardId === "SOR_T02");
+  if (shieldIdx !== -1) {
+    target.upgrades.splice(shieldIdx, 1);
     if (withLog) {
-      withLog.push(`${CardTitle(cardId)}: dealt ${amount} damage to ${CardTitle(target.cardId)}.`);
+      withLog.push(`${CardTitle(target.cardId)}'s Shield token was defeated, preventing ${amount} damage.`);
     }
+    return;
+  }
+  target.damage += amount;
+  if (withLog) {
+    withLog.push(`${CardTitle(cardId)}: dealt ${amount} damage to ${CardTitle(target.cardId)}.`);
   }
 }
 

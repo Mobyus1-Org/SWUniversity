@@ -379,6 +379,44 @@ function transferControl(game: GameState, log: string[], unit: Unit, newControll
 }
 
 /**
+ * Defeats the upgrade with the given playId, wherever it is attached, and resolves the
+ * Traitorous control-reversion and Luke Skywalker pilot-eject interactions. Returns a
+ * WhenDefeatedChoicePending when the defeated upgrade needs a follow-up choice (Luke eject),
+ * otherwise null. `sourceLabel` prefixes the game-log entry (e.g. "Confiscate", "Ketsu Onyo").
+ */
+function defeatUpgradeByPlayId(
+  game: GameState,
+  log: string[],
+  targetPlayId: string,
+  sourceLabel: string,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  for (const u of GetAllUnits(game)) {
+    const upgradeIdx = u.upgrades.findIndex(upg => upg.playId === targetPlayId);
+    if (upgradeIdx === -1) continue;
+    const [defeated] = u.upgrades.splice(upgradeIdx, 1);
+    log.push(`${sourceLabel} defeated ${CardTitle(defeated.cardId)} on ${CardTitle(u.cardId)}.`);
+    // Traitorous unattach: owner reclaims control when the upgrade is removed.
+    if (defeated.cardId === "SOR_122" && u.controller !== u.owner) {
+      transferControl(game, log, u, u.owner);
+    }
+    // Luke Skywalker eject: when defeated as a pilot upgrade, he may move to ground.
+    if (defeated.cardId === "JTL_094") {
+      return {
+        type: "when-defeated-choice",
+        defeatedCardId: "JTL_094",
+        defeatedPlayId: defeated.playId,
+        controlledBy: defeated.controller as PlayerId,
+        options: [`move_to_ground_exhausted=JTL_094,${defeated.controller}`, "decline"],
+        continuation,
+      };
+    }
+    break;
+  }
+  return null;
+}
+
+/**
  * Returns playIds of friendly Vehicle units that have zero pilot upgrades.
  * Used for L3-37's replacement effect — her card says "without a Pilot on it",
  * which means NO pilots at all (R2-D2 is a pilot via PilotingCost=0 and counts).
@@ -1003,6 +1041,30 @@ function resolveAttack(
       log.push(`Heroic Sacrifice: ${attackerName} is defeated after dealing combat damage.`);
       const sacrificePend = defeatUnit(game, log, attacker);
       if (sacrificePend) return injectContinuation(sacrificePend, whenAttackEnds);
+    }
+    // SHD_147 Ketsu Onyo: when deals combat damage to a base, may defeat an upgrade that costs 2 or less.
+    if (attacker.cardId === "SHD_147" && !Unit.FromInterface(attacker).LostAbilities() && atkPower > 0) {
+      const eligibleUpgrades147 = GetAllUnits(game)
+        .flatMap(u => u.upgrades)
+        .filter(up => CardCost(up.cardId) <= 2);
+      if (eligibleUpgrades147.length > 0) {
+        return {
+          type: "ability-option" as const,
+          cardId: "SHD_147",
+          player: attacker.controller,
+          helperText: "Defeat an upgrade that costs 2 or less?",
+          yesLabel: "Defeat",
+          noLabel: "Skip",
+          onYes: {
+            type: "ability-target" as const,
+            cardId: "SHD_147_defeat_upgrade",
+            player: attacker.controller,
+            fromPlayIds: eligibleUpgrades147.map(up => up.playId),
+            continuation: whenAttackEnds,
+          },
+          continuation: whenAttackEnds,
+        } satisfies AbilityOptionPending;
+      }
     }
     // SOR_133 Seventh Sister: when deals combat damage to opponent's base, may deal 3 to a ground unit.
     if (attacker.cardId === "SOR_133" && !Unit.FromInterface(attacker).LostAbilities()) {
@@ -5536,34 +5598,14 @@ function applyAbilityEffect(
     case "SHD_166": //reprint of SOR_162
     case "SOR_251": { // Confiscate — defeat an upgrade
       if (!targetPlayId) break;
-      const allGameUnits = GetAllUnits(game.currentGameState);
-      let lukeConfiscated: { cardId: string; playId: string; controller: number } | null = null;
-      for (const u of allGameUnits) {
-        const upgradeIdx = u.upgrades.findIndex(upg => upg.playId === targetPlayId);
-        if (upgradeIdx !== -1) {
-          const [defeated] = u.upgrades.splice(upgradeIdx, 1);
-          game.gameLog.push(`Confiscate defeated ${CardTitle(defeated.cardId)} on ${CardTitle(u.cardId)}.`);
-          // Traitorous unattach: owner reclaims control when the upgrade is removed.
-          if (defeated.cardId === "SOR_122" && u.controller !== u.owner) {
-            transferControl(game.currentGameState, game.gameLog, u, u.owner);
-          }
-          // Luke Skywalker eject: when defeated as a pilot upgrade, he may move to ground.
-          if (defeated.cardId === "JTL_094") {
-            lukeConfiscated = { cardId: defeated.cardId, playId: defeated.playId, controller: defeated.controller };
-          }
-          break;
-        }
-      }
-      if (lukeConfiscated) {
-        return {
-          type: "when-defeated-choice",
-          defeatedCardId: "JTL_094",
-          defeatedPlayId: lukeConfiscated.playId,
-          controlledBy: lukeConfiscated.controller as PlayerId,
-          options: [`move_to_ground_exhausted=JTL_094,${lukeConfiscated.controller}`, "decline"],
-          continuation: pending.continuation ?? null,
-        };
-      }
+      const lukePending = defeatUpgradeByPlayId(game.currentGameState, game.gameLog, targetPlayId, "Confiscate", pending.continuation ?? null);
+      if (lukePending) return lukePending;
+      break;
+    }
+    case "SHD_147_defeat_upgrade": { // Ketsu Onyo — after combat damage to a base, defeat an upgrade costing 2 or less
+      if (!targetPlayId) break;
+      const lukePending147 = defeatUpgradeByPlayId(game.currentGameState, game.gameLog, targetPlayId, CardTitle("SHD_147"), pending.continuation ?? null);
+      if (lukePending147) return lukePending147;
       break;
     }
     case "SHD_008": { // Boba Fett leader reaction: exhaust leader, give chosen unit +1/+0 for this phase
