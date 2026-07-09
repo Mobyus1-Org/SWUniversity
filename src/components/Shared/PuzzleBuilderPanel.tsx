@@ -1152,16 +1152,12 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                 <FieldRow label="Difficulty">
                   <div className="flex items-center gap-2">
                     {[1, 2, 3, 4, 5].map((n) => {
-                      const fillPct = state.difficulty >= n ? 100 : state.difficulty >= n - 0.5 ? 50 : 0;
+                      const fillPct = state.difficulty >= n ? 100 : 0;
                       return (
                         <button
                           key={n}
                           type="button"
-                          onClick={() => {
-                            if (state.difficulty === n) patchGlobal({ difficulty: n - 0.5 });
-                            else if (state.difficulty === n - 0.5) patchGlobal({ difficulty: n });
-                            else patchGlobal({ difficulty: n });
-                          }}
+                          onClick={() => patchGlobal({ difficulty: n })}
                           className="relative h-6 w-6 overflow-hidden rounded-full bg-white/20 hover:bg-white/30 transition-colors"
                         >
                           <span

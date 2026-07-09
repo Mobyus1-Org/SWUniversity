@@ -18,13 +18,10 @@ function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
   return (
     <span className="flex items-center gap-0.5">
       {Array.from({ length: max }, (_, i) => {
-        const fill = Math.min(1, Math.max(0, value - i));
-        const isHalf = fill > 0 && fill < 1;
-        const isFull = fill >= 1;
+        const isFull = value - i >= 1;
         return (
           <span key={i} className="relative inline-block h-6 w-6 rounded-full bg-white/20 overflow-hidden">
             {isFull && <span className="absolute inset-0 bg-primary" />}
-            {isHalf && <span className="absolute inset-0 right-1/2 bg-primary" />}
           </span>
         );
       })}
@@ -34,6 +31,53 @@ function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
 
 type SortKey = "title" | "difficulty";
 type SortDir = "asc" | "desc";
+type SolvedFilter = "all" | "solved" | "unsolved";
+
+const DIFF_LO = 1;
+const DIFF_HI = 5;
+const DIFF_STEP = 1;
+
+const rangeThumbClass =
+  "pointer-events-none absolute inset-0 h-6 w-full cursor-pointer appearance-none bg-transparent " +
+  "[&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow " +
+  "[&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow";
+
+function DifficultyRange({ min, max, onChange }: { min: number; max: number; onChange: (min: number, max: number) => void }) {
+  const pct = (v: number) => ((v - DIFF_LO) / (DIFF_HI - DIFF_LO)) * 100;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">Diff</span>
+      <span className="w-14 shrink-0 text-[11px] tabular-nums text-white/70">{min}–{max}</span>
+      <div className="relative h-6 w-36">
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white/15" />
+        <div
+          className="pointer-events-none absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-primary"
+          style={{ left: `${pct(min)}%`, right: `${100 - pct(max)}%` }}
+        />
+        <input
+          type="range"
+          aria-label="Minimum difficulty"
+          min={DIFF_LO}
+          max={DIFF_HI}
+          step={DIFF_STEP}
+          value={min}
+          onChange={(e) => onChange(Math.min(Number(e.target.value), max), max)}
+          className={rangeThumbClass}
+        />
+        <input
+          type="range"
+          aria-label="Maximum difficulty"
+          min={DIFF_LO}
+          max={DIFF_HI}
+          step={DIFF_STEP}
+          value={max}
+          onChange={(e) => onChange(min, Math.max(Number(e.target.value), min))}
+          className={rangeThumbClass}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function LoadPuzzlePanel(props: Props) {
   const { onPuzzleLoaded, onEditPuzzle, isAdmin = false, solvedPuzzleIds = [], refreshSignal } = props;
@@ -42,6 +86,9 @@ export function LoadPuzzlePanel(props: Props) {
   const [error, setError] = React.useState<string | null>(null);
   const [sortKey, setSortKey] = React.useState<SortKey>("difficulty");
   const [sortDir, setSortDir] = React.useState<SortDir>("asc");
+  const [solvedFilter, setSolvedFilter] = React.useState<SolvedFilter>("all");
+  const [diffMin, setDiffMin] = React.useState(DIFF_LO);
+  const [diffMax, setDiffMax] = React.useState(DIFF_HI);
 
   const fetchList = React.useCallback(() => {
     setLoading(true);
@@ -85,7 +132,15 @@ export function LoadPuzzlePanel(props: Props) {
     }
   }
 
-  const sortedPuzzles = [...puzzles].sort((a, b) => {
+  const filteredPuzzles = puzzles.filter((p) => {
+    const isSolved = solvedPuzzleIds.includes(p.id);
+    if (solvedFilter === "solved" && !isSolved) return false;
+    if (solvedFilter === "unsolved" && isSolved) return false;
+    if (p.difficulty < diffMin || p.difficulty > diffMax) return false;
+    return true;
+  });
+
+  const sortedPuzzles = [...filteredPuzzles].sort((a, b) => {
     const mul = sortDir === "asc" ? 1 : -1;
     if (sortKey === "title") return mul * a.name.localeCompare(b.name);
     return mul * (a.difficulty - b.difficulty);
@@ -98,7 +153,7 @@ export function LoadPuzzlePanel(props: Props) {
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-2">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <p className="text-sm font-semibold uppercase tracking-widest">Puzzles</p>
         <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 p-0.5 text-xs">
           {(["difficulty", "title"] as SortKey[]).map((key) => (
@@ -112,6 +167,19 @@ export function LoadPuzzlePanel(props: Props) {
             </button>
           ))}
         </div>
+        <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 p-0.5 text-xs">
+          {(["all", "solved", "unsolved"] as SolvedFilter[]).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setSolvedFilter(v)}
+              className={`rounded px-2 py-0.5 font-medium capitalize transition-colors ${solvedFilter === v ? "bg-white/15 text-white" : "text-white/50 hover:text-white/80"}`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+        <DifficultyRange min={diffMin} max={diffMax} onChange={(lo, hi) => { setDiffMin(lo); setDiffMax(hi); }} />
       </div>
       {loading ? (
         <p className="text-sm opacity-60">Scanning…</p>
@@ -119,6 +187,8 @@ export function LoadPuzzlePanel(props: Props) {
         <p className="text-sm text-error">{error}</p>
       ) : puzzles.length === 0 ? (
         <p className="text-sm opacity-60">No puzzles found.</p>
+      ) : sortedPuzzles.length === 0 ? (
+        <p className="text-sm opacity-60">No puzzles match these filters.</p>
       ) : (
         <ul className="h-7/8 space-y-2 overflow-y-auto pr-1">
           {sortedPuzzles.map((entry) => {
