@@ -1759,6 +1759,112 @@ function sec264BaseTargetPending(
   };
 }
 
+/**
+ * Duplicate-unique rule: returns a defeat prompt for the first unique card the player
+ * controls more than one copy of, or null if there is no conflict. Used by every unit-entry
+ * path so uniqueness always interrupts and resolves before the entering unit's own effects.
+ */
+function uniquenessDefeatPending(game: GameState, player: PlayerId): DefeatCopyPending | null {
+  const controlled = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena] as Unit[];
+  const checked = new Set<string>();
+  for (const u of controlled) {
+    if (checked.has(u.cardId) || !CardIsUnique(u.cardId)) continue;
+    checked.add(u.cardId);
+    const copies = controlled.filter(c => c.cardId === u.cardId);
+    if (copies.length > 1) {
+      return { type: "defeat-copy", eligiblePlayIds: copies.map(c => c.playId), enteringPlayer: player };
+    }
+  }
+  return null;
+}
+
+/**
+ * Queues an entering unit's own post-entry effects (Colonel Yularen heal, Shielded,
+ * injected effects, Fighters-for-Freedom / Boba Fett reactions, Ambush, When Played).
+ *
+ * Invoked either directly during a normal play (no uniqueness conflict) or by the
+ * defeat-copy handler AFTER the duplicate-unique defeat has been resolved — because
+ * uniqueness must interrupt and resolve before any of the entering unit's effects.
+ *
+ * When `deferWhenPlayed` is false, an interactive When Played is returned so the caller
+ * can present it immediately. When true (post-uniqueness resume), When Played is pushed
+ * to the trigger bag instead, so it resolves after the just-defeated copy's own triggers.
+ */
+function queueUnitEntryTriggers(
+  game: GameState,
+  log: string[],
+  unit: Unit,
+  cardId: string,
+  player: PlayerId,
+  opts: { injectEffect?: Omit<CurrentEffect, "targetPlayId"> } | undefined,
+  deferWhenPlayed: boolean,
+): PendingResolution | null {
+  // Colonel Yularen (SOR_109): when a Command unit is played, heal 1 from base.
+  const yularenUnit = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
+    .find(u => u.cardId === "SOR_109" && !Unit.FromInterface(u).LostAbilities());
+  if (yularenUnit && CardAspects(cardId).includes("Command")) {
+    const yularenBase = GetPlayer(game, player).base;
+    yularenBase.damage = Math.max(0, yularenBase.damage - 1);
+    log.push(`${CardTitle("SOR_109")}: healed 1 damage from your base.`);
+  }
+
+  // Any triggers pushed while the bag is already non-empty are nested (CR 7.6.11).
+  const nested = game.triggerBag.length > 0;
+
+  if (HasShielded(cardId, unit.playId, player)) {
+    game.triggerBag.push({ triggerType: "shielded", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
+  }
+  if (opts?.injectEffect) {
+    game.currentEffects.push({ ...opts.injectEffect, targetPlayId: unit.playId });
+  }
+  // SOR_143 Fighters for Freedom: when another Aggression card is played, may deal 1 damage to a base.
+  if (cardId !== "SOR_143" && CardAspects(cardId).includes("Aggression")) {
+    const fffUnit = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
+      .find(u => u.cardId === "SOR_143" && !Unit.FromInterface(u).LostAbilities());
+    if (fffUnit) {
+      game.triggerBag.push({ triggerType: "card-played-reaction", cardId: "SOR_143", fromPlayer: player, playId: fffUnit.playId, nested });
+    }
+  }
+
+  // Leader-reaction: Boba Fett — when the active player plays a keyword unit
+  const leaderState = GetPlayer(game, player).leader;
+  if (
+    leaderState.cardId === "SHD_008" &&
+    !leaderState.deployed &&
+    leaderState.ready &&
+    HasKeyword(cardId, "Any", unit.playId, player)
+  ) {
+    game.triggerBag.push({ triggerType: "leader-reaction", cardId: "SHD_008", fromPlayer: player, nested });
+  }
+
+  const hasAmbush = HasAmbush(cardId, unit.playId, "Hand", player);
+  if (hasAmbush) {
+    game.triggerBag.push({ triggerType: "ambush", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
+  }
+
+  if (hasAmbush && CardHasWhenPlayed(unit.cardId)) {
+    // Both Ambush and When Played — put both in bag for player to choose ordering,
+    // but only add WhenPlayed if it has interactive targets (non-null preview).
+    const whenPlayedPreview = resolveWhenPlayed(unit.cardId, player, unit.playId);
+    if (whenPlayedPreview !== null) {
+      game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
+    }
+    // If WhenPlayed has no targets, skip adding it — Ambush proceeds alone.
+  } else if (!hasAmbush && CardHasWhenPlayed(unit.cardId)) {
+    const whenPlayedPending = resolveWhenPlayed(unit.cardId, player, unit.playId);
+    if (whenPlayedPending && !deferWhenPlayed) {
+      // Interactive WP — hand back to the caller to present immediately; it implicitly
+      // takes priority over outer bag triggers.
+      return whenPlayedPending;
+    }
+    // Auto-resolving WP, or interactive WP that must wait for a uniqueness defeat —
+    // push to bag (nested if outer triggers are already waiting) to resolve after it.
+    game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
+  }
+
+  return null;
+}
+
 function completePlayCard(
   game: GameState,
   log: string[],
@@ -1782,6 +1888,11 @@ function completePlayCard(
     game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: unit.playId, playedAs: "Unit" });
     game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId, reason: "played" });
 
+    // Duplicate-unique rule: uniqueness must ALWAYS interrupt and resolve first. If the
+    // player now controls >1 copy, return the defeat prompt immediately — before any of
+    // the entering unit's own effects (Yularen heal, Shielded, Ambush, When Played) run.
+    // The defeat-copy handler resumes entry (via queueUnitEntryTriggers) once a copy is
+    // chosen, so When Played and friends fire only after the duplicate is defeated.
     if (CardIsUnique(cardId)) {
       const controlled = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena] as Unit[];
       const copies = controlled.filter(u => u.cardId === cardId);
@@ -1789,70 +1900,20 @@ function completePlayCard(
         const defeatCopyPending: DefeatCopyPending = {
           type: "defeat-copy",
           eligiblePlayIds: copies.map(u => u.playId),
+          enteringPlayId: unit.playId,
+          enteringCardId: cardId,
+          enteringPlayer: player,
+          enteringInjectEffect: opts?.injectEffect,
         };
         return { response: resolutionResponse(pendingToResolution(defeatCopyPending, game)), pending: defeatCopyPending, stateChanged: false };
       }
     }
 
-    // Colonel Yularen (SOR_109): when a Command unit is played, heal 1 from base.
-    const yularenUnit = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
-      .find(u => u.cardId === "SOR_109" && !Unit.FromInterface(u).LostAbilities());
-    if (yularenUnit && CardAspects(cardId).includes("Command")) {
-      const yularenBase = GetPlayer(game, player).base;
-      yularenBase.damage = Math.max(0, yularenBase.damage - 1);
-      log.push(`${CardTitle("SOR_109")}: healed 1 damage from your base.`);
-    }
-
-    // Any triggers pushed while the bag is already non-empty are nested (CR 7.6.11).
-    const nested = game.triggerBag.length > 0;
-
-    if (HasShielded(cardId, unit.playId, player)) {
-      game.triggerBag.push({ triggerType: "shielded", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
-    }
-    if (opts?.injectEffect) {
-      game.currentEffects.push({ ...opts.injectEffect, targetPlayId: unit.playId });
-    }
-    // SOR_143 Fighters for Freedom: when another Aggression card is played, may deal 1 damage to a base.
-    if (cardId !== "SOR_143" && CardAspects(cardId).includes("Aggression")) {
-      const fffUnit = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
-        .find(u => u.cardId === "SOR_143" && !Unit.FromInterface(u).LostAbilities());
-      if (fffUnit) {
-        game.triggerBag.push({ triggerType: "card-played-reaction", cardId: "SOR_143", fromPlayer: player, playId: fffUnit.playId, nested });
-      }
-    }
-
-    // Leader-reaction: Boba Fett — when the active player plays a keyword unit
-    const leaderState = GetPlayer(game, player).leader;
-    if (
-      leaderState.cardId === "SHD_008" &&
-      !leaderState.deployed &&
-      leaderState.ready &&
-      HasKeyword(cardId, "Any", unit.playId, player)
-    ) {
-      game.triggerBag.push({ triggerType: "leader-reaction", cardId: "SHD_008", fromPlayer: player, nested });
-    }
-
-    const hasAmbush = HasAmbush(cardId, unit.playId, "Hand", player);
-    if (hasAmbush) {
-      game.triggerBag.push({ triggerType: "ambush", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
-    }
-
-    if (hasAmbush && CardHasWhenPlayed(unit.cardId)) {
-      // Both Ambush and When Played — put both in bag for player to choose ordering,
-      // but only add WhenPlayed if it has interactive targets (non-null preview).
-      const whenPlayedPreview = resolveWhenPlayed(unit.cardId, player, unit.playId);
-      if (whenPlayedPreview !== null) {
-        game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
-      }
-      // If WhenPlayed has no targets, skip adding it — Ambush proceeds alone.
-    } else if (!hasAmbush && CardHasWhenPlayed(unit.cardId)) {
-      const whenPlayedPending = resolveWhenPlayed(unit.cardId, player, unit.playId);
-      if (whenPlayedPending) {
-        // Interactive WP — return immediately; it implicitly takes priority over outer bag triggers.
-        return { response: resolutionResponse(pendingToResolution(whenPlayedPending, game)), pending: whenPlayedPending, stateChanged: false };
-      }
-      // Auto-resolving WP — push to bag, nested if outer triggers are already waiting.
-      game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
+    // No uniqueness conflict — queue the entering unit's own effects now. An interactive
+    // When Played is returned so it can be presented immediately.
+    const whenPlayedPending = queueUnitEntryTriggers(game, log, unit, cardId, player, opts, false);
+    if (whenPlayedPending) {
+      return { response: resolutionResponse(pendingToResolution(whenPlayedPending, game)), pending: whenPlayedPending, stateChanged: false };
     }
   } else if (CardType(cardId) === "Upgrade") {
     const eligiblePlayIds = UpgradeEligibleTargets(cardId, game, player);
@@ -2836,9 +2897,46 @@ function handleChooseTarget(
       return { response: invalidResponse("Chosen unit not found."), pending, stateChanged: false };
     const defeatedPending = defeatUnit(game, log, unit);
     updateDefeatedPlayers(game);
-    if (defeatedPending) return { response: resolutionResponse(pendingToResolution(defeatedPending, game)), pending: defeatedPending, stateChanged: false };
+
+    // Uniqueness is now resolved — resume the entering unit's own entry (Shielded,
+    // Ambush, When Played, reactions). When Played is deferred to the bag so it resolves
+    // after the just-defeated copy's own triggers. (Only the single-entry play-a-card
+    // path sets enteringPlayId; deck-search plays already queued their triggers.)
+    if (pending.enteringPlayId && pending.enteringCardId && pending.enteringPlayer) {
+      const entering = GetUnitByPlayId(game, pending.enteringPlayId);
+      if (entering) {
+        queueUnitEntryTriggers(
+          game, log, entering, pending.enteringCardId, pending.enteringPlayer,
+          pending.enteringInjectEffect ? { injectEffect: pending.enteringInjectEffect } : undefined,
+          true,
+        );
+      }
+    }
+
+    const cont = pending.continuation ?? null;
+
+    // If more than two copies entered at once (multiple duplicates), keep prompting —
+    // uniqueness must resolve fully before anything downstream.
+    if (pending.enteringPlayer) {
+      const nextConflict = uniquenessDefeatPending(game, pending.enteringPlayer);
+      if (nextConflict) {
+        nextConflict.continuation = cont;
+        return { response: resolutionResponse(pendingToResolution(nextConflict, game)), pending: nextConflict, stateChanged: true };
+      }
+    }
+
+    // The defeated copy's own When Defeated (if any) interrupts first; the entering unit's
+    // queued triggers and any downstream continuation resolve after it.
+    if (defeatedPending) {
+      const chained = injectContinuation(defeatedPending, cont);
+      return { response: resolutionResponse(pendingToResolution(chained, game)), pending: chained, stateChanged: false };
+    }
     const uniquenessBag = drainTriggerBag(game, log);
-    if (uniquenessBag) return { response: resolutionResponse(pendingToResolution(uniquenessBag, game)), pending: uniquenessBag, stateChanged: false };
+    if (uniquenessBag) {
+      const chained = injectContinuation(uniquenessBag, cont);
+      return { response: resolutionResponse(pendingToResolution(chained, game)), pending: chained, stateChanged: true };
+    }
+    if (cont) return { response: resolutionResponse(pendingToResolution(cont, game)), pending: cont, stateChanged: true };
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
@@ -3428,6 +3526,16 @@ function handleChooseTarget(
     }
     updateDefeatedPlayers(game);
     const contPlay = pending.continuation ?? null;
+
+    // Uniqueness must interrupt before the entered units' queued triggers drain. If two
+    // copies of a unique card entered at once (e.g. two R2-D2 via U-Wing Reinforcement),
+    // prompt to defeat one; the entered units' When Played fires afterward via the bag.
+    const uniqueSearchPending = uniquenessDefeatPending(game, pending.player);
+    if (uniqueSearchPending) {
+      uniqueSearchPending.continuation = contPlay;
+      return { response: resolutionResponse(pendingToResolution(uniqueSearchPending, game)), pending: uniqueSearchPending, stateChanged: true };
+    }
+
     const bagPlay = drainTriggerBag(game, log);
     if (bagPlay) {
       const chained = contPlay ? injectContinuation(bagPlay, contPlay) : bagPlay;

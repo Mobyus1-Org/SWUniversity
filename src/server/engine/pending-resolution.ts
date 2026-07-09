@@ -1,5 +1,5 @@
 import type { Game } from "@/lib/engine/game";
-import type { PlayerId, Zones } from "@/lib/engine/core-models";
+import type { CurrentEffect, PlayerId, Zones } from "@/lib/engine/core-models";
 
 // ---------------------------------------------------------------------------
 // Pending resolution variants
@@ -104,6 +104,17 @@ export interface UpgradeTargetPending {
 export interface DefeatCopyPending {
   type: "defeat-copy";
   eligiblePlayIds: string[];
+  // Context for resuming the entering unit's own entry (Shielded, Ambush, When Played,
+  // reactions) AFTER the duplicate is defeated. Uniqueness must interrupt and resolve
+  // first, so none of these fire until the player has chosen a copy to defeat.
+  enteringPlayId?: string;
+  enteringCardId?: string;
+  enteringPlayer?: PlayerId;
+  enteringInjectEffect?: Omit<CurrentEffect, "targetPlayId">;
+  // Downstream resolution to run once uniqueness (and the entering unit's triggers) is
+  // fully resolved — used when a duplicate arises mid-way through a larger effect (e.g.
+  // multiple copies entering via a deck-search "play").
+  continuation?: PendingResolution | null;
 }
 
 /** Capture step 1: choose which friendly unit will act as the captor. */
