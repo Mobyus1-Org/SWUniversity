@@ -176,6 +176,8 @@ type PlayerBuilderState = {
   deck: string[];
   groundUnits: UnitEntry[];
   spaceUnits: UnitEntry[];
+  creditTokens: number;
+  forceToken: boolean;
 };
 
 type BuilderState = {
@@ -186,6 +188,7 @@ type BuilderState = {
   author: string;
   inspiredBy?: string;
   intendedSolution: string[];
+  hints: string[];
   assetPath: string;
   activePlayer: 1 | 2;
   gamePhase: GamePhase;
@@ -201,6 +204,7 @@ function emptyPlayer(): PlayerBuilderState {
     baseCardId: "", baseDamage: 0, baseEpicActionUsed: false,
     leaderCardId: "", leaderReady: true, leaderDeployed: false, leaderEpicActionUsed: false,
     resources: [], handCards: [], deck: [], groundUnits: [], spaceUnits: [],
+    creditTokens: 0, forceToken: false,
   };
 }
 
@@ -213,6 +217,7 @@ function initialBuilderState(): BuilderState {
     author: "",
     inspiredBy: "",
     intendedSolution: [],
+    hints: [],
     assetPath: "",
     activePlayer: 1,
     gamePhase: "ActionPhase" as GamePhase,
@@ -247,6 +252,7 @@ function parseRawPlayer(p: Record<string, unknown>): PlayerBuilderState {
   const resources = (p.resources ?? []) as Record<string, unknown>[];
   const hand = (p.hand ?? []) as Record<string, unknown>[];
   const deck = (p.deck ?? []) as Record<string, unknown>[];
+  const supplemental = (p.supplemental ?? {}) as Record<string, unknown>;
   return {
     baseCardId: String(base.cardId ?? ""),
     baseDamage: Number(base.damage ?? 0),
@@ -268,10 +274,12 @@ function parseRawPlayer(p: Record<string, unknown>): PlayerBuilderState {
       upgrades: ((u.upgrades ?? []) as Record<string, unknown>[]).map((ug) => String(ug.cardId ?? "")),
       captives: ((u.captives ?? []) as Record<string, unknown>[]).map((c) => String(c.cardId ?? "")),
     })),
+    creditTokens: Number(supplemental.creditTokens ?? 0),
+    forceToken: Boolean(supplemental.forceToken),
   };
 }
 
-function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; infoText?: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; assetPath?: string }): BuilderState {
+function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; infoText?: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; assetPath?: string }): BuilderState {
   return {
     name: meta.name,
     description: meta.description,
@@ -280,6 +288,7 @@ function fromRaw(raw: Record<string, unknown>, meta: { name: string; description
     author: meta.author ?? "",
     inspiredBy: meta.inspiredBy ?? "",
     intendedSolution: meta.intendedSolution ?? [],
+    hints: meta.hints ?? [],
     assetPath: meta.assetPath ?? "",
     activePlayer: Number(raw.activePlayer) === 2 ? 2 : 1,
     gamePhase: resolvePhase(raw.gamePhase),
@@ -318,7 +327,7 @@ function toRaw(s: BuilderState): RawPuzzleGameState {
       discard: [],
       deck: p.deck.map((cardId) => ({ cardId })),
       hand: p.handCards.map((cardId) => ({ cardId })),
-      supplemental: {},
+      supplemental: { creditTokens: p.creditTokens, forceToken: p.forceToken },
     };
   }
 
@@ -385,6 +394,15 @@ function PlayerSection({ label, state, cards, onChange }: PlayerSectionProps) {
           <NumberInput value={state.baseDamage} onChange={(v) => patch({ baseDamage: v })} />
         </FieldRow>
         <Checkbox checked={state.baseEpicActionUsed} onChange={(v) => patch({ baseEpicActionUsed: v })} label="Epic Action Used" />
+      </div>
+
+      {/* Tokens */}
+      <div className="rounded-lg bg-black/20 p-3 space-y-2">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Tokens</div>
+        <FieldRow label="Credits">
+          <NumberInput value={state.creditTokens} onChange={(v) => patch({ creditTokens: v })} />
+        </FieldRow>
+        <Checkbox checked={state.forceToken} onChange={(v) => patch({ forceToken: v })} label="Has the Force" />
       </div>
 
       {/* Leader */}
@@ -811,6 +829,10 @@ function BoardPreview({ state, cards }: { state: BuilderState; cards: CardCatalo
             ? `${p.resources.filter((r) => r.ready).length} ready / ${p.resources.length} total`
             : "0"}
         </div>
+        <div className="text-[11px] text-white/70">
+          <span className="text-white/40">Tokens: </span>
+          {p.creditTokens} credit{p.creditTokens !== 1 ? "s" : ""}{p.forceToken ? " · has the Force" : ""}
+        </div>
         {p.deck.length > 0 && (
           <div className="text-[11px] text-white/70">
             <span className="text-white/40">Deck: </span>
@@ -854,7 +876,7 @@ type Props = {
   onTest?: (data: { rawInitial?: unknown; gameState: unknown; sentinelPlayIds?: string[]; unitBuffs?: Record<string, { power: number; hp: number }> }) => void;
   initialRaw?: unknown;
   initialId?: string;
-  initialMeta?: { name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; assetPath?: string };
+  initialMeta?: { name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; assetPath?: string };
 };
 
 export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initialMeta, initialId }: Props) {
@@ -878,7 +900,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       try {
         const json = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
         let gamestate: Record<string, unknown>;
-        let meta = { name: "New Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [] as string[], assetPath: "" };
+        let meta = { name: "New Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [] as string[], hints: [] as string[], assetPath: "" };
         if (json.initialGamestate !== undefined) {
           gamestate = json.initialGamestate as Record<string, unknown>;
           meta = {
@@ -889,6 +911,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
             author: String(json.author ?? ""),
             inspiredBy: String(json.inspiredBy ?? ""),
             intendedSolution: Array.isArray(json.intendedSolution) ? json.intendedSolution.map(String) : [],
+            hints: Array.isArray(json.hints) ? json.hints.map(String) : [],
             assetPath: String(json.assetPath ?? ""),
           };
         } else {
@@ -914,8 +937,8 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
   React.useEffect(() => {
     if (initialRaw) {
       try {
-        const meta = initialMeta ?? { name: "Tested Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [], assetPath: "" };
-        setState(fromRaw(initialRaw as Record<string, unknown>, { name: String(meta.name ?? ""), description: String(meta.description ?? ""), infoText: String(meta.infoText ?? ""), difficulty: Number(meta.difficulty ?? 1), author: String(meta.author ?? ""), inspiredBy: String(meta.inspiredBy ?? ""), intendedSolution: meta.intendedSolution ?? [], assetPath: String(meta.assetPath ?? "") }));
+        const meta = initialMeta ?? { name: "Tested Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [], hints: [], assetPath: "" };
+        setState(fromRaw(initialRaw as Record<string, unknown>, { name: String(meta.name ?? ""), description: String(meta.description ?? ""), infoText: String(meta.infoText ?? ""), difficulty: Number(meta.difficulty ?? 1), author: String(meta.author ?? ""), inspiredBy: String(meta.inspiredBy ?? ""), intendedSolution: meta.intendedSolution ?? [], hints: meta.hints ?? [], assetPath: String(meta.assetPath ?? "") }));
       } catch {
         // ignore invalid initial raw
       }
@@ -937,6 +960,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       author: state.author?.trim() ?? "",
       inspiredBy: state.inspiredBy?.trim() ?? "",
       intendedSolution: state.intendedSolution ?? [],
+      hints: state.hints ?? [],
       difficulty: state.difficulty,
       assetPath: normalizePuzzleAssetPath(state.assetPath),
       initialGamestate: toRaw(state),
@@ -969,7 +993,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Test failed");
       const data = await res.json();
-      if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, infoText: state.infoText, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, assetPath: normalizePuzzleAssetPath(state.assetPath), ...data });
+      if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, infoText: state.infoText, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, hints: state.hints, assetPath: normalizePuzzleAssetPath(state.assetPath), ...data });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Test failed.");
     } finally {
@@ -985,6 +1009,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       author: state.author?.trim() ?? "",
       inspiredBy: state.inspiredBy?.trim() ?? "",
       intendedSolution: state.intendedSolution ?? [],
+      hints: state.hints ?? [],
       difficulty: state.difficulty,
       assetPath: normalizePuzzleAssetPath(state.assetPath),
       initialGamestate: toRaw(state),
@@ -1243,6 +1268,40 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                       <button
                         type="button"
                         onClick={() => patchGlobal({ intendedSolution: (state.intendedSolution ?? []).filter((_, j) => j !== i) })}
+                        className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hints */}
+              <div className="rounded-lg bg-black/20 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Hints</div>
+                  <button
+                    type="button"
+                    onClick={() => patchGlobal({ hints: [ ...(state.hints ?? []), "" ] })}
+                    className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20"
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {(state.hints ?? []).map((line, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="pt-1.5 text-[11px] text-white/40 shrink-0">Hint {i + 1}</span>
+                      <textarea
+                        value={line}
+                        onChange={(e) => patchGlobal({ hints: (state.hints ?? []).map((l, j) => j === i ? e.target.value : l) })}
+                        rows={2}
+                        className="w-full resize-y rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => patchGlobal({ hints: (state.hints ?? []).filter((_, j) => j !== i) })}
                         className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20"
                       >
                         ×

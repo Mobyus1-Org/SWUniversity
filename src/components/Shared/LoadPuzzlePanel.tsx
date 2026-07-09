@@ -3,7 +3,7 @@ import { globalBackgroundStyle } from "@/util/style-const";
 import { puzzleImageSrc, DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
 
-type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; deploy?: boolean; assetPath?: string; initialGamestate: RawPuzzleGameState };
+type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints: string[]; deploy?: boolean; assetPath?: string; initialGamestate: RawPuzzleGameState };
 
 type Props = {
   onPuzzleLoaded: (id: string, meta: PuzzleEntry) => void;

@@ -23,6 +23,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
       author: doc.author ?? "",
       inspiredBy: doc.inspiredBy,
       intendedSolution: doc.intendedSolution ?? [],
+      hints: doc.hints ?? [],
       assetPath: doc.assetPath || DEFAULT_PUZZLE_IMAGE,
     }))
     .filter((p) => showAll || p.deploy);
@@ -50,6 +51,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
           author: puzzle.author ?? "",
           inspiredBy: puzzle.inspiredBy,
           intendedSolution: puzzle.intendedSolution ?? [],
+          hints: puzzle.hints ?? [],
           assetPath: puzzle.assetPath || DEFAULT_PUZZLE_IMAGE,
         },
         { new: true, lean: true },
@@ -67,6 +69,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
       author: puzzle.author ?? "",
       inspiredBy: puzzle.inspiredBy,
       intendedSolution: puzzle.intendedSolution ?? [],
+      hints: puzzle.hints ?? [],
       assetPath: puzzle.assetPath || DEFAULT_PUZZLE_IMAGE,
     });
     return { ...puzzle, id: doc._id.toString() };

@@ -11,6 +11,7 @@ export type PuzzleData = {
   author: string;
   inspiredBy?: string;
   intendedSolution: string[];
+  hints: string[];
   /** Select-menu thumbnail, relative to public/assets/ (e.g. "puzzles/mandalore.png"). */
   assetPath?: string;
 };

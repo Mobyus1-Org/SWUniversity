@@ -88,7 +88,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "SHD_009", "SHD_010", "SHD_011", "SHD_012", "SHD_013",
   "SHD_016", "SHD_017",
   //Twilight of the Republic
-  "TWI_005",
+  "TWI_005", "TWI_012",
 ]);
 
 // Non-leader units with an Action ability. Maps cardId → short label for the modal button.
@@ -121,6 +121,7 @@ function CardVisual({
   cardScale90 = false,
   customGlowClass,
   epicUsed = false,
+  forceToken = false,
   buff,
 }: {
   cardId: string;
@@ -142,6 +143,7 @@ function CardVisual({
   cardScale90?: boolean;
   customGlowClass?: string;
   epicUsed?: boolean;
+  forceToken?: boolean;
   buff?: { power: number; hp: number };
 }) {
   const pattern = imageId ?? cardId;
@@ -205,7 +207,10 @@ function CardVisual({
         <img src="/assets/tokens/sentinel.png" alt="Sentinel" className="h-[29px] w-[29px]" />
       </div> : null}
       {epicUsed ? <div className="pointer-events-none absolute -bottom-1 right-1.5 z-10">
-        <img src="/assets/tokens/epic-used.png" alt="Epic action used" className="h-[26px] w-[26px] rotate-90" />
+        <img src="/assets/tokens/epic-used.png" alt="Epic action used" className="h-[22px] w-[22px] rotate-90" />
+      </div> : null}
+      {forceToken ? <div className="pointer-events-none absolute -top-1 right-1.5 z-10">
+        <img src="/assets/force-token.webp" alt="The Force" title="Has the Force" className="h-[24px] w-[24px] drop-shadow-[0_0_4px_rgba(124,58,237,0.85)]" />
       </div> : null}
     </div>
     {footer ? <div className="mt-2">{footer}</div> : null}
@@ -368,13 +373,16 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
   const [spreadDmgMap, setSpreadDmgMap] = React.useState<Record<string, number>>({});
   const [selectedPuzzleFilename, setSelectedPuzzleFilename] = React.useState<string | null>(null);
   const [puzzleName, setPuzzleName] = React.useState<string | null>(null);
-  const [puzzleMeta, setPuzzleMeta] = React.useState<{ name: string; author: string; inspiredBy?: string; intendedSolution: string[]; infoText?: string; description?: string } | null>(null);
+  const [puzzleMeta, setPuzzleMeta] = React.useState<{ name: string; author: string; inspiredBy?: string; intendedSolution: string[]; infoText?: string; description?: string; hints?: string[] } | null>(null);
   const [showInfoModal, setShowInfoModal] = React.useState(false);
   const [showSolutionModal, setShowSolutionModal] = React.useState(false);
+  const [showHintsModal, setShowHintsModal] = React.useState(false);
+  const [openHints, setOpenHints] = React.useState<Set<number>>(new Set());
+  const [showFailModal, setShowFailModal] = React.useState(false);
   const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
   const [lastTestRaw, setLastTestRaw] = React.useState<any | null>(null);
-  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; assetPath?: string } | null>(null);
-  const [editState, setEditState] = React.useState<{ id: string; raw: unknown; meta: { name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; assetPath?: string } } | null>(null);
+  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; assetPath?: string } | null>(null);
+  const [editState, setEditState] = React.useState<{ id: string; raw: unknown; meta: { name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints?: string[]; assetPath?: string } } | null>(null);
   const [puzzleListRefresh, setPuzzleListRefresh] = React.useState(0);
   // Read from localStorage only on the client to avoid SSR hydration mismatch.
   React.useEffect(() => {
@@ -754,6 +762,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
       setResolutionNeeded(null);
       setActionError(null);
       setHistoryLength(0);
+      setOpenHints(new Set());
+      setShowHintsModal(false);
+      setShowFailModal(false);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Load failed.");
     } finally {
@@ -780,6 +791,14 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
       }
     }
   }, [gameState, puzzleMeta, selectedPuzzleFilename]);
+
+  // Show failure modal when the puzzle is lost or ends in a draw
+  React.useEffect(() => {
+    if (gameState) {
+      const s = deriveStatus(gameState);
+      if (s === "lost" || s === "draw") setShowFailModal(true);
+    }
+  }, [gameState]);
 
   // Auto-scroll game log to bottom when entries change
   React.useEffect(() => {
@@ -824,7 +843,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             // remember raw for editing
             const raw = payload.rawInitial ?? null;
             setLastTestRaw(raw);
-            setLastTestMeta({ name: payload.name ?? undefined, description: payload.description ?? undefined, infoText: payload.infoText ?? undefined, difficulty: payload.difficulty ?? undefined, author: payload.author ?? undefined, inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? undefined, assetPath: payload.assetPath ?? undefined });
+            setLastTestMeta({ name: payload.name ?? undefined, description: payload.description ?? undefined, infoText: payload.infoText ?? undefined, difficulty: payload.difficulty ?? undefined, author: payload.author ?? undefined, inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? undefined, hints: payload.hints ?? undefined, assetPath: payload.assetPath ?? undefined });
 
             setIsResolving(true);
             setActionError(null);
@@ -867,7 +886,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
               setShowBuilderPanelOpen(false);
               const title = payload.name ?? lastTestMeta?.name ?? "Tested Puzzle";
               setPuzzleName(title);
-              setPuzzleMeta({ name: title, author: payload.author ?? "", inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? [], infoText: payload.infoText ?? undefined, description: payload.description ?? undefined });
+              setPuzzleMeta({ name: title, author: payload.author ?? "", inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? [], infoText: payload.infoText ?? undefined, description: payload.description ?? undefined, hints: payload.hints ?? [] });
               setShowInfoModal(Boolean(payload.infoText && String(payload.infoText).trim()));
             } catch (err) {
               setActionError(err instanceof Error ? err.message : "Test failed.");
@@ -903,7 +922,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             onPuzzleLoaded={(filename, meta) => {
               setSelectedPuzzleFilename(filename);
               setPuzzleName(meta.name);
-              setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description });
+              setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description, hints: meta.hints ?? [] });
               setShowSolutionModal(false);
               setShowInfoModal(Boolean(meta.infoText && meta.infoText.trim()));
               void loadPuzzle(filename);
@@ -920,6 +939,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                   author: entry.author,
                   inspiredBy: entry.inspiredBy,
                   intendedSolution: entry.intendedSolution,
+                  hints: entry.hints,
                   assetPath: entry.assetPath,
                 },
               });
@@ -1056,7 +1076,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
           onPuzzleLoaded={(filename, meta) => {
             setSelectedPuzzleFilename(filename);
             setPuzzleName(meta.name);
-            setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description });
+            setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description, hints: meta.hints ?? [] });
             setShowSolutionModal(false);
             setShowInfoModal(Boolean(meta.infoText && meta.infoText.trim()));
             void loadPuzzle(filename);
@@ -1139,6 +1159,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             <button type="button" onClick={() => void handleUndo()} disabled={isResolving || historyLength === 0} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Undo</button>
             <button type="button" onClick={handlePass} disabled={isResolving || isGameOver || !!resolutionNeeded} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass</button>
             <button type="button" onClick={handleClaimInitiative} disabled={isResolving || gameState.initiativeClaimed || isGameOver || !!resolutionNeeded} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Initiative</button>
+            {(puzzleMeta?.hints?.length ?? 0) > 0 ? (
+              <button type="button" onClick={() => setShowHintsModal(true)} className="rounded-lg border border-amber-400/30 bg-amber-500/15 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-amber-500/25">Hints</button>
+            ) : null}
             <div className="h-3" />
             <button type="button" onClick={() => { if (selectedPuzzleFilename !== null) void loadPuzzle(selectedPuzzleFilename); }} disabled={isResolving || selectedPuzzleFilename === null} className="rounded-lg border border-white/15 bg-rose-500/20 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40">Reset</button>
           </div>
@@ -1316,6 +1339,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                     square
                     centerDamageBadge={opponent.base.damage}
                     epicUsed={opponent.base.epicActionUsed}
+                    forceToken={opponent.supplemental.forceToken}
                   />{spreadBaseControls("player2.base")}</div>
                 </div>
               </div>
@@ -1392,6 +1416,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                     square
                     centerDamageBadge={opponent.base.damage}
                     epicUsed={opponent.base.epicActionUsed}
+                    forceToken={opponent.supplemental.forceToken}
                   />{spreadBaseControls("player2.base")}</div>
                 </div>
                 <div className="hidden xl:space-y-2 xl:block">
@@ -1419,6 +1444,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                       cardScale90
                       centerDamageBadge={opponent.base.damage}
                       epicUsed={opponent.base.epicActionUsed}
+                      forceToken={opponent.supplemental.forceToken}
                     />
                     {spreadBaseControls("player2.base")}
                   </div>
@@ -1500,6 +1526,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                     square
                     centerDamageBadge={player.base.damage}
                     epicUsed={player.base.epicActionUsed}
+                    forceToken={player.supplemental.forceToken}
                   />{spreadBaseControls("player1.base")}</div>
                 </div>
               </div>
@@ -1673,6 +1700,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                     square
                     centerDamageBadge={player.base.damage}
                     epicUsed={player.base.epicActionUsed}
+                    forceToken={player.supplemental.forceToken}
                   />{spreadBaseControls("player1.base")}</div>
                 </div>
                 <div className="hidden xl:space-y-2 xl:block">
@@ -1687,6 +1715,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                       cardScale90
                       centerDamageBadge={player.base.damage}
                       epicUsed={player.base.epicActionUsed}
+                      forceToken={player.supplemental.forceToken}
                     />
                     {spreadBaseControls("player1.base")}
                   </div>
@@ -2210,6 +2239,67 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
       </div>
     </div> : null}
 
+    {showHintsModal && (puzzleMeta?.hints?.length ?? 0) > 0 ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowHintsModal(false)}>
+      <div className="w-[min(90vw,640px)] max-h-[80vh] overflow-y-auto rounded-xl border border-amber-400/30 bg-[rgba(8,12,26,0.94)] p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="mb-4 border-b border-white/10 pb-4">
+          <h3 className="text-lg font-black uppercase tracking-[0.2em] text-white">Hints</h3>
+          <p className="mt-1 text-xs text-white/45">Open only as many as you need.</p>
+        </div>
+        <div className="space-y-2">
+          {(puzzleMeta?.hints ?? []).map((hint, i) => {
+            const isOpen = openHints.has(i);
+            return (
+              <div key={i} className="rounded-lg border border-white/10 bg-black/20">
+                <button
+                  type="button"
+                  onClick={() => setOpenHints(prev => {
+                    const next = new Set(prev);
+                    if (next.has(i)) next.delete(i); else next.add(i);
+                    return next;
+                  })}
+                  className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-semibold text-white/90 hover:bg-white/5"
+                >
+                  <span>Hint {i + 1}</span>
+                  <span className="text-white/40">{isOpen ? "−" : "+"}</span>
+                </button>
+                {isOpen ? (
+                  <p className="whitespace-pre-wrap border-t border-white/10 px-4 py-3 text-sm leading-6 text-white/80">
+                    <CardLinkText text={hint} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+        <button type="button" onClick={() => setShowHintsModal(false)} className="mt-6 w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/20">
+          Close
+        </button>
+      </div>
+    </div> : null}
+
+    {showFailModal ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowFailModal(false)}>
+      <div className="w-[min(90vw,560px)] rounded-xl border border-rose-400/40 bg-[rgba(8,12,26,0.94)] p-10 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <h3 className="mb-2 text-base font-bold text-rose-300">Puzzle failed</h3>
+        <p className="mb-6 text-sm text-white/70">Your base was defeated. Reset to try again, or head back to the puzzles menu.</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => { setShowFailModal(false); if (selectedPuzzleFilename !== null) void loadPuzzle(selectedPuzzleFilename); }}
+            className="flex-1 rounded-lg border border-white/15 bg-rose-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500/30"
+          >
+            Reset Puzzle
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowFailModal(false); setGameState(null); setPuzzleName(null); setPuzzleMeta(null); setShowInfoModal(false); setActionError(null); }}
+            className="flex-1 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/20"
+          >
+            Return to Puzzles Menu
+          </button>
+        </div>
+      </div>
+    </div> : null}
+
     {leaderModalOpen ? <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">Leader Action</h3>
@@ -2302,6 +2392,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
           <button type="button" onClick={() => void handleUndo()} disabled={isResolving || historyLength === 0} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Undo</button>
           <button type="button" onClick={handlePass} disabled={isResolving || isGameOver || !!resolutionNeeded} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass to Regroup Draw</button>
           <button type="button" onClick={handleClaimInitiative} disabled={isResolving || gameState.initiativeClaimed || isGameOver || !!resolutionNeeded} className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Take Initiative</button>
+          {(puzzleMeta?.hints?.length ?? 0) > 0 ? (
+            <button type="button" onClick={() => setShowHintsModal(true)} className="rounded-xl border border-amber-400/30 bg-amber-500/15 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-amber-500/25">Hints</button>
+          ) : null}
           <div className="hidden sm:block h-3" />
           <button type="button" onClick={() => { if (selectedPuzzleFilename !== null) void loadPuzzle(selectedPuzzleFilename); }} disabled={isResolving || selectedPuzzleFilename === null} className="rounded-xl border border-white/15 bg-rose-500/20 px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40">Reset Puzzle</button>
         </div>
