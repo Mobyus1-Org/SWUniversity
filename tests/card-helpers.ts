@@ -361,6 +361,8 @@ export const Cards = {
     },
     twi: {
       infiltratingDemolisher: "TWI_182",
+      shaakTi: "TWI_094",
+      anakinsInterceptor: "TWI_142",
       admiralTrench: "TWI_086",
       sanHill: "TWI_186",
       r2d2FullOfSolutions: "TWI_193",

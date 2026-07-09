@@ -6,6 +6,7 @@ import { CardTitle } from "@/server/engine/card-db/generated";
 import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { CreateCloneTrooper } from "@/server/engine/token-helpers";
 
 /**
  * On Attack abilities — called after the attack target is chosen.
@@ -361,6 +362,11 @@ export function resolveOnAttackTrigger(
           : { type: "ability-target", cardId: "SOR_131_self", player: attacker.controller, sourcePlayId: attacker.playId, fromPlayIds: [attacker.playId], continuation },
         continuation,
       };
+    }
+    case "TWI_094": { // Shaak Ti — On Attack: Create a Clone Trooper token.
+      const game094 = GetGame();
+      if (game094) CreateCloneTrooper(game094.currentGameState, attacker.controller, game094.gameLog, attacker.cardId);
+      return continuation;
     }
     case "SOR_014": { // Sabine Wren "On Attack: Deal 1 damage to each enemy base."
       const game = GetGame();

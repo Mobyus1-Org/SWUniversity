@@ -383,6 +383,14 @@ export function GetResources(player: PlayerId, availableOnly = false): CardInPla
   return availableOnly ? playerObj.resources.filter(resource => resource.ready) : playerObj.resources;
 }
 
+/** Damage currently on the given player's base. */
+export function GetBaseDamage(player: PlayerId): number {
+  const game = GetGame();
+  if (!game) return 0;
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  return playerObj.base.damage;
+}
+
 export function HasTheForce(player: PlayerId) {
   const game = GetGame();
   if (!game) {
@@ -578,6 +586,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_067": //Rugged Survivors
     case "LAW_238": //Scavenging Sandcrawler
     case "JTL_056": //Hondo Ohnaka - You Cannot Run From Your Name
+    case "TWI_094": //Shaak Ti - Unity Wins Wars
       return true;
     default: break;
   }

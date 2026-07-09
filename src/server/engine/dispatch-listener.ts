@@ -1188,7 +1188,9 @@ function resolveAttack(
     }
     log.push(`${attackerName} attacked ${defenderName}.`);
 
-    const excessDamage = Math.max(effectiveAtkPower - defHpBefore, 0);
+    // A Shield token absorbs the entire damage instance, so no combat damage
+    // reaches the defender and there is no excess for Overwhelm to spill.
+    const excessDamage = shieldIdx === -1 ? Math.max(effectiveAtkPower - defHpBefore, 0) : 0;
 
     // Overwhelm: excess damage spills to base
     try {
@@ -2297,6 +2299,12 @@ function handleChooseTarget(
 
     if (!target)
       return { response: invalidResponse("choose-target must include targetPlayIds or targetZones containing 'Base'."), pending, stateChanged: false };
+
+    // Anakin Skywalker (TWI_012) leader Action: the attacker gets +2/+0 for this attack if it is attacking a unit.
+    if (pending.source === "TWI_012" && target.type === "unit" && attacker) {
+      game.currentEffects.push({ cardId: "TWI_012_action", duration: "ForAttack", affectedPlayer: attacker.controller, targetPlayId: attacker.playId });
+      log.push(`${CardTitle("TWI_012")}: attacking a unit — +2/+0 for this attack.`);
+    }
 
     // Ability-initiated attacks (e.g. Rebel Assault, Precision Fire) skip handleAttack,
     // so queue the on-attack trigger now if it wasn't already.
@@ -4713,6 +4721,19 @@ function resolveActionAbility(
       game.player2.base.damage += 1;
       log.push(`${CardTitle(cardId)} dealt 1 damage to each base.`);
       return null;
+    case "TWI_012": { // Anakin Skywalker — Action [Exhaust, deal 2 damage to your base]: Attack with a unit. +2/+0 if attacking a unit.
+      GetPlayer(game, player).base.damage += 2;
+      log.push(`${CardTitle("TWI_012")}: dealt 2 damage to your base.`);
+      const readyUnits012 = GetUnitsForPlayer(player).filter(u => u.ready);
+      if (readyUnits012.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "TWI_012",
+        player,
+        fromPlayIds: readyUnits012.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "SHD_012": { // Bo-Katan Kryze - Princess in Exile: If a Mandalorian attacked this phase, deal 1 damage to a unit.
       if (!UnitAttackedThisPhase(player, "Mandalorian")) {
         log.push(`${CardTitle(cardId)}: no Mandalorian attacked this phase — soft pass.`);
@@ -6173,6 +6194,15 @@ function applyAbilityEffect(
         type: "attack-target",
         attackerPlayId: targetPlayId,
         source: "SOR_110",
+        continuation: null,
+      };
+    }
+    case "TWI_012": { // Anakin Skywalker leader Action: attack with the chosen unit (+2/+0 vs a unit).
+      if (!targetPlayId) break;
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "TWI_012",
         continuation: null,
       };
     }

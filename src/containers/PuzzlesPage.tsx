@@ -1587,6 +1587,13 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                         />
                       );
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {spreadEligiblePlayIds.has(unit.playId) && (
+                      <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className={spreadBtnClass}>−</button>
+                        <span className={spreadValueClass}>{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={isSpreadIncrementDisabled(unit.playId)} className={spreadBtnClass}>+</button>
+                      </div>
+                    )}
                     </div>})
                   }
                 </div>
@@ -1737,6 +1744,13 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                         />
                       );
                     })}{(unit.captives ?? []).map((captive) => <CaptiveStrip key={captive.playId} cardId={captive.cardId} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />)}
+                    {spreadEligiblePlayIds.has(unit.playId) && (
+                      <div className="absolute left-0 right-0 top-[3.6rem] z-10 flex items-center justify-center gap-0.5 rounded bg-black/70 py-0.5">
+                        <button type="button" onClick={() => handleSpreadDecrement(unit.playId)} disabled={(spreadDmgMap[unit.playId] ?? 0) <= 0} className={spreadBtnClass}>−</button>
+                        <span className={spreadValueClass}>{spreadDmgMap[unit.playId] ?? 0}</span>
+                        <button type="button" onClick={() => handleSpreadIncrement(unit.playId)} disabled={isSpreadIncrementDisabled(unit.playId)} className={spreadBtnClass}>+</button>
+                      </div>
+                    )}
                     </div>})
                   }
                 </div>

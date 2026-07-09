@@ -47,6 +47,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "SOR_006": //Emperor Palpatine - Galactic Ruler
         if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
         break;
+      case "TWI_012": // Anakin Skywalker — Action: Attack with a unit (needs a ready unit)
+        if (GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
+        break;
       case "SHD_011": //Kylo Ren - Rash and Deadly
         if (GetHand(player).length > 0) abilities.push(cardId);
         break;

@@ -1,5 +1,5 @@
 import { CardInPlay, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer } from "@/server/engine/core-functions";
 import { CardHp, CardPower, CardUpgradeHp, CardUpgradePower } from "@/server/engine/card-db/generated";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
@@ -150,6 +150,9 @@ export class Unit implements UnitInterface {
         case "SOR_100": // Wedge Antilles — each friendly VEHICLE unit gets +1/+1
           power += TraitContains(this.cardId, "Vehicle", this.controller, this.playId) ? 1 : 0;
           break;
+        case "TWI_094": // Shaak Ti — each friendly token unit gets +1/+0
+          power += this.IsTokenUnit() ? 1 : 0;
+          break;
         case "TWI_114": //Clone Commander Cody - Commanding the 212th
           power += IsCoordinateActive(this.controller) && isOtherUnit ? 1 : 0;
           break;
@@ -196,6 +199,7 @@ export class Unit implements UnitInterface {
         case "SOR_217": power += 1; break; // Shoot First +1/+0 ForAttack
         case "SOR_220": power += 3; break; // Surprise Strike +3/+0 ForAttack
         case "SOR_240": power += 2; break; // Fleet Lieutenant +2/+0 ForAttack
+        case "TWI_012_action": power += 2; break; // Anakin Skywalker leader Action +2/+0 ForAttack (vs a unit)
         default: break;
       }
     }
@@ -220,6 +224,8 @@ export class Unit implements UnitInterface {
       if (this.cardId === "SOR_081" && GetResources(this.controller).length >= 6) power += 2; // Seasoned Shoretrooper
       if (this.cardId === "SOR_118") power += GetResources(this.controller).length; // 97th Legion
       if (this.cardId === "SOR_161" && InitiativePlayer() === this.controller) power += 2; // Ardent Sympathizer
+      if (this.cardId === "TWI_142" && GetBaseDamage(this.controller) >= 15) power += 2; // Anakin's Interceptor
+      if (this.cardId === "TWI_012") power += Math.floor(GetBaseDamage(this.controller) / 5); // Anakin Skywalker (leader unit)
     }
 
     if (isAttacking) {
