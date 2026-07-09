@@ -257,6 +257,7 @@ export const Cards = {
       brightHope: "SOR_099",
       homeOne: "SOR_102",
       superlaserTechnician: "SOR_083",
+      admiralMotti: "SOR_226",
       zebOrrelios: "SOR_146",
       blackOne: "SOR_147",
       ardentSympathizer: "SOR_161",
@@ -318,6 +319,7 @@ export const Cards = {
       seventhSister: "SOR_133",
     },
     shd: {
+      superlaserTechnician: "SHD_085",
       doctorPershing: "SHD_028",
       generalTagge: "SHD_081",
       sundariPeaceKeeper: "SHD_098",
@@ -338,6 +340,7 @@ export const Cards = {
     },
     jtl: {
       kijimiPatrollers: "JTL_082",
+      hondoOhnaka: "JTL_056",
       l337: "JTL_049",
       lukeSkywalker: "JTL_094",
       blueLeader: "JTL_096",

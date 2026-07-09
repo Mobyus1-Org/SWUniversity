@@ -49,10 +49,11 @@ function resolveOwnWhenDefeated(
   player: PlayerId
 ): PendingResolution | null {
   switch (unit.cardId) {
-    case "SOR_083": { // Superlaser Technician: "When Defeated: You may put this unit into play as a resource and ready it."
+    case "SOR_083": // Superlaser Technician (SOR_083 / SHD_085 reprint): "When Defeated: You may put this unit into play as a resource and ready it."
+    case "SHD_085": {
       return {
         type: "ability-option",
-        cardId: "SOR_083",
+        cardId: unit.cardId,
         player,
         sourcePlayId: unit.playId,
         helperText: "Put Superlaser Technician into play as a ready resource?",

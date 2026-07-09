@@ -2,6 +2,7 @@ import { connectToDatabase } from "@/server/db";
 import { PuzzleModel } from "@/server/models/Puzzle";
 import type { PuzzleRepository, PuzzleData } from "../puzzle-repository";
 import type { RawPuzzleGameState } from "./puzzle-runtime";
+import { DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 
 export class MongoDBPuzzleRepository implements PuzzleRepository {
   private async connect() {
@@ -22,6 +23,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
       author: doc.author ?? "",
       inspiredBy: doc.inspiredBy,
       intendedSolution: doc.intendedSolution ?? [],
+      assetPath: doc.assetPath || DEFAULT_PUZZLE_IMAGE,
     }))
     .filter((p) => showAll || p.deploy);
   }
@@ -48,6 +50,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
           author: puzzle.author ?? "",
           inspiredBy: puzzle.inspiredBy,
           intendedSolution: puzzle.intendedSolution ?? [],
+          assetPath: puzzle.assetPath || DEFAULT_PUZZLE_IMAGE,
         },
         { new: true, lean: true },
       );
@@ -64,6 +67,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
       author: puzzle.author ?? "",
       inspiredBy: puzzle.inspiredBy,
       intendedSolution: puzzle.intendedSolution ?? [],
+      assetPath: puzzle.assetPath || DEFAULT_PUZZLE_IMAGE,
     });
     return { ...puzzle, id: doc._id.toString() };
   }

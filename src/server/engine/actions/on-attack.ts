@@ -5,6 +5,7 @@ import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/sab
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
+import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 
 /**
  * On Attack abilities — called after the attack target is chosen.
@@ -185,6 +186,29 @@ export function resolveOnAttackTrigger(
   }
   // innate On Attack abilities
   switch (attacker.cardId) {
+    case "JTL_056": { // Hondo Ohnaka — On Attack: You may take control of a non-Pilot upgrade on a unit and attach it to a different eligible unit.
+      const movableUpgrades056 = AllUnits().flatMap(u =>
+        u.upgrades.filter(upg => !IsPilotUpgrade(upg.cardId)).map(upg => upg.playId));
+      if (movableUpgrades056.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "JTL_056",
+        player: attacker.controller,
+        sourcePlayId: attacker.playId,
+        helperText: "Take control of a non-Pilot upgrade and attach it to a different eligible unit?",
+        yesLabel: "Move upgrade",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "JTL_056_upgrade",
+          player: attacker.controller,
+          sourcePlayId: attacker.playId,
+          fromPlayIds: movableUpgrades056,
+          continuation,
+        },
+        continuation,
+      };
+    }
     case "SOR_067": { // Rugged Survivors — On Attack: if you control a leader unit, you may draw a card
       const leader067 = GetLeaderForPlayer(attacker.controller);
       if (!leader067.deployed) return continuation;

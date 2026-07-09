@@ -1,5 +1,6 @@
 import { Schema, model, models, type Model } from "mongoose";
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
+import { DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 
 export type PuzzleDocument = {
   name: string;
@@ -11,6 +12,8 @@ export type PuzzleDocument = {
   author: string;
   inspiredBy?: string;
   intendedSolution: string[];
+  /** Select-menu thumbnail, relative to public/assets/ (e.g. "puzzles/mandalore.png"). */
+  assetPath: string;
 };
 
 const puzzleSchema = new Schema<PuzzleDocument>(
@@ -24,6 +27,7 @@ const puzzleSchema = new Schema<PuzzleDocument>(
     author: { type: String, default: "" },
     inspiredBy: { type: String },
     intendedSolution: { type: [String], default: [] },
+    assetPath: { type: String, default: DEFAULT_PUZZLE_IMAGE },
   },
   { timestamps: true },
 );

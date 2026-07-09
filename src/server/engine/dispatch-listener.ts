@@ -417,6 +417,40 @@ function defeatUpgradeByPlayId(
 }
 
 /**
+ * Moves an existing upgrade (by playId) off whatever unit it is currently on and attaches
+ * it to the destination unit, transferring control of the upgrade to `abilityController`.
+ * Handles Traitorous (SOR_122): the source unit reverts to its owner, and the destination
+ * unit is taken over by the ability's controller. Used by Hondo Ohnaka's On Attack.
+ */
+function moveUpgradeToUnit(
+  game: GameState,
+  log: string[],
+  upgradePlayId: string,
+  destPlayId: string,
+  abilityController: PlayerId,
+): void {
+  const dest = GetUnitByPlayId(game, destPlayId);
+  for (const u of GetAllUnits(game)) {
+    const idx = u.upgrades.findIndex(upg => upg.playId === upgradePlayId);
+    if (idx === -1) continue;
+    const [moved] = u.upgrades.splice(idx, 1);
+    // Traitorous leaving the source unit: its owner reclaims control.
+    if (moved.cardId === "SOR_122" && u.controller !== u.owner) {
+      transferControl(game, log, u, u.owner as PlayerId);
+    }
+    if (!dest) return; // destination gone — the upgrade is simply removed
+    moved.controller = abilityController;
+    dest.upgrades.push(moved);
+    log.push(`${CardTitle("JTL_056")}: moved ${CardTitle(moved.cardId)} onto ${CardTitle(dest.cardId)}.`);
+    // Traitorous now on the destination: the ability's controller takes control of it.
+    if (moved.cardId === "SOR_122" && dest.controller !== abilityController) {
+      transferControl(game, log, dest, abilityController);
+    }
+    return;
+  }
+}
+
+/**
  * Returns playIds of friendly Vehicle units that have zero pilot upgrades.
  * Used for L3-37's replacement effect — her card says "without a Pilot on it",
  * which means NO pilots at all (R2-D2 is a pilot via PilotingCost=0 and counts).
@@ -2771,8 +2805,11 @@ function handleChooseTarget(
     const unit = GetUnitByPlayId(game, chosen);
     if (!unit)
       return { response: invalidResponse("Chosen unit not found."), pending, stateChanged: false };
-    defeatUnit(game, log, unit);
+    const defeatedPending = defeatUnit(game, log, unit);
     updateDefeatedPlayers(game);
+    if (defeatedPending) return { response: resolutionResponse(pendingToResolution(defeatedPending, game)), pending: defeatedPending, stateChanged: false };
+    const uniquenessBag = drainTriggerBag(game, log);
+    if (uniquenessBag) return { response: resolutionResponse(pendingToResolution(uniquenessBag, game)), pending: uniquenessBag, stateChanged: false };
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
@@ -3614,21 +3651,22 @@ function applyAbilityOptionEffect(
       log.push(`${CardTitle("SOR_147")}: discarded hand and drew 3 cards.`);
       return pending.continuation ?? null;
     }
-    case "SOR_083": { // Superlaser Technician Yes — remove from discard, put into resources ready
+    case "SOR_083": // Superlaser Technician Yes (SOR_083 / SHD_085 reprint) — remove from discard, put into resources ready
+    case "SHD_085": {
       const pState083 = GetPlayer(game, pending.player!);
       const discardIdx083 = pState083.discard.findIndex(d => d.playId === pending.sourcePlayId);
       const playId083 = discardIdx083 >= 0
         ? pState083.discard.splice(discardIdx083, 1)[0].playId
         : nextPlayId(game);
       pState083.resources.push({
-        cardId: "SOR_083",
+        cardId: pending.cardId,
         playId: playId083,
         owner: pending.player!,
         controller: pending.player!,
         ready: true,
         stolen: false,
       });
-      log.push(`${CardTitle("SOR_083")}: entered play as a ready resource.`);
+      log.push(`${CardTitle(pending.cardId)}: entered play as a ready resource.`);
       return pending.continuation ?? null;
     }
     case "SOR_016": // Yes = reveal own deck
@@ -5935,6 +5973,36 @@ function applyAbilityEffect(
     case "SOR_131_self": { // Fifth Brother On Attack: no other ground unit — deal 1 to himself only.
       if (!pending.sourcePlayId) break;
       DealDamageToUnit(game.currentGameState, "SOR_131", pending.sourcePlayId, 1, game.gameLog);
+      break;
+    }
+    case "JTL_056_upgrade": { // Hondo Ohnaka On Attack, step 1: chose the upgrade — now pick a different eligible unit.
+      if (!targetPlayId || pending.player === undefined) break; // no upgrade chosen — continue combat
+      const gs056 = game.currentGameState;
+      let upgradeCardId056: string | undefined;
+      let currentUnitPlayId056: string | undefined;
+      for (const u of GetAllUnits(gs056)) {
+        const found = u.upgrades.find(upg => upg.playId === targetPlayId);
+        if (found) { upgradeCardId056 = found.cardId; currentUnitPlayId056 = u.playId; break; }
+      }
+      if (!upgradeCardId056) break;
+      const dests056 = UpgradeEligibleTargets(upgradeCardId056, gs056, pending.player)
+        .filter(id => id !== currentUnitPlayId056);
+      if (dests056.length === 0) {
+        game.gameLog.push(`${CardTitle("JTL_056")}: no eligible unit to move ${CardTitle(upgradeCardId056)} to.`);
+        break; // continue combat
+      }
+      return {
+        type: "ability-target",
+        cardId: "JTL_056_unit",
+        player: pending.player,
+        sourcePlayId: targetPlayId, // carry the chosen upgrade's playId into step 2
+        fromPlayIds: dests056,
+        continuation: pending.continuation,
+      } satisfies AbilityTargetPending;
+    }
+    case "JTL_056_unit": { // Hondo Ohnaka On Attack, step 2: attach the chosen upgrade to the chosen unit.
+      if (!targetPlayId || !pending.sourcePlayId || pending.player === undefined) break;
+      moveUpgradeToUnit(game.currentGameState, game.gameLog, pending.sourcePlayId, targetPlayId, pending.player);
       break;
     }
     case "SOR_097": { // Admiral Ackbar When Played: deal damage = friendly units in the target's arena.

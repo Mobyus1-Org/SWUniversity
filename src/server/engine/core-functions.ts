@@ -577,6 +577,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_056": //Bendu
     case "SOR_067": //Rugged Survivors
     case "LAW_238": //Scavenging Sandcrawler
+    case "JTL_056": //Hondo Ohnaka - You Cannot Run From Your Name
       return true;
     default: break;
   }

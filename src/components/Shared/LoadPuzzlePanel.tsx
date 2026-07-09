@@ -1,8 +1,9 @@
 import React from "react";
 import { globalBackgroundStyle } from "@/util/style-const";
+import { puzzleImageSrc, DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
 
-type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; deploy?: boolean; initialGamestate: RawPuzzleGameState };
+type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; deploy?: boolean; assetPath?: string; initialGamestate: RawPuzzleGameState };
 
 type Props = {
   onPuzzleLoaded: (id: string, meta: PuzzleEntry) => void;
@@ -126,8 +127,18 @@ export function LoadPuzzlePanel(props: Props) {
               <li
                 key={id}
                 onClick={() => handleLoad(entry)}
-                className={`group ${globalBackgroundStyle} border rounded cursor-pointer p-3 flex flex-col gap-1 transition-all hover:ring-2 hover:ring-primary/60`}
+                className={`group ${globalBackgroundStyle} border rounded cursor-pointer p-3 flex gap-3 transition-all hover:ring-2 hover:ring-primary/60`}
               >
+                <img
+                  src={puzzleImageSrc(entry.assetPath)}
+                  alt=""
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (!img.src.endsWith(DEFAULT_PUZZLE_IMAGE)) img.src = `/assets/${DEFAULT_PUZZLE_IMAGE}`;
+                  }}
+                  className="h-16 w-16 shrink-0 self-center rounded border-2 border-white/80 bg-black/30 object-cover"
+                />
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="font-semibold truncate">{name}</span>
@@ -178,6 +189,7 @@ export function LoadPuzzlePanel(props: Props) {
                     {entry.inspiredBy ? <span>Inspired by {entry.inspiredBy}</span> : null}
                   </div>
                 ) : null}
+                </div>
               </li>
             );
           })}

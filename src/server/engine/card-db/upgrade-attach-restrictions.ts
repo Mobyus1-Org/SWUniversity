@@ -114,6 +114,16 @@ export function UpgradeEligibleTargets(
   }
 }
 
+/**
+ * True if the given upgrade card is a Pilot upgrade — it has a piloting cost, or is a
+ * leader that can deploy as a pilot. Used to identify pilots when a rule cares about
+ * "non-Pilot upgrades" (e.g. Hondo Ohnaka's On Attack).
+ */
+export function IsPilotUpgrade(cardId: string): boolean {
+  return PilotingCost(cardId) >= 0
+    || (CardIsLeader(cardId) && LeaderDeployPilotThreshold(cardId) !== null);
+}
+
 const maxPilotsByCardId: Record<string, number> = {
   "JTL_249": 2, //Millennium Falcon - Get Out And Push
 };

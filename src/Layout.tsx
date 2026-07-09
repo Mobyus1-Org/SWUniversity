@@ -232,7 +232,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
       </div>
     </main>
     {modalKey !== "relevant-cards" && (
-      <footer className="text-center text-sm uwd:text-lg 4k:text-2xl mt-8 border-t pt-4 space-y-2 text-gray-400 z-10 relative">
+      <footer className="text-center text-sm uwd:text-lg 4k:text-2xl mt-8 border-t pt-4 space-y-2 text-gray-400 z-0 relative">
         <p className="p-2">
           For educational purposes only. Check out our <a
             href={DiscordLink}

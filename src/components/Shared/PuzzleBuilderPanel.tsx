@@ -1,5 +1,6 @@
 import React from "react";
 import { globalBackgroundStyle } from "@/util/style-const";
+import { normalizePuzzleAssetPath, puzzleImageSrc, DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
 import type { GamePhase } from "@/lib/engine/core-models";
 import type { SolverResult } from "@/server/puzzle/solver";
@@ -185,6 +186,7 @@ type BuilderState = {
   author: string;
   inspiredBy?: string;
   intendedSolution: string[];
+  assetPath: string;
   activePlayer: 1 | 2;
   gamePhase: GamePhase;
   currentRound: number;
@@ -211,6 +213,7 @@ function initialBuilderState(): BuilderState {
     author: "",
     inspiredBy: "",
     intendedSolution: [],
+    assetPath: "",
     activePlayer: 1,
     gamePhase: "ActionPhase" as GamePhase,
     currentRound: 1,
@@ -268,7 +271,7 @@ function parseRawPlayer(p: Record<string, unknown>): PlayerBuilderState {
   };
 }
 
-function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; infoText?: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[] }): BuilderState {
+function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; infoText?: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; assetPath?: string }): BuilderState {
   return {
     name: meta.name,
     description: meta.description,
@@ -277,6 +280,7 @@ function fromRaw(raw: Record<string, unknown>, meta: { name: string; description
     author: meta.author ?? "",
     inspiredBy: meta.inspiredBy ?? "",
     intendedSolution: meta.intendedSolution ?? [],
+    assetPath: meta.assetPath ?? "",
     activePlayer: Number(raw.activePlayer) === 2 ? 2 : 1,
     gamePhase: resolvePhase(raw.gamePhase),
     currentRound: Number(raw.currentRound ?? 1),
@@ -850,7 +854,7 @@ type Props = {
   onTest?: (data: { rawInitial?: unknown; gameState: unknown; sentinelPlayIds?: string[]; unitBuffs?: Record<string, { power: number; hp: number }> }) => void;
   initialRaw?: unknown;
   initialId?: string;
-  initialMeta?: { name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[] };
+  initialMeta?: { name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; assetPath?: string };
 };
 
 export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initialMeta, initialId }: Props) {
@@ -874,7 +878,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       try {
         const json = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
         let gamestate: Record<string, unknown>;
-        let meta = { name: "New Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [] as string[] };
+        let meta = { name: "New Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [] as string[], assetPath: "" };
         if (json.initialGamestate !== undefined) {
           gamestate = json.initialGamestate as Record<string, unknown>;
           meta = {
@@ -885,6 +889,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
             author: String(json.author ?? ""),
             inspiredBy: String(json.inspiredBy ?? ""),
             intendedSolution: Array.isArray(json.intendedSolution) ? json.intendedSolution.map(String) : [],
+            assetPath: String(json.assetPath ?? ""),
           };
         } else {
           gamestate = json;
@@ -909,8 +914,8 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
   React.useEffect(() => {
     if (initialRaw) {
       try {
-        const meta = initialMeta ?? { name: "Tested Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [] };
-        setState(fromRaw(initialRaw as Record<string, unknown>, { name: String(meta.name ?? ""), description: String(meta.description ?? ""), infoText: String(meta.infoText ?? ""), difficulty: Number(meta.difficulty ?? 1), author: String(meta.author ?? ""), inspiredBy: String(meta.inspiredBy ?? ""), intendedSolution: meta.intendedSolution ?? [] }));
+        const meta = initialMeta ?? { name: "Tested Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [], assetPath: "" };
+        setState(fromRaw(initialRaw as Record<string, unknown>, { name: String(meta.name ?? ""), description: String(meta.description ?? ""), infoText: String(meta.infoText ?? ""), difficulty: Number(meta.difficulty ?? 1), author: String(meta.author ?? ""), inspiredBy: String(meta.inspiredBy ?? ""), intendedSolution: meta.intendedSolution ?? [], assetPath: String(meta.assetPath ?? "") }));
       } catch {
         // ignore invalid initial raw
       }
@@ -933,6 +938,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       inspiredBy: state.inspiredBy?.trim() ?? "",
       intendedSolution: state.intendedSolution ?? [],
       difficulty: state.difficulty,
+      assetPath: normalizePuzzleAssetPath(state.assetPath),
       initialGamestate: toRaw(state),
     };
     fetch("/api/puzzles", {
@@ -963,7 +969,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Test failed");
       const data = await res.json();
-      if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, infoText: state.infoText, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, ...data });
+      if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, infoText: state.infoText, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, assetPath: normalizePuzzleAssetPath(state.assetPath), ...data });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Test failed.");
     } finally {
@@ -980,6 +986,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       inspiredBy: state.inspiredBy?.trim() ?? "",
       intendedSolution: state.intendedSolution ?? [],
       difficulty: state.difficulty,
+      assetPath: normalizePuzzleAssetPath(state.assetPath),
       initialGamestate: toRaw(state),
     };
     const blob = new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" });
@@ -1099,6 +1106,23 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                     placeholder="Optional credit…"
                     className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
                   />
+                </FieldRow>
+                <FieldRow label="Image">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={state.assetPath ?? ""}
+                      onChange={(e) => patchGlobal({ assetPath: e.target.value })}
+                      placeholder="filename.png — file lives in /public/assets/puzzles/"
+                      className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
+                    />
+                    <img
+                      src={puzzleImageSrc(normalizePuzzleAssetPath(state.assetPath ?? ""))}
+                      alt=""
+                      onError={(e) => { const img = e.currentTarget; if (!img.src.endsWith(DEFAULT_PUZZLE_IMAGE)) img.src = `/assets/${DEFAULT_PUZZLE_IMAGE}`; }}
+                      className="h-12 w-12 shrink-0 rounded border-2 border-white/80 bg-black/30 object-cover"
+                    />
+                  </div>
                 </FieldRow>
                 <FieldRow label="Difficulty">
                   <div className="flex items-center gap-2">
