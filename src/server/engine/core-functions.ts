@@ -559,6 +559,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "LOF_082": //Vaneé — When Played/On Attack
     case "SOR_179": //Boba Fett - Disintegrator
     case "SOR_040": //Avenger - Hunting Star Destroyer
     case "SOR_188": //Chopper
@@ -760,6 +761,79 @@ export function mandatoryTarget(
     fromPlayIds,
     continuation,
   } satisfies AbilityTargetPending;
+}
+
+/**
+ * Vaneé (LOF_082) "You may defeat an Experience token on a friendly unit.
+ * If you do, give an Experience token to a friendly unit." Shared by When Played and On Attack.
+ * Returns `continuation` unchanged when no friendly unit carries an Experience token.
+ */
+export function buildVaneeAbility(
+  player: PlayerId,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const friendly = GetUnitsForPlayer(player);
+  const withXp = friendly
+    .filter(u => u.upgrades.some(up => up.cardId === "SOR_T01"))
+    .map(u => u.playId);
+  if (withXp.length === 0) return continuation;
+  return {
+    type: "ability-option",
+    cardId: "LOF_082",
+    player,
+    helperText: "Defeat an Experience token on a friendly unit, then give one to a friendly unit?",
+    yesLabel: "Yes",
+    noLabel: "Skip",
+    onYes: {
+      type: "ability-target",
+      cardId: "LOF_082_defeat",
+      player,
+      fromPlayIds: withXp,
+      continuation: {
+        type: "ability-target",
+        cardId: "LOF_082_give",
+        player,
+        fromPlayIds: friendly.map(u => u.playId),
+        continuation,
+      },
+    },
+    continuation,
+  } satisfies AbilityOptionPending;
+}
+
+/**
+ * "You may take control of an upgrade matching `upgradeFilter` on a unit and attach it to a
+ * different eligible unit." Shared take-control mechanic (Hondo JTL_056 On Attack; Shuttle ST-149
+ * JTL_242 When Played/When Defeated). Two-step resolution is handled by the generic
+ * "take-control-upgrade" / "take-control-unit" dispatch cases.
+ * Returns `continuation` unchanged when no matching upgrade is in play.
+ */
+export function buildTakeControlOfUpgrade(
+  cardId: string,
+  player: PlayerId,
+  upgradeFilter: (upg: { cardId: string }) => boolean,
+  helperText: string,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const movable = AllUnits().flatMap(u =>
+    u.upgrades.filter(upgradeFilter).map(upg => upg.playId));
+  if (movable.length === 0) return continuation;
+  return {
+    type: "ability-option",
+    cardId,
+    player,
+    helperText,
+    yesLabel: "Move upgrade",
+    noLabel: "Skip",
+    onYes: {
+      type: "ability-target",
+      cardId: "take-control-upgrade",
+      player,
+      fromPlayIds: movable,
+      continuation,
+    },
+    continuation,
+  } satisfies AbilityOptionPending;
 }
 
 export interface SearchDeckFilter {

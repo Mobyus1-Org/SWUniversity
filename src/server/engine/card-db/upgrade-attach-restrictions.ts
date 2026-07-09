@@ -1,7 +1,7 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import { CardIsLeader, TraitContains } from "../core-functions";
-import { CardCost } from "@/server/engine/card-db/generated";
+import { CardCost, CardType } from "@/server/engine/card-db/generated";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { LeaderDeployPilotThreshold } from "./keyword-dictionaries.ts/leader-pilot-deploy";
 
@@ -122,6 +122,14 @@ export function UpgradeEligibleTargets(
 export function IsPilotUpgrade(cardId: string): boolean {
   return PilotingCost(cardId) >= 0
     || (CardIsLeader(cardId) && LeaderDeployPilotThreshold(cardId) !== null);
+}
+
+/**
+ * A token upgrade is a token card (generator gives tokens a `_T##` id) that is an Upgrade —
+ * e.g. Experience (SOR_T01) and Shield (SOR_T02) tokens.
+ */
+export function IsTokenUpgrade(cardId: string): boolean {
+  return /_T\d+$/.test(cardId) && CardType(cardId) === "Upgrade";
 }
 
 const maxPilotsByCardId: Record<string, number> = {

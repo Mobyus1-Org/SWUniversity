@@ -13,6 +13,8 @@ export function HasWhenAttackEnds(cardId: string): boolean {
   switch (cardId) {
     case "SOR_009": //Leia Organa "When this unit completes an attack: You may attack with another Rebel unit."
       return true;
+    case "SEC_006": //Colonel Yularen "When this unit completes an attack (and survives): You may attack with another unit that costs 4 or less."
+      return true;
     default: return false;
   }
 }

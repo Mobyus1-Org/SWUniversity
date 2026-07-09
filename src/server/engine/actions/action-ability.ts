@@ -50,6 +50,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "TWI_012": // Anakin Skywalker — Action: Attack with a unit (needs a ready unit)
         if (GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
         break;
+      case "SEC_006": // Colonel Yularen — Action [Exhaust]: Attack with a unit, then optionally a cheaper one (needs a ready unit)
+        if (GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
+        break;
       case "SHD_011": //Kylo Ren - Rash and Deadly
         if (GetHand(player).length > 0) abilities.push(cardId);
         break;

@@ -348,6 +348,7 @@ export const Cards = {
       snapWexley: "JTL_098",
       r2d2: "JTL_245",
       millenniumFalcon: "JTL_249",
+      shuttleSt149: "JTL_242",
     },
     lof: {
       kelleranBeq: "LOF_100",
@@ -358,6 +359,7 @@ export const Cards = {
       witchOfTheMist: "LOF_154",
       theLegacyRun: "LOF_213",
       sandtrooperCavalry: "LOF_232",
+      vanee: "LOF_082",
     },
     twi: {
       infiltratingDemolisher: "TWI_182",

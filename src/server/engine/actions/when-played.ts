@@ -1,5 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty } from "@/server/engine/core-functions";
+import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty } from "@/server/engine/core-functions";
+import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy, CreateCreditToken } from "@/server/engine/token-helpers";
@@ -27,6 +28,12 @@ export function resolveWhenPlayed(
   const game = GetGame();
   if (!game) throw new Error("Game not found in resolveWhenPlayedAbility");
   switch (cardId) {
+    case "LOF_082": // Vaneé — When Played/On Attack: may defeat an XP token on a friendly unit, then give one to a friendly unit.
+      return buildVaneeAbility(player, null);
+    case "JTL_242": // Shuttle ST-149 — When Played/When Defeated: may take control of a token upgrade and attach it to a different eligible unit.
+      return buildTakeControlOfUpgrade("JTL_242", player,
+        upg => IsTokenUpgrade(upg.cardId),
+        "Take control of a token upgrade and attach it to a different eligible unit?", null);
     case "SOR_042": // Search Your Feelings — Search your deck for a card and draw it. (Then, shuffle your deck.)
       return searchDeck(cardId, player, -1, "draw", { maxChoices: 1, dontReveal: true });
     case "SOR_119": { // Reinforcement Walker — look at top card, draw it (Yes) or discard + heal 3 (No).

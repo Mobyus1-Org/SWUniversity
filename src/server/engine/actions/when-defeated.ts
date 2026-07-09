@@ -1,7 +1,8 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, DrawCardForPlayer, GetGame, GetGameState, GetUnitsForPlayer, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget } from "@/server/engine/core-functions";
+import { AllUnits, DrawCardForPlayer, GetGame, GetGameState, GetUnitsForPlayer, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
+import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardAspects, CardTitle } from "@/server/engine/card-db/generated";
 import { CreateBattleDroid } from "@/server/engine/token-helpers";
 
@@ -49,6 +50,10 @@ function resolveOwnWhenDefeated(
   player: PlayerId
 ): PendingResolution | null {
   switch (unit.cardId) {
+    case "JTL_242": // Shuttle ST-149 — When Played/When Defeated: may take control of a token upgrade and attach it to a different eligible unit.
+      return buildTakeControlOfUpgrade("JTL_242", player,
+        upg => IsTokenUpgrade(upg.cardId),
+        "Take control of a token upgrade and attach it to a different eligible unit?", null);
     case "SOR_083": // Superlaser Technician (SOR_083 / SHD_085 reprint): "When Defeated: You may put this unit into play as a resource and ready it."
     case "SHD_085": {
       return {

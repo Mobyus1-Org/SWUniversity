@@ -1,6 +1,6 @@
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, DealDamageToUnit } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { CardTraits } from "@/server/engine/card-db/generated";
@@ -187,29 +187,16 @@ export function resolveOnAttackTrigger(
   }
   // innate On Attack abilities
   switch (attacker.cardId) {
-    case "JTL_056": { // Hondo Ohnaka — On Attack: You may take control of a non-Pilot upgrade on a unit and attach it to a different eligible unit.
-      const movableUpgrades056 = AllUnits().flatMap(u =>
-        u.upgrades.filter(upg => !IsPilotUpgrade(upg.cardId)).map(upg => upg.playId));
-      if (movableUpgrades056.length === 0) return continuation;
-      return {
-        type: "ability-option",
-        cardId: "JTL_056",
-        player: attacker.controller,
-        sourcePlayId: attacker.playId,
-        helperText: "Take control of a non-Pilot upgrade and attach it to a different eligible unit?",
-        yesLabel: "Move upgrade",
-        noLabel: "Skip",
-        onYes: {
-          type: "ability-target",
-          cardId: "JTL_056_upgrade",
-          player: attacker.controller,
-          sourcePlayId: attacker.playId,
-          fromPlayIds: movableUpgrades056,
-          continuation,
-        },
+    case "LOF_082": // Vaneé — When Played/On Attack: may defeat an XP token on a friendly unit, then give one to a friendly unit.
+      return buildVaneeAbility(attacker.controller, continuation) ?? continuation;
+    case "JTL_056": // Hondo Ohnaka — On Attack: You may take control of a non-Pilot upgrade on a unit and attach it to a different eligible unit.
+      return buildTakeControlOfUpgrade(
+        "JTL_056",
+        attacker.controller,
+        upg => !IsPilotUpgrade(upg.cardId),
+        "Take control of a non-Pilot upgrade and attach it to a different eligible unit?",
         continuation,
-      };
-    }
+      ) ?? continuation;
     case "SOR_067": { // Rugged Survivors — On Attack: if you control a leader unit, you may draw a card
       const leader067 = GetLeaderForPlayer(attacker.controller);
       if (!leader067.deployed) return continuation;

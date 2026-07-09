@@ -1386,6 +1386,27 @@ function resolveWhenAttackEnds(
         continuation,
       };
     }
+    case "SEC_006": { // Colonel Yularen (deployed): You may attack with another unit that costs 4 or less.
+      const eligible006 = (GetUnitsForPlayer(attacker.controller) as Unit[])
+        .filter(u => u.ready && u.playId !== attacker.playId && CardCost(u.cardId) <= 4);
+      if (eligible006.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "SEC_006_back",
+        player: attacker.controller,
+        helperText: "Attack with another unit that costs 4 or less?",
+        yesLabel: "Attack",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "SEC_006_back",
+          player: attacker.controller,
+          fromPlayIds: eligible006.map(u => u.playId),
+          continuation,
+        },
+        continuation,
+      };
+    }
     default:
       return continuation;
   }
@@ -4734,6 +4755,17 @@ function resolveActionAbility(
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    case "SEC_006": { // Colonel Yularen — Action [Exhaust]: Attack with a unit. Then, you may attack with another unit that costs less than it.
+      const readyUnits006 = GetUnitsForPlayer(player).filter(u => u.ready);
+      if (readyUnits006.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SEC_006",
+        player,
+        fromPlayIds: readyUnits006.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "SHD_012": { // Bo-Katan Kryze - Princess in Exile: If a Mandalorian attacked this phase, deal 1 damage to a unit.
       if (!UnitAttackedThisPhase(player, "Mandalorian")) {
         log.push(`${CardTitle(cardId)}: no Mandalorian attacked this phase — soft pass.`);
@@ -5276,6 +5308,26 @@ function applyAbilityEffect(
       }
       break;
     }
+    case "LOF_082_defeat": { // Vaneé — defeat one Experience token on the chosen friendly unit, then give one.
+      if (!targetPlayId) break;
+      const source082 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!source082) break;
+      const xpIdx082 = source082.upgrades.findIndex(u => u.cardId === "SOR_T01");
+      if (xpIdx082 !== -1) {
+        source082.upgrades.splice(xpIdx082, 1);
+        game.gameLog.push(`${CardTitle("LOF_082")}: defeated an Experience token on ${CardTitle(source082.cardId)}.`);
+      }
+      break; // flows to the give step via pending.continuation
+    }
+    case "LOF_082_give": { // Vaneé — give an Experience token to the chosen friendly unit.
+      if (!targetPlayId) break;
+      const target082 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target082) {
+        target082.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target082.owner, controller: target082.controller });
+        game.gameLog.push(`${CardTitle("LOF_082")}: gave an Experience token to ${CardTitle(target082.cardId)}.`);
+      }
+      break;
+    }
     case "SOR_108": { // Vanguard Infantry when-defeated: give Experience token to chosen unit
       if (!targetPlayId) break;
       const target108 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -5317,6 +5369,55 @@ function applyAbilityEffect(
         type: "attack-target",
         attackerPlayId: targetPlayId,
         source: "SOR_009",
+        continuation: pending.continuation,
+      };
+    }
+    case "SEC_006": { // Colonel Yularen front action: chosen unit attacks, then may attack with a unit that costs less than it.
+      if (!targetPlayId) break;
+      const attacker006 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!attacker006) break;
+      const firstCost006 = CardCost(attacker006.cardId);
+      const cheaper006 = GetUnitsForPlayer(attacker006.controller, true)
+        .filter(u => u.playId !== targetPlayId && CardCost(u.cardId) < firstCost006)
+        .map(u => u.playId);
+      const second006: PendingResolution | null = cheaper006.length === 0 ? null : {
+        type: "ability-option",
+        cardId: "SEC_006_second",
+        player: attacker006.controller,
+        helperText: "Attack with another unit that costs less?",
+        yesLabel: "Attack",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "SEC_006_second",
+          player: attacker006.controller,
+          fromPlayIds: cheaper006,
+          continuation: null,
+        },
+        continuation: null,
+      };
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "SEC_006",
+        continuation: second006,
+      };
+    }
+    case "SEC_006_second": { // Colonel Yularen front action: the chosen cheaper unit attacks.
+      if (!targetPlayId) break;
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "SEC_006_second",
+        continuation: null,
+      };
+    }
+    case "SEC_006_back": { // Colonel Yularen deployed: the chosen unit (cost ≤ 4) attacks.
+      if (!targetPlayId) break;
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "SEC_006_back",
         continuation: pending.continuation,
       };
     }
@@ -5996,32 +6097,32 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, "SOR_131", pending.sourcePlayId, 1, game.gameLog);
       break;
     }
-    case "JTL_056_upgrade": { // Hondo Ohnaka On Attack, step 1: chose the upgrade — now pick a different eligible unit.
-      if (!targetPlayId || pending.player === undefined) break; // no upgrade chosen — continue combat
-      const gs056 = game.currentGameState;
-      let upgradeCardId056: string | undefined;
-      let currentUnitPlayId056: string | undefined;
-      for (const u of GetAllUnits(gs056)) {
+    case "take-control-upgrade": { // Take-control step 1: chose the upgrade — now pick a different eligible unit (Hondo JTL_056, Shuttle ST-149 JTL_242).
+      if (!targetPlayId || pending.player === undefined) break; // no upgrade chosen — continue
+      const gsTc = game.currentGameState;
+      let upgradeCardIdTc: string | undefined;
+      let currentUnitPlayIdTc: string | undefined;
+      for (const u of GetAllUnits(gsTc)) {
         const found = u.upgrades.find(upg => upg.playId === targetPlayId);
-        if (found) { upgradeCardId056 = found.cardId; currentUnitPlayId056 = u.playId; break; }
+        if (found) { upgradeCardIdTc = found.cardId; currentUnitPlayIdTc = u.playId; break; }
       }
-      if (!upgradeCardId056) break;
-      const dests056 = UpgradeEligibleTargets(upgradeCardId056, gs056, pending.player)
-        .filter(id => id !== currentUnitPlayId056);
-      if (dests056.length === 0) {
-        game.gameLog.push(`${CardTitle("JTL_056")}: no eligible unit to move ${CardTitle(upgradeCardId056)} to.`);
-        break; // continue combat
+      if (!upgradeCardIdTc) break;
+      const destsTc = UpgradeEligibleTargets(upgradeCardIdTc, gsTc, pending.player)
+        .filter(id => id !== currentUnitPlayIdTc);
+      if (destsTc.length === 0) {
+        game.gameLog.push(`No eligible unit to move ${CardTitle(upgradeCardIdTc)} to.`);
+        break; // continue
       }
       return {
         type: "ability-target",
-        cardId: "JTL_056_unit",
+        cardId: "take-control-unit",
         player: pending.player,
         sourcePlayId: targetPlayId, // carry the chosen upgrade's playId into step 2
-        fromPlayIds: dests056,
+        fromPlayIds: destsTc,
         continuation: pending.continuation,
       } satisfies AbilityTargetPending;
     }
-    case "JTL_056_unit": { // Hondo Ohnaka On Attack, step 2: attach the chosen upgrade to the chosen unit.
+    case "take-control-unit": { // Take-control step 2: attach the chosen upgrade to the chosen unit.
       if (!targetPlayId || !pending.sourcePlayId || pending.player === undefined) break;
       moveUpgradeToUnit(game.currentGameState, game.gameLog, pending.sourcePlayId, targetPlayId, pending.player);
       break;
