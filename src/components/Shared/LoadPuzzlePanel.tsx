@@ -37,6 +37,10 @@ const DIFF_LO = 1;
 const DIFF_HI = 5;
 const DIFF_STEP = 1;
 
+// Tutorial puzzle pinned to the top of the Difficulty-sorted list (matched by exact title).
+// Only reorders puzzles already visible, so it disappears when its difficulty tier is filtered out.
+const PINNED_TUTORIAL_TITLE = "We Have to Start Somewhere";
+
 const rangeThumbClass =
   "pointer-events-none absolute inset-0 h-6 w-full cursor-pointer appearance-none bg-transparent " +
   "[&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow " +
@@ -143,7 +147,13 @@ export function LoadPuzzlePanel(props: Props) {
   const sortedPuzzles = [...filteredPuzzles].sort((a, b) => {
     const mul = sortDir === "asc" ? 1 : -1;
     if (sortKey === "title") return mul * a.name.localeCompare(b.name);
-    return mul * (a.difficulty - b.difficulty);
+    // Difficulty sort: the tutorial puzzle is pinned to the very top (either direction);
+    // then by difficulty (respecting the chosen direction); ties break by Title ascending.
+    // The pin only reorders the already-filtered list, so hiding its difficulty tier removes it.
+    const aPin = a.name === PINNED_TUTORIAL_TITLE ? 0 : 1;
+    const bPin = b.name === PINNED_TUTORIAL_TITLE ? 0 : 1;
+    if (aPin !== bPin) return aPin - bPin;
+    return mul * (a.difficulty - b.difficulty) || a.name.localeCompare(b.name);
   });
 
   const sortLabel = (key: SortKey) => {
