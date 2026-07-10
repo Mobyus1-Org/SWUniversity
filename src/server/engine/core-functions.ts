@@ -402,6 +402,47 @@ export function HasTheForce(player: PlayerId) {
   return playerObj.supplemental.forceToken === true;
 }
 
+/**
+ * "The Force is with you" — create the player's Force token in their base zone.
+ * Idempotent: if the player already controls their Force token, the instruction is
+ * ignored (CR 37.1). Passive/repeatable — callers may invoke it every time it triggers.
+ */
+export function CreateForceToken(player: PlayerId, gameLog: string[], fromCardId?: string): void {
+  const game = GetGame();
+  if (!game) return;
+
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  if (playerObj.supplemental.forceToken === true) return; // already controls it — ignore
+
+  playerObj.supplemental.forceToken = true;
+  if (fromCardId) {
+    gameLog.push(`${CardTitle(fromCardId)}: Player ${player} created their Force token.`);
+  } else {
+    gameLog.push(`Player ${player} created their Force token.`);
+  }
+}
+
+/**
+ * "Use the Force" — the player may defeat their Force token (CR 37.4). Returns true if
+ * the token was used (so callers can gate an "If you do…" effect), false if the player
+ * did not control their Force token.
+ */
+export function UseTheForce(player: PlayerId, gameLog: string[], fromCardId?: string): boolean {
+  const game = GetGame();
+  if (!game) return false;
+
+  const playerObj = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  if (playerObj.supplemental.forceToken !== true) return false;
+
+  playerObj.supplemental.forceToken = false;
+  if (fromCardId) {
+    gameLog.push(`${CardTitle(fromCardId)}: Player ${player} used the Force.`);
+  } else {
+    gameLog.push(`Player ${player} used the Force.`);
+  }
+  return true;
+}
+
 export function GetHand(player: PlayerId): Card[] {
   const game = GetGame();
   if (!game) {

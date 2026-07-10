@@ -31,7 +31,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
+import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -1040,6 +1040,13 @@ function computeAttackTargets(
 // Helpers: resolve combat
 // ---------------------------------------------------------------------------
 
+// The eight common LOF "Force" bases, all sharing the passive:
+//   "When a friendly Force unit attacks: The Force is with you (create your Force token)."
+const FORCE_ON_ATTACK_BASES = new Set([
+  "LOF_020", "LOF_021", "LOF_023", "LOF_024",
+  "LOF_026", "LOF_027", "LOF_029", "LOF_030",
+]);
+
 function resolveAttack(
   game: GameState,
   log: string[],
@@ -1050,6 +1057,18 @@ function resolveAttack(
 ): PendingResolution | null {
   const attacker = GetUnitByPlayId(game, pending.attackerPlayId);
   if (!attacker) return null;
+
+  // Common "Force" bases: "When a friendly Force unit attacks: The Force is with you
+  // (create your Force token)." Passive, mandatory, and targetless, so it fires inline
+  // here at attack declaration (before combat damage) on every attack path — normal,
+  // Ambush, and ability-initiated — and re-triggers each attack.
+  const controllerBaseId = GetPlayer(game, attacker.controller).base.cardId;
+  if (
+    FORCE_ON_ATTACK_BASES.has(controllerBaseId) &&
+    TraitContains(attacker.cardId, "Force", attacker.controller, attacker.playId)
+  ) {
+    CreateForceToken(attacker.controller, log, controllerBaseId);
+  }
 
   // Restore fires as an On Attack trigger before combat damage
   const restoreAmount = RestoreAmount(attacker.cardId, attacker.playId, attacker.controller);
@@ -3757,6 +3776,18 @@ function applyAbilityOptionEffect(
   log: string[],
 ): PendingResolution | null {
   switch (pending.cardId) {
+    case "LOF_075": // Cure Wounds — Use the Force, then heal 6 from a unit.
+    case "LOF_172": { // Sorcerous Blast — Use the Force, then deal 3 to a unit.
+      const forcePlayer = pending.player!;
+      if (!UseTheForce(forcePlayer, log, pending.cardId)) return pending.continuation ?? null;
+      return {
+        type: "ability-target",
+        cardId: pending.cardId,
+        player: forcePlayer,
+        fromPlayIds: GetAllUnits(game).map(u => u.playId),
+        continuation: pending.continuation ?? null,
+      };
+    }
     case "SEC_264": { // Clandestine Connections Yes — pay 2 (resources and/or Credits), then deal 2 to a base
       const unit264 = GetUnitByPlayId(game, pending.sourcePlayId!);
       const player264 = unit264 ? unit264.controller : pending.player!;
@@ -5435,6 +5466,16 @@ function applyAbilityEffect(
     case "SEC_182": { // Charged with Treason — deal 5 damage to chosen unit
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 5, game.gameLog);
+      break;
+    }
+    case "LOF_075": { // Cure Wounds — heal 6 damage from chosen unit
+      if (!targetPlayId) break;
+      healTarget(game.currentGameState, targetPlayId, 6, game.gameLog, pending.cardId);
+      break;
+    }
+    case "LOF_172": { // Sorcerous Blast — deal 3 damage to chosen unit
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog);
       break;
     }
     case "SOR_176":

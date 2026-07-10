@@ -38,6 +38,15 @@ export const Cards = {
       mysticMonastery: "LOF_022",
       templeOfDestruction: "LOF_025",
       tombOfEilram: "LOF_028",
+      // Common "Force" bases — "When a friendly Force unit attacks: create your Force token."
+      nightsisterLair: "LOF_020",
+      shadowedUndercity: "LOF_021",
+      jediTemple: "LOF_023",
+      starlightTemple: "LOF_024",
+      fortressVader: "LOF_026",
+      strangledCliffs: "LOF_027",
+      crystalCaves: "LOF_029",
+      theHolyCity: "LOF_030",
     },
     law: {
       allianceOutpost: "LAW_019",
@@ -508,6 +517,10 @@ export const Cards = {
       unmarkedCredits: "LAW_244",
       backedByTheHutts: "LAW_247",
       haymaker: "LAW_168",
+    },
+    lof: {
+      cureWounds: "LOF_075",
+      sorcerousBlast: "LOF_172",
     },
   },
 }

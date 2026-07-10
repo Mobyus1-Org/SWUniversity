@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty, HasTheForce } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
@@ -789,6 +789,24 @@ export function resolveWhenPlayed(
           : undefined,
         continuation: null,
       } satisfies SpreadHealPending;
+    }
+    case "LOF_075": // Cure Wounds — "Use the Force. If you do, heal 6 damage from a unit."
+    case "LOF_172": { // Sorcerous Blast — "Use the Force. If you do, deal 3 damage to a unit."
+      // "Use the Force" is a "may": only offer it when the player controls the Force.
+      if (!HasTheForce(player)) return null;
+      const isHeal = cardId === "LOF_075";
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        helperText: isHeal
+          ? "Use the Force to heal 6 damage from a unit?"
+          : "Use the Force to deal 3 damage to a unit?",
+        yesLabel: "Use the Force",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: null,
+      };
     }
     case "SOR_074": // Repair — Heal 3 damage from a unit or base.
     case "JTL_075": {
