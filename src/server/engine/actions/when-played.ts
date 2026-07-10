@@ -614,10 +614,8 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies SpreadDamagePending;
     }
-    case "TWI_229": { // Battle Droid Escort — "When Played: Create a Battle Droid token."
-      CreateBattleDroid(game.currentGameState, player, game.gameLog, cardId);
+    case "TWI_229": // Battle Droid Escort — When Played: Create a Battle Droid token. (auto-resolves in when-played-trigger — resolveWhenPlayed is also called as a preview, so the effect must NOT live here or it doubles)
       return null;
-    }
     case "TWI_190": { // On the Doorstep — "Create 3 Battle Droid tokens and ready them."
       const gs190 = game.currentGameState;
       const d1 = CreateBattleDroid(gs190, player, game.gameLog, cardId);
@@ -726,11 +724,13 @@ export function resolveWhenPlayed(
       return optionalTarget(cardId, player, spaceUnits132.map(u => u.playId),
         "Deal 3 damage to a space unit?", { yesLabel: "Deal 3", sourcePlayId: playId });
     }
-    case "SOR_134": { // Ruthless Raider — When Played/When Defeated: Deal 2 to enemy base + 2 to an enemy unit.
+    case "SOR_134": { // Ruthless Raider — When Played: Deal 2 to enemy base + 2 to an enemy unit.
+      // resolveWhenPlayed must stay side-effect-free (for units it is called both as a preview
+      // in queueUnitEntryTriggers AND on trigger-bag drain, so any mutation here double-applies).
+      // Base + unit damage are applied together when the ability-target resolves (applyAbilityEffect),
+      // or, when there is no enemy unit to hit, in resolveWhenPlayedTrigger (drained once).
       const gs134 = game.currentGameState;
       const oppState134 = player === 1 ? gs134.player2 : gs134.player1;
-      oppState134.base.damage += 2;
-      game.gameLog.push(`${CardTitle(cardId)}: dealt 2 damage to opponent's base.`);
       const enemyUnits134 = [...oppState134.groundArena, ...oppState134.spaceArena];
       if (enemyUnits134.length === 0) return null;
       return {

@@ -2,7 +2,7 @@ import { CardTitle } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
 import { DrawCardForPlayer, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
-import { CreateSpy, CreateTieFighter } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateTieFighter, CreateBattleDroid } from "@/server/engine/token-helpers";
 
 /**
  * Resolves a single when-played trigger entry against the current game state.
@@ -33,6 +33,13 @@ export function resolveWhenPlayedTrigger(
       break;
     case "JTL_082": // Kijimi Patrollers — When Played: Create a TIE Fighter token.
       CreateTieFighter(gs, trigger.fromPlayer, log, trigger.cardId);
+      break;
+    case "TWI_229": // Battle Droid Escort — When Played: Create a Battle Droid token.
+      CreateBattleDroid(gs, trigger.fromPlayer, log, trigger.cardId);
+      break;
+    case "SOR_134": // Ruthless Raider — When Played with no enemy unit to hit: deal 2 to the enemy base only.
+      otherPlayer.base.damage += 2;
+      log.push(`${CardTitle(trigger.cardId)}: dealt 2 damage to opponent's base.`);
       break;
     case "SEC_082": { // Chancellor Palpatine — When Played: If you control a leader unit, create 2 Spy tokens and give those tokens Sentinel for this phase.
       const leader082 = trigger.fromPlayer === 1 ? gs.player1.leader : gs.player2.leader;

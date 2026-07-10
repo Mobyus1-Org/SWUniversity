@@ -368,6 +368,7 @@ export const Cards = {
       admiralTrench: "TWI_086",
       sanHill: "TWI_186",
       r2d2FullOfSolutions: "TWI_193",
+      battleDroidEscort: "TWI_229",
     },
     sec: {
       cadBane: "SEC_034",

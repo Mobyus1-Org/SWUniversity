@@ -6004,8 +6004,15 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog);
       break;
     }
-    case "SOR_134": { // Ruthless Raider WP/WD: Deal 2 damage to chosen enemy unit.
+    case "SOR_134": { // Ruthless Raider WP/WD: Deal 2 to enemy base + 2 to chosen enemy unit.
       if (!targetPlayId) break;
+      // Base damage is applied here (once, at resolution) rather than in resolveWhenPlayed,
+      // which is called twice for units; the no-enemy-unit paths handle the base separately.
+      if (pending.player) {
+        const oppBase134 = pending.player === 1 ? game.currentGameState.player2 : game.currentGameState.player1;
+        oppBase134.base.damage += 2;
+        game.gameLog.push(`${CardTitle("SOR_134")}: dealt 2 damage to opponent's base.`);
+      }
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
       break;
     }

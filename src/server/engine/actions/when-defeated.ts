@@ -155,10 +155,14 @@ function resolveOwnWhenDefeated(
       if (!game134) return null;
       const gs134 = game134.currentGameState;
       const oppState134 = player === 1 ? gs134.player2 : gs134.player1;
-      oppState134.base.damage += 2;
-      game134.gameLog.push(`${CardTitle("SOR_134")}: dealt 2 damage to opponent's base.`);
       const enemyUnits134 = [...oppState134.groundArena, ...oppState134.spaceArena];
-      if (enemyUnits134.length === 0) return null;
+      if (enemyUnits134.length === 0) {
+        // No enemy unit to hit — apply the base damage here (the ability-target resolution won't run).
+        oppState134.base.damage += 2;
+        game134.gameLog.push(`${CardTitle("SOR_134")}: dealt 2 damage to opponent's base.`);
+        return null;
+      }
+      // Base + unit damage are applied together when the ability-target resolves (applyAbilityEffect).
       return mandatoryTarget("SOR_134", player, enemyUnits134.map(u => u.playId));
     }
     case "SOR_031": { // Inferno Four — When Defeated: Look at top 2, put any on bottom, rest on top.
