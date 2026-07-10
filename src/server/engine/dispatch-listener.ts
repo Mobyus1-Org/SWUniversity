@@ -2765,6 +2765,9 @@ function handleChooseTarget(
     if (gifted.length > 0)
       log.push(`${CardTitle(pending.cardId)}: gave Experience to ${gifted.join(", ")}.`);
     const next = pending.continuation;
+    // An On Attack give-XP (e.g. SEC_085 Rampart's disclose) is followed by the pending
+    // combat resolution; a resolve-attack continuation must be executed, not rendered.
+    if (next?.type === "resolve-attack") return handleResolveAttack(game, log, next);
     if (next)
       return { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: false };
     const bagAfterXp = drainTriggerBag(game, log);
