@@ -85,10 +85,23 @@ Then per card:
 1. Add the card helper entry to `tests/card-helpers.ts` (if missing)
 2. Write failing tests in `tests/unit/<set>/<card-title>.test.ts`
 3. Implement the engine changes to make tests pass
-4. **Pass the Definition of Done gate below** (every clause of the card text → code + test) before considering the card complete
-5. In a batch: proceed to next card. In a single: run full test suite now.
+4. **Update the Puzzles UI lists if the card has an activatable ability** — see the UI Registration gate below. This is required whenever the card is a Leader OR a non-leader unit with an `Action [...]` ability.
+5. **Pass the Definition of Done gate below** (every clause of the card text → code + test) before considering the card complete
+6. In a batch: proceed to next card. In a single: run full test suite now.
 
 Follow the conventions in memory: card test files go in `tests/unit/<set>/`, named `<card-title>.test.ts`. Use `Cards.*` helpers — never raw card ID strings.
+
+## UI Registration gate (activatable abilities)
+
+The engine tests do **not** render the Puzzles UI, so a fully-wired, fully-tested activatable ability can still be invisible in-game because `src/containers/PuzzlesPage.tsx` keeps hand-maintained lists of which cards show an action button. These lists are duplicate registries of `ActionAbilities()` — nothing keeps them in sync, and `npm test` passes without the entry.
+
+Check this predicate for every card, before marking it done:
+
+- **Card is a Leader** with an activatable leader-side `Action [...]` ability → add its cardId to `LEADERS_WITH_ACTION_ABILITY` in `PuzzlesPage.tsx`.
+- **Card is a non-leader unit** with an `Action [...]` ability → add `cardId: "<short button label>"` to `UNITS_WITH_ACTION_ABILITY` in `PuzzlesPage.tsx`.
+- **Ability is only an automatic trigger** (When Played / When Defeated / On Attack / When Deployed / a keyword) → no UI entry needed; these fire on their own.
+
+If the predicate matches and you did not touch `PuzzlesPage.tsx`, the card is **not done**. See memory: [[ui-leader-action-ability-set]].
 
 ## Definition of Done (completeness gate)
 
@@ -100,6 +113,7 @@ That confidence is not a gut feeling — you earn it by enumeration, because par
 2. **Split it into discrete clauses.** Each of these is a separate clause: every keyword (Saboteur, Sentinel, Shielded, Raid, Ambush, Overwhelm, Bounty…), every triggered ability ("When…", "On Attack", "When Defeated"), every activated/action ability, every conditional ("If…"), every optional ("You may…"), and every targeting restriction ("costs 2 or less", "non-leader", "in this arena").
 3. **Map each clause to (a) a code path that implements it and (b) a test that exercises it.** For "may"/optional clauses, the test must cover *both* the accept and the decline branch. A granted keyword counts as a clause — confirm it's wired through its dictionary (e.g. `keyword-dictionaries.ts/`) AND has a test, not merely assumed.
 4. **Account for ≥94% of the text this way.** The small remainder is only for genuinely non-executable flavor text. If any *mechanical* clause is unaccounted for, the card is **NOT done** — implement and test it, or surface it as an explicit blocker to the user. "The main ability works, the rest is an edge case" does not clear the gate.
+5. **Clear the UI Registration gate above.** If the card is a Leader or a non-leader unit with an `Action [...]` ability, its cardId must be in the matching `PuzzlesPage.tsx` list. A green test suite does not clear this — the engine tests never render the UI.
 
 State the clause→code→test mapping (briefly) when you report the card complete, so the coverage is visible rather than asserted.
 
@@ -120,5 +134,6 @@ Do not just update the Notes text — the entry must be deleted and the counts m
 - Given more than 5 cards → implement the first 5 only, tell user to continue in a new session
 - Marking a card done after wiring only one of its abilities/keywords → not done; every clause needs code + test (see Definition of Done)
 - Declaring done from memory of the card without re-reading its full text from `generated.ts` → re-read and enumerate clauses first
+- Implemented a Leader or a unit with an `Action [...]` ability, tests pass, but never opened `PuzzlesPage.tsx` → the action button won't render in-game; add the cardId to the matching UI list (see UI Registration gate)
 - "The main ability works, the rest is an edge case / flavor" → each mechanical clause is in scope, including optional "may" branches
 - A card grants a keyword and you assumed it "just works" → verify it's wired through its dictionary and has a test
