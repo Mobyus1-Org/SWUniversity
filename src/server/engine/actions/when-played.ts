@@ -1,5 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty } from "@/server/engine/core-functions";
+import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
@@ -203,6 +204,13 @@ export function resolveWhenPlayed(
       const vehicles206 = GetUnitsForPlayer(player).filter(u => TraitContains(u.cardId, "Vehicle", player, u.playId));
       if (vehicles206.length === 0) return null;
       return mandatoryTarget(cardId, player, vehicles206.map(u => u.playId));
+    }
+    case "LAW_045": { // Zeb Orellios — When Played: You may deal 3 damage to a ground unit (5 if you control a Command or Cunning unit).
+      const groundUnits045 = AllGroundUnits();
+      if (groundUnits045.length === 0) return null;
+      const amount045 = (PlayerHasUnitWithAspectInPlay(player, "Command") || PlayerHasUnitWithAspectInPlay(player, "Cunning")) ? 5 : 3;
+      return optionalTarget(cardId, player, groundUnits045.map(u => u.playId),
+        `Deal ${amount045} damage to a ground unit?`);
     }
     case "LAW_233": { // Galen Erso — "When Played: You may have an opponent take control of this unit."
       if (!playId) return null;
@@ -569,17 +577,10 @@ export function resolveWhenPlayed(
       }
       return null;
     }
-    case "SOR_127": { // Strike True — "A friendly unit deals damage equal to its power to an enemy unit."
-      const friendlyUnits127 = GetUnitsForPlayer(player);
-      if (friendlyUnits127.length === 0) return null;
-      return {
-        type: "ability-target",
-        cardId,
-        player,
-        fromPlayIds: friendlyUnits127.map(u => u.playId),
-        continuation: null,
-      };
-    }
+    case "SOR_127": // Strike True — "A friendly unit deals damage equal to its power to an enemy unit."
+      return chooseFriendlyForPowerDamage(cardId, player);
+    case "LAW_168": // Haymaker — "Give an Experience token to a friendly unit. That unit deals damage equal to its power to an enemy unit in the same arena."
+      return chooseFriendlyForPowerDamage(cardId, player);
     case "SOR_251": { // Confiscate — "Defeat an upgrade."
       const allUpgradePlayIds251 = AllUnits().flatMap(u => u.upgrades.map(upg => upg.playId));
       if (allUpgradePlayIds251.length === 0) return null;

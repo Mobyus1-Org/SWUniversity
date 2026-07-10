@@ -31,7 +31,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay } from "@/server/engine/core-functions";
+import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -96,6 +96,7 @@ import { resolveWhenPlayed } from "@/server/engine/actions/when-played";
 import { executeRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
 import { resolveWhenPlayedTrigger } from "@/server/engine/actions/when-played-trigger";
 import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
+import { chooseEnemyForPowerDamage, dealPowerToEnemy } from "@/server/engine/actions/deal-power-damage";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
@@ -243,6 +244,12 @@ function benduDiscount(game: GameState, player: PlayerId, cardId: string): numbe
   return game.currentEffects.some(e => e.cardId === "SOR_056" && e.affectedPlayer === player) ? 2 : 0;
 }
 
+// SEC_110 GNK Power Droid: next unit costs 1 less (consumed when a unit is played).
+function gnkPowerDroidDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Unit") return 0;
+  return game.currentEffects.some(e => e.cardId === "SEC_110" && e.affectedPlayer === player) ? 1 : 0;
+}
+
 function playCost(game: GameState, player: PlayerId, cardId: string): number {
   return CardCost(cardId)
     + aspectPenalty(game, player, cardId)
@@ -251,6 +258,7 @@ function playCost(game: GameState, player: PlayerId, cardId: string): number {
     - forceChokeDiscount(game, player, cardId)
     - jabbaTheTrickDiscount(game, player, cardId)
     - benduDiscount(game, player, cardId)
+    - gnkPowerDroidDiscount(game, player, cardId)
   ;
 }
 
@@ -1879,6 +1887,12 @@ function completePlayCard(
   if (!CardAspects(cardId).includes("Heroism") && !CardAspects(cardId).includes("Villainy")) {
     const benduIdx = game.currentEffects.findIndex(e => e.cardId === "SOR_056" && e.affectedPlayer === player);
     if (benduIdx !== -1) game.currentEffects.splice(benduIdx, 1);
+  }
+
+  // SEC_110 GNK Power Droid: consume the discount only when a unit is played.
+  if (CardType(cardId) === "Unit") {
+    const gnkIdx = game.currentEffects.findIndex(e => e.cardId === "SEC_110" && e.affectedPlayer === player);
+    if (gnkIdx !== -1) game.currentEffects.splice(gnkIdx, 1);
   }
 
   if (CardType(cardId) === "Unit") {
@@ -4697,6 +4711,7 @@ function getAffordablePlotPlayIds(game: GameState, player: PlayerId): string[] {
 function leaderHasWhenDeployed(cardId: string): boolean {
   switch (cardId) {
     case "SHD_002": return true;
+    case "LAW_008": return true;
     default: return false;
   }
 }
@@ -4848,6 +4863,17 @@ function resolveActionAbility(
         fromPlayIds: friendlyUnits006.map(u => u.playId),
         continuation: null,
       };
+    }
+    case "LAW_008": { // Director Krennic — Action [Exhaust, defeat a friendly unit]: Create a Credit token.
+      const friendly008 = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena];
+      if (friendly008.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LAW_008_action",
+        player,
+        fromPlayIds: friendly008.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
     }
     case "SOR_016": { // Grand Admiral Thrawn: Reveal top card of any player's deck. Exhaust a unit that costs ≤ that card.
       return {
@@ -5864,24 +5890,29 @@ function applyAbilityEffect(
     }
     case "SOR_127": { // Strike True — step 1: chose friendly unit, now prompt for enemy target
       if (!targetPlayId || !pending.player) break;
-      const enemyPlayer127 = GetOtherPlayer(pending.player);
-      const enemyUnits127 = GetUnitsForPlayer(enemyPlayer127);
-      if (enemyUnits127.length === 0) break;
-      return {
-        type: "ability-target",
-        cardId: "SOR_127_deal",
-        player: pending.player,
-        sourcePlayId: targetPlayId,
-        fromPlayIds: enemyUnits127.map(u => u.playId),
-        continuation: null,
-      };
+      const enemy127 = chooseEnemyForPowerDamage("SOR_127_deal", pending.player, targetPlayId, game.currentGameState);
+      if (enemy127) return enemy127;
+      break;
     }
     case "SOR_127_deal": { // Strike True — step 2: deal power damage to chosen enemy unit
       if (!targetPlayId || !pending.sourcePlayId) break;
-      const attacker127 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
-      if (!attacker127) break;
-      const power127 = Unit.FromInterface(attacker127).CurrentPower();
-      DealDamageToUnit(game.currentGameState, "Strike True", targetPlayId, power127, game.gameLog);
+      dealPowerToEnemy(game.currentGameState, game.gameLog, "Strike True", pending.sourcePlayId, targetPlayId);
+      break;
+    }
+    case "LAW_168": { // Haymaker — step 1: chose friendly unit; give it an Experience token, then prompt for a same-arena enemy.
+      if (!targetPlayId || !pending.player) break;
+      const marine168 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (marine168) {
+        marine168.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: marine168.owner, controller: marine168.controller });
+        game.gameLog.push(`${CardTitle("LAW_168")}: gave an Experience token to ${CardTitle(marine168.cardId)}.`);
+      }
+      const enemy168 = chooseEnemyForPowerDamage("LAW_168_deal", pending.player, targetPlayId, game.currentGameState, { sameArena: true });
+      if (enemy168) return enemy168;
+      break;
+    }
+    case "LAW_168_deal": { // Haymaker — step 2: the boosted unit deals its power to the chosen enemy unit.
+      if (!targetPlayId || !pending.sourcePlayId) break;
+      dealPowerToEnemy(game.currentGameState, game.gameLog, "Haymaker", pending.sourcePlayId, targetPlayId);
       break;
     }
     case "SOR_162": //Disabling Fang Fighter
@@ -6217,6 +6248,12 @@ function applyAbilityEffect(
       DealDamageToUnit(gs090d, "SOR_090", targetPlayId, resourceCount090, game.gameLog);
       break;
     }
+    case "LAW_045": { // Zeb Orellios When Played: deal 3 (or 5 if you control a Command or Cunning unit) to the chosen ground unit.
+      if (!targetPlayId || pending.player === undefined) break;
+      const amount045 = (PlayerHasUnitWithAspectInPlay(pending.player, "Command") || PlayerHasUnitWithAspectInPlay(pending.player, "Cunning")) ? 5 : 3;
+      DealDamageToUnit(game.currentGameState, "LAW_045", targetPlayId, amount045, game.gameLog);
+      break;
+    }
     case "SOR_131": { // Fifth Brother On Attack: deal 1 to himself + 1 to a chosen other ground unit.
       if (!targetPlayId || !pending.sourcePlayId) break;
       DealDamageToUnit(game.currentGameState, "SOR_131", pending.sourcePlayId, 1, game.gameLog); // this unit
@@ -6498,6 +6535,27 @@ function applyAbilityEffect(
         continuation: pending.continuation,
       };
       return spreadPending092;
+    }
+    case "LAW_008_action": { // Director Krennic Action — defeat the chosen friendly unit (cost), then create a Credit token.
+      if (!targetPlayId) break;
+      const sacrifice008 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!sacrifice008) break;
+      defeatUnit(game.currentGameState, game.gameLog, sacrifice008);
+      updateDefeatedPlayers(game.currentGameState);
+      game.gameLog.push(`${CardTitle(sacrifice008.cardId)} was defeated as part of ${CardTitle("LAW_008")}'s action cost.`);
+      CreateCreditToken(game.currentGameState, pending.player!, game.gameLog, "LAW_008");
+      break;
+    }
+    case "LAW_008_wd": { // Director Krennic When Deployed — step 1: chose the "another" friendly unit, now pick the enemy target.
+      if (!targetPlayId || !pending.player) break;
+      const enemy008 = chooseEnemyForPowerDamage("LAW_008_wd_deal", pending.player, targetPlayId, game.currentGameState);
+      if (enemy008) return enemy008;
+      break;
+    }
+    case "LAW_008_wd_deal": { // Director Krennic When Deployed — step 2: that unit deals its power to the chosen enemy unit.
+      if (!targetPlayId || !pending.sourcePlayId) break;
+      dealPowerToEnemy(game.currentGameState, game.gameLog, "Director Krennic", pending.sourcePlayId, targetPlayId);
+      break;
     }
     case "SOR_006": { // Action step 1: defeat the chosen friendly unit, then pick a unit to damage.
       if (!targetPlayId) break;

@@ -186,12 +186,12 @@ function CardVisual({
           {exhausted ? <div className="pointer-events-none absolute inset-0 bg-black/35" /> : null}
         </div>
           {typeof damage === "number" && damage > 0 ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200/30 bg-red-800/55 text-xs font-black text-white shadow-[0_0_12px_rgba(127,29,29,0.4)]">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-200/30 bg-red-800/75 text-xs font-black text-white shadow-[0_0_12px_rgba(127,29,29,0.4)]">
             {damage}
           </span>
         </div> : null}
         {typeof centerDamageBadge === "number" && centerDamageBadge > 0 ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-rose-200/25 bg-rose-800/55 text-sm font-black text-white shadow-[0_0_14px_rgba(127,29,29,0.45)]">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-rose-200/25 bg-rose-800/75 text-sm font-black text-white shadow-[0_0_14px_rgba(127,29,29,0.45)]">
             {centerDamageBadge}
           </span>
         </div> : null}

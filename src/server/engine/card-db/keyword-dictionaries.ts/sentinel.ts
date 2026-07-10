@@ -185,6 +185,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "SEC_098"://Captain Typho
     case "SEC_262"://Ando Commission
     case "LAW_254"://Stalwart Fleet Trooper
+    case "LAW_045"://Zeb Orellios
       return true;
   }
 

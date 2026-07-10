@@ -247,6 +247,18 @@ export function resolveOnAttackTrigger(
       }
       return continuation;
     }
+    case "SEC_110": { // GNK Power Droid — the next unit you play this phase costs 1 resource less
+      const game110 = GetGame();
+      if (game110) {
+        game110.currentGameState.currentEffects.push({
+          cardId: "SEC_110",
+          duration: "Phase",
+          affectedPlayer: attacker.controller,
+        });
+        game110.gameLog.push(`${CardTitle("SEC_110")}: the next unit you play this phase costs 1 resource less.`);
+      }
+      return continuation;
+    }
     case "SOR_179": { // Boba Fett — if attacking an exhausted unit that didn't enter play this round, deal 3 damage.
       if (continuation.target.type !== "unit") return continuation;
       const defPlayId179 = continuation.target.playId;

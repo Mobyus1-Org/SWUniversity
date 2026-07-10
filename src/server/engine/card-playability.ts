@@ -77,8 +77,14 @@ function benduDiscount(game: GameState, player: PlayerId, cardId: string): numbe
   return game.currentEffects.some(e => e.cardId === "SOR_056" && e.affectedPlayer === player) ? 2 : 0;
 }
 
+// SEC_110 GNK Power Droid: next unit costs 1 less (consumed when a unit is played).
+function gnkPowerDroidDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Unit") return 0;
+  return game.currentEffects.some(e => e.cardId === "SEC_110" && e.affectedPlayer === player) ? 1 : 0;
+}
+
 function playCost(game: GameState, player: PlayerId, cardId: string): number {
-  return CardCost(cardId) + aspectPenalty(game, player, cardId) + delMeekoEventTax(game, player, cardId) - guardianOfTheWhillsDiscount(game, player, cardId) - forceChokeDiscount(game, player, cardId) - jabbaTheTrickDiscount(game, player, cardId) - benduDiscount(game, player, cardId);
+  return CardCost(cardId) + aspectPenalty(game, player, cardId) + delMeekoEventTax(game, player, cardId) - guardianOfTheWhillsDiscount(game, player, cardId) - forceChokeDiscount(game, player, cardId) - jabbaTheTrickDiscount(game, player, cardId) - benduDiscount(game, player, cardId) - gnkPowerDroidDiscount(game, player, cardId);
 }
 
 function aspectPenaltyForAspects(game: GameState, player: PlayerId, aspects: string[]): number {

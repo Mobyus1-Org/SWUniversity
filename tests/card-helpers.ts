@@ -376,10 +376,15 @@ export const Cards = {
       isbShuttle: "SEC_083",
       viceAdmiralRampart: "SEC_085",
       nalaSe: "SEC_065",
+      gnkPowerDroid: "SEC_110",
     },
     law: {
       scavengingSandcrawler: "LAW_238",
       galenErso: "LAW_233",
+      zebOrellios: "LAW_045",
+    },
+    ash: {
+      antDroid: "ASH_116",
     },
   },
   upgrades: {
@@ -502,6 +507,7 @@ export const Cards = {
     law: {
       unmarkedCredits: "LAW_244",
       backedByTheHutts: "LAW_247",
+      haymaker: "LAW_168",
     },
   },
 }

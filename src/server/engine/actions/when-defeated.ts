@@ -183,6 +183,13 @@ function resolveOwnWhenDefeated(
         continuation: null,
       } satisfies DeckSearchPending;
     }
+    case "ASH_116": { // Ant Droid — When Defeated: Draw a card.
+      const game116 = GetGame();
+      if (!game116) return null;
+      DrawCardForPlayer(game116.currentGameState, game116.gameLog, player);
+      game116.gameLog.push(`${CardTitle("ASH_116")}: drew a card.`);
+      return null;
+    }
     case "SOR_163": { // Star Wing Scout — When Defeated: If you have the initiative, draw 2 cards.
       if (InitiativePlayer() !== player) return null;
       const game163 = GetGame();

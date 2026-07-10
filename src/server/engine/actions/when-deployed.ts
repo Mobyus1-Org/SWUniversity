@@ -3,6 +3,7 @@ import { PlayerId } from "@/lib/engine/core-models";
 import { GetGame, CardIsLeader } from "@/server/engine/core-functions";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
+import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 
 export function resolveWhenDeployed(
   cardId: string,
@@ -54,6 +55,10 @@ export function resolveWhenDeployed(
         fromPlayIds: eligible.map(u => u.playId),
         continuation: null,
       };
+    }
+    case "LAW_008": { // Director Krennic — When Deployed: Another friendly unit deals damage equal to its power to an enemy unit.
+      const leader008 = (player === 1 ? game.currentGameState.player1 : game.currentGameState.player2).leader;
+      return chooseFriendlyForPowerDamage("LAW_008_wd", player, { excludePlayId: leader008.deployedPlayId });
     }
     default:
       return null;

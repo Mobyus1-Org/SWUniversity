@@ -584,6 +584,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_142": //Explosives Artist - Sabine Wren
     case "SOR_131": //Fifth Brother
     case "SOR_056": //Bendu
+    case "SEC_110": //GNK Power Droid
     case "SOR_067": //Rugged Survivors
     case "LAW_238": //Scavenging Sandcrawler
     case "JTL_056": //Hondo Ohnaka - You Cannot Run From Your Name
