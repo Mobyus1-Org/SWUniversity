@@ -40,6 +40,7 @@ export class GameStateBuilder {
         baseDamagedThisPhase: [],
         lastActionWasPass: false,
         regroupResourcedPlayers: [],
+        forceUsedThisPhase: 0,
       },
     };
   }

@@ -46,6 +46,12 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "LAW_008": // Director Krennic — Action [Exhaust, defeat a friendly unit]: Create a Credit token (needs a friendly unit to defeat).
         if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
         break;
+      case "LOF_007": // Avar Kriss — Action [Exhaust]: The Force is with you (create your Force token).
+        abilities.push(cardId);
+        break;
+      case "LOF_003": // Ahsoka Tano — Action [Exhaust, use the Force]: Give a friendly unit Sentinel (needs the Force + a friendly unit).
+        if (HasTheForce(player) && GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
+        break;
       //needs conditions met
       case "SOR_006": //Emperor Palpatine - Galactic Ruler
         if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);

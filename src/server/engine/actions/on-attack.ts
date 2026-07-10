@@ -189,6 +189,12 @@ export function resolveOnAttackTrigger(
   switch (attacker.cardId) {
     case "LOF_082": // Vaneé — When Played/On Attack: may defeat an XP token on a friendly unit, then give one to a friendly unit.
       return buildVaneeAbility(attacker.controller, continuation) ?? continuation;
+    case "LOF_003": { // Ahsoka Tano (deployed) — On Attack: you may give a friendly unit Sentinel for this phase.
+      const friendly003 = GetUnitsForPlayer(attacker.controller);
+      if (friendly003.length === 0) return continuation;
+      return optionalTarget("LOF_003", attacker.controller, friendly003.map(u => u.playId),
+        "Give a friendly unit Sentinel for this phase?", { continuation });
+    }
     case "JTL_056": // Hondo Ohnaka — On Attack: You may take control of a non-Pilot upgrade on a unit and attach it to a different eligible unit.
       return buildTakeControlOfUpgrade(
         "JTL_056",

@@ -63,6 +63,8 @@ export interface GameState {
     baseDamagedThisPhase: { byPlayer: PlayerId; target: PlayerId }[];
     lastActionWasPass: boolean;
     regroupResourcedPlayers: PlayerId[];
+    /** Number of times either player has Used the Force this phase (e.g. LOF_007 Avar Kriss). */
+    forceUsedThisPhase: number;
   };
   triggerBag: TriggerEntry[];
 }

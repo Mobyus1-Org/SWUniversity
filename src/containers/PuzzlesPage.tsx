@@ -91,6 +91,8 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "TWI_005", "TWI_012",
   //Legends of the Underworld
   "LAW_008",
+  //Legacy of the Force
+  "LOF_003", "LOF_007",
 ]);
 
 // Non-leader units with an Action ability. Maps cardId → short label for the modal button.

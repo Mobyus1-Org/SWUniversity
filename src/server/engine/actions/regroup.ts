@@ -111,6 +111,7 @@ function executeRegroupReady(gs: GameState, log: string[]): void {
     baseDamagedThisPhase: [],
     lastActionWasPass: false,
     regroupResourcedPlayers: [],
+    forceUsedThisPhase: 0,
   };
   gs.gamePhase = "ActionPhase";
   log.push(`Regroup phase complete. Round ${gs.currentRound} begins.`);

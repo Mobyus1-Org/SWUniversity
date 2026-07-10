@@ -31,7 +31,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce } from "@/server/engine/core-functions";
+import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -1285,6 +1285,39 @@ function resolveAttack(
  * has a "when this unit completes an attack" ability, otherwise returns continuation.
  */
 function resolveWhenAttackEnds(
+  game: GameState,
+  attacker: Unit,
+  continuation: PendingResolution | null,
+  defDefeated: boolean = false,
+  excessDamage: number = 0,
+): PendingResolution | null {
+  // Darth Revan (LOF_017) — controller-level reaction to ANY friendly unit attacking and
+  // defeating a unit. It resolves before the attacker's own When-Attack-Ends ability.
+  // Front side: "you may exhaust this leader" is the cost (so only offer when ready);
+  // deployed side: no exhaust cost.
+  if (defDefeated && GetUnitByPlayId(game, attacker.playId)) {
+    const leader = GetLeaderForPlayer(attacker.controller);
+    if (leader.cardId === "LOF_017" && (leader.deployed || leader.ready)) {
+      const rest = attackerOwnWhenAttackEnds(game, attacker, continuation, defDefeated, excessDamage);
+      return {
+        type: "ability-option",
+        cardId: "LOF_017",
+        player: attacker.controller,
+        sourcePlayId: attacker.playId,
+        helperText: leader.deployed
+          ? `Give an Experience token to ${CardTitle(attacker.cardId)}?`
+          : `Exhaust ${CardTitle("LOF_017")} to give an Experience token to ${CardTitle(attacker.cardId)}?`,
+        yesLabel: leader.deployed ? "Give XP" : "Exhaust",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: rest,
+      };
+    }
+  }
+  return attackerOwnWhenAttackEnds(game, attacker, continuation, defDefeated, excessDamage);
+}
+
+function attackerOwnWhenAttackEnds(
   game: GameState,
   attacker: Unit,
   continuation: PendingResolution | null,
@@ -3776,6 +3809,16 @@ function applyAbilityOptionEffect(
   log: string[],
 ): PendingResolution | null {
   switch (pending.cardId) {
+    case "LOF_017": { // Darth Revan — (front: exhaust the leader), then give an Experience token to the attacking unit.
+      const attacker017 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      const leader017 = GetLeaderForPlayer(pending.player!);
+      if (!leader017.deployed) leader017.ready = false; // pay the "exhaust this leader" cost (front side)
+      if (attacker017) {
+        attacker017.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: attacker017.owner, controller: attacker017.controller });
+        log.push(`${CardTitle("LOF_017")}: gave an Experience token to ${CardTitle(attacker017.cardId)}.`);
+      }
+      return pending.continuation ?? null;
+    }
     case "LOF_075": // Cure Wounds — Use the Force, then heal 6 from a unit.
     case "LOF_172": { // Sorcerous Blast — Use the Force, then deal 3 to a unit.
       const forcePlayer = pending.player!;
@@ -4759,6 +4802,25 @@ function injectContinuation(
   return p;
 }
 
+/**
+ * Leaders whose Epic Action deploys "If you control N resources…" (or a related count)
+ * rather than by paying their deploy cost. Returns whether the condition is met, or null
+ * if the leader deploys normally (by paying).
+ */
+function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: string): boolean | null {
+  const p = GetPlayer(game, player);
+  switch (cardId) {
+    case "LOF_003": // Ahsoka Tano — If you control 6 or more resources.
+      return p.resources.length >= 6;
+    case "LOF_017": // Darth Revan — If you control 5 or more resources.
+      return p.resources.length >= 5;
+    case "LOF_007": // Avar Kriss — If resources + times Used the Force this phase >= 9.
+      return p.resources.length + game.roundState.forceUsedThisPhase >= 9;
+    default:
+      return null;
+  }
+}
+
 function deployLeader(game: GameState, log: string[], player: PlayerId): HandlerResult {
   const leader = GetPlayer(game, player).leader;
   if (leader.deployed)
@@ -4766,9 +4828,18 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
   if (leader.epicActionUsed)
     return { response: invalidResponse("Leader epic action already used this round."), pending: null, stateChanged: false };
 
-  const deployCost = playCost(game, player, leader.cardId);
-  if (GetPlayer(game, player).resources.length < deployCost)
-    return { response: invalidResponse("Not enough resources to deploy leader."), pending: null, stateChanged: false };
+  // Some LOF/ASH leaders deploy via a condition ("If you control N resources…") instead of
+  // paying their deploy cost. For those, gate on the condition and pay nothing.
+  const epicCondition = LeaderEpicDeployCondition(game, player, leader.cardId);
+  let deployCost = 0;
+  if (epicCondition !== null) {
+    if (!epicCondition)
+      return { response: invalidResponse("Epic Action deploy condition not met."), pending: null, stateChanged: false };
+  } else {
+    deployCost = playCost(game, player, leader.cardId);
+    if (GetPlayer(game, player).resources.length < deployCost)
+      return { response: invalidResponse("Not enough resources to deploy leader."), pending: null, stateChanged: false };
+  }
 
   // Check if this leader can also deploy as a pilot upgrade on a Vehicle
   const pilotThreshold = LeaderDeployPilotThreshold(leader.cardId);
@@ -4875,6 +4946,22 @@ function resolveActionAbility(
       base002.damage = Math.max(0, base002.damage - 1);
       log.push(`${CardTitle("SOR_002")}: healed 1 damage from your base.`);
       return null;
+    }
+    case "LOF_007": { // Avar Kriss — Action [Exhaust]: The Force is with you (create your Force token).
+      CreateForceToken(player, log, "LOF_007");
+      return null;
+    }
+    case "LOF_003": { // Ahsoka Tano — Action [Exhaust, use the Force]: Give a friendly unit Sentinel this phase.
+      if (!UseTheForce(player, log, "LOF_003")) return null;
+      const friendly003 = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena];
+      if (friendly003.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LOF_003",
+        player,
+        fromPlayIds: friendly003.map(u => u.playId),
+        continuation: null,
+      };
     }
     case "TWI_005": { // Count Dooku — Action [Exhaust]: Play a Separatist card from your hand. It gains Exploit 1.
       const separatistInHand = GetPlayer(game, player).hand.some(c => CardTraits(c.cardId).includes("Separatist"));
@@ -5461,6 +5548,13 @@ function applyAbilityEffect(
     case "SOR_204": { // Greedo mill: deal 2 damage to the chosen ground unit
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
+      break;
+    }
+    case "LOF_003": { // Ahsoka Tano — give the chosen friendly unit Sentinel for this phase.
+      if (!targetPlayId) break;
+      game.currentGameState.currentEffects.push({ cardId: "LOF_003", duration: "Phase", affectedPlayer: pending.player!, targetPlayId });
+      const unit003 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      game.gameLog.push(`${CardTitle("LOF_003")}: gave Sentinel to ${CardTitle(unit003?.cardId ?? "")} for this phase.`);
       break;
     }
     case "SEC_182": { // Charged with Treason — deal 5 damage to chosen unit

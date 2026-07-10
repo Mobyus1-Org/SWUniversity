@@ -435,6 +435,7 @@ export function UseTheForce(player: PlayerId, gameLog: string[], fromCardId?: st
   if (playerObj.supplemental.forceToken !== true) return false;
 
   playerObj.supplemental.forceToken = false;
+  game.currentGameState.roundState.forceUsedThisPhase += 1;
   if (fromCardId) {
     gameLog.push(`${CardTitle(fromCardId)}: Player ${player} used the Force.`);
   } else {
@@ -601,6 +602,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
   //cards with innate on-attack abilities
   switch (cardId) {
     case "LOF_082": //Vaneé — When Played/On Attack
+    case "LOF_003": //Ahsoka Tano (deployed) — On Attack: may give a friendly unit Sentinel
     case "SOR_179": //Boba Fett - Disintegrator
     case "SOR_040": //Avenger - Hunting Star Destroyer
     case "SOR_188": //Chopper
