@@ -2181,7 +2181,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
           {isMultiSelectTarget && selectableDiscardPlayIds.size > 0 && (
             <button
               type="button"
-              disabled={isResolving || selectedTargetPlayIds.length === 0}
+              // Discard-return prompts are all "up to N" / "may return" — selecting 0 is legal.
+              disabled={isResolving}
               onClick={() => {
                 setDiscardModalPlayer(null);
                 void sendDispatch(createDispatch("choose-target", { targetPlayIds: selectedTargetPlayIds }));
