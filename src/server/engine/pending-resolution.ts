@@ -22,6 +22,8 @@ export interface AbilityOptionPending {
   yesLabel?: string;
   noLabel?: string;
   onYes?: PendingResolution | null;
+  /** A value carried to the Yes-effect (e.g. the played card's cost for TWI_018 Quinlan Vos). */
+  amount?: number;
   continuation: PendingResolution | null;
 }
 
@@ -38,6 +40,9 @@ export interface AbilityTargetPending {
   /** Allow the player to select multiple targets at once. */
   needsMultiple?: boolean;
   maxTargets?: number;
+  /** A damage/heal amount carried to the effect when it isn't recomputable at apply time
+   *  (e.g. SHD_172 Krayt Dragon deals damage equal to the played card's cost). */
+  amount?: number;
   continuation: PendingResolution | null;
 }
 
@@ -254,6 +259,15 @@ export interface TriggerOrderPending {
   }>;
 }
 
+/**
+ * CR 7.6.10 — when triggered abilities from both players wait at the same time, the active
+ * player chooses which player resolves their whole stack first ("Mine" vs "Theirs").
+ */
+export interface TriggerPlayerOrderPending {
+  type: "trigger-player-order";
+  activePlayer: PlayerId;
+}
+
 
 /** Spread N damage simultaneously across eligible units. */
 export interface SpreadDamagePending {
@@ -455,6 +469,7 @@ export type PendingResolution =
   | PlotWindowPending
   | WhenDeployedPending
   | TriggerOrderPending
+  | TriggerPlayerOrderPending
   | SpreadDamagePending
   | OnAttackOrderPending
   | ReturnFromDiscardPending

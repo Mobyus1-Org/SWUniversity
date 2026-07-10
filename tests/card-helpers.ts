@@ -346,6 +346,7 @@ export const Cards = {
       supercommandoSquad: "SHD_034",
       followerOfTheWay: "SHD_056",
       ketsuOnyo: "SHD_147",
+      kraytDragon: "SHD_172",
     },
     jtl: {
       kijimiPatrollers: "JTL_082",
@@ -369,6 +370,7 @@ export const Cards = {
       theLegacyRun: "LOF_213",
       sandtrooperCavalry: "LOF_232",
       vanee: "LOF_082",
+      darthTyranus: "LOF_231",
     },
     twi: {
       infiltratingDemolisher: "TWI_182",

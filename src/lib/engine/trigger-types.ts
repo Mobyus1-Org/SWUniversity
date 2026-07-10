@@ -31,7 +31,8 @@ export type TriggerContext =
   | WhenUnitDealsDamageContext
   | WhenUnitTakesDamageContext
   | WhenBaseDamagedContext
-  | WhenUpgradeDetachedContext;
+  | WhenUpgradeDetachedContext
+  | CardPlayedContext;
 
 export interface WhenDefeatedContext {
   defeatedUnit: Unit;
@@ -56,4 +57,12 @@ export interface WhenBaseDamagedContext {
 
 export interface WhenUpgradeDetachedContext {
   detachedUpgradePlayId: string;
+}
+
+/** Context for a "when an opponent plays a card" reaction (e.g. SHD_172 Krayt Dragon). */
+export interface CardPlayedContext {
+  /** The printed cost of the card that was played — the damage amount for Krayt Dragon. */
+  playedCardCost: number;
+  /** The player who played the card (the opponent of the reacting unit's controller). */
+  cardPlayer: PlayerId;
 }

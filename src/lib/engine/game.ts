@@ -67,6 +67,13 @@ export interface GameState {
     forceUsedThisPhase: number;
   };
   triggerBag: TriggerEntry[];
+  /**
+   * CR 7.6.10 — when triggers from both players wait simultaneously, the active player picks
+   * which player's stack resolves first. This holds the chosen player while their stack drains,
+   * so the other player's triggers are deferred (and no re-prompt occurs). Cleared once that
+   * player's triggers are exhausted.
+   */
+  triggerBatchPlayer?: PlayerId;
 }
 
 export interface Game {

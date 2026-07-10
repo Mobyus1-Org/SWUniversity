@@ -62,5 +62,15 @@ function resolveAutoOption(
       return { dispatchType: "choose-option", dispatchData: { option } };
     }
   }
+
+  // SHD_172 Krayt Dragon controlled by the opponent (P2): always fire and always hit the
+  // human player's base — the worst-case, deterministic puzzle behaviour.
+  if (pending.type === "ability-option" && pending.cardId === "SHD_172" && pending.player === 2) {
+    return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };
+  }
+  if (pending.type === "ability-target" && pending.cardId === "SHD_172" && pending.player === 2) {
+    return { dispatchType: "choose-target", dispatchData: { targetPlayIds: ["player1.base"] } };
+  }
+
   return null;
 }

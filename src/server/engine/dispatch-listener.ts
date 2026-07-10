@@ -83,12 +83,13 @@ import type {
   SpreadDamagePending,
   SpreadHealPending,
   TriggerOrderPending,
+  TriggerPlayerOrderPending,
   UpgradeTargetPending,
   BamboozleAltCostPending,
   BamboozleAltCostDiscardPending,
   ChooseAspectEffectPending,
 } from "@/server/engine/pending-resolution";
-import type { TriggerEntry } from "@/lib/engine/trigger-types";
+import type { TriggerEntry, CardPlayedContext } from "@/lib/engine/trigger-types";
 import { collectBounties } from "@/server/engine/actions/bounty";
 import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -589,6 +590,89 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
 
   if (trigger.triggerType === "card-played-reaction") {
     switch (trigger.cardId) {
+      case "SHD_172": { // Krayt Dragon: when an opponent plays a card, may deal damage = its cost to their base or a ground unit they control.
+        const ctx = trigger.context as CardPlayedContext | undefined;
+        const amount = ctx?.playedCardCost ?? 0;
+        const opp = ctx?.cardPlayer;
+        if (amount <= 0 || opp == null) return null; // 0-cost card → nothing worth dealing.
+        const oppBaseId = `player${opp}.base`;
+        const oppGround = GetPlayer(game, opp).groundArena.map(u => u.playId);
+        return {
+          type: "ability-option",
+          cardId: "SHD_172",
+          player: trigger.fromPlayer,
+          helperText: `Deal ${amount} damage to their base or a ground unit they control?`,
+          yesLabel: `Deal ${amount}`,
+          noLabel: "Skip",
+          onYes: {
+            type: "ability-target",
+            cardId: "SHD_172",
+            player: trigger.fromPlayer,
+            fromPlayIds: [oppBaseId, ...oppGround],
+            amount,
+            continuation: null,
+          },
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
+      case "SHD_014": { // Cad Bane — When you play an Underworld card: may (front: exhaust leader;) opponent chooses one of their units, deal 1 (front) / 2 (deployed) to it.
+        const leaderC = GetLeaderForPlayer(trigger.fromPlayer);
+        const oppC = GetOtherPlayer(trigger.fromPlayer);
+        if (GetUnitsForPlayer(oppC).length === 0) return null; // opponent has no unit to choose
+        return {
+          type: "ability-option",
+          cardId: "SHD_014",
+          player: trigger.fromPlayer,
+          helperText: leaderC.deployed
+            ? "An opponent chooses a unit they control to take 2 damage?"
+            : "Exhaust Cad Bane — an opponent chooses a unit they control to take 1 damage?",
+          yesLabel: leaderC.deployed ? "Deal 2" : "Exhaust",
+          noLabel: "Skip",
+          onYes: null,
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
+      case "TWI_018": { // Quinlan Vos — When you play a unit: may deal 1 to an enemy unit of equal cost (front, + exhaust leader) / same-or-less cost (deployed).
+        const ctxQ = trigger.context as CardPlayedContext | undefined;
+        const costQ = ctxQ?.playedCardCost ?? 0;
+        const leaderQ = GetLeaderForPlayer(trigger.fromPlayer);
+        const oppQ = GetOtherPlayer(trigger.fromPlayer);
+        const eligibleQ = GetUnitsForPlayer(oppQ).filter(u =>
+          leaderQ.deployed ? (CardCost(u.cardId) ?? 0) <= costQ : (CardCost(u.cardId) ?? 0) === costQ);
+        if (eligibleQ.length === 0) return null;
+        return {
+          type: "ability-option",
+          cardId: "TWI_018",
+          player: trigger.fromPlayer,
+          amount: costQ,
+          helperText: leaderQ.deployed
+            ? "Deal 1 damage to an enemy unit that costs the same as or less than the played unit?"
+            : "Exhaust Quinlan Vos to deal 1 damage to an enemy unit of equal cost?",
+          yesLabel: "Deal 1",
+          noLabel: "Skip",
+          onYes: null,
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
+      case "SHD_018": { // The Mandalorian — When you play an upgrade: may exhaust an enemy unit (front ≤4 HP + exhaust leader; deployed ≤6 HP).
+        const leader018 = GetLeaderForPlayer(trigger.fromPlayer);
+        const threshold018 = leader018.deployed ? 6 : 4;
+        const opp018 = GetOtherPlayer(trigger.fromPlayer);
+        const eligible018 = GetUnitsForPlayer(opp018).filter(u => u.CurrentHP() <= threshold018);
+        if (eligible018.length === 0) return null;
+        return {
+          type: "ability-option",
+          cardId: "SHD_018",
+          player: trigger.fromPlayer,
+          helperText: leader018.deployed
+            ? "Exhaust an enemy unit with 6 or less remaining HP?"
+            : "Exhaust The Mandalorian to exhaust an enemy unit with 4 or less remaining HP?",
+          yesLabel: leader018.deployed ? "Exhaust unit" : "Exhaust",
+          noLabel: "Skip",
+          onYes: null,
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
       case "SOR_143": { // Fighters for Freedom: may deal 1 damage to a base
         return {
           type: "ability-option",
@@ -655,7 +739,10 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
     if (wdPending) return wdPending;
   }
 
-  if (game.triggerBag.length === 0) return null;
+  if (game.triggerBag.length === 0) {
+    game.triggerBatchPlayer = undefined;
+    return null;
+  }
 
   // CR 7.6.11-12: nested triggers (arose during resolution of another trigger) must resolve
   // before outer sibling triggers. Auto-prioritize them without offering an ordering choice.
@@ -678,36 +765,74 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
     } satisfies TriggerOrderPending;
   }
 
-  // Trigger-order for multiple triggers from different sources: player picks resolution order.
-  // Auto-drain when all remaining triggers share the same cardId + triggerType (board-wipe
-  // scenario where Iden/Gideon fires N times for N simultaneous deaths — ordering irrelevant).
-  const allSameSource =
+  // Ordering-irrelevant fast path: when EVERY waiting trigger (across both players) shares the
+  // same cardId + triggerType, the result is order-independent — auto-drain without any prompt
+  // (e.g. a board wipe where both players' Iden/Gideon fire once per simultaneous death).
+  const globalSameSource =
     game.triggerBag.length >= 2 &&
     game.triggerBag.every(
-      t => t.cardId === game.triggerBag[0].cardId && t.triggerType === game.triggerBag[0].triggerType
+      t => t.cardId === game.triggerBag[0].cardId && t.triggerType === game.triggerBag[0].triggerType,
     );
+  if (globalSameSource) {
+    while (game.triggerBag.length > 0) {
+      const [trigger] = game.triggerBag.splice(0, 1);
+      const pending = processSingleTrigger(trigger, game, log);
+      if (pending !== null) return pending;
+    }
+    game.triggerBatchPlayer = undefined;
+    return null;
+  }
 
-  if (game.triggerBag.length >= 2 && !allSameSource) {
-    const pending: TriggerOrderPending = {
+  // CR 7.6.10: when triggers from BOTH players wait simultaneously, the active player first
+  // chooses which player resolves their whole stack first. The choice is remembered in
+  // game.triggerBatchPlayer across the resolution chain, so the other player's triggers are
+  // deferred until the chosen player's stack is exhausted (no re-prompt).
+  let batchPlayer = game.triggerBatchPlayer;
+  if (batchPlayer != null && !game.triggerBag.some(t => t.fromPlayer === batchPlayer)) {
+    batchPlayer = game.triggerBatchPlayer = undefined; // that player's stack is done
+  }
+  const playersWithTriggers = new Set(game.triggerBag.map(t => t.fromPlayer));
+  if (batchPlayer == null && playersWithTriggers.size >= 2) {
+    return { type: "trigger-player-order", activePlayer: game.activePlayer } satisfies TriggerPlayerOrderPending;
+  }
+
+  // Resolve within a single player's stack — the chosen batch player, or (when only one player
+  // has triggers) that player. CR 7.6.9: that player orders their own triggers.
+  const targetPlayer = batchPlayer ?? game.triggerBag[0].fromPlayer;
+  const myTriggers = game.triggerBag.filter(t => t.fromPlayer === targetPlayer);
+
+  // Auto-drain when all of this player's triggers share cardId + triggerType (e.g. a board wipe
+  // where Iden/Gideon fires N times for N simultaneous deaths — ordering is irrelevant).
+  const allSameSource =
+    myTriggers.length >= 2 &&
+    myTriggers.every(t => t.cardId === myTriggers[0].cardId && t.triggerType === myTriggers[0].triggerType);
+
+  if (myTriggers.length >= 2 && !allSameSource) {
+    return {
       type: "trigger-order",
-      triggers: game.triggerBag.map(t => ({
+      triggers: myTriggers.map(t => ({
         label: triggerLabel(t),
         triggerType: t.triggerType,
         cardId: t.cardId,
         playId: t.playId,
         fromPlayer: t.fromPlayer,
       })),
-    };
-    return pending;
+    } satisfies TriggerOrderPending;
   }
 
-  // Single trigger or all-same-source: process in order, auto-drain nulls, stop at interactive.
-  while (game.triggerBag.length > 0) {
-    const [trigger] = game.triggerBag.splice(0, 1);
+  // Single trigger or all-same-source: process this player's triggers in order, auto-draining
+  // nulls, stopping at the first interactive one.
+  while (true) {
+    const idx = game.triggerBag.findIndex(t => t.fromPlayer === targetPlayer);
+    if (idx === -1) break;
+    const [trigger] = game.triggerBag.splice(idx, 1);
     const pending = processSingleTrigger(trigger, game, log);
     if (pending !== null) return pending;
   }
-  return null;
+
+  // This player's stack is exhausted — clear the marker and continue with the other player.
+  game.triggerBatchPlayer = undefined;
+  return drainTriggerBag(game, log);
 }
 
 /**
@@ -1614,6 +1739,12 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         helperText: "Choose which trigger to resolve first:",
         options: pending.triggers.map(t => t.label),
       } satisfies NeedsOption;
+    case "trigger-player-order":
+      return {
+        type: "Option",
+        helperText: "Which Triggers Should Resolve First?",
+        options: ["Mine", "Theirs"],
+      } satisfies NeedsOption;
     case "play-from-hand":
       return { type: "Target", fromZones: ["Hand"] } satisfies NeedsTarget;
     case "return-from-discard":
@@ -1850,6 +1981,69 @@ function uniquenessDefeatPending(game: GameState, player: PlayerId): DefeatCopyP
  * can present it immediately. When true (post-uniqueness resume), When Played is pushed
  * to the trigger bag instead, so it resolves after the just-defeated copy's own triggers.
  */
+/**
+ * SHD_172 Krayt Dragon: "When an opponent plays a card: You may deal damage equal to that
+ * card's cost to their base or a ground unit they control." Pushes one card-played-reaction
+ * per Krayt Dragon the opponent-of-the-player controls. `nested` must match the sibling
+ * triggers of the just-played card so the active player orders them together (CR 7.6.10).
+ */
+function queueKraytReactions(game: GameState, playerWhoPlayed: PlayerId, cardId: string, nested: boolean): void {
+  const kraytController = GetOtherPlayer(playerWhoPlayed);
+  const kraytUnits = [...GetPlayer(game, kraytController).groundArena, ...GetPlayer(game, kraytController).spaceArena]
+    .filter(u => u.cardId === "SHD_172" && !Unit.FromInterface(u).LostAbilities());
+  for (const krayt of kraytUnits) {
+    game.triggerBag.push({
+      triggerType: "card-played-reaction",
+      cardId: "SHD_172",
+      fromPlayer: kraytController,
+      playId: krayt.playId,
+      nested,
+      context: { playedCardCost: CardCost(cardId) ?? 0, cardPlayer: playerWhoPlayed },
+    });
+  }
+}
+
+/**
+ * Leaders that react to their OWN controller playing a card ("When you play <X>: you may …").
+ * Front side pays "exhaust this leader" (so only fires when undeployed + ready); the deployed
+ * side has no such cost. Each entry filters which played cards trigger it.
+ */
+function queueLeaderPlayReactions(game: GameState, player: PlayerId, cardId: string, nested: boolean): void {
+  const leader = GetPlayer(game, player).leader;
+  const canFront = !leader.deployed && leader.ready; // front: exhausting the leader is the cost
+  const canDeployed = leader.deployed;
+  if (!canFront && !canDeployed) return;
+
+  let matches = false;
+  switch (leader.cardId) {
+    case "TWI_018": // Quinlan Vos — When you play a unit.
+      matches = CardType(cardId) === "Unit";
+      break;
+    case "SHD_018": // The Mandalorian — When you play an upgrade.
+      matches = CardType(cardId) === "Upgrade";
+      break;
+    case "SHD_014": // Cad Bane — When you play an Underworld card (any type).
+      matches = TraitContains(cardId, "Underworld");
+      // Deployed: "use this ability only once each round".
+      if (matches && canDeployed && !canFront &&
+        game.currentEffects.some(e => e.cardId === "SHD_014_usedThisRound" && e.affectedPlayer === player)) {
+        matches = false;
+      }
+      break;
+    default:
+      return;
+  }
+  if (!matches) return;
+
+  game.triggerBag.push({
+    triggerType: "card-played-reaction",
+    cardId: leader.cardId,
+    fromPlayer: player,
+    nested,
+    context: { playedCardCost: CardCost(cardId) ?? 0, cardPlayer: player },
+  });
+}
+
 function queueUnitEntryTriggers(
   game: GameState,
   log: string[],
@@ -1885,6 +2079,13 @@ function queueUnitEntryTriggers(
       game.triggerBag.push({ triggerType: "card-played-reaction", cardId: "SOR_143", fromPlayer: player, playId: fffUnit.playId, nested });
     }
   }
+
+  // SHD_172 Krayt Dragon: opponent's Krayt reacts to this unit being played (sibling of the
+  // unit's own Shielded/Ambush/When-Played, so the active player orders them together).
+  queueKraytReactions(game, player, cardId, nested);
+
+  // Leader "when you play a unit" reactions (e.g. TWI_018 Quinlan Vos).
+  queueLeaderPlayReactions(game, player, cardId, nested);
 
   // Leader-reaction: Boba Fett — when the active player plays a keyword unit
   const leaderState = GetPlayer(game, player).leader;
@@ -1990,6 +2191,11 @@ function completePlayCard(
       fromPlayIds: eligiblePlayIds,
     };
     game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: "", playedAs: "Upgrade" });
+    // SHD_172 Krayt Dragon: opponent's Krayt reacts to this upgrade being played (resolves
+    // after the upgrade is attached, when the trigger bag drains).
+    queueKraytReactions(game, player, cardId, game.triggerBag.length > 0);
+    // Leader "when you play an upgrade" reactions (e.g. SHD_018 The Mandalorian).
+    queueLeaderPlayReactions(game, player, cardId, game.triggerBag.length > 0);
     return { response: resolutionResponse(pendingToResolution(upgradePending, game)), pending: upgradePending, stateChanged: false };
   } else {
     // Event branch
@@ -2010,6 +2216,11 @@ function completePlayCard(
         game.triggerBag.push({ triggerType: "card-played-reaction", cardId: "SOR_143", fromPlayer: player, playId: fffUnitEvt.playId, nested: nestedFFF });
       }
     }
+
+    // SHD_172 Krayt Dragon: opponent's Krayt reacts to this event being played.
+    queueKraytReactions(game, player, cardId, game.triggerBag.length > 0);
+    // Leader "when you play a card" reactions on events (e.g. SHD_014 Cad Bane / Underworld event).
+    queueLeaderPlayReactions(game, player, cardId, game.triggerBag.length > 0);
 
     // SOR_153 Saw Gerrera: opponent playing an event must deal 2 damage to their own base.
     const sawGerreraOpp = GetOtherPlayer(player);
@@ -3138,6 +3349,12 @@ function handleChooseTarget(
     }
 
     updateDefeatedPlayers(game);
+    // Drain any reactions queued by playing this upgrade (e.g. SHD_018 The Mandalorian, or an
+    // opponent's SHD_172 Krayt Dragon reacting to the upgrade being played).
+    const bagAfterUpgrade = drainTriggerBag(game, log);
+    if (bagAfterUpgrade) {
+      return { response: resolutionResponse(pendingToResolution(bagAfterUpgrade, game)), pending: bagAfterUpgrade, stateChanged: false };
+    }
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
@@ -3819,6 +4036,55 @@ function applyAbilityOptionEffect(
       }
       return pending.continuation ?? null;
     }
+    case "SHD_014": { // Cad Bane — (front: exhaust the leader; deployed: mark once-per-round used,) then the opponent chooses their unit to take damage.
+      const leaderC = GetLeaderForPlayer(pending.player!);
+      if (!leaderC.deployed) leaderC.ready = false; // front side: exhausting the leader is the cost
+      const oppC = GetOtherPlayer(pending.player!);
+      const oppUnitsC = GetUnitsForPlayer(oppC);
+      if (oppUnitsC.length === 0) return pending.continuation ?? null;
+      if (leaderC.deployed) {
+        game.currentEffects.push({ cardId: "SHD_014_usedThisRound", duration: "Round", affectedPlayer: pending.player! });
+      }
+      return {
+        type: "ability-target",
+        cardId: "SHD_014",
+        player: oppC, // "an opponent chooses a unit they control"
+        amount: leaderC.deployed ? 2 : 1,
+        fromPlayIds: oppUnitsC.map(u => u.playId),
+        continuation: pending.continuation ?? null,
+      };
+    }
+    case "TWI_018": { // Quinlan Vos — (front: exhaust the leader,) then choose an eligible-cost enemy unit to damage.
+      const leaderQ = GetLeaderForPlayer(pending.player!);
+      if (!leaderQ.deployed) leaderQ.ready = false; // front side: exhausting the leader is the cost
+      const costQ = pending.amount ?? 0;
+      const oppQ = GetOtherPlayer(pending.player!);
+      const eligibleQ = GetUnitsForPlayer(oppQ).filter(u =>
+        leaderQ.deployed ? (CardCost(u.cardId) ?? 0) <= costQ : (CardCost(u.cardId) ?? 0) === costQ);
+      if (eligibleQ.length === 0) return pending.continuation ?? null;
+      return {
+        type: "ability-target",
+        cardId: "TWI_018",
+        player: pending.player!,
+        fromPlayIds: eligibleQ.map(u => u.playId),
+        continuation: pending.continuation ?? null,
+      };
+    }
+    case "SHD_018": { // The Mandalorian — (front: exhaust the leader,) then exhaust an enemy unit within the HP threshold.
+      const leader018 = GetLeaderForPlayer(pending.player!);
+      if (!leader018.deployed) leader018.ready = false; // front side: exhausting the leader is the cost
+      const threshold018 = leader018.deployed ? 6 : 4;
+      const opp018 = GetOtherPlayer(pending.player!);
+      const eligible018 = GetUnitsForPlayer(opp018).filter(u => u.CurrentHP() <= threshold018);
+      if (eligible018.length === 0) return pending.continuation ?? null;
+      return {
+        type: "ability-target",
+        cardId: "SHD_018",
+        player: pending.player!,
+        fromPlayIds: eligible018.map(u => u.playId),
+        continuation: pending.continuation ?? null,
+      };
+    }
     case "LOF_075": // Cure Wounds — Use the Force, then heal 6 from a unit.
     case "LOF_172": { // Sorcerous Blast — Use the Force, then deal 3 to a unit.
       const forcePlayer = pending.player!;
@@ -4308,6 +4574,20 @@ function handleChooseOption(
         return returnPending(chosenPending, pending.continuation);
       }
     }
+  }
+
+  if (pending?.type === "trigger-player-order") {
+    // CR 7.6.10 — active player chose which player's stack resolves first.
+    if (option !== "Mine" && option !== "Theirs") {
+      return { response: invalidResponse(`Unknown option: ${option}`), pending, stateChanged: false };
+    }
+    game.triggerBatchPlayer = option === "Mine" ? pending.activePlayer : GetOtherPlayer(pending.activePlayer);
+    const nextPending = drainTriggerBag(game, log);
+    if (nextPending) {
+      return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+    }
+    updateDefeatedPlayers(game);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
   if (pending?.type === "trigger-order") {
@@ -4813,7 +5093,11 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
     case "LOF_003": // Ahsoka Tano — If you control 6 or more resources.
       return p.resources.length >= 6;
     case "LOF_017": // Darth Revan — If you control 5 or more resources.
+    case "TWI_018": // Quinlan Vos — If you control 5 or more resources.
       return p.resources.length >= 5;
+    case "SHD_014": // Cad Bane — If you control 6 or more resources.
+    case "SHD_018": // The Mandalorian — If you control 6 or more resources.
+      return p.resources.length >= 6;
     case "LOF_007": // Avar Kriss — If resources + times Used the Force this phase >= 9.
       return p.resources.length + game.roundState.forceUsedThisPhase >= 9;
     default:
@@ -6476,6 +6760,38 @@ function applyAbilityEffect(
       } else if (targetPlayId === "player2.base") {
         dealBaseDamage(game.currentGameState, 2, 1);
         game.gameLog.push(`${CardTitle("SOR_143")}: dealt 1 damage to Player 2's base.`);
+      }
+      break;
+    }
+    case "TWI_018": { // Quinlan Vos — deal 1 damage to the chosen enemy unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "TWI_018", targetPlayId, 1, game.gameLog);
+      break;
+    }
+    case "SHD_014": { // Cad Bane — deal `amount` (1 front / 2 deployed) to the opponent-chosen unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "SHD_014", targetPlayId, pending.amount ?? 1, game.gameLog);
+      break;
+    }
+    case "SHD_018": { // The Mandalorian — exhaust the chosen enemy unit.
+      if (!targetPlayId) break;
+      const opp018 = pending.player === 1 ? game.currentGameState.player2 : game.currentGameState.player1;
+      const target018 = [...opp018.groundArena, ...opp018.spaceArena].find(u => u.playId === targetPlayId);
+      if (target018) {
+        target018.ready = false;
+        game.gameLog.push(`${CardTitle("SHD_018")}: exhausted ${CardTitle(target018.cardId)}.`);
+      }
+      break;
+    }
+    case "SHD_172": { // Krayt Dragon: deal `amount` (played card's cost) to chosen base or ground unit.
+      if (!targetPlayId) break;
+      const amt172 = pending.amount ?? 0;
+      const baseMatch172 = targetPlayId.match(/^player([12])\.base$/);
+      if (baseMatch172) {
+        dealBaseDamage(game.currentGameState, Number(baseMatch172[1]) as PlayerId, amt172);
+        game.gameLog.push(`${CardTitle("SHD_172")}: dealt ${amt172} damage to Player ${baseMatch172[1]}'s base.`);
+      } else {
+        DealDamageToUnit(game.currentGameState, "SHD_172", targetPlayId, amt172, game.gameLog);
       }
       break;
     }
