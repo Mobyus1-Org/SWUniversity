@@ -2910,6 +2910,19 @@ function handleChooseTarget(
           pending.enteringInjectEffect ? { injectEffect: pending.enteringInjectEffect } : undefined,
           true,
         );
+      } else if (CardHasWhenPlayed(pending.enteringCardId)) {
+        // The player defeated the just-played copy itself. Per CR 8.29.3, abilities that
+        // trigger upon that copy being played must still resolve. The entry effects that
+        // need the unit in play (Shielded, Ambush, injected effects) are moot now that it
+        // is gone, but its When Played still fires — queue it to the bag so it resolves
+        // after the just-defeated copy's own When Defeated triggers.
+        game.triggerBag.push({
+          triggerType: "when-played",
+          cardId: pending.enteringCardId,
+          fromPlayer: pending.enteringPlayer,
+          playId: pending.enteringPlayId,
+          nested: game.triggerBag.length > 0,
+        });
       }
     }
 
