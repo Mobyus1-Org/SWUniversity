@@ -1648,7 +1648,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         options: pending.options,
       } satisfies NeedsOption;
     case "discard-from-hand":
-      return { type: "Target", fromZones: ["Hand"] } satisfies NeedsTarget;
+      return { type: "Target", fromZones: ["Hand"], handOwner: pending.targetPlayer } satisfies NeedsTarget;
     case "upgrade-target":
       return {
         type: "Target",
@@ -1702,6 +1702,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       return {
         type: "Target",
         fromZones: ["Hand"],
+        handOwner: pending.playingPlayer,
         fromIndices: pending.eligibleHandIndices,
       } satisfies NeedsTarget;
     case "exploit-target":
@@ -1746,7 +1747,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         options: ["Mine", "Theirs"],
       } satisfies NeedsOption;
     case "play-from-hand":
-      return { type: "Target", fromZones: ["Hand"] } satisfies NeedsTarget;
+      return { type: "Target", fromZones: ["Hand"], handOwner: pending.player } satisfies NeedsTarget;
     case "return-from-discard":
       return {
         type: "Target",
@@ -1852,6 +1853,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       return {
         type: "Target",
         fromZones: ["Hand"],
+        handOwner: pending.player,
         fromIndices: pending.eligibleIndices,
         needsMultiple: true,
         maxTargets: pending.maxCount,
@@ -4648,6 +4650,8 @@ function handleChooseOption(
     if (optionType === "player_discards_from_hand") {
       const targetPlayer = Number(parts[0]) as PlayerId;
       const count = Number(parts[1]);
+      // An empty target hand makes this pending unsatisfiable; skipUnsatisfiableDiscards
+      // in processDispatch resolves that centrally, for every card that forces a discard.
       const discardPending: DiscardFromHandPending = {
         type: "discard-from-hand",
         targetPlayer,
@@ -7311,6 +7315,42 @@ function checkMillenniumFalconTax(gs: GameState): AbilityOptionPending | null {
  * request. The context is opaque to the UI — it carries pending resolution
  * state and the full game object.
  */
+/**
+ * A discard-from-hand pending whose target has no cards is unsatisfiable: no card index can
+ * ever be valid, so the resolution would hang forever. Nothing to discard is a legal outcome
+ * — resolve it as a no-op and move on to whatever comes next.
+ *
+ * Applied centrally so every card that forces a discard is covered, not just the ones whose
+ * handler remembered to check.
+ */
+function skipUnsatisfiableDiscards(game: GameState, log: string[], result: HandlerResult): HandlerResult {
+  let current = result;
+
+  while (
+    current.pending?.type === "discard-from-hand" &&
+    GetPlayer(game, current.pending.targetPlayer).hand.length === 0
+  ) {
+    log.push(`Player ${current.pending.targetPlayer} has no cards to discard.`);
+
+    const next = current.pending.continuation ?? null;
+    if (next) {
+      current = { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: current.stateChanged };
+      continue;
+    }
+
+    const bagPending = drainTriggerBag(game, log);
+    if (bagPending) {
+      current = { response: resolutionResponse(pendingToResolution(bagPending, game)), pending: bagPending, stateChanged: current.stateChanged };
+      continue;
+    }
+
+    updateDefeatedPlayers(game);
+    current = { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  return current;
+}
+
 export function processDispatch(
   dispatch: GameDispatch,
   context: EngineContext,
@@ -7392,6 +7432,10 @@ export function processDispatch(
         const wasPass = dispatch.dispatchType === "pass-action" || dispatch.dispatchType === "claim-initiative";
         advanceTurn(gs, log, wasPass);
       }
+    }
+
+    if (!result.response.invalidAction) {
+      result = skipUnsatisfiableDiscards(gs, log, result);
     }
 
     // Snapshot the pre-dispatch state before top-level actions (play-card, initiate-attack,

@@ -29,6 +29,15 @@ const USE_HTTP_TRANSPORT = true;
 
 const PLAYER: PlayerId = 1;
 
+/**
+ * A Hand target is only ours to answer when it indexes OUR hand. Effects such as K-2SO's When
+ * Defeated make the opponent discard; those indices address their hand, so our cards must stay
+ * unclickable (an older engine omitted handOwner entirely — treat that as our own hand).
+ */
+function isOwnHandTarget(resolution: { handOwner?: PlayerId }): boolean {
+  return (resolution.handOwner ?? PLAYER) === PLAYER;
+}
+
 const LS_TEST_RAW = "puzzle_builder_test_raw";
 const LS_TEST_META = "puzzle_builder_test_meta";
 
@@ -530,7 +539,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
   // ---------------------------------------------------------------------------
   const isMultiSelectTarget = resolutionNeeded?.type === "Target" &&
     ((resolutionNeeded.needsMultiple ?? false) || (resolutionNeeded.maxTargets ?? 1) > 1);
-  const isMultiSelectHand = isMultiSelectTarget && resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Hand");
+  const isMultiSelectHand = isMultiSelectTarget && resolutionNeeded?.type === "Target"
+    && resolutionNeeded.fromZones?.includes("Hand") && isOwnHandTarget(resolutionNeeded);
 
   const handleConfirmTargets = React.useCallback(() => {
     if (isResolving) return;
@@ -590,7 +600,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
 
   const handleHandClick = React.useCallback((index: number, cardId: string) => {
     if (isResolving) return;
-    if (resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Hand")) {
+    if (resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Hand")
+        && isOwnHandTarget(resolutionNeeded)) {
       if (isMultiSelectHand) {
         setSelectedTargetIndices(prev => {
           if (prev.includes(index)) return prev.filter(i => i !== index);
@@ -1027,7 +1038,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
   const uiCanClickBase = !resolutionNeeded && !isGameOver &&
     BASES_WITH_EPIC_ACTION.has(player.base.cardId) && !player.base.epicActionUsed;
   const selectableHandIndices: number[] = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Hand")
-    ? (resolutionNeeded.fromIndices ?? player.hand.map((_, i) => i))
+    ? (isOwnHandTarget(resolutionNeeded) ? (resolutionNeeded.fromIndices ?? player.hand.map((_, i) => i)) : [])
     : !resolutionNeeded && !isGameOver
       ? player.hand.map((_, i) => i).filter(i => CardIsPlayable(gameState, PLAYER, player.hand[i].cardId))
       : [];

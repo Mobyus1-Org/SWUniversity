@@ -1,5 +1,7 @@
 import React from "react";
+import { CardRefField } from "@/components/Shared/CardRefField";
 import { globalBackgroundStyle } from "@/util/style-const";
+import { isKnownCardId, parseCardRefs } from "@/util/card-ref";
 import { normalizePuzzleAssetPath, puzzleImageSrc, DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
 import type { GamePhase } from "@/lib/engine/core-models";
@@ -949,6 +951,15 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
     setState((s) => ({ ...s, ...delta }));
   }
 
+  // Card references the renderer won't resolve — these silently vanish for players.
+  const unknownCardRefs = React.useMemo(() => {
+    const lines = [...(state.intendedSolution ?? []), ...(state.hints ?? [])];
+    return lines
+      .flatMap((line) => parseCardRefs(line))
+      .map((r) => r.cardId)
+      .filter((cardId) => !isKnownCardId(cardId));
+  }, [state.intendedSolution, state.hints]);
+
   function handleSave() {
     setSaving(true);
     setSaveError(null);
@@ -1254,12 +1265,10 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                 </div>
                 <div className="space-y-2">
                   {(state.intendedSolution ?? []).map((line, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input
-                        type="text"
+                    <div key={i} className="flex items-start gap-2">
+                      <CardRefField
                         value={line}
-                        onChange={(e) => patchGlobal({ intendedSolution: (state.intendedSolution ?? []).map((l, j) => j === i ? e.target.value : l) })}
-                        className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none"
+                        onChange={(next) => patchGlobal({ intendedSolution: (state.intendedSolution ?? []).map((l, j) => j === i ? next : l) })}
                       />
                       <button
                         type="button"
@@ -1289,11 +1298,11 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                   {(state.hints ?? []).map((line, i) => (
                     <div key={i} className="flex items-start gap-2">
                       <span className="pt-1.5 text-[11px] text-white/40 shrink-0">Hint {i + 1}</span>
-                      <textarea
-                        value={line}
-                        onChange={(e) => patchGlobal({ hints: (state.hints ?? []).map((l, j) => j === i ? e.target.value : l) })}
+                      <CardRefField
+                        multiline
                         rows={2}
-                        className="w-full resize-y rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none"
+                        value={line}
+                        onChange={(next) => patchGlobal({ hints: (state.hints ?? []).map((l, j) => j === i ? next : l) })}
                       />
                       <button
                         type="button"
@@ -1345,6 +1354,11 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                   </>
                 )}
                 {saveError ? <span className="text-xs text-rose-300">{saveError}</span> : null}
+                {unknownCardRefs.length > 0 ? (
+                  <span className="text-xs text-amber-300">
+                    {unknownCardRefs.length} unknown card reference{unknownCardRefs.length === 1 ? "" : "s"} ({unknownCardRefs.join(", ")}) — {unknownCardRefs.length === 1 ? "it" : "they"} will not render
+                  </span>
+                ) : null}
               </div>
               {/* Solver result (dev only) */}
               {process.env.NODE_ENV === "development" && solverError && (

@@ -1,23 +1,26 @@
 import React from "react";
-import { CardTitle, CardSubtitle } from "@/server/engine/card-db/generated";
+
+import { CardSubtitle, CardTitle } from "@/server/engine/card-db/generated";
+import { type CardRef, isKnownCardId, parseCardRefs } from "@/util/card-ref";
 
 type PreviewHandlers = {
   onPreviewStart: (p: { imageId: string; cardId: string; label?: string }) => void;
   onPreviewEnd: () => void;
 };
 
-// Parses "@[SET_XYZ]" or "@[SET_XYZ-L]", returning the base cardId and whether
-// the leader unit side (back face) was requested via the "-L" suffix.
-function extractCardId(raw: string): { cardId: string; showLeaderUnit: boolean } {
-  const inner = (/^@\[(.+)\]$/.exec(raw.trim())?.[1] ?? raw.trim());
-  if (inner.endsWith("-L")) {
-    return { cardId: inner.slice(0, -2), showLeaderUnit: true };
-  }
-  return { cardId: inner, showLeaderUnit: false };
-}
+export function CardLink({ cardRef, ...handlers }: { cardRef: CardRef } & PreviewHandlers) {
+  const { cardId, showLeaderUnit } = cardRef;
 
-export function CardLink({ raw, ...handlers }: { raw: string } & PreviewHandlers) {
-  const { cardId, showLeaderUnit } = extractCardId(raw);
+  // An id the card db doesn't know renders as visible raw text rather than
+  // disappearing — a bad reference should never be silent.
+  if (!isKnownCardId(cardId)) {
+    return (
+      <span className="text-rose-300 underline decoration-wavy underline-offset-2" title="Unknown card ID">
+        {cardRef.raw}
+      </span>
+    );
+  }
+
   const title = CardTitle(cardId);
   const subtitle = CardSubtitle(cardId);
   const label = subtitle ? `${title} — ${subtitle}` : title;
@@ -25,7 +28,7 @@ export function CardLink({ raw, ...handlers }: { raw: string } & PreviewHandlers
 
   return (
     <span
-      className="cursor-pointer underline decoration-dotted underline-offset-2 hover:text-sky-300 transition-colors"
+      className="cursor-pointer underline decoration-dotted underline-offset-2 transition-colors hover:text-sky-300"
       onMouseEnter={() => handlers.onPreviewStart({ imageId, cardId, label })}
       onMouseLeave={handlers.onPreviewEnd}
     >
@@ -34,27 +37,21 @@ export function CardLink({ raw, ...handlers }: { raw: string } & PreviewHandlers
   );
 }
 
-// Splits a string on @[SET_XYZ] tokens and returns an array of string | cardId pairs.
-type Segment = { type: "text"; value: string } | { type: "card"; raw: string };
-
-function parseSegments(text: string): Segment[] {
-  const parts = text.split(/(@\[[^\]]+\])/g);
-  return parts.map((part) =>
-    /^@\[.+\]$/.test(part)
-      ? { type: "card", raw: part }
-      : { type: "text", value: part },
-  );
-}
-
 export function CardLinkText({ text, ...handlers }: { text: string } & PreviewHandlers) {
-  const segments = parseSegments(text);
-  return (
-    <>
-      {segments.map((seg, i) =>
-        seg.type === "card"
-          ? <CardLink key={i} raw={seg.raw} {...handlers} />
-          : <React.Fragment key={i}>{seg.value}</React.Fragment>,
-      )}
-    </>
-  );
+  const refs = parseCardRefs(text);
+
+  const nodes: React.ReactNode[] = [];
+  let cursor = 0;
+  refs.forEach((ref, i) => {
+    if (ref.start > cursor) {
+      nodes.push(<React.Fragment key={`t${i}`}>{text.slice(cursor, ref.start)}</React.Fragment>);
+    }
+    nodes.push(<CardLink key={`c${i}`} cardRef={ref} {...handlers} />);
+    cursor = ref.end;
+  });
+  if (cursor < text.length) {
+    nodes.push(<React.Fragment key="t-last">{text.slice(cursor)}</React.Fragment>);
+  }
+
+  return <>{nodes}</>;
 }

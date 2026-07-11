@@ -8,6 +8,13 @@ import type { PlayerId, Zones } from "@/lib/engine/core-models";
 export interface NeedsTarget {
   type: "Target";
   fromZones?: Zones[];
+  /**
+   * For a "Hand" zone target: whose hand the indices index into. Effects like K-2SO's When
+   * Defeated make the OPPONENT discard, so a client must not assume a hand target means the
+   * local player's own hand — sending an index into the wrong hand is at best the wrong card
+   * and at worst unresolvable.
+   */
+  handOwner?: PlayerId;
   fromPlayIds?: string[];
   fromIndices?: number[];
   /** Arbitrary string choices (e.g. card titles for "Name a card" prompts). */

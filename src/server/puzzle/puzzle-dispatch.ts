@@ -1,6 +1,8 @@
 import { randomUUID } from "crypto";
 import { processDispatch } from "@/server/engine/dispatch-listener";
+import { CardCost, CardRarity } from "@/server/engine/card-db/generated";
 import type { EngineContext, PendingResolution } from "@/server/engine/pending-resolution";
+import type { GameState } from "@/lib/engine/game";
 import type { GameDispatch, DispatchResponse } from "@/lib/engine/message-types";
 import type { DispatchType, DispatchData } from "@/lib/engine/message-types";
 
@@ -13,6 +15,33 @@ import type { DispatchType, DispatchData } from "@/lib/engine/message-types";
 const PUZZLE_AUTO_RESPONSES: Record<string, string> = {
   "SOR_145": "deal_base_damage=1,3", // K-2SO: deal 3 damage to opponent's base
 };
+
+const RARITY_RANK: Record<string, number> = {
+  Common: 0,
+  Special: 1,
+  Uncommon: 2,
+  Rare: 3,
+  Legendary: 4,
+};
+
+/**
+ * Which card P2 gives up when something forces them to discard: the cheapest one, breaking
+ * ties toward the least rare, then toward the earliest hand position. Keeping their best card
+ * is the worst case for the solving player, and — unlike a random pick — it makes a puzzle
+ * replay identically every time, which the solver and the authored solutions depend on.
+ */
+function pickDiscardIndex(hand: { cardId: string }[]): number {
+  let best = 0;
+  for (let i = 1; i < hand.length; i++) {
+    const costDelta = CardCost(hand[i].cardId) - CardCost(hand[best].cardId);
+    if (costDelta < 0) { best = i; continue; }
+    if (costDelta > 0) continue;
+
+    const rarityRank = (cardId: string) => RARITY_RANK[CardRarity(cardId)] ?? 0;
+    if (rarityRank(hand[i].cardId) < rarityRank(hand[best].cardId)) best = i;
+  }
+  return best;
+}
 
 /**
  * Puzzle-mode dispatch wrapper.
@@ -33,7 +62,7 @@ export function processPuzzleDispatch(
     const pending = result.context.pending;
     if (!pending) break;
 
-    const auto = resolveAutoOption(pending);
+    const auto = resolveAutoOption(pending, result.context.game.currentGameState);
     if (!auto) break;
 
     const autoDispatch: GameDispatch = {
@@ -55,12 +84,24 @@ export function processPuzzleDispatch(
  */
 function resolveAutoOption(
   pending: PendingResolution,
+  gameState: GameState,
 ): { dispatchType: DispatchType; dispatchData: DispatchData } | null {
   if (pending.type === "when-defeated-choice" && pending.controlledBy === 2) {
     const option = PUZZLE_AUTO_RESPONSES[pending.defeatedCardId];
     if (option && pending.options.includes(option)) {
       return { dispatchType: "choose-option", dispatchData: { option } };
     }
+  }
+
+  // An effect that makes the OPPONENT discard (e.g. K-2SO's When Defeated) is their choice
+  // to make, not the human's — and the puzzle UI only ever renders the human's own hand, so
+  // prompting here would send an index into the wrong hand. P2 discards for themselves.
+  if (pending.type === "discard-from-hand" && pending.targetPlayer === 2) {
+    const p2Hand = gameState.player2.hand;
+    // No cards to discard: returning null (rather than an unsatisfiable index) stops the
+    // auto-resolve loop instead of spinning on a dispatch the engine always rejects.
+    if (p2Hand.length === 0) return null;
+    return { dispatchType: "choose-target", dispatchData: { targetIndices: [pickDiscardIndex(p2Hand)] } };
   }
 
   // SHD_172 Krayt Dragon controlled by the opponent (P2): always fire and always hit the
