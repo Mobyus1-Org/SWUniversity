@@ -596,10 +596,11 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     void sendDispatch(createDispatch("use-ability", { cardId, playId }));
   }, [unitAbilityModal, sendDispatch]);
 
-  const handleBaseClick = React.useCallback((_player: PlayerId) => {
+  const handleBaseClick = React.useCallback((player: PlayerId) => {
     if (isResolving) return;
     if (resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Base")) {
-      void sendDispatch(createDispatch("choose-target", { targetZones: ["Base"] }));
+      // Base abilities say "a base" — send which base was clicked, not just the zone.
+      void sendDispatch(createDispatch("choose-target", { targetZones: ["Base"], targetPlayers: [player] }));
     } else if (!resolutionNeeded && gameState && BASES_WITH_EPIC_ACTION.has(gameState.player1.base.cardId)) {
       void sendDispatch(createDispatch("use-ability", { cardId: gameState.player1.base.cardId }));
     }
@@ -1046,8 +1047,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
       </div>
     ) : null;
 
+  // Every base-targeting ability reads "a base" — either base is a legal choice.
   const selectableBaseForPlayer: PlayerId[] = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Base")
-    ? [2]
+    ? [1, 2]
     : [];
   // Clickable if deploy is still available (even exhausted) OR ability is ready
   const uiCanClickLeader = !resolutionNeeded && !isGameOver && !player.leader.deployed &&
