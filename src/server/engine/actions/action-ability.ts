@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand } from "@/server/engine/core-functions";
+import { CanDiscloseAnyOf, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS } from "@/server/engine/core-functions";
 import { CardTraits } from "@/server/engine/card-db/generated";
 import { PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 
@@ -68,6 +68,17 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         break;
       case "LOF_003": // Ahsoka Tano — Action [Exhaust, use the Force]: Give a friendly unit Sentinel (needs the Force + a friendly unit).
         if (HasTheForce(player) && GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
+        break;
+      case "SEC_004": // Leia Organa (SEC) — Action [1 resource, Exhaust]: disclose, then give an XP token.
+        if (CanDiscloseAnyOf(player, SEC_004_ASPECTS)) abilities.push(cardId);
+        break;
+      case "LAW_010": // Leia Organa (LAW) — Action [2 resources, Exhaust]: give a unit +1/+1 per different aspect.
+        if (GetUnitsForPlayer(1).concat(GetUnitsForPlayer(2)).length > 0) abilities.push(cardId);
+        break;
+      case "LOF_002": // Mother Talzin — Action [Exhaust, use the Force]: Give a unit -1/-1 this phase.
+        if (HasTheForce(player) && GetUnitsForPlayer(1).concat(GetUnitsForPlayer(2)).length > 0) {
+          abilities.push(cardId);
+        }
         break;
       case "JTL_013": { // Poe Dameron — Action [1 resource, Exhaust]: Flip this leader and attach him
                         // as an upgrade to a friendly Vehicle unit WITHOUT a Pilot on it.
@@ -171,6 +182,10 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
 export function ActionAbilityCost(cardId: string): number {
   switch (cardId) {
     //Leader abilities
+    case "LAW_010"://Leia Organa - Someone Who Loves You
+      return 2;
+    case "SEC_004"://Leia Organa - Of A Secret Bloodline
+      return 1;
     case "SOR_005"://Luke Skywalker
       return 1;
     case "SOR_007"://Grand Moff Tarkin

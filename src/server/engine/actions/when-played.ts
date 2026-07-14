@@ -1223,6 +1223,30 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "LOF_128": { // Protect the Pod — "A friendly non-Vehicle unit deals damage equal to its
+                      // remaining HP to an enemy unit."
+      const opponent128 = player === 1 ? 2 : 1;
+      if (GetUnitsForPlayer(opponent128).length === 0) return null; // no enemy unit to damage
+      return chooseFriendlyForPowerDamage("LOF_128", player, {
+        filter: u => !TraitContains(u.cardId, "Vehicle", u.controller, u.playId),
+      });
+    }
+    case "JTL_156": { // Trench Run — "Attack with a Fighter unit. For this attack, it gets +4/+0 and
+                      // gains: 'On Attack: Discard 2 cards from the defending player's deck. Deal
+                      // unpreventable damage equal to the difference in the discarded cards' costs
+                      // to this unit.'"
+      const fighters156 = GetUnitsForPlayer(player, true)
+        .filter(u => TraitContains(u.cardId, "Fighter", u.controller, u.playId));
+      if (fighters156.length === 0) return null;
+      return mandatoryTarget(cardId, player, fighters156.map(u => u.playId));
+    }
+    case "JTL_177": { // Stay on Target — "Attack with a Vehicle unit. For this attack, it gets +2/+0
+                      // and gains: 'When this unit deals damage to a base: Draw a card.'"
+      const vehicles177 = GetUnitsForPlayer(player, true)
+        .filter(u => TraitContains(u.cardId, "Vehicle", u.controller, u.playId));
+      if (vehicles177.length === 0) return null;
+      return mandatoryTarget(cardId, player, vehicles177.map(u => u.playId));
+    }
     case "SOR_220": { // Surprise Strike — Attack with a unit. It gets +3/+0 for this attack.
       const readyFriendly220 = GetUnitsForPlayer(player, true);
       if (readyFriendly220.length === 0) return null;

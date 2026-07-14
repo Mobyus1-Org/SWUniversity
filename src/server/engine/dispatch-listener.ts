@@ -30,7 +30,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase } from "@/server/engine/core-functions";
+import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -98,7 +98,7 @@ import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB, anakinMortisAb
 import { executeRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
 import { resolveWhenPlayedTrigger, WhenPlayedHasAutoEffect } from "@/server/engine/actions/when-played-trigger";
 import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
-import { chooseEnemyForPowerDamage, dealPowerToEnemy } from "@/server/engine/actions/deal-power-damage";
+import { chooseEnemyForPowerDamage, dealPowerToEnemy, dealRemainingHpToEnemy } from "@/server/engine/actions/deal-power-damage";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
@@ -106,7 +106,7 @@ import { HasAmbush } from "@/server/engine/card-db/keyword-dictionaries.ts/ambus
 import { ActionAbilities, ActionAbilityCost } from "@/server/engine/actions/action-ability";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
-import { PilotingEligibleVehicles, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { IsTokenUpgrade, PilotingEligibleVehicles, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dictionaries.ts/leader-pilot-deploy";
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
@@ -182,6 +182,22 @@ function resolveChooseOne(
         ? shatterpointModeA(pending.cardId, pending.player)
         : shatterpointModeB(pending.cardId, pending.player, log);
       break;
+    case "LAW_019": { // Alliance Outpost — the player picked one of the three modes.
+      if (optionId === "credit") {
+        CreateCreditToken(game, pending.player, log, "LAW_019");
+        break;
+      }
+      const units019 = GetAllUnits(game);
+      if (units019.length === 0) break; // nothing to give a token to
+      next = {
+        type: "ability-target",
+        cardId: optionId === "experience" ? "LAW_019_experience" : "LAW_019_shield",
+        player: pending.player,
+        fromPlayIds: units019.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+      break;
+    }
     case "LOF_070": { // Anakin (Champion of Mortis) — the player picked which When Played resolves first.
       const first = optionId === "heroism" ? "heroism" : "villainy";
       const second = first === "heroism" ? "villainy" : "heroism";
@@ -1418,6 +1434,11 @@ function resolveAttack(
     const willSacrifice = game.currentEffects.some(
       e => e.cardId === "SOR_150_sacrifice" && e.targetPlayId === attacker.playId,
     );
+    // JTL_177 Stay on Target grants the attacker "When this unit deals damage to a base: Draw a
+    // card." Read the effect BEFORE the ForAttack effects are cleared just below.
+    const stayOnTarget177 = atkPower > 0 && game.currentEffects.some(
+      e => e.cardId === "JTL_177" && e.targetPlayId === attacker.playId,
+    );
     // Clear ForAttack effects scoped to this attacker after the attack resolves
     game.currentEffects = game.currentEffects.filter(
       (e) => !(e.duration === "ForAttack" && e.targetPlayId === attacker.playId),
@@ -1425,7 +1446,14 @@ function resolveAttack(
     // The attacker's attack has ended — its Advantage tokens defeat. This runs BEFORE any
     // "When Attack Ends" ability, so a token granted by one of those survives (ASH_180).
     DefeatAdvantageTokensAfterCombat([attacker], log);
-    const whenAttackEnds = resolveWhenAttackEnds(game, attacker, pending.continuation ?? null);
+    if (stayOnTarget177) {
+      DrawCardForPlayer(game, log, attacker.controller);
+      log.push(`${CardTitle("JTL_177")}: ${attackerName} damaged the base — drew a card.`);
+    }
+    const whenAttackEnds = resolveWhenAttackEnds(
+      game, attacker, pending.continuation ?? null, false, 0,
+      atkPower > 0 ? target.player : null,
+    );
     if (willSacrifice) {
       log.push(`Heroic Sacrifice: ${attackerName} is defeated after dealing combat damage.`);
       const sacrificePend = defeatUnit(game, log, attacker);
@@ -1622,6 +1650,9 @@ function resolveWhenAttackEnds(
   continuation: PendingResolution | null,
   defDefeated: boolean = false,
   excessDamage: number = 0,
+  /** The opponent whose BASE took combat damage from this attack, if any (ASH_183). Overwhelm
+   *  spill is not combat damage to the base, so it never sets this. */
+  baseDamagedPlayer: PlayerId | null = null,
 ): PendingResolution | null {
   // Darth Revan (LOF_017) — controller-level reaction to ANY friendly unit attacking and
   // defeating a unit. It resolves before the attacker's own When-Attack-Ends ability.
@@ -1630,7 +1661,7 @@ function resolveWhenAttackEnds(
   if (defDefeated && GetUnitByPlayId(game, attacker.playId)) {
     const leader = GetLeaderForPlayer(attacker.controller);
     if (leader.cardId === "LOF_017" && (leader.deployed || leader.ready)) {
-      const rest = attackerOwnWhenAttackEnds(game, attacker, continuation, defDefeated, excessDamage);
+      const rest = attackerOwnWhenAttackEnds(game, attacker, continuation, defDefeated, excessDamage, baseDamagedPlayer);
       return {
         type: "ability-option",
         cardId: "LOF_017",
@@ -1646,7 +1677,7 @@ function resolveWhenAttackEnds(
       };
     }
   }
-  return attackerOwnWhenAttackEnds(game, attacker, continuation, defDefeated, excessDamage);
+  return attackerOwnWhenAttackEnds(game, attacker, continuation, defDefeated, excessDamage, baseDamagedPlayer);
 }
 
 function attackerOwnWhenAttackEnds(
@@ -1655,6 +1686,7 @@ function attackerOwnWhenAttackEnds(
   continuation: PendingResolution | null,
   defDefeated: boolean = false,
   excessDamage: number = 0,
+  baseDamagedPlayer: PlayerId | null = null,
 ): PendingResolution | null {
   // If attacker was defeated, no trigger fires
   if (!GetUnitByPlayId(game, attacker.playId)) return continuation;
@@ -1662,6 +1694,20 @@ function attackerOwnWhenAttackEnds(
   // Upgrade-granted When-Attack-Ends abilities
   for (const upgrade of attacker.upgrades) {
     switch (upgrade.cardId) {
+      case "ASH_183": { // Whistling Birds — "When Attack Ends: If this unit dealt combat damage to
+                        // an opponent's base, deal 2 damage to each unit that opponent controls in
+                        // this unit's arena."
+        if (baseDamagedPlayer === null || baseDamagedPlayer === attacker.controller) break;
+        const arena183 = (CardArena(attacker.cardId) ?? "Ground") as "Ground" | "Space";
+        const victimState = GetPlayer(game, baseDamagedPlayer);
+        const victims183 = arena183 === "Ground" ? victimState.groundArena : victimState.spaceArena;
+        const log183 = GetGame()?.gameLog ?? [];
+        for (const victim of [...victims183]) {
+          DealDamageToUnit(game, "ASH_183", victim.playId, 2, log183);
+        }
+        updateDefeatedPlayers(game);
+        return sweepDeadUnits(game, log183, continuation);
+      }
       case "JTL_197": { // Anakin Skywalker (pilot) — "When attached unit completes an attack (and
                         // survives): You may return this upgrade to its owner's hand."
                         // The early return above already guarantees the attacker survived.
@@ -2911,6 +2957,7 @@ function handleBaseEpicAction(game: GameState, log: string[], player: PlayerId):
     case "SOR_022": return resolveEclEpicAction(game, log, player);
     case "SOR_025": return resolveTarkintownEpicAction(game, log, player);
     case "SOR_028": return resolveJedhaCityEpicAction(game, log, player);
+    case "LAW_019": return resolveAllianceOutpostEpicAction(game, log, player);
     default: return { response: invalidResponse("This base has no implemented epic action."), pending: null, stateChanged: false };
   }
 }
@@ -2953,6 +3000,42 @@ function splashCardIsAffordable(game: GameState, player: PlayerId, cardId: strin
     if (ready >= pilotCost) return true;
   }
   return false;
+}
+
+/**
+ * LAW_019 Alliance Outpost — "Epic Action [defeat a friendly token]: Give an Experience or Shield
+ * token to a unit, or create a Credit token."
+ * Step 1 is the COST: pick a friendly token to defeat. A "token" is either a token unit
+ * (Battle Droid, X-Wing, Spy…) or a token upgrade (Experience, Shield, Advantage).
+ */
+function friendlyTokenPlayIds(game: GameState, player: PlayerId): string[] {
+  const pState = GetPlayer(game, player);
+  const units = [...pState.groundArena, ...pState.spaceArena] as Unit[];
+  const tokenUnits = units.filter(u => Unit.FromInterface(u).IsTokenUnit()).map(u => u.playId);
+  // A token upgrade the player controls, wherever it is attached.
+  const tokenUpgrades = GetAllUnits(game)
+    .flatMap(u => u.upgrades)
+    .filter(upg => IsTokenUpgrade(upg.cardId) && upg.controller === player)
+    .map(upg => upg.playId);
+  return [...tokenUnits, ...tokenUpgrades];
+}
+
+function resolveAllianceOutpostEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
+  const tokens = friendlyTokenPlayIds(game, player);
+  if (tokens.length === 0) {
+    return { response: invalidResponse("Alliance Outpost: you control no token to defeat."), pending: null, stateChanged: false };
+  }
+
+  GetPlayer(game, player).base.epicActionUsed = true;
+  log.push(`Player ${player} used ${CardTitle("LAW_019")}.`);
+  const pending: AbilityTargetPending = {
+    type: "ability-target",
+    cardId: "LAW_019_cost",
+    player,
+    fromPlayIds: tokens,
+    continuation: null,
+  };
+  return { response: resolutionResponse(pendingToResolution(pending, game)), pending, stateChanged: false };
 }
 
 /** SOR_025 Tarkintown — "Epic Action: Deal 3 damage to a damaged non-leader unit." */
@@ -3984,6 +4067,28 @@ function handleChooseTarget(
         const bag181 = drainTriggerBag(game, log);
         if (bag181) return { response: resolutionResponse(pendingToResolution(bag181, game)), pending: bag181, stateChanged: true };
         return { response: stateResponse(game), pending: null, stateChanged: true };
+      }
+      case "SEC_004": { // Leia Organa disclose: the revealed card must carry one of the five aspects.
+        if (!CardsCanDisclose([cardId], []) || !CardAspects(cardId).some(a => SEC_004_ASPECTS.includes(a))) {
+          return { response: invalidResponse("Disclose: revealed card has none of Vigilance, Command, Aggression, Cunning or Heroism."), pending, stateChanged: false };
+        }
+        log.push(`${CardTitle("SEC_004")}: disclosed ${CardTitle(cardId)}.`);
+        // "a unit that doesn't share an aspect with the disclosed card"
+        const eligible004 = UnitsNotSharingAspectWith(cardId);
+        if (eligible004.length === 0) {
+          log.push(`${CardTitle("SEC_004")}: no unit without a shared aspect — no token given.`);
+          const bag004 = drainTriggerBag(game, log);
+          if (bag004) return { response: resolutionResponse(pendingToResolution(bag004, game)), pending: bag004, stateChanged: true };
+          return { response: stateResponse(game), pending: null, stateChanged: true };
+        }
+        const xpPending: AbilityTargetPending = {
+          type: "ability-target",
+          cardId: "SEC_004_xp",
+          player: pending.player,
+          fromPlayIds: eligible004.map(u => u.playId),
+          continuation: null,
+        };
+        return { response: resolutionResponse(pendingToResolution(xpPending, game)), pending: xpPending, stateChanged: false };
       }
       case "SEC_148": { // Karis Nemik disclose pick 1: needs Aggression + Heroism across the revealed cards
         const has148A = CardsCanDisclose([cardId], ["Aggression"]);
@@ -5971,6 +6076,35 @@ function resolveActionAbility(
         fromPlayIds: vehicles013,
       } satisfies UpgradeTargetPending;
     }
+    case "SEC_004": { // Leia Organa (leader side) — disclose one of the five aspects, then give an
+                      // Experience token to a unit that doesn't share an aspect with that card.
+      if (!CanDiscloseAnyOf(player, SEC_004_ASPECTS)) return null;
+      return { type: "play-from-hand", cardId: "SEC_004", player } satisfies PlayFromHandPending;
+    }
+    case "LAW_010": { // Leia Organa (leader side) — Action [2 resources, Exhaust]: for this phase,
+                      // give a unit +1/+1 for each different aspect it has.
+      const allUnits010 = GetAllUnits(game);
+      if (allUnits010.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LAW_010",
+        player,
+        fromPlayIds: allUnits010.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "LOF_002": { // Mother Talzin (leader side) — Action [Exhaust, use the Force]: Give a unit -1/-1.
+      if (!UseTheForce(player, log, "LOF_002")) return null; // no token → the cost can't be paid
+      const allUnits002 = GetAllUnits(game);
+      if (allUnits002.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LOF_002",
+        player,
+        fromPlayIds: allUnits002.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "LOF_003": { // Ahsoka Tano — Action [Exhaust, use the Force]: Give a friendly unit Sentinel this phase.
       if (!UseTheForce(player, log, "LOF_003")) return null;
       const friendly003 = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena];
@@ -7243,6 +7377,55 @@ function applyAbilityEffect(
       }
       break;
     }
+    case "LAW_019_cost": { // Alliance Outpost — the cost: defeat the chosen friendly token.
+      if (!targetPlayId) break;
+      const gs019 = game.currentGameState;
+      const tokenUnit = GetUnitByPlayId(gs019, targetPlayId);
+      if (tokenUnit) {
+        defeatUnit(gs019, game.gameLog, tokenUnit);
+      } else {
+        defeatUpgradeByPlayId(gs019, game.gameLog, targetPlayId, CardTitle("LAW_019"), null, pending.player);
+      }
+      updateDefeatedPlayers(gs019);
+      return {
+        type: "choose-one",
+        cardId: "LAW_019",
+        player: pending.player!,
+        options: [
+          { id: "experience", label: "Give an Experience token to a unit" },
+          { id: "shield", label: "Give a Shield token to a unit" },
+          { id: "credit", label: "Create a Credit token" },
+        ],
+        continuation: null,
+      } satisfies ChooseOnePending;
+    }
+    case "LAW_019_experience": // Alliance Outpost — give the chosen token to the chosen unit.
+    case "LAW_019_shield": {
+      if (!targetPlayId) break;
+      const target019 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target019) {
+        const tokenCardId = pending.cardId === "LAW_019_experience" ? "SOR_T01" : "SOR_T02";
+        target019.upgrades.push({
+          cardId: tokenCardId,
+          playId: nextPlayId(game.currentGameState),
+          owner: target019.owner,
+          controller: target019.controller,
+        });
+        game.gameLog.push(`${CardTitle("LAW_019")}: gave a ${CardTitle(tokenCardId)} token to ${CardTitle(target019.cardId)}.`);
+      }
+      break;
+    }
+    case "LOF_128": { // Protect the Pod — step 1: chose the friendly non-Vehicle unit, now pick the enemy.
+      if (!targetPlayId || !pending.player) break;
+      const enemy128 = chooseEnemyForPowerDamage("LOF_128_deal", pending.player, targetPlayId, game.currentGameState);
+      if (enemy128) return enemy128;
+      break;
+    }
+    case "LOF_128_deal": { // Protect the Pod — step 2: deal the friendly unit's REMAINING HP to it.
+      if (!targetPlayId || !pending.sourcePlayId) break;
+      dealRemainingHpToEnemy(game.currentGameState, game.gameLog, CardTitle("LOF_128"), pending.sourcePlayId, targetPlayId);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
     case "SOR_127": { // Strike True — step 1: chose friendly unit, now prompt for enemy target
       if (!targetPlayId || !pending.player) break;
       const enemy127 = chooseEnemyForPowerDamage("SOR_127_deal", pending.player, targetPlayId, game.currentGameState);
@@ -7452,6 +7635,53 @@ function applyAbilityEffect(
       const target031 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target031) GiveStatModForPhase("LOF_031", target031, -2, game.gameLog);
       break;
+    }
+    case "LAW_010": { // Leia Organa — +1/+1 for each different aspect the chosen unit has.
+      if (!targetPlayId) break;
+      const target010 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target010) {
+        const aspects010 = DistinctAspectCount(target010.cardId);
+        if (aspects010 > 0) GiveStatModForPhase("LAW_010", target010, aspects010, game.gameLog);
+      }
+      break;
+    }
+    case "SEC_004_xp": { // Leia Organa — give an Experience token to the chosen non-sharing unit.
+      if (!targetPlayId) break;
+      const target004 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target004) {
+        target004.upgrades.push({
+          cardId: "SOR_T01",
+          playId: nextPlayId(game.currentGameState),
+          owner: target004.owner,
+          controller: target004.controller,
+        });
+        game.gameLog.push(`${CardTitle("SEC_004")}: gave an Experience token to ${CardTitle(target004.cardId)}.`);
+      }
+      break;
+    }
+    case "LAW_010_deployed": { // Leia Organa (When Deployed) — give the chosen unit an Experience
+                                // token for each different aspect among units you control.
+      if (!targetPlayId) break;
+      const target010d = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target010d) {
+        const count010 = DistinctAspectsAmongUnits(pending.player!).size;
+        for (let i = 0; i < count010; i++) {
+          target010d.upgrades.push({
+            cardId: "SOR_T01",
+            playId: nextPlayId(game.currentGameState),
+            owner: target010d.owner,
+            controller: target010d.controller,
+          });
+        }
+        game.gameLog.push(`${CardTitle("LAW_010")}: gave ${count010} Experience token(s) to ${CardTitle(target010d.cardId)}.`);
+      }
+      break;
+    }
+    case "LOF_002": { // Mother Talzin (both sides) — give the chosen unit -1/-1 for this phase.
+      if (!targetPlayId) break;
+      const target002 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target002) GiveStatModForPhase("LOF_002", target002, -1, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
     case "LOF_070_heroism": // Anakin (Champion of Mortis) — either When Played gives –3/–3 for this phase.
     case "LOF_070_villainy": {
@@ -7896,6 +8126,27 @@ function applyAbilityEffect(
         attackerPlayId: targetPlayId,
         source: "SOR_217",
         continuation: pending.continuation,
+      };
+    }
+    case "JTL_156": { // Trench Run: +4/+0 ForAttack (and the granted On Attack, see on-attack.ts),
+                      // then attack with the chosen Fighter.
+      if (!targetPlayId) break;
+      game.currentGameState.currentEffects.push({ cardId: "JTL_156", duration: "ForAttack", affectedPlayer: pending.player!, targetPlayId });
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "JTL_156",
+        continuation: null,
+      };
+    }
+    case "JTL_177": { // Stay on Target: +2/+0 ForAttack, then attack with the chosen Vehicle.
+      if (!targetPlayId) break;
+      game.currentGameState.currentEffects.push({ cardId: "JTL_177", duration: "ForAttack", affectedPlayer: pending.player!, targetPlayId });
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "JTL_177",
+        continuation: null,
       };
     }
     case "SOR_220": { // Surprise Strike: +3/+0 ForAttack then attack with chosen unit.

@@ -597,6 +597,34 @@ export function CanDisclose(player: PlayerId, aspects: string[]): boolean {
   return CardsCanDisclose(GetHand(player).map(c => c.cardId), aspects);
 }
 
+/** The five aspects Leia (SEC_004) may disclose — Villainy is deliberately not among them. */
+export const SEC_004_ASPECTS = ["Vigilance", "Command", "Aggression", "Cunning", "Heroism"];
+
+/** True when the player's hand holds a card carrying at least one of the given aspects. */
+export function CanDiscloseAnyOf(player: PlayerId, aspects: string[]): boolean {
+  return GetHand(player).some(c => CardAspects(c.cardId).some(a => aspects.includes(a)));
+}
+
+/** Units sharing no aspect at all with the disclosed card. */
+export function UnitsNotSharingAspectWith(disclosedCardId: string): Unit[] {
+  const disclosed = new Set(CardAspects(disclosedCardId));
+  return AllUnits().filter(u => !CardAspects(u.cardId).some(a => disclosed.has(a)));
+}
+
+/** How many DIFFERENT aspects a card has (Command,Heroism → 2; Command,Command → 1). */
+export function DistinctAspectCount(cardId: string): number {
+  return new Set(CardAspects(cardId)).size;
+}
+
+/** The set of different aspects across all units a player controls. */
+export function DistinctAspectsAmongUnits(player: PlayerId): Set<string> {
+  const aspects = new Set<string>();
+  for (const unit of GetUnitsForPlayer(player)) {
+    for (const aspect of CardAspects(unit.cardId)) aspects.add(aspect);
+  }
+  return aspects;
+}
+
 /** True when the player's discard pile contains at least one card with the given aspect. */
 export function PlayerHasAspectInDiscard(player: PlayerId, aspect: string): boolean {
   const game = GetGame();
@@ -810,6 +838,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
   //cards with innate on-attack abilities
   switch (cardId) {
     case "SEC_188": //Darth Traya — On Attack: may ready a non-unit leader
+    case "SEC_004": //Leia Organa (SEC, deployed) — On Attack: may disclose, then give an XP token
+    case "LOF_002": //Mother Talzin (deployed) — On Attack: may give a unit -1/-1 this phase
     case "JTL_147": //Black One — On Attack: if you control Poe Dameron, may deal 1 damage to a unit
     case "JTL_151": //Red Five — On Attack: may deal 2 damage to a damaged unit
     case "LOF_045": //Yaddle — On Attack: each other friendly Jedi gains Restore 1 this phase

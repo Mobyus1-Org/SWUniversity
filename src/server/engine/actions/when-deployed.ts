@@ -14,6 +14,21 @@ export function resolveWhenDeployed(
   const game = GetGame();
   if (!game) throw new Error("Game not found in resolveWhenDeployed");
   switch (cardId) {
+    case "LAW_010": { // Leia Organa — "When Deployed: Choose a unit. Give an Experience token to
+                      // that unit for each different aspect among units you control."
+      const units010 = [
+        ...game.currentGameState.player1.groundArena, ...game.currentGameState.player1.spaceArena,
+        ...game.currentGameState.player2.groundArena, ...game.currentGameState.player2.spaceArena,
+      ];
+      if (units010.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LAW_010_deployed",
+        player,
+        fromPlayIds: units010.map(u => u.playId),
+        continuation: null,
+      };
+    }
     case "TWI_007": { // Captain Rex — When Deployed: Create a Clone Trooper token.
       CreateCloneTrooper(game.currentGameState, player, log, "TWI_007");
       return null;

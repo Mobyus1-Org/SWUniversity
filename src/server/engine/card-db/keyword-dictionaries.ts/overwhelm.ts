@@ -105,6 +105,7 @@ export function HasOverwhelm(cardId: string,
   switch(cardId)
   {
     //leader units
+    case "LAW_010"://Leia Organa (LAW) Leader Unit - Someone Who Loves You
     case "SHD_007"://Moff Gideon Leader Unit
     case "TWI_012"://Anakin Skywalker Leader Unit
     case "TWI_005"://Count Dooku Leader Unit

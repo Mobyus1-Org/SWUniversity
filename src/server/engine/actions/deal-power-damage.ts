@@ -5,8 +5,9 @@ import { GetUnitsForPlayer, GetOtherPlayer, GetUnitByPlayId, DealDamageToUnit } 
 import { Unit } from "@/server/engine/unit";
 import { CardArena } from "@/server/engine/card-db/generated";
 
-// Shared mechanic: "<a friendly unit> deals damage equal to its power to <an enemy unit>."
-// Used by Strike True (SOR_127), Haymaker (LAW_168), and Director Krennic's deployed side (LAW_008).
+// Shared mechanic: "<a friendly unit> deals damage equal to <its power | its remaining HP> to
+// <an enemy unit>." Used by Strike True (SOR_127), Haymaker (LAW_168), Director Krennic's deployed
+// side (LAW_008), and Protect the Pod (LOF_128, remaining HP + non-Vehicle restriction).
 // Callers wire two dispatch "choose-target" cases: the first (cardId) resolves the friendly pick and
 // builds step 2; the second (dealCardId) applies the damage.
 
@@ -14,9 +15,11 @@ import { CardArena } from "@/server/engine/card-db/generated";
 export function chooseFriendlyForPowerDamage(
   cardId: string,
   player: PlayerId,
-  opts: { excludePlayId?: string } = {},
+  opts: { excludePlayId?: string; filter?: (unit: Unit) => boolean } = {},
 ): AbilityTargetPending | null {
-  const friendly = GetUnitsForPlayer(player).filter(u => u.playId !== opts.excludePlayId);
+  const friendly = GetUnitsForPlayer(player)
+    .filter(u => u.playId !== opts.excludePlayId)
+    .filter(u => (opts.filter ? opts.filter(u) : true));
   if (friendly.length === 0) return null;
   return { type: "ability-target", cardId, player, fromPlayIds: friendly.map(u => u.playId), continuation: null };
 }
@@ -38,6 +41,20 @@ export function chooseEnemyForPowerDamage(
   }
   if (enemies.length === 0) return null;
   return { type: "ability-target", cardId: dealCardId, player, sourcePlayId: friendlyPlayId, fromPlayIds: enemies.map(u => u.playId), continuation: null };
+}
+
+/** Resolve — deal the chosen friendly unit's REMAINING HP to the chosen enemy unit. */
+export function dealRemainingHpToEnemy(
+  game: GameState,
+  gameLog: string[],
+  sourceLabel: string,
+  friendlyPlayId: string,
+  enemyPlayId: string,
+): void {
+  const source = GetUnitByPlayId(game, friendlyPlayId);
+  if (!source) return;
+  const remainingHp = Unit.FromInterface(source).CurrentHP();
+  DealDamageToUnit(game, sourceLabel, enemyPlayId, remainingHp, gameLog);
 }
 
 /** Resolve — deal the chosen friendly unit's current power to the chosen enemy unit. */

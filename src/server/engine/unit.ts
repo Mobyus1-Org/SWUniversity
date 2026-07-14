@@ -209,6 +209,8 @@ export class Unit implements UnitInterface {
         case "SOR_028": power -= 4; break; // Jedha City base Epic Action –4/–0 Phase
         case "SOR_217": power += 1; break; // Shoot First +1/+0 ForAttack
         case "SOR_220": power += 3; break; // Surprise Strike +3/+0 ForAttack
+        case "JTL_177": power += 2; break; // Stay on Target +2/+0 ForAttack
+        case "JTL_156": power += 4; break; // Trench Run +4/+0 ForAttack
         case "SOR_240": power += 2; break; // Fleet Lieutenant +2/+0 ForAttack
         case "TWI_012_action": power += 2; break; // Anakin Skywalker leader Action +2/+0 ForAttack (vs a unit)
         case "TWI_011_action": power += 1; break; // Ahsoka Tano leader Action +1/+0 for this attack

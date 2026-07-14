@@ -474,6 +474,7 @@ export const Cards = {
     ash: {
       camtono: "ASH_229",
       nowhereToHide: "ASH_198",
+      whistlingBirds: "ASH_183",
     },
     sec: {
       clandestineConnections: "SEC_264",
@@ -550,6 +551,8 @@ export const Cards = {
     },
     jtl: {
       repair: "JTL_075",
+      stayOnTarget: "JTL_177",
+      trenchRun: "JTL_156",
       torpedoBarrage: "JTL_234",
       dedicatedWingmen: "JTL_254",
       unityOfPurpose: "JTL_106",
@@ -576,6 +579,7 @@ export const Cards = {
       cureWounds: "LOF_075",
       sorcerousBlast: "LOF_172",
       shatterpoint: "LOF_079",
+      protectThePod: "LOF_128",
     },
   },
 }

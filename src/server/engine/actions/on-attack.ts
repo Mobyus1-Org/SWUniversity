@@ -1,8 +1,9 @@
+import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, PlayerControlsCardWithTitle } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
-import { CardTitle } from "@/server/engine/card-db/generated";
+import { CardCost, CardTitle } from "@/server/engine/card-db/generated";
 import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -66,7 +67,51 @@ export function resolveOnAttackTrigger(
   for(const currentEffect of GetCurrentEffectsForPlayer(attacker.controller)) {
     if (currentEffect.targetPlayId && currentEffect.targetPlayId !== attacker.playId) continue;
     switch (currentEffect.cardId) {
-      //TODO effects that grant on-attack triggers
+      case "JTL_156": { // Trench Run grants the attacker: "On Attack: Discard 2 cards from the
+                        // defending player's deck. Deal unpreventable damage equal to the
+                        // difference in the discarded cards' costs to this unit."
+        const game156 = GetGame();
+        if (!game156) break;
+        const gs156 = game156.currentGameState;
+        // The defending player is whoever owns the attack's target.
+        const opponent156: PlayerId = attacker.controller === 1 ? 2 : 1;
+        const target156 = continuation.target;
+        const defender156: PlayerId = target156.type === "base"
+          ? target156.player
+          : (AllUnits().find(u => u.playId === target156.playId)?.controller ?? opponent156);
+        const defState156 = defender156 === 1 ? gs156.player1 : gs156.player2;
+
+        const discarded156: string[] = [];
+        for (let i = 0; i < 2; i++) {
+          const top = defState156.deck.pop(); // the top of the deck is the END of the array
+          if (!top) break;
+          discarded156.push(top.cardId);
+          defState156.discard.unshift({
+            cardId: top.cardId,
+            playId: String(gs156.nextPlayId++),
+            owner: defender156,
+            controller: defender156,
+            turnDiscarded: gs156.currentRound,
+            discardEffect: "",
+          });
+        }
+        if (discarded156.length > 0) {
+          game156.gameLog.push(`${CardTitle("JTL_156")}: discarded ${discarded156.map(c => CardTitle(c)).join(", ")} from player ${defender156}'s deck.`);
+        }
+        // "the difference in the discarded cards' costs" — needs both cards to have a difference.
+        if (discarded156.length === 2) {
+          const diff156 = Math.abs(CardCost(discarded156[0]) - CardCost(discarded156[1]));
+          if (diff156 > 0) {
+            // Unpreventable: applied straight to the unit, ignoring Shields and any prevention.
+            const self156 = GetUnitsForPlayer(attacker.controller).find(u => u.playId === attacker.playId);
+            if (self156) {
+              self156.damage += diff156;
+              game156.gameLog.push(`${CardTitle("JTL_156")}: dealt ${diff156} unpreventable damage to ${CardTitle(attacker.cardId)}.`);
+            }
+          }
+        }
+        break;
+      }
     }
   }
 
@@ -391,6 +436,27 @@ export function resolveOnAttackTrigger(
         game045.gameLog.push(`${CardTitle("LOF_045")}: ${otherJedi.length} other friendly Jedi unit(s) gained Restore 1 this phase.`);
       }
       return continuation;
+    }
+    case "SEC_004": { // Leia Organa (deployed) — "On Attack: You may disclose ... If you do, give an
+                      // Experience token to a unit that doesn't share an aspect with the disclosed card."
+      if (!CanDiscloseAnyOf(attacker.controller, SEC_004_ASPECTS)) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "SEC_004",
+        player: attacker.controller,
+        sourcePlayId: attacker.playId,
+        helperText: "Disclose an aspect to give an Experience token to a unit that doesn't share it?",
+        yesLabel: "Disclose",
+        noLabel: "Skip",
+        onYes: { type: "play-from-hand", cardId: "SEC_004", player: attacker.controller },
+        continuation,
+      };
+    }
+    case "LOF_002": { // Mother Talzin (deployed) — "On Attack: You may give a unit -1/-1 for this phase."
+      const units002 = AllUnits();
+      if (units002.length === 0) return continuation;
+      return optionalTarget("LOF_002", attacker.controller, units002.map(u => u.playId),
+        "Give a unit -1/-1 for this phase?", { continuation });
     }
     case "JTL_147": { // Black One "On Attack: If you control Poe Dameron (as a unit, upgrade, or
                       // leader), you may deal 1 damage to a unit."
