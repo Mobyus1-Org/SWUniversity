@@ -25,8 +25,6 @@ import {
   CardTitle,
   CardTraits,
   CardType,
-  CardUpgradeHp,
-  CardUpgradePower,
 } from "@/server/engine/card-db/generated";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
@@ -113,7 +111,8 @@ import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dict
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
-import { CreateSpy, CreateCreditToken, CreateCloneTrooper } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateCreditToken, CreateCloneTrooper, DefeatAdvantageTokensAfterCombat } from "@/server/engine/token-helpers";
+import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { UpgradeImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
@@ -150,8 +149,8 @@ export function computeUnitBuffs(gs: GameState): Record<string, { power: number;
       const unit = Unit.FromInterface(u);
       const basePower = CardPower(u.cardId) || 0;
       const baseHp = CardHp(u.cardId) || 0;
-      const upgPow = u.upgrades.reduce((sum, upg) => sum + (CardUpgradePower(upg.cardId) || 0), 0);
-      const upgHp = u.upgrades.reduce((sum, upg) => sum + (CardUpgradeHp(upg.cardId) || 0), 0);
+      const upgPow = u.upgrades.reduce((sum, upg) => sum + UpgradePowerOf(upg.cardId), 0);
+      const upgHp = u.upgrades.reduce((sum, upg) => sum + UpgradeHpOf(upg.cardId), 0);
       const powBuff = unit.CurrentPower() - basePower - upgPow;
       const hpBuff = unit.TotalHP() - baseHp - upgHp;
       if (powBuff > 0 || hpBuff > 0) {
@@ -1385,6 +1384,9 @@ function resolveAttack(
     game.currentEffects = game.currentEffects.filter(
       (e) => !(e.duration === "ForAttack" && e.targetPlayId === attacker.playId),
     );
+    // The attacker's attack has ended — its Advantage tokens defeat. This runs BEFORE any
+    // "When Attack Ends" ability, so a token granted by one of those survives (ASH_180).
+    DefeatAdvantageTokensAfterCombat([attacker], log);
     const whenAttackEnds = resolveWhenAttackEnds(game, attacker, pending.continuation ?? null);
     if (willSacrifice) {
       log.push(`Heroic Sacrifice: ${attackerName} is defeated after dealing combat damage.`);
@@ -1548,6 +1550,10 @@ function resolveAttack(
     if (willSacrificeUnit && attacker.CurrentHP() > 0) {
       log.push(`Heroic Sacrifice: ${attackerName} is defeated after dealing combat damage.`);
     }
+
+    // The attacker's attack and the defender's defense have both ended — their Advantage
+    // tokens defeat. Advantage is +1/+0, so removing it can't change who was defeated above.
+    DefeatAdvantageTokensAfterCombat([attacker, defender], log);
 
     // Resolve defeats (defender first per SWU rules)
     let nextPending: PendingResolution | null = null;

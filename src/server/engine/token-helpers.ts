@@ -1,7 +1,7 @@
 import { CardArena, CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import type { GameState } from "@/lib/engine/game";
-import type { PlayerId } from "@/lib/engine/core-models";
+import type { PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 
 function spawnToken(game: GameState, player: PlayerId, cardId: string): Unit {
   const playId = String(game.nextPlayId++);
@@ -72,6 +72,53 @@ export function CreateSpy(gamestate: GameState, player: PlayerId, gameLog: strin
   }
 
   return spawnToken(gamestate, player, "SEC_T01");
+}
+
+export const ADVANTAGE_TOKEN = "ASH_T02";
+
+/**
+ * Advantage (ASH_T02) — a token upgrade giving the attached unit +1/+0 with
+ * "When attached unit's attack or defense ends: Defeat this upgrade." (CR 8.15)
+ * Shared by every ASH card that says "give an Advantage token to a unit".
+ */
+export function GiveAdvantageTokens(
+  game: GameState,
+  target: UnitInterface,
+  count: number,
+  gameLog: string[],
+  fromCardId?: string,
+): void {
+  if (count <= 0) return;
+  for (let i = 0; i < count; i++) {
+    target.upgrades.push({
+      cardId: ADVANTAGE_TOKEN,
+      playId: String(game.nextPlayId++),
+      owner: target.owner,
+      controller: target.controller,
+    });
+  }
+  const prefix = fromCardId ? `${CardTitle(fromCardId)}: ` : "";
+  gameLog.push(`${prefix}gave ${count} Advantage token${count > 1 ? "s" : ""} to ${CardTitle(target.cardId)}.`);
+}
+
+/**
+ * The Advantage token's own ability: it is defeated once the unit it is attached to
+ * finishes attacking or defending. Called at the end of an attack for the attacker and
+ * (for unit attacks) the defender. Units that took no part in the attack keep theirs.
+ */
+export function DefeatAdvantageTokensAfterCombat(
+  units: (UnitInterface | undefined | null)[],
+  gameLog: string[],
+): void {
+  for (const unit of units) {
+    if (!unit) continue;
+    const before = unit.upgrades.length;
+    unit.upgrades = unit.upgrades.filter(u => u.cardId !== ADVANTAGE_TOKEN);
+    const defeated = before - unit.upgrades.length;
+    if (defeated > 0) {
+      gameLog.push(`${defeated} Advantage token${defeated > 1 ? "s" : ""} on ${CardTitle(unit.cardId)} defeated after combat.`);
+    }
+  }
 }
 
 /**

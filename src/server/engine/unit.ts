@@ -1,6 +1,7 @@
 import { CardInPlay, PHASE_STAT_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce } from "@/server/engine/core-functions";
-import { CardHp, CardPower, CardUpgradeHp, CardUpgradePower } from "@/server/engine/card-db/generated";
+import { CardHp, CardPower } from "@/server/engine/card-db/generated";
+import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
@@ -216,7 +217,7 @@ export class Unit implements UnitInterface {
     }
 
     for (const upgrade of this.upgrades) {
-      power += CardUpgradePower(upgrade.cardId);
+      power += UpgradePowerOf(upgrade.cardId);
     }
 
     if (this.cardId === "SHD_056" && this.upgrades.length > 0 && !this.LostAbilities()) {
@@ -281,7 +282,7 @@ export class Unit implements UnitInterface {
     }
 
     for (const upgrade of this.upgrades) {
-      hp += CardUpgradeHp(upgrade.cardId);
+      hp += UpgradeHpOf(upgrade.cardId);
     }
 
     if (this.cardId === "SHD_056" && this.upgrades.length > 0) {

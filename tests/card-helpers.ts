@@ -430,6 +430,7 @@ export const Cards = {
     token: {
       experience: "SOR_T01",
       shield: "SOR_T02",
+      advantage: "ASH_T02",
     },
     sor: {
       entrenched: "SOR_072",
