@@ -1,5 +1,6 @@
 import type { Game } from "@/lib/engine/game";
 import type { CurrentEffect, PlayerId, Zones } from "@/lib/engine/core-models";
+import type { GameDispatch } from "@/lib/engine/message-types";
 
 // ---------------------------------------------------------------------------
 // Pending resolution variants
@@ -167,43 +168,47 @@ export interface ExploitTargetPending {
 }
 
 /**
- * What happens once a Credit-discounted cost is paid. "play-card" finishes
- * playing the card; "sec264-base-damage" resolves Clandestine Connections'
- * "deal 2 damage to a base", then resumes the attack.
+ * Everything needed to replay the dispatch that raised a Credit prompt.
+ *
+ * The engine reaches a Credit prompt by speculatively running `replayDispatch`,
+ * hitting a payment the player has a real choice about, and rolling back.
+ * Answering the prompt re-runs `replayDispatch` from the top with the decision
+ * appended to `decisions`, so the payment site itself never learns Credits exist.
  */
-export type CreditPaymentPurpose =
-  | { kind: "play-card" }
-  | { kind: "sec264-base-damage"; amount: number; attackContinuation: PendingResolution | null };
-
-/**
- * Step 1 of Credit payment: ask whether to defeat Credit tokens for a {1R}
- * discount while paying a cost. Resolved via "choose-option" (Yes/No).
- * When maxUseful === 1 this is the whole flow ("Use 1 Credit?" → auto-spend 1).
- */
-export interface CreditPaymentOptionPending {
-  type: "credit-payment-option";
-  /** The card being played (already removed from hand) or the ability source. */
+interface CreditPaymentBase {
+  /** The card or ability whose cost is being paid — used for prompt text only. */
   cardId: string;
   playingPlayer: PlayerId;
   /** Full resource cost before any Credit reduction. */
   fullCost: number;
   /** min(Credits controlled, fullCost) — the most Credits worth defeating. */
   maxUseful: number;
-  /** Defaults to { kind: "play-card" } when omitted. */
-  purpose?: CreditPaymentPurpose;
+  /** max(0, fullCost - ready resources) — Credits that must be defeated regardless. */
+  minForced: number;
+  /** Which payment of the replayed dispatch this is (0-based). */
+  paymentIndex: number;
+  replayDispatch: GameDispatch;
+  replayPending: PendingResolution | null;
+  /** Decisions already made for earlier payments of this same dispatch. */
+  decisions: (number | null)[];
 }
 
 /**
- * Step 2 of Credit payment (only when maxUseful >= 2): pick how many Credits to
- * defeat, 1..maxUseful. Resolved via "choose-option" with the number as a string.
+ * Step 1 of Credit payment: ask whether to defeat Credit tokens for a {1R}
+ * discount while paying a cost. Resolved via "choose-option" (Yes/No), where
+ * "No" means "defeat only the forced minimum" (usually zero).
  */
-export interface CreditPaymentAmountPending {
+export interface CreditPaymentOptionPending extends CreditPaymentBase {
+  type: "credit-payment-option";
+}
+
+/**
+ * Step 2 of Credit payment (only when more than one amount is available): pick
+ * how many Credits to defeat, minForced..maxUseful. Resolved via "choose-option"
+ * with the number as a string.
+ */
+export interface CreditPaymentAmountPending extends CreditPaymentBase {
   type: "credit-payment-amount";
-  cardId: string;
-  playingPlayer: PlayerId;
-  fullCost: number;
-  maxUseful: number;
-  purpose?: CreditPaymentPurpose;
 }
 
 /** Plot mechanic step 1: ask whether to use Plot before or after When Deployed. */

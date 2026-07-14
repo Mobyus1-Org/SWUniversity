@@ -54,7 +54,7 @@ import type {
   ResolutionRequest,
   UseAbilityDispatchData,
 } from "@/lib/engine/message-types";
-import { effectiveSmuggleCost } from "@/server/engine/card-playability";
+import { effectiveSmuggleCost, spendableFor } from "@/server/engine/card-playability";
 import type { Game, GameState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import type {
@@ -278,7 +278,8 @@ function regionalGovernorBlocks(game: GameState, player: PlayerId, cardId: strin
   );
 }
 
-function exhaustResources(game: GameState, player: PlayerId, count: number): void {
+/** Exhausts `count` ready resources. Never consults Credits — callers use payResources. */
+function exhaustResourcesRaw(game: GameState, player: PlayerId, count: number): void {
   let remaining = count;
   for (const r of GetPlayer(game, player).resources) {
     if (remaining <= 0) break;
@@ -287,6 +288,78 @@ function exhaustResources(game: GameState, player: PlayerId, count: number): voi
       remaining--;
     }
   }
+}
+
+/**
+ * Thrown by payResources when the player has a real choice about how many Credits
+ * to defeat. runDispatch catches it, discards the speculative run, and prompts;
+ * answering replays the dispatch with the decision recorded.
+ */
+class NeedsCreditDecision extends Error {
+  constructor(
+    readonly info: {
+      paymentIndex: number;
+      player: PlayerId;
+      sourceCardId: string;
+      fullCost: number;
+      maxUseful: number;
+      minForced: number;
+    },
+  ) {
+    super("Credit payment decision required");
+    this.name = "NeedsCreditDecision";
+  }
+}
+
+/**
+ * Per-dispatch Credit decision state, set by runDispatch before the handler runs.
+ * creditDecisions[i] is how many Credits the player chose to defeat for the i-th
+ * payment of this dispatch; a hole means "not decided yet".
+ */
+let creditDecisions: (number | null)[] = [];
+let creditPaymentIndex = 0;
+
+/**
+ * The single entry point for paying a resource cost.
+ *
+ * CR 375: a Credit token reads "While paying resources, you may defeat this token.
+ * If you do, pay 1 less" — so this applies to every cost in the game. Callers never
+ * think about Credits: when the player has a real choice this unwinds with
+ * NeedsCreditDecision, and the dispatch is replayed once the prompt is answered.
+ */
+function payResources(
+  game: GameState,
+  player: PlayerId,
+  cost: number,
+  log: string[],
+  sourceCardId: string,
+): void {
+  const paymentIndex = creditPaymentIndex++;
+  const p = GetPlayer(game, player);
+  const credits = p.supplemental.creditTokens ?? 0;
+  const ready = p.resources.filter(r => r.ready).length;
+  const maxUseful = Math.min(credits, cost);
+  const minForced = Math.max(0, cost - ready);
+
+  const decided = creditDecisions[paymentIndex];
+  let spend: number;
+  if (typeof decided === "number") {
+    spend = decided;
+  } else if (maxUseful > minForced) {
+    throw new NeedsCreditDecision({ paymentIndex, player, sourceCardId, fullCost: cost, maxUseful, minForced });
+  } else {
+    // No real choice: 0 when the player has no Credits, or the forced amount when
+    // resources alone cannot cover the cost. Clamped to maxUseful because a caller's
+    // affordability guard may be looser than this payment (deployLeader, for one,
+    // counts all resources rather than ready ones) — never overdraw Credits.
+    spend = Math.min(minForced, maxUseful);
+  }
+
+  if (spend > 0) {
+    p.supplemental.creditTokens = credits - spend;
+    log.push(`Player ${player} defeated ${spend} Credit token(s) to pay ${spend} less.`);
+  }
+  exhaustResourcesRaw(game, player, Math.max(0, cost - spend));
 }
 
 function pilotPlayCost(game: GameState, player: PlayerId, cardId: string): number {
@@ -488,7 +561,7 @@ function addUnitFromSearch(game: GameState, log: string[], cardId: string, playe
   let costDesc = 'for free';
   if (costModifier !== undefined && costModifier !== 'free') {
     const effectiveCost = Math.max(0, playCost(game, player, cardId) + costModifier);
-    exhaustResources(game, player, effectiveCost);
+    payResources(game, player, effectiveCost, log, cardId);
     costDesc = `for ${effectiveCost} resources`;
   }
 
@@ -1529,7 +1602,7 @@ function attackerOwnWhenAttackEnds(
       if (deck192.length === 0) return continuation;
       const topCard192 = deck192[deck192.length - 1];
       const cost192 = playCost(game, attacker.controller, topCard192.cardId);
-      const ready192 = (attacker.controller === 1 ? game.player1 : game.player2).resources.filter(r => r.ready).length;
+      const ready192 = spendableFor(game, attacker.controller);
       const discardStep192 = {
         type: "ability-option" as const,
         cardId: "SOR_192_discard",
@@ -1674,21 +1747,29 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         helperText: `Use Exploit ${pending.exploitAmount} while playing ${CardTitle(pending.cardId)}?`,
         options: ["Yes", "No"],
       } satisfies NeedsOption;
-    case "credit-payment-option":
+    case "credit-payment-option": {
+      // Only one amount above the forced floor → the Yes/No prompt is the whole flow.
+      const onlyOneAmount = pending.maxUseful === pending.minForced + 1;
       return {
         type: "Option",
-        helperText: pending.maxUseful === 1
-          ? `Use 1 Credit to pay 1 less for ${CardTitle(pending.cardId)}?`
+        helperText: onlyOneAmount
+          ? `Use ${pending.maxUseful} Credit(s) to pay less for ${CardTitle(pending.cardId)}?`
           : `Use Credits to pay less for ${CardTitle(pending.cardId)}?`,
         options: ["Yes", "No"],
-        yesLabel: pending.maxUseful === 1 ? "Use 1 Credit" : "Use Credits",
-        noLabel: `Pay ${pending.fullCost}`,
+        yesLabel: onlyOneAmount ? `Use ${pending.maxUseful} Credit(s)` : "Use Credits",
+        noLabel: pending.minForced > 0
+          ? `Use only ${pending.minForced} Credit(s)`
+          : `Pay ${pending.fullCost}`,
       } satisfies NeedsOption;
+    }
     case "credit-payment-amount":
       return {
         type: "Option",
-        helperText: `Defeat how many Credits? (1–${pending.maxUseful})`,
-        options: Array.from({ length: pending.maxUseful }, (_, i) => String(i + 1)),
+        helperText: `Defeat how many Credits? (${pending.minForced}–${pending.maxUseful})`,
+        options: Array.from(
+          { length: pending.maxUseful - pending.minForced + 1 },
+          (_, i) => String(pending.minForced + i),
+        ),
       } satisfies NeedsOption;
     case "bamboozle-alt-cost":
       return {
@@ -1885,11 +1966,33 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
 // Internal result type
 // ---------------------------------------------------------------------------
 
+/**
+ * Set when the player has just answered a Credit prompt: re-run `pending.replayDispatch`,
+ * defeating `spend` Credits for its paymentIndex-th payment. handleChooseOption only sees
+ * the cloned game state, not the caller's context, so it cannot replay itself — runDispatch
+ * does, and discards whatever `response` accompanied this marker.
+ */
+interface CreditReplay {
+  pending: CreditPaymentOptionPending | CreditPaymentAmountPending;
+  spend: number;
+}
+
 interface HandlerResult {
   response: DispatchResponse;
   pending: PendingResolution | null;
   /** True when an irreversible game state change occurred (snapshot history). */
   stateChanged: boolean;
+  creditReplay?: CreditReplay;
+}
+
+/** The player answered a Credit prompt: hand runDispatch the replay it needs to perform. */
+function replayWithCredits(
+  game: GameState,
+  pending: CreditPaymentOptionPending | CreditPaymentAmountPending,
+  spend: number,
+): HandlerResult {
+  // `response` is a placeholder — runDispatch replaces it with the replayed run's response.
+  return { response: stateResponse(game), pending, stateChanged: false, creditReplay: { pending, spend } };
 }
 
 // ---------------------------------------------------------------------------
@@ -1900,41 +2003,6 @@ interface HandlerResult {
  * Finishes playing a card after cost has been paid and the card removed from hand.
  * Handles Unit placement, Upgrade targeting, Event resolution, and trigger draining.
  */
-/**
- * Defeat `creditsToSpend` Credit tokens (each a {1R} discount), exhaust the
- * reduced resource cost, then finish playing the card. Shared by the Yes/No and
- * amount-picker steps of the Credit payment flow.
- */
-function payWithCreditsAndComplete(
-  game: GameState,
-  log: string[],
-  pending: CreditPaymentOptionPending | CreditPaymentAmountPending,
-  creditsToSpend: number,
-): HandlerResult {
-  const { cardId, fullCost } = pending;
-  const player = pending.playingPlayer;
-  const reducedCost = Math.max(0, fullCost - creditsToSpend);
-  const readyCount = GetPlayer(game, player).resources.filter(r => r.ready).length;
-  if (readyCount < reducedCost) {
-    return { response: invalidResponse(`Player ${player} cannot afford ${cardId}.`), pending: null, stateChanged: false };
-  }
-  if (creditsToSpend > 0) {
-    const p = GetPlayer(game, player);
-    p.supplemental.creditTokens = (p.supplemental.creditTokens ?? 0) - creditsToSpend;
-    log.push(`Player ${player} defeated ${creditsToSpend} Credit token(s) to pay ${creditsToSpend} less.`);
-  }
-  exhaustResources(game, player, reducedCost);
-
-  const purpose = pending.purpose ?? { kind: "play-card" as const };
-  if (purpose.kind === "play-card") {
-    log.push(`Player ${player} played ${CardTitle(cardId) ?? cardId}.`);
-    return completePlayCard(game, log, cardId, player);
-  }
-  // sec264-base-damage: paid the cost; now choose a base to damage, then resume the attack.
-  log.push(`${CardTitle(cardId)}: paid ${fullCost} resource(s)/Credit(s).`);
-  const baseTarget = sec264BaseTargetPending(player, purpose.amount, purpose.attackContinuation);
-  return { response: resolutionResponse(pendingToResolution(baseTarget, game)), pending: baseTarget, stateChanged: false };
-}
 
 /** Builds the "choose a base to deal SEC_264 damage to" ability-target step. */
 function sec264BaseTargetPending(
@@ -2308,7 +2376,7 @@ function handlePlayCard(
 
   const fullCost = playCost(game, player, cardId);
   const exploitAmt = ExploitAmount(cardId, "hand", player, true); // report mode: peek without consuming
-  const readyCount = GetPlayer(game, player).resources.filter(r => r.ready).length;
+  const readyCount = spendableFor(game, player);
   const minCost = exploitAmt > 0 ? Math.max(0, fullCost - exploitAmt * 2) : fullCost;
 
   // --- Piloting branch (checked before the unit affordability guard) ---
@@ -2324,7 +2392,7 @@ function handlePlayCard(
 
       if (!canAffordUnit) {
         // Only piloting is affordable — skip prompt, go straight to vehicle target
-        exhaustResources(game, player, pilotCost);
+        payResources(game, player, pilotCost, log, cardId);
         log.push(`Player ${player} is playing ${CardTitle(cardId) ?? cardId} as a Pilot.`);
         game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: "", playedAs: "Pilot" });
         const upgradePending: UpgradeTargetPending = {
@@ -2371,28 +2439,9 @@ function handlePlayCard(
       hand.push({ cardId }); // restore card
       return { response: invalidResponse(`Player ${player} cannot afford ${cardId}.`), pending: null, stateChanged: false };
     }
-    exhaustResources(game, player, fullCost);
+    payResources(game, player, fullCost, log, cardId);
     log.push(`Player ${player} played ${CardTitle(cardId) ?? cardId}.`);
     return completePlayCard(game, log, cardId, player);
-  }
-
-  // Credit tokens: while paying resources you may defeat Credits for a {1R}
-  // discount each. Offer this on the plain payment path (no Exploit) whenever the
-  // player controls a Credit worth spending and the play is affordable using them.
-  if (exploitAmt === 0) {
-    const creditsAvail = GetPlayer(game, player).supplemental.creditTokens ?? 0;
-    const maxUseful = Math.min(creditsAvail, fullCost);
-    if (maxUseful >= 1 && readyCount >= fullCost - maxUseful) {
-      hand.splice(idx, 1);
-      const creditOptionPending: CreditPaymentOptionPending = {
-        type: "credit-payment-option",
-        cardId,
-        playingPlayer: player,
-        fullCost,
-        maxUseful,
-      };
-      return { response: resolutionResponse(pendingToResolution(creditOptionPending, game)), pending: creditOptionPending, stateChanged: false };
-    }
   }
 
   if (readyCount < minCost)
@@ -2411,8 +2460,8 @@ function handlePlayCard(
     return { response: resolutionResponse(pendingToResolution(exploitOptionPending, game)), pending: exploitOptionPending, stateChanged: false };
   }
 
-  // No piloting, no exploit — pay full cost immediately
-  exhaustResources(game, player, fullCost);
+  // No piloting, no exploit — pay full cost immediately (Credits may cover part of it)
+  payResources(game, player, fullCost, log, cardId);
   hand.splice(idx, 1);
   log.push(`Player ${player} played ${CardTitle(cardId) ?? cardId}.`);
   return completePlayCard(game, log, cardId, player);
@@ -2435,7 +2484,7 @@ function handlePlaySmuggle(
   if (cost === null)
     return { response: invalidResponse(`Resource ${playId} (${resource.cardId}) cannot be Smuggled.`), pending: null, stateChanged: false };
 
-  const readyCount = p.resources.filter(r => r.ready).length;
+  const readyCount = spendableFor(game, player);
   if (readyCount < cost)
     return { response: invalidResponse(`Player ${player} cannot afford Smuggle cost of ${cost}.`), pending: null, stateChanged: false };
 
@@ -2445,7 +2494,7 @@ function handlePlaySmuggle(
   const idx = p.resources.findIndex(r => r.playId === playId);
   p.resources.splice(idx, 1);
 
-  exhaustResources(game, player, Math.max(0, wasReady ? cost - 1 : cost));
+  payResources(game, player, Math.max(0, wasReady ? cost - 1 : cost), log, cardId);
 
   if (p.deck.length > 0) {
     const topCard = p.deck.pop()!;
@@ -2529,12 +2578,12 @@ function handleUseAbility(
       return { response: invalidResponse("Leader has no available ability."), pending: null, stateChanged: false };
 
     const abilityCost = ActionAbilityCost(leader.cardId);
-    const readyResources = GetPlayer(game, player).resources.filter(r => r.ready).length;
+    const readyResources = spendableFor(game, player);
     if (readyResources < abilityCost)
       return { response: invalidResponse("Not enough resources to use leader ability."), pending: null, stateChanged: false };
 
     leader.ready = false;
-    exhaustResources(game, player, abilityCost);
+    payResources(game, player, abilityCost, log, leader.cardId);
     const nextPending = resolveActionAbility(game, log, player, leader.cardId);
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
@@ -2556,7 +2605,7 @@ function handleUseAbility(
     if (!unitAbilities.includes(unit.cardId))
       return { response: invalidResponse(`${CardTitle(unit.cardId)} has no available action ability.`), pending: null, stateChanged: false };
     const unitAbilityCost = ActionAbilityCost(unit.cardId);
-    const readyResourceCount = GetPlayer(game, player).resources.filter(r => r.ready).length;
+    const readyResourceCount = spendableFor(game, player);
     if (readyResourceCount < unitAbilityCost)
       return { response: invalidResponse(`Not enough resources to use ${CardTitle(unit.cardId)}'s ability.`), pending: null, stateChanged: false };
 
@@ -2571,7 +2620,7 @@ function handleUseAbility(
     }
 
     unit.ready = false;
-    exhaustResources(game, player, unitAbilityCost);
+    payResources(game, player, unitAbilityCost, log, unit.cardId);
 
     const nextPending = resolveActionAbility(game, log, player, unit.cardId, unit.playId);
     if (nextPending) {
@@ -2606,7 +2655,7 @@ function handleBaseEpicAction(game: GameState, log: string[], player: PlayerId):
 function resolveEclEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
   GetPlayer(game, player).base.epicActionUsed = true;
 
-  const readyCount = GetPlayer(game, player).resources.filter(r => r.ready).length;
+  const readyCount = spendableFor(game, player);
   const eligible = GetPlayer(game, player).hand.filter(c =>
     CardType(c.cardId) === "Unit" &&
     (CardCost(c.cardId) ?? 0) <= 6 &&
@@ -2733,7 +2782,7 @@ function handleChooseTarget(
     if (!canAfford(game, pending.player, resource.cardId))
       return { response: invalidResponse("Not enough resources to play this Plot card."), pending, stateChanged: false };
 
-    exhaustResources(game, pending.player, playCost(game, pending.player, resource.cardId));
+    payResources(game, pending.player, playCost(game, pending.player, resource.cardId), log, resource.cardId);
     playerState.resources.splice(resourceIdx, 1);
     if (playerState.deck.length > 0) {
       const topCard = playerState.deck.pop()!;
@@ -2952,11 +3001,11 @@ function handleChooseTarget(
         return { response: invalidResponse("Home One: card not found in discard."), pending, stateChanged: false };
       const cardId102 = playerState102.discard[idx102].cardId;
       const reducedCost102 = Math.max(0, playCost(game, pending.player, cardId102) - 3);
-      const ready102 = playerState102.resources.filter(r => r.ready).length;
+      const ready102 = spendableFor(game, pending.player);
       if (ready102 < reducedCost102)
         return { response: invalidResponse(`Home One: not enough resources to play ${CardTitle(cardId102)} (needs ${reducedCost102}).`), pending, stateChanged: false };
       playerState102.discard.splice(idx102, 1);
-      exhaustResources(game, pending.player, reducedCost102);
+      payResources(game, pending.player, reducedCost102, log, cardId102);
       log.push(`${CardTitle("SOR_102")}: played ${CardTitle(cardId102)} from discard (cost -3 = ${reducedCost102}).`);
       return completePlayCard(game, log, cardId102, pending.player);
     }
@@ -3378,7 +3427,7 @@ function handleChooseTarget(
 
     // Cost = fullCost − 2 per defeated unit, minimum 0
     const reducedCost = Math.max(0, pending.fullCost - chosen.length * 2);
-    const readyCount = GetPlayer(game, pending.playingPlayer).resources.filter(r => r.ready).length;
+    const readyCount = spendableFor(game, pending.playingPlayer);
     if (readyCount < reducedCost) {
       // Shouldn't normally happen (we validated before offering Exploit), but guard anyway
       return { response: invalidResponse(`Not enough resources after Exploit reduction.`), pending, stateChanged: false };
@@ -3387,7 +3436,7 @@ function handleChooseTarget(
     // Consume the Exploit current-effect by calling ExploitAmount in consume mode
     ExploitAmount(pending.cardId, "hand", pending.playingPlayer, false);
 
-    exhaustResources(game, pending.playingPlayer, reducedCost);
+    payResources(game, pending.playingPlayer, reducedCost, log, pending.cardId);
     log.push(`Player ${pending.playingPlayer} played ${CardTitle(pending.cardId)} using Exploit (defeated ${chosen.length} unit(s), cost reduced by ${chosen.length * 2}).`);
     return completePlayCard(game, log, pending.cardId, pending.playingPlayer);
   }
@@ -3408,10 +3457,10 @@ function handleChooseTarget(
         if (!CardTraits(cardId).includes("Imperial"))
           return { response: invalidResponse("Admiral Ozzel: chosen unit is not Imperial."), pending, stateChanged: false };
         const cost129 = playCost(game, pending.player, cardId);
-        const ready129 = GetPlayer(game, pending.player).resources.filter(r => r.ready).length;
+        const ready129 = spendableFor(game, pending.player);
         if (ready129 < cost129)
           return { response: invalidResponse("Not enough resources to play this unit."), pending, stateChanged: false };
-        exhaustResources(game, pending.player, cost129);
+        payResources(game, pending.player, cost129, log, cardId);
         hand.splice(idx, 1);
         log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Admiral Ozzel (enters ready).`);
         const result129 = completePlayCard(game, log, cardId, pending.player, { enterReady: true });
@@ -3440,10 +3489,10 @@ function handleChooseTarget(
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("Alliance Dispatcher: chosen card is not a Unit."), pending, stateChanged: false };
         const cost093 = Math.max(0, playCost(game, pending.player, cardId) - 1);
-        const ready093 = GetPlayer(game, pending.player).resources.filter(r => r.ready).length;
+        const ready093 = spendableFor(game, pending.player);
         if (ready093 < cost093)
           return { response: invalidResponse("Not enough resources to play this unit."), pending, stateChanged: false };
-        exhaustResources(game, pending.player, cost093);
+        payResources(game, pending.player, cost093, log, cardId);
         hand.splice(idx, 1);
         log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Alliance Dispatcher (-1 cost).`);
         return completePlayCard(game, log, cardId, pending.player);
@@ -3454,10 +3503,10 @@ function handleChooseTarget(
         if ((CardCost(cardId) ?? 0) > 6)
           return { response: invalidResponse("ECL: chosen unit costs more than 6."), pending, stateChanged: false };
         const eclCost = playCost(game, pending.player, cardId);
-        const eclReady = GetPlayer(game, pending.player).resources.filter(r => r.ready).length;
+        const eclReady = spendableFor(game, pending.player);
         if (eclReady < eclCost)
           return { response: invalidResponse("ECL: not enough resources to play this unit."), pending, stateChanged: false };
-        exhaustResources(game, pending.player, eclCost);
+        payResources(game, pending.player, eclCost, log, cardId);
         hand.splice(idx, 1);
         log.push(`Player ${pending.player} played ${CardTitle(cardId) ?? cardId} via Energy Conversion Lab.`);
         return completePlayCard(game, log, cardId, pending.player, {
@@ -3468,10 +3517,10 @@ function handleChooseTarget(
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("Timely Intervention: chosen card is not a Unit."), pending, stateChanged: false };
         const tiCost = playCost(game, pending.player, cardId);
-        const tiReady = GetPlayer(game, pending.player).resources.filter(r => r.ready).length;
+        const tiReady = spendableFor(game, pending.player);
         if (tiReady < tiCost)
           return { response: invalidResponse("Timely Intervention: not enough resources to play this unit."), pending, stateChanged: false };
-        exhaustResources(game, pending.player, tiCost);
+        payResources(game, pending.player, tiCost, log, cardId);
         hand.splice(idx, 1);
         log.push(`Player ${pending.player} played ${CardTitle(cardId) ?? cardId} via Timely Intervention.`);
         return completePlayCard(game, log, cardId, pending.player, {
@@ -3484,7 +3533,7 @@ function handleChooseTarget(
         const fullCost = playCost(game, pending.player, cardId);
         const cardExploit = ExploitAmount(cardId, undefined, undefined, true);
         const totalExploit = cardExploit + 1;
-        const dookuReady = GetPlayer(game, pending.player).resources.filter(r => r.ready).length;
+        const dookuReady = spendableFor(game, pending.player);
         const minCost = Math.max(0, fullCost - totalExploit * 2);
         if (dookuReady < minCost)
           return { response: invalidResponse("Not enough resources to play that card."), pending, stateChanged: false };
@@ -3580,10 +3629,10 @@ function handleChooseTarget(
           return { response: invalidResponse("Sneak Attack: chosen card is not a Unit."), pending, stateChanged: false };
         const fullCost219 = playCost(game, pending.player, cardId);
         const reducedCost219 = Math.max(0, fullCost219 - 3);
-        const ready219 = GetPlayer(game, pending.player).resources.filter(r => r.ready).length;
+        const ready219 = spendableFor(game, pending.player);
         if (ready219 < reducedCost219)
           return { response: invalidResponse("Sneak Attack: not enough resources to play this unit."), pending, stateChanged: false };
-        exhaustResources(game, pending.player, reducedCost219);
+        payResources(game, pending.player, reducedCost219, log, cardId);
         hand.splice(idx, 1);
         log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Sneak Attack (cost reduced by 3, enters ready).`);
         return completePlayCard(game, log, cardId, pending.player, {
@@ -3979,10 +4028,7 @@ function processSingleOnAttackTrigger(
       };
     }
     case "SEC_264": { // Clandestine Connections upgrade On Attack (resolved as a single chosen trigger)
-      const p264 = GetPlayer(game, attacker.controller);
-      const ready264 = p264.resources.filter(r => r.ready).length;
-      const credits264 = p264.supplemental.creditTokens ?? 0;
-      if (ready264 + credits264 < 2) return cont;
+      if (spendableFor(game, attacker.controller) < 2) return cont;
       return {
         type: "ability-option",
         cardId: "SEC_264",
@@ -4099,27 +4145,11 @@ function applyAbilityOptionEffect(
         continuation: pending.continuation ?? null,
       };
     }
-    case "SEC_264": { // Clandestine Connections Yes — pay 2 (resources and/or Credits), then deal 2 to a base
+    case "SEC_264": { // Clandestine Connections Yes — pay 2, then deal 2 to a base
       const unit264 = GetUnitByPlayId(game, pending.sourcePlayId!);
       const player264 = unit264 ? unit264.controller : pending.player!;
-      const credits264 = GetPlayer(game, player264).supplemental.creditTokens ?? 0;
-      const maxUseful264 = Math.min(credits264, 2);
-      const purpose264 = { kind: "sec264-base-damage" as const, amount: 2, attackContinuation: pending.continuation ?? null };
-      if (maxUseful264 >= 1) {
-        // Offer the Credit discount; the payment flow handles the base-damage follow-up.
-        const creditPending264: CreditPaymentOptionPending = {
-          type: "credit-payment-option",
-          cardId: "SEC_264",
-          playingPlayer: player264,
-          fullCost: 2,
-          maxUseful: maxUseful264,
-          purpose: purpose264,
-        };
-        return creditPending264;
-      }
-      // No Credits — pay 2 resources outright, then choose a base.
-      exhaustResources(game, player264, 2);
-      log.push(`${CardTitle("SEC_264")}: paid 2 resources.`);
+      payResources(game, player264, 2, log, "SEC_264");
+      log.push(`${CardTitle("SEC_264")}: paid 2.`);
       return sec264BaseTargetPending(player264, 2, pending.continuation ?? null);
     }
     case "LAW_233": { // Galen Erso Yes — an opponent takes control of Galen
@@ -4183,7 +4213,7 @@ function applyAbilityOptionEffect(
     case "JTL_096": {
       const unit = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (unit) {
-        exhaustResources(game, unit.controller, 2);
+        payResources(game, unit.controller, 2, log, "JTL_096");
         const pState = GetPlayer(game, unit.controller);
         const spaceIdx = pState.spaceArena.findIndex(u => u.playId === unit.playId);
         if (spaceIdx !== -1) {
@@ -4254,7 +4284,7 @@ function applyAbilityOptionEffect(
     case "SOR_206": { // Mining Guild TIE Yes: pay 2 resources, draw a card.
       const unit206 = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (unit206) {
-        exhaustResources(game, unit206.controller, 2);
+        payResources(game, unit206.controller, 2, log, "SOR_206");
         DrawCardForPlayer(game, log, unit206.controller);
         log.push(`${CardTitle("SOR_206")}: paid 2 resources and drew a card.`);
       }
@@ -4283,7 +4313,7 @@ function applyAbilityOptionEffect(
       const topCard192 = pState192.deck.pop();
       if (!topCard192) return pending.continuation ?? null;
       const cost192 = playCost(game, player192, topCard192.cardId);
-      exhaustResources(game, player192, cost192);
+      payResources(game, player192, cost192, log, "SOR_192");
       log.push(`${CardTitle("SOR_192")}: playing ${CardTitle(topCard192.cardId)} from top of deck.`);
       const result192 = completePlayCard(game, log, topCard192.cardId, player192);
       return result192.pending;
@@ -4429,33 +4459,27 @@ function handleChooseOption(
   }
 
   if (pending?.type === "credit-payment-option") {
-    if (option === "No") {
-      return payWithCreditsAndComplete(game, log, pending, 0);
-    }
-    if (option !== "Yes") {
+    if (option !== "Yes" && option !== "No") {
       return { response: invalidResponse(`Unknown option: ${option}`), pending, stateChanged: false };
     }
-    // "Yes" — single useful Credit auto-spends; otherwise ask how many.
-    if (pending.maxUseful === 1) {
-      return payWithCreditsAndComplete(game, log, pending, 1);
+    // "No" defeats only what the player is forced to (usually nothing).
+    if (option === "No") {
+      return replayWithCredits(game, pending, pending.minForced);
     }
-    const amountPending: CreditPaymentAmountPending = {
-      type: "credit-payment-amount",
-      cardId: pending.cardId,
-      playingPlayer: pending.playingPlayer,
-      fullCost: pending.fullCost,
-      maxUseful: pending.maxUseful,
-      purpose: pending.purpose,
-    };
+    // "Yes" with only one possible amount auto-spends it; otherwise ask how many.
+    if (pending.maxUseful === pending.minForced + 1) {
+      return replayWithCredits(game, pending, pending.maxUseful);
+    }
+    const amountPending: CreditPaymentAmountPending = { ...pending, type: "credit-payment-amount" };
     return { response: resolutionResponse(pendingToResolution(amountPending, game)), pending: amountPending, stateChanged: false };
   }
 
   if (pending?.type === "credit-payment-amount") {
     const n = parseInt(option, 10);
-    if (Number.isNaN(n) || n < 1 || n > pending.maxUseful) {
-      return { response: invalidResponse(`Choose between 1 and ${pending.maxUseful} Credit(s).`), pending, stateChanged: false };
+    if (Number.isNaN(n) || n < pending.minForced || n > pending.maxUseful) {
+      return { response: invalidResponse(`Choose between ${pending.minForced} and ${pending.maxUseful} Credit(s).`), pending, stateChanged: false };
     }
-    return payWithCreditsAndComplete(game, log, pending, n);
+    return replayWithCredits(game, pending, n);
   }
 
   if (pending?.type === "choose-indirect-target") {
@@ -4758,13 +4782,13 @@ function handleChooseOption(
 
   if (pending?.type === "exploit-option") {
     if (option === "No") {
-      const readyCount = GetPlayer(game, pending.playingPlayer).resources.filter(r => r.ready).length;
+      const readyCount = spendableFor(game, pending.playingPlayer);
       if (readyCount < pending.fullCost) {
         // Can't afford without Exploit — return card to hand
         GetPlayer(game, pending.playingPlayer).hand.push({ cardId: pending.cardId });
         return { response: invalidResponse("Cannot afford this card without using Exploit."), pending: null, stateChanged: false };
       }
-      exhaustResources(game, pending.playingPlayer, pending.fullCost);
+      payResources(game, pending.playingPlayer, pending.fullCost, log, pending.cardId);
       log.push(`Player ${pending.playingPlayer} played ${CardTitle(pending.cardId)} (Exploit declined).`);
       return completePlayCard(game, log, pending.cardId, pending.playingPlayer);
     }
@@ -4797,24 +4821,24 @@ function handleChooseOption(
       return { response: resolutionResponse(pendingToResolution(discardPending, game)), pending: discardPending, stateChanged: false };
     }
     // "No" — pay normal cost; return card to hand if they can't afford it.
-    const readyNow = GetPlayer(game, pending.playingPlayer).resources.filter(r => r.ready).length;
+    const readyNow = spendableFor(game, pending.playingPlayer);
     if (readyNow < pending.fullCost) {
       GetPlayer(game, pending.playingPlayer).hand.push({ cardId: "SOR_199" });
       return { response: invalidResponse("Cannot afford Bamboozle without using alternate cost."), pending: null, stateChanged: false };
     }
-    exhaustResources(game, pending.playingPlayer, pending.fullCost);
+    payResources(game, pending.playingPlayer, pending.fullCost, log, "SOR_199");
     log.push(`Player ${pending.playingPlayer} played ${CardTitle("SOR_199")} (normal cost).`);
     return completePlayCard(game, log, "SOR_199", pending.playingPlayer);
   }
 
   if (pending?.type === "piloting-option" && pending.source === "hand") {
     if (option === "Play as Unit") {
-      exhaustResources(game, pending.playingPlayer, pending.unitCost);
+      payResources(game, pending.playingPlayer, pending.unitCost, log, pending.cardId);
       log.push(`Player ${pending.playingPlayer} played ${CardTitle(pending.cardId)} as a unit.`);
       return completePlayCard(game, log, pending.cardId, pending.playingPlayer);
     }
     if (option === "Play as Pilot") {
-      exhaustResources(game, pending.playingPlayer, pending.pilotingCost);
+      payResources(game, pending.playingPlayer, pending.pilotingCost, log, pending.cardId);
       log.push(`Player ${pending.playingPlayer} is playing ${CardTitle(pending.cardId)} as a Pilot.`);
       game.roundState.cardsPlayedThisRound.push({ fromPlayer: pending.playingPlayer, cardId: pending.cardId, playId: "", playedAs: "Pilot" });
       const eligibleVehicles = PilotingEligibleVehicles(game, pending.playingPlayer);
@@ -7355,6 +7379,24 @@ export function processDispatch(
   dispatch: GameDispatch,
   context: EngineContext,
 ): { response: DispatchResponse; context: EngineContext } {
+  return runDispatch(dispatch, context, []);
+}
+
+/**
+ * Runs one dispatch. `decisions` carries the Credit-spend choices already made for
+ * this dispatch's payments (see payResources): a dispatch that needs a decision is
+ * run speculatively, rolled back, prompted, and then re-run through here with the
+ * answer appended.
+ */
+function runDispatch(
+  dispatch: GameDispatch,
+  context: EngineContext,
+  decisions: (number | null)[],
+): { response: DispatchResponse; context: EngineContext } {
+  // 0. Arm the per-dispatch Credit decision state read by payResources.
+  creditDecisions = decisions;
+  creditPaymentIndex = 0;
+
   // 1. Deep-clone so callers' objects are never mutated
   const game: Game = structuredClone(context.game);
   const log = game.gameLog;
@@ -7427,6 +7469,20 @@ export function processDispatch(
           result = { response: invalidResponse(`Unknown dispatch type.`), pending: null, stateChanged: false };
       }
 
+      // The player just answered a Credit prompt: throw this run away and re-run the
+      // dispatch that raised it, now with the decision recorded. `context.game` is the
+      // rolled-back state that dispatch originally started from.
+      if (result.creditReplay) {
+        const { pending: creditPending, spend } = result.creditReplay;
+        const nextDecisions = [...creditPending.decisions];
+        nextDecisions[creditPending.paymentIndex] = spend;
+        return runDispatch(
+          creditPending.replayDispatch,
+          { game: context.game, pending: creditPending.replayPending },
+          nextDecisions,
+        );
+      }
+
       // After a successful top-level action, advance the turn.
       if (isTopLevelAction && !result.response.invalidAction) {
         const wasPass = dispatch.dispatchType === "pass-action" || dispatch.dispatchType === "claim-initiative";
@@ -7458,6 +7514,32 @@ export function processDispatch(
     return {
       response: result.response,
       context: { game: updatedGame, pending: result.pending },
+    };
+  } catch (err) {
+    if (!(err instanceof NeedsCreditDecision)) throw err;
+
+    // A payment needs a Credit decision. Discard every mutation this speculative run
+    // made — `context` is the caller's object, which runDispatch clones before touching
+    // — and prompt. Answering replays this same dispatch from that untouched state.
+    const { paymentIndex, player, sourceCardId, fullCost, maxUseful, minForced } = err.info;
+    const priorDecisions: (number | null)[] = [];
+    for (let i = 0; i < paymentIndex; i++) priorDecisions[i] = decisions[i] ?? null;
+
+    const creditPending: CreditPaymentOptionPending = {
+      type: "credit-payment-option",
+      cardId: sourceCardId,
+      playingPlayer: player,
+      fullCost,
+      maxUseful,
+      minForced,
+      paymentIndex,
+      replayDispatch: dispatch,
+      replayPending: context.pending,
+      decisions: priorDecisions,
+    };
+    return {
+      response: resolutionResponse(pendingToResolution(creditPending, context.game.currentGameState)),
+      context: { game: context.game, pending: creditPending },
     };
   } finally {
     SetGame(null);

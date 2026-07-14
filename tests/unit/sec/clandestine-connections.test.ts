@@ -23,8 +23,8 @@ describe("SEC_264 Clandestine Connections", () => {
     await g.attackWithGroundUnitAsync(1, 0);
     await g.chooseGroundUnitAsync(2, 0); // attack the enemy Marine
     await g.chooseOptionAsync(1, "Yes"); // SEC_264: pay 2 to deal 2 to a base
-    await g.chooseOptionAsync(1, "Yes"); // Use Credits?
-    await g.chooseOptionAsync(1, "2"); // defeat 2 Credits
+    // No Credit prompt: with no resources at all, defeating 2 Credits is the only
+    // way to pay the 2 — a forced spend, so the engine takes it without asking.
     // Base selection via the UI path (the real client sends targetZones, not a playId).
     await g.dispatchAsync(1, "choose-target", { targetZones: ["Base"] });
 

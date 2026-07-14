@@ -7,6 +7,18 @@ import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/pi
 import { Unit } from "@/server/engine/unit";
 import { SmuggleCost, SmuggleAspects } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
 
+/**
+ * Everything the player can put toward a cost: ready resources plus Credit tokens.
+ *
+ * Credits are not resources (CR 375), but they read "While paying resources, you may
+ * defeat this token. If you do, pay 1 less" — so a cost is affordable when ready
+ * resources and Credits together cover it. Every affordability guard uses this.
+ */
+export function spendableFor(game: GameState, player: PlayerId): number {
+  const p = player === 1 ? game.player1 : game.player2;
+  return p.resources.filter(r => r.ready).length + (p.supplemental.creditTokens ?? 0);
+}
+
 function aspectPenalty(game: GameState, player: PlayerId, cardId: string): number {
   const p = player === 1 ? game.player1 : game.player2;
 
@@ -167,7 +179,7 @@ export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string
   if (regionalGovernorBlocks(game, player, cardId)) return false;
 
   const p = player === 1 ? game.player1 : game.player2;
-  const readyResources = p.resources.filter(r => r.ready).length;
+  const readyResources = spendableFor(game, player);
   const fullCost = playCost(game, player, cardId);
 
   // SOR_199 Bamboozle: can be played via alternate cost (discard a Cunning card from hand).
