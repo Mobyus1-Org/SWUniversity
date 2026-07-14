@@ -9,7 +9,7 @@ description: Use when the user says "implement SWU card [SET_XYZ]" or "implement
 
 When the user requests one or more SWU card implementations, explore each card's mechanics via brainstorming, pick an approach, then implement directly with TDD. Skip spec documents and plans — individual card implementations are small and follow established codebase patterns.
 
-**Batch max: 5 cards per session.** If given more, implement the first 5 and tell the user to start a new session for the rest.
+**Batch max: 10 cards per session.** If given more, implement the first 10 and tell the user to start a new session for the rest.
 
 ## Workflow
 
@@ -31,7 +31,7 @@ digraph swu_card_single {
 }
 ```
 
-### Batch (2–5 cards)
+### Batch (2–10 cards)
 
 Brainstorm all cards upfront — propose an approach for each card in a single message, grouped by similarity where possible. User approves all (or revises individual ones). Then implement each card sequentially via TDD, running the full test suite once at the end.
 
@@ -131,7 +131,7 @@ Do not just update the Notes text — the entry must be deleted and the counts m
 ## Red Flags
 
 - About to invoke `superpowers:writing-plans` or create a file under `docs/superpowers/` → stop, wrong path
-- Given more than 5 cards → implement the first 5 only, tell user to continue in a new session
+- Given more than 10 cards → implement the first 10 only, tell user to continue in a new session
 - Marking a card done after wiring only one of its abilities/keywords → not done; every clause needs code + test (see Definition of Done)
 - Declaring done from memory of the card without re-reading its full text from `generated.ts` → re-read and enumerate clauses first
 - Implemented a Leader or a unit with an `Action [...]` ability, tests pass, but never opened `PuzzlesPage.tsx` → the action button won't render in-game; add the cardId to the matching UI list (see UI Registration gate)

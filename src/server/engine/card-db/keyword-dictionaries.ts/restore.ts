@@ -117,6 +117,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "LOF_017": amount += 1; break;//Darth Revan
     case "LOF_032": amount += 2; break;//Magistrate's Scout
     case "LOF_039": amount += 2; break;//Darth Sidious
+    case "ASH_102": amount += 2; break;//Ravager - Final Imperial Command
     case "LOF_045": amount += 1; break;//Yaddle
     case "LOF_057": amount += 2; break;//Owen Lars
     case "LOF_088": amount += 1; break;//Eye of Sion

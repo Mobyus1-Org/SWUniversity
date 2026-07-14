@@ -359,6 +359,8 @@ export const Cards = {
       r2d2: "JTL_245",
       millenniumFalcon: "JTL_249",
       shuttleSt149: "JTL_242",
+      redFive: "JTL_151",
+      devastator: "JTL_143",
     },
     lof: {
       kelleranBeq: "LOF_100",
@@ -371,6 +373,8 @@ export const Cards = {
       sandtrooperCavalry: "LOF_232",
       vanee: "LOF_082",
       darthTyranus: "LOF_231",
+      itinerantWarrior: "LOF_048",
+      yaddle: "LOF_045",
     },
     twi: {
       infiltratingDemolisher: "TWI_182",
@@ -388,14 +392,17 @@ export const Cards = {
       viceAdmiralRampart: "SEC_085",
       nalaSe: "SEC_065",
       gnkPowerDroid: "SEC_110",
+      outerRimConstable: "SEC_163",
     },
     law: {
       scavengingSandcrawler: "LAW_238",
       galenErso: "LAW_233",
       zebOrellios: "LAW_045",
+      expendableMercenary: "LAW_159",
     },
     ash: {
       antDroid: "ASH_116",
+      ravager: "ASH_102",
     },
   },
   upgrades: {

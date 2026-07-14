@@ -357,6 +357,32 @@ export function resolveOnAttackTrigger(
     case "SOR_040": { // Avenger On Attack — opponent chooses a non-leader unit they control to defeat.
       return chooseAndDefeatUnit("SOR_040", attacker.controller, false, continuation);
     }
+    case "LOF_045": { // Yaddle "On Attack: Each other friendly Jedi unit gains Restore 1 for this phase."
+      const game045 = GetGame();
+      if (!game045) return continuation;
+      const otherJedi = GetUnitsForPlayer(attacker.controller).filter(
+        u => u.playId !== attacker.playId && TraitContains(u.cardId, "Jedi", attacker.controller, u.playId),
+      );
+      // One targeted effect per unit — RestoreAmount() reads these by targetPlayId.
+      for (const jedi of otherJedi) {
+        game045.currentGameState.currentEffects.push({
+          cardId: "LOF_045",
+          duration: "Phase",
+          affectedPlayer: attacker.controller,
+          targetPlayId: jedi.playId,
+        });
+      }
+      if (otherJedi.length > 0) {
+        game045.gameLog.push(`${CardTitle("LOF_045")}: ${otherJedi.length} other friendly Jedi unit(s) gained Restore 1 this phase.`);
+      }
+      return continuation;
+    }
+    case "JTL_151": { // Red Five "On Attack: You may deal 2 damage to a damaged unit."
+      const damaged151 = AllUnits().filter(u => u.damage > 0);
+      if (damaged151.length === 0) return continuation; // nothing damaged — no prompt
+      return optionalTarget("JTL_151", attacker.controller, damaged151.map(u => u.playId),
+        "You may deal 2 damage to a damaged unit.", { continuation });
+    }
     case "SOR_010": { // Darth Vader "On Attack: You may deal 2 damage to a unit."
       return optionalTarget("SOR_010", attacker.controller, AllUnits().map(u => u.playId),
         "You may deal 2 damage to a unit.", { continuation });

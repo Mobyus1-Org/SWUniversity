@@ -576,6 +576,17 @@ export function DefeatableUpgradePlayIds(player: PlayerId): string[] {
   );
 }
 
+/**
+ * JTL_143 Devastator: "You assign all indirect damage you deal to opponents."
+ * Normally the player *receiving* indirect damage chooses how to spread it; while this
+ * player controls a Devastator, they assign the damage they deal instead.
+ */
+export function PlayerAssignsOwnIndirectDamage(player: PlayerId): boolean {
+  return GetUnitsForPlayer(player).some(
+    u => u.cardId === "JTL_143" && !Unit.FromInterface(u).LostAbilities(),
+  );
+}
+
 export function LeaderCanDeployAsPilot(cardId: string): boolean {
   switch(cardId) {
     case "JTL_001"://Asajj Ventress
@@ -638,6 +649,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "JTL_151": //Red Five — On Attack: may deal 2 damage to a damaged unit
+    case "LOF_045": //Yaddle — On Attack: each other friendly Jedi gains Restore 1 this phase
     case "LOF_082": //Vaneé — When Played/On Attack
     case "LOF_003": //Ahsoka Tano (deployed) — On Attack: may give a friendly unit Sentinel
     case "SOR_179": //Boba Fett - Disintegrator

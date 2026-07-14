@@ -89,6 +89,22 @@ function resolveOwnWhenDefeated(
         options: [`deal_base_damage=${opponent},3`, `player_discards_from_hand=${opponent},1`],
       };
     }
+    case "LAW_159": { // Expendable Mercenary — "When Defeated: You may resource this unit from its
+                      // owner's discard pile." The ability belongs to its controller; the card is
+                      // in its OWNER's discard (that's the distinction the text draws).
+      return {
+        type: "ability-option",
+        cardId: "LAW_159",
+        player, // the controller at the time it was defeated
+        sourcePlayId: unit.playId, // locates the card in the discard pile
+        helperText: `Resource ${CardTitle("LAW_159")} from its owner's discard pile?`,
+        yesLabel: "Resource it",
+        noLabel: "Leave it in the discard",
+        amount: unit.owner, // whose discard pile to take it from
+        onYes: null,
+        continuation: null,
+      };
+    }
     case "SOR_204": { // Greedo — When Defeated: You may discard a card from your deck. If it's not a unit, deal 2 damage to a ground unit.
       const gs204 = GetGameState();
       const deck204 = player === 1 ? gs204.player1.deck : gs204.player2.deck;

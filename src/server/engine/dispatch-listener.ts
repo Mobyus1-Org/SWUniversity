@@ -96,7 +96,7 @@ import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB } from "@/server/engine/actions/when-played";
 import { executeRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
-import { resolveWhenPlayedTrigger } from "@/server/engine/actions/when-played-trigger";
+import { resolveWhenPlayedTrigger, WhenPlayedHasAutoEffect } from "@/server/engine/actions/when-played-trigger";
 import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
 import { chooseEnemyForPowerDamage, dealPowerToEnemy } from "@/server/engine/actions/deal-power-damage";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
@@ -112,7 +112,7 @@ import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper } from "@/server/engine/token-helpers";
-import { UpgradeImmuneToEnemyAbilities } from "@/server/engine/core-functions";
+import { UpgradeImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -710,6 +710,40 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
 
   if (trigger.triggerType === "card-played-reaction") {
     switch (trigger.cardId) {
+      case "ASH_102": { // Ravager: the just-played unit may deal damage equal to its power
+                        // to a unit in the same arena (including the Ravager itself).
+        const ctx102 = trigger.context as CardPlayedContext | undefined;
+        const playedPlayId = ctx102?.playedPlayId;
+        if (!playedPlayId) return null;
+        const playedUnit = GetUnitByPlayId(game, playedPlayId);
+        if (!playedUnit) return null; // it already left play
+        const power102 = Unit.FromInterface(playedUnit).CurrentPower();
+        if (power102 <= 0) return null;
+        // "a unit in the same arena" — as the played unit, either side, itself included.
+        const inGround = GetPlayer(game, 1).groundArena.concat(GetPlayer(game, 2).groundArena)
+          .some(u => u.playId === playedPlayId);
+        const sameArena = inGround
+          ? [...GetPlayer(game, 1).groundArena, ...GetPlayer(game, 2).groundArena]
+          : [...GetPlayer(game, 1).spaceArena, ...GetPlayer(game, 2).spaceArena];
+        return {
+          type: "ability-option",
+          cardId: "ASH_102",
+          player: trigger.fromPlayer,
+          helperText: `Have ${CardTitle(playedUnit.cardId)} deal ${power102} damage to a unit in the same arena?`,
+          yesLabel: `Deal ${power102}`,
+          noLabel: "Skip",
+          onYes: {
+            type: "ability-target",
+            cardId: "ASH_102",
+            player: trigger.fromPlayer,
+            sourcePlayId: playedPlayId,
+            fromPlayIds: sameArena.map(u => u.playId),
+            amount: power102,
+            continuation: null,
+          },
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
       case "SHD_172": { // Krayt Dragon: when an opponent plays a card, may deal damage = its cost to their base or a ground unit they control.
         const ctx = trigger.context as CardPlayedContext | undefined;
         const amount = ctx?.playedCardCost ?? 0;
@@ -1935,7 +1969,12 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         optional: false,
         eligiblePlayIds: pending.eligibleUnitPlayIds,
         includesBase: true,
-        assigningPlayer: pending.targetPlayer,
+        // The victim assigns indirect damage — unless the dealer controls a Devastator
+        // (JTL_143: "You assign all indirect damage you deal to opponents").
+        assigningPlayer:
+          pending.targetPlayer !== pending.sourcePlayer && PlayerAssignsOwnIndirectDamage(pending.sourcePlayer)
+            ? pending.sourcePlayer
+            : pending.targetPlayer,
       } satisfies NeedsSpreadDamage;
     case "on-attack-order":
       return {
@@ -2152,6 +2191,26 @@ function queueKraytReactions(game: GameState, playerWhoPlayed: PlayerId, cardId:
  * Front side pays "exhaust this leader" (so only fires when undeployed + ready); the deployed
  * side has no such cost. Each entry filters which played cards trigger it.
  */
+/**
+ * ASH_102 Ravager: "When you play a unit: You may have it deal damage equal to its power to a
+ * unit in the same arena." Fires only for units YOU play, and never off the Ravager's own entry
+ * (its ability isn't active until it is already in play).
+ */
+function queueRavagerReactions(game: GameState, player: PlayerId, playedPlayId: string, nested: boolean): void {
+  const ravagers = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
+    .filter(u => u.cardId === "ASH_102" && u.playId !== playedPlayId && !Unit.FromInterface(u).LostAbilities());
+  for (const ravager of ravagers) {
+    game.triggerBag.push({
+      triggerType: "card-played-reaction",
+      cardId: "ASH_102",
+      fromPlayer: player,
+      playId: ravager.playId,
+      nested,
+      context: { playedCardCost: 0, cardPlayer: player, playedPlayId },
+    });
+  }
+}
+
 function queueLeaderPlayReactions(game: GameState, player: PlayerId, cardId: string, nested: boolean): void {
   const leader = GetPlayer(game, player).leader;
   const canFront = !leader.deployed && leader.ready; // front: exhausting the leader is the cost
@@ -2228,6 +2287,9 @@ function queueUnitEntryTriggers(
   // unit's own Shielded/Ambush/When-Played, so the active player orders them together).
   queueKraytReactions(game, player, cardId, nested);
 
+  // ASH_102 Ravager: "When you play a unit" — your own Ravagers react to this unit entering.
+  queueRavagerReactions(game, player, unit.playId, nested);
+
   // Leader "when you play a unit" reactions (e.g. TWI_018 Quinlan Vos).
   queueLeaderPlayReactions(game, player, cardId, nested);
 
@@ -2261,6 +2323,12 @@ function queueUnitEntryTriggers(
       // Interactive WP — hand back to the caller to present immediately; it implicitly
       // takes priority over outer bag triggers.
       return whenPlayedPending;
+    }
+    // A null pending means either "auto-resolving WP" or "WP that can't do anything right
+    // now" (e.g. LOF_048 with no Force token). Only the former is worth bagging — bagging a
+    // no-op would make the player order it against the unit's Shielded/other triggers.
+    if (whenPlayedPending === null && !WhenPlayedHasAutoEffect(unit.cardId)) {
+      return null;
     }
     // Auto-resolving WP, or interactive WP that must wait for a uniqueness defeat —
     // push to bag (nested if outer triggers are already waiting) to resolve after it.
@@ -4305,6 +4373,25 @@ function applyAbilityOptionEffect(
       log.push(`${CardTitle(pending.cardId)}: entered play as a ready resource.`);
       return pending.continuation ?? null;
     }
+    case "LAW_159": { // Expendable Mercenary — resource it from its OWNER's discard into the
+                      // controller's resource zone (stolen if they aren't the owner).
+      const controller159 = pending.player!;
+      const owner159 = (pending.amount ?? controller159) as PlayerId;
+      const ownerDiscard = GetPlayer(game, owner159).discard;
+      const idx159 = ownerDiscard.findIndex(d => d.playId === pending.sourcePlayId);
+      if (idx159 === -1) return pending.continuation ?? null; // already gone — nothing to resource
+      const [card159] = ownerDiscard.splice(idx159, 1);
+      GetPlayer(game, controller159).resources.push({
+        cardId: card159.cardId,
+        playId: nextPlayId(game),
+        owner: owner159,
+        controller: controller159,
+        ready: true,
+        stolen: owner159 !== controller159,
+      });
+      log.push(`${CardTitle("LAW_159")}: resourced from Player ${owner159}'s discard by Player ${controller159}.`);
+      return pending.continuation ?? null;
+    }
     case "SOR_016": // Yes = reveal own deck
       return thrawnsReveal(game, log, pending.player!, pending.player!);
     case "JTL_096": {
@@ -6160,6 +6247,38 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
       break;
+    }
+    case "ASH_102": { // Ravager: the played unit deals its power to the chosen unit in its arena
+      if (!targetPlayId) break;
+      const source102 = pending.sourcePlayId ? GetUnitByPlayId(game.currentGameState, pending.sourcePlayId) : null;
+      const amount102 = pending.amount ?? 0;
+      if (!source102 || amount102 <= 0) break;
+      DealDamageToUnit(game.currentGameState, source102.cardId, targetPlayId, amount102, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "JTL_151": { // Red Five On Attack: deal 2 damage to the chosen damaged unit
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "JTL_151", targetPlayId, 2, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "LOF_048": { // Itinerant Warrior When Played: use the Force, then heal 3 from the chosen base.
+      const owner048 = pending.player!;
+      let basePlayer048: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer048 = 1;
+      else if (targetPlayId === "player2.base") basePlayer048 = 2;
+      else if (targetIsBase) basePlayer048 = targetBasePlayer ?? (owner048 === 1 ? 2 : 1);
+      if (basePlayer048 === null) break;
+      // "If you do" — the heal only happens when the Force token is actually spent.
+      if (!UseTheForce(owner048, game.gameLog, "LOF_048")) break;
+      HealBaseForPlayer(game.currentGameState, basePlayer048, 3, game.gameLog, "LOF_048");
+      break;
+    }
+    case "SEC_163": { // Outer Rim Constable When Played: defeat the chosen upgrade
+      if (!targetPlayId) break;
+      return defeatUpgradeByPlayId(
+        game.currentGameState, game.gameLog, targetPlayId,
+        CardTitle("SEC_163"), pending.continuation ?? null, pending.player,
+      );
     }
     case "SOR_010_leader": { // Darth Vader leader ability: 1 damage to the chosen unit…
       if (!targetPlayId) break;

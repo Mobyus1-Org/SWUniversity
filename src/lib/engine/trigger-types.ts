@@ -65,4 +65,6 @@ export interface CardPlayedContext {
   playedCardCost: number;
   /** The player who played the card (the opponent of the reacting unit's controller). */
   cardPlayer: PlayerId;
+  /** The played unit's playId, when it entered an arena — Ravager (ASH_102) has it deal its own power. */
+  playedPlayId?: string;
 }

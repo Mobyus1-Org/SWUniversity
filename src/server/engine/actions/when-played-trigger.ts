@@ -5,6 +5,25 @@ import { DrawCardForPlayer, PlayerHasUnitWithAspectInPlay } from "@/server/engin
 import { CreateSpy, CreateTieFighter, CreateBattleDroid } from "@/server/engine/token-helpers";
 
 /**
+ * Cards whose When Played does something without asking the player anything — i.e. the
+ * cases handled by resolveWhenPlayedTrigger below. Keep the two in sync.
+ *
+ * Used to tell "this When Played auto-resolves" apart from "this When Played can't do
+ * anything right now", since resolveWhenPlayed() returns null for both. Without that
+ * distinction, a unit whose When Played fizzles (e.g. LOF_048 Itinerant Warrior with no
+ * Force token) would still be bagged next to its Shielded trigger, and the player would be
+ * asked to order a trigger that does nothing.
+ */
+const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
+  "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
+  "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148",
+]);
+
+export function WhenPlayedHasAutoEffect(cardId: string): boolean {
+  return WHEN_PLAYED_AUTO_EFFECT_CARDS.has(cardId);
+}
+
+/**
  * Resolves a single when-played trigger entry against the current game state.
  *
  * These are no-input auto-resolving effects. Cards that require target

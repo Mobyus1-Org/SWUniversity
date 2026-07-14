@@ -624,6 +624,47 @@ export function resolveWhenPlayed(
       return chooseFriendlyForPowerDamage(cardId, player);
     case "LAW_168": // Haymaker — "Give an Experience token to a friendly unit. That unit deals damage equal to its power to an enemy unit in the same arena."
       return chooseFriendlyForPowerDamage(cardId, player);
+    case "JTL_143": { // Devastator — "When Played: Deal 4 indirect damage to each opponent."
+      const opponent143: PlayerId = player === 1 ? 2 : 1;
+      return {
+        type: "indirect-damage",
+        cardId: "JTL_143",
+        sourcePlayer: player,
+        targetPlayer: opponent143,
+        totalDamage: 4,
+        eligibleUnitPlayIds: GetUnitsForPlayer(opponent143).map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "LOF_048": { // Itinerant Warrior — "When Played: You may use the Force (lose your Force
+                      // token). If you do, heal 3 damage from a base."
+      if (!HasTheForce(player)) return null; // no token → nothing to spend, no prompt
+      return {
+        type: "ability-option",
+        cardId: "LOF_048",
+        player,
+        helperText: "Use the Force to heal 3 damage from a base?",
+        yesLabel: "Use the Force",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "LOF_048",
+          player,
+          fromPlayIds: [],
+          fromZones: ["Base"],
+          continuation: null,
+        },
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "SEC_163": { // Outer Rim Constable — "When Played: You may defeat an upgrade."
+      const upgrades163 = DefeatableUpgradePlayIds(player);
+      if (upgrades163.length === 0) return null;
+      return optionalTarget(cardId, player, upgrades163, "You may defeat an upgrade.", {
+        yesLabel: "Defeat an upgrade",
+        noLabel: "Skip",
+      });
+    }
     case "SOR_251": { // Confiscate — "Defeat an upgrade."
       // Upgrades immune to enemy abilities (Luke JTL_012 as a Pilot) aren't legal targets.
       const allUpgradePlayIds251 = DefeatableUpgradePlayIds(player);
