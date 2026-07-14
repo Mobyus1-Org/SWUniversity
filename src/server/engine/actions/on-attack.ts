@@ -357,6 +357,19 @@ export function resolveOnAttackTrigger(
     case "SOR_040": { // Avenger On Attack — opponent chooses a non-leader unit they control to defeat.
       return chooseAndDefeatUnit("SOR_040", attacker.controller, false, continuation);
     }
+    case "SEC_188": { // Darth Traya "On Attack: You may ready a non-unit leader."
+      const game188 = GetGame();
+      if (!game188) return continuation;
+      const gs188 = game188.currentGameState;
+      // "non-unit leader" = still in the leader zone (not deployed), and only an exhausted
+      // one is worth readying. Either player's leader is a legal target.
+      const eligible188: string[] = [];
+      if (!gs188.player1.leader.deployed && !gs188.player1.leader.ready) eligible188.push("player1.leader");
+      if (!gs188.player2.leader.deployed && !gs188.player2.leader.ready) eligible188.push("player2.leader");
+      if (eligible188.length === 0) return continuation;
+      return optionalTarget("SEC_188", attacker.controller, eligible188,
+        "You may ready a non-unit leader.", { continuation });
+    }
     case "LOF_045": { // Yaddle "On Attack: Each other friendly Jedi unit gains Restore 1 for this phase."
       const game045 = GetGame();
       if (!game045) return continuation;

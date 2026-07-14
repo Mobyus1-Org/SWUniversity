@@ -649,6 +649,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "SEC_188": //Darth Traya — On Attack: may ready a non-unit leader
     case "JTL_151": //Red Five — On Attack: may deal 2 damage to a damaged unit
     case "LOF_045": //Yaddle — On Attack: each other friendly Jedi gains Restore 1 this phase
     case "LOF_082": //Vaneé — When Played/On Attack

@@ -393,6 +393,7 @@ export const Cards = {
       nalaSe: "SEC_065",
       gnkPowerDroid: "SEC_110",
       outerRimConstable: "SEC_163",
+      darthTraya: "SEC_188",
     },
     law: {
       scavengingSandcrawler: "LAW_238",
@@ -533,6 +534,8 @@ export const Cards = {
       backedByTheHutts: "LAW_247",
       haymaker: "LAW_168",
       lostAndForgotten: "LAW_133",
+      singleReactorIgnition: "LAW_044",
+      doubleCross: "LAW_170",
     },
     lof: {
       cureWounds: "LOF_075",

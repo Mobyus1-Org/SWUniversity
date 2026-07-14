@@ -1,5 +1,5 @@
 import type { Game } from "@/lib/engine/game";
-import type { CurrentEffect, PlayerId, Zones } from "@/lib/engine/core-models";
+import type { CurrentEffect, PlayerId, Unit as UnitInterface, Zones } from "@/lib/engine/core-models";
 import type { GameDispatch } from "@/lib/engine/message-types";
 
 // ---------------------------------------------------------------------------
@@ -74,6 +74,24 @@ export interface ChooseOnePending {
   options: { id: string; label: string }[];
   /** Card-specific payload the chosen mode needs (e.g. Yoda's held card). Must stay serializable. */
   data?: Record<string, string | number>;
+  continuation: PendingResolution | null;
+}
+
+/**
+ * JTL_002 Grand Admiral Thrawn: "When you use a 'When Defeated' ability: You may exhaust this
+ * leader (deployed: once each round instead). If you do, use that ability again."
+ *
+ * Raised *after* the When Defeated ability has resolved. The defeated unit has already left the
+ * arena, so a snapshot of it rides along and the ability is re-derived from that on replay.
+ */
+export interface ThrawnReplayPending {
+  type: "thrawn-replay";
+  /** Thrawn's controller — the player who used the When Defeated ability. */
+  player: PlayerId;
+  /** Snapshot of the defeated unit, so its ability can be resolved a second time. */
+  defeatedUnit: UnitInterface;
+  /** true = deployed side (free, once per round); false = leader side (exhaust as the cost). */
+  deployed: boolean;
   continuation: PendingResolution | null;
 }
 
@@ -488,6 +506,7 @@ export type PendingResolution =
   | LeaderActionPending
   | WhenDefeatedChoicePending
   | ChooseOnePending
+  | ThrawnReplayPending
   | HandToDeckPending
   | DiscardFromHandPending
   | ResolveAttackPending

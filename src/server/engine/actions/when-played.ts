@@ -624,6 +624,16 @@ export function resolveWhenPlayed(
       return chooseFriendlyForPowerDamage(cardId, player);
     case "LAW_168": // Haymaker — "Give an Experience token to a friendly unit. That unit deals damage equal to its power to an enemy unit in the same arena."
       return chooseFriendlyForPowerDamage(cardId, player);
+    case "LAW_170": { // Double-Cross — "Choose a friendly non-leader unit and an enemy non-leader
+                      // unit. Exchange control of those units. The player who takes control of the
+                      // lower-cost unit creates Credit tokens equal to the difference in cost."
+      const opponent170: PlayerId = player === 1 ? 2 : 1;
+      const friendly170 = GetUnitsForPlayer(player).filter(u => !Unit.FromInterface(u).IsLeader());
+      const enemy170 = GetUnitsForPlayer(opponent170).filter(u => !Unit.FromInterface(u).IsLeader());
+      if (friendly170.length === 0 || enemy170.length === 0) return null; // needs one of each
+      // Step 1 picks the friendly unit; its continuation picks the enemy unit.
+      return mandatoryTarget("LAW_170_friendly", player, friendly170.map(u => u.playId));
+    }
     case "JTL_143": { // Devastator — "When Played: Deal 4 indirect damage to each opponent."
       const opponent143: PlayerId = player === 1 ? 2 : 1;
       return {

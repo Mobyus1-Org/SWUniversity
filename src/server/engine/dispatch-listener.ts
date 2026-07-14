@@ -17,6 +17,7 @@ import {
   CardAspects,
   CardCost,
   CardHasWhenPlayed,
+  CardHasWhenDefeated,
   CardHp,
   CardIsUnique,
   CardPower,
@@ -71,6 +72,7 @@ import type {
   CreditPaymentOptionPending,
   CreditPaymentAmountPending,
   ChooseOnePending,
+  ThrawnReplayPending,
   OnAttackOrderPending,
   OnAttackTriggerEntry,
   PendingResolution,
@@ -112,7 +114,7 @@ import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper } from "@/server/engine/token-helpers";
-import { UpgradeImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage } from "@/server/engine/core-functions";
+import { UpgradeImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -647,12 +649,61 @@ function triggerLabel(t: TriggerEntry): string {
   }
 }
 
+/**
+ * JTL_002 Grand Admiral Thrawn — "When you use a 'When Defeated' ability: You may exhaust this
+ * leader. If you do, use that ability again." (Deployed: free, but only once each round.)
+ *
+ * Wraps every When Defeated resolution: the ability resolves first, then Thrawn's prompt is
+ * chained on after it. Answering Yes re-runs the SAME ability from a snapshot of the defeated
+ * unit — via plain resolveWhenDefeated, so a replay can never chain another Thrawn prompt.
+ */
+function resolveWhenDefeatedWithThrawn(
+  game: GameState,
+  unit: Unit,
+  player: PlayerId,
+): PendingResolution | null {
+  const whenDefeated = resolveWhenDefeated(unit, player);
+  const thrawn = thrawnReplayPending(game, unit, player);
+  if (!thrawn) return whenDefeated;
+  if (!whenDefeated) return thrawn;
+  // The prompt must come AFTER the ability has been used — chain it onto the end.
+  // injectContinuation only threads through pendings that already carry a `continuation`
+  // key; several When Defeated pendings leave that optional field off entirely (K-2SO's
+  // when-defeated-choice, for one), so seed it before chaining or the prompt is dropped.
+  const seeded = "continuation" in whenDefeated && whenDefeated.continuation !== undefined
+    ? whenDefeated
+    : { ...whenDefeated, continuation: null } as PendingResolution;
+  return injectContinuation(seeded, thrawn);
+}
+
+/** The Thrawn prompt, or null when he can't (or shouldn't) offer a replay right now. */
+function thrawnReplayPending(game: GameState, unit: Unit, player: PlayerId): ThrawnReplayPending | null {
+  // "that ability" must exist — a unit with no When Defeated ability gives Thrawn nothing to repeat.
+  if (!CardHasWhenDefeated(unit.cardId)) return null;
+
+  const leader = GetPlayer(game, player).leader;
+  if (leader.cardId !== "JTL_002") return null;
+
+  if (!leader.deployed) {
+    // Leader side: exhausting the leader IS the cost, so an exhausted leader can't pay it.
+    if (!leader.ready || LeaderAbilitiesIgnored()) return null;
+    return { type: "thrawn-replay", player, defeatedUnit: unit, deployed: false, continuation: null };
+  }
+
+  // Deployed side: no cost, but only once each round.
+  const usedThisRound = game.currentEffects.some(
+    e => e.cardId === "JTL_002_usedThisRound" && e.affectedPlayer === player,
+  );
+  if (usedThisRound) return null;
+  return { type: "thrawn-replay", player, defeatedUnit: unit, deployed: true, continuation: null };
+}
+
 function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: string[]): PendingResolution | null {
   if (trigger.triggerType === "when-defeated") {
     const wdCtx = trigger.context as { defeatedUnit?: UnitInterface } | undefined;
     if (!wdCtx?.defeatedUnit) return null;
     const unit = Unit.FromInterface(wdCtx.defeatedUnit);
-    return resolveWhenDefeated(unit, trigger.fromPlayer);
+    return resolveWhenDefeatedWithThrawn(game, unit, trigger.fromPlayer);
   }
 
   if (trigger.triggerType === "when-played") {
@@ -889,7 +940,7 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
     const wdCtx = t.context as { defeatedUnit?: UnitInterface } | undefined;
     if (!wdCtx?.defeatedUnit) continue;
     const unit = Unit.FromInterface(wdCtx.defeatedUnit);
-    const wdPending = resolveWhenDefeated(unit, t.fromPlayer);
+    const wdPending = resolveWhenDefeatedWithThrawn(game, unit, t.fromPlayer);
     if (wdPending) return wdPending;
   }
 
@@ -1095,7 +1146,7 @@ function defeatUnit(
   }
 
   // When-Defeated triggers fire after bounty collection (CR 13c).
-  const whenDefeated = resolveWhenDefeated(unit, removed.player);
+  const whenDefeated = resolveWhenDefeatedWithThrawn(game, unit, removed.player);
   const collectingPlayer: PlayerId = removed.player === 1 ? 2 : 1;
   const chainedDefeated = collectBounties(unit, collectingPlayer, whenDefeated) ?? whenDefeated;
 
@@ -1816,6 +1867,16 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         fromZones: ["Hand"],
         handOwner: pending.player,
       } satisfies NeedsTarget;
+    case "thrawn-replay":
+      return {
+        type: "Option",
+        helperText: pending.deployed
+          ? `Use ${CardTitle(pending.defeatedUnit.cardId)}'s When Defeated ability again? (once each round)`
+          : `Exhaust ${CardTitle("JTL_002")} to use ${CardTitle(pending.defeatedUnit.cardId)}'s When Defeated ability again?`,
+        options: ["Yes", "No"],
+        yesLabel: pending.deployed ? "Use it again" : "Exhaust leader",
+        noLabel: "Skip",
+      } satisfies NeedsOption;
     case "discard-from-hand":
       return { type: "Target", fromZones: ["Hand"], handOwner: pending.targetPlayer } satisfies NeedsTarget;
     case "upgrade-target":
@@ -2474,15 +2535,23 @@ function completePlayCard(
             return { response: resolutionResponse(pendingToResolution(discard175, game)), pending: discard175, stateChanged: false };
           }
         }
-      } else if (cardId === "SOR_043" || cardId === "TWI_078") {
+      } else if (cardId === "SOR_043" || cardId === "TWI_078" || cardId === "LAW_044") {
         const otherPlayer: PlayerId = player === 1 ? 2 : 1;
         // Snapshot trigger-holders before any unit is removed so wiped units still trigger.
         const holdersP1 = GetUnitsForPlayer(1);
         const holdersP2 = GetUnitsForPlayer(2);
-        const toDefeat = cardId === "SOR_043"
-          ? [...GetUnitsForPlayer(otherPlayer), ...GetUnitsForPlayer(player)]
-          : [...GetUnitsForPlayer(otherPlayer)];
+        const enemyUnits = GetUnitsForPlayer(otherPlayer);
+        const toDefeat = cardId === "TWI_078"
+          ? [...enemyUnits]
+          : [...enemyUnits, ...GetUnitsForPlayer(player)]; // SOR_043 / LAW_044 wipe both sides
+        // LAW_044 Single Reactor Ignition: "For each enemy unit defeated this way, deal 1
+        // damage to its controller's base." Counted before the wipe; friendly losses deal none.
+        const enemyDefeated044 = cardId === "LAW_044" ? enemyUnits.length : 0;
         boardWipeDefeat(game, log, toDefeat, holdersP1, holdersP2);
+        if (enemyDefeated044 > 0) {
+          dealBaseDamage(game, otherPlayer, enemyDefeated044, player);
+          log.push(`${CardTitle("LAW_044")}: dealt ${enemyDefeated044} damage to Player ${otherPlayer}'s base (1 per enemy unit defeated).`);
+        }
       } else {
         const nextPending = resolveWhenPlayed(cardId, player);
         if (nextPending) {
@@ -3001,7 +3070,13 @@ function handleChooseTarget(
   }
 
   if (pending.type === "ability-target") {
-    const chosen = data.targetPlayIds?.[0];
+    // Leaders are not units, so a leader target arrives as a zone + player rather than a
+    // playId. Normalize it to the "playerN.leader" form the eligible list uses, then let it
+    // flow through the normal target path.
+    const chosenLeader = data.targetZones?.includes("Leader")
+      ? `player${data.targetPlayers?.[0] ?? pending.player ?? 1}.leader`
+      : undefined;
+    const chosen = data.targetPlayIds?.[0] ?? chosenLeader;
     const chosenBase = data.targetZones?.includes("Base") ?? false;
 
     if (!chosen && !chosenBase)
@@ -4833,6 +4908,37 @@ function handleChooseOption(
     return resolveLeaderAbility(game, log, pending.player);
   }
 
+  if (pending?.type === "thrawn-replay") {
+    if (option !== "Yes" && option !== "No") {
+      return { response: invalidResponse(`Unknown option: ${option}`), pending, stateChanged: false };
+    }
+    if (option === "No") {
+      const cont = pending.continuation;
+      if (cont) return { response: resolutionResponse(pendingToResolution(cont, game)), pending: cont, stateChanged: false };
+      const bagNo = drainTriggerBag(game, log);
+      if (bagNo) return { response: resolutionResponse(pendingToResolution(bagNo, game)), pending: bagNo, stateChanged: false };
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    // Pay the cost, then use the ability again.
+    if (pending.deployed) {
+      game.currentEffects.push({ cardId: "JTL_002_usedThisRound", duration: "Round", affectedPlayer: pending.player });
+      log.push(`${CardTitle("JTL_002")}: using that When Defeated ability again (once this round).`);
+    } else {
+      GetPlayer(game, pending.player).leader.ready = false;
+      log.push(`${CardTitle("JTL_002")}: exhausted to use that When Defeated ability again.`);
+    }
+    // Plain resolveWhenDefeated — a replay must not chain another Thrawn prompt.
+    const replay = resolveWhenDefeated(Unit.FromInterface(pending.defeatedUnit), pending.player);
+    const next = replay ? injectContinuation(replay, pending.continuation) : pending.continuation;
+    if (next) return { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: false };
+    const bagYes = drainTriggerBag(game, log);
+    if (bagYes) return { response: resolutionResponse(pendingToResolution(bagYes, game)), pending: bagYes, stateChanged: false };
+    updateDefeatedPlayers(game);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
   if (pending?.type === "choose-one") {
     if (!pending.options.some(o => o.id === option)) {
       return { response: invalidResponse(`Unknown option: ${option}`), pending, stateChanged: false };
@@ -5320,6 +5426,8 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "TWI_004": // Yoda — If you control 7 or more resources.
       return p.resources.length >= 7;
+    case "JTL_002": // Grand Admiral Thrawn — If you control 6 or more resources.
+      return p.resources.length >= 6;
     case "LOF_017": // Darth Revan — If you control 5 or more resources.
     case "TWI_018": // Quinlan Vos — If you control 5 or more resources.
       return p.resources.length >= 5;
@@ -6255,6 +6363,57 @@ function applyAbilityEffect(
       if (!source102 || amount102 <= 0) break;
       DealDamageToUnit(game.currentGameState, source102.cardId, targetPlayId, amount102, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "LAW_170_friendly": { // Double-Cross step 1: the friendly unit is chosen; now pick the enemy one.
+      if (!targetPlayId) break;
+      const player170 = pending.player!;
+      const opponent170: PlayerId = player170 === 1 ? 2 : 1;
+      const enemy170 = GetUnitsForPlayer(opponent170).filter(u => !Unit.FromInterface(u).IsLeader());
+      if (enemy170.length === 0) break;
+      return {
+        type: "ability-target",
+        cardId: "LAW_170_enemy",
+        player: player170,
+        sourcePlayId: targetPlayId, // remember the friendly unit
+        fromPlayIds: enemy170.map(u => u.playId),
+        continuation: pending.continuation,
+      } satisfies AbilityTargetPending;
+    }
+    case "LAW_170_enemy": { // Double-Cross step 2: exchange control, then hand out the Credits.
+      if (!targetPlayId || !pending.sourcePlayId) break;
+      const player170e = pending.player!;
+      const opponent170e: PlayerId = player170e === 1 ? 2 : 1;
+      const gs170 = game.currentGameState;
+      const friendlyUnit = GetUnitByPlayId(gs170, pending.sourcePlayId);
+      const enemyUnit = GetUnitByPlayId(gs170, targetPlayId);
+      if (!friendlyUnit || !enemyUnit) break;
+
+      const friendlyCost = CardCost(friendlyUnit.cardId) ?? 0;
+      const enemyCost = CardCost(enemyUnit.cardId) ?? 0;
+
+      transferControl(gs170, game.gameLog, Unit.FromInterface(friendlyUnit), opponent170e);
+      transferControl(gs170, game.gameLog, Unit.FromInterface(enemyUnit), player170e);
+
+      // Whoever received the cheaper unit is compensated with the cost difference in Credits.
+      const diff170 = Math.abs(friendlyCost - enemyCost);
+      if (diff170 > 0) {
+        // You gave away the friendly unit and took the enemy one.
+        const takerOfCheaper = enemyCost < friendlyCost ? player170e : opponent170e;
+        for (let i = 0; i < diff170; i++) {
+          CreateCreditToken(gs170, takerOfCheaper, game.gameLog, "LAW_170");
+        }
+      }
+      return pending.continuation;
+    }
+    case "SEC_188": { // Darth Traya On Attack: ready the chosen non-unit leader
+      const leaderMatch188 = targetPlayId?.match(/^player([12])\.leader$/);
+      if (!leaderMatch188) break;
+      const leaderPlayer188 = Number(leaderMatch188[1]) as PlayerId;
+      const leader188 = GetPlayer(game.currentGameState, leaderPlayer188).leader;
+      if (leader188.deployed) break; // "non-unit leader" only
+      leader188.ready = true;
+      game.gameLog.push(`${CardTitle("SEC_188")}: readied Player ${leaderPlayer188}'s leader.`);
+      break;
     }
     case "JTL_151": { // Red Five On Attack: deal 2 damage to the chosen damaged unit
       if (!targetPlayId) break;
