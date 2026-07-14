@@ -1,5 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds } from "@/server/engine/core-functions";
+import { aspectPenalty } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
@@ -1357,7 +1358,7 @@ export function resolveWhenPlayed(
       const eligible102 = playerState102.discard.filter(d => {
         if (CardType(d.cardId) !== "Unit") return false;
         if (!CardAspects(d.cardId)?.includes("Heroism")) return false;
-        const effectiveCost = Math.max(0, CardCost(d.cardId) + AspectPenalty(gs102, player, d.cardId) - 3);
+        const effectiveCost = Math.max(0, CardCost(d.cardId) + aspectPenalty(gs102, player, d.cardId) - 3);
         return effectiveCost <= readyResources102;
       });
       if (eligible102.length === 0) return null;

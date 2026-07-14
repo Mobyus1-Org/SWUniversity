@@ -114,6 +114,9 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string> = {
 
 const BASES_WITH_EPIC_ACTION = new Set([
   "SOR_022", "SOR_025", "SOR_028",
+  // LAW "splash" bases — play a card from hand ignoring 1 non-side aspect penalty.
+  "LAW_020", "LAW_021", "LAW_022", "LAW_024",
+  "LAW_025", "LAW_027", "LAW_028", "LAW_030",
 ]);
 
 function CardVisual({

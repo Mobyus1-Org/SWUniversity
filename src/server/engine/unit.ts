@@ -202,6 +202,7 @@ export class Unit implements UnitInterface {
         case "SOR_054": power -= 2; break; // Jedi Lightsaber –2/–2 Phase (conditional Force On Attack)
         case "SOR_116": power += 2; break; // Steadfast Battalion +2/+2 Phase
         case "SOR_216": power -= 4; break; // Disarm –4/+0 Phase
+        case "SOR_028": power -= 4; break; // Jedha City base Epic Action –4/–0 Phase
         case "SOR_217": power += 1; break; // Shoot First +1/+0 ForAttack
         case "SOR_220": power += 3; break; // Surprise Strike +3/+0 ForAttack
         case "SOR_240": power += 2; break; // Fleet Lieutenant +2/+0 ForAttack
@@ -239,7 +240,9 @@ export class Unit implements UnitInterface {
       power += RaidAmount(this.cardId, this.playId, this.controller);
     }
 
-    return power;
+    // A unit's power can never be reduced below 0. Without this, a debuffed unit (e.g. Nowhere
+    // to Hide on a 1-power unit) attacking a base would HEAL it — dealBaseDamage does `+= amount`.
+    return Math.max(0, power);
   }
 
   CurrentHP(): number {

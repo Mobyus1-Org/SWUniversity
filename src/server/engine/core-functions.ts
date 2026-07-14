@@ -1099,20 +1099,5 @@ export function searchDeck(
   } satisfies DeckSearchPending;
 }
 
-/** Aspect penalty (in resources) for a player playing a given card. +2 per uncovered aspect. */
-export function AspectPenalty(gs: GameState, player: PlayerId, cardId: string): number {
-  const playerState = player === 1 ? gs.player1 : gs.player2;
-  const provided = [
-    ...CardAspects(playerState.base.cardId),
-    ...CardAspects(playerState.leader.cardId),
-  ];
-  const counts = new Map<string, number>();
-  for (const a of provided) counts.set(a, (counts.get(a) ?? 0) + 1);
-  let missing = 0;
-  for (const a of CardAspects(cardId)) {
-    const rem = counts.get(a) ?? 0;
-    if (rem > 0) counts.set(a, rem - 1);
-    else missing++;
-  }
-  return missing * 2;
-}
+// Aspect penalty lives in card-playability.ts (`aspectPenalty`) — the single definition shared by
+// the playability check and the payment path.

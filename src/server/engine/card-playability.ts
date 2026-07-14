@@ -5,6 +5,7 @@ import { UpgradeEligibleTargets, PilotingEligibleVehicles } from "@/server/engin
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { Unit } from "@/server/engine/unit";
+import { TraitContains } from "@/server/engine/core-functions";
 import { SmuggleCost, SmuggleAspects } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
 
 /**
@@ -19,27 +20,22 @@ export function spendableFor(game: GameState, player: PlayerId): number {
   return p.resources.filter(r => r.ready).length + (p.supplemental.creditTokens ?? 0);
 }
 
-function aspectPenalty(game: GameState, player: PlayerId, cardId: string): number {
+/**
+ * The aspect penalty for playing `cardId`: +2 per aspect icon the player's base + leader do not
+ * cover. This is THE definition — both the playability check and the actual payment path use it.
+ */
+export function aspectPenalty(game: GameState, player: PlayerId, cardId: string): number {
   const p = player === 1 ? game.player1 : game.player2;
 
   // Darksaber: free aspect penalty when a friendly non-Vehicle Mandalorian unit is in play
   if (cardId === "SHD_126") {
     const hasMandalorian = [...p.groundArena, ...p.spaceArena].some(
-      u => !CardTraits(u.cardId).includes("Vehicle") && CardTraits(u.cardId).includes("Mandalorian"),
+      u => !TraitContains(u.cardId, "Vehicle") && TraitContains(u.cardId, "Mandalorian", player, u.playId),
     );
     if (hasMandalorian) return 0;
   }
 
-  const provided = [...CardAspects(p.base.cardId), ...CardAspects(p.leader.cardId)];
-  const counts = new Map<string, number>();
-  for (const a of provided) counts.set(a, (counts.get(a) ?? 0) + 1);
-  let missing = 0;
-  for (const a of CardAspects(cardId)) {
-    const rem = counts.get(a) ?? 0;
-    if (rem > 0) counts.set(a, rem - 1);
-    else missing++;
-  }
-  return missing * 2;
+  return aspectPenaltyForAspects(game, player, CardAspects(cardId));
 }
 
 function delMeekoEventTax(game: GameState, player: PlayerId, cardId: string): number {
@@ -95,11 +91,47 @@ function gnkPowerDroidDiscount(game: GameState, player: PlayerId, cardId: string
   return game.currentEffects.some(e => e.cardId === "SEC_110" && e.affectedPlayer === player) ? 1 : 0;
 }
 
-function playCost(game: GameState, player: PlayerId, cardId: string): number {
-  return CardCost(cardId) + aspectPenalty(game, player, cardId) + delMeekoEventTax(game, player, cardId) - guardianOfTheWhillsDiscount(game, player, cardId) - forceChokeDiscount(game, player, cardId) - jabbaTheTrickDiscount(game, player, cardId) - benduDiscount(game, player, cardId) - gnkPowerDroidDiscount(game, player, cardId);
+/**
+ * The full cost to play `cardId` from hand: printed cost + aspect penalty + taxes − discounts.
+ * The single definition used by BOTH the playability check (what the UI offers) and the payment
+ * path in dispatch-listener (what actually gets charged) — they must never disagree.
+ */
+export function playCost(game: GameState, player: PlayerId, cardId: string): number {
+  return CardCost(cardId)
+    + aspectPenalty(game, player, cardId)
+    + delMeekoEventTax(game, player, cardId)
+    - guardianOfTheWhillsDiscount(game, player, cardId)
+    - forceChokeDiscount(game, player, cardId)
+    - jabbaTheTrickDiscount(game, player, cardId)
+    - benduDiscount(game, player, cardId)
+    - gnkPowerDroidDiscount(game, player, cardId)
+  ;
 }
 
-function aspectPenaltyForAspects(game: GameState, player: PlayerId, aspects: string[]): number {
+/**
+ * The cost to play a Pilot card as an upgrade on a Vehicle: its piloting cost plus the same
+ * aspect penalty. Card-cost discounts (Bendu, GNK, …) key off the printed cost and do not apply.
+ */
+export function pilotPlayCost(game: GameState, player: PlayerId, cardId: string): number {
+  return PilotingCost(cardId) + aspectPenalty(game, player, cardId);
+}
+
+/** SOR_062 Regional Governor: while in play, opponents can't play the card named on entry. */
+export function regionalGovernorBlocks(game: GameState, player: PlayerId, cardId: string): boolean {
+  const title = CardTitle(cardId);
+  if (!title) return false;
+  const opp = player === 1 ? game.player2 : game.player1;
+  return [...opp.groundArena, ...opp.spaceArena].some(
+    u => u.cardId === "SOR_062" && !Unit.FromInterface(u).LostAbilities() && u.namedCardTitle === title,
+  );
+}
+
+/**
+ * The aspect icons the player's base + leader do NOT cover, as a multiset — a card with two
+ * Aggression icons against a single Aggression source leaves one uncovered.
+ * The one place aspect matching is defined; everything else counts or filters this list.
+ */
+export function uncoveredAspects(game: GameState, player: PlayerId, aspects: string[]): string[] {
   const p = player === 1 ? game.player1 : game.player2;
   const provided = [
     ...CardAspects(p.base.cardId),
@@ -107,13 +139,18 @@ function aspectPenaltyForAspects(game: GameState, player: PlayerId, aspects: str
   ];
   const counts = new Map<string, number>();
   for (const a of provided) counts.set(a, (counts.get(a) ?? 0) + 1);
-  let missing = 0;
+
+  const uncovered: string[] = [];
   for (const a of aspects) {
     const rem = counts.get(a) ?? 0;
     if (rem > 0) counts.set(a, rem - 1);
-    else missing++;
+    else uncovered.push(a);
   }
-  return missing * 2;
+  return uncovered;
+}
+
+function aspectPenaltyForAspects(game: GameState, player: PlayerId, aspects: string[]): number {
+  return uncoveredAspects(game, player, aspects).length * 2;
 }
 
 function hasTechInPlay(game: GameState, player: PlayerId): boolean {
@@ -157,16 +194,6 @@ export function ResourceIsSmuggleable(
   return readyCount >= cost;
 }
 
-// SOR_062 Regional Governor: while in play, opponents can't play the card named on entry.
-function regionalGovernorBlocks(game: GameState, player: PlayerId, cardId: string): boolean {
-  const title = CardTitle(cardId);
-  if (!title) return false;
-  const opp = player === 1 ? game.player2 : game.player1;
-  return [...opp.groundArena, ...opp.spaceArena].some(
-    u => u.cardId === "SOR_062" && !Unit.FromInterface(u).LostAbilities() && u.namedCardTitle === title,
-  );
-}
-
 // SOR_199 Bamboozle: playable via alternate cost if hand has another Cunning card.
 function bamboozleAltCostAvailable(game: GameState, player: PlayerId): boolean {
   const p = player === 1 ? game.player1 : game.player2;
@@ -191,8 +218,9 @@ export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string
   // Check if piloting is an option
   const pilotBase = PilotingCost(cardId);
   if (pilotBase >= 0) {
-    const aspectPen = fullCost - CardCost(cardId); // the aspect penalty already computed
-    const pilotFullCost = pilotBase + aspectPen;
+    // Must match the payment path exactly: piloting cost + aspect penalty. (This used to be
+    // `fullCost - CardCost`, which wrongly folded card-cost discounts and taxes into it.)
+    const pilotFullCost = pilotPlayCost(game, player, cardId);
     const canAffordPilot = readyResources >= pilotFullCost;
     const hasVehicle = PilotingEligibleVehicles(game, player).length > 0;
     if (canAffordPilot && hasVehicle) return true;

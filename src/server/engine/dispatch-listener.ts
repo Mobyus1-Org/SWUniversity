@@ -55,7 +55,7 @@ import type {
   ResolutionRequest,
   UseAbilityDispatchData,
 } from "@/lib/engine/message-types";
-import { effectiveSmuggleCost, spendableFor } from "@/server/engine/card-playability";
+import { effectiveSmuggleCost, spendableFor, playCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks } from "@/server/engine/card-playability";
 import type { Game, GameState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import type {
@@ -215,105 +215,40 @@ function sweepDeadUnits(gs: GameState, log: string[], continuation: PendingResol
 // Helpers: resources & cost
 // ---------------------------------------------------------------------------
 
-function aspectPenalty(game: GameState, player: PlayerId, cardId: string): number {
-  const playerState = GetPlayer(game, player);
+/**
+ * The 8 common LAW "splash" bases — "Epic Action: Play a card from your hand, ignoring 1 of its
+ * Vigilance, Command, Aggression, or Cunning aspect penalties."
+ */
+const SPLASH_BASES = new Set([
+  "LAW_020", //Daimyo's Palace
+  "LAW_021", //Coaxium Mine
+  "LAW_022", //Aldhani Garrison
+  "LAW_024", //Imperial Command Complex
+  "LAW_025", //Contested Caverns
+  "LAW_027", //Stygeon Spire
+  "LAW_028", //Canto Bight
+  "LAW_030", //Partisan Hideout
+]);
 
-  // Darksaber: free aspect cost when a friendly Mandalorian non-Vehicle target exists
-  if (cardId === "SHD_126") {
-    const hasMandalorian = [...playerState.groundArena, ...playerState.spaceArena]
-      .some(u => !TraitContains(u.cardId, "Vehicle") && TraitContains(u.cardId, "Mandalorian", player, u.playId));
-    if (hasMandalorian) return 0;
-  }
+/** The four non-side aspects. Heroism/Villainy penalties can never be splashed away. */
+const SPLASHABLE_ASPECTS = ["Vigilance", "Command", "Aggression", "Cunning"];
 
-  const provided = [
-    ...CardAspects(playerState.base.cardId),
-    ...CardAspects(playerState.leader.cardId),
-  ];
-  const counts = new Map<string, number>();
-  for (const a of provided) counts.set(a, (counts.get(a) ?? 0) + 1);
-  let missing = 0;
-  for (const a of CardAspects(cardId)) {
-    const rem = counts.get(a) ?? 0;
-    if (rem > 0) counts.set(a, rem - 1);
-    else missing++;
-  }
-  return missing * 2;
-}
-
-function delMeekoEventTax(game: GameState, player: PlayerId, cardId: string): number {
-  if (CardType(cardId) !== "Event") return 0;
-  const opp = GetOtherPlayer(player);
-  const oppUnits = [...GetPlayer(game, opp).groundArena, ...GetPlayer(game, opp).spaceArena];
-  return oppUnits.some(u => u.cardId === "SOR_034" && !Unit.FromInterface(u).LostAbilities()) ? 1 : 0;
-}
-
-function guardianOfTheWhillsDiscount(game: GameState, player: PlayerId, cardId: string): number {
-  if (CardType(cardId) !== "Upgrade") return 0;
-  const p = GetPlayer(game, player);
-  const eligibleTargets = UpgradeEligibleTargets(cardId, game, player);
-  const hasEligibleGuardian = [...p.groundArena, ...p.spaceArena].some(u => {
-    if (u.cardId !== "SOR_061" && u.cardId !== "LOF_058") return false;
-    if (Unit.FromInterface(u).LostAbilities()) return false;
-    if (game.currentEffects.some(e => e.cardId === "SOR_061_firstUpgradeUsed" && e.targetPlayId === u.playId && e.affectedPlayer === player)) return false;
-    return eligibleTargets.includes(u.playId);
-  });
-  return hasEligibleGuardian ? 1 : 0;
-}
-
-// SOR_139 Force Choke: costs 1 less if you control a Force unit.
-function forceChokeDiscount(game: GameState, player: PlayerId, cardId: string): number {
-  if (cardId !== "SOR_139") return 0;
-  const p = GetPlayer(game, player);
-  return [...p.groundArena, ...p.spaceArena].some(
-    u => CardTraits(u.cardId).includes("Force") && !Unit.FromInterface(u).LostAbilities(),
-  ) ? 1 : 0;
-}
-
-function jabbaTheTrickDiscount(game: GameState, player: PlayerId, cardId: string): number {
-  if (CardType(cardId) !== "Event" || !CardTraits(cardId).includes("Trick")) return 0;
-  const p = GetPlayer(game, player);
-  return [...p.groundArena, ...p.spaceArena].some(
-    u => u.cardId === "SOR_181" && !Unit.FromInterface(u).LostAbilities(),
-  ) ? 1 : 0;
-}
-
-// SOR_056 Bendu: next non-Heroism non-Villainy card costs 2 less (consumed on use).
-function benduDiscount(game: GameState, player: PlayerId, cardId: string): number {
-  if (CardAspects(cardId).includes("Heroism") || CardAspects(cardId).includes("Villainy")) return 0;
-  return game.currentEffects.some(e => e.cardId === "SOR_056" && e.affectedPlayer === player) ? 2 : 0;
-}
-
-// SEC_110 GNK Power Droid: next unit costs 1 less (consumed when a unit is played).
-function gnkPowerDroidDiscount(game: GameState, player: PlayerId, cardId: string): number {
-  if (CardType(cardId) !== "Unit") return 0;
-  return game.currentEffects.some(e => e.cardId === "SEC_110" && e.affectedPlayer === player) ? 1 : 0;
-}
-
-function playCost(game: GameState, player: PlayerId, cardId: string): number {
-  return CardCost(cardId)
-    + aspectPenalty(game, player, cardId)
-    + delMeekoEventTax(game, player, cardId)
-    - guardianOfTheWhillsDiscount(game, player, cardId)
-    - forceChokeDiscount(game, player, cardId)
-    - jabbaTheTrickDiscount(game, player, cardId)
-    - benduDiscount(game, player, cardId)
-    - gnkPowerDroidDiscount(game, player, cardId)
-  ;
+/**
+ * The resource discount a splash base gives when playing `cardId`: 2 if at least one of the
+ * card's UNCOVERED aspect icons is one of the four non-side aspects, else 0.
+ *
+ * Every aspect penalty is worth the same 2 resources, so which icon the player "chooses" to
+ * ignore never changes the price — no prompt is needed. A doubled uncovered icon (e.g.
+ * Aggression×2) is two separate penalties and only one is ignored, hence a flat 2, not 4.
+ */
+function splashAspectDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  const uncovered = uncoveredAspects(game, player, CardAspects(cardId));
+  return uncovered.some(a => SPLASHABLE_ASPECTS.includes(a)) ? 2 : 0;
 }
 
 function canAfford(game: GameState, player: PlayerId, cardId: string): boolean {
   const ready = GetPlayer(game, player).resources.filter((r) => r.ready).length;
   return ready >= playCost(game, player, cardId);
-}
-
-function regionalGovernorBlocks(game: GameState, player: PlayerId, cardId: string): boolean {
-  const title = CardTitle(cardId);
-  if (!title) return false;
-  const opp = GetOtherPlayer(player);
-  const oppState = GetPlayer(game, opp);
-  return [...oppState.groundArena, ...oppState.spaceArena].some(
-    u => u.cardId === "SOR_062" && !Unit.FromInterface(u).LostAbilities() && u.namedCardTitle === title,
-  );
 }
 
 /** Exhausts `count` ready resources. Never consults Credits — callers use payResources. */
@@ -398,10 +333,6 @@ function payResources(
     log.push(`Player ${player} defeated ${spend} Credit token(s) to pay ${spend} less.`);
   }
   exhaustResourcesRaw(game, player, Math.max(0, cost - spend));
-}
-
-function pilotPlayCost(game: GameState, player: PlayerId, cardId: string): number {
-  return PilotingCost(cardId) + aspectPenalty(game, player, cardId);
 }
 
 // ---------------------------------------------------------------------------
@@ -2600,7 +2531,24 @@ function handlePlayCard(
   dispatch: GameDispatch,
 ): HandlerResult {
   const { cardId } = dispatch.dispatchData as PlayCardDispatchData;
-  const player = dispatch.fromPlayer;
+  return playCardFromHand(game, log, dispatch.fromPlayer, cardId);
+}
+
+/**
+ * The shared "play this card out of hand" path: affordability, Piloting, Exploit, Bamboozle,
+ * payment (Credits included), then completePlayCard.
+ *
+ * `costDelta` is a one-off reduction applied to BOTH the unit cost and the piloting cost — used
+ * by abilities that play a card at a discount (e.g. the LAW splash bases, which ignore one
+ * aspect penalty). It never reduces a cost below 0.
+ */
+function playCardFromHand(
+  game: GameState,
+  log: string[],
+  player: PlayerId,
+  cardId: string,
+  costDelta = 0,
+): HandlerResult {
   const hand = GetPlayer(game, player).hand;
   const idx = hand.findIndex((c) => c.cardId === cardId);
 
@@ -2610,7 +2558,7 @@ function handlePlayCard(
   if (regionalGovernorBlocks(game, player, cardId))
     return { response: invalidResponse(`Regional Governor prevents playing ${CardTitle(cardId) ?? cardId}.`), pending: null, stateChanged: false };
 
-  const fullCost = playCost(game, player, cardId);
+  const fullCost = Math.max(0, playCost(game, player, cardId) - costDelta);
   const exploitAmt = ExploitAmount(cardId, "hand", player, true); // report mode: peek without consuming
   const readyCount = spendableFor(game, player);
   const minCost = exploitAmt > 0 ? Math.max(0, fullCost - exploitAmt * 2) : fullCost;
@@ -2618,7 +2566,7 @@ function handlePlayCard(
   // --- Piloting branch (checked before the unit affordability guard) ---
   const pilotBase = PilotingCost(cardId);
   if (pilotBase >= 0) {
-    const pilotCost = pilotPlayCost(game, player, cardId);
+    const pilotCost = Math.max(0, pilotPlayCost(game, player, cardId) - costDelta);
     const eligibleVehicles = PilotingEligibleVehicles(game, player);
     const canAffordUnit = readyCount >= fullCost;
     const canAffordPilot = readyCount >= pilotCost && eligibleVehicles.length > 0;
@@ -2884,10 +2832,94 @@ function handleBaseEpicAction(game: GameState, log: string[], player: PlayerId):
   if (game.gamePhase !== "ActionPhase")
     return { response: invalidResponse("Base epic action can only be used during the action phase."), pending: null, stateChanged: false };
 
+  if (SPLASH_BASES.has(base.cardId)) return resolveSplashEpicAction(game, log, player);
+
   switch (base.cardId) {
     case "SOR_022": return resolveEclEpicAction(game, log, player);
+    case "SOR_025": return resolveTarkintownEpicAction(game, log, player);
+    case "SOR_028": return resolveJedhaCityEpicAction(game, log, player);
     default: return { response: invalidResponse("This base has no implemented epic action."), pending: null, stateChanged: false };
   }
+}
+
+/**
+ * The 8 LAW splash bases — "Epic Action: Play a card from your hand, ignoring 1 of its
+ * Vigilance, Command, Aggression, or Cunning aspect penalties."
+ *
+ * Any card in hand is a legal choice (the discount is a benefit, not a requirement); it just has
+ * to be affordable once the splash discount is applied.
+ */
+function resolveSplashEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
+  const base = GetPlayer(game, player).base;
+  base.epicActionUsed = true;
+
+  const eligible = GetPlayer(game, player).hand.filter(c => splashCardIsAffordable(game, player, c.cardId));
+  if (eligible.length === 0) {
+    log.push(`Player ${player} used ${CardTitle(base.cardId)} — no affordable cards to play.`);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  log.push(`Player ${player} used ${CardTitle(base.cardId)}.`);
+  const pending: PlayFromHandPending = { type: "play-from-hand", cardId: base.cardId, player };
+  return { response: resolutionResponse(pendingToResolution(pending, game)), pending, stateChanged: false };
+}
+
+/** Can this card be played via a splash base — i.e. affordable as a unit OR as a Pilot, after the discount? */
+function splashCardIsAffordable(game: GameState, player: PlayerId, cardId: string): boolean {
+  const discount = splashAspectDiscount(game, player, cardId);
+  const ready = spendableFor(game, player);
+
+  const exploitAmt = ExploitAmount(cardId, "hand", player, true);
+  const unitCost = Math.max(0, playCost(game, player, cardId) - discount);
+  const minUnitCost = exploitAmt > 0 ? Math.max(0, unitCost - exploitAmt * 2) : unitCost;
+  if (ready >= minUnitCost) return true;
+
+  // A Pilot the player can't hard-cast may still be affordable attached to a Vehicle.
+  if (PilotingCost(cardId) >= 0 && PilotingEligibleVehicles(game, player).length > 0) {
+    const pilotCost = Math.max(0, pilotPlayCost(game, player, cardId) - discount);
+    if (ready >= pilotCost) return true;
+  }
+  return false;
+}
+
+/** SOR_025 Tarkintown — "Epic Action: Deal 3 damage to a damaged non-leader unit." */
+function resolveTarkintownEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
+  const eligible = GetAllUnits(game).filter(u => u.damage > 0 && !CardIsLeader(u.cardId));
+  if (eligible.length === 0) {
+    log.push(`${CardTitle("SOR_025")}: no damaged non-leader unit — soft pass.`);
+    return { response: invalidResponse("Tarkintown: no damaged non-leader unit to damage."), pending: null, stateChanged: false };
+  }
+
+  GetPlayer(game, player).base.epicActionUsed = true;
+  log.push(`Player ${player} used ${CardTitle("SOR_025")}.`);
+  const pending: AbilityTargetPending = {
+    type: "ability-target",
+    cardId: "SOR_025",
+    player,
+    fromPlayIds: eligible.map(u => u.playId),
+    continuation: null,
+  };
+  return { response: resolutionResponse(pendingToResolution(pending, game)), pending, stateChanged: false };
+}
+
+/** SOR_028 Jedha City — "Epic Action: Give a non-leader unit -4/-0 for this phase." */
+function resolveJedhaCityEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
+  const eligible = GetAllUnits(game).filter(u => !CardIsLeader(u.cardId));
+  if (eligible.length === 0) {
+    log.push(`${CardTitle("SOR_028")}: no non-leader unit — soft pass.`);
+    return { response: invalidResponse("Jedha City: no non-leader unit to target."), pending: null, stateChanged: false };
+  }
+
+  GetPlayer(game, player).base.epicActionUsed = true;
+  log.push(`Player ${player} used ${CardTitle("SOR_028")}.`);
+  const pending: AbilityTargetPending = {
+    type: "ability-target",
+    cardId: "SOR_028",
+    player,
+    fromPlayIds: eligible.map(u => u.playId),
+    continuation: null,
+  };
+  return { response: resolutionResponse(pendingToResolution(pending, game)), pending, stateChanged: false };
 }
 
 function resolveEclEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
@@ -3800,6 +3832,16 @@ function handleChooseTarget(
         hand.splice(idx, 1);
         log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Alliance Dispatcher (-1 cost).`);
         return completePlayCard(game, log, cardId, pending.player);
+      }
+      case "LAW_020": case "LAW_021": case "LAW_022": case "LAW_024":
+      case "LAW_025": case "LAW_027": case "LAW_028": case "LAW_030": {
+        // Splash bases: any card in hand, played at -2 if it has an uncovered non-side aspect.
+        // playCardFromHand carries the discount through Piloting, Exploit and Credit payment.
+        const discount = splashAspectDiscount(game, pending.player, cardId);
+        if (!splashCardIsAffordable(game, pending.player, cardId))
+          return { response: invalidResponse(`Not enough resources to play ${CardTitle(cardId) ?? cardId}.`), pending, stateChanged: false };
+        log.push(`Player ${pending.player} is playing ${CardTitle(cardId) ?? cardId} via ${CardTitle(pending.cardId)}${discount > 0 ? " (1 aspect penalty ignored)" : ""}.`);
+        return playCardFromHand(game, log, pending.player, cardId, discount);
       }
       case "SOR_022": {
         if (CardType(cardId) !== "Unit")
@@ -7560,6 +7602,24 @@ function applyAbilityEffect(
         DrawCardForPlayer(gs099, game.gameLog, pending.player!);
         game.gameLog.push(`${CardTitle("SOR_099")}: returned ${CardTitle(bounced099.unit.cardId)} to hand and drew a card.`);
       }
+      break;
+    }
+    case "SOR_025": { // Tarkintown Epic Action: deal 3 damage to a damaged non-leader unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "SOR_025", targetPlayId, 3, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "SOR_028": { // Jedha City Epic Action: give a non-leader unit -4/-0 for this phase.
+      if (!targetPlayId) break;
+      const target028 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target028) break;
+      game.currentGameState.currentEffects.push({
+        cardId: "SOR_028",
+        duration: "Phase",
+        affectedPlayer: target028.controller,
+        targetPlayId,
+      });
+      game.gameLog.push(`${CardTitle("SOR_028")}: ${CardTitle(target028.cardId)} gets -4/-0 for this phase.`);
       break;
     }
     case "SOR_136": { // Vader's Lightsaber When Played: deal 4 damage to a ground unit.

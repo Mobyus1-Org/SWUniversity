@@ -53,6 +53,16 @@ export const Cards = {
       greatPitOfCarkoon: "LAW_023",
       shipbreakingYard: "LAW_026",
       citadelResearchCenter: "LAW_029",
+      // Common "splash" bases — "Epic Action: Play a card from your hand, ignoring 1 of its
+      // Vigilance, Command, Aggression, or Cunning aspect penalties."
+      daimyosPalace: "LAW_020",
+      coaxiumMine: "LAW_021",
+      aldhaniGarrison: "LAW_022",
+      imperialCommandComplex: "LAW_024",
+      contestedCaverns: "LAW_025",
+      stygeonSpire: "LAW_027",
+      cantoBight: "LAW_028",
+      partisanHideout: "LAW_030",
     }
   },
   leaders: {
@@ -262,6 +272,7 @@ export const Cards = {
       chopper: "SOR_188",
       lothalInsurgent: "SOR_190",
       battlefieldMarine: "SOR_095",
+      tieLnFighter: "SOR_225",
       echoBaseDefender: "SOR_098",
       brightHope: "SOR_099",
       homeOne: "SOR_102",
@@ -358,6 +369,7 @@ export const Cards = {
       snapWexley: "JTL_098",
       r2d2: "JTL_245",
       millenniumFalcon: "JTL_249",
+      theMandalorianPilot: "JTL_210",
       shuttleSt149: "JTL_242",
       redFive: "JTL_151",
       devastator: "JTL_143",
@@ -470,6 +482,7 @@ export const Cards = {
       rebelAssault: "SOR_103",
       strikeTrue: "SOR_127",
       forceChoke: "SOR_139",
+      rallyingCry: "SOR_154",
       resupply: "SOR_126",
       prepareForTakeoff: "SOR_125",
       asteroidSanctuary: "SOR_218",
