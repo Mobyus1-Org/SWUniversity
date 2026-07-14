@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty, HasTheForce, HealBaseForPlayer, UseTheForce } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
@@ -625,7 +625,8 @@ export function resolveWhenPlayed(
     case "LAW_168": // Haymaker — "Give an Experience token to a friendly unit. That unit deals damage equal to its power to an enemy unit in the same arena."
       return chooseFriendlyForPowerDamage(cardId, player);
     case "SOR_251": { // Confiscate — "Defeat an upgrade."
-      const allUpgradePlayIds251 = AllUnits().flatMap(u => u.upgrades.map(upg => upg.playId));
+      // Upgrades immune to enemy abilities (Luke JTL_012 as a Pilot) aren't legal targets.
+      const allUpgradePlayIds251 = DefeatableUpgradePlayIds(player);
       if (allUpgradePlayIds251.length === 0) return null;
       return mandatoryTarget(cardId, player, allUpgradePlayIds251);
     }

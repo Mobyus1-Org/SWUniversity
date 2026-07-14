@@ -4,6 +4,7 @@ import { GetGame, CardIsLeader } from "@/server/engine/core-functions";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
+import { CreateCloneTrooper } from "@/server/engine/token-helpers";
 
 export function resolveWhenDeployed(
   cardId: string,
@@ -13,6 +14,32 @@ export function resolveWhenDeployed(
   const game = GetGame();
   if (!game) throw new Error("Game not found in resolveWhenDeployed");
   switch (cardId) {
+    case "TWI_007": { // Captain Rex — When Deployed: Create a Clone Trooper token.
+      CreateCloneTrooper(game.currentGameState, player, log, "TWI_007");
+      return null;
+    }
+    case "TWI_004": { // Yoda — When Deployed: You may discard a card from your deck. If you do,
+                      // defeat an enemy non-leader unit that costs the same as or less than it.
+      const deck004 = (player === 1 ? game.currentGameState.player1 : game.currentGameState.player2).deck;
+      if (deck004.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId: "TWI_004",
+        player,
+        helperText: "Discard a card from your deck to defeat an enemy unit costing the same or less?",
+        yesLabel: "Discard from deck",
+        noLabel: "Skip",
+        onYes: {
+          type: "mill",
+          cardId: "TWI_004",
+          player,
+          millingPlayer: player,
+          count: 1,
+          continuation: null,
+        },
+        continuation: null,
+      };
+    }
     case "SHD_002": { // Qi'ra — heal all damage from each unit, then deal floor(TotalHP/2) to each
       const gs = game.currentGameState;
       const allUnits = [

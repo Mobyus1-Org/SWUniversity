@@ -73,6 +73,14 @@ export function resolveOnAttackTrigger(
   //Upgrade-granted On Attack abilities
   for (const upgrade of activeUpgrades) {
     switch (upgrade.cardId) {
+      case "JTL_012": { // Luke Skywalker piloting a Fighter — "On Attack: You may deal 3 damage to a unit."
+        const allUnits012 = AllUnits();
+        if (allUnits012.length > 0) {
+          return optionalTarget("JTL_012_pilot", attacker.controller, allUnits012.map(u => u.playId),
+            "Deal 3 damage to a unit?", { continuation });
+        }
+        break;
+      }
       case "SOR_121": { // Hardpoint Heavy Blaster
         if (continuation.target.type === "unit") {
           const defenderPlayId = continuation.target.playId;

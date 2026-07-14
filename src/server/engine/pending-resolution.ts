@@ -72,6 +72,19 @@ export interface ChooseOnePending {
   cardId: string;
   player: PlayerId;
   options: { id: string; label: string }[];
+  /** Card-specific payload the chosen mode needs (e.g. Yoda's held card). Must stay serializable. */
+  data?: Record<string, string | number>;
+  continuation: PendingResolution | null;
+}
+
+/**
+ * "Put a card from your hand on the top or bottom of your deck" (Yoda TWI_004).
+ * Step 1 picks the card; the top/bottom choice follows as a ChooseOnePending.
+ */
+export interface HandToDeckPending {
+  type: "hand-to-deck";
+  cardId: string;
+  player: PlayerId;
   continuation: PendingResolution | null;
 }
 
@@ -475,6 +488,7 @@ export type PendingResolution =
   | LeaderActionPending
   | WhenDefeatedChoicePending
   | ChooseOnePending
+  | HandToDeckPending
   | DiscardFromHandPending
   | ResolveAttackPending
   | UpgradeTargetPending

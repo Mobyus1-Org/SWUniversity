@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand } from "@/server/engine/core-functions";
+import { GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand } from "@/server/engine/core-functions";
 import { CardTraits } from "@/server/engine/card-db/generated";
 
 export function ActionAbilities(cardId: string, player: PlayerId, playId?: string): string[] {
@@ -49,6 +49,15 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "LOF_007": // Avar Kriss — Action [Exhaust]: The Force is with you (create your Force token).
         abilities.push(cardId);
         break;
+      case "TWI_007": // Captain Rex — Action [2 resources, Exhaust]: create a Clone Trooper if a friendly unit attacked.
+        abilities.push(cardId);
+        break;
+      case "TWI_004": // Yoda — Action [Exhaust]: draw + top/bottom, if a unit left play this phase.
+        abilities.push(cardId);
+        break;
+      case "JTL_012": // Luke Skywalker — Action [Exhaust]: 1 damage to a unit, if a Fighter attacked this phase.
+        abilities.push(cardId);
+        break;
       case "LOF_003": // Ahsoka Tano — Action [Exhaust, use the Force]: Give a friendly unit Sentinel (needs the Force + a friendly unit).
         if (HasTheForce(player) && GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
         break;
@@ -58,6 +67,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         break;
       case "TWI_012": // Anakin Skywalker — Action: Attack with a unit (needs a ready unit)
         if (GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
+        break;
+      case "TWI_011": // Ahsoka Tano — Coordinate: gains the Action only while controlling 3+ units.
+        if (IsCoordinateActive(player) && GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
         break;
       case "SEC_006": // Colonel Yularen — Action [Exhaust]: Attack with a unit, then optionally a cheaper one (needs a ready unit)
         if (GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);

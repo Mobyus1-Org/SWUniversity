@@ -558,6 +558,24 @@ export function CardWasPlayedThisPhase(player: PlayerId, trait?: string, type?: 
   return playedCards.length > 0;
 }
 
+/**
+ * Upgrades that can't be defeated by an OPPONENT's card abilities — e.g. Luke Skywalker
+ * (JTL_012) deployed as a Pilot. Their own controller's abilities can still defeat them,
+ * and combat/unit defeat still removes them with the unit.
+ */
+export function UpgradeImmuneToEnemyAbilities(upgradeCardId: string): boolean {
+  return upgradeCardId === "JTL_012";
+}
+
+/** Upgrade playIds `player` may legally target with a "defeat an upgrade" ability. */
+export function DefeatableUpgradePlayIds(player: PlayerId): string[] {
+  return AllUnits().flatMap(u =>
+    u.upgrades
+      .filter(upg => !(UpgradeImmuneToEnemyAbilities(upg.cardId) && u.controller !== player))
+      .map(upg => upg.playId),
+  );
+}
+
 export function LeaderCanDeployAsPilot(cardId: string): boolean {
   switch(cardId) {
     case "JTL_001"://Asajj Ventress
@@ -674,6 +692,14 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
   if (player && playId) {
     //for conditional on-attack abilities granted by upgrades
     //TODO: example Jedi Lightsaber
+
+    // Luke Skywalker (Hero of Yavin) as a Pilot upgrade only grants the On Attack
+    // "If it's a Fighter" — a piloted Transport or Capital Ship gains nothing.
+    if (cardId === "JTL_012") {
+      const attached = GetUnitsForPlayer(player).find(u => u.upgrades.some(upg => upg.playId === playId));
+      if (!attached) return false;
+      return CardTraits(attached.cardId).includes("Fighter");
+    }
   }
 
   switch (cardId) {

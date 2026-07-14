@@ -111,7 +111,8 @@ import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dict
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
-import { CreateSpy, CreateCreditToken } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateCreditToken, CreateCloneTrooper } from "@/server/engine/token-helpers";
+import { UpgradeImmuneToEnemyAbilities } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -180,6 +181,16 @@ function resolveChooseOne(
         ? shatterpointModeA(pending.cardId, pending.player)
         : shatterpointModeB(pending.cardId, pending.player, log);
       break;
+    case "TWI_004": { // Yoda — put the held card on the top or bottom of the deck.
+      const heldCardId = String(pending.data?.heldCardId ?? "");
+      if (!heldCardId) break;
+      const deck004 = GetPlayer(game, pending.player).deck;
+      // The top of the deck is the END of the array (drawing pops).
+      if (optionId === "top") deck004.push({ cardId: heldCardId });
+      else deck004.unshift({ cardId: heldCardId });
+      log.push(`${CardTitle("TWI_004")}: put ${CardTitle(heldCardId)} on the ${optionId} of the deck.`);
+      break;
+    }
     default:
       log.push(`No "Choose one" handler for ${CardTitle(pending.cardId)}.`);
       break;
@@ -497,10 +508,21 @@ function defeatUpgradeByPlayId(
   targetPlayId: string,
   sourceLabel: string,
   continuation: PendingResolution | null,
+  /** The player whose card ability is doing the defeating, when one is. */
+  bySourcePlayer?: PlayerId,
 ): PendingResolution | null {
   for (const u of GetAllUnits(game)) {
     const upgradeIdx = u.upgrades.findIndex(upg => upg.playId === targetPlayId);
     if (upgradeIdx === -1) continue;
+    // "This upgrade can't be defeated by enemy card abilities" (Luke JTL_012 as a Pilot).
+    if (
+      bySourcePlayer !== undefined &&
+      u.controller !== bySourcePlayer &&
+      UpgradeImmuneToEnemyAbilities(u.upgrades[upgradeIdx].cardId)
+    ) {
+      log.push(`${CardTitle(u.upgrades[upgradeIdx].cardId)} can't be defeated by enemy card abilities.`);
+      return continuation;
+    }
     const [defeated] = u.upgrades.splice(upgradeIdx, 1);
     log.push(`${sourceLabel} defeated ${CardTitle(defeated.cardId)} on ${CardTitle(u.cardId)}.`);
     // Traitorous unattach: owner reclaims control when the upgrade is removed.
@@ -1754,6 +1776,12 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         options: pending.options.map(o => o.id),
         optionLabels: pending.options.map(o => o.label),
       } satisfies NeedsOption;
+    case "hand-to-deck":
+      return {
+        type: "Target",
+        fromZones: ["Hand"],
+        handOwner: pending.player,
+      } satisfies NeedsTarget;
     case "discard-from-hand":
       return { type: "Target", fromZones: ["Hand"], handOwner: pending.targetPlayer } satisfies NeedsTarget;
     case "upgrade-target":
@@ -2037,6 +2065,18 @@ function replayWithCredits(
  * Finishes playing a card after cost has been paid and the card removed from hand.
  * Handles Unit placement, Upgrade targeting, Event resolution, and trigger draining.
  */
+
+/** Builds the "choose a base" step of Darth Vader's leader ability (1 damage to a base). */
+function vaderBaseTargetPending(player: PlayerId): AbilityTargetPending {
+  return {
+    type: "ability-target",
+    cardId: "SOR_010_leader_base",
+    player,
+    fromPlayIds: [],
+    fromZones: ["Base"],
+    continuation: null,
+  };
+}
 
 /** Builds the "choose a base to deal SEC_264 damage to" ability-target step. */
 function sec264BaseTargetPending(
@@ -2935,7 +2975,7 @@ function handleChooseTarget(
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
-    const rawPending = applyAbilityEffect(pending, chosenBase, chosen);
+    const rawPending = applyAbilityEffect(pending, chosenBase, chosen, data.targetPlayers?.[0]);
     updateDefeatedPlayers(game);
 
     if (rawPending?.type === "resolve-attack") {
@@ -3169,6 +3209,29 @@ function handleChooseTarget(
     if (bag) return { response: resolutionResponse(pendingToResolution(bag, game)), pending: bag, stateChanged: false };
     updateDefeatedPlayers(game);
     return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending.type === "hand-to-deck") {
+    const idx = data.targetIndices?.[0];
+    if (idx == null)
+      return { response: invalidResponse("Choose a card from your hand."), pending, stateChanged: false };
+    const hand = GetPlayer(game, pending.player).hand;
+    if (idx < 0 || idx >= hand.length)
+      return { response: invalidResponse("Invalid hand index."), pending, stateChanged: false };
+    const [held] = hand.splice(idx, 1);
+    // The card is out of hand; now ask where it goes.
+    const placement: ChooseOnePending = {
+      type: "choose-one",
+      cardId: pending.cardId,
+      player: pending.player,
+      options: [
+        { id: "top", label: `Put ${CardTitle(held.cardId)} on top of your deck` },
+        { id: "bottom", label: `Put ${CardTitle(held.cardId)} on the bottom of your deck` },
+      ],
+      data: { heldCardId: held.cardId },
+      continuation: pending.continuation,
+    };
+    return { response: resolutionResponse(pendingToResolution(placement, game)), pending: placement, stateChanged: false };
   }
 
   if (pending.type === "bamboozle-alt-cost-discard") {
@@ -5140,6 +5203,8 @@ function leaderHasWhenDeployed(cardId: string): boolean {
   switch (cardId) {
     case "SHD_002": return true;
     case "LAW_008": return true;
+    case "TWI_004": return true; // Yoda — may discard from deck, then defeat a unit by cost
+    case "TWI_007": return true; // Captain Rex — create a Clone Trooper token
     default: return false;
   }
 }
@@ -5166,6 +5231,8 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
   switch (cardId) {
     case "LOF_003": // Ahsoka Tano — If you control 6 or more resources.
       return p.resources.length >= 6;
+    case "TWI_004": // Yoda — If you control 7 or more resources.
+      return p.resources.length >= 7;
     case "LOF_017": // Darth Revan — If you control 5 or more resources.
     case "TWI_018": // Quinlan Vos — If you control 5 or more resources.
       return p.resources.length >= 5;
@@ -5305,6 +5372,62 @@ function resolveActionAbility(
       log.push(`${CardTitle("SOR_002")}: healed 1 damage from your base.`);
       return null;
     }
+    case "SOR_010": { // Darth Vader — Action [1 resource, exhaust]: If you played a [Villainy] card
+                      // this phase, deal 1 damage to a unit and 1 damage to a base.
+      const playedVillainy = game.roundState.cardsPlayedThisPhase.some(
+        c => c.fromPlayer === player && CardAspects(c.cardId).includes("Villainy"),
+      );
+      if (!playedVillainy) {
+        log.push(`${CardTitle("SOR_010")}: no Villainy card played this phase — soft pass.`);
+        return null;
+      }
+      // The base damage always happens; the unit damage only if there is a unit to hit.
+      const baseStep010 = vaderBaseTargetPending(player);
+      const units010 = GetAllUnits(game);
+      if (units010.length === 0) return baseStep010;
+      return {
+        type: "ability-target",
+        cardId: "SOR_010_leader",
+        player,
+        fromPlayIds: units010.map(u => u.playId),
+        continuation: baseStep010,
+      };
+    }
+    case "JTL_012": { // Luke Skywalker — Action [Exhaust]: If you attacked with a Fighter unit this
+                      // phase, deal 1 damage to a unit.
+      if (!UnitAttackedThisPhase(player, "Fighter")) {
+        log.push(`${CardTitle("JTL_012")}: no Fighter attacked this phase — soft pass.`);
+        return null;
+      }
+      const units012 = GetAllUnits(game);
+      if (units012.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "JTL_012_leader",
+        player,
+        fromPlayIds: units012.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "TWI_004": { // Yoda — Action [Exhaust]: If a unit left play this phase, draw a card, then
+                      // put a card from your hand on the top or bottom of your deck.
+      if (game.roundState.cardsLeftPlayThisPhase.length === 0) {
+        log.push(`${CardTitle("TWI_004")}: no unit left play this phase — soft pass.`);
+        return null;
+      }
+      DrawCardForPlayer(game, log, player);
+      if (GetPlayer(game, player).hand.length === 0) return null;
+      return { type: "hand-to-deck", cardId: "TWI_004", player, continuation: null };
+    }
+    case "TWI_007": { // Captain Rex — Action [2 resources, Exhaust]: If a friendly unit attacked
+                      // this phase, create a Clone Trooper token.
+      if (!UnitAttackedThisPhase(player)) {
+        log.push(`${CardTitle("TWI_007")}: no friendly unit attacked this phase — soft pass.`);
+        return null;
+      }
+      CreateCloneTrooper(game, player, log, "TWI_007");
+      return null;
+    }
     case "LOF_007": { // Avar Kriss — Action [Exhaust]: The Force is with you (create your Force token).
       CreateForceToken(player, log, "LOF_007");
       return null;
@@ -5378,6 +5501,17 @@ function resolveActionAbility(
         cardId: "TWI_012",
         player,
         fromPlayIds: readyUnits012.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "TWI_011": { // Ahsoka Tano — Coordinate — Action [Exhaust]: Attack with a unit. It gets +1/+0 for this attack.
+      const readyUnits011 = GetUnitsForPlayer(player).filter(u => u.ready);
+      if (readyUnits011.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "TWI_011",
+        player,
+        fromPlayIds: readyUnits011.map(u => u.playId),
         continuation: null,
       } satisfies AbilityTargetPending;
     }
@@ -5698,6 +5832,25 @@ function processMill(game: GameState, log: string[], pending: MillPending): Pend
  */
 function processMillResult(game: GameState, log: string[], pending: MillResultPending): PendingResolution | null {
   switch (pending.cardId) {
+    case "TWI_004": { // Yoda — defeat an enemy non-leader unit costing ≤ the discarded card's cost.
+      const milled004 = pending.milledCardIds[0];
+      if (!milled004) return pending.continuation ?? null;
+      const maxCost004 = CardCost(milled004) ?? 0;
+      const enemy004 = GetUnitsForPlayer(pending.player === 1 ? 2 : 1).filter(
+        u => !Unit.FromInterface(u).IsLeader() && (CardCost(u.cardId) ?? 0) <= maxCost004,
+      );
+      if (enemy004.length === 0) {
+        log.push(`${CardTitle("TWI_004")}: no enemy unit costs ${maxCost004} or less.`);
+        return pending.continuation ?? null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "TWI_004_defeat",
+        player: pending.player,
+        fromPlayIds: enemy004.map(u => u.playId),
+        continuation: pending.continuation ?? null,
+      };
+    }
     case "SOR_204": { // Greedo — if any non-unit was milled, deal 2 damage to a ground unit
       const nonUnitMilled = pending.milledCardIds.some((id: string) => CardType(id) !== "Unit");
       if (nonUnitMilled) {
@@ -5774,6 +5927,8 @@ function applyAbilityEffect(
   pending: AbilityTargetPending,
   targetIsBase: boolean,
   targetPlayId?: string,
+  /** Which base the player picked, when the card lets them choose either one ("a base"). */
+  targetBasePlayer?: PlayerId,
 ): PendingResolution | null {
   const game = GetGame();
   if(!game) throw new Error("Game not found in applyAbilityEffect.");
@@ -6001,9 +6156,26 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, "SHD_012", targetPlayId, 1, game.gameLog);
       break;
     }
-    case "SOR_010": { // Darth Vader: deal 2 damage to chosen unit
+    case "SOR_010": { // Darth Vader (deployed) On Attack: deal 2 damage to chosen unit
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
+      break;
+    }
+    case "SOR_010_leader": { // Darth Vader leader ability: 1 damage to the chosen unit…
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "SOR_010", targetPlayId, 1, game.gameLog);
+      // …then the base step, which is already this pending's continuation.
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "SOR_010_leader_base": { // …and 1 damage to the chosen base ("a base" — either one).
+      const owner010 = pending.player!;
+      let basePlayer010: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer010 = 1;
+      else if (targetPlayId === "player2.base") basePlayer010 = 2;
+      else if (targetIsBase) basePlayer010 = targetBasePlayer ?? (owner010 === 1 ? 2 : 1);
+      if (basePlayer010 === null) break;
+      dealBaseDamage(game.currentGameState, basePlayer010, 1, owner010);
+      game.gameLog.push(`${CardTitle("SOR_010")}: dealt 1 damage to player ${basePlayer010}'s base.`);
       break;
     }
     case "SOR_009": { // Leia Organa: chosen Rebel unit attacks (no buff)
@@ -6185,6 +6357,26 @@ function applyAbilityEffect(
       const defeatPend077 = defeatUnit(game.currentGameState, game.gameLog, target077);
       game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target077.cardId)}.`);
       if (defeatPend077) return injectContinuation(defeatPend077, pending.continuation);
+      return pending.continuation;
+    }
+    case "JTL_012_leader": { // Luke Skywalker leader ability: 1 damage to the chosen unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "JTL_012", targetPlayId, 1, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "JTL_012_pilot": { // Luke as a Pilot upgrade — granted On Attack: deal 3 damage to a unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "JTL_012", targetPlayId, 3, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "TWI_004_defeat": { // Yoda When Deployed: defeat the chosen enemy unit.
+      if (!targetPlayId) break;
+      const target004 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target004) break;
+      if (CardIsLeader(target004.cardId)) break;
+      const defeatPend004 = defeatUnit(game.currentGameState, game.gameLog, target004);
+      game.gameLog.push(`${CardTitle("TWI_004")} defeated ${CardTitle(target004.cardId)}.`);
+      if (defeatPend004) return injectContinuation(defeatPend004, pending.continuation);
       return pending.continuation;
     }
     case "LOF_079": { // Shatterpoint — both modes end the same way: defeat the chosen unit.
@@ -6454,13 +6646,13 @@ function applyAbilityEffect(
     case "SHD_166": //reprint of SOR_162
     case "SOR_251": { // Confiscate — defeat an upgrade
       if (!targetPlayId) break;
-      const lukePending = defeatUpgradeByPlayId(game.currentGameState, game.gameLog, targetPlayId, "Confiscate", pending.continuation ?? null);
+      const lukePending = defeatUpgradeByPlayId(game.currentGameState, game.gameLog, targetPlayId, "Confiscate", pending.continuation ?? null, pending.player);
       if (lukePending) return lukePending;
       break;
     }
     case "SHD_147_defeat_upgrade": { // Ketsu Onyo — after combat damage to a base, defeat an upgrade costing 2 or less
       if (!targetPlayId) break;
-      const lukePending147 = defeatUpgradeByPlayId(game.currentGameState, game.gameLog, targetPlayId, CardTitle("SHD_147"), pending.continuation ?? null);
+      const lukePending147 = defeatUpgradeByPlayId(game.currentGameState, game.gameLog, targetPlayId, CardTitle("SHD_147"), pending.continuation ?? null, pending.player);
       if (lukePending147) return lukePending147;
       break;
     }
@@ -7039,6 +7231,21 @@ function applyAbilityEffect(
         type: "attack-target",
         attackerPlayId: targetPlayId,
         source: "TWI_012",
+        continuation: null,
+      };
+    }
+    case "TWI_011": { // Ahsoka Tano leader Action: the chosen unit attacks with +1/+0 for this attack.
+      if (!targetPlayId) break;
+      game.currentGameState.currentEffects.push({
+        cardId: "TWI_011_action",
+        duration: "ForAttack",
+        affectedPlayer: pending.player!,
+        targetPlayId,
+      });
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "TWI_011",
         continuation: null,
       };
     }

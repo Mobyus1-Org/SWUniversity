@@ -156,6 +156,9 @@ export class Unit implements UnitInterface {
         case "TWI_114": //Clone Commander Cody - Commanding the 212th
           power += IsCoordinateActive(this.controller) && isOtherUnit ? 1 : 0;
           break;
+        case "TWI_011": // Ahsoka Tano (deployed) — Coordinate: this unit gets +2/+0
+          power += (!isOtherUnit && IsCoordinateActive(this.controller)) ? 2 : 0;
+          break;
         case "LOF_007": //Avar Kriss (deployed) — while the Force is with you, this unit gets +4/+0
           power += (!isOtherUnit && HasTheForce(this.controller)) ? 4 : 0;
           break;
@@ -203,6 +206,7 @@ export class Unit implements UnitInterface {
         case "SOR_220": power += 3; break; // Surprise Strike +3/+0 ForAttack
         case "SOR_240": power += 2; break; // Fleet Lieutenant +2/+0 ForAttack
         case "TWI_012_action": power += 2; break; // Anakin Skywalker leader Action +2/+0 ForAttack (vs a unit)
+        case "TWI_011_action": power += 1; break; // Ahsoka Tano leader Action +1/+0 for this attack
         default: break;
       }
     }
@@ -253,6 +257,9 @@ export class Unit implements UnitInterface {
       switch (unit.cardId) {
        case "TWI_114": //Clone Commander Cody - Commanding the 212th
           hp += IsCoordinateActive(this.controller) && isOtherUnit ? 1 : 0;
+          break;
+        case "TWI_007": // Captain Rex (deployed) — each other friendly Trooper unit gets +0/+1
+          hp += isOtherUnit && TraitContains(this.cardId, "Trooper", this.controller, this.playId) ? 1 : 0;
           break;
         case "SOR_230": // General Veers — other friendly Imperial units get +1/+1
           hp += isOtherUnit && TraitContains(this.cardId, "Imperial", this.controller, this.playId) ? 1 : 0;
