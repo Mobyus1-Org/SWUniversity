@@ -1,6 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand } from "@/server/engine/core-functions";
 import { CardTraits } from "@/server/engine/card-db/generated";
+import { PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 
 export function ActionAbilities(cardId: string, player: PlayerId, playId?: string): string[] {
   const game = GetGame();
@@ -68,6 +69,14 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "LOF_003": // Ahsoka Tano — Action [Exhaust, use the Force]: Give a friendly unit Sentinel (needs the Force + a friendly unit).
         if (HasTheForce(player) && GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
         break;
+      case "JTL_013": { // Poe Dameron — Action [1 resource, Exhaust]: Flip this leader and attach him
+                        // as an upgrade to a friendly Vehicle unit WITHOUT a Pilot on it.
+        const game013 = GetGame();
+        if (game013 && PilotlessVehiclePlayIds(game013.currentGameState, player).length > 0) {
+          abilities.push(cardId);
+        }
+        break;
+      }
       //needs conditions met
       case "SOR_006": //Emperor Palpatine - Galactic Ruler
         if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);

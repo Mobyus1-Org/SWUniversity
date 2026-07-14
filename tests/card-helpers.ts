@@ -340,6 +340,7 @@ export const Cards = {
     },
     shd: {
       superlaserTechnician: "SHD_085",
+      concordDawnInterceptors: "SHD_042",
       doctorPershing: "SHD_028",
       generalTagge: "SHD_081",
       sundariPeaceKeeper: "SHD_098",
@@ -376,6 +377,9 @@ export const Cards = {
       onyxSquadronBrute: "JTL_033",
       chimaera: "JTL_039",
       desperateCommando: "JTL_060",
+      anakinSkywalker: "JTL_197",
+      blackOne: "JTL_147",
+      poeDameron: "JTL_100",
     },
     lof: {
       kelleranBeq: "LOF_100",
@@ -394,6 +398,7 @@ export const Cards = {
       oggdoBogdo: "LOF_063",
       guardianOfTheWhills: "LOF_058",
       karis: "LOF_031",
+      anakinSkywalkerChampionOfMortis: "LOF_070",
     },
     twi: {
       infiltratingDemolisher: "TWI_182",
@@ -414,16 +419,20 @@ export const Cards = {
       outerRimConstable: "SEC_163",
       darthTraya: "SEC_188",
       karisNemik: "SEC_148",
+      grandAdmiralThrawn: "SEC_193",
     },
     law: {
       scavengingSandcrawler: "LAW_238",
       galenErso: "LAW_233",
       zebOrellios: "LAW_045",
       expendableMercenary: "LAW_159",
+      sabineWren: "LAW_078",
     },
     ash: {
       antDroid: "ASH_116",
       ravager: "ASH_102",
+      poeDameron: "ASH_040",
+      helgait: "ASH_195",
     },
   },
   upgrades: {

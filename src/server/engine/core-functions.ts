@@ -1,4 +1,4 @@
-import { CardAspects, CardCost, CardIsUnique, CardText, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
+import { CardArena, CardAspects, CardCost, CardIsUnique, CardText, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { Card, CardInPlay, CardTypes, CurrentEffect, Leader, PHASE_STAT_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { Game, GameState, PlayerState } from "@/lib/engine/game";
 import { Unit } from "@/server/engine/unit";
@@ -597,6 +597,14 @@ export function CanDisclose(player: PlayerId, aspects: string[]): boolean {
   return CardsCanDisclose(GetHand(player).map(c => c.cardId), aspects);
 }
 
+/** True when the player's discard pile contains at least one card with the given aspect. */
+export function PlayerHasAspectInDiscard(player: PlayerId, aspect: string): boolean {
+  const game = GetGame();
+  if (!game) return false;
+  const pState = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  return pState.discard.some(c => CardAspects(c.cardId).includes(aspect));
+}
+
 export function UnitWasDefeatedThisPhase(player: PlayerId, trait?: string): boolean {
   const game = GetGame();
   if (!game) {
@@ -664,6 +672,39 @@ export function CardWasPlayedThisPhase(player: PlayerId, trait?: string, type?: 
  */
 export function UpgradeImmuneToEnemyAbilities(upgradeCardId: string): boolean {
   return upgradeCardId === "JTL_012";
+}
+
+/** Readies the unit with this playId, if it is still in play. */
+export function ReadyUnitByPlayId(playId: string | undefined, player: PlayerId, fromCardId?: string): void {
+  if (!playId) return;
+  const unit = GetUnitsForPlayer(player).find(u => u.playId === playId);
+  if (!unit) return;
+  unit.ready = true;
+  const game = GetGame();
+  if (game) {
+    const prefix = fromCardId ? `${CardTitle(fromCardId)}: ` : "";
+    game.gameLog.push(`${prefix}readied ${CardTitle(unit.cardId)}.`);
+  }
+}
+
+/** True when `captor` has at least one enemy non-leader unit in its arena to capture. */
+export function CaptureVictimsExistFor(captor: UnitInterface): boolean {
+  const game = GetGame();
+  if (!game) return false;
+  const arena = (CardArena(captor.cardId) ?? "Ground") as "Ground" | "Space";
+  const enemy: PlayerId = captor.controller === 1 ? 2 : 1;
+  const enemyState = enemy === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  const units = arena === "Ground" ? enemyState.groundArena : enemyState.spaceArena;
+  return units.some(u => !CardIsLeader(u.cardId));
+}
+
+/** The upgrade with this playId, wherever it is attached, or null. */
+export function FindUpgradeByPlayId(playId: string): CardInPlay | null {
+  for (const unit of AllUnits()) {
+    const upgrade = unit.upgrades.find(u => u.playId === playId);
+    if (upgrade) return upgrade;
+  }
+  return null;
 }
 
 /** Upgrade playIds `player` may legally target with a "defeat an upgrade" ability. */
@@ -769,6 +810,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
   //cards with innate on-attack abilities
   switch (cardId) {
     case "SEC_188": //Darth Traya — On Attack: may ready a non-unit leader
+    case "JTL_147": //Black One — On Attack: if you control Poe Dameron, may deal 1 damage to a unit
     case "JTL_151": //Red Five — On Attack: may deal 2 damage to a damaged unit
     case "LOF_045": //Yaddle — On Attack: each other friendly Jedi gains Restore 1 this phase
     case "LOF_082": //Vaneé — When Played/On Attack

@@ -337,6 +337,21 @@ export interface SpreadDamagePending {
 }
 
 /**
+ * Distribute N token upgrades among eligible units, several allowed on one unit
+ * (Helgait ASH_195: "distribute Advantage tokens equal to this unit's power among friendly units").
+ * Reuses the spread-damage assignment payload; `optional` means 0 or all, never partial.
+ */
+export interface SpreadTokensPending {
+  type: "spread-tokens";
+  cardId: string;
+  player: PlayerId;
+  totalTokens: number;
+  optional: boolean;
+  eligiblePlayIds: string[];
+  continuation: PendingResolution | null;
+}
+
+/**
  * A side effect applied after the heal total is known.
  * "deal-healed-to-self" — deal the healed amount to a predetermined target (e.g. Redemption rebounding damage to itself).
  * "deal-healed-to-unit" — surface a SpreadDamage prompt so the player picks where to deal the healed amount.
@@ -529,6 +544,7 @@ export type PendingResolution =
   | TriggerOrderPending
   | TriggerPlayerOrderPending
   | SpreadDamagePending
+  | SpreadTokensPending
   | OnAttackOrderPending
   | ReturnFromDiscardPending
   | GiveXpMultiplePending

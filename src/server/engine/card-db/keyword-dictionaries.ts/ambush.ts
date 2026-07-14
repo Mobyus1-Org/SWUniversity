@@ -123,6 +123,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "LOF_087"://Eighth Brother
     case "SEC_087"://Dedra Meero
     case "SEC_209"://The Mandalorian
+    case "LAW_078"://Sabine Wren - Spectre Five
       return true;
   }
   //JTL_053: The Ghost - Heart of the Family

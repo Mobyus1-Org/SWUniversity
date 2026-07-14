@@ -94,7 +94,7 @@ import type { TriggerEntry, CardPlayedContext } from "@/lib/engine/trigger-types
 import { collectBounties } from "@/server/engine/actions/bounty";
 import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB } from "@/server/engine/actions/when-played";
+import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB, anakinMortisAbility } from "@/server/engine/actions/when-played";
 import { executeRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
 import { resolveWhenPlayedTrigger, WhenPlayedHasAutoEffect } from "@/server/engine/actions/when-played-trigger";
 import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
@@ -106,12 +106,12 @@ import { HasAmbush } from "@/server/engine/card-db/keyword-dictionaries.ts/ambus
 import { ActionAbilities, ActionAbilityCost } from "@/server/engine/actions/action-ability";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
-import { PilotingEligibleVehicles } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { PilotingEligibleVehicles, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dictionaries.ts/leader-pilot-deploy";
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
-import { CreateSpy, CreateCreditToken, CreateCloneTrooper, DefeatAdvantageTokensAfterCombat } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateCreditToken, CreateCloneTrooper, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { UpgradeImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource } from "@/server/engine/core-functions";
 
@@ -182,6 +182,12 @@ function resolveChooseOne(
         ? shatterpointModeA(pending.cardId, pending.player)
         : shatterpointModeB(pending.cardId, pending.player, log);
       break;
+    case "LOF_070": { // Anakin (Champion of Mortis) — the player picked which When Played resolves first.
+      const first = optionId === "heroism" ? "heroism" : "villainy";
+      const second = first === "heroism" ? "villainy" : "heroism";
+      next = anakinMortisAbility(first, pending.player, anakinMortisAbility(second, pending.player, null));
+      break;
+    }
     case "TWI_004": { // Yoda — put the held card on the top or bottom of the deck.
       const heldCardId = String(pending.data?.heldCardId ?? "");
       if (!heldCardId) break;
@@ -203,6 +209,50 @@ function resolveChooseOne(
 function createReadySpy(gs: GameState, player: PlayerId, log: string[]): void {
   const spy = CreateSpy(gs, player, log, "SEC_148");
   spy.ready = true;
+}
+
+/**
+ * One unit captures another (CR 8.33): the captive leaves play facedown under the captor,
+ * losing its damage and upgrades. Tokens are set aside instead of being held.
+ * Shared by Take Captive (TWI_128) and Grand Admiral Thrawn (SEC_193).
+ */
+function CaptureUnit(
+  game: GameState,
+  log: string[],
+  captor: Unit,
+  target: Unit,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  removeFromArena(game, target.playId);
+
+  if (target.IsTokenUnit()) {
+    log.push(`${CardTitle(target.cardId)} was captured and set aside (token).`);
+    updateDefeatedPlayers(game);
+    return continuation;
+  }
+
+  const collector: PlayerId = target.controller === 1 ? 2 : 1;
+  const bounty = collectBounties(target, collector, continuation);
+
+  target.damage = 0;
+  target.upgrades = [];
+  captor.captives.push(target);
+  log.push(`${CardTitle(captor.cardId)} captured ${CardTitle(target.cardId)}.`);
+  game.roundState.cardsPlayedThisPhase = game.roundState.cardsPlayedThisPhase.filter(e => e.playId !== target.playId);
+  game.roundState.cardsEnteredPlayThisPhase = game.roundState.cardsEnteredPlayThisPhase.filter(e => e.playId !== target.playId);
+
+  updateDefeatedPlayers(game);
+  return bounty ?? continuation;
+}
+
+/** Enemy non-leader units in the same arena as `captor` — the legal victims of a capture. */
+function CaptureVictimPlayIds(game: GameState, captor: Unit): string[] {
+  const arena = (CardArena(captor.cardId) ?? "Ground") as "Ground" | "Space";
+  const enemy = GetOtherPlayer(captor.controller);
+  const enemyArena = arena === "Ground"
+    ? (GetPlayer(game, enemy).groundArena as Unit[])
+    : (GetPlayer(game, enemy).spaceArena as Unit[]);
+  return enemyArena.filter(u => !CardIsLeader(u.cardId)).map(u => u.playId);
 }
 
 function sweepDeadUnits(gs: GameState, log: string[], continuation: PendingResolution | null): PendingResolution | null {
@@ -523,19 +573,7 @@ function moveUpgradeToUnit(
  * which means NO pilots at all (R2-D2 is a pilot via PilotingCost=0 and counts).
  */
 function l337EligibleVehicles(game: GameState, player: PlayerId, l337PlayId: string): string[] {
-  const p = GetPlayer(game, player);
-  const friendly = [...p.groundArena, ...p.spaceArena] as Unit[];
-  return friendly
-    .filter(u => {
-      if (u.playId === l337PlayId) return false;
-      if (!TraitContains(u.cardId, "Vehicle")) return false;
-      const pilotCount = u.upgrades.filter(
-        upg => PilotingCost(upg.cardId) >= 0 ||
-               (CardIsLeader(upg.cardId) && LeaderDeployPilotThreshold(upg.cardId) !== null)
-      ).length;
-      return pilotCount === 0;
-    })
-    .map(u => u.playId);
+  return PilotlessVehiclePlayIds(game, player, l337PlayId);
 }
 
 /**
@@ -1451,7 +1489,7 @@ function resolveAttack(
       !Unit.FromInterface(attacker).LostAbilities() &&
       (game.player1.groundArena.some(u => u.playId === defender.playId) ||
        game.player2.groundArena.some(u => u.playId === defender.playId));
-    const defPower = Math.max(0, defender.CurrentPower() - (defenderIsGround212 ? 2 : 0));
+    const defPower = Math.max(0, defender.CurrentPower(false, true) - (defenderIsGround212 ? 2 : 0));
 
     // SOR_071 Electrostaff: while attached unit is defending, attacker gets –1/–0.
     const electrostaffModifier = defender.upgrades.some(u => u.cardId === "SOR_071") ? 1 : 0;
@@ -1624,6 +1662,21 @@ function attackerOwnWhenAttackEnds(
   // Upgrade-granted When-Attack-Ends abilities
   for (const upgrade of attacker.upgrades) {
     switch (upgrade.cardId) {
+      case "JTL_197": { // Anakin Skywalker (pilot) — "When attached unit completes an attack (and
+                        // survives): You may return this upgrade to its owner's hand."
+                        // The early return above already guarantees the attacker survived.
+        return {
+          type: "ability-option",
+          cardId: "JTL_197",
+          player: attacker.controller,
+          sourcePlayId: upgrade.playId,
+          helperText: `Return ${CardTitle("JTL_197")} to its owner's hand?`,
+          yesLabel: "Return to hand",
+          noLabel: "Leave attached",
+          onYes: null,
+          continuation,
+        } satisfies AbilityOptionPending;
+      }
       case "ASH_229": { // Camtono — When Attack Ends: look at top card; if it costs 2 or less, you may play it for free.
         const pState229 = GetPlayer(game, attacker.controller);
         if (pState229.deck.length === 0) break;
@@ -1973,6 +2026,14 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       return {
         type: "SpreadDamage",
         totalDamage: pending.totalDamage,
+        optional: pending.optional,
+        eligiblePlayIds: pending.eligiblePlayIds,
+      } satisfies NeedsSpreadDamage;
+    case "spread-tokens":
+      // Reuses the SpreadDamage prompt shape: the client assigns counts per unit.
+      return {
+        type: "SpreadDamage",
+        totalDamage: pending.totalTokens,
         optional: pending.optional,
         eligiblePlayIds: pending.eligiblePlayIds,
       } satisfies NeedsSpreadDamage;
@@ -2579,7 +2640,7 @@ function playCardFromHand(
   const pilotBase = PilotingCost(cardId);
   if (pilotBase >= 0) {
     const pilotCost = Math.max(0, pilotPlayCost(game, player, cardId) - costDelta);
-    const eligibleVehicles = PilotingEligibleVehicles(game, player);
+    const eligibleVehicles = PilotingEligibleVehicles(game, player, cardId);
     const canAffordUnit = readyCount >= fullCost;
     const canAffordPilot = readyCount >= pilotCost && eligibleVehicles.length > 0;
 
@@ -2887,7 +2948,7 @@ function splashCardIsAffordable(game: GameState, player: PlayerId, cardId: strin
   if (ready >= minUnitCost) return true;
 
   // A Pilot the player can't hard-cast may still be affordable attached to a Vehicle.
-  if (PilotingCost(cardId) >= 0 && PilotingEligibleVehicles(game, player).length > 0) {
+  if (PilotingCost(cardId) >= 0 && PilotingEligibleVehicles(game, player, cardId).length > 0) {
     const pilotCost = Math.max(0, pilotPlayCost(game, player, cardId) - discount);
     if (ready >= pilotCost) return true;
   }
@@ -4038,6 +4099,33 @@ function handleChooseTarget(
     }
   }
 
+  if (pending.type === "spread-tokens") {
+    const assignments = (data.spreadDamageAssignments ?? []).filter(
+      a => pending.eligiblePlayIds.includes(a.playId) && a.damage > 0,
+    );
+    const total = assignments.reduce((sum, a) => sum + a.damage, 0);
+    if (pending.optional) {
+      if (total !== 0 && total !== pending.totalTokens) {
+        return { response: invalidResponse(`Distribute 0 or all ${pending.totalTokens} tokens. No partial distribution.`), pending, stateChanged: false };
+      }
+    } else if (total !== pending.totalTokens) {
+      return { response: invalidResponse(`Must distribute exactly ${pending.totalTokens} tokens.`), pending, stateChanged: false };
+    }
+
+    for (const assignment of assignments) {
+      const unit = GetUnitByPlayId(game, assignment.playId);
+      if (!unit) continue;
+      GiveAdvantageTokens(game, unit, assignment.damage, log, pending.cardId);
+    }
+
+    updateDefeatedPlayers(game);
+    const nextTokens = pending.continuation ?? null;
+    if (nextTokens) return { response: resolutionResponse(pendingToResolution(nextTokens, game)), pending: nextTokens, stateChanged: true };
+    const bagTokens = drainTriggerBag(game, log);
+    if (bagTokens) return { response: resolutionResponse(pendingToResolution(bagTokens, game)), pending: bagTokens, stateChanged: true };
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
   if (pending.type === "spread-damage") {
     const assignments = (data.spreadDamageAssignments ?? []).filter(
       a => pending.eligiblePlayIds.includes(a.playId) && a.damage > 0,
@@ -4467,6 +4555,19 @@ function applyAbilityOptionEffect(
   log: string[],
 ): PendingResolution | null {
   switch (pending.cardId) {
+    case "JTL_197": { // Anakin (pilot) Yes — return this upgrade to its owner's hand.
+      const upgradePlayId = pending.sourcePlayId;
+      if (!upgradePlayId) return pending.continuation ?? null;
+      for (const unit of GetAllUnits(game)) {
+        const idx = unit.upgrades.findIndex(u => u.playId === upgradePlayId);
+        if (idx === -1) continue;
+        const [returned] = unit.upgrades.splice(idx, 1);
+        GetPlayer(game, returned.owner).hand.push({ cardId: returned.cardId });
+        log.push(`${CardTitle(returned.cardId)} was returned to its owner's hand.`);
+        break;
+      }
+      return pending.continuation ?? null;
+    }
     case "LOF_017": { // Darth Revan — (front: exhaust the leader), then give an Experience token to the attacking unit.
       const attacker017 = GetUnitByPlayId(game, pending.sourcePlayId!);
       const leader017 = GetLeaderForPlayer(pending.player!);
@@ -4759,6 +4860,14 @@ function applyAbilityOptionDeclineEffect(
   log: string[],
 ): PendingResolution | null {
   switch (pending.cardId) {
+    case "SEC_193": { // Thrawn — the opponent gave up no unit, so "ready this unit."
+      const thrawn193 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      if (thrawn193) {
+        thrawn193.ready = true;
+        log.push(`${CardTitle("SEC_193")}: no unit was given up — readied ${CardTitle(thrawn193.cardId)}.`);
+      }
+      return pending.continuation ?? null;
+    }
     case "SOR_119": { // Reinforcement Walker No — discard top card and heal 3 from base
       const pState119No = GetPlayer(game, pending.player!);
       const top119No = pState119No.deck.pop();
@@ -5305,7 +5414,7 @@ function handleChooseOption(
       payResources(game, pending.playingPlayer, pending.pilotingCost, log, pending.cardId);
       log.push(`Player ${pending.playingPlayer} is playing ${CardTitle(pending.cardId)} as a Pilot.`);
       game.roundState.cardsPlayedThisRound.push({ fromPlayer: pending.playingPlayer, cardId: pending.cardId, playId: "", playedAs: "Pilot" });
-      const eligibleVehicles = PilotingEligibleVehicles(game, pending.playingPlayer);
+      const eligibleVehicles = PilotingEligibleVehicles(game, pending.playingPlayer, pending.cardId);
       const upgradePending: UpgradeTargetPending = {
         type: "upgrade-target",
         upgradeCardId: pending.cardId,
@@ -5658,7 +5767,7 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
   // Check if this leader can also deploy as a pilot upgrade on a Vehicle
   const pilotThreshold = LeaderDeployPilotThreshold(leader.cardId);
   if (pilotThreshold !== null) {
-    const eligibleVehicles = PilotingEligibleVehicles(game, player);
+    const eligibleVehicles = PilotingEligibleVehicles(game, player, leader.cardId);
     if (eligibleVehicles.length > 0) {
       leader.epicActionUsed = true;
       log.push(`Player ${player} is deploying ${CardTitle(leader.cardId)} — choose unit or pilot.`);
@@ -5845,6 +5954,22 @@ function resolveActionAbility(
         fromPlayIds: resources013.map(r => r.playId),
         continuation: null,
       };
+    }
+    case "JTL_013": { // Poe Dameron — "Flip this leader and attach him as an upgrade to a friendly
+                      // Vehicle unit without a Pilot on it." An ATTACH, so the Falcon's and R2's
+                      // "play or deploy 1 additional Pilot" permissions do not apply: the target
+                      // must carry no Pilot at all.
+      const vehicles013 = PilotlessVehiclePlayIds(game, player);
+      if (vehicles013.length === 0) return null;
+      const leader013 = GetPlayer(game, player).leader;
+      leader013.deployed = true; // flipped — he is now the upgrade, not the leader card
+      log.push(`${CardTitle("JTL_013")}: flipped and attaching as a Pilot upgrade.`);
+      return {
+        type: "upgrade-target",
+        upgradeCardId: "JTL_013",
+        player,
+        fromPlayIds: vehicles013,
+      } satisfies UpgradeTargetPending;
     }
     case "LOF_003": { // Ahsoka Tano — Action [Exhaust, use the Force]: Give a friendly unit Sentinel this phase.
       if (!UseTheForce(player, log, "LOF_003")) return null;
@@ -6634,6 +6759,11 @@ function applyAbilityEffect(
       game.gameLog.push(`${CardTitle("SEC_188")}: readied Player ${leaderPlayer188}'s leader.`);
       break;
     }
+    case "JTL_147": { // Black One On Attack: deal 1 damage to the chosen unit
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "JTL_147", targetPlayId, 1, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
     case "JTL_151": { // Red Five On Attack: deal 2 damage to the chosen damaged unit
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, "JTL_151", targetPlayId, 2, game.gameLog);
@@ -6651,11 +6781,12 @@ function applyAbilityEffect(
       HealBaseForPlayer(game.currentGameState, basePlayer048, 3, game.gameLog, "LOF_048");
       break;
     }
+    case "LAW_078": // Sabine Wren (Spectre Five) When Played: defeat the chosen upgrade.
     case "SEC_163": { // Outer Rim Constable When Played: defeat the chosen upgrade
       if (!targetPlayId) break;
       return defeatUpgradeByPlayId(
         game.currentGameState, game.gameLog, targetPlayId,
-        CardTitle("SEC_163"), pending.continuation ?? null, pending.player,
+        CardTitle(pending.cardId), pending.continuation ?? null, pending.player,
       );
     }
     case "SOR_010_leader": { // Darth Vader leader ability: 1 damage to the chosen unit…
@@ -7321,6 +7452,13 @@ function applyAbilityEffect(
       const target031 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target031) GiveStatModForPhase("LOF_031", target031, -2, game.gameLog);
       break;
+    }
+    case "LOF_070_heroism": // Anakin (Champion of Mortis) — either When Played gives –3/–3 for this phase.
+    case "LOF_070_villainy": {
+      if (!targetPlayId) break;
+      const target070 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target070) GiveStatModForPhase("LOF_070", target070, -3, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
     case "SOR_076": { // Make an Opening: –2/–2 Phase to chosen unit + heal 2 from own base.
       if (!targetPlayId) break;
@@ -8004,26 +8142,36 @@ function applyAbilityEffect(
       const twi128Target = GetUnitByPlayId(game.currentGameState, targetPlayId);
       const twi128Captor = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
       if (!twi128Target || !twi128Captor) break;
-
-      removeFromArena(game.currentGameState, twi128Target.playId);
-
-      if (twi128Target.IsTokenUnit()) {
-        game.gameLog.push(`${CardTitle(twi128Target.cardId)} was captured and set aside (token).`);
-        updateDefeatedPlayers(game.currentGameState);
-        return pending.continuation;
+      return CaptureUnit(game.currentGameState, game.gameLog, twi128Captor, twi128Target, pending.continuation ?? null);
+    }
+    case "SEC_193_wd": { // Thrawn When Defeated: "A friendly unit captures an enemy non-leader unit
+                          // in the same arena." Step 1 picks the captor, step 2 the victim.
+      if (!targetPlayId) break;
+      if (!pending.sourcePlayId) {
+        const captor193 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+        if (!captor193) break;
+        const victims193 = CaptureVictimPlayIds(game.currentGameState, captor193);
+        if (victims193.length === 0) break;
+        return {
+          type: "ability-target",
+          cardId: "SEC_193_wd",
+          player: pending.player,
+          sourcePlayId: targetPlayId,
+          fromPlayIds: victims193,
+          continuation: pending.continuation,
+        } satisfies AbilityTargetPending;
       }
-      const captureCollector: PlayerId = twi128Target.controller === 1 ? 2 : 1;
-      const twi128Bounty = collectBounties(twi128Target, captureCollector, pending.continuation ?? null);
-
-      twi128Target.damage = 0;
-      twi128Target.upgrades = [];
-      twi128Captor.captives.push(twi128Target);
-      game.gameLog.push(`${CardTitle(twi128Captor.cardId)} captured ${CardTitle(twi128Target.cardId)}.`);
-      game.currentGameState.roundState.cardsPlayedThisPhase = game.currentGameState.roundState.cardsPlayedThisPhase.filter(e => e.playId !== twi128Target.playId);
-      game.currentGameState.roundState.cardsEnteredPlayThisPhase = game.currentGameState.roundState.cardsEnteredPlayThisPhase.filter(e => e.playId !== twi128Target.playId);
-
-      updateDefeatedPlayers(game.currentGameState);
-      return twi128Bounty ?? pending.continuation;
+      const victim193 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      const wdCaptor193 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
+      if (!victim193 || !wdCaptor193) break;
+      return CaptureUnit(game.currentGameState, game.gameLog, wdCaptor193, victim193, pending.continuation ?? null);
+    }
+    case "SEC_193": { // Thrawn When Played: the OPPONENT picked one of their units — Thrawn captures it.
+      if (!targetPlayId || !pending.sourcePlayId) break;
+      const victim = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      const thrawn193 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
+      if (!victim || !thrawn193) break;
+      return CaptureUnit(game.currentGameState, game.gameLog, thrawn193, victim, pending.continuation ?? null);
     }
     case "SHD_068": {
       if (!targetPlayId) break;
@@ -8037,6 +8185,25 @@ function applyAbilityEffect(
       });
       game.gameLog.push(`Bounty collected: Shield token placed on ${CardTitle(targetSHD068.cardId)}.`);
       return pending.continuation;
+    }
+    case "JTL_100": { // Poe Dameron — attach himself as a Pilot upgrade onto the chosen Vehicle.
+      if (!targetPlayId || !pending.sourcePlayId) break;
+      const poe100 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
+      const vehicle100 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!poe100 || !vehicle100) break;
+      removeFromArena(game.currentGameState, poe100.playId);
+      for (const upg of poe100.upgrades) {
+        game.gameLog.push(`${CardTitle(upg.cardId)} on ${CardTitle("JTL_100")} was defeated.`);
+      }
+      vehicle100.upgrades.push({
+        cardId: "JTL_100",
+        playId: nextPlayId(game.currentGameState),
+        owner: poe100.owner,
+        controller: poe100.controller,
+      });
+      game.gameLog.push(`${CardTitle("JTL_100")} attached as a Pilot upgrade to ${CardTitle(vehicle100.cardId)}.`);
+      updateDefeatedPlayers(game.currentGameState);
+      return pending.continuation ?? null;
     }
     case "JTL_049": {
       if (!targetPlayId || !pending.sourcePlayId) break;

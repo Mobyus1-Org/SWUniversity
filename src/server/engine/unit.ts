@@ -116,7 +116,7 @@ export class Unit implements UnitInterface {
     return false;
   }
 
-  CurrentPower(isAttacking: boolean = false): number {
+  CurrentPower(isAttacking: boolean = false, isDefending: boolean = false): number {
     let power = CardPower(this.cardId) || 0;
     if (this.HasUpgrade("LOF_056")) { //Size Matters Not
       power = 5;
@@ -224,6 +224,11 @@ export class Unit implements UnitInterface {
       power += 1;
     }
 
+    // Black One — "While this unit is upgraded, it gets +1/+0."
+    if (this.cardId === "JTL_147" && this.upgrades.length > 0 && !this.LostAbilities()) {
+      power += 1;
+    }
+
     if (this.cardId === "JTL_249" && !this.LostAbilities()) {
       power += this.upgrades.filter(upg => TraitContains(upg.cardId, "Pilot")).length;
     }
@@ -242,6 +247,11 @@ export class Unit implements UnitInterface {
 
     if (isAttacking) {
       power += RaidAmount(this.cardId, this.playId, this.controller);
+    }
+
+    // Concord Dawn Interceptors — "This unit gets +2/+0 while defending."
+    if (isDefending && this.cardId === "SHD_042" && !this.LostAbilities()) {
+      power += 2;
     }
 
     // A unit's power can never be reduced below 0. Without this, a debuffed unit (e.g. Nowhere

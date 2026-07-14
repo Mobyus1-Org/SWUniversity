@@ -2,8 +2,26 @@ import { PlayerId } from "@/lib/engine/core-models";
 import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, InitiativePlayer, IsCoordinateActive, GetResources, NumberOfUnitsInArena, PlayerControlsCardWithTrait, PlayerHasUnitInPlayWithMinimumPower, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
 import { CardAspects } from "@/server/engine/card-db/generated";
 
+/** True while any player controls an ASH_040 Poe Dameron whose abilities are active. */
+function AllUnitsLoseSentinel(): boolean {
+  const players: PlayerId[] = [1, 2];
+  return players.some(p =>
+    GetUnitsForPlayer(p).some(u => {
+      if (u.cardId !== "ASH_040") return false;
+      const poe = GetUnitInPlay(u.playId, p);
+      return !!poe && !poe.LostAbilities();
+    }),
+  );
+}
+
 export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, isRecursion = false)
 {
+  // ASH_040 Poe Dameron — "All units lose Sentinel." A constant ability that applies to EVERY
+  // unit on both sides, so it is checked before any grant below (including self-Sentinel, which
+  // ignores effects entirely). Not modelled as a currentEffect: those are only read for the
+  // unit's own controller, and this must reach across the table.
+  if (AllUnitsLoseSentinel()) return false;
+
   if (player && playId) {
     const otherPlayer = player == 1 ? 2 : 1;
     const unit = GetUnitInPlay(playId, player);

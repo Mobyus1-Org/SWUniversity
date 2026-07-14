@@ -99,7 +99,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   //Twilight of the Republic
   "TWI_004", "TWI_005", "TWI_007", "TWI_011", "TWI_012",
   //Jump to Lightspeed
-  "JTL_012", "JTL_018",
+  "JTL_012", "JTL_013", "JTL_018",
   //Legends of the Underworld
   "LAW_008", "LAW_013",
   //Legacy of the Force

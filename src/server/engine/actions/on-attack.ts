@@ -1,6 +1,6 @@
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, PlayerControlsCardWithTitle } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { CardTraits } from "@/server/engine/card-db/generated";
@@ -391,6 +391,12 @@ export function resolveOnAttackTrigger(
         game045.gameLog.push(`${CardTitle("LOF_045")}: ${otherJedi.length} other friendly Jedi unit(s) gained Restore 1 this phase.`);
       }
       return continuation;
+    }
+    case "JTL_147": { // Black One "On Attack: If you control Poe Dameron (as a unit, upgrade, or
+                      // leader), you may deal 1 damage to a unit."
+      if (!PlayerControlsCardWithTitle(attacker.controller, "Poe Dameron")) return continuation;
+      return optionalTarget("JTL_147", attacker.controller, AllUnits().map(u => u.playId),
+        "You may deal 1 damage to a unit.", { continuation });
     }
     case "JTL_151": { // Red Five "On Attack: You may deal 2 damage to a damaged unit."
       const damaged151 = AllUnits().filter(u => u.damage > 0);

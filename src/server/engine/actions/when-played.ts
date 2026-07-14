@@ -1,12 +1,29 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId } from "@/server/engine/core-functions";
 import { aspectPenalty } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
-import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
+import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy, CreateCreditToken } from "@/server/engine/token-helpers";
-import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits } from "@/server/engine/card-db/generated";
+import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits, CardIsUnique } from "@/server/engine/card-db/generated";
+
+/**
+ * One of LOF_070 Anakin's two "you may give a unit -3/-3 for this phase" abilities.
+ * `continuation` chains the other one after it when both are live.
+ */
+export function anakinMortisAbility(
+  which: "heroism" | "villainy",
+  player: PlayerId,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const units = AllUnits();
+  if (units.length === 0) return continuation;
+  const aspect = which === "heroism" ? "Heroism" : "Villainy";
+  return optionalTarget(`LOF_070_${which}`, player, units.map(u => u.playId),
+    `${aspect} card in your discard: give a unit -3/-3 for this phase?`,
+    { continuation });
+}
 
 /** Returns playIds for all units on both sides plus both base identifiers. */
 function allUnitsAndBasesPlayIds(): string[] {
@@ -668,6 +685,83 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies AbilityOptionPending;
     }
+    case "LAW_078": { // Sabine Wren (Spectre Five) — "When Played: You may defeat a non-unique
+                      // upgrade. If you control a Vigilance or Command unit, you may defeat an
+                      // upgrade instead." The condition only WIDENS the legal targets.
+      const anyUpgrade078 = PlayerHasUnitWithAspectInPlay(player, "Vigilance")
+        || PlayerHasUnitWithAspectInPlay(player, "Command");
+      const eligible078 = DefeatableUpgradePlayIds(player).filter(playId => {
+        if (anyUpgrade078) return true;
+        const upgrade = FindUpgradeByPlayId(playId);
+        return !!upgrade && !CardIsUnique(upgrade.cardId);
+      });
+      if (eligible078.length === 0) return null;
+      return optionalTarget(cardId, player, eligible078,
+        anyUpgrade078 ? "You may defeat an upgrade." : "You may defeat a non-unique upgrade.", {
+          yesLabel: "Defeat an upgrade",
+          noLabel: "Skip",
+        });
+    }
+    case "JTL_100": { // Poe Dameron (One Hell of a Pilot) — "When played as a unit: Create an X-Wing
+                      // token. You may attach this unit as an upgrade to a friendly Vehicle unit
+                      // without a Pilot on it." Only reached on the unit path: playing him as a
+                      // Pilot never puts a unit into play, so this trigger never fires there.
+      const game100 = GetGame();
+      if (!game100) return null;
+      CreateXWing(game100.currentGameState, player, game100.gameLog, "JTL_100");
+      if (!playId) return null;
+      const vehicles100 = PilotlessVehiclePlayIds(game100.currentGameState, player, playId);
+      if (vehicles100.length === 0) return null;
+      // Hand-built rather than optionalTarget(): the target step needs sourcePlayId (which Poe
+      // to attach), and optionalTarget only puts sourcePlayId on the option, not on its onYes.
+      return {
+        type: "ability-option",
+        cardId: "JTL_100",
+        player,
+        sourcePlayId: playId,
+        helperText: "Attach Poe Dameron as an upgrade to a friendly Vehicle without a Pilot?",
+        yesLabel: "Attach as Pilot",
+        noLabel: "Stay as a unit",
+        onYes: {
+          type: "ability-target",
+          cardId: "JTL_100",
+          player,
+          sourcePlayId: playId,
+          fromPlayIds: vehicles100,
+          continuation: null,
+        } satisfies AbilityTargetPending,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "SEC_193": { // Grand Admiral Thrawn (Grand Schemer) — "When Played: An opponent may choose
+                      // a non-leader unit they control. If they do, this unit captures that unit.
+                      // If they don't, ready this unit." The choice belongs to the OPPONENT.
+      const opponent193 = player === 1 ? 2 : 1;
+      const theirUnits193 = GetUnitsForPlayer(opponent193).filter(u => !CardIsLeader(u.cardId));
+      if (theirUnits193.length === 0) {
+        // They can't choose, so they didn't — ready Thrawn straight away.
+        ReadyUnitByPlayId(playId, player, "SEC_193");
+        return null;
+      }
+      return {
+        type: "ability-option",
+        cardId: "SEC_193",
+        player: opponent193, // the opponent answers
+        sourcePlayId: playId, // Thrawn, the captor
+        helperText: `Choose a non-leader unit for ${CardTitle("SEC_193")} to capture? (If you don't, it readies.)`,
+        yesLabel: "Give up a unit",
+        noLabel: "Ready Thrawn instead",
+        onYes: {
+          type: "ability-target",
+          cardId: "SEC_193",
+          player: opponent193,
+          sourcePlayId: playId,
+          fromPlayIds: theirUnits193.map(u => u.playId),
+          continuation: null,
+        } satisfies AbilityTargetPending,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
     case "SEC_163": { // Outer Rim Constable — "When Played: You may defeat an upgrade."
       const upgrades163 = DefeatableUpgradePlayIds(player);
       if (upgrades163.length === 0) return null;
@@ -955,6 +1049,30 @@ export function resolveWhenPlayed(
       return optionalTarget("JTL_039", player, eligible039.map(u => u.playId),
         "Use a “When Defeated” ability on another friendly unit?",
         { yesLabel: "Use it" });
+    }
+    case "LOF_070": { // Anakin Skywalker (Champion of Mortis) — TWO independent When Played abilities:
+                      //   "If there is a Heroism card in your discard pile, you may give a unit -3/-3 for this phase."
+                      //   "If there is a Villainy card in your discard pile, you may give a unit -3/-3 for this phase."
+                      // Both can be live at once; they are simultaneous triggers, so the controller
+                      // orders them (the first debuff can defeat a unit and change the second's targets).
+      const units070 = AllUnits();
+      if (units070.length === 0) return null;
+      const heroism070 = PlayerHasAspectInDiscard(player, "Heroism");
+      const villainy070 = PlayerHasAspectInDiscard(player, "Villainy");
+      if (!heroism070 && !villainy070) return null;
+      if (heroism070 && villainy070) {
+        return {
+          type: "choose-one",
+          cardId: "LOF_070",
+          player,
+          options: [
+            { id: "heroism", label: "Resolve the Heroism ability first" },
+            { id: "villainy", label: "Resolve the Villainy ability first" },
+          ],
+          continuation: null,
+        } satisfies ChooseOnePending;
+      }
+      return anakinMortisAbility(heroism070 ? "heroism" : "villainy", player, null);
     }
     case "SOR_074": // Repair — Heal 3 damage from a unit or base.
     case "JTL_075": {

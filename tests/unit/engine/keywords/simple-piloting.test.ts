@@ -158,7 +158,11 @@ describe("PilotingEligibleVehicles", () => {
     expect(eligible).toHaveLength(0);
   });
 
-  it("non-pilot upgrade (Poe Dameron attached via leader ability) does not count toward PILOT limit", () => {
+  // Poe Dameron (JTL_013) has the Pilot trait. He ATTACHES via his leader ability rather than
+  // being played or deployed, but once attached he is a Pilot on that Vehicle — so he fills its
+  // Pilot slot. (The Falcon's "+1/+0 for each Pilot on it" already counted him; the slot rule
+  // used to disagree, because it only recognised pilots by piloting cost / deploy threshold.)
+  it("Poe Dameron attached via his leader ability DOES count toward the PILOT limit", () => {
     const state = new GameStateBuilder()
       .MyBase(Cards.bases.common.blue30HP)
       .MyLeader(Cards.leaders.jtl.poeDameron)
@@ -172,7 +176,7 @@ describe("PilotingEligibleVehicles", () => {
 
     const eligible = PilotingEligibleVehicles(state, 1);
 
-    expect(eligible).toHaveLength(1);
+    expect(eligible).toHaveLength(0); // the Hammerhead's only Pilot slot is taken by Poe
   });
 });
 
@@ -395,9 +399,11 @@ describe("Piloting — play as pilot", () => {
     expect(falcon.upgrades.some(u => u.cardId === Cards.units.jtl.lukeSkywalker)).toBe(true);
   });
 
-  it("vehicle with only a non-pilot upgrade (Poe via ability) is still eligible for a pilot", async () => {
+  it("vehicle carrying Poe (attached via his ability) can NOT take another pilot", async () => {
     // Poe Dameron leader (Aggression+Heroism) + blue30HP (Vigilance): Luke's Command uncovered → penalty=2.
-    // Luke fullCost=4, pilotCost=5. 10 resources → both affordable → option shown.
+    // Luke fullCost=4, pilotCost=5. 10 resources → both affordable, but Poe already fills the
+    // Hammerhead's only Pilot slot, so "Play as Pilot" has no legal target and Luke is played
+    // as a unit instead.
     const adapter = new GameTestAdapter();
     adapter.loadNewState(
       new GameStateBuilder()
@@ -415,12 +421,10 @@ describe("Piloting — play as pilot", () => {
     );
 
     await adapter.playCardFromHandAsync(1, 0);
-    expect(adapter.lastDispatchResponse?.resolutionNeeded?.type).toBe("Option");
-    await adapter.chooseOptionAsync(1, "Play as Pilot");
-    await adapter.chooseSpaceUnitAsync(1, 0);
 
     const hammerhead = adapter.state.player1.spaceArena[0];
-    expect(hammerhead.upgrades.some(u => u.cardId === Cards.units.jtl.lukeSkywalker)).toBe(true);
+    expect(hammerhead.upgrades.map(u => u.cardId)).toEqual([Cards.leaders.jtl.poeDameron]);
+    expect(adapter.state.player1.groundArena.some(u => u.cardId === Cards.units.jtl.lukeSkywalker)).toBe(true);
   });
 });
 

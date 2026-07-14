@@ -1,9 +1,10 @@
 import { Unit } from "@/server/engine/unit";
-import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending } from "@/server/engine/pending-resolution";
+import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, CanDisclose, DrawCardForPlayer, GetGame, GetGameState, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
+import { AllUnits, CanDisclose, CaptureVictimsExistFor, DrawCardForPlayer, GetGame, GetGameState, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { CardAspects, CardTitle } from "@/server/engine/card-db/generated";
+import { CardAspects, CardPower, CardTitle } from "@/server/engine/card-db/generated";
+import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { CreateBattleDroid, CreateTieFighter } from "@/server/engine/token-helpers";
 
 /**
@@ -43,6 +44,12 @@ export function resolveWhenDefeated(
   }
 
   return resolveOwnWhenDefeated(unit, player);
+}
+
+/** Power of a unit that has just left play: printed power plus its upgrades' contributions. */
+function LastKnownPower(unit: Unit): number {
+  const fromUpgrades = unit.upgrades.reduce((sum, upg) => sum + UpgradePowerOf(upg.cardId), 0);
+  return Math.max(0, (CardPower(unit.cardId) || 0) + fromUpgrades);
 }
 
 function resolveOwnWhenDefeated(
@@ -184,6 +191,34 @@ function resolveOwnWhenDefeated(
         onYes: { type: "play-from-hand", cardId: "SEC_148", player },
         continuation: null,
       };
+    }
+    case "ASH_195": { // Helgait — "When Defeated: You may distribute a number of Advantage tokens
+                      // equal to this unit's power among friendly units (divided as you choose)."
+      const friendly195 = GetUnitsForPlayer(player);
+      if (friendly195.length === 0) return null;
+      // CR 8.11 last known information: the unit is already out of play, so its power can't be
+      // recomputed live (CurrentPower would look itself up in an arena it has left). Take the
+      // printed power plus whatever its upgrades were giving it as it left.
+      const tokens195 = LastKnownPower(unit);
+      if (tokens195 <= 0) return null;
+      return {
+        type: "spread-tokens",
+        cardId: "ASH_195",
+        player,
+        totalTokens: tokens195,
+        optional: true,
+        eligiblePlayIds: friendly195.map(u => u.playId),
+        continuation: null,
+      } satisfies SpreadTokensPending;
+    }
+    case "SEC_193": { // Grand Admiral Thrawn — "When Defeated: A friendly unit captures an enemy
+                      // non-leader unit in the same arena." Step 1 picks the captor.
+      const friendly193 = GetUnitsForPlayer(player);
+      if (friendly193.length === 0) return null;
+      // Only units that actually have an enemy non-leader unit in their arena can capture.
+      const captors193 = friendly193.filter(u => CaptureVictimsExistFor(u));
+      if (captors193.length === 0) return null;
+      return mandatoryTarget("SEC_193_wd", player, captors193.map(u => u.playId));
     }
     case "SOR_108": { // Vanguard Infantry — "When Defeated: You may give an Experience token to a unit."
       const units108 = AllUnits();

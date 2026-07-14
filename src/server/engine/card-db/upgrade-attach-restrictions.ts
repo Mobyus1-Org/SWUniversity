@@ -116,13 +116,24 @@ export function UpgradeEligibleTargets(
 }
 
 /**
- * True if the given upgrade card is a Pilot upgrade — it has a piloting cost, or is a
- * leader that can deploy as a pilot. Used to identify pilots when a rule cares about
- * "non-Pilot upgrades" (e.g. Hondo Ohnaka's On Attack).
+ * True if the given upgrade card is a Pilot upgrade. This is the SINGLE definition of "a Pilot
+ * is on this unit" — every pilot-slot rule below reads it, so the three ways a Pilot can end up
+ * attached all count:
+ *   - a Pilot unit played via the Piloting keyword (has a piloting cost),
+ *   - a Pilot leader deployed as an upgrade (Luke JTL_012, Asajj JTL_001, Kazuda JTL_018),
+ *   - a Pilot leader ATTACHED by his own ability (Poe JTL_013) — he has neither a piloting cost
+ *     nor a deploy threshold, so he is only recognisable by his Pilot trait. Missing him used to
+ *     make a Vehicle carrying him read as pilotless.
  */
 export function IsPilotUpgrade(cardId: string): boolean {
   return PilotingCost(cardId) >= 0
-    || (CardIsLeader(cardId) && LeaderDeployPilotThreshold(cardId) !== null);
+    || (CardIsLeader(cardId) && LeaderDeployPilotThreshold(cardId) !== null)
+    || (CardIsLeader(cardId) && TraitContains(cardId, "Pilot"));
+}
+
+/** How many Pilots are currently attached to a unit. */
+function pilotCountOn(unit: { upgrades: Array<{ cardId: string }> }): number {
+  return unit.upgrades.filter(upg => IsPilotUpgrade(upg.cardId)).length;
 }
 
 /**
@@ -145,20 +156,44 @@ function effectiveMaxPilots(unit: { cardId: string; upgrades: Array<{ cardId: st
 }
 
 /**
- * Returns playIds of friendly Vehicle units that have not yet reached their PILOT upgrade limit.
- * A PILOT upgrade is any attached card with PilotingCost >= 0, or a leader with a deploy-as-pilot threshold.
- * Non-pilot leader upgrades (e.g. Poe Dameron attached via leader ability) are ignored.
- * R2-D2 already aboard raises the effective max by 1.
+ * Friendly Vehicles with NO Pilot on them at all — the "...to a friendly Vehicle unit without a
+ * Pilot on it" predicate used by ATTACH effects: Poe Dameron leader (JTL_013), Poe Dameron unit
+ * (JTL_100) and L3-37 (JTL_049).
+ *
+ * Deliberately strict: the extra slots granted by the Millennium Falcon ("You may play or deploy
+ * 1 additional Pilot on this unit") and by R2-D2 permit an additional PLAY or DEPLOY only. An
+ * attach is neither, so a Falcon that already carries one Pilot still has a free slot yet is NOT
+ * a legal attach target.
  */
-export function PilotingEligibleVehicles(game: GameState, player: PlayerId): string[] {
+export function PilotlessVehiclePlayIds(game: GameState, player: PlayerId, excludePlayId?: string): string[] {
+  const p = player === 1 ? game.player1 : game.player2;
+  const friendly = [...p.groundArena, ...p.spaceArena];
+  return friendly
+    .filter(u => {
+      if (u.playId === excludePlayId) return false;
+      if (!TraitContains(u.cardId, "Vehicle")) return false;
+      return pilotCountOn(u) === 0;
+    })
+    .map(u => u.playId);
+}
+
+export function PilotingEligibleVehicles(
+  game: GameState,
+  player: PlayerId,
+  /** The pilot about to be attached. R2-D2 brings his own slot, so he may board a full Vehicle. */
+  incomingPilotCardId?: string,
+): string[] {
   const p = player === 1 ? game.player1 : game.player2;
   const friendly = [...p.groundArena, ...p.spaceArena];
   return friendly
     .filter(u => {
       if (!TraitContains(u.cardId, "Vehicle")) return false;
-      const pilotCount = u.upgrades.filter(upg => PilotingCost(upg.cardId) >= 0
-        || (CardIsLeader(upg.cardId) && LeaderDeployPilotThreshold(upg.cardId) !== null)).length;
-      return pilotCount < effectiveMaxPilots(u);
+      // R2-D2 (JTL_245): "This upgrade can be played on a friendly Vehicle unit with a Pilot on
+      // it." He grants the extra slot he occupies, so his own arrival must not be blocked by a
+      // Vehicle already being at its pilot limit.
+      const incomingR2 = incomingPilotCardId === "JTL_245"
+        && !u.upgrades.some(upg => upg.cardId === "JTL_245");
+      return pilotCountOn(u) < effectiveMaxPilots(u) + (incomingR2 ? 1 : 0);
     })
     .map(u => u.playId);
 }
