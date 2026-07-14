@@ -134,6 +134,16 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "SEC_043": amount += 2; break;//Chandrilan Sponsor
     case "SEC_094": amount += 1; break;//Mina Bonteri
     case "SEC_103": amount += 3; break;//Mon Mothma
+    case "LAW_050": amount += 2; break;//Honnah
+    case "LAW_070": amount += 1; break;//Devaronian Doorbuster
+    case "LAW_090": amount += 1; break;//Toydarian Technician
+    case "LAW_120": amount += 2; break;//Vigilant Scouts
+    case "LAW_153": amount += 1; break;//Follower of the Code
+    case "ASH_076": amount += 2; break;//Remnant Official
+    case "ASH_095": amount += 1; break;//Remnant Interceptor
+    case "ASH_096": amount += 1; break;//Forest Patroller
+    case "ASH_106": amount += 1; break;//Pathfinder Sergeant
+    case "ASH_256": amount += 1; break;//Rebel Infiltrators
     default: break;
   }
 

@@ -148,6 +148,16 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "IBH_010": amount += 2; break; //Han Solo
     case "SEC_T01": amount += 2; break; //Spy token
     case "SEC_213": amount += 1; break; //A-Wing
+    case "LAW_050": amount += 2; break; //Honnah
+    case "LAW_082": amount += 4; break; //Urrr'k
+    case "LAW_090": amount += 1; break; //Toydarian Technician
+    case "LAW_154": amount += 1; break; //Partisan Infantry
+    case "LAW_172": amount += 1; break; //Storm Raider
+    case "LAW_190": amount += 2; break; //Haxion Aggressor
+    case "LAW_199": amount += 3; break; //Ohnaka Gang Bandits
+    case "LAW_220": amount += 2; break; //Wookiee Guerilla
+    case "LAW_234": amount += 2; break; //Kage Elite
+    case "ASH_154": amount += 1; break; //Honorable Nite Owl
     default: break;
   }
 

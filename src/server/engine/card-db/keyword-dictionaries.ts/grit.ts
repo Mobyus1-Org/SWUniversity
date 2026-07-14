@@ -103,6 +103,9 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
     case "LAW_060"://Quarren Contractor
     case "LAW_086"://The Stranger - No Survivors
     case "LAW_123"://Syndicate Security
+    case "ASH_074"://Mos Eisley Modifier
+    case "ASH_145"://Praetorian Elite
+    case "ASH_175"://Wookiee Chieftain
       return true;
     default: break;
   }

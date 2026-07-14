@@ -124,6 +124,13 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "SEC_087"://Dedra Meero
     case "SEC_209"://The Mandalorian
     case "LAW_078"://Sabine Wren - Spectre Five
+    case "LAW_081"://Sullustan Sapper
+    case "LAW_135"://Pirate Snub Fighter
+    case "LAW_239"://Guild Ambush Team
+    case "LAW_255"://Circuit Challenger
+    case "ASH_106"://Pathfinder Sergeant
+    case "ASH_129"://Defenders of the Forest
+    case "ASH_192"://Fennec Shand
       return true;
   }
   //JTL_053: The Ghost - Heart of the Family

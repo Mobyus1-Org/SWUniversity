@@ -75,6 +75,19 @@ export function HasHidden(cardId: string, playId?: string, player?: PlayerId, is
     case "SEC_201"://Anakin Skywalker
     case "SEC_148"://Karis Nemik
       return true;
+
+    case "LAW_082"://Urrr'k
+    case "LAW_160"://Hidden Hunters
+    case "LAW_188"://Savareen Survivor
+    case "LAW_209"://Nihil Stormsower
+    case "LAW_220"://Wookiee Guerilla
+    case "LAW_260"://Seasoned Tracker
+    case "ASH_166"://Ewok Warrior
+    case "ASH_213"://Womp Rat
+    case "ASH_225"://Tatooine Sand Beast
+    case "ASH_244"://Remnant Trooper Corps
+    case "ASH_249"://Covert Veteran
+      return true;
     default: break;
   }
 

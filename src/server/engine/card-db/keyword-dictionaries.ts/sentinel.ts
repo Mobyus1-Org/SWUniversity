@@ -205,6 +205,19 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "SEC_262"://Ando Commission
     case "LAW_254"://Stalwart Fleet Trooper
     case "LAW_045"://Zeb Orellios
+    case "LAW_049"://Bith Brute
+    case "LAW_060"://Quarren Contractor
+    case "LAW_100"://IGV-55 Listener
+    case "LAW_114"://Alkenzi Patroller
+    case "LAW_118"://Droid Laser Turret
+    case "LAW_251"://Night Wind Assailants
+    case "LAW_263"://Kessel Hulk
+    case "ASH_029"://Scorpenek Annihilator Droid
+    case "ASH_048"://Imperial Armored Commando
+    case "ASH_117"://Outland Protector
+    case "ASH_126"://Survivors' Langskib
+    case "ASH_239"://Imperial Loyalist
+    case "ASH_252"://N5 Sentry Droid
       return true;
   }
 

@@ -427,12 +427,17 @@ export const Cards = {
       zebOrellios: "LAW_045",
       expendableMercenary: "LAW_159",
       sabineWren: "LAW_078",
+      shieldedHauler: "LAW_122",
+      ohnakaGangBandits: "LAW_199",
+      vigilantScouts: "LAW_120",
     },
     ash: {
       antDroid: "ASH_116",
       ravager: "ASH_102",
       poeDameron: "ASH_040",
       helgait: "ASH_195",
+      praetorianElite: "ASH_145",
+      outlandProtector: "ASH_117",
     },
   },
   upgrades: {

@@ -110,6 +110,20 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
     case "LOF_166"://Blockade Runner
     case "LOF_199"://Depa Billaba
     case "SEC_199"://Bravo Squadron Fighter
+    case "LAW_049"://Bith Brute
+    case "LAW_070"://Devaronian Doorbuster
+    case "LAW_196"://Relentless Hunters
+    case "LAW_218"://Artful Pickpocket
+    case "LAW_222"://Rebel Blockade Runner
+    case "LAW_230"://Ohnaka Gang Starhopper
+    case "LAW_234"://Kage Elite
+    case "LAW_250"://Callous Bounty Hunter
+    case "ASH_141"://TIE Striker
+    case "ASH_173"://Shydopp Pirate Skiff
+    case "ASH_192"://Fennec Shand
+    case "ASH_193"://Emperor's Champion
+    case "ASH_222"://Unsanctioned Patrol
+    case "ASH_256"://Rebel Infiltrators
       return true;
     default: break;
   }

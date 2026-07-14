@@ -155,6 +155,17 @@ export function HasOverwhelm(cardId: string,
     case "LOF_109"://Mynock
     case "LOF_120"://Trident Assault Ship
     case "SEC_081"://Major Partagaz
+    case "LAW_038"://Lepi Lookout
+    case "LAW_081"://Sullustan Sapper
+    case "LAW_162"://Beach Patrol AT-ACT
+    case "LAW_177"://Son-tuul Berserkers
+    case "LAW_259"://Cartel Heavy Fighter
+    case "ASH_029"://Scorpenek Annihilator Droid
+    case "ASH_096"://Forest Patroller
+    case "ASH_121"://Blurrg
+    case "ASH_129"://Defenders of the Forest
+    case "ASH_143"://Tempest Lieutenant
+    case "ASH_164"://Alamite Hunter
       return true;
     default: break;
   }

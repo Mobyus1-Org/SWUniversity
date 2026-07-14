@@ -76,6 +76,18 @@ export function HasShielded(cardId: string, playId?: string, player?: PlayerId, 
     case "LOF_214"://Sorcerers of Tund
       return true;
 
+    case "LAW_038"://Lepi Lookout
+    case "LAW_042"://IG-88
+    case "LAW_118"://Droid Laser Turret
+    case "LAW_122"://Shielded Hauler
+    case "LAW_211"://Black Sun Patroller
+    case "ASH_029"://Scorpenek Annihilator Droid
+    case "ASH_048"://Imperial Armored Commando
+    case "ASH_069"://Noti Nomad
+    case "ASH_193"://Emperor's Champion
+    case "ASH_T01"://Mandalorian token
+      return true;
+
     default: break;
   }
   //JTL_053: The Ghost - Heart of the Family
