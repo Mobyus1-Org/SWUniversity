@@ -444,6 +444,25 @@ export function UseTheForce(player: PlayerId, gameLog: string[], fromCardId?: st
   return true;
 }
 
+/**
+ * Heals `amount` damage from a player's base, floored at 0. Shared by every card that
+ * heals a base (Grassroots Resistance, Lost and Forgotten, …).
+ */
+export function HealBaseForPlayer(
+  gs: GameState,
+  player: PlayerId,
+  amount: number,
+  gameLog: string[],
+  fromCardId?: string,
+): void {
+  const playerObj = player === 1 ? gs.player1 : gs.player2;
+  const healed = Math.min(amount, playerObj.base.damage);
+  if (healed <= 0) return;
+  playerObj.base.damage -= healed;
+  const prefix = fromCardId ? `${CardTitle(fromCardId)}: ` : "";
+  gameLog.push(`${prefix}healed ${healed} damage from Player ${player}'s base.`);
+}
+
 export function GetHand(player: PlayerId): Card[] {
   const game = GetGame();
   if (!game) {

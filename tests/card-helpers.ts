@@ -511,18 +511,26 @@ export const Cards = {
       dedicatedWingmen: "JTL_254",
       unityOfPurpose: "JTL_106",
       flyCasual: "JTL_206",
+      noGloryOnlyResults: "JTL_043",
     },
     sec: {
       iAmTheSenate: "SEC_092",
+      grassrootsResistance: "SEC_258",
+    },
+    ash: {
+      // Identical reprint of SEC_258 Grassroots Resistance.
+      grassrootsResistance: "ASH_258",
     },
     law: {
       unmarkedCredits: "LAW_244",
       backedByTheHutts: "LAW_247",
       haymaker: "LAW_168",
+      lostAndForgotten: "LAW_133",
     },
     lof: {
       cureWounds: "LOF_075",
       sorcerousBlast: "LOF_172",
+      shatterpoint: "LOF_079",
     },
   },
 }

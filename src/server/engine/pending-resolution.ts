@@ -61,6 +61,20 @@ export interface WhenDefeatedChoicePending {
   continuation?: PendingResolution | null;
 }
 
+/**
+ * A card's "Choose one:" — the player picks one of N modes, each identified by a stable
+ * id and shown with a human label. Unlike WhenDefeatedChoicePending (whose options are
+ * self-contained encoded effects), a mode here may resolve into a further pending, so the
+ * per-card handler decides what each id does.
+ */
+export interface ChooseOnePending {
+  type: "choose-one";
+  cardId: string;
+  player: PlayerId;
+  options: { id: string; label: string }[];
+  continuation: PendingResolution | null;
+}
+
 export interface DiscardFromHandPending {
   type: "discard-from-hand";
   targetPlayer: PlayerId;
@@ -460,6 +474,7 @@ export type PendingResolution =
   | AbilityTargetPending
   | LeaderActionPending
   | WhenDefeatedChoicePending
+  | ChooseOnePending
   | DiscardFromHandPending
   | ResolveAttackPending
   | UpgradeTargetPending

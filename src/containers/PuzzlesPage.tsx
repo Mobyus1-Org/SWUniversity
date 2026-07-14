@@ -1996,8 +1996,10 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                 )}
               </>
             );
-          })() : resolutionNeeded?.type === "Option" ? resolutionNeeded.options.map((opt) => {
-            const displayLabel = opt === "Yes" && resolutionNeeded.yesLabel
+          })() : resolutionNeeded?.type === "Option" ? resolutionNeeded.options.map((opt, optIdx) => {
+            const displayLabel = resolutionNeeded.optionLabels?.[optIdx]
+              ? resolutionNeeded.optionLabels[optIdx]
+              : opt === "Yes" && resolutionNeeded.yesLabel
               ? resolutionNeeded.yesLabel
               : opt === "No" && resolutionNeeded.noLabel
               ? resolutionNeeded.noLabel

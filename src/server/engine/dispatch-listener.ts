@@ -31,7 +31,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer } from "@/server/engine/core-functions";
+import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -70,6 +70,7 @@ import type {
   ExploitTargetPending,
   CreditPaymentOptionPending,
   CreditPaymentAmountPending,
+  ChooseOnePending,
   OnAttackOrderPending,
   OnAttackTriggerEntry,
   PendingResolution,
@@ -93,7 +94,7 @@ import type { TriggerEntry, CardPlayedContext } from "@/lib/engine/trigger-types
 import { collectBounties } from "@/server/engine/actions/bounty";
 import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { resolveWhenPlayed } from "@/server/engine/actions/when-played";
+import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB } from "@/server/engine/actions/when-played";
 import { executeRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
 import { resolveWhenPlayedTrigger } from "@/server/engine/actions/when-played-trigger";
 import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
@@ -161,6 +162,30 @@ export function computeUnitBuffs(gs: GameState): Record<string, { power: number;
 // ---------------------------------------------------------------------------
 // Helpers: game state accessors
 // ---------------------------------------------------------------------------
+
+/**
+ * Resolves the mode a player picked from a card's "Choose one:" prompt. Each mode returns
+ * the pending it needs next (usually a target step), or null when it resolves outright.
+ */
+function resolveChooseOne(
+  game: GameState,
+  log: string[],
+  pending: ChooseOnePending,
+  optionId: string,
+): PendingResolution | null {
+  let next: PendingResolution | null = null;
+  switch (pending.cardId) {
+    case "LOF_079": // Shatterpoint
+      next = optionId === "defeat_low_hp"
+        ? shatterpointModeA(pending.cardId, pending.player)
+        : shatterpointModeB(pending.cardId, pending.player, log);
+      break;
+    default:
+      log.push(`No "Choose one" handler for ${CardTitle(pending.cardId)}.`);
+      break;
+  }
+  return next ? injectContinuation(next, pending.continuation) : pending.continuation;
+}
 
 function sweepDeadUnits(gs: GameState, log: string[], continuation: PendingResolution | null): PendingResolution | null {
   let pending = continuation;
@@ -964,8 +989,10 @@ function defeatUnit(
   }
 
   // Tokens are set aside on defeat, not placed in discard (CR 7.6.1).
+  // A defeated card goes to its OWNER's discard, not its controller's — this differs
+  // for units taken with a control effect (No Glory Only Results, Traitorous, …).
   if (!unit.IsTokenUnit()) {
-    pushToDiscard(game, removed.player, unit);
+    pushToDiscard(game, unit.owner, unit);
   }
   game.roundState.cardsLeftPlayThisPhase.push({
     fromPlayer: removed.player,
@@ -1719,6 +1746,13 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         type: "Option",
         helperText: `Choose When Defeated effect for ${CardTitle(pending.defeatedCardId)}.`,
         options: pending.options,
+      } satisfies NeedsOption;
+    case "choose-one":
+      return {
+        type: "Option",
+        helperText: `${CardTitle(pending.cardId)} — choose one:`,
+        options: pending.options.map(o => o.id),
+        optionLabels: pending.options.map(o => o.label),
       } satisfies NeedsOption;
     case "discard-from-hand":
       return { type: "Target", fromZones: ["Hand"], handOwner: pending.targetPlayer } satisfies NeedsTarget;
@@ -4649,6 +4683,18 @@ function handleChooseOption(
     return resolveLeaderAbility(game, log, pending.player);
   }
 
+  if (pending?.type === "choose-one") {
+    if (!pending.options.some(o => o.id === option)) {
+      return { response: invalidResponse(`Unknown option: ${option}`), pending, stateChanged: false };
+    }
+    const chosen = resolveChooseOne(game, log, pending, option);
+    if (chosen) {
+      return { response: resolutionResponse(pendingToResolution(chosen, game)), pending: chosen, stateChanged: false };
+    }
+    updateDefeatedPlayers(game);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
   if (pending?.type === "when-defeated-choice") {
     const eqIdx = option.indexOf("=");
     const optionType = eqIdx >= 0 ? option.slice(0, eqIdx) : option;
@@ -6140,6 +6186,48 @@ function applyAbilityEffect(
       game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target077.cardId)}.`);
       if (defeatPend077) return injectContinuation(defeatPend077, pending.continuation);
       return pending.continuation;
+    }
+    case "LOF_079": { // Shatterpoint — both modes end the same way: defeat the chosen unit.
+      if (!targetPlayId) break;
+      const target079 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target079) break;
+      if (CardIsLeader(target079.cardId)) break;
+      const defeatPend079 = defeatUnit(game.currentGameState, game.gameLog, target079);
+      game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target079.cardId)}.`);
+      if (defeatPend079) return injectContinuation(defeatPend079, pending.continuation);
+      return pending.continuation;
+    }
+    case "JTL_043": { // No Glory, Only Results — take control of a non-leader unit, then defeat it.
+      if (!targetPlayId) break;
+      const target043 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target043) break;
+      if (CardIsLeader(target043.cardId)) break;
+      // Order matters: the unit is defeated while under the caster's control, so its
+      // When Defeated ability resolves for the caster, not its owner.
+      transferControl(game.currentGameState, game.gameLog, Unit.FromInterface(target043), pending.player!);
+      const defeatPend043 = defeatUnit(game.currentGameState, game.gameLog, target043);
+      game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target043.cardId)}.`);
+      if (defeatPend043) return injectContinuation(defeatPend043, pending.continuation);
+      return pending.continuation;
+    }
+    case "LAW_133": { // Lost and Forgotten — defeat a non-leader unit, then heal 3 from your base.
+      if (!targetPlayId) break;
+      const target133 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target133) break;
+      if (CardIsLeader(target133.cardId)) break;
+      const defeatPend133 = defeatUnit(game.currentGameState, game.gameLog, target133);
+      game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target133.cardId)}.`);
+      // "If you do" — the unit was defeated, so the heal follows.
+      HealBaseForPlayer(game.currentGameState, pending.player!, 3, game.gameLog, pending.cardId);
+      if (defeatPend133) return injectContinuation(defeatPend133, pending.continuation);
+      return pending.continuation;
+    }
+    case "SEC_258": // Grassroots Resistance — deal 3 to a unit, then heal 3 from your base.
+    case "ASH_258": { // reprint of SEC_258
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog);
+      // The heal is unconditional — it is a second sentence, not an "if you do".
+      HealBaseForPlayer(game.currentGameState, pending.player!, 3, game.gameLog, pending.cardId);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
     case "SOR_078": // Vanquish — defeat a non-leader unit.
     case "TWI_077": { // reprint of SOR_078

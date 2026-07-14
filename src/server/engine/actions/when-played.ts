@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty, HasTheForce } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, AspectPenalty, HasTheForce, HealBaseForPlayer, UseTheForce } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, AbilityOptionPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
@@ -15,6 +15,49 @@ function allUnitsAndBasesPlayIds(): string[] {
     "player1.base",
     "player2.base",
   ];
+}
+
+// ---------------------------------------------------------------------------
+// LOF_079 Shatterpoint — "Choose one:
+//   Defeat a non-leader unit with 3 or less remaining HP.
+//   Use the Force (lose your Force token). If you do, defeat a non-leader unit."
+// The two modes are built here because both the initial "Choose one" prompt and the
+// single-live-mode shortcut need them.
+// ---------------------------------------------------------------------------
+
+/** Non-leader units the mode-A clause can reach (3 or less REMAINING HP). */
+export function shatterpointLowHpTargets(): Unit[] {
+  return AllUnits().filter(u => {
+    const unit = Unit.FromInterface(u);
+    return !unit.IsLeader() && unit.CurrentHP() <= 3;
+  });
+}
+
+/** Every non-leader unit — what mode B can reach once the Force is spent. */
+export function shatterpointAnyTargets(): Unit[] {
+  return AllUnits().filter(u => !Unit.FromInterface(u).IsLeader());
+}
+
+/** Mode A: defeat a non-leader unit with 3 or less remaining HP. No cost. */
+export function shatterpointModeA(cardId: string, player: PlayerId): PendingResolution | null {
+  const targets = shatterpointLowHpTargets();
+  if (targets.length === 0) return null;
+  return mandatoryTarget(cardId, player, targets.map(u => u.playId));
+}
+
+/**
+ * Mode B: Use the Force, then defeat any non-leader unit. The Force is spent up front —
+ * "If you do" gates the defeat on the token actually being there.
+ */
+export function shatterpointModeB(
+  cardId: string,
+  player: PlayerId,
+  gameLog: string[],
+): PendingResolution | null {
+  const targets = shatterpointAnyTargets();
+  if (targets.length === 0) return null;
+  if (!UseTheForce(player, gameLog, cardId)) return null; // no Force token → no defeat
+  return mandatoryTarget(cardId, player, targets.map(u => u.playId));
 }
 
 /**
@@ -601,6 +644,49 @@ export function resolveWhenPlayed(
       const eligible078 = AllUnits().filter(u => !Unit.FromInterface(u).IsLeader());
       if (eligible078.length === 0) return null;
       return mandatoryTarget(cardId, player, eligible078.map(u => u.playId));
+    }
+    case "LOF_079": { // Shatterpoint — "Choose one: …"
+      const modeALive = shatterpointLowHpTargets().length > 0;
+      // Mode B needs both the Force token to spend and something to defeat with it.
+      const modeBLive = HasTheForce(player) && shatterpointAnyTargets().length > 0;
+
+      if (modeALive && modeBLive) {
+        return {
+          type: "choose-one",
+          cardId,
+          player,
+          options: [
+            { id: "defeat_low_hp", label: "Defeat a unit with 3 or less remaining HP" },
+            { id: "use_force_then_defeat", label: "Use the Force, then defeat a unit" },
+          ],
+          continuation: null,
+        };
+      }
+      // Only one mode is executable — no choice to present.
+      if (modeALive) return shatterpointModeA(cardId, player);
+      if (modeBLive) return shatterpointModeB(cardId, player, game.gameLog);
+      return null; // neither mode can be carried out
+    }
+    case "JTL_043": { // No Glory, Only Results — "Take control of a non-leader unit, then defeat it."
+      const eligible043 = AllUnits().filter(u => !Unit.FromInterface(u).IsLeader());
+      if (eligible043.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible043.map(u => u.playId));
+    }
+    case "LAW_133": { // Lost and Forgotten — "Defeat a non-leader unit. If you do, heal 3 damage from your base."
+      const eligible133 = AllUnits().filter(u => !Unit.FromInterface(u).IsLeader());
+      // No legal target → nothing is defeated, so the "if you do" heal never happens.
+      if (eligible133.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible133.map(u => u.playId));
+    }
+    case "SEC_258": // Grassroots Resistance — "Deal 3 damage to a unit. Heal 3 damage from your base."
+    case "ASH_258": { // reprint of SEC_258
+      const eligible258 = AllUnits();
+      if (eligible258.length === 0) {
+        // No unit to damage, but the heal is not conditional on it — do it now.
+        HealBaseForPlayer(game.currentGameState, player, 3, game.gameLog, cardId);
+        return null;
+      }
+      return mandatoryTarget(cardId, player, eligible258.map(u => u.playId));
     }
     case "SOR_135": { // Emperor Palpatine — When Played: Deal 6 damage divided as you choose among enemy units.
       const enemies135 = GetUnitsForPlayer(player === 1 ? 2 : 1);

@@ -32,6 +32,11 @@ export interface NeedsOption {
   yesLabel?: string;
   /** Override display label for "No" option (dispatch value remains "No"). */
   noLabel?: string;
+  /**
+   * Display labels parallel to `options` (dispatch values remain the `options` entries).
+   * Used by "Choose one:" prompts, whose option ids are machine-readable, not player-facing.
+   */
+  optionLabels?: string[];
 }
 
 export interface NeedsPlayer {
