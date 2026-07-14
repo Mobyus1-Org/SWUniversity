@@ -1,5 +1,5 @@
 import { CardAspects, CardCost, CardIsUnique, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
-import { Card, CardInPlay, CardTypes, CurrentEffect, Leader, PlayerId } from "@/lib/engine/core-models";
+import { Card, CardInPlay, CardTypes, CurrentEffect, Leader, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { Game, GameState, PlayerState } from "@/lib/engine/game";
 import { Unit } from "@/server/engine/unit";
 import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
@@ -383,6 +383,37 @@ export function GetResources(player: PlayerId, availableOnly = false): CardInPla
   return availableOnly ? playerObj.resources.filter(resource => resource.ready) : playerObj.resources;
 }
 
+/**
+ * "Defeat a friendly resource" — removes the resource from the resource row and puts the card
+ * in its owner's discard pile. Returns false when the playId isn't one of the player's
+ * resources. Ready or exhausted, either can be defeated.
+ */
+export function DefeatResource(
+  gs: GameState,
+  player: PlayerId,
+  resourcePlayId: string,
+  gameLog: string[],
+  fromCardId?: string,
+): boolean {
+  const playerObj = player === 1 ? gs.player1 : gs.player2;
+  const index = playerObj.resources.findIndex(r => r.playId === resourcePlayId);
+  if (index === -1) return false;
+
+  const [defeated] = playerObj.resources.splice(index, 1);
+  const owner = defeated.owner ?? player;
+  const ownerObj = owner === 1 ? gs.player1 : gs.player2;
+  ownerObj.discard.push({
+    ...defeated,
+    controller: owner,
+    turnDiscarded: gs.currentRound,
+    discardEffect: "",
+  });
+
+  const prefix = fromCardId ? `${CardTitle(fromCardId)}: ` : "";
+  gameLog.push(`${prefix}Player ${player} defeated a resource (${CardTitle(defeated.cardId)}).`);
+  return true;
+}
+
 /** Damage currently on the given player's base. */
 export function GetBaseDamage(player: PlayerId): number {
   const game = GetGame();
@@ -441,7 +472,37 @@ export function UseTheForce(player: PlayerId, gameLog: string[], fromCardId?: st
   } else {
     gameLog.push(`Player ${player} used the Force.`);
   }
+
+  QueueUseTheForceReactions(player, game.currentGameState);
   return true;
+}
+
+/** Cards with a "When you use the Force:" reaction. */
+function CardHasUseTheForceReaction(cardId: string): boolean {
+  switch (cardId) {
+    case "LOF_260": //The Father — may deal 1 damage to itself to regain the Force token
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * "When you use the Force" reactions belong to the player who spent the token, so only units
+ * that player controls trigger. Pushed onto the trigger bag from the single UseTheForce
+ * choke point, so every Force-spending card fires them.
+ */
+function QueueUseTheForceReactions(player: PlayerId, gs: GameState): void {
+  for (const unit of GetUnitsForPlayer(player)) {
+    if (!CardHasUseTheForceReaction(unit.cardId)) continue;
+    if (unit.LostAbilities()) continue;
+    gs.triggerBag.push({
+      triggerType: "use-the-force",
+      cardId: unit.cardId,
+      fromPlayer: player,
+      playId: unit.playId,
+    });
+  }
 }
 
 /**
@@ -624,6 +685,26 @@ export function FisherYatesShuffle<T>(array: T[]): T[] {
   return array;
 }
 
+/**
+ * Constant "this unit can't attack" restrictions (CR: declaring an attack is illegal).
+ * A unit that has lost its abilities also loses the restriction — "can't attack" is itself
+ * an ability, so silencing the unit frees it to attack.
+ */
+export function CanUnitAttack(unit: UnitInterface): boolean {
+  const asUnit = Unit.FromInterface(unit);
+  if (asUnit.LostAbilities()) return true;
+
+  switch (unit.cardId) {
+    case "LOF_063": //Oggdo Bogdo — "can't attack unless it's damaged"
+      return asUnit.IsDamaged();
+    case "LOF_044": //Loth-Wolf — "This unit can't attack."
+    case "JTL_059": //Corporate Defense Shuttle — "This unit can't attack."
+      return false;
+    default:
+      return true;
+  }
+}
+
 export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string): boolean {
   if (player && playId) {
     const unit = GetUnitInPlay(playId, player);
@@ -668,6 +749,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_236": //R2-D2 - Ignoring Protocol
     case "SOR_206": //Mining Guild TIE Fighter
     case "SOR_006": //Emperor Palpatine - Galactic Ruler
+    case "LAW_013": //Chewbacca - Hero of Kessel (deployed)
+    case "JTL_018": //Kazuda Xiono - Best Pilot in the Galaxy (deployed)
     case "SOR_010": //Darth Vader - Dark Lord of the Sith
     case "SOR_014": //Sabine Wren - Galvanized Revolutionary
     case "SHD_012": //Bo-Katan Kryze - Princess in Exile
@@ -724,6 +807,7 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
     case "SOR_054": //Jedi Lightsaber (conditional: only fires if attached unit is Force)
     case "SOR_137": //Fallen Lightsaber (conditional: only fires if attached unit is Force)
     case "SEC_264": //Clandestine Connections
+    case "JTL_018": //Kazuda Xiono piloting — grants his On Attack to the attached Vehicle
       return true;
     default: return false;
   }

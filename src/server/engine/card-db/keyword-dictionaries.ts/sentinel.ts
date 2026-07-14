@@ -57,7 +57,8 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
           break;
         //conditional upgrade sentinel
         case "JTL_109"://Jarek Yeager
-          hasSentinel = NumberOfUnitsInArena(player, "Ground") > 0
+          //Must OR: an unmet condition here can't erase Sentinel granted by another upgrade.
+          hasSentinel ||= NumberOfUnitsInArena(player, "Ground") > 0
             && NumberOfUnitsInArena(player, "Space") > 0;
             break;
         case "LOF_261"://Constructed Lightsaber

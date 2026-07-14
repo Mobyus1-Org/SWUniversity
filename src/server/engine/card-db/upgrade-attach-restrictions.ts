@@ -91,6 +91,7 @@ export function UpgradeEligibleTargets(
 
     // "Attach to a friendly unit."
     case "SHD_124": // Legal Authority
+    case "LOF_091": // Craving Power
       return friendly.map(u => u.playId);
 
     // "Attach to a non-leader unit that costs 3 or less (and has no leader pilot)."

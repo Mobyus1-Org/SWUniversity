@@ -99,9 +99,9 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   //Twilight of the Republic
   "TWI_004", "TWI_005", "TWI_007", "TWI_011", "TWI_012",
   //Jump to Lightspeed
-  "JTL_012",
+  "JTL_012", "JTL_018",
   //Legends of the Underworld
-  "LAW_008",
+  "LAW_008", "LAW_013",
   //Legacy of the Force
   "LOF_003", "LOF_007",
 ]);
@@ -999,6 +999,16 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             .map(upg => upg.playId)
         )
       : new Set();
+  // Abilities that target a RESOURCE (e.g. LAW_013 Chewbacca's "defeat a friendly resource"
+  // cost) put resource playIds in fromPlayIds, so the resource row becomes clickable.
+  const selectableResourcePlayIds: Set<string> =
+    resolutionNeeded?.type === "Target" && (resolutionNeeded.fromPlayIds ?? []).length > 0
+      ? new Set(
+          player.resources
+            .filter(r => (resolutionNeeded.fromPlayIds ?? []).includes(r.playId))
+            .map(r => r.playId)
+        )
+      : new Set();
   const spreadEligiblePlayIds: Set<string> = resolutionNeeded?.type === "SpreadDamage"
     ? new Set(resolutionNeeded.eligiblePlayIds)
     : new Set();
@@ -1813,10 +1823,17 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                 <div className="flex flex-wrap gap-2">
                   {player.resources.map((resource) => {
                     const isSmuggleable = smuggleablePlayIds.has(resource.playId);
+                    const isResourceTarget = selectableResourcePlayIds.has(resource.playId);
+                    // A pending target prompt takes precedence over the Smuggle click.
+                    const onResourceClick = isResourceTarget
+                      ? () => { void sendDispatch(createDispatch("choose-target", { targetPlayIds: [resource.playId] })); }
+                      : isSmuggleable
+                        ? () => { void sendDispatch(createDispatch("play-smuggle", { playId: resource.playId })); }
+                        : undefined;
                     return <div
                       key={resource.playId}
-                      className={`relative ${isSmuggleable ? "cursor-pointer" : ""}`}
-                      onClick={isSmuggleable ? () => { void sendDispatch(createDispatch("play-smuggle", { playId: resource.playId })); } : undefined}
+                      className={`relative ${onResourceClick ? "cursor-pointer" : ""}`}
+                      onClick={onResourceClick}
                     >
                       <div className={!resource.ready ? "opacity-40" : ""}>
                         <FaceDownResource
@@ -1826,7 +1843,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                           onPreviewEnd={handlePreviewEnd}
                         />
                       </div>
-                      {isSmuggleable && <div className={`pointer-events-none absolute inset-0 rounded-xl ${lightsaberGlow}`} />}
+                      {(isSmuggleable || isResourceTarget) && <div className={`pointer-events-none absolute inset-0 rounded-xl ${lightsaberGlow}`} />}
                     </div>;
                   })}
                 </div>

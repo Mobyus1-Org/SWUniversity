@@ -73,6 +73,8 @@ export function resolveOnAttackTrigger(
   //Upgrade-granted On Attack abilities
   for (const upgrade of activeUpgrades) {
     switch (upgrade.cardId) {
+      case "JTL_018": // Kazuda Xiono piloting — same On Attack as his deployed side.
+        return kazudaSilencePending(attacker, continuation);
       case "JTL_012": { // Luke Skywalker piloting a Fighter — "On Attack: You may deal 3 damage to a unit."
         const allUnits012 = AllUnits();
         if (allUnits012.length > 0) {
@@ -522,6 +524,30 @@ export function resolveOnAttackTrigger(
         continuation,
       };
     }
+    case "JTL_018": // Kazuda Xiono (deployed) — "On Attack: Choose any number of friendly units. They lose all abilities for this round."
+      return kazudaSilencePending(attacker, continuation);
+    case "LAW_013": { // Chewbacca (deployed) — "On Attack: You may defeat a friendly resource. If you do, deal 2 damage to a unit and create a Credit token."
+      const gs013 = GetGame()!.currentGameState;
+      const resources013 = (attacker.controller === 1 ? gs013.player1 : gs013.player2).resources;
+      if (resources013.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "LAW_013_OA",
+        player: attacker.controller,
+        helperText: "You may defeat a friendly resource. If you do, deal 2 damage to a unit and create a Credit token.",
+        yesLabel: "Defeat a resource",
+        noLabel: "Skip",
+        onYes: {
+          // Shares the leader Action's resolution chain: defeat the resource, then damage + Credit.
+          type: "ability-target",
+          cardId: "LAW_013_resource",
+          player: attacker.controller,
+          fromPlayIds: resources013.map(r => r.playId),
+          continuation,
+        },
+        continuation,
+      };
+    }
     case "SEC_065": { // Nala Se — On Attack: You may disclose Vigilance×Vigilance. If you do, heal up to 4 from other units.
       if (!CanDisclose(attacker.controller, ["Vigilance", "Vigilance"])) return continuation;
       const otherUnits065 = AllUnits()
@@ -655,4 +681,23 @@ export function resolveOnAttackTrigger(
       // If an upgrade-only trigger fired but no native ability, return continuation so combat proceeds.
       return activeUpgrades.length > 0 ? continuation : null;
   }
+}
+
+/**
+ * JTL_018 Kazuda Xiono — "On Attack: Choose any number of friendly units. They lose all
+ * abilities for this round." Shared by his deployed side and his Pilot-upgrade side.
+ * "Any number" includes zero, so the prompt is always satisfiable.
+ */
+function kazudaSilencePending(attacker: Unit, continuation: ResolveAttackPending): PendingResolution {
+  const friendly = GetUnitsForPlayer(attacker.controller);
+  if (friendly.length === 0) return continuation;
+  return {
+    type: "ability-target",
+    cardId: "JTL_018_OA",
+    player: attacker.controller,
+    fromPlayIds: friendly.map(u => u.playId),
+    needsMultiple: true,
+    maxTargets: friendly.length,
+    continuation,
+  };
 }

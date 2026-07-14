@@ -375,6 +375,9 @@ export const Cards = {
       darthTyranus: "LOF_231",
       itinerantWarrior: "LOF_048",
       yaddle: "LOF_045",
+      theFather: "LOF_260",
+      oggdoBogdo: "LOF_063",
+      guardianOfTheWhills: "LOF_058",
     },
     twi: {
       infiltratingDemolisher: "TWI_182",
@@ -433,9 +436,13 @@ export const Cards = {
       mandalorianArmor: "SHD_073",
       vambraceFlamethrower: "SHD_177",
     },
+    jtl: {
+      jarekYeager: "JTL_109",
+    },
     lof: {
       bolsteredEndurance: "LOF_074",
       constructedLightsaber: "LOF_261",
+      cravingPower: "LOF_091",
     },
     ash: {
       camtono: "ASH_229",

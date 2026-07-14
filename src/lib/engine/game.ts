@@ -65,6 +65,11 @@ export interface GameState {
     regroupResourcedPlayers: PlayerId[];
     /** Number of times either player has Used the Force this phase (e.g. LOF_007 Avar Kriss). */
     forceUsedThisPhase: number;
+    /**
+     * "Take an extra action after this one" (e.g. JTL_018 Kazuda Xiono) — the player who keeps
+     * priority instead of passing the turn. Consumed by the next advanceTurn.
+     */
+    extraActionPlayer?: PlayerId;
   };
   triggerBag: TriggerEntry[];
   /**

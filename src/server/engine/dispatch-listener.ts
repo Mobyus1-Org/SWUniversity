@@ -114,7 +114,7 @@ import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper } from "@/server/engine/token-helpers";
-import { UpgradeImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored } from "@/server/engine/core-functions";
+import { UpgradeImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -713,6 +713,24 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
     return null;
   }
 
+  if (trigger.triggerType === "use-the-force" && trigger.playId) {
+    // LOF_260 The Father — "When you use the Force: You may deal 1 damage to this unit.
+    // If you do, the Force is with you."
+    const father = GetUnitByPlayId(game, trigger.playId);
+    if (!father) return null; // left play before the reaction resolved
+    return {
+      type: "ability-option",
+      cardId: trigger.cardId,
+      sourcePlayId: trigger.playId,
+      player: trigger.fromPlayer,
+      helperText: `Deal 1 damage to ${CardTitle(trigger.cardId)} to return your Force token?`,
+      yesLabel: "Deal 1 damage",
+      noLabel: "Skip",
+      onYes: null,
+      continuation: null,
+    };
+  }
+
   if (trigger.triggerType === "shielded" && trigger.playId) {
     const unit = GetUnitByPlayId(game, trigger.playId);
     if (unit) {
@@ -725,6 +743,7 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
   if (trigger.triggerType === "ambush" && trigger.playId) {
     const unit = GetUnitByPlayId(game, trigger.playId);
     if (!unit) return null;
+    if (!CanUnitAttack(unit)) return null; // a unit that can't attack can't ambush-attack either
     const { unitPlayIds } = computeAttackTargets(game, unit as Unit);
     if (unitPlayIds.length === 0) return null; // no valid unit targets — fizzle
     return {
@@ -1686,6 +1705,12 @@ function attackerOwnWhenAttackEnds(
     case "SOR_149": { // Mace Windu — when attacks and defeats a unit: Ready him.
       if (defDefeated && !Unit.FromInterface(attacker).LostAbilities()) {
         attacker.ready = true;
+      }
+      return continuation;
+    }
+    case "LOF_063": { // Oggdo Bogdo — when attacks and defeats a unit: heal 2 damage from this unit.
+      if (defDefeated && !Unit.FromInterface(attacker).LostAbilities()) {
+        attacker.damage = Math.max(0, attacker.damage - 2);
       }
       return continuation;
     }
@@ -2738,6 +2763,8 @@ function handleInitiateAttack(
     return { response: invalidResponse(`Unit ${playId} is not controlled by Player ${player}.`), pending: null, stateChanged: false };
   if (!attacker.ready)
     return { response: invalidResponse(`Unit ${playId} is exhausted.`), pending: null, stateChanged: false };
+  if (!CanUnitAttack(attacker))
+    return { response: invalidResponse(`${CardTitle(attacker.cardId)} can't attack.`), pending: null, stateChanged: false };
 
   if (HasOnAttack(attacker.cardId, attacker.controller, attacker.playId)) {
     game.triggerBag.push({ triggerType: "on-attack", cardId: attacker.cardId, fromPlayer: player });
@@ -3078,6 +3105,24 @@ function handleChooseTarget(
       : undefined;
     const chosen = data.targetPlayIds?.[0] ?? chosenLeader;
     const chosenBase = data.targetZones?.includes("Base") ?? false;
+
+    // JTL_018 Kazuda Xiono On Attack: "Choose ANY NUMBER of friendly units." Zero is a legal
+    // choice, so this must run before the empty-selection guard below.
+    if (pending.cardId === "JTL_018_OA") {
+      const chosen018 = data.targetPlayIds ?? [];
+      for (const id of chosen018) {
+        if (!pending.fromPlayIds.includes(id))
+          return { response: invalidResponse(`Unit ${id} is not a valid target for ${CardTitle("JTL_018")}.`), pending, stateChanged: false };
+      }
+      for (const id of chosen018) {
+        silenceUnitForRound(game, log, id);
+      }
+      const cont018 = pending.continuation;
+      if (cont018?.type === "resolve-attack") return handleResolveAttack(game, log, cont018);
+      if (cont018) return { response: resolutionResponse(pendingToResolution(cont018, game)), pending: cont018, stateChanged: true };
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
 
     if (!chosen && !chosenBase)
       return { response: invalidResponse("choose-target must include targetPlayIds or targetZones."), pending, stateChanged: false };
@@ -3617,9 +3662,28 @@ function handleChooseTarget(
       }
     }
 
+    // LOF_091 Craving Power: When Played — deal damage to an enemy unit equal to attached unit's
+    // power. The upgrade is already attached, so its own +2 power is included.
+    if (pending.upgradeCardId === "LOF_091") {
+      const enemy091: PlayerId = pending.player === 1 ? 2 : 1;
+      const enemyUnits091 = GetUnitsForPlayer(enemy091);
+      if (enemyUnits091.length > 0) {
+        const cravingPowerPending: AbilityTargetPending = {
+          type: "ability-target",
+          cardId: "LOF_091",
+          player: pending.player,
+          fromPlayIds: enemyUnits091.map(u => u.playId),
+          amount: Unit.FromInterface(targetUnit).CurrentPower(),
+          continuation: null,
+        };
+        updateDefeatedPlayers(game);
+        return { response: resolutionResponse(pendingToResolution(cravingPowerPending, game)), pending: cravingPowerPending, stateChanged: true };
+      }
+    }
+
     // Snapshot Reflexes: When Played — may attack with attached unit if it's ready.
     if (pending.upgradeCardId === "SOR_215" || pending.upgradeCardId === "SHD_223") {
-      if (targetUnit.ready) {
+      if (targetUnit.ready && CanUnitAttack(targetUnit)) {
         const snapPending: AbilityOptionPending = {
           type: "ability-option",
           cardId: pending.upgradeCardId,
@@ -4391,6 +4455,14 @@ function applyAbilityOptionEffect(
       payResources(game, player264, 2, log, "SEC_264");
       log.push(`${CardTitle("SEC_264")}: paid 2.`);
       return sec264BaseTargetPending(player264, 2, pending.continuation ?? null);
+    }
+    case "LOF_260": { // The Father Yes — deal 1 damage to himself; if you do, the Force is with you.
+      const father260 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      if (!father260) return pending.continuation ?? null;
+      const player260 = father260.controller;
+      DealDamageToUnit(game, "LOF_260", father260.playId, 1, log);
+      CreateForceToken(player260, log, "LOF_260");
+      return sweepDeadUnits(game, log, pending.continuation ?? null);
     }
     case "LAW_233": { // Galen Erso Yes — an opponent takes control of Galen
       const owner233 = pending.player!;
@@ -5349,6 +5421,28 @@ function handleClaimInitiative(game: GameState, log: string[], dispatch: GameDis
  * When initiative has been claimed, the holder auto-passes on their subsequent
  * turns — they never take real actions again this phase (CR 1.15.5b).
  */
+/**
+ * JTL_018 Kazuda Xiono — "loses all abilities for this round." Unit.LostAbilities() already
+ * recognizes a JTL_018 effect; this is the producing side. affectedPlayer must be the target
+ * unit's controller, since LostAbilities reads the effects of the unit's own controller.
+ */
+function silenceUnitForRound(game: GameState, log: string[], targetPlayId: string): void {
+  const target = GetUnitByPlayId(game, targetPlayId);
+  if (!target) return;
+  const alreadySilenced = game.currentEffects.some(
+    e => e.cardId === "JTL_018" && e.targetPlayId === targetPlayId,
+  );
+  if (alreadySilenced) return;
+
+  game.currentEffects.push({
+    cardId: "JTL_018",
+    duration: "Round",
+    affectedPlayer: target.controller,
+    targetPlayId,
+  });
+  log.push(`${CardTitle("JTL_018")}: ${CardTitle(target.cardId)} loses all abilities for this round.`);
+}
+
 function advanceTurn(game: GameState, log: string[], wasPass: boolean): void {
   const prevWasPass = game.roundState.lastActionWasPass;
   game.roundState.lastActionWasPass = wasPass;
@@ -5359,6 +5453,14 @@ function advanceTurn(game: GameState, log: string[], wasPass: boolean): void {
     log.push("Both players passed consecutively. Action phase ended.");
     executeRegroupDraw(game, log);
     updateDefeatedPlayers(game);
+    return;
+  }
+
+  // "Take an extra action after this one" — the acting player keeps priority instead of the
+  // turn passing. Consumed once.
+  if (game.roundState.extraActionPlayer === game.activePlayer) {
+    game.roundState.extraActionPlayer = undefined;
+    log.push(`Player ${game.activePlayer} takes an extra action.`);
     return;
   }
 
@@ -5431,6 +5533,8 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
     case "LOF_017": // Darth Revan — If you control 5 or more resources.
     case "TWI_018": // Quinlan Vos — If you control 5 or more resources.
       return p.resources.length >= 5;
+    case "JTL_018": // Kazuda Xiono — If you control 4 or more resources.
+      return p.resources.length >= 4;
     case "SHD_014": // Cad Bane — If you control 6 or more resources.
     case "SHD_018": // The Mandalorian — If you control 6 or more resources.
       return p.resources.length >= 6;
@@ -5626,6 +5730,31 @@ function resolveActionAbility(
     case "LOF_007": { // Avar Kriss — Action [Exhaust]: The Force is with you (create your Force token).
       CreateForceToken(player, log, "LOF_007");
       return null;
+    }
+    case "JTL_018": { // Kazuda Xiono — Action [Exhaust]: A friendly unit loses all abilities for this round. Take an extra action after this one.
+      const friendly018 = GetUnitsForPlayer(player);
+      if (friendly018.length === 0) return null;
+      // The extra action is granted by using the ability, independent of the target choice.
+      game.roundState.extraActionPlayer = player;
+      return {
+        type: "ability-target",
+        cardId: "JTL_018_leader",
+        player,
+        fromPlayIds: friendly018.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "LAW_013": { // Chewbacca — Action [1 resource, Exhaust, defeat a friendly resource]: Deal 2 damage to a unit and create a Credit token.
+      const resources013 = GetPlayer(game, player).resources;
+      if (resources013.length === 0) return null;
+      // Step 1: pick the resource to defeat (the remaining cost).
+      return {
+        type: "ability-target",
+        cardId: "LAW_013_resource",
+        player,
+        fromPlayIds: resources013.map(r => r.playId),
+        continuation: null,
+      };
     }
     case "LOF_003": { // Ahsoka Tano — Action [Exhaust, use the Force]: Give a friendly unit Sentinel this phase.
       if (!UseTheForce(player, log, "LOF_003")) return null;
@@ -7438,6 +7567,11 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, "SOR_136", targetPlayId, 4, game.gameLog);
       break;
     }
+    case "LOF_091": { // Craving Power When Played: deal damage to an enemy unit equal to attached unit's power.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "LOF_091", targetPlayId, pending.amount ?? 0, game.gameLog);
+      break;
+    }
     case "SOR_049": { // Obi-Wan Kenobi When Defeated: give 2 XP to chosen friendly unit; if Force, draw a card.
       if (!targetPlayId) break;
       const target049 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -7632,6 +7766,40 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, "SOR_006", targetPlayId, 1, game.gameLog);
       DrawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "JTL_018_leader": { // Kazuda Xiono leader Action: the chosen friendly unit loses all abilities this round.
+      if (!targetPlayId) break;
+      silenceUnitForRound(game.currentGameState, game.gameLog, targetPlayId);
+      return pending.continuation ?? null;
+    }
+    // LAW_013 Chewbacca — shared by the leader Action and the deployed On Attack: defeating a
+    // friendly resource is the cost, then deal 2 damage to a unit and create a Credit token.
+    case "LAW_013_resource": { // step 1: defeat the chosen friendly resource (the cost)
+      if (!targetPlayId) break;
+      const player013 = pending.player!;
+      if (!DefeatResource(game.currentGameState, player013, targetPlayId, game.gameLog, "LAW_013")) break;
+      const allUnits013 = [
+        ...game.currentGameState.player1.groundArena, ...game.currentGameState.player1.spaceArena,
+        ...game.currentGameState.player2.groundArena, ...game.currentGameState.player2.spaceArena,
+      ];
+      if (allUnits013.length === 0) {
+        // No unit to damage — the Credit token still happens.
+        CreateCreditToken(game.currentGameState, player013, game.gameLog, "LAW_013");
+        return pending.continuation ?? null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "LAW_013_damage",
+        player: player013,
+        fromPlayIds: allUnits013.map(u => u.playId),
+        continuation: pending.continuation,
+      } satisfies AbilityTargetPending;
+    }
+    case "LAW_013_damage": { // step 2: deal 2 damage to the chosen unit and create a Credit token.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "LAW_013", targetPlayId, 2, game.gameLog);
+      CreateCreditToken(game.currentGameState, pending.player!, game.gameLog, "LAW_013");
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
     case "SOR_006_D": { // When Deployed: take control of chosen damaged non-leader unit.

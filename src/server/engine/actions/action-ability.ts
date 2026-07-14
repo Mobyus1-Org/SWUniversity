@@ -46,6 +46,10 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "LAW_008": // Director Krennic — Action [Exhaust, defeat a friendly unit]: Create a Credit token (needs a friendly unit to defeat).
         if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
         break;
+      case "LAW_013": // Chewbacca — Action [1 resource, Exhaust, defeat a friendly resource]: 2 damage to a unit + Credit token.
+        // Needs a resource to defeat on top of the 1 paid (the paid one may itself be defeated).
+        if (GetResources(player).length > 0) abilities.push(cardId);
+        break;
       case "LOF_007": // Avar Kriss — Action [Exhaust]: The Force is with you (create your Force token).
         abilities.push(cardId);
         break;
@@ -57,6 +61,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         break;
       case "JTL_012": // Luke Skywalker — Action [Exhaust]: 1 damage to a unit, if a Fighter attacked this phase.
         abilities.push(cardId);
+        break;
+      case "JTL_018": // Kazuda Xiono — Action [Exhaust]: a friendly unit loses all abilities this round (needs a unit to target).
+        if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
         break;
       case "LOF_003": // Ahsoka Tano — Action [Exhaust, use the Force]: Give a friendly unit Sentinel (needs the Force + a friendly unit).
         if (HasTheForce(player) && GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
@@ -162,6 +169,8 @@ export function ActionAbilityCost(cardId: string): number {
     case "SOR_013"://Cassian Andor
       return 1;
     case "SOR_006"://Emperor Palpatine
+      return 1;
+    case "LAW_013"://Chewbacca - Hero of Kessel
       return 1;
     case "SOR_010"://Darth Vader
       return 1;

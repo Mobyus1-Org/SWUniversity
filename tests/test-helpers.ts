@@ -1,5 +1,18 @@
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { Cards } from "./card-helpers";
+import type { GameTestAdapter } from "./unit/game-test-adapter";
+
+/** The eligible target playIds of the pending Target prompt, or [] when the prompt isn't one. */
+export function TargetIds(g: GameTestAdapter): string[] {
+  const resolution = g.lastDispatchResponse?.resolutionNeeded;
+  return resolution?.type === "Target" ? resolution.fromPlayIds ?? [] : [];
+}
+
+/** The helper text of the pending Option prompt, or "" when the prompt isn't one. */
+export function OptionText(g: GameTestAdapter): string {
+  const resolution = g.lastDispatchResponse?.resolutionNeeded;
+  return resolution?.type === "Option" ? resolution.helperText ?? "" : "";
+}
 
 type ColorCodes =
   | "bbk" //blue blue black

@@ -16,6 +16,7 @@ export type TriggerType =
   | "leader-reaction"
   | "card-played-reaction"  // reaction triggered by playing a card
   | "enemy-unit-defeated"
+  | "use-the-force"  // reaction to its controller using the Force (e.g. LOF_260 The Father)
 
 export interface TriggerEntry {
   triggerType: TriggerType;

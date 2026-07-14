@@ -9,6 +9,7 @@
 const leaderDeployPilotThresholdByCardId: Record<string, number> = {
   "JTL_001": 6, // Asajj Ventress — "If you control 6 or more resources, choose one: Deploy / Deploy as upgrade"
   "JTL_012": 6, // Luke Skywalker (Hero of Yavin) — same choose-one epic action
+  "JTL_018": 4, // Kazuda Xiono (Best Pilot in the Galaxy) — same choose-one epic action
 };
 
 export function LeaderDeployPilotThreshold(cardId: string): number | null {
