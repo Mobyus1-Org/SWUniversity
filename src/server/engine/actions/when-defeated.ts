@@ -1,10 +1,10 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, DrawCardForPlayer, GetGame, GetGameState, GetUnitsForPlayer, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
+import { AllUnits, CanDisclose, DrawCardForPlayer, GetGame, GetGameState, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardAspects, CardTitle } from "@/server/engine/card-db/generated";
-import { CreateBattleDroid } from "@/server/engine/token-helpers";
+import { CreateBattleDroid, CreateTieFighter } from "@/server/engine/token-helpers";
 
 /**
  * When Defeated abilities — called immediately after the unit is removed from
@@ -140,6 +140,50 @@ function resolveOwnWhenDefeated(
         eligiblePlayIds: enemies213.map(u => u.playId),
         continuation: null,
       } satisfies SpreadDamagePending;
+    }
+    case "JTL_033": { // Onyx Squadron Brute — When Defeated: Heal 2 damage from a base.
+      return mandatoryTarget("JTL_033", player, ["player1.base", "player2.base"]);
+    }
+    case "JTL_039": { // Chimaera — When Defeated: Create 2 TIE Fighter tokens.
+      const game039 = GetGame();
+      if (!game039) return null;
+      CreateTieFighter(game039.currentGameState, player, game039.gameLog, "JTL_039");
+      CreateTieFighter(game039.currentGameState, player, game039.gameLog, "JTL_039");
+      return null;
+    }
+    case "JTL_060": { // Desperate Commando — When Defeated: You may give a unit –1/–1 for this phase.
+      const units060 = AllUnits();
+      if (units060.length === 0) return null;
+      return optionalTarget("JTL_060", player, units060.map(u => u.playId),
+        "Give a unit –1/–1 for this phase?");
+    }
+    case "LOF_031": { // Karis — When Defeated: You may use the Force. If you do, give a unit –2/–2 for this phase.
+      if (!HasTheForce(player)) return null;
+      if (AllUnits().length === 0) return null; // nothing to debuff — don't burn the Force token
+      return {
+        type: "ability-option",
+        cardId: "LOF_031",
+        player,
+        helperText: "Use the Force to give a unit –2/–2 for this phase?",
+        yesLabel: "Use the Force",
+        noLabel: "Skip",
+        onYes: null, // the Force is spent in the Yes handler, which then asks for the target
+        continuation: null,
+      };
+    }
+    case "SEC_148": { // Karis Nemik — When Defeated: You may disclose Aggression+Heroism.
+                      // If you do, create a Spy token and ready it.
+      if (!CanDisclose(player, ["Aggression", "Heroism"])) return null;
+      return {
+        type: "ability-option",
+        cardId: "SEC_148",
+        player,
+        helperText: "Disclose Aggression + Heroism to create a ready Spy token?",
+        yesLabel: "Disclose",
+        noLabel: "Skip",
+        onYes: { type: "play-from-hand", cardId: "SEC_148", player },
+        continuation: null,
+      };
     }
     case "SOR_108": { // Vanguard Infantry — "When Defeated: You may give an Experience token to a unit."
       const units108 = AllUnits();

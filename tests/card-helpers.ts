@@ -373,6 +373,9 @@ export const Cards = {
       shuttleSt149: "JTL_242",
       redFive: "JTL_151",
       devastator: "JTL_143",
+      onyxSquadronBrute: "JTL_033",
+      chimaera: "JTL_039",
+      desperateCommando: "JTL_060",
     },
     lof: {
       kelleranBeq: "LOF_100",
@@ -390,6 +393,7 @@ export const Cards = {
       theFather: "LOF_260",
       oggdoBogdo: "LOF_063",
       guardianOfTheWhills: "LOF_058",
+      karis: "LOF_031",
     },
     twi: {
       infiltratingDemolisher: "TWI_182",
@@ -409,6 +413,7 @@ export const Cards = {
       gnkPowerDroid: "SEC_110",
       outerRimConstable: "SEC_163",
       darthTraya: "SEC_188",
+      karisNemik: "SEC_148",
     },
     law: {
       scavengingSandcrawler: "LAW_238",

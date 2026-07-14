@@ -186,6 +186,11 @@ export interface PlayFromHandPending {
   /** Card granting this ability (e.g. "SOR_022" for ECL, "TWI_005" for Count Dooku). */
   cardId: string;
   player: PlayerId;
+  /**
+   * Hand index already used by an earlier step of a multi-card reveal. A disclose needs the
+   * icons spread across *different* cards, so the same card can't be revealed twice.
+   */
+  excludeHandIndex?: number;
 }
 
 /** Step 1 of Exploit: prompt the playing player whether to use Exploit. */

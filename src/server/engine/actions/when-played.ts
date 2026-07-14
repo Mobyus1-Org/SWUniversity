@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility } from "@/server/engine/core-functions";
 import { aspectPenalty } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -946,6 +946,15 @@ export function resolveWhenPlayed(
         onYes: null,
         continuation: null,
       };
+    }
+    case "JTL_039": { // Chimaera — "You may use a 'When Defeated' ability on another friendly unit."
+                      // The chosen unit is NOT defeated; only its ability is used.
+      const eligible039 = GetUnitsForPlayer(player)
+        .filter(u => u.playId !== playId && UnitHasWhenDefeatedAbility(u));
+      if (eligible039.length === 0) return null;
+      return optionalTarget("JTL_039", player, eligible039.map(u => u.playId),
+        "Use a “When Defeated” ability on another friendly unit?",
+        { yesLabel: "Use it" });
     }
     case "SOR_074": // Repair — Heal 3 damage from a unit or base.
     case "JTL_075": {

@@ -73,6 +73,7 @@ export function HasHidden(cardId: string, playId?: string, player?: PlayerId, is
 
     //Secrets of Power
     case "SEC_201"://Anakin Skywalker
+    case "SEC_148"://Karis Nemik
       return true;
     default: break;
   }

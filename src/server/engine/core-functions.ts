@@ -1,5 +1,5 @@
-import { CardAspects, CardCost, CardIsUnique, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
-import { Card, CardInPlay, CardTypes, CurrentEffect, Leader, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import { CardAspects, CardCost, CardIsUnique, CardText, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
+import { Card, CardInPlay, CardTypes, CurrentEffect, Leader, PHASE_STAT_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { Game, GameState, PlayerState } from "@/lib/engine/game";
 import { Unit } from "@/server/engine/unit";
 import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
@@ -522,6 +522,44 @@ export function HealBaseForPlayer(
   playerObj.base.damage -= healed;
   const prefix = fromCardId ? `${CardTitle(fromCardId)}: ` : "";
   gameLog.push(`${prefix}healed ${healed} damage from Player ${player}'s base.`);
+}
+
+/**
+ * True when `unit` has a "When Defeated" ability that another card could use (Chimaera JTL_039).
+ * Covers the three ways a unit can have one: printed on the card, granted by a Droid Cohort
+ * (TWI_218) upgrade, or granted to every other friendly unit by General Krell (SOR_105).
+ */
+export function UnitHasWhenDefeatedAbility(unit: Unit): boolean {
+  if (unit.LostAbilities()) return false;
+  if (CardText(unit.cardId).includes("When Defeated")) return true;
+  if (unit.upgrades.some(u => u.cardId === "TWI_218")) return true;
+  return GetUnitsForPlayer(unit.controller)
+    .some(u => u.cardId === "SOR_105" && u.playId !== unit.playId);
+}
+
+/**
+ * Gives a unit a +X/+X (or –X/–X, when `amount` is negative) modifier for this phase.
+ * Shared by every card with a "for this phase" stat modifier — the amount rides on the
+ * effect's `value`, so Unit.CurrentPower/TotalHP read it generically and no per-card
+ * case is needed.
+ */
+export function GiveStatModForPhase(
+  sourceCardId: string,
+  target: Unit,
+  amount: number,
+  gameLog: string[],
+): void {
+  const gs = GetGameState();
+  gs.currentEffects.push({
+    cardId: PHASE_STAT_MOD,
+    duration: "Phase",
+    affectedPlayer: target.controller,
+    targetPlayId: target.playId,
+    value: amount,
+  });
+  const sign = amount >= 0 ? "+" : "–";
+  const mag = Math.abs(amount);
+  gameLog.push(`${CardTitle(sourceCardId)}: gave ${sign}${mag}/${sign}${mag} to ${CardTitle(target.cardId)} for this phase.`);
 }
 
 export function GetHand(player: PlayerId): Card[] {

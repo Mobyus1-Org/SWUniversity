@@ -77,6 +77,12 @@ export interface DiscardedCard extends CardInPlay {
   discardEffect: DiscardEffect;
 }
 
+/**
+ * Sentinel `cardId` for a generic "+X/+X (or –X/–X) for this phase" modifier. The amount
+ * lives on the effect's `value`, so any card can push one without its own stat case.
+ */
+export const PHASE_STAT_MOD = "stat-mod";
+
 export interface CurrentEffect {
   cardId: string;
   duration: EffectDuration;

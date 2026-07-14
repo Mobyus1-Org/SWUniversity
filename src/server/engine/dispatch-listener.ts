@@ -32,7 +32,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer } from "@/server/engine/core-functions";
+import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -198,6 +198,12 @@ function resolveChooseOne(
       break;
   }
   return next ? injectContinuation(next, pending.continuation) : pending.continuation;
+}
+
+/** Karis Nemik (SEC_148): "create a Spy token and ready it" — tokens spawn exhausted. */
+function createReadySpy(gs: GameState, player: PlayerId, log: string[]): void {
+  const spy = CreateSpy(gs, player, log, "SEC_148");
+  spy.ready = true;
 }
 
 function sweepDeadUnits(gs: GameState, log: string[], continuation: PendingResolution | null): PendingResolution | null {
@@ -3912,6 +3918,41 @@ function handleChooseTarget(
         if (bag181) return { response: resolutionResponse(pendingToResolution(bag181, game)), pending: bag181, stateChanged: true };
         return { response: stateResponse(game), pending: null, stateChanged: true };
       }
+      case "SEC_148": { // Karis Nemik disclose pick 1: needs Aggression + Heroism across the revealed cards
+        const has148A = CardsCanDisclose([cardId], ["Aggression"]);
+        const has148H = CardsCanDisclose([cardId], ["Heroism"]);
+        if (!has148A && !has148H)
+          return { response: invalidResponse("Disclose: revealed card has neither an Aggression nor a Heroism aspect."), pending, stateChanged: false };
+        log.push(`${CardTitle("SEC_148")}: disclosed ${CardTitle(cardId)}.`);
+        if (has148A && has148H) {
+          // One card covered both icons — the disclose is complete.
+          createReadySpy(game, pending.player, log);
+          const bag148 = drainTriggerBag(game, log);
+          if (bag148) return { response: resolutionResponse(pendingToResolution(bag148, game)), pending: bag148, stateChanged: true };
+          return { response: stateResponse(game), pending: null, stateChanged: true };
+        }
+        // Only one icon so far — reveal a second, different card carrying the other one.
+        const needs148: PlayFromHandPending = {
+          type: "play-from-hand",
+          cardId: has148A ? "SEC_148_H" : "SEC_148_A",
+          player: pending.player,
+          excludeHandIndex: idx,
+        };
+        return { response: resolutionResponse(pendingToResolution(needs148, game)), pending: needs148, stateChanged: false };
+      }
+      case "SEC_148_A": // Karis Nemik disclose pick 2: the still-missing icon
+      case "SEC_148_H": {
+        const needed148 = pending.cardId === "SEC_148_A" ? "Aggression" : "Heroism";
+        if (idx === pending.excludeHandIndex)
+          return { response: invalidResponse("Disclose: the icons must come from different cards."), pending, stateChanged: false };
+        if (!CardsCanDisclose([cardId], [needed148]))
+          return { response: invalidResponse(`Disclose: revealed card does not have a ${needed148} aspect.`), pending, stateChanged: false };
+        log.push(`${CardTitle("SEC_148")}: disclosed ${CardTitle(cardId)} (${needed148}) — requirement met.`);
+        createReadySpy(game, pending.player, log);
+        const bag148b = drainTriggerBag(game, log);
+        if (bag148b) return { response: resolutionResponse(pendingToResolution(bag148b, game)), pending: bag148b, stateChanged: true };
+        return { response: stateResponse(game), pending: null, stateChanged: true };
+      }
       case "SEC_182": { // Charged with Treason disclose pick 1: count Aggression icons
         if (!CardsCanDisclose([cardId], ["Aggression"]))
           return { response: invalidResponse("Disclose: revealed card does not have an Aggression aspect."), pending, stateChanged: false };
@@ -4479,6 +4520,7 @@ function applyAbilityOptionEffect(
         continuation: pending.continuation ?? null,
       };
     }
+    case "LOF_031": // Karis When Defeated — Use the Force, then give a unit –2/–2 for this phase.
     case "LOF_075": // Cure Wounds — Use the Force, then heal 6 from a unit.
     case "LOF_172": { // Sorcerous Blast — Use the Force, then deal 3 to a unit.
       const forcePlayer = pending.player!;
@@ -7238,6 +7280,40 @@ function applyAbilityEffect(
         value: debuff051,
       });
       game.gameLog.push(`${CardTitle("SOR_051")}: gave –${debuff051}/–${debuff051} to ${CardTitle(target051.cardId)} for this phase.`);
+      break;
+    }
+    case "JTL_033": { // Onyx Squadron Brute When Defeated: heal 2 from the chosen base ("a base" — either one).
+      const owner033 = pending.player!;
+      let basePlayer033: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer033 = 1;
+      else if (targetPlayId === "player2.base") basePlayer033 = 2;
+      else if (targetIsBase) basePlayer033 = targetBasePlayer ?? owner033;
+      if (basePlayer033 === null) break;
+      HealBaseForPlayer(game.currentGameState, basePlayer033, 2, game.gameLog, "JTL_033");
+      break;
+    }
+    case "JTL_039": { // Chimaera When Played: use the chosen friendly unit's When Defeated ability.
+                      // The unit stays in play — only its ability is used.
+      if (!targetPlayId) break;
+      const target039 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target039) break;
+      game.gameLog.push(`${CardTitle("JTL_039")}: using ${CardTitle(target039.cardId)}'s When Defeated ability.`);
+      // Thrawn (JTL_002) triggers on *using* a When Defeated ability, not on the unit dying —
+      // so this goes through the Thrawn-aware resolver, same as a real defeat would.
+      const used039 = resolveWhenDefeatedWithThrawn(game.currentGameState, target039, pending.player!);
+      if (used039) return injectContinuation(used039, pending.continuation);
+      break;
+    }
+    case "JTL_060": { // Desperate Commando When Defeated: –1/–1 for this phase to the chosen unit.
+      if (!targetPlayId) break;
+      const target060 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target060) GiveStatModForPhase("JTL_060", target060, -1, game.gameLog);
+      break;
+    }
+    case "LOF_031": { // Karis When Defeated: the Force is already spent — give –2/–2 for this phase.
+      if (!targetPlayId) break;
+      const target031 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target031) GiveStatModForPhase("LOF_031", target031, -2, game.gameLog);
       break;
     }
     case "SOR_076": { // Make an Opening: –2/–2 Phase to chosen unit + heal 2 from own base.

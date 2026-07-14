@@ -1,4 +1,4 @@
-import { CardInPlay, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import { CardInPlay, PHASE_STAT_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce } from "@/server/engine/core-functions";
 import { CardHp, CardPower, CardUpgradeHp, CardUpgradePower } from "@/server/engine/card-db/generated";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
@@ -170,6 +170,9 @@ export class Unit implements UnitInterface {
       if (currentEffect.targetPlayId && currentEffect.targetPlayId !== this.playId) continue;
 
       switch(currentEffect.cardId) {
+        case PHASE_STAT_MOD: // generic +X/+X or –X/–X for this phase
+          power += currentEffect.value ?? 0;
+          break;
         case "SOR_103": //Rebel Assault
           power += 1;
           break;
@@ -292,6 +295,7 @@ export class Unit implements UnitInterface {
     for (const effect of GetCurrentEffectsForPlayer(this.controller)) {
       if (effect.targetPlayId && effect.targetPlayId !== this.playId) continue;
       switch (effect.cardId) {
+        case PHASE_STAT_MOD: hp += effect.value ?? 0; break; // generic +X/+X or –X/–X for this phase
         case "SOR_106_3": hp += 3; break; // Attack Pattern Delta
         case "SOR_106_2": hp += 2; break;
         case "SOR_106_1": hp += 1; break;
