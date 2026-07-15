@@ -1,4 +1,4 @@
-import { CardInPlay, PHASE_STAT_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import { CardInPlay, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce } from "@/server/engine/core-functions";
 import { CardHp, CardPower } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -172,6 +172,9 @@ export class Unit implements UnitInterface {
 
       switch(currentEffect.cardId) {
         case PHASE_STAT_MOD: // generic +X/+X or –X/–X for this phase
+          power += currentEffect.value ?? 0;
+          break;
+        case POWER_MOD: // generic +X/+0 or –X/–0 (HP untouched — see TotalHP, which ignores it)
           power += currentEffect.value ?? 0;
           break;
         case "SOR_103": //Rebel Assault

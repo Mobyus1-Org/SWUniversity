@@ -1,6 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { GetCurrentEffectsForPlayer, GetHand, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerControlsCardWithTitle, PlayerHasTokenUnitInPlay, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
 import { CardAspects } from "@/server/engine/card-db/generated";
+import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 
 export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): number {
   let amount = 0;
@@ -8,6 +9,9 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     const unit = GetUnitInPlay(playId, player);
     if (!unit) return amount;
     if (unit.LostAbilities()) return 0;
+    //Support: the attacker has gained the supporting unit's keywords for this attack.
+    const supported = SupportGrantedCardId(playId, player);
+    if (supported) amount += RaidAmount(supported);
     // LAW_233 Galen Erso: enemy units (of Galen's controller) gain Raid 1.
     if (GetPlayIdForUniqueUnitInPlay("LAW_233", player === 1 ? 2 : 1) !== "0") amount += 1;
     const units = GetUnitsForPlayer(player);

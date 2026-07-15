@@ -57,6 +57,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
         case "LOF_223": hasSentinel = true; break;//Force Illusion
         //Secrets of Power
         case "SEC_082": hasSentinel = true; break;//Chancellor Palpatine unit (SEC)
+        case "ASH_099": hasSentinel = true; break;//Gozanti Assault Carrier On Attack (this phase)
         default: break;
       }
     }

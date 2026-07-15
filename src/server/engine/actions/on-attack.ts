@@ -1,8 +1,9 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
+import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle } from "@/server/engine/card-db/generated";
 import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
@@ -240,8 +241,142 @@ export function resolveOnAttackTrigger(
       }
     }
   }
-  // innate On Attack abilities
-  switch (attacker.cardId) {
+  // Innate On Attack abilities — the attacker's own, plus any it gained from a Support unit for
+  // this attack. The granted ability resolves with `attacker` as its subject, so "this unit" in
+  // the borrowed text correctly means the unit that is attacking.
+  let resolved = activeUpgrades.length > 0;
+  for (const sourceCardId of AttackAbilityCardIds(attacker)) {
+    const pending = resolveInnateOnAttack(sourceCardId, attacker, continuation);
+    if (pending === null) continue;              // this source has no On Attack ability
+    if (pending === continuation) { resolved = true; continue; } // it fizzled (no legal target)
+    return pending;                              // it needs player input
+  }
+  // An upgrade-only or fizzled trigger still means combat proceeds; nothing at all means no trigger.
+  return resolved ? continuation : null;
+}
+
+/**
+ * Resolves the On Attack ability printed on `sourceCardId`, applied to `attacker`.
+ * `sourceCardId` is normally the attacker's own cardId, but is the supporter's when the attacker
+ * gained its abilities via Support.
+ */
+function resolveInnateOnAttack(
+  sourceCardId: string,
+  attacker: Unit,
+  continuation: ResolveAttackPending,
+): PendingResolution | null {
+  switch (sourceCardId) {
+    case "ASH_189": { // Emperor's Messenger — "On Attack: Ready a resource." Mandatory and
+                      // targetless: resources are interchangeable, so ready the first exhausted one.
+      const game189 = GetGame();
+      if (!game189) return continuation;
+      const player189 = attacker.controller === 1
+        ? game189.currentGameState.player1
+        : game189.currentGameState.player2;
+      const exhausted189 = player189.resources.find(r => !r.ready);
+      if (exhausted189) {
+        exhausted189.ready = true;
+        game189.gameLog.push(`${CardTitle("ASH_189")}: readied a resource.`);
+      }
+      return continuation;
+    }
+    case "ASH_009": { // Ahsoka Tano (deployed) — "On Attack: You may give a unit with less power
+                      // than this unit +2/+0 for this phase."
+      const weaker009 = AllUnits().filter(u =>
+        Unit.FromInterface(u).CurrentPower() < attacker.CurrentPower(),
+      );
+      if (weaker009.length === 0) return continuation;
+      return optionalTarget("ASH_009", attacker.controller, weaker009.map(u => u.playId),
+        "Give a unit with less power +2/+0 for this phase?", { continuation });
+    }
+    case "ASH_014": { // The Mandalorian (deployed) — "On Attack: If you have the initiative, you may
+                      // draw a card."
+      const game014 = GetGame();
+      if (!game014 || InitiativePlayer() !== attacker.controller) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "ASH_014",
+        player: attacker.controller,
+        sourcePlayId: attacker.playId,
+        helperText: "Draw a card?",
+        yesLabel: "Draw",
+        noLabel: "Skip",
+        onYes: null,
+        continuation,
+      };
+    }
+    case "ASH_072": { // Doctor Pershing — "On Attack: If this unit has 3 or more remaining HP, draw a card."
+      const game072 = GetGame();
+      if (!game072) return continuation;
+      if (attacker.CurrentHP() >= 3) {
+        DrawCardForPlayer(game072.currentGameState, game072.gameLog, attacker.controller);
+        game072.gameLog.push(`${CardTitle("ASH_072")}: drew a card.`);
+      }
+      return continuation;
+    }
+    case "ASH_059": { // Leia Organa — "On Attack: You may deal 1 damage to this unit. If you do,
+                      // heal 2 damage from your base."
+      return {
+        type: "ability-option",
+        cardId: "ASH_059",
+        player: attacker.controller,
+        sourcePlayId: attacker.playId,
+        helperText: `Deal 1 damage to ${CardTitle(attacker.cardId)} to heal 2 damage from your base?`,
+        yesLabel: "Deal 1 damage",
+        noLabel: "Skip",
+        onYes: null,
+        continuation,
+      };
+    }
+    case "ASH_099": { // Gozanti Assault Carrier — "On Attack: This unit gains Sentinel for this phase."
+      const game099 = GetGame();
+      if (!game099) return continuation;
+      game099.currentGameState.currentEffects.push({
+        cardId: "ASH_099",
+        duration: "Phase",
+        affectedPlayer: attacker.controller,
+        targetPlayId: attacker.playId,
+      });
+      game099.gameLog.push(`${CardTitle("ASH_099")}: gained Sentinel for this phase.`);
+      return continuation;
+    }
+    case "ASH_203": { // Mando's N-1 Starfighter — "On Attack: You may exhaust a friendly (non-upgrade)
+                      // leader. If you do, this unit gets +2/+0 for this attack."
+      const leader203 = GetLeaderForPlayer(attacker.controller);
+      // "non-upgrade leader": a leader piloting a unit is an upgrade, so it can't be exhausted here.
+      const leaderIsUpgrade203 = AllUnits().some(u => u.upgrades.some(up => up.cardId === leader203.cardId));
+      if (!leader203.ready || leaderIsUpgrade203) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "ASH_203",
+        player: attacker.controller,
+        sourcePlayId: attacker.playId,
+        helperText: `Exhaust ${CardTitle(leader203.cardId)} to give ${CardTitle(attacker.cardId)} +2/+0 for this attack?`,
+        yesLabel: "Exhaust leader",
+        noLabel: "Skip",
+        onYes: null,
+        continuation,
+      };
+    }
+    case "ASH_209": { // Ezra Bridger — "On Attack: If this unit is upgraded, you may give a unit
+                      // –3/–0 for this phase."
+      if (attacker.upgrades.length === 0) return continuation;
+      const allUnits209 = AllUnits();
+      if (allUnits209.length === 0) return continuation;
+      return optionalTarget("ASH_209", attacker.controller, allUnits209.map(u => u.playId),
+        "Give a unit –3/–0 for this phase?", { continuation });
+    }
+    case "ASH_253": { // Yellow Aces Bomber — "On Attack: If this unit is upgraded, deal 2 damage to a base."
+      if (attacker.upgrades.length === 0) return continuation;
+      return {
+        type: "ability-target",
+        cardId: "ASH_253",
+        player: attacker.controller,
+        fromPlayIds: [],
+        fromZones: ["Base"],
+        continuation,
+      };
+    }
     case "LOF_082": // Vaneé — When Played/On Attack: may defeat an XP token on a friendly unit, then give one to a friendly unit.
       return buildVaneeAbility(attacker.controller, continuation) ?? continuation;
     case "LOF_003": { // Ahsoka Tano (deployed) — On Attack: you may give a friendly unit Sentinel for this phase.
@@ -750,8 +885,7 @@ export function resolveOnAttackTrigger(
       return mandatoryTarget(attacker.cardId, attacker.controller, enemyVehicles244.map(u => u.playId), continuation);
     }
     default:
-      // If an upgrade-only trigger fired but no native ability, return continuation so combat proceeds.
-      return activeUpgrades.length > 0 ? continuation : null;
+      return null; // this source has no innate On Attack ability
   }
 }
 

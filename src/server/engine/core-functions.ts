@@ -1,5 +1,6 @@
 import { CardArena, CardAspects, CardCost, CardIsUnique, CardText, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
-import { Card, CardInPlay, CardTypes, CurrentEffect, Leader, PHASE_STAT_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
+import { Card, CardInPlay, CardTypes, CurrentEffect, EffectDuration, Leader, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { Game, GameState, PlayerState } from "@/lib/engine/game";
 import { Unit } from "@/server/engine/unit";
 import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
@@ -562,6 +563,31 @@ export function GiveStatModForPhase(
   gameLog.push(`${CardTitle(sourceCardId)}: gave ${sign}${mag}/${sign}${mag} to ${CardTitle(target.cardId)} for this phase.`);
 }
 
+/**
+ * Gives a unit a +X/+0 (or –X/–0, when `amount` is negative) power-only modifier. Sibling of
+ * GiveStatModForPhase for cards that move power without touching HP; `duration` lets the same
+ * helper serve "for this phase" and "for this attack" cards.
+ */
+export function GivePowerMod(
+  sourceCardId: string,
+  target: UnitInterface,
+  amount: number,
+  duration: EffectDuration,
+  gameLog: string[],
+): void {
+  const gs = GetGameState();
+  gs.currentEffects.push({
+    cardId: POWER_MOD,
+    duration,
+    affectedPlayer: target.controller,
+    targetPlayId: target.playId,
+    value: amount,
+  });
+  const sign = amount >= 0 ? "+" : "–";
+  const scope = duration === "ForAttack" ? "this attack" : "this phase";
+  gameLog.push(`${CardTitle(sourceCardId)}: gave ${sign}${Math.abs(amount)}/+0 to ${CardTitle(target.cardId)} for ${scope}.`);
+}
+
 export function GetHand(player: PlayerId): Card[] {
   const game = GetGame();
   if (!game) {
@@ -832,11 +858,26 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
           return true;
         }
       }
+
+      //Support: the attacker gained the supporting unit's On Attack ability for this attack.
+      const supported = SupportGrantedCardId(playId, player);
+      if (supported && HasOnAttack(supported)) return true;
     }
   }
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "ASH_009": //Ahsoka Tano (deployed) — On Attack: may give a weaker unit +2/+0 this phase
+    case "ASH_014": //The Mandalorian (deployed) — On Attack: may draw a card with the initiative
+    case "ASH_059": //Leia Organa (ASH) — On Attack: may self-damage to heal your base
+    case "ASH_072": //Doctor Pershing — On Attack: draw a card if it has 3+ remaining HP
+    case "ASH_099": //Gozanti Assault Carrier — On Attack: gains Sentinel for this phase
+    case "ASH_156": //R5-D4 — On Attack: defeat all upgrades on the defending unit
+    case "ASH_168": //Migs Mayfeld — On Attack: deal 1 (2 if upgraded) damage to the defending unit
+    case "ASH_203": //Mando's N-1 Starfighter — On Attack: may exhaust your leader for +2/+0
+    case "ASH_209": //Ezra Bridger — On Attack: if upgraded, may give a unit –3/–0 this phase
+    case "ASH_253": //Yellow Aces Bomber — On Attack: if upgraded, deal 2 damage to a base
+    case "ASH_189": //Emperor's Messenger — On Attack: Ready a resource.
     case "SEC_188": //Darth Traya — On Attack: may ready a non-unit leader
     case "SEC_004": //Leia Organa (SEC, deployed) — On Attack: may disclose, then give an XP token
     case "LOF_002": //Mother Talzin (deployed) — On Attack: may give a unit -1/-1 this phase

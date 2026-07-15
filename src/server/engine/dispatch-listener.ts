@@ -30,7 +30,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith } from "@/server/engine/core-functions";
+import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -56,6 +56,7 @@ import type {
 import { effectiveSmuggleCost, spendableFor, playCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks } from "@/server/engine/card-playability";
 import type { Game, GameState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import { PHASE_STAT_MOD } from "@/lib/engine/core-models";
 import type {
   AbilityOptionPending,
   AbilityTargetPending,
@@ -103,7 +104,8 @@ import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/sab
 import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { HasAmbush } from "@/server/engine/card-db/keyword-dictionaries.ts/ambush";
-import { ActionAbilities, ActionAbilityCost } from "@/server/engine/actions/action-ability";
+import { AttackAbilityCardIds, HasSupport, SupportGrantEffectCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
+import { ActionAbilities, ActionAbilityCost, WeakerThanAFriendlyUnitPlayIds } from "@/server/engine/actions/action-ability";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { IsTokenUpgrade, PilotingEligibleVehicles, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -615,6 +617,9 @@ function addUnitFromSearch(game: GameState, log: string[], cardId: string, playe
   if (HasAmbush(cardId, unit.playId, "Hand", player)) {
     game.triggerBag.push({ triggerType: "ambush", cardId, fromPlayer: player, playId: unit.playId, nested });
   }
+  if (HasSupport(cardId, unit.playId, player)) {
+    game.triggerBag.push({ triggerType: "support", cardId, fromPlayer: player, playId: unit.playId, nested });
+  }
   if (CardHasWhenPlayed(cardId)) {
     game.triggerBag.push({ triggerType: "when-played", cardId, fromPlayer: player, playId: unit.playId, nested });
   }
@@ -745,6 +750,10 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
       onYes: { type: "attack-target", attackerPlayId: trigger.playId, source: "ambush" },
       continuation: null,
     };
+  }
+
+  if (trigger.triggerType === "support" && trigger.playId) {
+    return supportAttackPending(game, trigger.cardId, trigger.playId, trigger.fromPlayer);
   }
 
   if (trigger.triggerType === "enemy-unit-defeated") {
@@ -1315,7 +1324,13 @@ function boardWipeDefeat(
 
 function computeAttackTargets(
   game: GameState,
-  attacker: Unit
+  attacker: Unit,
+  /**
+   * An ability source the attacker is ABOUT to gain but hasn't yet — used when offering Support:
+   * eligibility is computed before the grant exists, and the supporter may be what gives the unit
+   * a legal target at all (ASH_037 Red Leader's "may attack units in either arena").
+   */
+  pendingAbilityCardId?: string,
 ): { unitPlayIds: string[]; includesBase: boolean } {
   const inGround =
     game.player1.groundArena.some(u => u.playId === attacker.playId) ||
@@ -1346,16 +1361,24 @@ function computeAttackTargets(
     return true;
   });
 
-  // Strafing Gunship (SOR_212): space unit that can also attack enemy ground units.
-  // Combine space + ground visible targets, then apply sentinel check over the combined pool.
+  // Attackers that reach outside their own arena. Strafing Gunship (SOR_212) is a space unit that
+  // can also hit enemy ground units; Red Leader (ASH_037) "may attack units in either arena", and
+  // Support can hand that reach to a unit in either arena — hence the ability-source scan.
+  const otherArena = (arena === "Ground" ? p.spaceArena : p.groundArena) as Unit[];
+  const abilitySources = [
+    ...AttackAbilityCardIds(Unit.FromInterface(attacker)),
+    ...(pendingAbilityCardId ? [pendingAbilityCardId] : []),
+  ];
+  const reachesOtherArena =
+    (attacker.cardId === "SOR_212" && arena === "Space" && !Unit.FromInterface(attacker).LostAbilities())
+    || abilitySources.includes("ASH_037");
+
   let finalVisible = visible;
-  if (attacker.cardId === "SOR_212" && arena === "Space" && !Unit.FromInterface(attacker).LostAbilities()) {
-    const enemyGround212 = p.groundArena as Unit[];
-    const visibleGround212 = enemyGround212.filter(u => {
-      if (HasHidden(u.cardId, u.playId, u.controller) && enteredThisPhase.has(u.playId) && !HasSentinel(u.cardId, u.playId, u.controller)) return false;
-      return true;
-    });
-    finalVisible = [...visible, ...visibleGround212];
+  if (reachesOtherArena) {
+    const visibleOther = otherArena.filter(u =>
+      !(HasHidden(u.cardId, u.playId, u.controller) && enteredThisPhase.has(u.playId) && !HasSentinel(u.cardId, u.playId, u.controller)),
+    );
+    finalVisible = [...visible, ...visibleOther];
   }
 
   const sentinels = finalVisible.filter((u) => {
@@ -1439,6 +1462,9 @@ function resolveAttack(
     const stayOnTarget177 = atkPower > 0 && game.currentEffects.some(
       e => e.cardId === "JTL_177" && e.targetPlayId === attacker.playId,
     );
+    // Capture the attacker's ability sources BEFORE the ForAttack effects are cleared — a Support
+    // grant lives in those effects, and the abilities it lent still fire in When Attack Ends.
+    const baseAttackSources = AttackAbilityCardIds(Unit.FromInterface(attacker));
     // Clear ForAttack effects scoped to this attacker after the attack resolves
     game.currentEffects = game.currentEffects.filter(
       (e) => !(e.duration === "ForAttack" && e.targetPlayId === attacker.playId),
@@ -1452,7 +1478,7 @@ function resolveAttack(
     }
     const whenAttackEnds = resolveWhenAttackEnds(
       game, attacker, pending.continuation ?? null, false, 0,
-      atkPower > 0 ? target.player : null,
+      atkPower > 0 ? target.player : null, null, baseAttackSources,
     );
     if (willSacrifice) {
       log.push(`Heroic Sacrifice: ${attackerName} is defeated after dealing combat damage.`);
@@ -1517,11 +1543,32 @@ function resolveAttack(
       !Unit.FromInterface(attacker).LostAbilities() &&
       (game.player1.groundArena.some(u => u.playId === defender.playId) ||
        game.player2.groundArena.some(u => u.playId === defender.playId));
+
+    // ASH_046 Scion Shuttle — "While this unit is attacking, the defending unit gets –1/–1."
+    // The HP half matters (it can bring the defender into lethal range), so it is a real stat mod
+    // on the defender rather than a local subtraction. Support can grant it, hence the source scan.
+    const attackerSources = AttackAbilityCardIds(Unit.FromInterface(attacker));
+    if (attackerSources.includes("ASH_046")) {
+      game.currentEffects.push({
+        cardId: PHASE_STAT_MOD,
+        duration: "ForAttack",
+        affectedPlayer: defender.controller,
+        targetPlayId: defender.playId,
+        value: -1,
+      });
+      log.push(`${CardTitle("ASH_046")}: gave –1/–1 to ${CardTitle(defender.cardId)} for this attack.`);
+    }
+
     const defPower = Math.max(0, defender.CurrentPower(false, true) - (defenderIsGround212 ? 2 : 0));
 
     // SOR_071 Electrostaff: while attached unit is defending, attacker gets –1/–0.
     const electrostaffModifier = defender.upgrades.some(u => u.cardId === "SOR_071") ? 1 : 0;
-    const effectiveAtkPower = Math.max(0, atkPower - electrostaffModifier);
+    // ASH_241 Marrok's Fiend Fighter — "This unit gets +2/+0 while attacking a damaged unit."
+    // Defender-dependent, so it can't live in CurrentPower(); Support can grant it, so the check
+    // runs over every ability source the attacker has for this attack.
+    const damagedDefenderBonus = defender.IsDamaged()
+      && AttackAbilityCardIds(Unit.FromInterface(attacker)).includes("ASH_241") ? 2 : 0;
+    const effectiveAtkPower = Math.max(0, atkPower + damagedDefenderBonus - electrostaffModifier);
     const defHpBefore = defender.CurrentHP();
     const defenderName = CardTitle(defender.cardId);
 
@@ -1539,8 +1586,10 @@ function resolveAttack(
       } catch { /* unit may not be in singleton during test setup */ }
     }
 
-    // First strike (SOR_217): attacker deals damage first; if defender is defeated, no counter-damage.
-    const hasFirstStrike = game.currentEffects.some(
+    // First strike: attacker deals damage first; if defender is defeated, no counter-damage.
+    // Granted by SOR_217, or printed on ASH_202 Carson Teva ("While attacking, this unit deals
+    // combat damage before the defender") — which Support can hand to another attacker.
+    const hasFirstStrike = attackerSources.includes("ASH_202") || game.currentEffects.some(
       e => e.cardId === "SOR_217_first_strike" && e.targetPlayId === attacker.playId && e.duration === "ForAttack",
     );
 
@@ -1574,6 +1623,10 @@ function resolveAttack(
     // A Shield token absorbs the entire damage instance, so no combat damage
     // reaches the defender and there is no excess for Overwhelm to spill.
     const excessDamage = shieldIdx === -1 ? Math.max(effectiveAtkPower - defHpBefore, 0) : 0;
+
+    // The unit this attack actually dealt combat damage to (a Shield absorbs the whole instance,
+    // so nothing lands). ASH_101 The Great Mothers defeats what it damaged, survivors included.
+    const combatDamagedPlayId = shieldIdx === -1 && effectiveAtkPower > 0 ? defender.playId : null;
 
     // Overwhelm: excess damage spills to base
     try {
@@ -1609,9 +1662,13 @@ function resolveAttack(
     );
     const atkDefeated = attacker.CurrentHP() <= 0 || willSacrificeUnit;
 
-    // Clear ForAttack effects scoped to this attacker after the attack resolves
+    // Clear ForAttack effects scoped to this attack — on the attacker, and on the defender (an
+    // attacker's ability can debuff it "while this unit is attacking", e.g. ASH_046 Scion Shuttle).
+    // Safe here: defDefeated/atkDefeated are already decided above, so removing a –X/–X can't
+    // resurrect a unit that combat killed.
     game.currentEffects = game.currentEffects.filter(
-      (e) => !(e.duration === "ForAttack" && e.targetPlayId === attacker.playId),
+      (e) => !(e.duration === "ForAttack"
+        && (e.targetPlayId === attacker.playId || e.targetPlayId === defender.playId)),
     );
     if (willSacrificeUnit && attacker.CurrentHP() > 0) {
       log.push(`Heroic Sacrifice: ${attackerName} is defeated after dealing combat damage.`);
@@ -1628,7 +1685,7 @@ function resolveAttack(
     if (nextPending) {
       // Append resolveWhenAttackEnds at the tail of the pending chain.
       // defeatUnit returns BountyPending | WhenDefeatedChoicePending, both have continuation.
-      const whenAttackEnds = resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage);
+      const whenAttackEnds = resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, null, combatDamagedPlayId, attackerSources);
       type WithContinuation = { continuation: PendingResolution | null | undefined };
       let tail: WithContinuation = nextPending as unknown as WithContinuation;
       while (tail.continuation != null) tail = tail.continuation as unknown as WithContinuation;
@@ -1636,7 +1693,7 @@ function resolveAttack(
       return nextPending;
     }
 
-    return resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage);
+    return resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, null, combatDamagedPlayId, attackerSources);
   }
 }
 
@@ -1653,6 +1710,13 @@ function resolveWhenAttackEnds(
   /** The opponent whose BASE took combat damage from this attack, if any (ASH_183). Overwhelm
    *  spill is not combat damage to the base, so it never sets this. */
   baseDamagedPlayer: PlayerId | null = null,
+  /** The defending unit this attack dealt combat damage to, if any (ASH_101). */
+  combatDamagedPlayId: string | null = null,
+  /**
+   * The attacker's ability sources, captured BEFORE the attack's ForAttack effects were cleared —
+   * a Support grant is one of those effects, and the abilities it lent must still fire here.
+   */
+  abilitySources: string[] | null = null,
 ): PendingResolution | null {
   // Darth Revan (LOF_017) — controller-level reaction to ANY friendly unit attacking and
   // defeating a unit. It resolves before the attacker's own When-Attack-Ends ability.
@@ -1661,7 +1725,7 @@ function resolveWhenAttackEnds(
   if (defDefeated && GetUnitByPlayId(game, attacker.playId)) {
     const leader = GetLeaderForPlayer(attacker.controller);
     if (leader.cardId === "LOF_017" && (leader.deployed || leader.ready)) {
-      const rest = attackerOwnWhenAttackEnds(game, attacker, continuation, defDefeated, excessDamage, baseDamagedPlayer);
+      const rest = attackerOwnWhenAttackEnds(game, attacker, continuation, defDefeated, excessDamage, baseDamagedPlayer, combatDamagedPlayId, abilitySources);
       return {
         type: "ability-option",
         cardId: "LOF_017",
@@ -1677,7 +1741,7 @@ function resolveWhenAttackEnds(
       };
     }
   }
-  return attackerOwnWhenAttackEnds(game, attacker, continuation, defDefeated, excessDamage, baseDamagedPlayer);
+  return attackerOwnWhenAttackEnds(game, attacker, continuation, defDefeated, excessDamage, baseDamagedPlayer, combatDamagedPlayId, abilitySources);
 }
 
 function attackerOwnWhenAttackEnds(
@@ -1687,6 +1751,8 @@ function attackerOwnWhenAttackEnds(
   defDefeated: boolean = false,
   excessDamage: number = 0,
   baseDamagedPlayer: PlayerId | null = null,
+  combatDamagedPlayId: string | null = null,
+  abilitySources: string[] | null = null,
 ): PendingResolution | null {
   // If attacker was defeated, no trigger fires
   if (!GetUnitByPlayId(game, attacker.playId)) return continuation;
@@ -1743,7 +1809,94 @@ function attackerOwnWhenAttackEnds(
     }
   }
 
-  switch (attacker.cardId) {
+  // The attacker's own When Attack Ends, plus any it gained from a Support unit for this attack.
+  // A source with no such ability returns null; one whose ability fizzles returns `continuation`,
+  // which must not stop the other source from resolving.
+  for (const sourceCardId of abilitySources ?? AttackAbilityCardIds(Unit.FromInterface(attacker))) {
+    const pending = innateWhenAttackEnds(
+      sourceCardId, game, attacker, continuation, defDefeated, excessDamage, combatDamagedPlayId,
+    );
+    if (pending !== null && pending !== continuation) return pending;
+  }
+  return continuation;
+}
+
+/**
+ * Resolves the When Attack Ends ability printed on `sourceCardId`, applied to `attacker`.
+ * `sourceCardId` is the supporter's cardId when the attacker gained its abilities via Support.
+ * Returns null when `sourceCardId` has no When Attack Ends ability at all.
+ */
+function innateWhenAttackEnds(
+  sourceCardId: string,
+  game: GameState,
+  attacker: Unit,
+  continuation: PendingResolution | null,
+  defDefeated: boolean,
+  excessDamage: number,
+  combatDamagedPlayId: string | null,
+): PendingResolution | null {
+  const log = GetGame()?.gameLog ?? [];
+  switch (sourceCardId) {
+    case "ASH_033": { // Grand Admiral Thrawn — "When Attack Ends: If the defending unit was
+                      // defeated, ready this unit."
+      if (defDefeated) {
+        attacker.ready = true;
+        log.push(`${CardTitle("ASH_033")}: readied ${CardTitle(attacker.cardId)}.`);
+      }
+      return continuation;
+    }
+    case "ASH_223": { // Halo — "When Attack Ends: If the defending unit was defeated, give a Shield
+                      // token to this unit."
+      if (defDefeated) {
+        attacker.upgrades.push({
+          cardId: "SOR_T02",
+          playId: nextPlayId(game),
+          owner: attacker.controller,
+          controller: attacker.controller,
+        });
+        log.push(`${CardTitle("ASH_223")}: gave a Shield token to ${CardTitle(attacker.cardId)}.`);
+      }
+      return continuation;
+    }
+    case "ASH_036": { // Rukh — "When Attack Ends: If the defending unit was defeated, you may give
+                      // 3 Advantage tokens to a unit."
+      if (!defDefeated) return continuation;
+      const allUnits036 = GetAllUnits(game);
+      if (allUnits036.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "ASH_036",
+        player: attacker.controller,
+        helperText: "Give 3 Advantage tokens to a unit?",
+        yesLabel: "Give 3 Advantage",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "ASH_036",
+          player: attacker.controller,
+          fromPlayIds: allUnits036.map(u => u.playId),
+          continuation,
+        },
+        continuation,
+      };
+    }
+    case "ASH_101": { // The Great Mothers — "When Attack Ends: If this unit dealt combat damage to
+                      // 1 or more non-leader units, defeat those units."
+      if (!combatDamagedPlayId) return continuation;
+      const damaged101 = GetUnitByPlayId(game, combatDamagedPlayId);
+      // Already dead from combat, or a leader → nothing left to defeat.
+      if (!damaged101 || CardIsLeader(damaged101.cardId)) return continuation;
+      log.push(`${CardTitle("ASH_101")}: defeated ${CardTitle(damaged101.cardId)}.`);
+      const defeat101 = defeatUnit(game, log, damaged101);
+      if (defeat101) {
+        type WithContinuation = { continuation: PendingResolution | null | undefined };
+        let tail = defeat101 as unknown as WithContinuation;
+        while (tail.continuation != null) tail = tail.continuation as unknown as WithContinuation;
+        tail.continuation = continuation;
+        return defeat101;
+      }
+      return sweepDeadUnits(game, log, continuation);
+    }
     case "SOR_149": { // Mace Windu — when attacks and defeats a unit: Ready him.
       if (defDefeated && !Unit.FromInterface(attacker).LostAbilities()) {
         attacker.ready = true;
@@ -1867,7 +2020,7 @@ function attackerOwnWhenAttackEnds(
       };
     }
     default:
-      return continuation;
+      return null; // this source has no innate When Attack Ends ability
   }
 }
 
@@ -2241,6 +2394,93 @@ function replayWithCredits(
  * Handles Unit placement, Upgrade targeting, Event resolution, and trigger draining.
  */
 
+/**
+ * Auto (no-input) On Attack abilities that act on the defending unit before combat. They live here
+ * rather than in on-attack.ts because they need the engine's defeat plumbing (upgrade defeat,
+ * dead-unit sweep). Runs once per ability source, so Support grants them like any other On Attack.
+ */
+function applyAutoOnAttackEffects(
+  game: GameState,
+  log: string[],
+  attacker: Unit,
+  target: ResolveAttackPending["target"],
+): void {
+  if (target.type !== "unit") return;
+  const defenderPlayId = target.playId;
+  let applied = false;
+
+  for (const sourceCardId of AttackAbilityCardIds(attacker)) {
+    switch (sourceCardId) {
+      case "ASH_156": { // R5-D4 — "On Attack: Defeat all upgrades on the defending unit."
+        const defender156 = GetUnitByPlayId(game, defenderPlayId);
+        if (!defender156) break;
+        for (const upgrade of [...defender156.upgrades]) {
+          defeatUpgradeByPlayId(game, log, upgrade.playId, CardTitle("ASH_156"), null, attacker.controller);
+        }
+        applied = true;
+        break;
+      }
+      case "ASH_168": { // Migs Mayfeld — "On Attack: Deal 1 damage to the defending unit. If this
+                        // unit is upgraded, deal 2 damage to the defending unit instead."
+        const amount168 = attacker.upgrades.length > 0 ? 2 : 1;
+        DealDamageToUnit(game, "ASH_168", defenderPlayId, amount168, log);
+        applied = true;
+        break;
+      }
+      default: break;
+    }
+  }
+
+  // Only sweep when one of the effects above ran: a defender killed before combat must leave play,
+  // so the attack finds no target rather than trading damage with a dead unit. Sweeping
+  // unconditionally would also defeat unrelated units that are already at 0 HP.
+  if (!applied) return;
+  sweepDeadUnits(game, log, null);
+  updateDefeatedPlayers(game);
+}
+
+/**
+ * Support — "When you play this unit (or deploy this leader), you may attack with another unit.
+ * It gains this unit's other abilities for this attack."
+ *
+ * Builds the optional prompt and the "choose which unit attacks" step. The ability grant itself is
+ * applied when the attacker is chosen (see the "support" case in applyAbilityEffect).
+ * Returns null when no other friendly unit could attack — the keyword then simply fizzles.
+ */
+function supportAttackPending(
+  game: GameState,
+  supporterCardId: string,
+  supporterPlayId: string,
+  player: PlayerId,
+): PendingResolution | null {
+  const eligible = (GetUnitsForPlayer(player) as Unit[]).filter(u => {
+    if (u.playId === supporterPlayId) return false; // "another unit"
+    if (!CanUnitAttack(u)) return false;
+    const { unitPlayIds, includesBase } = computeAttackTargets(game, u, supporterCardId);
+    return unitPlayIds.length > 0 || includesBase;
+  });
+  if (eligible.length === 0) return null;
+
+  return {
+    type: "ability-option",
+    cardId: "support",
+    sourcePlayId: supporterPlayId,
+    player,
+    helperText: `${CardTitle(supporterCardId)} has Support — attack with another unit?`,
+    yesLabel: "Attack",
+    noLabel: "Skip",
+    onYes: {
+      type: "ability-target",
+      cardId: "support",
+      sourcePlayId: supporterPlayId,
+      player,
+      fromPlayIds: eligible.map(u => u.playId),
+      continuation: null,
+    },
+    continuation: null,
+  };
+}
+
 /** Builds the "choose a base" step of Darth Vader's leader ability (1 damage to a base). */
 function vaderBaseTargetPending(player: PlayerId): AbilityTargetPending {
   return {
@@ -2443,6 +2683,10 @@ function queueUnitEntryTriggers(
   const hasAmbush = HasAmbush(cardId, unit.playId, "Hand", player);
   if (hasAmbush) {
     game.triggerBag.push({ triggerType: "ambush", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
+  }
+
+  if (HasSupport(cardId, unit.playId, player)) {
+    game.triggerBag.push({ triggerType: "support", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
   }
 
   if (hasAmbush && CardHasWhenPlayed(unit.cardId)) {
@@ -3159,6 +3403,11 @@ function handleChooseTarget(
     };
 
     const onAttackTriggerIndex = game.triggerBag.findIndex(t => t.triggerType === "on-attack");
+    if (attacker && onAttackTriggerIndex !== -1) {
+      // On Attack abilities that act on the defender before combat and need engine-level defeat
+      // handling (upgrade defeat, lethal damage). They take no player input, so they resolve here.
+      applyAutoOnAttackEffects(game, log, attacker, target);
+    }
     const onAttackTriggerPending = attacker && onAttackTriggerIndex !== -1
       ? (game.triggerBag.splice(onAttackTriggerIndex, 1), resolveOnAttackTrigger(attacker, resolveAttackPending))
       : null;
@@ -4752,6 +5001,37 @@ function applyAbilityOptionEffect(
       log.push(`${CardTitle("SEC_264")}: paid 2.`);
       return sec264BaseTargetPending(player264, 2, pending.continuation ?? null);
     }
+    case "ASH_014": { // The Mandalorian (deployed) Yes — draw a card (you have the initiative).
+      const mando014 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      const player014 = mando014 ? mando014.controller : pending.player!;
+      DrawCardForPlayer(game, log, player014);
+      log.push(`${CardTitle("ASH_014")}: drew a card.`);
+      return pending.continuation ?? null;
+    }
+    case "ASH_014_initiative": { // The Mandalorian (leader side) Yes — pay 1 resource, draw a card.
+      const player014i = pending.player!;
+      payResources(game, player014i, 1, log, "ASH_014");
+      DrawCardForPlayer(game, log, player014i);
+      log.push(`${CardTitle("ASH_014")}: paid 1 resource and drew a card.`);
+      return pending.continuation ?? null;
+    }
+    case "ASH_059": { // Leia Organa Yes — deal 1 damage to herself; if you do, heal 2 from your base.
+      const leia059 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      if (!leia059) return pending.continuation ?? null;
+      DealDamageToUnit(game, "ASH_059", leia059.playId, 1, log);
+      HealBaseForPlayer(game, leia059.controller, 2, log, "ASH_059");
+      return sweepDeadUnits(game, log, pending.continuation ?? null);
+    }
+    case "ASH_203": { // Mando's N-1 Starfighter Yes — exhaust your leader for +2/+0 for this attack.
+      const n1_203 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      if (!n1_203) return pending.continuation ?? null;
+      const leader203 = GetLeaderForPlayer(n1_203.controller);
+      if (!leader203.ready) return pending.continuation ?? null; // readied state changed under us
+      leader203.ready = false;
+      log.push(`${CardTitle("ASH_203")}: exhausted ${CardTitle(leader203.cardId)}.`);
+      GivePowerMod("ASH_203", n1_203, 2, "ForAttack", log);
+      return pending.continuation ?? null;
+    }
     case "LOF_260": { // The Father Yes — deal 1 damage to himself; if you do, the Force is with you.
       const father260 = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (!father260) return pending.continuation ?? null;
@@ -5712,6 +5992,28 @@ function handleClaimInitiative(game: GameState, log: string[], dispatch: GameDis
   game.initiativeClaimed = true;
   game.initiativePlayer = dispatch.fromPlayer;
   log.push(`Player ${dispatch.fromPlayer} claimed initiative.`);
+
+  // ASH_014 The Mandalorian (leader side) — "When you take the initiative: You may pay 1 resource.
+  // If you do, draw a card." A leader-side ability, so it stops once he deploys.
+  const player = dispatch.fromPlayer;
+  const leader014 = GetPlayer(game, player).leader;
+  if (
+    leader014.cardId === "ASH_014" && !leader014.deployed && !LeaderAbilitiesIgnored()
+    && spendableFor(game, player) >= 1
+  ) {
+    const pending014: AbilityOptionPending = {
+      type: "ability-option",
+      cardId: "ASH_014_initiative",
+      player,
+      helperText: "Pay 1 resource to draw a card?",
+      yesLabel: "Pay 1",
+      noLabel: "Skip",
+      onYes: null,
+      continuation: null,
+    };
+    return { response: resolutionResponse(pendingToResolution(pending014, game)), pending: pending014, stateChanged: true };
+  }
+
   return { response: stateResponse(game), pending: null, stateChanged: true };
 }
 
@@ -5897,6 +6199,11 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
   const nested = game.triggerBag.length > 0;
   if (HasShielded(leader.cardId, unit.playId, player)) {
     game.triggerBag.push({ triggerType: "shielded", cardId: leader.cardId, fromPlayer: player, playId: unit.playId, nested });
+  }
+  // Support on a leader unit reads "When you deploy this leader, you may attack with another unit"
+  // — same timing window as Shielded, so it queues here (ASH_009 Ahsoka, ASH_014 The Mandalorian).
+  if (HasSupport(leader.cardId, unit.playId, player)) {
+    game.triggerBag.push({ triggerType: "support", cardId: leader.cardId, fromPlayer: player, playId: unit.playId, nested });
   }
 
   const plotPlayIds = getAffordablePlotPlayIds(game, player);
@@ -6090,6 +6397,18 @@ function resolveActionAbility(
         cardId: "LAW_010",
         player,
         fromPlayIds: allUnits010.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "ASH_009": { // Ahsoka Tano (leader side) — Action [Exhaust]: Choose a unit with less power
+                      // than a friendly unit. It gets +2/+0 for this phase.
+      const eligible009 = WeakerThanAFriendlyUnitPlayIds(player);
+      if (eligible009.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "ASH_009_leader",
+        player,
+        fromPlayIds: eligible009,
         continuation: null,
       } satisfies AbilityTargetPending;
     }
@@ -6903,6 +7222,42 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, "JTL_151", targetPlayId, 2, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
+    case "ASH_009":        // Ahsoka Tano (deployed) On Attack — the chosen weaker unit gets +2/+0.
+    case "ASH_009_leader": { // …and her leader-side Action does the same.
+      if (!targetPlayId) break;
+      const target009 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target009) GivePowerMod("ASH_009", target009, 2, "Phase", game.gameLog);
+      break;
+    }
+    case "ASH_036": { // Rukh When Attack Ends: give 3 Advantage tokens to the chosen unit.
+      if (!targetPlayId) break;
+      const target036 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target036) GiveAdvantageTokens(game.currentGameState, target036, 3, game.gameLog, "ASH_036");
+      break;
+    }
+    case "ASH_050": { // Morgan Elsbeth When Defeated: give the chosen unit –2/–2 for this phase.
+      if (!targetPlayId) break;
+      const target050 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target050) GiveStatModForPhase("ASH_050", target050, -2, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "ASH_209": { // Ezra Bridger On Attack: give the chosen unit –3/–0 for this phase.
+      if (!targetPlayId) break;
+      const target209 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target209) GivePowerMod("ASH_209", target209, -3, "Phase", game.gameLog);
+      break;
+    }
+    case "ASH_253": { // Yellow Aces Bomber On Attack: deal 2 damage to the chosen base ("a base" — either one).
+      const owner253 = pending.player!;
+      let basePlayer253: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer253 = 1;
+      else if (targetPlayId === "player2.base") basePlayer253 = 2;
+      else if (targetIsBase) basePlayer253 = targetBasePlayer ?? (owner253 === 1 ? 2 : 1);
+      if (basePlayer253 === null) break;
+      dealBaseDamage(game.currentGameState, basePlayer253, 2, owner253);
+      game.gameLog.push(`${CardTitle("ASH_253")}: dealt 2 damage to player ${basePlayer253}'s base.`);
+      break;
+    }
     case "LOF_048": { // Itinerant Warrior When Played: use the Force, then heal 3 from the chosen base.
       const owner048 = pending.player!;
       let basePlayer048: PlayerId | null = null;
@@ -6978,6 +7333,28 @@ function applyAbilityEffect(
         attackerPlayId: targetPlayId,
         source: "SEC_006",
         continuation: second006,
+      };
+    }
+    case "support": { // Support: the chosen unit attacks, gaining the supporter's other abilities.
+      if (!targetPlayId) break;
+      const gsSupport = game.currentGameState;
+      const supporter = GetUnitByPlayId(gsSupport, pending.sourcePlayId!);
+      if (!supporter) break;
+      // Cleared automatically when this attack ends (every ForAttack effect on the attacker is).
+      gsSupport.currentEffects.push({
+        cardId: SupportGrantEffectCardId(supporter.cardId),
+        duration: "ForAttack",
+        affectedPlayer: supporter.controller,
+        targetPlayId,
+      });
+      game.gameLog.push(
+        `${CardTitle(supporter.cardId)}: Support — ${CardTitle(GetUnitByPlayId(gsSupport, targetPlayId)?.cardId ?? "")} attacks and gains its abilities for this attack.`,
+      );
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "support",
+        continuation: pending.continuation,
       };
     }
     case "SEC_006_second": { // Colonel Yularen front action: the chosen cheaper unit attacks.

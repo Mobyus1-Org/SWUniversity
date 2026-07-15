@@ -1,5 +1,6 @@
 import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, TraitContains } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
+import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 
 export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRecursion = false)
 {
@@ -7,6 +8,9 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
     const unit = GetUnitInPlay(playId, player);
     if (!unit) throw new Error("Unit not found for given playId and player in HasGrit");
     if (unit.LostAbilities()) return unit.upgrades.some(u => u.cardId === "LOF_054");//Exiled From The Force
+    //Support: the attacker has gained the supporting unit's keywords for this attack.
+    const supported = SupportGrantedCardId(playId, player);
+    if (supported && HasGrit(supported)) return true;
     if (!unit.IsLeader()) {
       const units = GetUnitsForPlayer(player);
       for (const u of units) {

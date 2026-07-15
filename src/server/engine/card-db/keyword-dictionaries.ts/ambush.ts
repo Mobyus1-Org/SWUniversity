@@ -1,10 +1,15 @@
 import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
 import { PlayerId, Zones } from "@/lib/engine/core-models";
 import { CardCost, CardTitle, CardType } from "@/server/engine/card-db/generated";
+import { EnemyUnitsLoseAmbushAndSupport } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 
 export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, player?: PlayerId, isRecursion = false)
 {
   if (cardId == "TWI_116") return false; //Clone - Prevent bugs related to ECL and Timely.
+
+  // ASH_068 Domesticated Loth-Cat — "Enemy units lose Ambush and Support." Checked before any
+  // grant below (including self-Ambush, which ignores effects entirely).
+  if (player && EnemyUnitsLoseAmbushAndSupport(player)) return false;
 
   if (player && playId) {
     const otherPlayer = player == 1 ? 2 : 1;

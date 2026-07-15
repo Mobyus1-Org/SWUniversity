@@ -1,6 +1,7 @@
 import { GetUnitInPlay, LeaderAbilitiesIgnored, GetUnitsForPlayer, IsCoordinateActive, TraitContains, GetCurrentEffectsForPlayer, PlayerHasUnitWithTraitInPlay, HasTheForce, GetPlayIdForUniqueUnitInPlay } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
 import { CardCost } from "@/server/engine/card-db/generated";
+import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 
 /**
  * @param defenderPlayId - playId of the defending unit. When provided,
@@ -24,6 +25,9 @@ export function HasOverwhelm(cardId: string,
     const unit = GetUnitInPlay(playId, player);
     if (!unit) throw new Error("Unit not found for given playId and player in HasOverwhelm");
     if(unit.LostAbilities()) return false;
+    //Support: the attacker has gained the supporting unit's keywords for this attack.
+    const supported = SupportGrantedCardId(playId, player);
+    if (supported && HasOverwhelm(supported)) return true;
     const units = GetUnitsForPlayer(player);
     //other units passive abilities that give overwhelm
     for(const u of units)
@@ -163,6 +167,7 @@ export function HasOverwhelm(cardId: string,
     case "ASH_029"://Scorpenek Annihilator Droid
     case "ASH_096"://Forest Patroller
     case "ASH_121"://Blurrg
+    case "ASH_241"://Marrok's Fiend Fighter
     case "ASH_129"://Defenders of the Forest
     case "ASH_143"://Tempest Lieutenant
     case "ASH_164"://Alamite Hunter

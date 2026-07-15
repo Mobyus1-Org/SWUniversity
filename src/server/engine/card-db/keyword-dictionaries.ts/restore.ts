@@ -1,12 +1,16 @@
 import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, InitiativePlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
 import { CardAspects } from "@/server/engine/card-db/generated";
+import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 
 export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): number
 {
   let amount = 0;
 
   if (player && playId) {
+    //Support: the attacker has gained the supporting unit's keywords for this attack.
+    const supported = SupportGrantedCardId(playId, player);
+    if (supported) amount += RestoreAmount(supported);
     //restore from effects
     for (const currentEffect of GetCurrentEffectsForPlayer(player)) {
       if (currentEffect.cardId === "JTL_047_Restore_1" && TraitContains(cardId, "Vehicle", player)) {

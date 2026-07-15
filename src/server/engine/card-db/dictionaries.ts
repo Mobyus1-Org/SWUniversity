@@ -15,6 +15,7 @@ import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/e
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
+import { HasSupport } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 
 export function HasKeyword(cardId: string, keyword: string, playId?: string, player?: PlayerId)
 {
@@ -59,6 +60,8 @@ export function HasKeyword(cardId: string, keyword: string, playId?: string, pla
       return ExploitAmount(cardId, playId, player) > 0;
     case "Piloting":
       return PilotingCost(cardId) >= 0;
+    case "Support":
+      return HasSupport(cardId, playId, player);
     case "Any":
       return HasSentinel(cardId, playId, player) ||
         HasGrit(cardId, playId, player) ||
@@ -74,7 +77,8 @@ export function HasKeyword(cardId: string, keyword: string, playId?: string, pla
         RestoreAmount(cardId, playId, player) > 0 ||
         SmuggleCost(cardId) > -1 ||
         ExploitAmount(cardId, playId, player) > 0 ||
-        PilotingCost(cardId) >= 0;
+        PilotingCost(cardId) >= 0 ||
+        HasSupport(cardId, playId, player);
     default:
       return false;
   }

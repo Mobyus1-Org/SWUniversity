@@ -13,6 +13,7 @@ export type TriggerType =
   | "when-upgrade-detached"
   | "shielded"  // same timing window as when-played
   | "ambush"    // same timing window as when-played
+  | "support"   // same timing window as when-played (and as when-deployed, for leaders)
   | "leader-reaction"
   | "card-played-reaction"  // reaction triggered by playing a card
   | "enemy-unit-defeated"

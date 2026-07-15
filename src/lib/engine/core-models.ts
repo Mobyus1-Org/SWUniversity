@@ -83,6 +83,9 @@ export interface DiscardedCard extends CardInPlay {
  */
 export const PHASE_STAT_MOD = "stat-mod";
 
+/** Generic power-only modifier (+X/+0 or –X/–0). Unlike PHASE_STAT_MOD, it leaves HP alone. */
+export const POWER_MOD = "power-mod";
+
 export interface CurrentEffect {
   cardId: string;
   duration: EffectDuration;

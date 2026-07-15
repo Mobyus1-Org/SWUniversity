@@ -57,6 +57,12 @@ function resolveOwnWhenDefeated(
   player: PlayerId
 ): PendingResolution | null {
   switch (unit.cardId) {
+    case "ASH_050": { // Morgan Elsbeth — "When Defeated: You may give a unit –2/–2 for this phase."
+      const allUnits050 = AllUnits();
+      if (allUnits050.length === 0) return null;
+      return optionalTarget("ASH_050", player, allUnits050.map(u => u.playId),
+        "Give a unit –2/–2 for this phase?", { yesLabel: "Give –2/–2" });
+    }
     case "JTL_242": // Shuttle ST-149 — When Played/When Defeated: may take control of a token upgrade and attach it to a different eligible unit.
       return buildTakeControlOfUpgrade("JTL_242", player,
         upg => IsTokenUpgrade(upg.cardId),

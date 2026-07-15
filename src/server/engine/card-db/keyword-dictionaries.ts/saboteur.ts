@@ -1,6 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { GetCurrentEffectsForPlayer, GetHand, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, PlayerHasUnitWithTraitInPlay, TraitContains, UnitWasDefeatedThisPhase } from "@/server/engine/core-functions";
 import { CardTitle } from "@/server/engine/card-db/generated";
+import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 
 export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, isRecursion = false)
 {
@@ -9,6 +10,9 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
     const unit = GetUnitInPlay(playId, player);
     if (!unit) throw new Error("Unit not found for given playId and player in HasSaboteur");
     if (unit.LostAbilities()) return false;
+    //Support: the attacker has gained the supporting unit's keywords for this attack.
+    const supported = SupportGrantedCardId(playId, player);
+    if (supported && HasSaboteur(supported)) return true;
 
     // LAW_233 Galen Erso: enemy units (of Galen's controller) gain Saboteur.
     if (GetPlayIdForUniqueUnitInPlay("LAW_233", otherPlayer) !== "0") return true;

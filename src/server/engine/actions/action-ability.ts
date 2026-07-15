@@ -1,7 +1,21 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { CanDiscloseAnyOf, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS } from "@/server/engine/core-functions";
+import { AllUnits, CanDiscloseAnyOf, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS } from "@/server/engine/core-functions";
+import { Unit } from "@/server/engine/unit";
 import { CardTraits } from "@/server/engine/card-db/generated";
 import { PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
+
+/**
+ * Every unit (either side) whose power is below that of at least one unit `player` controls —
+ * the legal targets for ASH_009 Ahsoka Tano's "choose a unit with less power than a friendly unit".
+ */
+export function WeakerThanAFriendlyUnitPlayIds(player: PlayerId): string[] {
+  const friendlyPowers = GetUnitsForPlayer(player).map(u => Unit.FromInterface(u).CurrentPower());
+  if (friendlyPowers.length === 0) return [];
+  const strongestFriendly = Math.max(...friendlyPowers);
+  return AllUnits()
+    .filter(u => Unit.FromInterface(u).CurrentPower() < strongestFriendly)
+    .map(u => u.playId);
+}
 
 export function ActionAbilities(cardId: string, player: PlayerId, playId?: string): string[] {
   const game = GetGame();
@@ -74,6 +88,12 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         break;
       case "LAW_010": // Leia Organa (LAW) — Action [2 resources, Exhaust]: give a unit +1/+1 per different aspect.
         if (GetUnitsForPlayer(1).concat(GetUnitsForPlayer(2)).length > 0) abilities.push(cardId);
+        break;
+      case "ASH_009": // Ahsoka Tano — Action [Exhaust]: Choose a unit with less power than a friendly
+                      // unit. It gets +2/+0 for this phase.
+        if (WeakerThanAFriendlyUnitPlayIds(player).length > 0) {
+          abilities.push(cardId);
+        }
         break;
       case "LOF_002": // Mother Talzin — Action [Exhaust, use the Force]: Give a unit -1/-1 this phase.
         if (HasTheForce(player) && GetUnitsForPlayer(1).concat(GetUnitsForPlayer(2)).length > 0) {
