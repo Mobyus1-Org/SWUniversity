@@ -249,6 +249,19 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "JTL_140": { // IG-2000 — "When Played: Deal 1 damage to each of up to 3 units."
+      const allUnits140 = AllUnits();
+      if (allUnits140.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "JTL_140",
+        player,
+        fromPlayIds: allUnits140.map(u => u.playId),
+        needsMultiple: true,
+        maxTargets: 3,
+        continuation: null,
+      };
+    }
     case "LAW_101": { // Lawbringer — "When Played/On Attack: Choose an aspect. Give each enemy unit
                       // with that aspect –2/–2 for this phase." (The On Attack side is in on-attack.ts.)
       return {

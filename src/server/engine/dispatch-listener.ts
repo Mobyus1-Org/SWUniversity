@@ -30,7 +30,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -113,7 +113,7 @@ import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dict
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
-import { CreateSpy, CreateCreditToken, CreateCloneTrooper, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource } from "@/server/engine/core-functions";
 
@@ -214,6 +214,15 @@ function resolveChooseOne(
       if (optionId === "top") deck004.push({ cardId: heldCardId });
       else deck004.unshift({ cardId: heldCardId });
       log.push(`${CardTitle("TWI_004")}: put ${CardTitle(heldCardId)} on the ${optionId} of the deck.`);
+      break;
+    }
+    case "SHD_001": { // Gar Saxon — the player picked which upgrade to return to its owner's hand.
+      const cardId001 = String(pending.data?.[optionId] ?? "");
+      const owner001 = Number(pending.data?.[`${optionId}_owner`] ?? pending.player) as PlayerId;
+      if (cardId001) {
+        GetPlayer(game, owner001).hand.push({ cardId: cardId001 });
+        log.push(`${CardTitle("SHD_001")}: returned ${CardTitle(cardId001)} to Player ${owner001}'s hand.`);
+      }
       break;
     }
     default:
@@ -925,6 +934,29 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
     return null;
   }
 
+  if (trigger.triggerType === "when-unit-deals-damage") {
+    if (trigger.cardId === "TWI_016") { // Jango Fett — exhaust the damaged enemy unit.
+      const enemy016 = trigger.playId ? GetUnitByPlayId(game, trigger.playId) : undefined;
+      if (!enemy016 || !enemy016.ready) return null; // gone or already exhausted → nothing worth doing
+      const leader016 = GetPlayer(game, trigger.fromPlayer).leader;
+      const deployed016 = leader016.cardId === "TWI_016" && leader016.deployed;
+      // Front side requires exhausting Jango; only offer it while he is ready.
+      if (!deployed016 && !(leader016.cardId === "TWI_016" && leader016.ready)) return null;
+      return {
+        type: "ability-option",
+        cardId: "TWI_016",
+        player: trigger.fromPlayer,
+        sourcePlayId: trigger.playId,
+        helperText: deployed016 ? "Exhaust that enemy unit?" : "Exhaust Jango Fett to exhaust that enemy unit?",
+        yesLabel: deployed016 ? "Exhaust it" : "Exhaust",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    return null;
+  }
+
   if (trigger.triggerType === "leader-reaction") {
     const leaderState = GetPlayer(game, trigger.fromPlayer).leader;
     if (leaderState.deployed || !leaderState.ready) return null;
@@ -945,6 +977,21 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
             fromPlayIds: friendlyPlayIds,
             continuation: null,
           },
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
+      case "SOR_015": { // Boba Fett — When an enemy unit leaves play: You may exhaust this leader.
+                        // If you do, ready a resource. Skip if there is no exhausted resource to ready.
+        const exhausted015 = GetPlayer(game, trigger.fromPlayer).resources.some(r => !r.ready);
+        if (!exhausted015) return null;
+        return {
+          type: "ability-option",
+          cardId: "SOR_015",
+          player: trigger.fromPlayer,
+          helperText: "Exhaust Boba Fett to ready a resource?",
+          yesLabel: "Exhaust",
+          noLabel: "Skip",
+          onYes: null,
           continuation: null,
         } satisfies AbilityOptionPending;
       }
@@ -1083,6 +1130,20 @@ function updateDefeatedPlayers(game: GameState): void {
 // Helpers: defeat a unit (arena → discard / leader zone)
 // ---------------------------------------------------------------------------
 
+/**
+ * SOR_015 Boba Fett (leader): "When an enemy unit leaves play: You may exhaust this leader. If you
+ * do, ready a resource." Queues the optional reaction for the OTHER player when a unit belonging to
+ * `leftPlayer` leaves play. Called from every unit-leaves-play recording site (the defeat paths),
+ * consistent with how the deployed side reads `cardsLeftPlayThisPhase`.
+ */
+function queueBobaLeftPlayReaction(game: GameState, leftPlayer: PlayerId): void {
+  const opponent: PlayerId = leftPlayer === 1 ? 2 : 1;
+  const leader = GetPlayer(game, opponent).leader;
+  if (leader.cardId === "SOR_015" && !leader.deployed && leader.ready) {
+    game.triggerBag.push({ triggerType: "leader-reaction", cardId: "SOR_015", fromPlayer: opponent, nested: true });
+  }
+}
+
 function defeatUnit(
   game: GameState,
   log: string[],
@@ -1133,6 +1194,7 @@ function defeatUnit(
     reason: unit.IsTokenUnit() ? "token-defeated" : "defeated",
   });
   log.push(`${CardTitle(unit.cardId)} was defeated.`);
+  queueBobaLeftPlayReaction(game, removed.player);
 
   // Rescue any units the defeated unit was guarding (CR 34.4).
   for (const captive of unit.captives ?? []) {
@@ -1218,6 +1280,7 @@ function defeatForExploit(game: GameState, log: string[], unit: Unit): void {
     reason: unit.IsTokenUnit() ? "token-defeated" : "defeated",
   });
   log.push(`${CardTitle(unit.cardId)} was defeated via Exploit.`);
+  queueBobaLeftPlayReaction(game, removed.player);
 
   // Rescue captives (CR 34.4)
   for (const captive of unit.captives ?? []) {
@@ -1302,6 +1365,7 @@ function boardWipeDefeat(
       playId: unit.playId,
       reason: unit.IsTokenUnit() ? "token-defeated" : "defeated",
     });
+    queueBobaLeftPlayReaction(game, removed.player);
 
     for (const captive of unit.captives ?? []) {
       const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
@@ -1641,6 +1705,11 @@ function resolveAttack(
       attacker.damage += effectiveDefPower;
     }
     log.push(`${attackerName} attacked ${defenderName}.`);
+
+    // Jango Fett (TWI_016): when a friendly unit deals combat damage to an enemy unit. Both the
+    // attacker→defender hit and the defender→attacker counter are "a friendly unit deals damage".
+    if (shieldIdx === -1 && effectiveAtkPower > 0) QueueJangoDamageReaction(game, attacker.controller, defender.playId);
+    if (attackerShieldIdx === -1 && effectiveDefPower > 0) QueueJangoDamageReaction(game, defender.controller, attacker.playId);
 
     // A Shield token absorbs the entire damage instance, so no combat damage
     // reaches the defender and there is no excess for Overwhelm to spill.
@@ -2000,6 +2069,19 @@ function innateWhenAttackEnds(
         onYes: null,
         continuation: discardStep192,
       };
+    }
+    case "SOR_015": { // Boba Fett (deployed): When this unit completes an attack: If an enemy unit
+                      // left play this phase, ready up to 2 resources. (Attacker survival is already
+                      // guaranteed by the early return above.)
+      const opp015: PlayerId = attacker.controller === 1 ? 2 : 1;
+      if (!UnitWasDefeatedThisPhase(opp015)) return continuation;
+      let readied015 = 0;
+      for (const r of GetPlayer(game, attacker.controller).resources) {
+        if (readied015 >= 2) break;
+        if (!r.ready) { r.ready = true; readied015++; }
+      }
+      if (readied015 > 0) log.push(`${CardTitle("SOR_015")}: readied ${readied015} resource(s).`);
+      return continuation;
     }
     case "SOR_009": { // Leia Organa: You may attack with another Rebel unit
       const rebelUnits = (GetUnitsForPlayer(attacker.controller) as Unit[])
@@ -3602,19 +3684,24 @@ function handleChooseTarget(
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
-    if (pending.cardId === "JTL_170") { // War Juggernaut — deal 1 to each chosen unit (any number).
-      const chosen170 = data.targetPlayIds ?? [];
-      for (const id of chosen170) {
+    if (pending.cardId === "JTL_170" || pending.cardId === "JTL_140") {
+      // War Juggernaut — deal 1 to each chosen unit (any number).
+      // IG-2000 — deal 1 to each chosen unit (up to 3).
+      const cap = pending.cardId === "JTL_140" ? 3 : Infinity;
+      const chosenDmg = (data.targetPlayIds ?? []).slice(0, cap);
+      for (const id of chosenDmg) {
         if (!pending.fromPlayIds.includes(id))
-          return { response: invalidResponse(`Unit ${id} is not a valid target for ${CardTitle("JTL_170")}.`), pending, stateChanged: false };
+          return { response: invalidResponse(`Unit ${id} is not a valid target for ${CardTitle(pending.cardId)}.`), pending, stateChanged: false };
       }
-      for (const id of chosen170) {
-        DealDamageToUnit(game, "JTL_170", id, 1, log);
+      for (const id of chosenDmg) {
+        DealDamageToUnit(game, pending.cardId, id, 1, log);
       }
-      const next170 = sweepDeadUnits(game, log, pending.continuation ?? null);
-      if (next170?.type === "resolve-attack") return handleResolveAttack(game, log, next170);
-      if (next170) return { response: resolutionResponse(pendingToResolution(next170, game)), pending: next170, stateChanged: true };
+      const nextDmg = sweepDeadUnits(game, log, pending.continuation ?? null);
+      if (nextDmg?.type === "resolve-attack") return handleResolveAttack(game, log, nextDmg);
+      if (nextDmg) return { response: resolutionResponse(pendingToResolution(nextDmg, game)), pending: nextDmg, stateChanged: true };
       updateDefeatedPlayers(game);
+      const bagDmg = drainTriggerBag(game, log);
+      if (bagDmg) return { response: resolutionResponse(pendingToResolution(bagDmg, game)), pending: bagDmg, stateChanged: false };
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
@@ -3688,6 +3775,31 @@ function handleChooseTarget(
     const invalid = chosen.find(id => !pending.eligiblePlayIds.includes(id));
     if (invalid)
       return { response: invalidResponse(`Card ${invalid} is not eligible for return from discard.`), pending, stateChanged: false };
+
+    if (pending.cardId === "SHD_015") {
+      // Doctor Aphra When Deployed: the player chose 3 discard cards with different names; return 1
+      // of them at random to hand (the other 2 stay in the discard).
+      const pState015 = GetPlayer(game, pending.player);
+      const picked015 = chosen.slice(0, 3)
+        .map(id => pState015.discard.find(d => d.playId === id))
+        .filter((d): d is NonNullable<typeof d> => !!d);
+      const names015 = new Set(picked015.map(d => d.cardId));
+      if (picked015.length < 3 || names015.size < 3) {
+        return { response: invalidResponse("Choose 3 cards with different names."), pending, stateChanged: false };
+      }
+      const chosenAtRandom = picked015[Math.floor(Math.random() * picked015.length)];
+      const idx015 = pState015.discard.findIndex(d => d.playId === chosenAtRandom.playId);
+      if (idx015 !== -1) {
+        const card015 = pState015.discard.splice(idx015, 1)[0];
+        pState015.hand.push({ cardId: card015.cardId });
+        log.push(`${CardTitle("SHD_015")}: returned ${CardTitle(card015.cardId)} to hand at random.`);
+      }
+      const next015 = pending.continuation;
+      if (next015) return { response: resolutionResponse(pendingToResolution(next015, game)), pending: next015, stateChanged: false };
+      const bag015 = drainTriggerBag(game, log);
+      if (bag015) return { response: resolutionResponse(pendingToResolution(bag015, game)), pending: bag015, stateChanged: false };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
 
     if (pending.cardId === "LAW_238") {
       // Scavenging Sandcrawler: move the chosen card to the bottom of the deck, then create a Credit.
@@ -4996,6 +5108,26 @@ function applyAbilityOptionEffect(
       }
       return pending.continuation ?? null;
     }
+    case "TWI_016": { // Jango Fett — (front: exhaust this leader,) then exhaust that enemy unit.
+      const leader016 = GetLeaderForPlayer(pending.player!);
+      if (!leader016.deployed) leader016.ready = false; // front side: exhausting the leader is the cost
+      const enemy016 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      if (enemy016) {
+        enemy016.ready = false;
+        log.push(`${CardTitle("TWI_016")}: exhausted ${CardTitle(enemy016.cardId)}.`);
+      }
+      return pending.continuation ?? null;
+    }
+    case "SOR_015": { // Boba Fett — exhaust this leader (front side), then ready a resource.
+      const leader015 = GetLeaderForPlayer(pending.player!);
+      if (!leader015.deployed) leader015.ready = false; // front side: exhausting the leader is the cost
+      const res015 = GetPlayer(game, pending.player!).resources.find(r => !r.ready);
+      if (res015) {
+        res015.ready = true;
+        log.push(`${CardTitle("SOR_015")}: exhausted Boba Fett to ready a resource.`);
+      }
+      return pending.continuation ?? null;
+    }
     case "LOF_017": { // Darth Revan — (front: exhaust the leader), then give an Experience token to the attacking unit.
       const attacker017 = GetUnitByPlayId(game, pending.sourcePlayId!);
       const leader017 = GetLeaderForPlayer(pending.player!);
@@ -6226,6 +6358,18 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "LOF_007": // Avar Kriss — If resources + times Used the Force this phase >= 9.
       return p.resources.length + game.roundState.forceUsedThisPhase >= 9;
+    case "TWI_001": // Nala Se — If you control 4 or more resources.
+    case "TWI_014": // Asajj Ventress — If you control 4 or more resources.
+      return p.resources.length >= 4;
+    case "SOR_015": // Boba Fett — If you control 5 or more resources.
+    case "SHD_015": // Doctor Aphra — If you control 5 or more resources.
+    case "TWI_006": // Wat Tambor — If you control 5 or more resources.
+    case "TWI_016": // Jango Fett — If you control 5 or more resources.
+      return p.resources.length >= 5;
+    case "SOR_008": // Hera Syndulla — If you control 6 or more resources.
+    case "SHD_001": // Gar Saxon — If you control 6 or more resources.
+    case "TWI_002": // Nute Gunray — If you control 6 or more resources.
+      return p.resources.length >= 6;
     default:
       return null;
   }
@@ -6451,6 +6595,31 @@ function resolveActionAbility(
       CreateForceToken(player, log, "LOF_007");
       return null;
     }
+    case "TWI_002": { // Nute Gunray — Action [Exhaust]: If 2 or more friendly units were defeated
+                      // this phase, create a Battle Droid token.
+      if (UnitsDefeatedThisPhaseCount(player) < 2) {
+        log.push(`${CardTitle("TWI_002")}: fewer than 2 friendly units defeated this phase — soft pass.`);
+        return null;
+      }
+      CreateBattleDroid(game, player, log, "TWI_002");
+      return null;
+    }
+    case "TWI_006": { // Wat Tambor — Action [Exhaust]: If a friendly unit was defeated this phase,
+                      // give a unit +2/+2 for this phase.
+      if (!UnitWasDefeatedThisPhase(player)) {
+        log.push(`${CardTitle("TWI_006")}: no friendly unit defeated this phase — soft pass.`);
+        return null;
+      }
+      const units006 = GetAllUnits(game);
+      if (units006.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "TWI_006_leader",
+        player,
+        fromPlayIds: units006.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "JTL_018": { // Kazuda Xiono — Action [Exhaust]: A friendly unit loses all abilities for this round. Take an extra action after this one.
       const friendly018 = GetUnitsForPlayer(player);
       if (friendly018.length === 0) return null;
@@ -6602,6 +6771,18 @@ function resolveActionAbility(
         cardId: "TWI_012",
         player,
         fromPlayIds: readyUnits012.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "TWI_014": { // Asajj Ventress — Action [Exhaust]: Attack with a unit. If you played an event
+                      // this phase, it gets +1/+0 for this attack.
+      const readyUnits014 = GetUnitsForPlayer(player).filter(u => u.ready);
+      if (readyUnits014.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "TWI_014_leader",
+        player,
+        fromPlayIds: readyUnits014.map(u => u.playId),
         continuation: null,
       } satisfies AbilityTargetPending;
     }
@@ -7357,6 +7538,13 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target009 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target009) GivePowerMod("ASH_009", target009, 2, "Phase", game.gameLog);
+      break;
+    }
+    case "TWI_006":        // Wat Tambor (deployed) On Attack — give another unit +2/+2 this phase.
+    case "TWI_006_leader": { // …and his leader-side Action does the same.
+      if (!targetPlayId) break;
+      const target006 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target006) GiveStatModForPhase("TWI_006", target006, 2, game.gameLog);
       break;
     }
     case "ASH_036": { // Rukh When Attack Ends: give 3 Advantage tokens to the chosen unit.
@@ -8743,6 +8931,20 @@ function applyAbilityEffect(
         type: "attack-target",
         attackerPlayId: targetPlayId,
         source: "TWI_011",
+        continuation: null,
+      };
+    }
+    case "TWI_014_leader": { // Asajj Ventress leader Action: the chosen unit attacks; if an event was
+                            // played this phase, it gets +1/+0 for this attack.
+      if (!targetPlayId) break;
+      if (CardWasPlayedThisPhase(pending.player!, undefined, "Event")) {
+        game.currentGameState.currentEffects.push({ cardId: "TWI_014", duration: "ForAttack", affectedPlayer: pending.player!, targetPlayId });
+        game.gameLog.push(`${CardTitle("TWI_014")}: chosen unit gets +1/+0 for this attack (event played this phase).`);
+      }
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "TWI_014",
         continuation: null,
       };
     }

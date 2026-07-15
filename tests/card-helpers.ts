@@ -371,6 +371,7 @@ export const Cards = {
       hondoOhnaka: "JTL_056",
       l337: "JTL_049",
       warJuggernaut: "JTL_170",
+      ig2000: "JTL_140",
       lukeSkywalker: "JTL_094",
       blueLeader: "JTL_096",
       rebelliousHammerhead: "JTL_153",
@@ -419,6 +420,7 @@ export const Cards = {
       sanHill: "TWI_186",
       r2d2FullOfSolutions: "TWI_193",
       battleDroidEscort: "TWI_229",
+      cloneHeavyGunner: "TWI_158",
     },
     sec: {
       cadBane: "SEC_034",

@@ -7,6 +7,24 @@ function ps(gs: GameState, player: PlayerId): PlayerState {
 }
 
 export function executeRegroupDraw(gs: GameState, log: string[]): void {
+  // SHD_015 Doctor Aphra (leader): "When the regroup phase starts: Discard a card from your deck."
+  // Only the undeployed leader side carries this; the deployed side has different abilities.
+  for (const player of [1, 2] as PlayerId[]) {
+    const p = ps(gs, player);
+    if (p.leader.cardId === "SHD_015" && !p.leader.deployed && p.deck.length > 0) {
+      const card = p.deck.pop()!;
+      p.discard.unshift({
+        cardId: card.cardId,
+        playId: String(gs.nextPlayId++),
+        owner: player,
+        controller: player,
+        turnDiscarded: gs.currentRound,
+        discardEffect: "",
+      });
+      log.push(`${CardTitle("SHD_015")}: discarded ${CardTitle(card.cardId)} from the deck.`);
+    }
+  }
+
   // Revert "UntilStartOfRegroup" effects before drawing (e.g. Change of Heart).
   const revertEffects = gs.currentEffects.filter(e => e.duration === "UntilStartOfRegroup");
   for (const eff of revertEffects) {

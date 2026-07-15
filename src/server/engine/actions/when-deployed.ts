@@ -33,6 +33,20 @@ export function resolveWhenDeployed(
       CreateCloneTrooper(game.currentGameState, player, log, "TWI_007");
       return null;
     }
+    case "SHD_015": { // Doctor Aphra — When Deployed: Choose 3 cards in your discard pile with
+                      // different names. If you do, return 1 of them at random to your hand.
+      const discard015 = (player === 1 ? game.currentGameState.player1 : game.currentGameState.player2).discard;
+      const distinctNames015 = new Set(discard015.map(d => d.cardId));
+      if (distinctNames015.size < 3) return null; // can't choose 3 different names — skip
+      return {
+        type: "return-from-discard",
+        cardId: "SHD_015",
+        player,
+        maxCount: 3,
+        eligiblePlayIds: discard015.map(d => d.playId),
+        continuation: null,
+      };
+    }
     case "TWI_004": { // Yoda — When Deployed: You may discard a card from your deck. If you do,
                       // defeat an enemy non-leader unit that costs the same as or less than it.
       const deck004 = (player === 1 ? game.currentGameState.player1 : game.currentGameState.player2).deck;

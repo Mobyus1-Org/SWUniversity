@@ -75,6 +75,10 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "TWI_004": // Yoda — Action [Exhaust]: draw + top/bottom, if a unit left play this phase.
         abilities.push(cardId);
         break;
+      case "TWI_002": // Nute Gunray — Action [Exhaust]: create a Battle Droid if 2+ units defeated this phase (soft-pass condition, not a cost gate).
+      case "TWI_006": // Wat Tambor — Action [Exhaust]: if a friendly unit was defeated this phase, give a unit +2/+2 (soft-pass condition).
+        abilities.push(cardId);
+        break;
       case "JTL_012": // Luke Skywalker — Action [Exhaust]: 1 damage to a unit, if a Fighter attacked this phase.
         abilities.push(cardId);
         break;
@@ -114,6 +118,7 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
         break;
       case "TWI_012": // Anakin Skywalker — Action: Attack with a unit (needs a ready unit)
+      case "TWI_014": // Asajj Ventress — Action: Attack with a unit; +1/+0 if an event was played (needs a ready unit)
         if (GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
         break;
       case "TWI_011": // Ahsoka Tano — Coordinate: gains the Action only while controlling 3+ units.

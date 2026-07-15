@@ -26,6 +26,53 @@ export function resolveWhenDefeated(
     }
   }
 
+  // TWI_001 Nala Se (deployed): each friendly Clone unit gains "When Defeated: Heal 2 damage from
+  // your base." Mandatory and targetless. The dying unit is already out of the arena, so a Nala Se
+  // found in GetUnitsForPlayer is a surviving source.
+  if (unit.isClone || CardTraits(unit.cardId).includes("Clone")) {
+    const gameNala = GetGame();
+    if (gameNala && GetUnitsForPlayer(player).some(u => u.cardId === "TWI_001")) {
+      const pStateNala = GetPlayer(gameNala.currentGameState, player);
+      const healed = Math.min(2, pStateNala.base.damage);
+      if (healed > 0) {
+        pStateNala.base.damage -= healed;
+        gameNala.gameLog.push(`${CardTitle("TWI_001")}: ${CardTitle(unit.cardId)} was defeated — healed ${healed} damage from your base.`);
+      }
+    }
+  }
+
+  // SHD_001 Gar Saxon (deployed): each friendly upgraded unit gains "When Defeated: You may return
+  // an upgrade that was attached to this unit to its owner's hand." Only real (non-token) upgrades
+  // can go to a hand. The dying unit still carries its upgrades on `unit.upgrades`.
+  const garSaxonInPlay = GetUnitsForPlayer(player).some(u => u.cardId === "SHD_001");
+  if (garSaxonInPlay) {
+    const returnable = unit.upgrades.filter(up => !IsTokenUpgrade(up.cardId));
+    if (returnable.length > 0) {
+      const data: Record<string, string | number> = {};
+      for (const up of returnable) {
+        data[up.playId] = up.cardId;
+        data[`${up.playId}_owner`] = up.owner;
+      }
+      return {
+        type: "ability-option",
+        cardId: "SHD_001",
+        player,
+        helperText: `${CardTitle("SHD_001")}: return an upgrade from ${CardTitle(unit.cardId)} to its owner's hand?`,
+        yesLabel: "Return an upgrade",
+        noLabel: "Skip",
+        onYes: {
+          type: "choose-one",
+          cardId: "SHD_001",
+          player,
+          options: returnable.map(up => ({ id: up.playId, label: CardTitle(up.cardId) ?? up.cardId })),
+          data,
+          continuation: resolveOwnWhenDefeated(unit, player),
+        },
+        continuation: resolveOwnWhenDefeated(unit, player),
+      };
+    }
+  }
+
   // SOR_105 General Krell: each other friendly unit gains "When Defeated: You may draw a card."
   // The dying unit is already removed from the arena before this runs, so any Krell found
   // in GetUnitsForPlayer is a surviving unit — never the unit that just died.

@@ -645,6 +645,14 @@ export function DistinctAspectCount(cardId: string): number {
   return new Set(CardAspects(cardId)).size;
 }
 
+/** The number of different card costs among the cards in a player's discard pile. */
+export function DistinctCostsInDiscard(player: PlayerId): number {
+  const game = GetGame();
+  if (!game) return 0;
+  const pState = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  return new Set(pState.discard.map(d => CardCost(d.cardId) ?? 0)).size;
+}
+
 /** The set of different aspects across all units a player controls. */
 export function DistinctAspectsAmongUnits(player: PlayerId): Set<string> {
   const aspects = new Set<string>();
@@ -674,6 +682,14 @@ export function UnitWasDefeatedThisPhase(player: PlayerId, trait?: string): bool
   }
 
   return defeatedUnits.length > 0;
+}
+
+export function UnitsDefeatedThisPhaseCount(player: PlayerId): number {
+  const game = GetGame();
+  if (!game) return 0;
+  return game.currentGameState.roundState.cardsLeftPlayThisPhase.filter(
+    d => d.fromPlayer === player && (d.reason === "defeated" || d.reason === "token-defeated"),
+  ).length;
 }
 
 export function UnitAttackedThisPhase(player: PlayerId, trait?: string, another?: boolean, playId?: string): boolean {
@@ -924,6 +940,10 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "LAW_238": //Scavenging Sandcrawler
     case "JTL_056": //Hondo Ohnaka - You Cannot Run From Your Name
     case "TWI_094": //Shaak Ti - Unity Wins Wars
+    case "SOR_008": //Hera Syndulla (deployed) — On Attack: may give an XP token to another unique unit
+    case "TWI_002": //Nute Gunray (deployed) — On Attack: create a Battle Droid token
+    case "TWI_006": //Wat Tambor (deployed) — On Attack: if a friendly unit was defeated this phase, may give +2/+2
+    case "TWI_014": //Asajj Ventress (deployed) — On Attack: if you played an event this phase, +1/+0 and first strike
       return true;
     default: break;
   }
@@ -1073,6 +1093,33 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
   if (withLog) {
     withLog.push(`${CardTitle(cardId)}: dealt ${amount} damage to ${CardTitle(target.cardId)}.`);
   }
+
+  // Jango Fett (TWI_016): a unit dealing ability damage to an enemy unit counts as "a friendly unit
+  // deals damage to an enemy unit". (Combat damage is applied in resolveAttack and hooked there.)
+  // Attribute to the source unit's controller when `cardId` is a unit in play on the enemy side of
+  // the target — i.e. a real friendly-vs-enemy hit, not a friendly self-damage effect.
+  if (CardType(cardId) === "Unit") {
+    const sourceUnit = [
+      ...gs.player1.groundArena, ...gs.player1.spaceArena,
+      ...gs.player2.groundArena, ...gs.player2.spaceArena,
+    ].find(u => u.cardId === cardId && u.controller !== target.controller);
+    if (sourceUnit) QueueJangoDamageReaction(gs, sourceUnit.controller, target.playId);
+  }
+}
+
+/**
+ * TWI_016 Jango Fett: "When a friendly unit deals damage to an enemy unit: You may exhaust this
+ * leader (deployed: no cost). If you do, exhaust that enemy unit." Queues the optional reaction when
+ * a unit controlled by `sourceController` deals damage to `damagedPlayId` (an enemy unit). The
+ * damaged unit rides on the trigger's `playId`. Fires for either the leader side (undeployed, ready)
+ * or the deployed side (a TWI_016 unit in play). Shared by the combat and ability damage paths.
+ */
+export function QueueJangoDamageReaction(gs: GameState, sourceController: PlayerId, damagedPlayId: string): void {
+  const pState = sourceController === 1 ? gs.player1 : gs.player2;
+  const leaderSide = pState.leader.cardId === "TWI_016" && !pState.leader.deployed && pState.leader.ready;
+  const deployedSide = [...pState.groundArena, ...pState.spaceArena].some(u => u.cardId === "TWI_016");
+  if (!leaderSide && !deployedSide) return;
+  gs.triggerBag.push({ triggerType: "when-unit-deals-damage", cardId: "TWI_016", fromPlayer: sourceController, playId: damagedPlayId, nested: true });
 }
 
 /** Builds a pending where the opponent of `player` chooses one of their own units to defeat. */

@@ -24,6 +24,24 @@ export function spendableFor(game: GameState, player: PlayerId): number {
  * The aspect penalty for playing `cardId`: +2 per aspect icon the player's base + leader do not
  * cover. This is THE definition — both the playability check and the actual payment path use it.
  */
+// Leaders that waive the aspect penalty on cards you play matching a trait. The waiver is
+// printed on both the undeployed and deployed sides, so it keys on the controller's leader
+// cardId regardless of deploy state.
+//   SOR_008 Hera Syndulla — "Ignore the aspect penalty on SPECTRE cards you play."
+//   TWI_001 Nala Se — "Ignore the aspect penalty on Clone units you play."
+const LEADER_ASPECT_WAIVERS: Record<string, { trait: string; unitOnly?: boolean }> = {
+  SOR_008: { trait: "Spectre" },
+  TWI_001: { trait: "Clone", unitOnly: true },
+};
+
+function leaderWaivesAspectPenalty(game: GameState, player: PlayerId, cardId: string): boolean {
+  const p = player === 1 ? game.player1 : game.player2;
+  const waiver = LEADER_ASPECT_WAIVERS[p.leader.cardId];
+  if (!waiver) return false;
+  if (waiver.unitOnly && CardType(cardId) !== "Unit") return false;
+  return TraitContains(cardId, waiver.trait, player);
+}
+
 export function aspectPenalty(game: GameState, player: PlayerId, cardId: string): number {
   const p = player === 1 ? game.player1 : game.player2;
 
@@ -34,6 +52,9 @@ export function aspectPenalty(game: GameState, player: PlayerId, cardId: string)
     );
     if (hasMandalorian) return 0;
   }
+
+  // Leader waivers (Hera / Nala Se): matching trait → no aspect penalty.
+  if (leaderWaivesAspectPenalty(game, player, cardId)) return 0;
 
   return aspectPenaltyForAspects(game, player, CardAspects(cardId));
 }

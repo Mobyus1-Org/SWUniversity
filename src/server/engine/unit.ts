@@ -1,5 +1,5 @@
 import { CardInPlay, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard } from "@/server/engine/core-functions";
 import { CardHp, CardPower } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
@@ -154,6 +154,9 @@ export class Unit implements UnitInterface {
         case "TWI_094": // Shaak Ti — each friendly token unit gets +1/+0
           power += this.IsTokenUnit() ? 1 : 0;
           break;
+        case "SHD_001": // Gar Saxon (deployed) — each friendly upgraded unit gets +1/+0
+          power += this.upgrades.length > 0 ? 1 : 0;
+          break;
         case "TWI_114": //Clone Commander Cody - Commanding the 212th
           power += IsCoordinateActive(this.controller) && isOtherUnit ? 1 : 0;
           break;
@@ -164,6 +167,15 @@ export class Unit implements UnitInterface {
           power += (!isOtherUnit && HasTheForce(this.controller)) ? 4 : 0;
           break;
         default: break;
+      }
+    }
+
+    // Gar Saxon (SHD_001) grants friendly upgraded units +1/+0 from the leader zone too. When he is
+    // deployed he is caught by the loop above; when undeployed his aura still applies from the zone.
+    if (this.upgrades.length > 0 && !LeaderAbilitiesIgnored()) {
+      const leaderCtrl = GetLeaderForPlayer(this.controller);
+      if (leaderCtrl.cardId === "SHD_001" && !leaderCtrl.deployed) {
+        power += 1;
       }
     }
 
@@ -211,6 +223,7 @@ export class Unit implements UnitInterface {
         case "SOR_216": power -= 4; break; // Disarm –4/+0 Phase
         case "SOR_028": power -= 4; break; // Jedha City base Epic Action –4/–0 Phase
         case "SOR_217": power += 1; break; // Shoot First +1/+0 ForAttack
+        case "TWI_014": power += 1; break; // Asajj Ventress +1/+0 ForAttack (event played this phase)
         case "SOR_220": power += 3; break; // Surprise Strike +3/+0 ForAttack
         case "JTL_177": power += 2; break; // Stay on Target +2/+0 ForAttack
         case "JTL_156": power += 4; break; // Trench Run +4/+0 ForAttack
@@ -232,6 +245,12 @@ export class Unit implements UnitInterface {
     // Black One — "While this unit is upgraded, it gets +1/+0."
     if (this.cardId === "JTL_147" && this.upgrades.length > 0 && !this.LostAbilities()) {
       power += 1;
+    }
+
+    // Doctor Aphra (deployed) — "While there are 5 or more different costs among cards in your
+    // discard pile, this unit gets +3/+0."
+    if (this.cardId === "SHD_015" && !this.LostAbilities() && DistinctCostsInDiscard(this.controller) >= 5) {
+      power += 3;
     }
 
     if (this.cardId === "JTL_249" && !this.LostAbilities()) {

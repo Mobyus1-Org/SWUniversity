@@ -1,14 +1,14 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
-import { CardCost, CardTitle } from "@/server/engine/card-db/generated";
+import { CardCost, CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { CreateCloneTrooper } from "@/server/engine/token-helpers";
+import { CreateCloneTrooper, CreateBattleDroid } from "@/server/engine/token-helpers";
 
 /**
  * On Attack abilities — called after the attack target is chosen.
@@ -312,6 +312,53 @@ function resolveInnateOnAttack(
           fromPlayIds: allUnits015.map(u => u.playId),
           continuation,
         },
+        continuation,
+      };
+    }
+    case "TWI_002": { // Nute Gunray (deployed) — "On Attack: Create a Battle Droid token."
+      const game002 = GetGame();
+      if (game002) CreateBattleDroid(game002.currentGameState, attacker.controller, game002.gameLog, "TWI_002");
+      return continuation;
+    }
+    case "TWI_014": { // Asajj Ventress (deployed) — "On Attack: If you played an event this phase,
+                      // this unit gets +1/+0 for this attack and deals combat damage before the
+                      // defender." (first strike)
+      const game014 = GetGame();
+      if (game014 && CardWasPlayedThisPhase(attacker.controller, undefined, "Event")) {
+        game014.currentGameState.currentEffects.push({ cardId: "TWI_014", duration: "ForAttack", affectedPlayer: attacker.controller, targetPlayId: attacker.playId });
+        game014.currentGameState.currentEffects.push({ cardId: "SOR_217_first_strike", duration: "ForAttack", affectedPlayer: attacker.controller, targetPlayId: attacker.playId });
+        game014.gameLog.push(`${CardTitle("TWI_014")}: +1/+0 and first strike for this attack (event played this phase).`);
+      }
+      return continuation;
+    }
+    case "TWI_006": { // Wat Tambor (deployed) — "On Attack: If a friendly unit was defeated this
+                      // phase, you may give another unit +2/+2 for this phase."
+      if (!UnitWasDefeatedThisPhase(attacker.controller)) return continuation;
+      const others006 = AllUnits().filter(u => u.playId !== attacker.playId);
+      if (others006.length === 0) return continuation;
+      return optionalTarget("TWI_006", attacker.controller, others006.map(u => u.playId),
+        "Give another unit +2/+2 for this phase?", { yesLabel: "Give +2/+2", continuation });
+    }
+    case "SOR_008": { // Hera Syndulla (deployed) — "On Attack: You may give an Experience token to
+                      // another unique unit."
+      const uniqueOthers008 = AllUnits()
+        .filter(u => u.playId !== attacker.playId && CardIsUnique(u.cardId));
+      if (uniqueOthers008.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "SOR_008",
+        player: attacker.controller,
+        helperText: "Give an Experience token to another unique unit?",
+        yesLabel: "Give Experience",
+        noLabel: "Skip",
+        onYes: {
+          type: "give-xp-multiple",
+          cardId: "SOR_008",
+          player: attacker.controller,
+          maxCount: 1,
+          eligiblePlayIds: uniqueOthers008.map(u => u.playId),
+          continuation,
+        } satisfies GiveXpMultiplePending,
         continuation,
       };
     }
