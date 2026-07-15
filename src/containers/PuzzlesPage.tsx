@@ -1269,6 +1269,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                   {opponent.spaceArena.map((unit) => <div key={unit.playId} className="relative w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
+                      imageId={getPreviewImageId(unit.cardId, CardIsLeader(unit.cardId))}
                       selectable={selectablePlayIds.includes(unit.playId)}
                       customGlowClass={getUnitGlowClass(unit.playId)}
                       onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
@@ -1314,6 +1315,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                   {opponent.groundArena.map((unit) => <div key={unit.playId} className="relative w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
+                      imageId={getPreviewImageId(unit.cardId, CardIsLeader(unit.cardId))}
                       selectable={selectablePlayIds.includes(unit.playId)}
                       customGlowClass={getUnitGlowClass(unit.playId)}
                       onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
@@ -1391,6 +1393,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                   {opponent.spaceArena.map((unit) => <div key={unit.playId} className="relative w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
+                      imageId={getPreviewImageId(unit.cardId, CardIsLeader(unit.cardId))}
                       selectable={selectablePlayIds.includes(unit.playId)}
                       customGlowClass={getUnitGlowClass(unit.playId)}
                       onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
@@ -1496,6 +1499,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                   {opponent.groundArena.map((unit) => <div key={unit.playId} className="relative w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
+                      imageId={getPreviewImageId(unit.cardId, CardIsLeader(unit.cardId))}
                       selectable={selectablePlayIds.includes(unit.playId)}
                       customGlowClass={getUnitGlowClass(unit.playId)}
                       onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
@@ -1673,7 +1677,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                   {player.spaceArena.map((unit) => <div key={unit.playId} className="relative w-24 shrink-0">
                     <CardVisual
                       cardId={unit.cardId}
-                      imageId={getPreviewImageId(unit.cardId)}
+                      imageId={getPreviewImageId(unit.cardId, CardIsLeader(unit.cardId))}
                       selectable={selectablePlayIds.includes(unit.playId)}
                       customGlowClass={getUnitGlowClass(unit.playId)}
                       onClick={selectablePlayIds.includes(unit.playId) ? () => handleUnitClick(unit.playId) : undefined}
