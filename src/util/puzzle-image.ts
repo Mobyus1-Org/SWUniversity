@@ -10,13 +10,16 @@ export const DEFAULT_PUZZLE_IMAGE = "SWUniversity_Cardback.png";
 
 /**
  * Normalize a user-entered puzzle image path (relative to public/assets/).
- * - blank -> "" (so the default applies)
+ * - blank (or the default card back) -> "" (so the default applies)
  * - a bare filename -> "puzzles/<filename>"
  * - an explicit path (contains "/") -> used as-is, with any leading slash stripped
+ *
+ * The default card back lives at public/assets/, not under puzzles/, so treating
+ * it as blank keeps the edit -> save round-trip from mis-filing it under puzzles/.
  */
 export function normalizePuzzleAssetPath(input: string): string {
   const trimmed = input.trim().replace(/^\/+/, "");
-  if (!trimmed) return "";
+  if (!trimmed || trimmed === DEFAULT_PUZZLE_IMAGE) return "";
   if (trimmed.includes("/")) return trimmed;
   return `puzzles/${trimmed}`;
 }

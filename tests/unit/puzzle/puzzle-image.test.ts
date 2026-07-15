@@ -22,6 +22,13 @@ describe("normalizePuzzleAssetPath", () => {
     expect(normalizePuzzleAssetPath("")).toBe("");
     expect(normalizePuzzleAssetPath("   ")).toBe("");
   });
+
+  it("treats the default card back as blank so re-saving doesn't mis-file it under puzzles/", () => {
+    // The default lives at public/assets/SWUniversity_Cardback.png, NOT under puzzles/.
+    // Edit-load seeds the builder with this filename; a naive re-save would produce
+    // "puzzles/SWUniversity_Cardback.png" (a broken link).
+    expect(normalizePuzzleAssetPath(DEFAULT_PUZZLE_IMAGE)).toBe("");
+  });
 });
 
 describe("puzzleImageSrc", () => {
