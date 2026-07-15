@@ -104,6 +104,14 @@ function resolveAutoOption(
     return { dispatchType: "choose-target", dispatchData: { targetIndices: [pickDiscardIndex(p2Hand)] } };
   }
 
+  // ASH_097 Moff Gideon (Remnant Commander) controlled by the opponent (P2): his "You may return
+  // a non-unique Imperial unit from your discard to your hand" When Defeated is the opponent's
+  // optional ability. Auto-skip it so the human is never prompted to resolve an enemy ability —
+  // returning a card to P2's hand can't affect the solver's single action phase anyway.
+  if (pending.type === "ability-option" && pending.cardId === "ASH_097" && pending.player === 2) {
+    return { dispatchType: "choose-option", dispatchData: { option: "No" } };
+  }
+
   // SHD_172 Krayt Dragon controlled by the opponent (P2): always fire and always hit the
   // human player's base — the worst-case, deterministic puzzle behaviour.
   if (pending.type === "ability-option" && pending.cardId === "SHD_172" && pending.player === 2) {

@@ -18,6 +18,7 @@ QA sends card requests in loose human language — one card per line, with infor
 3. **Leaders → both sides** (see below).
 4. **Overflow:** if more than 10 cards resolve, ask the user which 10 to run this session; list the rest.
 5. **Hand off:** invoke `implement-swu-card` with the resolved ID list (≤10). Add no confirmation step of your own, and do NOT pre-check whether a card is already implemented — `implement-swu-card`'s per-card brainstorm is the gate that decides.
+6. **Summarize:** once the batch is implemented, write the Discord-pasteable batch summary in chat (see Batch summary).
 
 ## Resolution recipe (per entry)
 
@@ -67,6 +68,30 @@ Resolves to:
 | Zeb (LAW) | **LAW_045** | Zeb Orellios | Fuzzy "Zeb" → two spellings; `(LAW)` picks LAW_045 over SOR_146. |
 
 Then invoke `implement-swu-card` on `LAW_008 LAW_168 ASH_116 SEC_110 LAW_045` (LAW_008 = both sides). 5 cards, well within the 10-card cap — no overflow prompt.
+
+## Batch summary (end of batch)
+
+After `implement-swu-card` finishes the batch, produce a **Discord-pasteable summary in chat** (not a file). This is the last step of every batch.
+
+Format — a plain `Added:` list, then an optional `Mechanics:` list:
+
+```
+Added:
+- <Card Title> (<SET>) <Type>
+- ...
+
+Mechanics:
+- <short, player-facing description of any new shared mechanic>
+```
+
+Rules:
+
+- **Only list cards that were actually implemented this batch** (skip any the per-card brainstorm found already done).
+- **Group by type in this order:** Leaders, Bases, Units, Events, Upgrades. Within a group, keep the batch order.
+- Use the card's **display title** (no subtitle needed) and its **set code** in parens (`SOR`, `SHD`, `TWI`, `JTL`, `LAW`, `SEC`, `ASH`, …). A leader is one line, `<Name> (<SET>) Leader` — do not split its two sides.
+- Include a card that was implemented incidentally to make the batch work (e.g. a combo partner), under its own type.
+- **Mechanics section is optional** — include it only when new shared/engine mechanics were added (a new trigger, a generic helper, a keyword). Describe each in one short player-facing line, not by function name. Omit the whole section if nothing engine-level was added.
+- Keep it terse. No preamble, no per-card notes — just the lists, ready to paste.
 
 ## Red flags
 
