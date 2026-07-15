@@ -280,6 +280,14 @@ function resolveInnateOnAttack(
       }
       return continuation;
     }
+    case "LOF_037": { // Darth Vader — "On Attack: Defeat an enemy unit with a Shield token on it."
+                      // Mandatory when there is a valid target (a shielded enemy, which may be a
+                      // leader unit and need not be the defender). Resolves before combat damage.
+      const shieldedEnemies037 = GetUnitsForPlayer(attacker.controller === 1 ? 2 : 1)
+        .filter(u => u.upgrades.some(up => up.cardId === "SOR_T02"));
+      if (shieldedEnemies037.length === 0) return continuation;
+      return mandatoryTarget("LOF_037_OA", attacker.controller, shieldedEnemies037.map(u => u.playId), continuation);
+    }
     case "ASH_009": { // Ahsoka Tano (deployed) — "On Attack: You may give a unit with less power
                       // than this unit +2/+0 for this phase."
       const weaker009 = AllUnits().filter(u =>

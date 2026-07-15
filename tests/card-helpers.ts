@@ -390,6 +390,7 @@ export const Cards = {
       kelleranBeq: "LOF_100",
       grogu: "LOF_246",
       gungi: "LOF_093",
+      darthVader: "LOF_037",
       priestessesOfTheForce: "LOF_072",
       strikeship: "LOF_131",
       witchOfTheMist: "LOF_154",
@@ -525,6 +526,7 @@ export const Cards = {
       timelyIntervention: "SHD_129",
       chooseSides: "SHD_132",
       midnightRepairs: "SHD_054",
+      daringRaid: "SHD_178",
     },
     sor: {
       searchYourFeelings: "SOR_042",
@@ -588,6 +590,7 @@ export const Cards = {
       droidDeployment: "TWI_237",
       dropIn: "TWI_251",
       takeCaptive: "TWI_128",
+      daringRaid: "TWI_170",
     },
     jtl: {
       repair: "JTL_075",
@@ -620,6 +623,7 @@ export const Cards = {
       sorcerousBlast: "LOF_172",
       shatterpoint: "LOF_079",
       protectThePod: "LOF_128",
+      shienFlurry: "LOF_220",
     },
   },
 }

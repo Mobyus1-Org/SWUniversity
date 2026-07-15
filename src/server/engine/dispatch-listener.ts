@@ -30,7 +30,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { GetAllUnits, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -1568,7 +1568,12 @@ function resolveAttack(
     // runs over every ability source the attacker has for this attack.
     const damagedDefenderBonus = defender.IsDamaged()
       && AttackAbilityCardIds(Unit.FromInterface(attacker)).includes("ASH_241") ? 2 : 0;
-    const effectiveAtkPower = Math.max(0, atkPower + damagedDefenderBonus - electrostaffModifier);
+    // Shien Flurry prevention on the DEFENDER reduces the attacker's damage before the Shield.
+    const effectiveAtkPower = ApplyDamagePrevention(
+      game, defender.playId,
+      Math.max(0, atkPower + damagedDefenderBonus - electrostaffModifier),
+      log,
+    );
     const defHpBefore = defender.CurrentHP();
     const defenderName = CardTitle(defender.cardId);
 
@@ -1603,7 +1608,12 @@ function resolveAttack(
     }
 
     // If first strike is active and defender is now defeated, counter-damage is 0.
-    const effectiveDefPower = hasFirstStrike && defender.CurrentHP() <= 0 ? 0 : defPower;
+    // Shien Flurry prevention on the ATTACKER reduces the counter-damage before its Shield.
+    const effectiveDefPower = ApplyDamagePrevention(
+      game, attacker.playId,
+      hasFirstStrike && defender.CurrentHP() <= 0 ? 0 : defPower,
+      log,
+    );
     if (hasFirstStrike && effectiveDefPower === 0 && defender.CurrentHP() <= 0) {
       log.push(`Shoot First: ${defenderName} defeated before dealing counter-damage.`);
     }
@@ -2649,6 +2659,18 @@ function queueUnitEntryTriggers(
   }
   if (opts?.injectEffect) {
     game.currentEffects.push({ ...opts.injectEffect, targetPlayId: unit.playId });
+    // Shien Flurry (LOF_220) grants the played unit both a phase-long Ambush (the injected effect)
+    // and a one-shot "prevent 2 of the next damage this phase" — a separate effect because it is
+    // consumed on the first damage instance rather than lasting the whole phase.
+    if (opts.injectEffect.cardId === "LOF_220") {
+      game.currentEffects.push({
+        cardId: "LOF_220_prevent",
+        duration: "Phase",
+        affectedPlayer: opts.injectEffect.affectedPlayer,
+        targetPlayId: unit.playId,
+        value: 2,
+      });
+    }
   }
   // SOR_143 Fighters for Freedom: when another Aggression card is played, may deal 1 damage to a base.
   if (cardId !== "SOR_143" && CardAspects(cardId).includes("Aggression")) {
@@ -4276,6 +4298,23 @@ function handleChooseTarget(
         log.push(`Player ${pending.player} played ${CardTitle(cardId) ?? cardId} via Timely Intervention.`);
         return completePlayCard(game, log, cardId, pending.player, {
           injectEffect: { cardId: "SHD_129", duration: "Phase", affectedPlayer: pending.player },
+        });
+      }
+      case "LOF_220": { // Shien Flurry — play a FORCE unit from hand (paying its cost).
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Shien Flurry: chosen card is not a Unit."), pending, stateChanged: false };
+        if (!CardTraits(cardId).includes("Force"))
+          return { response: invalidResponse("Shien Flurry: chosen unit does not have the Force trait."), pending, stateChanged: false };
+        const sfCost = playCost(game, pending.player, cardId);
+        if (spendableFor(game, pending.player) < sfCost)
+          return { response: invalidResponse("Shien Flurry: not enough resources to play this unit."), pending, stateChanged: false };
+        payResources(game, pending.player, sfCost, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId) ?? cardId} via Shien Flurry.`);
+        // injectEffect LOF_220 grants Ambush this phase (read in ambush.ts) and, via
+        // queueUnitEntryTriggers, spawns the sibling LOF_220_prevent one-shot prevention.
+        return completePlayCard(game, log, cardId, pending.player, {
+          injectEffect: { cardId: "LOF_220", duration: "Phase", affectedPlayer: pending.player },
         });
       }
       case "TWI_005": {
@@ -6947,6 +6986,18 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
       break;
     }
+    case "SHD_178": // Daring Raid — deal 2 damage to the chosen unit or base (TWI_170 is identical).
+    case "TWI_170": {
+      if (!targetPlayId) break;
+      const baseMatch178 = targetPlayId.match(/^player([12])\.base$/);
+      if (baseMatch178) {
+        dealBaseDamage(game.currentGameState, Number(baseMatch178[1]) as PlayerId, 2, pending.player);
+        game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 2 damage to player ${baseMatch178[1]}'s base.`);
+      } else {
+        DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
+      }
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
     case "SOR_016": { // Grand Admiral Thrawn — exhaust chosen unit
       if (!targetPlayId) break;
       const target016 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -7596,6 +7647,24 @@ function applyAbilityEffect(
         targetPlayId: unit224.playId,
       });
       break;
+    }
+    case "LOF_037": { // Darth Vader When Played — give a Shield token to the chosen unit (runs
+                      // twice: once for the friendly target, once for the enemy via continuation).
+      if (!targetPlayId) break;
+      const target037 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target037) break;
+      target037.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target037.owner, controller: target037.controller });
+      game.gameLog.push(`${CardTitle("LOF_037")}: Shield token placed on ${CardTitle(target037.cardId)}.`);
+      break;
+    }
+    case "LOF_037_OA": { // Darth Vader On Attack — defeat the chosen enemy unit that has a Shield.
+      if (!targetPlayId) break;
+      const target037OA = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target037OA) break;
+      game.gameLog.push(`${CardTitle("LOF_037")}: defeated ${CardTitle(target037OA.cardId)} (Shielded).`);
+      const defeat037 = defeatUnit(game.currentGameState, game.gameLog, target037OA);
+      if (defeat037) return injectContinuation(defeat037, pending.continuation ?? null);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "SOR_073": { // Moment of Peace — "Give a Shield token to a unit."
       if (!targetPlayId) break;

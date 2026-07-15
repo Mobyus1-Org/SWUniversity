@@ -161,6 +161,25 @@ export function resolveWhenPlayed(
         afterHeal: { type: "deal-healed-to-self", targetPlayId: playId },
         continuation: null,
       } satisfies SpreadHealPending;
+    case "LOF_037": { // Darth Vader — "When Played: Give a Shield token to a friendly unit and to an
+                      // enemy unit." Two mandatory steps: friendly first, then enemy.
+      const friendly037 = GetUnitsForPlayer(player);
+      const enemy037 = GetUnitsForPlayer(player === 1 ? 2 : 1);
+      if (friendly037.length === 0 || enemy037.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LOF_037",
+        player,
+        fromPlayIds: friendly037.map(u => u.playId),
+        continuation: {
+          type: "ability-target",
+          cardId: "LOF_037",
+          player,
+          fromPlayIds: enemy037.map(u => u.playId),
+          continuation: null,
+        },
+      };
+    }
     case "SOR_033": //Death Trooper "Deal 2 damage to a friendly ground unit and 2 damage to an enemy ground unit."
     case "SEC_030": {// reprint of SOR_033
       const friendlyGround = player === 1 ? game.currentGameState.player1.groundArena : game.currentGameState.player2.groundArena;
@@ -223,6 +242,18 @@ export function resolveWhenPlayed(
       const playerHand = player === 1 ? game129.currentGameState.player1.hand : game129.currentGameState.player2.hand;
       const handUnits = playerHand.filter(c => CardType(c.cardId) === "Unit");
       if (handUnits.length === 0) return null;
+      return {
+        type: "play-from-hand",
+        cardId,
+        player,
+      };
+    }
+    case "LOF_220": {//Shien Flurry: Play a Force unit from your hand. It gains Ambush this phase; prevent 2 of the next damage to it.
+      const game220 = GetGame();
+      if (!game220) throw new Error("Game not found in LOF_220 resolution.");
+      const hand220 = player === 1 ? game220.currentGameState.player1.hand : game220.currentGameState.player2.hand;
+      const forceUnits = hand220.filter(c => CardType(c.cardId) === "Unit" && CardTraits(c.cardId).includes("Force"));
+      if (forceUnits.length === 0) return null;
       return {
         type: "play-from-hand",
         cardId,
@@ -1076,6 +1107,16 @@ export function resolveWhenPlayed(
     }
     case "SOR_074": // Repair — Heal 3 damage from a unit or base.
     case "JTL_075": {
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: allUnitsAndBasesPlayIds(),
+        continuation: null,
+      };
+    }
+    case "SHD_178": // Daring Raid — "Deal 2 damage to a unit or base." (TWI_170 is an identical reprint.)
+    case "TWI_170": {
       return {
         type: "ability-target",
         cardId,

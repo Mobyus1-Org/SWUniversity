@@ -867,6 +867,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "LOF_037": //Darth Vader — On Attack: defeat an enemy unit with a Shield token on it
     case "ASH_009": //Ahsoka Tano (deployed) — On Attack: may give a weaker unit +2/+0 this phase
     case "ASH_014": //The Mandalorian (deployed) — On Attack: may draw a card with the initiative
     case "ASH_059": //Leia Organa (ASH) — On Attack: may self-damage to heal your base
@@ -1007,10 +1008,34 @@ export function GetUnitByPlayId(game: GameState, playId: string): Unit | null {
   return GetAllUnits(game).find((u) => u.playId === playId) ?? null;
 }
 
+/**
+ * Applies one-shot damage prevention (LOF_220 Shien Flurry: "the next time it would be dealt
+ * damage this phase, prevent 2 of that damage") to a damage instance about to hit `targetPlayId`.
+ * Returns the reduced amount, and consumes the effect the first time a real (>0) instance occurs.
+ * Applied BEFORE any Shield absorption, so a fully-prevented instance leaves a Shield token intact.
+ */
+export function ApplyDamagePrevention(gs: GameState, targetPlayId: string, amount: number, log?: string[]): number {
+  if (amount <= 0) return amount;
+  const idx = gs.currentEffects.findIndex(e => e.cardId === "LOF_220_prevent" && e.targetPlayId === targetPlayId);
+  if (idx === -1) return amount;
+  const prevent = gs.currentEffects[idx].value ?? 0;
+  gs.currentEffects.splice(idx, 1); // one-shot — consumed on the next damage instance
+  const reduced = Math.max(0, amount - prevent);
+  const prevented = amount - reduced;
+  if (prevented > 0 && log) {
+    const target = GetUnitByPlayId(gs, targetPlayId);
+    log.push(`${CardTitle("LOF_220")}: prevented ${prevented} damage to ${target ? CardTitle(target.cardId) : "a unit"}.`);
+  }
+  return reduced;
+}
+
 export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: string|undefined, amount: number, withLog?: string[]): void {
   if (!targetPlayId) return;
   const target = GetUnitByPlayId(gs, targetPlayId);
   if (!target) return;
+  if (amount <= 0) return;
+  // Shien Flurry prevention applies before the Shield, so a fully-prevented hit spares the Shield.
+  amount = ApplyDamagePrevention(gs, targetPlayId, amount, withLog);
   if (amount <= 0) return;
   // Shield token absorbs the entire instance of damage: prevent it and defeat one Shield token.
   const shieldIdx = target.upgrades.findIndex(u => u.cardId === "SOR_T02");
