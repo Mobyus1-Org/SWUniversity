@@ -21,6 +21,12 @@ export interface NeedsTarget {
   fromChoices?: string[];
   needsMultiple?: boolean;
   maxTargets?: number;
+  /**
+   * When `fromZones` includes "Base", restricts which players' bases are legal targets. An attack
+   * sets this to the enemy only (a unit can't attack its own base); "a base" ability targets leave
+   * it undefined, meaning either base is legal.
+   */
+  baseTargetPlayers?: PlayerId[];
 }
 
 export interface NeedsOption {

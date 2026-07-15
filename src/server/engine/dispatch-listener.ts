@@ -2068,10 +2068,14 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       if (!attacker) return { type: "Target" } satisfies NeedsTarget;
       const { unitPlayIds, includesBase } = computeAttackTargets(game, attacker);
       const allowBase = includesBase && pending.source !== "ambush" && pending.source !== "SOR_110";
+      // A unit can only attack the ENEMY base, never its own — restrict the base target so the UI
+      // doesn't offer both. ("A base" ability targets leave baseTargetPlayers undefined = either.)
+      const enemyOfAttacker: PlayerId = attacker.controller === 1 ? 2 : 1;
       return {
         type: "Target",
         fromPlayIds: unitPlayIds.length > 0 ? unitPlayIds : undefined,
         fromZones: allowBase ? ["Base"] : undefined,
+        baseTargetPlayers: allowBase ? [enemyOfAttacker] : undefined,
       } satisfies NeedsTarget;
     }
     case "ability-option":
@@ -3117,11 +3121,14 @@ function handleInitiateAttack(
     source: "normal-attack",
   };
   const { unitPlayIds, includesBase } = computeAttackTargets(game, attacker);
+  // A unit can only attack the ENEMY base — restrict the base target so the UI doesn't offer both.
+  const enemyOfAttacker: PlayerId = attacker.controller === 1 ? 2 : 1;
   return {
     response: resolutionResponse({
       type: "Target",
       fromPlayIds: unitPlayIds.length > 0 ? unitPlayIds : undefined,
       fromZones: includesBase ? ["Base"] : undefined,
+      baseTargetPlayers: includesBase ? [enemyOfAttacker] : undefined,
     }),
     pending: attackPending,
     stateChanged: false,

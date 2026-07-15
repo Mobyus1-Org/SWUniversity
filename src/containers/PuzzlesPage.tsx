@@ -1049,9 +1049,10 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
       </div>
     ) : null;
 
-  // Every base-targeting ability reads "a base" — either base is a legal choice.
+  // Base targets: an attack restricts to the enemy base (baseTargetPlayers); "a base" ability
+  // targets leave it undefined, so either base is a legal choice.
   const selectableBaseForPlayer: PlayerId[] = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Base")
-    ? [1, 2]
+    ? (resolutionNeeded.baseTargetPlayers ?? [1, 2])
     : [];
   // Clickable if deploy is still available (even exhausted) OR ability is ready
   const uiCanClickLeader = !resolutionNeeded && !isGameOver && !player.leader.deployed &&
