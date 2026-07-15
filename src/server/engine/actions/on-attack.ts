@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle } from "@/server/engine/card-db/generated";
@@ -279,6 +279,30 @@ function resolveInnateOnAttack(
         game189.gameLog.push(`${CardTitle("ASH_189")}: readied a resource.`);
       }
       return continuation;
+    }
+    case "LAW_101": { // Lawbringer — "On Attack: Choose an aspect. Give each enemy unit with that
+                      // aspect –2/–2 for this phase." (Same effect as its When Played.)
+      return {
+        type: "ability-target",
+        cardId: "LAW_101",
+        player: attacker.controller,
+        fromPlayIds: [],
+        fromChoices: LAWBRINGER_ASPECTS,
+        continuation,
+      };
+    }
+    case "LAW_048": { // Chio Fain — "On Attack: You may choose 2 players. If you do, they each draw
+                      // a card." With only two players, that is simply: both players may each draw.
+      return {
+        type: "ability-option",
+        cardId: "LAW_048",
+        player: attacker.controller,
+        helperText: "Both players each draw a card?",
+        yesLabel: "Both draw",
+        noLabel: "Skip",
+        onYes: null,
+        continuation,
+      };
     }
     case "LOF_037": { // Darth Vader — "On Attack: Defeat an enemy unit with a Shield token on it."
                       // Mandatory when there is a valid target (a shielded enemy, which may be a

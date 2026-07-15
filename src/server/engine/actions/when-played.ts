@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyAbilities } from "@/server/engine/core-functions";
 import { aspectPenalty } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -234,6 +234,30 @@ export function resolveWhenPlayed(
           fromPlayIds: rebelPlayIds,
           continuation: null,
         }
+      };
+    }
+    case "JTL_170": { // War Juggernaut — "When Played: Deal 1 damage to each of any number of units."
+      const allUnits170 = AllUnits();
+      if (allUnits170.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "JTL_170",
+        player,
+        fromPlayIds: allUnits170.map(u => u.playId),
+        needsMultiple: true,
+        maxTargets: allUnits170.length,
+        continuation: null,
+      };
+    }
+    case "LAW_101": { // Lawbringer — "When Played/On Attack: Choose an aspect. Give each enemy unit
+                      // with that aspect –2/–2 for this phase." (The On Attack side is in on-attack.ts.)
+      return {
+        type: "ability-target",
+        cardId: "LAW_101",
+        player,
+        fromPlayIds: [],
+        fromChoices: LAWBRINGER_ASPECTS,
+        continuation: null,
       };
     }
     case "SHD_129": {//Timely Intervention: Play a unit from your hand. Give it Ambush for this phase.
@@ -819,7 +843,11 @@ export function resolveWhenPlayed(
     }
     case "SOR_078": // Vanquish — "Defeat a non-leader unit."
     case "TWI_077": { // reprint of SOR_078
-      const eligible078 = AllUnits().filter(u => !Unit.FromInterface(u).IsLeader());
+      const eligible078 = AllUnits().filter(u =>
+        !Unit.FromInterface(u).IsLeader()
+        // A unit immune to enemy card abilities (SHD_187) can't be defeated by an opponent's Vanquish.
+        && !(UnitImmuneToEnemyAbilities(u.cardId) && u.controller !== player),
+      );
       if (eligible078.length === 0) return null;
       return mandatoryTarget(cardId, player, eligible078.map(u => u.playId));
     }

@@ -1,9 +1,9 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, CanDisclose, CaptureVictimsExistFor, DrawCardForPlayer, GetGame, GetGameState, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
+import { AllUnits, CanDisclose, CaptureVictimsExistFor, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { CardAspects, CardPower, CardTitle } from "@/server/engine/card-db/generated";
+import { CardAspects, CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { CreateBattleDroid, CreateTieFighter } from "@/server/engine/token-helpers";
 
@@ -290,6 +290,42 @@ function resolveOwnWhenDefeated(
       DrawCardForPlayer(game116.currentGameState, game116.gameLog, player);
       game116.gameLog.push(`${CardTitle("ASH_116")}: drew a card.`);
       return null;
+    }
+    case "LOF_059": { // Nightsister Warrior — When Defeated: Draw a card.
+      const game059 = GetGame();
+      if (!game059) return null;
+      DrawCardForPlayer(game059.currentGameState, game059.gameLog, player);
+      game059.gameLog.push(`${CardTitle("LOF_059")}: drew a card.`);
+      return null;
+    }
+    case "ASH_097": { // Moff Gideon (Remnant Commander) — When Defeated: You may return a
+                      // non-unique Imperial unit from your discard pile to your hand.
+      const game097 = GetGame();
+      if (!game097) return null;
+      const discard097 = GetPlayer(game097.currentGameState, player).discard;
+      const eligible097 = discard097.filter(c =>
+        CardType(c.cardId) === "Unit"
+        && CardTraits(c.cardId).includes("Imperial")
+        && !CardIsUnique(c.cardId),
+      );
+      if (eligible097.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId: "ASH_097",
+        player,
+        helperText: "Return a non-unique Imperial unit from your discard pile to your hand?",
+        yesLabel: "Return",
+        noLabel: "Skip",
+        onYes: {
+          type: "return-from-discard",
+          cardId: "ASH_097",
+          player,
+          maxCount: 1,
+          eligiblePlayIds: eligible097.map(c => c.playId),
+          continuation: null,
+        },
+        continuation: null,
+      };
     }
     case "SOR_163": { // Star Wing Scout — When Defeated: If you have the initiative, draw 2 cards.
       if (InitiativePlayer() !== player) return null;

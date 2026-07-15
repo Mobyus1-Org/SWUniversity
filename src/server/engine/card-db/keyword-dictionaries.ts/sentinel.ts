@@ -217,6 +217,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "ASH_048"://Imperial Armored Commando
     case "ASH_117"://Outland Protector
     case "ASH_126"://Survivors' Langskib
+    case "ASH_097"://Moff Gideon (Remnant Commander)
     case "ASH_239"://Imperial Loyalist
     case "ASH_252"://N5 Sentry Droid
       return true;

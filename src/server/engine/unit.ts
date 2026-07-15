@@ -250,6 +250,12 @@ export class Unit implements UnitInterface {
       if (this.cardId === "TWI_012") power += Math.floor(GetBaseDamage(this.controller) / 5); // Anakin Skywalker (leader unit)
     }
 
+    // War Juggernaut — "This unit gets +1/+0 for each damaged unit." (Any unit in play with damage,
+    // both sides, including itself.) A constant ability, so it is lost if the unit loses abilities.
+    if (this.cardId === "JTL_170" && !this.LostAbilities()) {
+      power += [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].filter(u => u.damage > 0).length;
+    }
+
     if (isAttacking) {
       power += RaidAmount(this.cardId, this.playId, this.controller);
     }

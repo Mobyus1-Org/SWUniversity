@@ -626,6 +626,9 @@ export function CanDisclose(player: PlayerId, aspects: string[]): boolean {
 /** The five aspects Leia (SEC_004) may disclose — Villainy is deliberately not among them. */
 export const SEC_004_ASPECTS = ["Vigilance", "Command", "Aggression", "Cunning", "Heroism"];
 
+/** The six card aspects — the options for LAW_101 Lawbringer's "Choose an aspect". */
+export const LAWBRINGER_ASPECTS = ["Vigilance", "Command", "Aggression", "Cunning", "Heroism", "Villainy"];
+
 /** True when the player's hand holds a card carrying at least one of the given aspects. */
 export function CanDiscloseAnyOf(player: PlayerId, aspects: string[]): boolean {
   return GetHand(player).some(c => CardAspects(c.cardId).some(a => aspects.includes(a)));
@@ -749,7 +752,7 @@ export function CaptureVictimsExistFor(captor: UnitInterface): boolean {
   const enemy: PlayerId = captor.controller === 1 ? 2 : 1;
   const enemyState = enemy === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
   const units = arena === "Ground" ? enemyState.groundArena : enemyState.spaceArena;
-  return units.some(u => !CardIsLeader(u.cardId));
+  return units.some(u => !CardIsLeader(u.cardId) && !UnitImmuneToEnemyAbilities(u.cardId));
 }
 
 /** The upgrade with this playId, wherever it is attached, or null. */
@@ -867,6 +870,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "LAW_101": //Lawbringer — On Attack: choose an aspect, give enemy units with it –2/–2
+    case "LAW_048": //Chio Fain — On Attack: may have both players each draw a card
     case "LOF_037": //Darth Vader — On Attack: defeat an enemy unit with a Shield token on it
     case "ASH_009": //Ahsoka Tano (deployed) — On Attack: may give a weaker unit +2/+0 this phase
     case "ASH_014": //The Mandalorian (deployed) — On Attack: may draw a card with the initiative
@@ -1029,11 +1034,28 @@ export function ApplyDamagePrevention(gs: GameState, targetPlayId: string, amoun
   return reduced;
 }
 
-export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: string|undefined, amount: number, withLog?: string[]): void {
+/**
+ * Units that "can't be captured, damaged, or defeated by enemy card abilities" (SHD_187 Lurking
+ * TIE Phantom). Combat is not a card ability, so it still damages/defeats them — every such vector
+ * routes through a card ability's target selection or DealDamageToUnit, never through combat.
+ */
+export function UnitImmuneToEnemyAbilities(cardId: string): boolean {
+  return cardId === "SHD_187";
+}
+
+export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: string|undefined, amount: number, withLog?: string[], sourcePlayer?: PlayerId): void {
   if (!targetPlayId) return;
   const target = GetUnitByPlayId(gs, targetPlayId);
   if (!target) return;
   if (amount <= 0) return;
+  // Immunity to enemy card abilities: all DealDamageToUnit is ability damage (combat damage is
+  // applied directly in resolveAttack, never here). Prevent unless the source is the unit's own
+  // controller. `sourcePlayer` is undefined for most callers, so enemy AoE/targeted damage is
+  // blocked by default; a friendly effect must pass sourcePlayer to damage its own immune unit.
+  if (UnitImmuneToEnemyAbilities(target.cardId) && sourcePlayer !== target.controller) {
+    if (withLog) withLog.push(`${CardTitle(target.cardId)} can't be damaged by enemy card abilities.`);
+    return;
+  }
   // Shien Flurry prevention applies before the Shield, so a fully-prevented hit spares the Shield.
   amount = ApplyDamagePrevention(gs, targetPlayId, amount, withLog);
   if (amount <= 0) return;
@@ -1062,7 +1084,7 @@ export function chooseAndDefeatUnit(
   const game = GetGame();
   if (!game) throw new Error("Game not found in chooseAndDefeatUnit");
   const opponent = GetOtherPlayer(player);
-  const opponentUnits = GetUnitsForPlayer(opponent);
+  const opponentUnits = GetUnitsForPlayer(opponent).filter(u => !UnitImmuneToEnemyAbilities(u.cardId));
   const eligible = includeLeaders ? opponentUnits : opponentUnits.filter(u => !CardIsLeader(u.cardId));
   if (eligible.length === 0) return null;
   return {

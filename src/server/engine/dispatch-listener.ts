@@ -115,7 +115,7 @@ import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { UpgradeImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource } from "@/server/engine/core-functions";
+import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -270,7 +270,7 @@ function CaptureVictimPlayIds(game: GameState, captor: Unit): string[] {
   const enemyArena = arena === "Ground"
     ? (GetPlayer(game, enemy).groundArena as Unit[])
     : (GetPlayer(game, enemy).spaceArena as Unit[]);
-  return enemyArena.filter(u => !CardIsLeader(u.cardId)).map(u => u.playId);
+  return enemyArena.filter(u => !CardIsLeader(u.cardId) && !UnitImmuneToEnemyAbilities(u.cardId)).map(u => u.playId);
 }
 
 function sweepDeadUnits(gs: GameState, log: string[], continuation: PendingResolution | null): PendingResolution | null {
@@ -762,6 +762,13 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
         const base = trigger.fromPlayer === 1 ? game.player1.base : game.player2.base;
         base.damage = Math.max(0, base.damage - 1);
         return null;
+      case "LOF_130": { // HK-47 — When an enemy unit is defeated: Deal 1 damage to its controller's
+                        // base. The defeated unit's controller is the opponent of HK-47's controller.
+        const opp130: PlayerId = trigger.fromPlayer === 1 ? 2 : 1;
+        dealBaseDamage(game, opp130, 1, trigger.fromPlayer);
+        log.push(`${CardTitle("LOF_130")}: dealt 1 damage to player ${opp130}'s base.`);
+        return null;
+      }
       case "SOR_036": //Gideon Hask — When an enemy unit is defeated: Give an Experience token to a friendly unit.
         const friendlyUnits = GetUnitsForPlayer(trigger.fromPlayer);
         if (friendlyUnits.length === 0) return null;
@@ -3583,6 +3590,22 @@ function handleChooseTarget(
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
+    if (pending.cardId === "JTL_170") { // War Juggernaut — deal 1 to each chosen unit (any number).
+      const chosen170 = data.targetPlayIds ?? [];
+      for (const id of chosen170) {
+        if (!pending.fromPlayIds.includes(id))
+          return { response: invalidResponse(`Unit ${id} is not a valid target for ${CardTitle("JTL_170")}.`), pending, stateChanged: false };
+      }
+      for (const id of chosen170) {
+        DealDamageToUnit(game, "JTL_170", id, 1, log);
+      }
+      const next170 = sweepDeadUnits(game, log, pending.continuation ?? null);
+      if (next170?.type === "resolve-attack") return handleResolveAttack(game, log, next170);
+      if (next170) return { response: resolutionResponse(pendingToResolution(next170, game)), pending: next170, stateChanged: true };
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
     if (!chosen && !chosenBase)
       return { response: invalidResponse("choose-target must include targetPlayIds or targetZones."), pending, stateChanged: false };
     if (chosen && pending.fromPlayIds.length > 0 && !pending.fromPlayIds.includes(chosen))
@@ -5045,6 +5068,12 @@ function applyAbilityOptionEffect(
       const player014 = mando014 ? mando014.controller : pending.player!;
       DrawCardForPlayer(game, log, player014);
       log.push(`${CardTitle("ASH_014")}: drew a card.`);
+      return pending.continuation ?? null;
+    }
+    case "LAW_048": { // Chio Fain On Attack Yes — both players each draw a card.
+      DrawCardForPlayer(game, log, 1);
+      DrawCardForPlayer(game, log, 2);
+      log.push(`${CardTitle("LAW_048")}: both players drew a card.`);
       return pending.continuation ?? null;
     }
     case "ASH_014_initiative": { // The Mandalorian (leader side) Yes — pay 1 resource, draw a card.
@@ -7292,6 +7321,18 @@ function applyAbilityEffect(
       if (target050) GiveStatModForPhase("ASH_050", target050, -2, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
+    case "LAW_101": { // Lawbringer — the chosen aspect arrives as targetPlayId; give each enemy unit
+                      // with that aspect –2/–2 for this phase.
+      const aspect101 = targetPlayId;
+      if (!aspect101) break;
+      const opp101 = pending.player === 1 ? 2 : 1;
+      for (const enemy of GetUnitsForPlayer(opp101)) {
+        if (CardAspects(enemy.cardId).includes(aspect101)) {
+          GiveStatModForPhase("LAW_101", enemy, -2, game.gameLog);
+        }
+      }
+      break;
+    }
     case "ASH_209": { // Ezra Bridger On Attack: give the chosen unit –3/–0 for this phase.
       if (!targetPlayId) break;
       const target209 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -8824,7 +8865,8 @@ function applyAbilityEffect(
         const enemyArena = captorArena === "Ground"
           ? (GetPlayer(game.currentGameState, enemyPlayer).groundArena as Unit[])
           : (GetPlayer(game.currentGameState, enemyPlayer).spaceArena as Unit[]);
-        const eligible = enemyArena.filter(u => !CardIsLeader(u.cardId));
+        // SHD_187 and other immune units can't be captured by an opponent's card ability.
+        const eligible = enemyArena.filter(u => !CardIsLeader(u.cardId) && !UnitImmuneToEnemyAbilities(u.cardId));
         if (eligible.length === 0) break;
         return {
           type: "ability-target",
