@@ -871,6 +871,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
   //cards with innate on-attack abilities
   switch (cardId) {
     case "LAW_101": //Lawbringer — On Attack: choose an aspect, give enemy units with it –2/–2
+    case "SEC_015": //C-3PO (deployed) — On Attack: if you control another exhausted unit, may exhaust a unit
     case "LAW_048": //Chio Fain — On Attack: may have both players each draw a card
     case "LOF_037": //Darth Vader — On Attack: defeat an enemy unit with a Shield token on it
     case "ASH_009": //Ahsoka Tano (deployed) — On Attack: may give a weaker unit +2/+0 this phase

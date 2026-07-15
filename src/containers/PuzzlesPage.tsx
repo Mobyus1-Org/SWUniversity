@@ -105,7 +105,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   //Legacy of the Force
   "LOF_002", "LOF_003", "LOF_007",
   //Secrets of Power
-  "SEC_004",
+  "SEC_004", "SEC_015",
   //ASH
   "ASH_009",
 ]);
@@ -114,6 +114,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
 // Mirrors the playId block of ActionAbilities() in action-ability.ts.
 const UNITS_WITH_ACTION_ABILITY: Record<string, string> = {
   "SHD_028": "Draw a card",
+  "LOF_206": "Attack with a Droid",
 };
 
 const BASES_WITH_EPIC_ACTION = new Set([

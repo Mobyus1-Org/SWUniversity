@@ -392,6 +392,7 @@ export const Cards = {
       kelleranBeq: "LOF_100",
       grogu: "LOF_246",
       gungi: "LOF_093",
+      babuFrik: "LOF_206",
       nightsisterWarrior: "LOF_059",
       hk47: "LOF_130",
       darthVader: "LOF_037",
@@ -519,6 +520,7 @@ export const Cards = {
     lof: {
       bolsteredEndurance: "LOF_074",
       constructedLightsaber: "LOF_261",
+      sizeMattersNot: "LOF_056",
       cravingPower: "LOF_091",
     },
     ash: {

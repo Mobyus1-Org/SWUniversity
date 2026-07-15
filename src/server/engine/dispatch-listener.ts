@@ -1455,7 +1455,12 @@ function resolveAttack(
     cardId: attacker.cardId,
     playId: attacker.playId,
   });
-  const atkPower = attacker.CurrentPower(true);
+  // Babu Frik (LOF_206): for this attack the unit deals damage equal to its remaining HP instead
+  // of its power. The ForAttack effect is set when Babu Frik sends it in.
+  const dealsHpAsDamage = game.currentEffects.some(
+    e => e.cardId === "LOF_206_hp_as_damage" && e.targetPlayId === attacker.playId && e.duration === "ForAttack",
+  );
+  const atkPower = dealsHpAsDamage ? Math.max(0, attacker.CurrentHP()) : attacker.CurrentPower(true);
   const attackerName = CardTitle(attacker.cardId);
 
   if (target.type === "base") {
@@ -6346,6 +6351,35 @@ function resolveActionAbility(
   playId?: string,
 ): PendingResolution | null {
   switch (cardId) {
+    case "SEC_015": { // C-3PO (leader) — Action [1 resource, Exhaust]: If you control an exhausted
+                      // unit, exhaust a unit. The "if" is a soft condition (soft-pass if unmet).
+      if (!GetUnitsForPlayer(player).some(u => !u.ready)) {
+        log.push(`${CardTitle("SEC_015")}: no exhausted unit controlled — soft pass.`);
+        return null;
+      }
+      const allUnits015 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      if (allUnits015.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SEC_015",
+        player,
+        fromPlayIds: allUnits015.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "LOF_206": { // Babu Frik — Action [Exhaust]: attack with a friendly Droid unit; for that
+                      // attack it deals damage equal to its remaining HP instead of its power.
+      const droids206 = GetUnitsForPlayer(player, true)
+        .filter(u => u.playId !== playId && TraitContains(u.cardId, "Droid", player, u.playId));
+      if (droids206.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LOF_206",
+        player,
+        fromPlayIds: droids206.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "SOR_002": { // Iden Versio — Action [Exhaust]: If an enemy unit was defeated this phase, heal 1 damage from your base.
       const otherPlayer002: PlayerId = player === 1 ? 2 : 1;
       if (!UnitWasDefeatedThisPhase(otherPlayer002)) {
@@ -7043,6 +7077,15 @@ function applyAbilityEffect(
       }
       break;
     }
+    case "SEC_015": { // C-3PO (both sides) — exhaust the chosen unit.
+      if (!targetPlayId) break;
+      const target015 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target015) {
+        target015.ready = false;
+        game.gameLog.push(`${CardTitle("SEC_015")}: exhausted ${CardTitle(target015.cardId)}.`);
+      }
+      break;
+    }
     case "SOR_178": { // Cartel Spacer — exhaust chosen enemy unit
       if (!targetPlayId) break;
       const opp178 = pending.player === 1 ? game.currentGameState.player2 : game.currentGameState.player1;
@@ -7327,6 +7370,23 @@ function applyAbilityEffect(
       const target050 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target050) GiveStatModForPhase("ASH_050", target050, -2, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "LOF_206": { // Babu Frik — the chosen friendly Droid attacks, dealing damage equal to its
+                      // remaining HP instead of its power. Mark it with a ForAttack effect the
+                      // combat step reads, then send it into a normal attack.
+      if (!targetPlayId) break;
+      game.currentGameState.currentEffects.push({
+        cardId: "LOF_206_hp_as_damage",
+        duration: "ForAttack",
+        affectedPlayer: pending.player!,
+        targetPlayId,
+      });
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "LOF_206",
+        continuation: null,
+      };
     }
     case "LAW_101": { // Lawbringer — the chosen aspect arrives as targetPlayId; give each enemy unit
                       // with that aspect –2/–2 for this phase.

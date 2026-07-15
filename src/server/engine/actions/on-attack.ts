@@ -291,6 +291,30 @@ function resolveInnateOnAttack(
         continuation,
       };
     }
+    case "SEC_015": { // C-3PO (deployed) — "On Attack: If you control another exhausted unit, you
+                      // may exhaust a unit." Condition: an exhausted unit other than the attacker.
+      const hasOtherExhausted015 = GetUnitsForPlayer(attacker.controller)
+        .some(u => u.playId !== attacker.playId && !u.ready);
+      if (!hasOtherExhausted015) return continuation;
+      const allUnits015 = AllUnits();
+      if (allUnits015.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "SEC_015",
+        player: attacker.controller,
+        helperText: "Exhaust a unit?",
+        yesLabel: "Exhaust",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "SEC_015",
+          player: attacker.controller,
+          fromPlayIds: allUnits015.map(u => u.playId),
+          continuation,
+        },
+        continuation,
+      };
+    }
     case "LAW_048": { // Chio Fain — "On Attack: You may choose 2 players. If you do, they each draw
                       // a card." With only two players, that is simply: both players may each draw.
       return {

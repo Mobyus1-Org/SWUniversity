@@ -79,6 +79,16 @@ function forceChokeDiscount(game: GameState, player: PlayerId, cardId: string): 
   return hasForceUnit ? 1 : 0;
 }
 
+// LOF_056 Size Matters Not: this upgrade costs 1 less to play if you control a Force unit.
+function sizeMattersNotDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (cardId !== "LOF_056") return 0;
+  const p = player === 1 ? game.player1 : game.player2;
+  const hasForceUnit = [...p.groundArena, ...p.spaceArena].some(
+    u => CardTraits(u.cardId).includes("Force") && !Unit.FromInterface(u).LostAbilities(),
+  );
+  return hasForceUnit ? 1 : 0;
+}
+
 // SOR_056 Bendu: next non-Heroism non-Villainy card costs 2 less (consumed on use).
 function benduDiscount(game: GameState, player: PlayerId, cardId: string): number {
   if (CardAspects(cardId).includes("Heroism") || CardAspects(cardId).includes("Villainy")) return 0;
@@ -102,6 +112,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     + delMeekoEventTax(game, player, cardId)
     - guardianOfTheWhillsDiscount(game, player, cardId)
     - forceChokeDiscount(game, player, cardId)
+    - sizeMattersNotDiscount(game, player, cardId)
     - jabbaTheTrickDiscount(game, player, cardId)
     - benduDiscount(game, player, cardId)
     - gnkPowerDroidDiscount(game, player, cardId)

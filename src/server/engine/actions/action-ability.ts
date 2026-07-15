@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, CanDiscloseAnyOf, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS } from "@/server/engine/core-functions";
+import { AllUnits, CanDiscloseAnyOf, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { CardTraits } from "@/server/engine/card-db/generated";
 import { PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -49,6 +49,7 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "SHD_007": //Moff Gideon - Formidable Commander
       case "SHD_009": //Hunter - Outcast Sergeant
       case "SHD_010": //Bossk - Hunting His Prey
+      case "SEC_015": //C-3PO - Human-Cyborg Relations: Action [1 resource, Exhaust]: if you control an exhausted unit, exhaust a unit. (Soft-passes if the condition isn't met.)
       case "SHD_012": //Bo-Katan Kryze - Princess in Exile
       case "SHD_013": //Han Solo - Worth the Risk
       case "SHD_016": //Fennec Shand - Honoring the Deal
@@ -178,6 +179,11 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "LOF_246": // Grogu — Action [Exhaust]: Heal up to 2 from a unit; if healed, deal that to a unit.
         abilities.push(cardId);
         break;
+      case "LOF_206": // Babu Frik — Action [Exhaust]: attack with a friendly Droid unit (deals HP as damage).
+        if (GetUnitsForPlayer(player, true).some(u => u.playId !== playId && TraitContains(u.cardId, "Droid", player, u.playId))) {
+          abilities.push(cardId);
+        }
+        break;
       case "SOR_093": // Alliance Dispatcher — Action [Exhaust]: Play a unit from hand at -1 cost.
         if (PlayerHasUnitsInHand(player)) abilities.push(cardId);
         break;
@@ -205,6 +211,8 @@ export function ActionAbilityCost(cardId: string): number {
     case "LAW_010"://Leia Organa - Someone Who Loves You
       return 2;
     case "SEC_004"://Leia Organa - Of A Secret Bloodline
+      return 1;
+    case "SEC_015"://C-3PO - Human-Cyborg Relations
       return 1;
     case "SOR_005"://Luke Skywalker
       return 1;
