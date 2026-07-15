@@ -91,6 +91,19 @@ Then per card:
 
 Follow the conventions in memory: card test files go in `tests/unit/<set>/`, named `<card-title>.test.ts`. Use `Cards.*` helpers — never raw card ID strings.
 
+## Writing card tests (fixture pitfalls)
+
+Most wasted debug cycles come from wrong test *fixtures*, not wrong engine code. Before blaming the engine when a card test fails, suspect the fixture — several times a "bug" was the test setup being wrong while the engine was right.
+
+- **Pull stats from `generated.ts`, never from memory.** Cost / power / HP / arena / traits live in separate parallel maps (`cardCost`, `cardPower`, `cardHp`, `cardArena`, …). Confirm the exact values and the arena (Ground vs Space) for every card in the fixture — a unit you assumed was 3/7 space may be 4/6 ground.
+- **Over-fill resources.** Aspect penalties make a card's effective cost higher than its printed cost, so `FillResourcesForPlayer(p, ..., <printed cost>)` can leave it unplayable with a silent "cannot afford". Fill generously (e.g. 14) unless the test is specifically about resource limits.
+- **Account for what the engine does to the fixture before your assertion.** A unit that dies to counter-damage never reaches its own When-Attack-Ends / When-Defeated trigger; a `–X/–X` debuff can legitimately defeat a unit whose existing damage now exceeds its reduced HP; the engine tolerates 0-HP units sitting in play, so an unconditional sweep is wrong. If the fixture needs the attacker to *survive* to fire a late trigger, give the defender 0 power.
+- **Always write the control case.** Alongside "the ability does X", assert "the same setup *without* the ability does not do X" — that's what proves your code is what caused the effect, not something incidental.
+
+### Test the mechanic at its latest lifecycle point
+
+When a card plugs into a shared or multi-stage mechanic (a grant that is later cleaned up, a keyword lent for one attack, anything with trigger ordering), the dangerous bug is the one that only shows when the borrowed ability fires at the *last* possible moment — e.g. a granted "When Attack Ends" ability read *after* the grant was already cleared. Such a bug passes every test whose cards happen to fire earlier. So order your cases by pipeline depth and include one that exercises the mechanic at its latest stage; don't rely on later cards to surface it.
+
 ## UI Registration gate (activatable abilities)
 
 The engine tests do **not** render the Puzzles UI, so a fully-wired, fully-tested activatable ability can still be invisible in-game because `src/containers/PuzzlesPage.tsx` keeps hand-maintained lists of which cards show an action button. These lists are duplicate registries of `ActionAbilities()` — nothing keeps them in sync, and `npm test` passes without the entry.
@@ -137,3 +150,5 @@ Do not just update the Notes text — the entry must be deleted and the counts m
 - Implemented a Leader or a unit with an `Action [...]` ability, tests pass, but never opened `PuzzlesPage.tsx` → the action button won't render in-game; add the cardId to the matching UI list (see UI Registration gate)
 - "The main ability works, the rest is an edge case / flavor" → each mechanical clause is in scope, including optional "may" branches
 - A card grants a keyword and you assumed it "just works" → verify it's wired through its dictionary and has a test
+- Card test fails and you start editing the engine → first suspect the fixture (wrong stats-from-memory, under-filled resources hitting an aspect penalty, attacker died before its late trigger). See Writing card tests.
+- Card touches a shared/lifecycle mechanic (granted keyword, cleaned-up effect, trigger ordering) and every test happens to fire it early → add a case that exercises it at the mechanic's latest stage, or a late-firing bug ships green.
