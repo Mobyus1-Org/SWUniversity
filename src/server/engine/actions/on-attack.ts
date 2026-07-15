@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
@@ -911,6 +911,94 @@ function resolveInnateOnAttack(
         damagedOthers059.map(u => u.playId),
         "Heal 2 damage from another unit?",
         { yesLabel: "Heal 2", sourcePlayId: attacker.playId, continuation });
+    }
+    case "JTL_004": { // Rose Tico (deployed) — On Attack: You may heal 2 damage from a Vehicle unit.
+      const damagedVehicles004 = AllUnits()
+        .filter(u => u.damage > 0 && TraitContains(u.cardId, "Vehicle", u.controller, u.playId));
+      if (damagedVehicles004.length === 0) return continuation;
+      return optionalTarget(attacker.cardId, attacker.controller,
+        damagedVehicles004.map(u => u.playId),
+        "Heal 2 damage from a Vehicle unit?",
+        { yesLabel: "Heal 2", sourcePlayId: attacker.playId, continuation });
+    }
+    case "LOF_015": { // Cal Kestis (deployed) — On Attack: An opponent chooses a ready unit they
+                      // control. Exhaust that unit.
+      const opp015 = attacker.controller === 1 ? 2 : 1;
+      const readyEnemy015 = GetUnitsForPlayer(opp015).filter(u => u.ready);
+      if (readyEnemy015.length === 0) return continuation;
+      return {
+        type: "ability-target",
+        cardId: "LOF_015",
+        player: attacker.controller,
+        fromPlayIds: readyEnemy015.map(u => u.playId),
+        continuation,
+      };
+    }
+    case "LOF_014": { // Grand Inquisitor (deployed) — On Attack: The defender gets -2/-0 for this attack.
+      if (continuation.target.type === "unit") {
+        const game014 = GetGame();
+        const def014 = AllUnits().find(u => u.playId === (continuation.target as { playId: string }).playId);
+        if (game014 && def014) {
+          GivePowerMod("LOF_014", def014, -2, "ForAttack", game014.gameLog);
+          game014.gameLog.push(`${CardTitle("LOF_014")}: defender gets -2/-0 for this attack.`);
+        }
+      }
+      return continuation;
+    }
+    case "LOF_009": { // Darth Maul (deployed) — On Attack: Deal 1 damage to a unit and 1 damage to a
+                      // different unit.
+      const game009 = GetGame();
+      if (!game009) return continuation;
+      const units009 = AllUnits();
+      if (units009.length === 0) return continuation;
+      return {
+        type: "ability-target",
+        cardId: "LOF_009_a",
+        player: attacker.controller,
+        fromPlayIds: units009.map(u => u.playId),
+        continuation,
+      };
+    }
+    case "LOF_005": { // Morgan Elsbeth (deployed) — On Attack: The next unit you play this phase costs
+                      // 1 resource less if it shares a keyword with a friendly unit.
+      const game005 = GetGame();
+      if (game005 && !game005.currentGameState.currentEffects.some(e => e.cardId === "LOF_005" && e.affectedPlayer === attacker.controller)) {
+        game005.currentGameState.currentEffects.push({ cardId: "LOF_005", duration: "Phase", affectedPlayer: attacker.controller });
+        game005.gameLog.push(`${CardTitle("LOF_005")}: next keyword-sharing unit you play this phase costs 1 less.`);
+      }
+      return continuation;
+    }
+    case "JTL_010": { // Captain Phasma (deployed) — On Attack: If you played another First Order card
+                      // this phase, you may deal 1 damage to a unit. If you do, deal 1 damage to a base.
+      if (!CardWasPlayedThisPhase(attacker.controller, "First Order")) return continuation;
+      const units010 = AllUnits();
+      if (units010.length === 0) return continuation; // no unit to deal to → the whole ability is skipped
+      // Accept → 1 to a chosen unit, then 1 to a chosen base, then combat. Decline → straight to combat.
+      const baseStep010: PendingResolution = {
+        type: "ability-target",
+        cardId: "JTL_010_base",
+        player: attacker.controller,
+        fromPlayIds: [],
+        fromZones: ["Base"],
+        continuation,
+      };
+      return {
+        type: "ability-option",
+        cardId: "JTL_010",
+        player: attacker.controller,
+        sourcePlayId: attacker.playId,
+        helperText: "Deal 1 damage to a unit (then 1 to a base)?",
+        yesLabel: "Deal 1",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "JTL_010_unit",
+          player: attacker.controller,
+          fromPlayIds: units010.map(u => u.playId),
+          continuation: baseStep010,
+        },
+        continuation,
+      };
     }
     case "SOR_206": { // Mining Guild TIE Fighter — On Attack: You may pay 2. If you do, draw a card.
       const game206 = GetGame();

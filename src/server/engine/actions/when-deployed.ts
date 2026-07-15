@@ -116,6 +116,40 @@ export function resolveWhenDeployed(
       const leader008 = (player === 1 ? game.currentGameState.player1 : game.currentGameState.player2).leader;
       return chooseFriendlyForPowerDamage("LAW_008_wd", player, { excludePlayId: leader008.deployedPlayId });
     }
+    case "LOF_012": { // Rey — When Deployed: You may discard your hand. If you do, draw 2 cards.
+      const hand012 = (player === 1 ? game.currentGameState.player1 : game.currentGameState.player2).hand;
+      if (hand012.length === 0) return null; // nothing to discard — the option is meaningless
+      return {
+        type: "ability-option",
+        cardId: "LOF_012_wd",
+        player,
+        helperText: "Discard your hand to draw 2 cards?",
+        yesLabel: "Discard & draw 2",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: null,
+      };
+    }
+    case "JTL_014": { // Admiral Trench — When Deployed: Reveal the top 4 cards of your deck. An
+                      // opponent discards 2 of them. Draw 1 of the remaining cards and discard the other.
+      const deck014 = (player === 1 ? game.currentGameState.player1 : game.currentGameState.player2).deck;
+      if (deck014.length === 0) return null;
+      // The top of the deck is the END of the array; reveal up to 4 from the top.
+      const revealCount = Math.min(4, deck014.length);
+      const revealed = deck014.splice(deck014.length - revealCount, revealCount)
+        .map((c, i) => ({ tempId: String(i), cardId: c.cardId }));
+      log.push(`${CardTitle("JTL_014")}: revealed the top ${revealed.length} card(s) of the deck.`);
+      const opponent: PlayerId = player === 1 ? 2 : 1;
+      return {
+        type: "trench-reveal",
+        cardId: "JTL_014",
+        player,
+        chooser: opponent,
+        stage: "opponent-discard",
+        revealed,
+        continuation: null,
+      };
+    }
     default:
       return null;
   }

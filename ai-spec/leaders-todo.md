@@ -2,7 +2,7 @@
 
 _Generated 2026-07-15 by an automated scan._
 
-**60 unimplemented** of 155 canonical leaders across all sets.
+**50 unimplemented** of 155 canonical leaders across all sets.
 
 ## Method & caveats
 
@@ -27,22 +27,14 @@ _All canonical leaders implemented._
 - [ ] `TWI_017` Chancellor Palpatine — Playing Both Sides
 
 ### JTL — Jump to Lightspeed
-**4 unimplemented** of 18 canonical leaders.
+**0 unimplemented** of 18 canonical leaders.
 
-- [ ] `JTL_004` Rose Tico — Saving What We Love
-- [ ] `JTL_005` Admiral Piett — Commanding the Armada
-- [ ] `JTL_010` Captain Phasma — Chrome Dome
-- [ ] `JTL_014` Admiral Trench — Chk-chk-chk-chk
+_All canonical leaders implemented._
 
 ### LOF — Legends of the Force
-**6 unimplemented** of 18 canonical leaders.
+**0 unimplemented** of 18 canonical leaders.
 
-- [ ] `LOF_005` Morgan Elsbeth — Following the Call
-- [ ] `LOF_009` Darth Maul — Sith Revealed
-- [ ] `LOF_012` Rey — Nobody
-- [ ] `LOF_014` Grand Inquisitor — Stories Travel Quickly
-- [ ] `LOF_015` Cal Kestis — I Can't Keep Hiding
-- [ ] `LOF_016` Qui-Gon Jinn — Student of the Living Force
+_All canonical leaders implemented._
 
 ### SEC — Secrets of Power
 **10 unimplemented** of 18 canonical leaders.

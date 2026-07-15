@@ -113,6 +113,27 @@ export interface DiscardFromHandPending {
   continuation: PendingResolution | null;
   /** SOR_167 Force Throw: if set, after discard capture cost and offer Force damage. */
   forceThrowControllerPlayer?: PlayerId;
+  /** JTL_014 Admiral Trench: only cards costing this much or more may be discarded. */
+  minCost?: number;
+  /** JTL_014 Admiral Trench: after the discard, draw a card for this player ("if you do, draw a card"). */
+  thenDrawForPlayer?: PlayerId;
+}
+
+/**
+ * JTL_014 Admiral Trench — When Deployed: reveal the top 4 cards, the opponent discards 2 of them,
+ * then Trench's controller draws 1 of the remaining cards and discards the other. A two-stage
+ * choice over the same revealed set (opponent discards first, then the controller draws).
+ */
+export interface TrenchRevealPending {
+  type: "trench-reveal";
+  cardId: string;
+  /** Trench's controller — owner of the revealed cards (they go to this player's discard/hand). */
+  player: PlayerId;
+  /** Who chooses at this stage. */
+  chooser: PlayerId;
+  stage: "opponent-discard" | "self-draw";
+  revealed: Array<{ tempId: string; cardId: string }>;
+  continuation: PendingResolution | null;
 }
 
 /**
@@ -191,6 +212,20 @@ export interface PlayFromHandPending {
    * icons spread across *different* cards, so the same card can't be revealed twice.
    */
   excludeHandIndex?: number;
+  /** LOF_005 Morgan Elsbeth: the chosen attacked unit whose keyword the played card must share. */
+  sharesKeywordWithCardId?: string;
+  sharesKeywordWithPlayId?: string;
+  sharesKeywordWithPlayer?: PlayerId;
+  /** LOF_005 Morgan Elsbeth: play the chosen unit for this many resources less. */
+  costReduction?: number;
+  /** LOF_016 Qui-Gon Jinn: the played unit's printed cost must be at most this (cost < returned unit). */
+  maxCost?: number;
+  /** LOF_016 Qui-Gon Jinn: the played unit must NOT have this aspect (non-Villainy). */
+  excludeAspect?: string;
+  /** LOF_016 Qui-Gon Jinn: play the chosen unit for free (ignore its cost entirely). */
+  freePlay?: boolean;
+  /** LOF_016 Qui-Gon Jinn (deployed): the attack pipeline to resume after the free play resolves. */
+  continuation?: PendingResolution | null;
 }
 
 /** Step 1 of Exploit: prompt the playing player whether to use Exploit. */
@@ -529,6 +564,7 @@ export type PendingResolution =
   | ThrawnReplayPending
   | HandToDeckPending
   | DiscardFromHandPending
+  | TrenchRevealPending
   | ResolveAttackPending
   | UpgradeTargetPending
   | DefeatCopyPending

@@ -22,6 +22,8 @@ export function HasWhenAttackEnds(cardId: string): boolean {
     case "ASH_101": //The Great Mothers — defeat the non-leader units this unit dealt combat damage to
     case "ASH_223": //Halo — if the defending unit was defeated, give a Shield token to this unit
       return true;
+    case "LOF_016": //Qui-Gon Jinn — completes an attack (and survives): may return a unit and play a cheaper non-Villainy unit free
+      return true;
     default: return false;
   }
 }

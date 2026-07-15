@@ -7,6 +7,7 @@ import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/pi
 import { Unit } from "@/server/engine/unit";
 import { TraitContains } from "@/server/engine/core-functions";
 import { SmuggleCost, SmuggleAspects } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
+import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
 
 /**
  * Everything the player can put toward a cost: ready resources plus Credit tokens.
@@ -122,6 +123,27 @@ function gnkPowerDroidDiscount(game: GameState, player: PlayerId, cardId: string
   return game.currentEffects.some(e => e.cardId === "SEC_110" && e.affectedPlayer === player) ? 1 : 0;
 }
 
+// LOF_005 Morgan Elsbeth (deployed) On Attack: the NEXT unit you play this phase costs 1 less if it
+// shares a keyword with a friendly unit. The effect is consumed in completePlayCard on the next unit.
+function morganNextUnitDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Unit") return 0;
+  if (!game.currentEffects.some(e => e.cardId === "LOF_005" && e.affectedPlayer === player)) return 0;
+  const p = player === 1 ? game.player1 : game.player2;
+  const friendly = [...p.groundArena, ...p.spaceArena];
+  const shares = friendly.some(u => SharesKeyword(cardId, u.cardId, {}, { player, playId: u.playId }));
+  return shares ? 1 : 0;
+}
+
+// JTL_005 Admiral Piett (deployed): each Capital Ship unit you play costs 2 resources less.
+function piettCapitalShipDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Unit" || !CardTraits(cardId).includes("Capital Ship")) return 0;
+  const p = player === 1 ? game.player1 : game.player2;
+  if (p.leader.cardId !== "JTL_005" || !p.leader.deployed) return 0;
+  const deployedUnit = [...p.groundArena, ...p.spaceArena].find(u => u.playId === p.leader.deployedPlayId);
+  if (deployedUnit && Unit.FromInterface(deployedUnit).LostAbilities()) return 0;
+  return 2;
+}
+
 /**
  * The full cost to play `cardId` from hand: printed cost + aspect penalty + taxes − discounts.
  * The single definition used by BOTH the playability check (what the UI offers) and the payment
@@ -137,6 +159,8 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - jabbaTheTrickDiscount(game, player, cardId)
     - benduDiscount(game, player, cardId)
     - gnkPowerDroidDiscount(game, player, cardId)
+    - piettCapitalShipDiscount(game, player, cardId)
+    - morganNextUnitDiscount(game, player, cardId)
   ;
 }
 

@@ -74,6 +74,7 @@ export function HasShielded(cardId: string, playId?: string, player?: PlayerId, 
     case "LOF_061"://Secretive Sage
     case "LOF_062"://Axe Woves
     case "LOF_214"://Sorcerers of Tund
+    case "LOF_014"://Grand Inquisitor (deployed leader) — Shielded
       return true;
 
     case "LAW_038"://Lepi Lookout

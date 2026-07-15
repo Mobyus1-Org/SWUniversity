@@ -720,6 +720,21 @@ export function UnitAttackedThisPhase(player: PlayerId, trait?: string, another?
   return attackedUnits.length > 0;
 }
 
+/**
+ * PlayIds of units that attacked this phase (either player) and are still in play, optionally
+ * filtered to a trait. Used by cards that reference "a unit that attacked this phase"
+ * (JTL_004 Rose Tico — a Vehicle unit; LOF_005 Morgan Elsbeth — a friendly unit).
+ */
+export function AttackedThisPhasePlayIds(opts: { trait?: string; player?: PlayerId } = {}): string[] {
+  const game = GetGame();
+  if (!game) return [];
+  let attacked = game.currentGameState.roundState.unitsAttackedThisPhase;
+  if (opts.player) attacked = attacked.filter(a => a.fromPlayer === opts.player);
+  if (opts.trait) attacked = attacked.filter(a => TraitContains(a.cardId, opts.trait!));
+  const inPlay = new Set(AllUnits().map(u => u.playId));
+  return attacked.filter(a => inPlay.has(a.playId)).map(a => a.playId);
+}
+
 export function CardWasPlayedThisPhase(player: PlayerId, trait?: string, type?: CardTypes): boolean {
   const game = GetGame();
   if (!game) {
@@ -904,6 +919,12 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SEC_188": //Darth Traya — On Attack: may ready a non-unit leader
     case "SEC_004": //Leia Organa (SEC, deployed) — On Attack: may disclose, then give an XP token
     case "LOF_002": //Mother Talzin (deployed) — On Attack: may give a unit -1/-1 this phase
+    case "JTL_004": //Rose Tico (deployed) — On Attack: may heal 2 damage from a Vehicle unit
+    case "LOF_005": //Morgan Elsbeth (deployed) — On Attack: next keyword-sharing unit costs 1 less
+    case "LOF_009": //Darth Maul (deployed) — On Attack: deal 1 to a unit and 1 to a different unit
+    case "LOF_014": //Grand Inquisitor (deployed) — On Attack: defender gets -2/-0 for this attack
+    case "LOF_015": //Cal Kestis (deployed) — On Attack: opponent exhausts a ready unit they control
+    case "JTL_010": //Captain Phasma (deployed) — On Attack: if First Order played, may deal 1 to a unit + 1 to a base
     case "JTL_147": //Black One — On Attack: if you control Poe Dameron, may deal 1 damage to a unit
     case "JTL_151": //Red Five — On Attack: may deal 2 damage to a damaged unit
     case "LOF_045": //Yaddle — On Attack: each other friendly Jedi gains Restore 1 this phase

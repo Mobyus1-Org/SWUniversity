@@ -30,7 +30,8 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction } from "@/server/engine/core-functions";
+import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -64,6 +65,7 @@ import type {
   DefeatCopyPending,
   DontGetCockyPending,
   DiscardFromHandPending,
+  TrenchRevealPending,
   IndirectDamagePending,
   EngineContext,
   ExploitOptionPending,
@@ -1936,6 +1938,23 @@ function innateWhenAttackEnds(
       }
       return continuation;
     }
+    case "LOF_016": { // Qui-Gon Jinn — "When this unit completes an attack (and survives): You may
+                      // return a friendly non-leader unit to its owner's hand. Play a non-Villainy
+                      // unit that costs less than the returned unit from your hand for free."
+                      // The early return at the top guarantees the attacker survived.
+      const friendly016 = GetUnitsForPlayer(attacker.controller).filter(u => !CardIsLeader(u.cardId));
+      if (friendly016.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "LOF_016",
+        player: attacker.controller,
+        helperText: "Return a friendly non-leader unit and play a cheaper non-Villainy unit for free?",
+        yesLabel: "Return & play",
+        noLabel: "Skip",
+        onYes: buildQuiGonReturn(game, attacker.controller, continuation),
+        continuation,
+      };
+    }
     case "ASH_223": { // Halo — "When Attack Ends: If the defending unit was defeated, give a Shield
                       // token to this unit."
       if (defDefeated) {
@@ -2412,6 +2431,14 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         helperText: `${CardTitle(pending.cardId)}: choose any cards to discard. The rest return to the top of your deck.`,
         choices: pending.revealedCards,
       } satisfies NeedsRevealDiscard;
+    case "trench-reveal":
+      return {
+        type: "RevealDiscard",
+        helperText: pending.stage === "opponent-discard"
+          ? `${CardTitle(pending.cardId)}: opponent — choose 2 of the revealed cards to discard.`
+          : `${CardTitle(pending.cardId)}: choose 1 of the remaining cards to draw; the other is discarded.`,
+        choices: pending.revealed.map(c => ({ tempId: c.tempId, cardId: c.cardId })),
+      } satisfies NeedsRevealDiscard;
     case "peek-hand": {
       const targetHand = GetPlayer(game, pending.targetPlayer).hand;
       const eligibleIndices = pending.mustDiscard
@@ -2590,6 +2617,40 @@ function supportAttackPending(
 }
 
 /** Builds the "choose a base" step of Darth Vader's leader ability (1 damage to a base). */
+/**
+ * LOF_009 Darth Maul — "Deal 1 damage to a unit and 1 damage to a different unit." Two sequential
+ * single-target steps; the second excludes the first. Used by both the leader Action and the
+ * deployed On Attack (the On Attack passes the combat continuation).
+ */
+function buildMaulSpread(game: GameState, player: PlayerId, continuation: PendingResolution | null): PendingResolution | null {
+  const units = GetAllUnits(game);
+  if (units.length === 0) return continuation;
+  return {
+    type: "ability-target",
+    cardId: "LOF_009_a",
+    player,
+    fromPlayIds: units.map(u => u.playId),
+    continuation,
+  } satisfies AbilityTargetPending;
+}
+
+/**
+ * LOF_016 Qui-Gon Jinn — the "return a friendly non-leader unit, then play a cheaper non-Villainy
+ * unit for free" sequence. Returns the return-target step, or the continuation if there is no
+ * eligible unit to return. Shared by the leader Action and the deployed When-Attack-Ends trigger.
+ */
+function buildQuiGonReturn(game: GameState, player: PlayerId, continuation: PendingResolution | null): PendingResolution | null {
+  const friendly = GetUnitsForPlayer(player).filter(u => !CardIsLeader(u.cardId));
+  if (friendly.length === 0) return continuation;
+  return {
+    type: "ability-target",
+    cardId: "LOF_016_return",
+    player,
+    fromPlayIds: friendly.map(u => u.playId),
+    continuation,
+  } satisfies AbilityTargetPending;
+}
+
 function vaderBaseTargetPending(player: PlayerId): AbilityTargetPending {
   return {
     type: "ability-target",
@@ -2858,6 +2919,13 @@ function completePlayCard(
   if (CardType(cardId) === "Unit") {
     const gnkIdx = game.currentEffects.findIndex(e => e.cardId === "SEC_110" && e.affectedPlayer === player);
     if (gnkIdx !== -1) game.currentEffects.splice(gnkIdx, 1);
+  }
+
+  // LOF_005 Morgan Elsbeth: "the NEXT unit you play this phase" — consume on the next unit played,
+  // whether or not it qualified for the keyword-sharing discount.
+  if (CardType(cardId) === "Unit") {
+    const morganIdx = game.currentEffects.findIndex(e => e.cardId === "LOF_005" && e.affectedPlayer === player);
+    if (morganIdx !== -1) game.currentEffects.splice(morganIdx, 1);
   }
 
   if (CardType(cardId) === "Unit") {
@@ -3509,6 +3577,15 @@ function handleChooseTarget(
       log.push(`${CardTitle("TWI_012")}: attacking a unit — +2/+0 for this attack.`);
     }
 
+    // Grand Inquisitor (LOF_014) leader Action / On Attack: the defender gets -2/-0 for this attack.
+    if (pending.source === "LOF_014" && target.type === "unit") {
+      const def014 = GetUnitByPlayId(game, target.playId);
+      if (def014) {
+        GivePowerMod("LOF_014", def014, -2, "ForAttack", log);
+        log.push(`${CardTitle("LOF_014")}: defender gets -2/-0 for this attack.`);
+      }
+    }
+
     // Ability-initiated attacks (e.g. Rebel Assault, Precision Fire) skip handleAttack,
     // so queue the on-attack trigger now if it wasn't already.
     if (attacker && HasOnAttack(attacker.cardId, attacker.controller, attacker.playId)) {
@@ -4049,9 +4126,19 @@ function handleChooseTarget(
     const playerHand = GetPlayer(game, pending.targetPlayer).hand;
     if (idx < 0 || idx >= playerHand.length)
       return { response: invalidResponse("Invalid hand index."), pending, stateChanged: false };
+    // JTL_014 Admiral Trench: only cards costing minCost or more are eligible to discard.
+    if (pending.minCost !== undefined && (CardCost(playerHand[idx].cardId) ?? 0) < pending.minCost)
+      return { response: invalidResponse(`Chosen card must cost ${pending.minCost} or more.`), pending, stateChanged: false };
     const [discardedCard] = playerHand.splice(idx, 1);
     const discardedCost = CardCost(discardedCard.cardId) ?? 0;
+    GetPlayer(game, pending.targetPlayer).discard.push({
+      cardId: discardedCard.cardId, playId: String(game.nextPlayId++),
+      owner: pending.targetPlayer, controller: pending.targetPlayer,
+      turnDiscarded: game.currentRound, discardEffect: "",
+    });
     log.push(`Player ${pending.targetPlayer} discarded a card.`);
+    // JTL_014 Admiral Trench: "If you do, draw a card."
+    if (pending.thenDrawForPlayer !== undefined) DrawCardForPlayer(game, log, pending.thenDrawForPlayer);
     const remaining = pending.count - 1;
     let nextPending: PendingResolution | null = remaining > 0
       ? { type: "discard-from-hand", targetPlayer: pending.targetPlayer, count: remaining, continuation: pending.continuation }
@@ -4394,6 +4481,56 @@ function handleChooseTarget(
           continuation: result129.pending ?? null,
         };
         return { response: resolutionResponse(pendingToResolution(ozzelContinuation, game)), pending: ozzelContinuation, stateChanged: false };
+      }
+      case "LOF_016_play": { // Qui-Gon Jinn — play a non-Villainy unit costing less than the returned
+                             // unit, for free.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Qui-Gon Jinn: chosen card is not a Unit."), pending, stateChanged: false };
+        if (pending.excludeAspect && CardAspects(cardId).includes(pending.excludeAspect))
+          return { response: invalidResponse("Qui-Gon Jinn: chosen unit is Villainy."), pending, stateChanged: false };
+        if (pending.maxCost !== undefined && (CardCost(cardId) ?? 0) > pending.maxCost)
+          return { response: invalidResponse("Qui-Gon Jinn: chosen unit costs too much."), pending, stateChanged: false };
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} for free via Qui-Gon Jinn.`);
+        const res016 = completePlayCard(game, log, cardId, pending.player);
+        if (pending.continuation && res016.pending) {
+          const chained016 = injectContinuation(res016.pending, pending.continuation);
+          return { response: resolutionResponse(pendingToResolution(chained016, game)), pending: chained016, stateChanged: true };
+        }
+        if (pending.continuation && !res016.pending) {
+          return { response: resolutionResponse(pendingToResolution(pending.continuation, game)), pending: pending.continuation, stateChanged: true };
+        }
+        return res016;
+      }
+      case "LOF_005": { // Morgan Elsbeth — play a hand unit that shares a keyword with the chosen
+                        // attacked unit, for 1 resource less.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Morgan Elsbeth: chosen card is not a Unit."), pending, stateChanged: false };
+        const shares005 = SharesKeyword(cardId, pending.sharesKeywordWithCardId ?? "", {},
+          { player: pending.sharesKeywordWithPlayer, playId: pending.sharesKeywordWithPlayId });
+        if (!shares005)
+          return { response: invalidResponse("Morgan Elsbeth: chosen unit shares no keyword with the attacker."), pending, stateChanged: false };
+        const cost005m = Math.max(0, playCost(game, pending.player, cardId) - (pending.costReduction ?? 0));
+        if (spendableFor(game, pending.player) < cost005m)
+          return { response: invalidResponse("Not enough resources to play this unit."), pending, stateChanged: false };
+        payResources(game, pending.player, cost005m, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Morgan Elsbeth (-1 cost).`);
+        return completePlayCard(game, log, cardId, pending.player);
+      }
+      case "JTL_005": { // Admiral Piett — play a Capital Ship unit from hand at -1 cost.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Admiral Piett: chosen card is not a Unit."), pending, stateChanged: false };
+        if (!CardTraits(cardId).includes("Capital Ship"))
+          return { response: invalidResponse("Admiral Piett: chosen unit is not a Capital Ship."), pending, stateChanged: false };
+        const cost005 = Math.max(0, playCost(game, pending.player, cardId) - 1);
+        const ready005 = spendableFor(game, pending.player);
+        if (ready005 < cost005)
+          return { response: invalidResponse("Not enough resources to play this unit."), pending, stateChanged: false };
+        payResources(game, pending.player, cost005, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Admiral Piett (-1 cost).`);
+        return completePlayCard(game, log, cardId, pending.player);
       }
       case "SOR_093": { // Alliance Dispatcher — play a unit from hand at -1 cost
         if (CardType(cardId) !== "Unit")
@@ -4948,6 +5085,62 @@ function handleChooseTarget(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
+  if (pending.type === "trench-reveal") {
+    if (dispatch.fromPlayer !== pending.chooser)
+      return { response: invalidResponse("It is not your choice to make."), pending, stateChanged: false };
+    const chosen = data.targetPlayIds ?? [];
+    const cardMap = new Map(pending.revealed.map(c => [c.tempId, c]));
+    for (const id of chosen)
+      if (!cardMap.has(id))
+        return { response: invalidResponse(`Trench: unknown selection "${id}".`), pending, stateChanged: false };
+    const owner = GetPlayer(game, pending.player);
+    const toDiscard = (cards: Array<{ tempId: string; cardId: string }>) => {
+      for (const c of cards)
+        owner.discard.push({ cardId: c.cardId, playId: String(game.nextPlayId++), owner: pending.player, controller: pending.player, turnDiscarded: game.currentRound, discardEffect: "" });
+    };
+
+    if (pending.stage === "opponent-discard") {
+      const need = Math.min(2, pending.revealed.length);
+      if (chosen.length !== need)
+        return { response: invalidResponse(`Trench: choose exactly ${need} card(s) to discard.`), pending, stateChanged: false };
+      const discardSet = new Set(chosen);
+      const discarded = pending.revealed.filter(c => discardSet.has(c.tempId));
+      const remaining = pending.revealed.filter(c => !discardSet.has(c.tempId));
+      toDiscard(discarded);
+      log.push(`${CardTitle(pending.cardId)}: opponent discarded ${discarded.length} of the revealed cards.`);
+      if (remaining.length === 0) {
+        const cont = pending.continuation ?? null;
+        if (cont) return { response: resolutionResponse(pendingToResolution(cont, game)), pending: cont, stateChanged: true };
+        return { response: stateResponse(game), pending: null, stateChanged: true };
+      }
+      // Trench's controller now draws 1 of the remaining and discards the other.
+      const drawStep: TrenchRevealPending = {
+        type: "trench-reveal",
+        cardId: pending.cardId,
+        player: pending.player,
+        chooser: pending.player,
+        stage: "self-draw",
+        revealed: remaining,
+        continuation: pending.continuation,
+      };
+      return { response: resolutionResponse(pendingToResolution(drawStep, game)), pending: drawStep, stateChanged: true };
+    }
+
+    // stage === "self-draw": draw exactly 1 of the remaining; discard the rest.
+    if (chosen.length !== 1)
+      return { response: invalidResponse("Trench: choose exactly 1 card to draw."), pending, stateChanged: false };
+    const drawn = cardMap.get(chosen[0])!;
+    owner.hand.push({ cardId: drawn.cardId });
+    toDiscard(pending.revealed.filter(c => c.tempId !== chosen[0]));
+    log.push(`${CardTitle(pending.cardId)}: drew ${CardTitle(drawn.cardId)} and discarded the other revealed card.`);
+    updateDefeatedPlayers(game);
+    const cont = pending.continuation ?? null;
+    if (cont) return { response: resolutionResponse(pendingToResolution(cont, game)), pending: cont, stateChanged: true };
+    const bag = drainTriggerBag(game, log);
+    if (bag) return { response: resolutionResponse(pendingToResolution(bag, game)), pending: bag, stateChanged: true };
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
   return { response: invalidResponse(`choose-target is not valid while pending: ${pending.type}.`), pending, stateChanged: false };
 }
 
@@ -5407,6 +5600,18 @@ function applyAbilityOptionEffect(
         DrawCardForPlayer(game, log, unit206.controller);
         log.push(`${CardTitle("SOR_206")}: paid 2 resources and drew a card.`);
       }
+      return pending.continuation ?? null;
+    }
+    case "LOF_012_wd": { // Rey When Deployed Yes: discard your whole hand, then draw 2 cards.
+      const player012 = pending.player!;
+      const pState012 = GetPlayer(game, player012);
+      const discarded012 = pState012.hand.length;
+      for (const c of pState012.hand.splice(0)) {
+        pState012.discard.push({ cardId: c.cardId, playId: String(game.nextPlayId++), owner: player012, controller: player012, turnDiscarded: game.currentRound, discardEffect: "" });
+      }
+      DrawCardForPlayer(game, log, player012);
+      DrawCardForPlayer(game, log, player012);
+      log.push(`${CardTitle("LOF_012")}: discarded ${discarded012} card(s) and drew 2.`);
       return pending.continuation ?? null;
     }
     case "SOR_221": { // Outmaneuver Yes: exhaust each ground unit.
@@ -6318,6 +6523,8 @@ function leaderHasWhenDeployed(cardId: string): boolean {
     case "LAW_008": return true;
     case "TWI_004": return true; // Yoda — may discard from deck, then defeat a unit by cost
     case "TWI_007": return true; // Captain Rex — create a Clone Trooper token
+    case "JTL_014": return true; // Admiral Trench — reveal 4, opponent discards 2, draw 1/discard 1
+    case "LOF_012": return true; // Rey — may discard your hand to draw 2
     default: return false;
   }
 }
@@ -6353,6 +6560,21 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 5;
     case "JTL_018": // Kazuda Xiono — If you control 4 or more resources.
       return p.resources.length >= 4;
+    case "JTL_004": // Rose Tico — If you control 5 or more resources.
+    case "JTL_005": // Admiral Piett — If you control 5 or more resources.
+    case "JTL_010": // Captain Phasma — If you control 5 or more resources.
+    case "LOF_005": // Morgan Elsbeth — If you control 5 or more resources.
+    case "LOF_014": // Grand Inquisitor — If you control 5 or more resources.
+      return p.resources.length >= 5;
+    case "LOF_015": // Cal Kestis — If you control 4 or more resources.
+      return p.resources.length >= 4;
+    case "LOF_009": // Darth Maul — If you control 6 or more resources.
+    case "LOF_016": // Qui-Gon Jinn — If you control 6 or more resources.
+      return p.resources.length >= 6;
+    case "LOF_012": // Rey — If you control 7 or more resources.
+      return p.resources.length >= 7;
+    case "JTL_014": // Admiral Trench — Action [3 resources, Exhaust]: If you control 6 or more resources.
+      return p.resources.length >= 6;
     case "SHD_014": // Cad Bane — If you control 6 or more resources.
     case "SHD_018": // The Mandalorian — If you control 6 or more resources.
       return p.resources.length >= 6;
@@ -6389,6 +6611,13 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
   if (epicCondition !== null) {
     if (!epicCondition)
       return { response: invalidResponse("Epic Action deploy condition not met."), pending: null, stateChanged: false };
+    // JTL_014 Admiral Trench deploys via "Action [3 resources, Exhaust]" — pay 3 on top of the
+    // 6-resource condition (the only conditional-deploy leader that also has a resource cost).
+    if (leader.cardId === "JTL_014") {
+      if (spendableFor(game, player) < 3)
+        return { response: invalidResponse("Not enough resources to deploy Admiral Trench."), pending: null, stateChanged: false };
+      payResources(game, player, 3, log, leader.cardId);
+    }
   } else {
     deployCost = playCost(game, player, leader.cardId);
     if (GetPlayer(game, player).resources.length < deployCost)
@@ -6572,6 +6801,58 @@ function resolveActionAbility(
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    case "JTL_004": { // Rose Tico — Action [Exhaust]: Heal 2 damage from a Vehicle unit that attacked
+                      // this phase.
+      const vehicles004 = AttackedThisPhasePlayIds({ trait: "Vehicle" });
+      if (vehicles004.length === 0) {
+        log.push(`${CardTitle("JTL_004")}: no Vehicle attacked this phase — soft pass.`);
+        return null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "JTL_004",
+        player,
+        fromPlayIds: vehicles004,
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "JTL_005": { // Admiral Piett — Action [Exhaust]: Play a Capital Ship unit from hand at -1.
+      if (!GetPlayer(game, player).hand.some(c => CardTraits(c.cardId).includes("Capital Ship"))) {
+        log.push(`${CardTitle("JTL_005")}: no Capital Ship in hand.`);
+        return null;
+      }
+      return { type: "play-from-hand", cardId: "JTL_005", player } satisfies PlayFromHandPending;
+    }
+    case "JTL_014": { // Admiral Trench — Action [Exhaust]: Discard a card that costs 3 or more from
+                      // your hand. If you do, draw a card.
+      if (!GetPlayer(game, player).hand.some(c => (CardCost(c.cardId) ?? 0) >= 3)) {
+        log.push(`${CardTitle("JTL_014")}: no card costing 3 or more in hand.`);
+        return null;
+      }
+      return {
+        type: "discard-from-hand",
+        targetPlayer: player,
+        count: 1,
+        minCost: 3,
+        thenDrawForPlayer: player,
+        continuation: null,
+      } satisfies DiscardFromHandPending;
+    }
+    case "JTL_010": { // Captain Phasma — Action [Exhaust]: If you played a First Order card this phase,
+                      // deal 1 damage to a base.
+      if (!CardWasPlayedThisPhase(player, "First Order")) {
+        log.push(`${CardTitle("JTL_010")}: no First Order card played this phase — soft pass.`);
+        return null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "JTL_010",
+        player,
+        fromPlayIds: [],
+        fromZones: ["Base"],
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "TWI_004": { // Yoda — Action [Exhaust]: If a unit left play this phase, draw a card, then
                       // put a card from your hand on the top or bottom of your deck.
       if (game.roundState.cardsLeftPlayThisPhase.length === 0) {
@@ -6594,6 +6875,21 @@ function resolveActionAbility(
     case "LOF_007": { // Avar Kriss — Action [Exhaust]: The Force is with you (create your Force token).
       CreateForceToken(player, log, "LOF_007");
       return null;
+    }
+    case "LOF_005": { // Morgan Elsbeth — Action [Exhaust]: Choose a friendly unit that attacked this
+                      // phase. Play a hand unit that shares a keyword with it at -1.
+      const attacked005 = AttackedThisPhasePlayIds({ player });
+      if (attacked005.length === 0) {
+        log.push(`${CardTitle("LOF_005")}: no friendly unit attacked this phase — soft pass.`);
+        return null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "LOF_005",
+        player,
+        fromPlayIds: attacked005,
+        continuation: null,
+      } satisfies AbilityTargetPending;
     }
     case "TWI_002": { // Nute Gunray — Action [Exhaust]: If 2 or more friendly units were defeated
                       // this phase, create a Battle Droid token.
@@ -6699,6 +6995,63 @@ function resolveActionAbility(
         cardId: "LOF_002",
         player,
         fromPlayIds: allUnits002.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "LOF_009": { // Darth Maul — Action [Exhaust, use the Force]: Deal 1 damage to a unit and 1
+                      // damage to a different unit.
+      if (!UseTheForce(player, log, "LOF_009")) return null; // no token → the cost can't be paid
+      return buildMaulSpread(game, player, null);
+    }
+    case "LOF_012": { // Rey — Action [Exhaust]: If you played a non-unit Force card this phase, deal
+                      // 1 damage to a unit.
+      const playedNonUnitForce = game.roundState.cardsPlayedThisPhase.some(
+        c => c.fromPlayer === player && CardType(c.cardId) !== "Unit" && CardTraits(c.cardId).includes("Force"),
+      );
+      if (!playedNonUnitForce) {
+        log.push(`${CardTitle("LOF_012")}: no non-unit Force card played this phase — soft pass.`);
+        return null;
+      }
+      const units012r = GetAllUnits(game);
+      if (units012r.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LOF_012",
+        player,
+        fromPlayIds: units012r.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "LOF_016": { // Qui-Gon Jinn — Action [Exhaust, use the Force]: Return a friendly non-leader
+                      // unit to its owner's hand. Play a non-Villainy unit that costs less than the
+                      // returned unit from your hand for free.
+      if (!UseTheForce(player, log, "LOF_016")) return null; // no token → the cost can't be paid
+      return buildQuiGonReturn(game, player, null);
+    }
+    case "LOF_015": { // Cal Kestis — Action [Exhaust, use the Force]: An opponent chooses a ready unit
+                      // they control. Exhaust that unit.
+      if (!UseTheForce(player, log, "LOF_015")) return null; // no token → the cost can't be paid
+      const opp015 = GetOtherPlayer(player);
+      const readyEnemy015 = GetUnitsForPlayer(opp015).filter(u => u.ready);
+      if (readyEnemy015.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LOF_015",
+        player,
+        fromPlayIds: readyEnemy015.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "LOF_014": { // Grand Inquisitor — Action [Exhaust, use the Force]: Attack with a friendly
+                      // unit. The defender gets -2/-0 for this attack.
+      if (!UseTheForce(player, log, "LOF_014")) return null; // no token → the cost can't be paid
+      const ready014 = GetUnitsForPlayer(player).filter(u => u.ready);
+      if (ready014.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LOF_014",
+        player,
+        fromPlayIds: ready014.map(u => u.playId),
         continuation: null,
       } satisfies AbilityTargetPending;
     }
@@ -7642,6 +7995,23 @@ function applyAbilityEffect(
       game.gameLog.push(`${CardTitle("SOR_010")}: dealt 1 damage to player ${basePlayer010}'s base.`);
       break;
     }
+    case "JTL_010": // Captain Phasma (front) — deal 1 to the chosen base.
+    case "JTL_010_base": { // Captain Phasma (deployed) — "if you do, deal 1 damage to a base".
+      const owner10 = pending.player!;
+      let basePlayer10: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer10 = 1;
+      else if (targetPlayId === "player2.base") basePlayer10 = 2;
+      else if (targetIsBase) basePlayer10 = targetBasePlayer ?? (owner10 === 1 ? 2 : 1);
+      if (basePlayer10 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer10, 1, owner10);
+        game.gameLog.push(`${CardTitle("JTL_010")}: dealt 1 damage to player ${basePlayer10}'s base.`);
+      }
+      return pending.continuation;
+    }
+    case "JTL_010_unit": { // Captain Phasma (deployed) — deal 1 to the chosen unit, then the base step.
+      if (targetPlayId) DealDamageToUnit(game.currentGameState, "JTL_010", targetPlayId, 1, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
     case "SOR_009": { // Leia Organa: chosen Rebel unit attacks (no buff)
       if (!targetPlayId) break;
       return {
@@ -8310,6 +8680,84 @@ function applyAbilityEffect(
       healTarget(game.currentGameState, targetPlayId, 2, game.gameLog, "SOR_059");
       return pending.continuation;
     }
+    case "JTL_004": { // Rose Tico (both sides) — heal 2 from the chosen Vehicle unit.
+      if (!targetPlayId) return pending.continuation;
+      healTarget(game.currentGameState, targetPlayId, 2, game.gameLog, "JTL_004");
+      return pending.continuation;
+    }
+    case "LOF_009_a": { // Darth Maul — deal 1 to the first chosen unit, then target a different unit.
+      if (!targetPlayId) return pending.continuation;
+      DealDamageToUnit(game.currentGameState, "LOF_009", targetPlayId, 1, game.gameLog);
+      const others009 = GetAllUnits(game.currentGameState).filter(u => u.playId !== targetPlayId);
+      const secondStep = others009.length > 0
+        ? {
+            type: "ability-target" as const,
+            cardId: "LOF_009_b",
+            player: pending.player!,
+            fromPlayIds: others009.map(u => u.playId),
+            continuation: pending.continuation,
+          }
+        : pending.continuation;
+      return sweepDeadUnits(game.currentGameState, game.gameLog, secondStep);
+    }
+    case "LOF_009_b": { // Darth Maul — deal 1 to the second (different) chosen unit.
+      if (targetPlayId) DealDamageToUnit(game.currentGameState, "LOF_009", targetPlayId, 1, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "LOF_012": { // Rey (front) — deal 1 damage to the chosen unit.
+      if (targetPlayId) DealDamageToUnit(game.currentGameState, "LOF_012", targetPlayId, 1, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "LOF_016_return": { // Qui-Gon Jinn — return the chosen friendly non-leader unit to hand, then
+                             // set up the free play of a cheaper non-Villainy unit.
+      if (!targetPlayId || !pending.player) return pending.continuation;
+      const removed016 = removeFromArena(game.currentGameState, targetPlayId);
+      if (!removed016) return pending.continuation;
+      const returnedCost016 = CardCost(removed016.unit.cardId) ?? 0;
+      if (!removed016.unit.IsTokenUnit()) {
+        GetPlayer(game.currentGameState, removed016.unit.owner).hand.push({ cardId: removed016.unit.cardId });
+        game.gameLog.push(`${CardTitle("LOF_016")}: returned ${CardTitle(removed016.unit.cardId)} to its owner's hand.`);
+      }
+      updateDefeatedPlayers(game.currentGameState);
+      const hand016 = GetPlayer(game.currentGameState, pending.player).hand;
+      const canPlay016 = hand016.some(c =>
+        CardType(c.cardId) === "Unit" && !CardAspects(c.cardId).includes("Villainy") && (CardCost(c.cardId) ?? 0) < returnedCost016);
+      if (!canPlay016) return pending.continuation;
+      return {
+        type: "play-from-hand",
+        cardId: "LOF_016_play",
+        player: pending.player,
+        maxCost: returnedCost016 - 1,
+        excludeAspect: "Villainy",
+        freePlay: true,
+        continuation: pending.continuation,
+      } satisfies PlayFromHandPending;
+    }
+    case "LOF_015": { // Cal Kestis (both sides) — exhaust the chosen (opponent's) ready unit.
+      if (targetPlayId) {
+        const u015 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+        if (u015) {
+          u015.ready = false;
+          game.gameLog.push(`${CardTitle("LOF_015")}: exhausted ${CardTitle(u015.cardId)}.`);
+        }
+      }
+      return pending.continuation;
+    }
+    case "LOF_005": { // Morgan Elsbeth (front) — the chosen attacked unit is picked; now play a hand
+                      // unit that shares a keyword with it, for 1 resource less.
+      if (!targetPlayId || !pending.player) return null;
+      const chosen005 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!chosen005) return null;
+      return {
+        type: "play-from-hand",
+        cardId: "LOF_005",
+        player: pending.player,
+        sharesKeywordWithCardId: chosen005.cardId,
+        sharesKeywordWithPlayId: chosen005.playId,
+        sharesKeywordWithPlayer: chosen005.controller,
+        costReduction: 1,
+      } satisfies PlayFromHandPending;
+    }
     case "SOR_132": { // Imperial Interceptor WP: Deal 3 damage to chosen space unit.
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog);
@@ -8916,6 +9364,16 @@ function applyAbilityEffect(
         type: "attack-target",
         attackerPlayId: targetPlayId,
         source: "TWI_012",
+        continuation: null,
+      };
+    }
+    case "LOF_014": { // Grand Inquisitor leader Action: the chosen friendly unit attacks; the
+                      // defender gets -2/-0 for this attack.
+      if (!targetPlayId) break;
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "LOF_014",
         continuation: null,
       };
     }

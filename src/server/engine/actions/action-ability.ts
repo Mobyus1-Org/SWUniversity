@@ -1,7 +1,8 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, CanDiscloseAnyOf, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
+import { AllUnits, AttackedThisPhasePlayIds, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
-import { CardTraits } from "@/server/engine/card-db/generated";
+import { CardTraits, CardCost, CardType } from "@/server/engine/card-db/generated";
+import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
 import { PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 
 /**
@@ -69,6 +70,17 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "LOF_007": // Avar Kriss — Action [Exhaust]: The Force is with you (create your Force token).
         abilities.push(cardId);
         break;
+      case "LOF_005": { // Morgan Elsbeth — Action [Exhaust]: Choose a friendly unit that attacked this
+                        // phase; play a hand unit that shares a keyword with it at -1.
+        const attacked005 = AttackedThisPhasePlayIds({ player });
+        const handUnits005 = GetHand(player).filter(c => CardType(c.cardId) === "Unit");
+        const canShare005 = attacked005.some(pid => {
+          const u = AllUnits().find(x => x.playId === pid);
+          return u && handUnits005.some(h => SharesKeyword(h.cardId, u.cardId, {}, { player, playId: pid }));
+        });
+        if (canShare005) abilities.push(cardId);
+        break;
+      }
       case "TWI_007": // Captain Rex — Action [2 resources, Exhaust]: create a Clone Trooper if a friendly unit attacked.
         abilities.push(cardId);
         break;
@@ -80,13 +92,36 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         abilities.push(cardId);
         break;
       case "JTL_012": // Luke Skywalker — Action [Exhaust]: 1 damage to a unit, if a Fighter attacked this phase.
+      case "JTL_010": // Captain Phasma — Action [Exhaust]: 1 damage to a base, if you played a First Order card this phase (soft-pass condition).
+      case "LOF_012": // Rey — Action [Exhaust]: 1 damage to a unit, if you played a non-unit Force card this phase (soft-pass condition).
         abilities.push(cardId);
+        break;
+      case "JTL_004": // Rose Tico — Action [Exhaust]: Heal 2 from a Vehicle unit that attacked this phase.
+        if (AttackedThisPhasePlayIds({ trait: "Vehicle" }).length > 0) abilities.push(cardId);
+        break;
+      case "JTL_005": // Admiral Piett — Action [Exhaust]: Play a Capital Ship unit from hand at -1.
+        if (PlayerHasUnitsInHand(player, { trait: "Capital Ship" })) abilities.push(cardId);
+        break;
+      case "JTL_014": // Admiral Trench — Action [Exhaust]: Discard a card that costs 3+ from hand, then draw.
+        if (GetHand(player).some(c => (CardCost(c.cardId) ?? 0) >= 3)) abilities.push(cardId);
         break;
       case "JTL_018": // Kazuda Xiono — Action [Exhaust]: a friendly unit loses all abilities this round (needs a unit to target).
         if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
         break;
       case "LOF_003": // Ahsoka Tano — Action [Exhaust, use the Force]: Give a friendly unit Sentinel (needs the Force + a friendly unit).
         if (HasTheForce(player) && GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
+        break;
+      case "LOF_009": // Darth Maul — Action [Exhaust, use the Force]: 1 damage to a unit + 1 to a different unit (needs the Force + a unit).
+        if (HasTheForce(player) && AllUnits().length > 0) abilities.push(cardId);
+        break;
+      case "LOF_014": // Grand Inquisitor — Action [Exhaust, use the Force]: Attack with a friendly unit (needs the Force + a ready unit).
+        if (HasTheForce(player) && GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
+        break;
+      case "LOF_015": // Cal Kestis — Action [Exhaust, use the Force]: opponent exhausts a ready unit (needs the Force + an enemy ready unit).
+        if (HasTheForce(player) && GetUnitsForPlayer(player === 1 ? 2 : 1).some(u => u.ready)) abilities.push(cardId);
+        break;
+      case "LOF_016": // Qui-Gon Jinn — Action [Exhaust, use the Force]: return a friendly non-leader unit (needs the Force + a friendly non-leader unit).
+        if (HasTheForce(player) && GetUnitsForPlayer(player).some(u => !CardIsLeader(u.cardId))) abilities.push(cardId);
         break;
       case "SEC_004": // Leia Organa (SEC) — Action [1 resource, Exhaust]: disclose, then give an XP token.
         if (CanDiscloseAnyOf(player, SEC_004_ASPECTS)) abilities.push(cardId);
