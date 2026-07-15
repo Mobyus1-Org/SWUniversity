@@ -214,7 +214,8 @@ function initialBuilderState(): BuilderState {
   return {
     name: "",
     description: "",
-    infoText: "",
+    infoText:
+      "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nWin the game.",
     difficulty: 1,
     author: "",
     inspiredBy: "",
