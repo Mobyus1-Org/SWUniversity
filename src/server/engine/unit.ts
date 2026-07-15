@@ -230,6 +230,7 @@ export class Unit implements UnitInterface {
         case "SOR_240": power += 2; break; // Fleet Lieutenant +2/+0 ForAttack
         case "TWI_012_action": power += 2; break; // Anakin Skywalker leader Action +2/+0 ForAttack (vs a unit)
         case "TWI_011_action": power += 1; break; // Ahsoka Tano leader Action +1/+0 for this attack
+        case "SOR_012_action": power += 1; break; // IG-88 leader Action +1/+0 (more units than defender)
         default: break;
       }
     }

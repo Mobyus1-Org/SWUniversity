@@ -7150,6 +7150,18 @@ function resolveActionAbility(
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    case "SOR_012": { // IG-88 — Action [Exhaust]: Attack with a unit. If you control more units than
+                      // the defending player, the attacker gets +1/+0 for this attack.
+      const readyUnitsIg88 = GetUnitsForPlayer(player).filter(u => u.ready);
+      if (readyUnitsIg88.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_012_leader",
+        player,
+        fromPlayIds: readyUnitsIg88.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "SEC_006": { // Colonel Yularen — Action [Exhaust]: Attack with a unit. Then, you may attack with another unit that costs less than it.
       const readyUnits006 = GetUnitsForPlayer(player).filter(u => u.ready);
       if (readyUnits006.length === 0) return null;
@@ -9403,6 +9415,21 @@ function applyAbilityEffect(
         type: "attack-target",
         attackerPlayId: targetPlayId,
         source: "TWI_014",
+        continuation: null,
+      };
+    }
+    case "SOR_012_leader": { // IG-88 leader Action: the chosen unit attacks; if you control more
+                             // units than the defending player (the opponent), it gets +1/+0.
+      if (!targetPlayId) break;
+      const opponent012: PlayerId = pending.player! === 1 ? 2 : 1;
+      if (GetUnitsForPlayer(pending.player!).length > GetUnitsForPlayer(opponent012).length) {
+        game.currentGameState.currentEffects.push({ cardId: "SOR_012_action", duration: "ForAttack", affectedPlayer: pending.player!, targetPlayId });
+        game.gameLog.push(`${CardTitle("SOR_012")}: chosen unit gets +1/+0 for this attack (you control more units).`);
+      }
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "SOR_012",
         continuation: null,
       };
     }
