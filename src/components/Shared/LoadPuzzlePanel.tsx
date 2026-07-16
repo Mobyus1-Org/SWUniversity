@@ -32,6 +32,8 @@ function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
 type SortKey = "title" | "difficulty";
 type SortDir = "asc" | "desc";
 type SolvedFilter = "all" | "solved" | "unsolved";
+// Admin-only: filter the list by deploy status. Deployed = live, Hidden = not yet deployed.
+type DeployFilter = "all" | "deployed" | "hidden";
 
 const DIFF_LO = 1;
 const DIFF_HI = 5;
@@ -91,6 +93,7 @@ export function LoadPuzzlePanel(props: Props) {
   const [sortKey, setSortKey] = React.useState<SortKey>("difficulty");
   const [sortDir, setSortDir] = React.useState<SortDir>("asc");
   const [solvedFilter, setSolvedFilter] = React.useState<SolvedFilter>("all");
+  const [deployFilter, setDeployFilter] = React.useState<DeployFilter>("all");
   const [diffMin, setDiffMin] = React.useState(DIFF_LO);
   const [diffMax, setDiffMax] = React.useState(DIFF_HI);
 
@@ -140,6 +143,11 @@ export function LoadPuzzlePanel(props: Props) {
     const isSolved = solvedPuzzleIds.includes(p.id);
     if (solvedFilter === "solved" && !isSolved) return false;
     if (solvedFilter === "unsolved" && isSolved) return false;
+    // Admin-only deploy filter; ignored entirely for non-admins.
+    if (isAdmin) {
+      if (deployFilter === "deployed" && !p.deploy) return false;
+      if (deployFilter === "hidden" && p.deploy) return false;
+    }
     if (p.difficulty < diffMin || p.difficulty > diffMax) return false;
     return true;
   });
@@ -190,6 +198,23 @@ export function LoadPuzzlePanel(props: Props) {
           ))}
         </div>
         <DifficultyRange min={diffMin} max={diffMax} onChange={(lo, hi) => { setDiffMin(lo); setDiffMax(hi); }} />
+        {isAdmin ? (
+          <div
+            className="flex items-center gap-1 rounded-lg border border-emerald-400/20 bg-emerald-500/5 p-0.5 text-xs"
+            title="Admin only — filter by deploy status"
+          >
+            {(["all", "deployed", "hidden"] as DeployFilter[]).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setDeployFilter(v)}
+                className={`rounded px-2 py-0.5 font-medium capitalize transition-colors ${deployFilter === v ? "bg-emerald-600/80 text-white" : "text-white/50 hover:text-white/80"}`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
       {loading ? (
         <p className="text-sm opacity-60">Scanning…</p>
