@@ -311,6 +311,26 @@ export function resolveWhenPlayed(
         fromPlayIds: GetUnitsForPlayer(player, true).map((u) => u.playId),
         continuation: null,
       }
+    case "JTL_231": { // Punch It — "Attack with a Vehicle unit. It gets +2/+0 for this attack."
+      const vehiclePlayIds = GetUnitsForPlayer(player, true)
+        .filter(u => TraitContains(u.cardId, "Vehicle", u.controller, u.playId))
+        .map(u => u.playId);
+      if (vehiclePlayIds.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        fromPlayIds: vehiclePlayIds,
+        continuation: null,
+      };
+    }
+    case "TS26_058": { // Backed by the Pykes — "Give an Experience token to a friendly unit.
+                       // You may deal damage to a unit equal to the number of Experience tokens on friendly units."
+      const friendly058 = GetUnitsForPlayer(player);
+      if (friendly058.length === 0) return null; // no friendly unit to receive the token — nothing to do
+      // Step 1 (mandatory): choose the friendly unit to give an Experience token to.
+      // Step 2 (optional damage) is built after the token lands, in applyAbilityEffect.
+      return mandatoryTarget("TS26_058", player, friendly058.map(u => u.playId));
+    }
     case "JTL_153": //Rebellious Hammerhead "When Played: You may deal damage to a unit equal to the number of cards in your hand."
       if (!playId && !player) return null;
       return {
@@ -1030,6 +1050,18 @@ export function resolveWhenPlayed(
       return optionalTarget(cardId, player, spaceUnits132.map(u => u.playId),
         "Deal 3 damage to a space unit?", { yesLabel: "Deal 3", sourcePlayId: playId });
     }
+    case "ASH_194": { // Snub Fighter Squadron — When Played: Deal 1 damage to a space unit. (mandatory)
+      const spaceUnits194 = AllSpaceUnits();
+      if (spaceUnits194.length === 0) return null;
+      return mandatoryTarget(cardId, player, spaceUnits194.map(u => u.playId));
+    }
+    case "LOF_158": { // Hyena Bomber — When Played: If you control another Aggression unit, you may deal 2 damage to a ground unit.
+      if (!PlayerHasUnitWithAspectInPlay(player, "Aggression", true, playId)) return null;
+      const groundUnits158 = AllGroundUnits();
+      if (groundUnits158.length === 0) return null;
+      return optionalTarget(cardId, player, groundUnits158.map(u => u.playId),
+        "Deal 2 damage to a ground unit?", { yesLabel: "Deal 2", sourcePlayId: playId });
+    }
     case "SOR_134": { // Ruthless Raider — When Played: Deal 2 to enemy base + 2 to an enemy unit.
       // resolveWhenPlayed must stay side-effect-free (for units it is called both as a preview
       // in queueUnitEntryTriggers AND on trigger-bag drain, so any mutation here double-applies).
@@ -1612,6 +1644,33 @@ export function resolveWhenPlayed(
         } satisfies ReturnFromDiscardPending,
         continuation: null,
       } satisfies AbilityOptionPending;
+    }
+    case "TWI_189": { // Unnatural Life — "Play a unit that was defeated this phase from your discard
+                      // pile. It costs 2 resources less and enters play ready. At the start of the
+                      // regroup phase, defeat it."
+      const gs189 = game.currentGameState;
+      const pState189 = player === 1 ? gs189.player1 : gs189.player2;
+      const readyResources189 = pState189.resources.filter(r => r.ready).length;
+      const defeatedThisPhase189 = new Set(
+        gs189.roundState.cardsLeftPlayThisPhase
+          .filter(c => c.fromPlayer === player && (c.reason === "defeated" || c.reason === "token-defeated"))
+          .map(c => c.playId),
+      );
+      const eligible189 = pState189.discard.filter(d => {
+        if (CardType(d.cardId) !== "Unit") return false;
+        if (!defeatedThisPhase189.has(d.playId)) return false;
+        const effectiveCost = Math.max(0, CardCost(d.cardId) + aspectPenalty(gs189, player, d.cardId) - 2);
+        return effectiveCost <= readyResources189;
+      });
+      if (eligible189.length === 0) return null;
+      return {
+        type: "return-from-discard",
+        cardId: "TWI_189",
+        player,
+        maxCount: 1,
+        eligiblePlayIds: eligible189.map(d => d.playId),
+        continuation: null,
+      } satisfies ReturnFromDiscardPending;
     }
     case "SOR_086": { // Gladiator Star Destroyer — Give a unit Sentinel for this phase.
       const all086 = AllUnits();

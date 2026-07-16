@@ -507,6 +507,24 @@ function QueueUseTheForceReactions(player: PlayerId, gs: GameState): void {
 }
 
 /**
+ * TWI_132 Confederate Tri-Fighter: "Bases can't be healed." A static ability affecting ALL bases
+ * (both players'), active while any Tri-Fighter is in play. Base-heal sites across the engine call
+ * this to skip the heal (unit healing is unaffected). Base healing is not centralized, so each site
+ * guards itself — see the callers of this function.
+ */
+export function BaseHealingPrevented(): boolean {
+  const game = GetGame();
+  if (!game) return false;
+  const gs = game.currentGameState;
+  for (const pState of [gs.player1, gs.player2]) {
+    for (const u of [...pState.groundArena, ...pState.spaceArena]) {
+      if (u.cardId === "TWI_132") return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Heals `amount` damage from a player's base, floored at 0. Shared by every card that
  * heals a base (Grassroots Resistance, Lost and Forgotten, …).
  */
@@ -517,6 +535,7 @@ export function HealBaseForPlayer(
   gameLog: string[],
   fromCardId?: string,
 ): void {
+  if (BaseHealingPrevented()) return; // TWI_132 Confederate Tri-Fighter
   const playerObj = player === 1 ? gs.player1 : gs.player2;
   const healed = Math.min(amount, playerObj.base.damage);
   if (healed <= 0) return;

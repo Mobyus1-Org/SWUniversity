@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, CanDisclose, CaptureVictimsExistFor, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
+import { AllUnits, BaseHealingPrevented, CanDisclose, CaptureVictimsExistFor, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardAspects, CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -31,7 +31,7 @@ export function resolveWhenDefeated(
   // found in GetUnitsForPlayer is a surviving source.
   if (unit.isClone || CardTraits(unit.cardId).includes("Clone")) {
     const gameNala = GetGame();
-    if (gameNala && GetUnitsForPlayer(player).some(u => u.cardId === "TWI_001")) {
+    if (gameNala && !BaseHealingPrevented() && GetUnitsForPlayer(player).some(u => u.cardId === "TWI_001")) { // TWI_132 Confederate Tri-Fighter
       const pStateNala = GetPlayer(gameNala.currentGameState, player);
       const healed = Math.min(2, pStateNala.base.damage);
       if (healed > 0) {
@@ -289,6 +289,12 @@ function resolveOwnWhenDefeated(
       const game229 = GetGame();
       if (!game229) return null;
       CreateBattleDroid(game229.currentGameState, player, game229.gameLog, "TWI_229");
+      return null;
+    }
+    case "TWI_079": { // Confederate Courier — "When Defeated: Create a Battle Droid token."
+      const game079 = GetGame();
+      if (!game079) return null;
+      CreateBattleDroid(game079.currentGameState, player, game079.gameLog, "TWI_079");
       return null;
     }
     case "SOR_060": { // Distant Patroller — When Defeated: You may give a Shield token to a [Vigilance] unit.

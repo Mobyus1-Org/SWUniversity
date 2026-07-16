@@ -30,8 +30,8 @@ export function executeRegroupDraw(gs: GameState, log: string[]): void {
   for (const eff of revertEffects) {
     if (!eff.targetPlayId) continue;
 
-    if (eff.cardId === "SOR_219") {
-      // Sneak Attack: defeat the unit at start of regroup.
+    if (eff.cardId === "SOR_219" || eff.cardId === "TWI_189") {
+      // Sneak Attack (SOR_219) / Unnatural Life (TWI_189): defeat the unit at start of regroup.
       outer219: for (const pState of [gs.player1, gs.player2]) {
         for (const zone of ["groundArena", "spaceArena"] as const) {
           const idx = pState[zone].findIndex(u => u.playId === eff.targetPlayId);
@@ -48,7 +48,7 @@ export function executeRegroupDraw(gs: GameState, log: string[]): void {
             };
             ownerState.discard.unshift(discarded);
             gs.roundState.cardsLeftPlayThisPhase.push({ fromPlayer: unit.owner as PlayerId, cardId: unit.cardId, playId: unit.playId, reason: "defeated" });
-            log.push(`Sneak Attack: ${CardTitle(unit.cardId)} was defeated at start of regroup.`);
+            log.push(`${CardTitle(eff.cardId)}: ${CardTitle(unit.cardId)} was defeated at start of regroup.`);
             break outer219;
           }
         }

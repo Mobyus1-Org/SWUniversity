@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -769,10 +769,13 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
 
   if (trigger.triggerType === "enemy-unit-defeated") {
     switch (trigger.cardId) {
-      case "SOR_002": //Iden Versio - When an enemy unit is defeated: Heal 1 damage from your base.
-        const base = trigger.fromPlayer === 1 ? game.player1.base : game.player2.base;
-        base.damage = Math.max(0, base.damage - 1);
+      case "SOR_002": { //Iden Versio - When an enemy unit is defeated: Heal 1 damage from your base.
+        if (!BaseHealingPrevented()) { // TWI_132 Confederate Tri-Fighter
+          const base = trigger.fromPlayer === 1 ? game.player1.base : game.player2.base;
+          base.damage = Math.max(0, base.damage - 1);
+        }
         return null;
+      }
       case "LOF_130": { // HK-47 — When an enemy unit is defeated: Deal 1 damage to its controller's
                         // base. The defeated unit's controller is the opponent of HK-47's controller.
         const opp130: PlayerId = trigger.fromPlayer === 1 ? 2 : 1;
@@ -1509,7 +1512,7 @@ function resolveAttack(
 
   // Restore fires as an On Attack trigger before combat damage
   const restoreAmount = RestoreAmount(attacker.cardId, attacker.playId, attacker.controller);
-  if (restoreAmount > 0) {
+  if (restoreAmount > 0 && !BaseHealingPrevented()) { // TWI_132 Confederate Tri-Fighter
     const controllerBase = GetPlayer(game, attacker.controller).base;
     controllerBase.damage = Math.max(0, controllerBase.damage - restoreAmount);
     log.push(`Restore ${restoreAmount}: healed ${restoreAmount} damage from Player ${attacker.controller}'s base.`);
@@ -2817,7 +2820,7 @@ function queueUnitEntryTriggers(
   // Colonel Yularen (SOR_109): when a Command unit is played, heal 1 from base.
   const yularenUnit = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
     .find(u => u.cardId === "SOR_109" && !Unit.FromInterface(u).LostAbilities());
-  if (yularenUnit && CardAspects(cardId).includes("Command")) {
+  if (yularenUnit && CardAspects(cardId).includes("Command") && !BaseHealingPrevented()) { // TWI_132 Confederate Tri-Fighter
     const yularenBase = GetPlayer(game, player).base;
     yularenBase.damage = Math.max(0, yularenBase.damage - 1);
     log.push(`${CardTitle("SOR_109")}: healed 1 damage from your base.`);
@@ -2884,13 +2887,15 @@ function queueUnitEntryTriggers(
   }
 
   if (hasAmbush && CardHasWhenPlayed(unit.cardId)) {
-    // Both Ambush and When Played — put both in bag for player to choose ordering,
-    // but only add WhenPlayed if it has interactive targets (non-null preview).
+    // Both Ambush and When Played — put both in bag for player to choose ordering.
+    // Add WhenPlayed if it has interactive targets (non-null preview) OR is a no-input
+    // auto-effect (e.g. TWI_112 Subjugating Starfighter's "create a Battle Droid token");
+    // a preview-null auto-effect must still fire, so it can't be skipped like a true no-op.
     const whenPlayedPreview = resolveWhenPlayed(unit.cardId, player, unit.playId);
-    if (whenPlayedPreview !== null) {
+    if (whenPlayedPreview !== null || WhenPlayedHasAutoEffect(unit.cardId)) {
       game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
     }
-    // If WhenPlayed has no targets, skip adding it — Ambush proceeds alone.
+    // If WhenPlayed has no targets and no auto-effect, skip adding it — Ambush proceeds alone.
   } else if (!hasAmbush && CardHasWhenPlayed(unit.cardId)) {
     const whenPlayedPending = resolveWhenPlayed(unit.cardId, player, unit.playId);
     if (whenPlayedPending && !deferWhenPlayed) {
@@ -3966,6 +3971,33 @@ function handleChooseTarget(
       payResources(game, pending.player, reducedCost102, log, cardId102);
       log.push(`${CardTitle("SOR_102")}: played ${CardTitle(cardId102)} from discard (cost -3 = ${reducedCost102}).`);
       return completePlayCard(game, log, cardId102, pending.player);
+    }
+
+    // TWI_189 Unnatural Life: play the chosen unit from discard at cost -2, entering ready, and
+    // defeat it at the start of the regroup phase (via the UntilStartOfRegroup effect).
+    if (pending.cardId === "TWI_189") {
+      const playId189 = chosen[0];
+      if (!playId189) {
+        const bag189a = drainTriggerBag(game, log);
+        if (bag189a) return { response: resolutionResponse(pendingToResolution(bag189a, game)), pending: bag189a, stateChanged: true };
+        return { response: stateResponse(game), pending: null, stateChanged: true };
+      }
+      const playerState189 = GetPlayer(game, pending.player);
+      const idx189 = playerState189.discard.findIndex(d => d.playId === playId189);
+      if (idx189 === -1)
+        return { response: invalidResponse("Unnatural Life: card not found in discard."), pending, stateChanged: false };
+      const cardId189 = playerState189.discard[idx189].cardId;
+      const reducedCost189 = Math.max(0, playCost(game, pending.player, cardId189) - 2);
+      const ready189 = spendableFor(game, pending.player);
+      if (ready189 < reducedCost189)
+        return { response: invalidResponse(`Unnatural Life: not enough resources to play ${CardTitle(cardId189)} (needs ${reducedCost189}).`), pending, stateChanged: false };
+      playerState189.discard.splice(idx189, 1);
+      payResources(game, pending.player, reducedCost189, log, cardId189);
+      log.push(`${CardTitle("TWI_189")}: played ${CardTitle(cardId189)} from discard (cost -2 = ${reducedCost189}, enters ready).`);
+      return completePlayCard(game, log, cardId189, pending.player, {
+        enterReady: true,
+        injectEffect: { cardId: "TWI_189", duration: "UntilStartOfRegroup", affectedPlayer: pending.player },
+      });
     }
 
     // SOR_183 Bounty Hunter Crew (Han Solo): return an event from either player's discard to its owner's hand.
@@ -5689,8 +5721,10 @@ function applyAbilityOptionDeclineEffect(
       if (top119No) {
         pushEventToDiscard(game, pending.player!, top119No.cardId);
         log.push(`${CardTitle(pending.cardId)}: discarded ${CardTitle(top119No.cardId)}.`);
-        pState119No.base.damage = Math.max(0, pState119No.base.damage - 3);
-        log.push(`${CardTitle(pending.cardId)}: healed 3 damage from player ${pending.player!}'s base.`);
+        if (!BaseHealingPrevented()) { // TWI_132 Confederate Tri-Fighter
+          pState119No.base.damage = Math.max(0, pState119No.base.damage - 3);
+          log.push(`${CardTitle(pending.cardId)}: healed 3 damage from player ${pending.player!}'s base.`);
+        }
       }
       return pending.continuation;
     }
@@ -7542,7 +7576,7 @@ function processMillResult(game: GameState, log: string[], pending: MillResultPe
     case "SOR_047": { // Kanan Jarrus — heal base by number of distinct aspects among milled cards
       const distinctAspects = new Set(pending.milledCardIds.flatMap((id: string) => CardAspects(id)));
       const healAmount = distinctAspects.size;
-      if (healAmount > 0) {
+      if (healAmount > 0 && !BaseHealingPrevented()) { // TWI_132 Confederate Tri-Fighter
         const healPlayer = GetPlayer(game, pending.player);
         healPlayer.base.damage = Math.max(0, healPlayer.base.damage - healAmount);
         log.push(`${CardTitle(pending.cardId)}: healed ${healAmount} damage from player ${pending.player}'s base (${healAmount} distinct aspect(s)).`);
@@ -7566,6 +7600,7 @@ function healTarget(
 ): void {
   const baseMatch = targetPlayId.match(/^player([12])\.base$/);
   if (baseMatch) {
+    if (BaseHealingPrevented()) return; // TWI_132 Confederate Tri-Fighter
     const playerNum = Number(baseMatch[1]) as PlayerId;
     const playerState = GetPlayer(game, playerNum);
     playerState.base.damage = Math.max(0, playerState.base.damage - amount);
@@ -7814,6 +7849,42 @@ function applyAbilityEffect(
         target108.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target108.owner, controller: target108.controller });
         game.gameLog.push(`${CardTitle("SOR_108")}: gave an Experience token to ${CardTitle(target108.cardId)}.`);
       }
+      break;
+    }
+    case "TS26_058": { // Backed by the Pykes — step 1: give an Experience token to the chosen friendly unit,
+                       // then offer the optional damage (equal to friendly Experience-token count).
+      if (!targetPlayId || pending.player === undefined) break;
+      const target058 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target058) {
+        target058.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target058.owner, controller: target058.controller });
+        game.gameLog.push(`${CardTitle("TS26_058")}: gave an Experience token to ${CardTitle(target058.cardId)}.`);
+      }
+      const xpCount058 = GetUnitsForPlayer(pending.player).reduce(
+        (sum, u) => sum + u.upgrades.filter(up => up.cardId === "SOR_T01").length, 0);
+      const allUnits058 = GetAllUnits(game.currentGameState);
+      if (xpCount058 <= 0 || allUnits058.length === 0) break;
+      return {
+        type: "ability-option",
+        cardId: "TS26_058_damage",
+        player: pending.player,
+        helperText: `Deal ${xpCount058} damage to a unit?`,
+        yesLabel: `Deal ${xpCount058}`,
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "TS26_058_damage",
+          player: pending.player,
+          fromPlayIds: allUnits058.map(u => u.playId),
+          continuation: null,
+        },
+        continuation: null,
+      };
+    }
+    case "TS26_058_damage": { // Backed by the Pykes — step 2: deal damage equal to friendly Experience-token count.
+      if (!targetPlayId || pending.player === undefined) break;
+      const xpCount058b = GetUnitsForPlayer(pending.player).reduce(
+        (sum, u) => sum + u.upgrades.filter(up => up.cardId === "SOR_T01").length, 0);
+      DealDamageToUnit(game.currentGameState, "TS26_058", targetPlayId, xpCount058b, game.gameLog);
       break;
     }
     case "SOR_121": { // Hardpoint Heavy Blaster on-attack: deal 2 damage to chosen unit in defender's arena
@@ -8143,6 +8214,18 @@ function applyAbilityEffect(
         attackerPlayId: targetPlayId,
         source: "SOR_103",
         continuation: continuationSOR103,
+      };
+    }
+    case "JTL_231": { // Punch It: give the chosen Vehicle +2/+0 for this attack, then attack with it.
+      if (!targetPlayId) break;
+      const unit231 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit231) break;
+      GivePowerMod("JTL_231", unit231, 2, "ForAttack", game.gameLog);
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "JTL_231",
+        continuation: pending.continuation,
       };
     }
     case "SOR_168": { // Precision Fire: push ForAttack Saboteur + Trooper bonus, then attack with chosen unit
@@ -8786,6 +8869,16 @@ function applyAbilityEffect(
     case "SOR_132": { // Imperial Interceptor WP: Deal 3 damage to chosen space unit.
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog);
+      break;
+    }
+    case "ASH_194": { // Snub Fighter Squadron WP: Deal 1 damage to chosen space unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 1, game.gameLog);
+      break;
+    }
+    case "LOF_158": { // Hyena Bomber WP: Deal 2 damage to chosen ground unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
       break;
     }
     case "SOR_134": { // Ruthless Raider WP/WD: Deal 2 to enemy base + 2 to chosen enemy unit.

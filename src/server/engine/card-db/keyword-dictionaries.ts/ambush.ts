@@ -136,6 +136,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "ASH_106"://Pathfinder Sergeant
     case "ASH_129"://Defenders of the Forest
     case "ASH_192"://Fennec Shand
+    case "ASH_194"://Snub Fighter Squadron
       return true;
   }
   //JTL_053: The Ghost - Heart of the Family

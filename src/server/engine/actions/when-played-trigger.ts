@@ -1,7 +1,7 @@
 import { CardTitle } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { DrawCardForPlayer, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
+import { BaseHealingPrevented, DrawCardForPlayer, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
 import { CreateSpy, CreateTieFighter, CreateBattleDroid } from "@/server/engine/token-helpers";
 
 /**
@@ -16,7 +16,7 @@ import { CreateSpy, CreateTieFighter, CreateBattleDroid } from "@/server/engine/
  */
 const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
-  "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148",
+  "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -55,6 +55,11 @@ export function resolveWhenPlayedTrigger(
       break;
     case "TWI_229": // Battle Droid Escort — When Played: Create a Battle Droid token.
       CreateBattleDroid(gs, trigger.fromPlayer, log, trigger.cardId);
+      break;
+    case "TWI_112": // Subjugating Starfighter — When Played: If you have the initiative, create a Battle Droid token.
+      if (gs.initiativePlayer === trigger.fromPlayer) {
+        CreateBattleDroid(gs, trigger.fromPlayer, log, trigger.cardId);
+      }
       break;
     case "SOR_134": // Ruthless Raider — When Played with no enemy unit to hit: deal 2 to the enemy base only.
       otherPlayer.base.damage += 2;
@@ -125,6 +130,7 @@ export function resolveWhenPlayedTrigger(
     }
     case "SOR_068": { // Cargo Juggernaut — If you control another Vigilance unit, heal 4 from base.
       if (!PlayerHasUnitWithAspectInPlay(trigger.fromPlayer, "Vigilance", true, trigger.playId)) break;
+      if (BaseHealingPrevented()) break; // TWI_132 Confederate Tri-Fighter
       const base068 = trigger.fromPlayer === 1 ? gs.player1.base : gs.player2.base;
       base068.damage = Math.max(0, base068.damage - 4);
       log.push(`${CardTitle(trigger.cardId)}: healed 4 damage from your base.`);

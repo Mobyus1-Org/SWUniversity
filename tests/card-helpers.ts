@@ -412,6 +412,7 @@ export const Cards = {
       guardianOfTheWhills: "LOF_058",
       karis: "LOF_031",
       anakinSkywalkerChampionOfMortis: "LOF_070",
+      hyenaBomber: "LOF_158",
     },
     twi: {
       infiltratingDemolisher: "TWI_182",
@@ -422,6 +423,11 @@ export const Cards = {
       r2d2FullOfSolutions: "TWI_193",
       battleDroidEscort: "TWI_229",
       cloneHeavyGunner: "TWI_158",
+      separatistCommando: "TWI_180",
+      confederateCourier: "TWI_079",
+      hailfireTank: "TWI_233",
+      subjugatingStarfighter: "TWI_112",
+      confederateTriFighter: "TWI_132",
     },
     sec: {
       cadBane: "SEC_034",
@@ -484,6 +490,7 @@ export const Cards = {
       morganElsbeth: "ASH_050",
       theGreatMothers: "ASH_101",
       halo: "ASH_223",
+      snubFighterSquadron: "ASH_194",
       // Leader units (the deployed side of the ASH leaders)
       ahsokaTano: "ASH_009",
       theMandalorian: "ASH_014",
@@ -605,6 +612,7 @@ export const Cards = {
       dropIn: "TWI_251",
       takeCaptive: "TWI_128",
       daringRaid: "TWI_170",
+      unnaturalLife: "TWI_189",
     },
     jtl: {
       repair: "JTL_075",
@@ -615,6 +623,10 @@ export const Cards = {
       unityOfPurpose: "JTL_106",
       flyCasual: "JTL_206",
       noGloryOnlyResults: "JTL_043",
+      punchIt: "JTL_231",
+    },
+    ts26: {
+      backedByThePykes: "TS26_058",
     },
     sec: {
       iAmTheSenate: "SEC_092",
