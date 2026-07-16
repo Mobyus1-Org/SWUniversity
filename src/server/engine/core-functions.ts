@@ -543,6 +543,25 @@ export function BaseHealingPrevented(): boolean {
 }
 
 /**
+ * ASH_070 At Attin Safety Droid: "If your base would be dealt more than 4 damage, prevent all but
+ * 4 of that damage." A per-instance cap on damage to its controller's own base — only checked
+ * when `targetPlayer` (the player whose base is being hit) controls a live Safety Droid. Base
+ * damage is not centralized, so each site routes its amount through this before applying it —
+ * see the callers of this function.
+ */
+export function CapBaseDamage(targetPlayer: PlayerId, amount: number): number {
+  if (amount <= 4) return amount;
+  const game = GetGame();
+  if (!game) return amount;
+  const hasSafetyDroid = GetUnitsForPlayer(targetPlayer).some(u => {
+    if (u.cardId !== "ASH_070") return false;
+    const unit = GetUnitInPlay(u.playId, targetPlayer);
+    return !!unit && !unit.LostAbilities();
+  });
+  return hasSafetyDroid ? 4 : amount;
+}
+
+/**
  * Heals `amount` damage from a player's base, floored at 0. Shared by every card that
  * heals a base (Grassroots Resistance, Lost and Forgotten, …).
  */
@@ -995,6 +1014,10 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_056": //Bendu
     case "SEC_110": //GNK Power Droid
     case "SOR_067": //Rugged Survivors
+    case "LAW_079": //K-2SO — On Attack: may deal 3 damage to a damaged ground unit
+    case "ASH_043": //Corona Four — On Attack: may give a unit -2/-0 for this phase
+    case "ASH_056": //Huyang — On Attack: may give an upgraded unit -4/-0 for this phase
+    case "ASH_083": //Summa-verminoth — On Attack: defeat all other space units
     case "JTL_186": //Mist Hunter — On Attack: if you played a Bounty Hunter or Pilot card this phase, may draw
     case "LAW_173": //BT-1 — On Attack: discard top of deck; if Aggression, may deal 1 to a ground unit
     case "LAW_174": //0-0-0 — On Attack: may put an Aggression card from discard on deck bottom; deal 1 to each enemy base
@@ -1166,6 +1189,29 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
     ].find(u => u.cardId === cardId && u.controller !== target.controller);
     if (sourceUnit) QueueJangoDamageReaction(gs, sourceUnit.controller, target.playId);
   }
+
+  // Rancor Keeper (ASH_032): "When a friendly unit is dealt damage and survives" — ability damage path.
+  QueueRancorKeeperReaction(gs, target);
+}
+
+/**
+ * ASH_032 Rancor Keeper: "When a friendly unit is dealt damage and survives: Deal 1 damage to any
+ * number of bases. Use this ability only once each round." Queues the trigger when `damaged`
+ * (already carrying its post-damage HP) belongs to a player controlling a live Rancor Keeper that
+ * hasn't used the ability this round. Called after damage lands, from both the ability-damage path
+ * (DealDamageToUnit) and the combat-damage path (resolveAttack).
+ */
+export function QueueRancorKeeperReaction(gs: GameState, damaged: Unit): void {
+  if (damaged.CurrentHP() <= 0) return; // must survive
+  const controller = damaged.controller;
+  const keeper = GetUnitsForPlayer(controller).find(u => u.cardId === "ASH_032");
+  if (!keeper) return;
+  if (Unit.FromInterface(keeper).LostAbilities()) return;
+  const usedThisRound = gs.currentEffects.some(
+    e => e.cardId === "ASH_032_usedThisRound" && e.affectedPlayer === controller,
+  );
+  if (usedThisRound) return;
+  gs.triggerBag.push({ triggerType: "when-unit-takes-damage", cardId: "ASH_032", fromPlayer: controller, playId: damaged.playId, nested: true });
 }
 
 /**

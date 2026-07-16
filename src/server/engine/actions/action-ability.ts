@@ -37,6 +37,7 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "SOR_009": //Leia Organa - Alliance General
       case "SOR_010": //Darth Vader - Dark Lord of the Sith
       case "SOR_011": //Grand Inquisitor - Hunting the Jedi
+      case "ASH_004": //Grand Admiral Thrawn - Victory is Mine
       case "SOR_012": //IG-88 - Ruthless Bounty Hunter
       case "SOR_013": //Cassian Andor - Dedicated to the Rebellion
       case "SOR_014": //Sabine Wren - Galvanized Revolutionary

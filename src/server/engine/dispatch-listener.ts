@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, CapBaseDamage } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -497,6 +497,7 @@ function pushEventToDiscard(game: GameState, player: PlayerId, cardId: string): 
 }
 
 function dealBaseDamage(game: GameState, player: PlayerId, amount: number, byPlayer?: PlayerId): void {
+  amount = CapBaseDamage(player, amount); // ASH_070 At Attin Safety Droid
   GetPlayer(game, player).base.damage += amount;
   if (byPlayer !== undefined) {
     game.roundState.baseDamagedThisPhase ??= [];
@@ -961,6 +962,24 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
         onYes: null,
         continuation: null,
       } satisfies AbilityOptionPending;
+    }
+    return null;
+  }
+
+  if (trigger.triggerType === "when-unit-takes-damage") {
+    if (trigger.cardId === "ASH_032") { // Rancor Keeper — deal 1 damage to any number of bases (once per round).
+      const keeper032 = GetUnitsForPlayer(trigger.fromPlayer).find(u => u.cardId === "ASH_032");
+      if (!keeper032 || Unit.FromInterface(keeper032).LostAbilities()) return null;
+      game.currentEffects.push({ cardId: "ASH_032_usedThisRound", duration: "Round", affectedPlayer: trigger.fromPlayer });
+      return {
+        type: "ability-target",
+        cardId: "ASH_032",
+        player: trigger.fromPlayer,
+        fromPlayIds: ["player1.base", "player2.base"],
+        needsMultiple: true,
+        maxTargets: 2,
+        continuation: null,
+      } satisfies AbilityTargetPending;
     }
     return null;
   }
@@ -1731,6 +1750,10 @@ function resolveAttack(
     // attacker→defender hit and the defender→attacker counter are "a friendly unit deals damage".
     if (shieldIdx === -1 && effectiveAtkPower > 0) QueueJangoDamageReaction(game, attacker.controller, defender.playId);
     if (attackerShieldIdx === -1 && effectiveDefPower > 0) QueueJangoDamageReaction(game, defender.controller, attacker.playId);
+
+    // Rancor Keeper (ASH_032): "When a friendly unit is dealt damage and survives" — combat path.
+    if (shieldIdx === -1 && effectiveAtkPower > 0) QueueRancorKeeperReaction(game, defender);
+    if (attackerShieldIdx === -1 && effectiveDefPower > 0) QueueRancorKeeperReaction(game, attacker);
 
     // A Shield token absorbs the entire damage instance, so no combat damage
     // reaches the defender and there is no excess for Overwhelm to spill.
@@ -2559,6 +2582,25 @@ function applyAutoOnAttackEffects(
   attacker: Unit,
   target: ResolveAttackPending["target"],
 ): void {
+  // ASH_083 Summa-verminoth — "On Attack: Defeat all other space units." Target-agnostic (applies
+  // to both sides, regardless of whether the declared target is a unit or a base), so it is
+  // checked before the unit-target gate below. If the declared defender is a space unit, it is
+  // defeated here too — resolveAttack already handles a defender that has left play (returns null).
+  if (AttackAbilityCardIds(attacker).includes("ASH_083")) {
+    const otherSpaceUnits083 = [...game.player1.spaceArena, ...game.player2.spaceArena]
+      .filter(u => u.playId !== attacker.playId);
+    for (const u of otherSpaceUnits083) {
+      const unit083 = GetUnitByPlayId(game, u.playId);
+      // bypassL337: this is a no-input auto-effect, so JTL_049's "move to a Vehicle instead"
+      // replacement prompt can't be offered here — force the actual defeat.
+      if (unit083) defeatUnit(game, log, unit083, true);
+    }
+    if (otherSpaceUnits083.length > 0) {
+      log.push(`${CardTitle("ASH_083")}: defeated all other space units.`);
+      updateDefeatedPlayers(game);
+    }
+  }
+
   if (target.type !== "unit") return;
   const defenderPlayId = target.playId;
   let applied = false;
@@ -3782,6 +3824,24 @@ function handleChooseTarget(
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
+    if (pending.cardId === "ASH_032") {
+      // Rancor Keeper — deal 1 damage to each chosen base (any number, including zero).
+      const chosenBases032 = data.targetPlayIds ?? [];
+      for (const id of chosenBases032) {
+        if (!pending.fromPlayIds.includes(id))
+          return { response: invalidResponse(`${id} is not a valid target for ${CardTitle(pending.cardId)}.`), pending, stateChanged: false };
+      }
+      for (const id of chosenBases032) {
+        const basePlayer032: PlayerId = id === "player1.base" ? 1 : 2;
+        dealBaseDamage(game, basePlayer032, 1, pending.player);
+        log.push(`${CardTitle("ASH_032")}: dealt 1 damage to Player ${basePlayer032}'s base.`);
+      }
+      updateDefeatedPlayers(game);
+      const bagAsh032 = drainTriggerBag(game, log);
+      if (bagAsh032) return { response: resolutionResponse(pendingToResolution(bagAsh032, game)), pending: bagAsh032, stateChanged: false };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
     if (pending.cardId === "JTL_170" || pending.cardId === "JTL_140") {
       // War Juggernaut — deal 1 to each chosen unit (any number).
       // IG-2000 — deal 1 to each chosen unit (up to 3).
@@ -3908,8 +3968,9 @@ function handleChooseTarget(
       if (idx174 !== -1) {
         const card174 = pState174.discard.splice(idx174, 1)[0];
         pState174.deck.unshift({ cardId: card174.cardId }); // bottom of deck (top is popped from the end)
-        const enemyState174 = GetPlayer(game, player174 === 1 ? 2 : 1);
-        enemyState174.base.damage += 1;
+        const enemyPlayer174: PlayerId = player174 === 1 ? 2 : 1;
+        const enemyState174 = GetPlayer(game, enemyPlayer174);
+        enemyState174.base.damage += CapBaseDamage(enemyPlayer174, 1);
         log.push(`${CardTitle("LAW_174")}: put ${CardTitle(card174.cardId)} on the bottom of the deck and dealt 1 damage to the enemy base.`);
       }
       const next174 = pending.continuation;
@@ -4820,7 +4881,7 @@ function handleChooseTarget(
         hand.splice(idx, 1);
         log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Galactic Ambition (free).`);
         const result235 = completePlayCard(game, log, cardId, pending.player);
-        GetPlayer(game, pending.player).base.damage += baseCost235;
+        GetPlayer(game, pending.player).base.damage += CapBaseDamage(pending.player, baseCost235);
         log.push(`${CardTitle("SOR_235")}: dealt ${baseCost235} damage to Player ${pending.player}'s base.`);
         return result235;
       }
@@ -4946,7 +5007,7 @@ function handleChooseTarget(
     // Apply base damage
     const targetState = pending.targetPlayer === 1 ? game.player1 : game.player2;
     if (baseDamage > 0) {
-      targetState.base.damage += baseDamage;
+      targetState.base.damage += CapBaseDamage(pending.targetPlayer, baseDamage);
       game.roundState.baseDamagedThisPhase.push({ byPlayer: pending.sourcePlayer, target: pending.targetPlayer });
     }
 
@@ -6693,8 +6754,10 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "TWI_004": // Yoda — If you control 7 or more resources.
       return p.resources.length >= 7;
-    case "JTL_002": // Grand Admiral Thrawn — If you control 6 or more resources.
+    case "JTL_002": // Grand Admiral Thrawn (JTL) — If you control 6 or more resources.
       return p.resources.length >= 6;
+    case "ASH_004": // Grand Admiral Thrawn (ASH) — If you control 8 or more resources.
+      return p.resources.length >= 8;
     case "LOF_017": // Darth Revan — If you control 5 or more resources.
     case "TWI_018": // Quinlan Vos — If you control 5 or more resources.
       return p.resources.length >= 5;
@@ -7250,12 +7313,12 @@ function resolveActionAbility(
       } satisfies AbilityOptionPending;
     }
     case "SOR_014": // Sabine Wren - Galvanized Revolutionary: Deal 1 damage to each base.
-      game.player1.base.damage += 1;
-      game.player2.base.damage += 1;
+      game.player1.base.damage += CapBaseDamage(1, 1);
+      game.player2.base.damage += CapBaseDamage(2, 1);
       log.push(`${CardTitle(cardId)} dealt 1 damage to each base.`);
       return null;
     case "TWI_012": { // Anakin Skywalker — Action [Exhaust, deal 2 damage to your base]: Attack with a unit. +2/+0 if attacking a unit.
-      GetPlayer(game, player).base.damage += 2;
+      GetPlayer(game, player).base.damage += CapBaseDamage(player, 2);
       log.push(`${CardTitle("TWI_012")}: dealt 2 damage to your base.`);
       const readyUnits012 = GetUnitsForPlayer(player).filter(u => u.ready);
       if (readyUnits012.length === 0) return null;
@@ -7287,6 +7350,19 @@ function resolveActionAbility(
         cardId: "TWI_011",
         player,
         fromPlayIds: readyUnits011.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "ASH_004": { // Grand Admiral Thrawn (leader) — Action [Exhaust]: Attack with a unit. It
+                      // gains Restore 2 for this attack if you control the same number of units as
+                      // the defending player.
+      const readyUnits004 = GetUnitsForPlayer(player).filter(u => u.ready);
+      if (readyUnits004.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "ASH_004_leader",
+        player,
+        fromPlayIds: readyUnits004.map(u => u.playId),
         continuation: null,
       } satisfies AbilityTargetPending;
     }
@@ -8163,6 +8239,23 @@ function applyAbilityEffect(
       if (target209) GivePowerMod("ASH_209", target209, -3, "Phase", game.gameLog);
       break;
     }
+    case "LAW_079": { // K-2SO On Attack: deal 3 damage to the chosen damaged ground unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "LAW_079", targetPlayId, 3, game.gameLog);
+      break;
+    }
+    case "ASH_043": { // Corona Four On Attack: give the chosen unit –2/–0 for this phase.
+      if (!targetPlayId) break;
+      const target043 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target043) GivePowerMod("ASH_043", target043, -2, "Phase", game.gameLog);
+      break;
+    }
+    case "ASH_056": { // Huyang On Attack: give the chosen upgraded unit –4/–0 for this phase.
+      if (!targetPlayId) break;
+      const target056 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target056) GivePowerMod("ASH_056", target056, -4, "Phase", game.gameLog);
+      break;
+    }
     case "ASH_253": { // Yellow Aces Bomber On Attack: deal 2 damage to the chosen base ("a base" — either one).
       const owner253 = pending.player!;
       let basePlayer253: PlayerId | null = null;
@@ -8889,13 +8982,13 @@ function applyAbilityEffect(
     case "SOR_142": { // Explosives Artist OA: deal 1 damage to chosen unit or base, then proceed.
       if (targetIsBase) {
         const opp142: PlayerId = pending.player === 1 ? 2 : 1;
-        GetPlayer(game.currentGameState, opp142).base.damage += 1;
+        GetPlayer(game.currentGameState, opp142).base.damage += CapBaseDamage(opp142, 1);
         game.gameLog.push(`${CardTitle("SOR_142")}: dealt 1 damage to player ${opp142}'s base.`);
       } else if (targetPlayId) {
         const baseMatch142 = targetPlayId.match(/^player([12])\.base$/);
         if (baseMatch142) {
           const basePlayer142 = Number(baseMatch142[1]) as PlayerId;
-          GetPlayer(game.currentGameState, basePlayer142).base.damage += 1;
+          GetPlayer(game.currentGameState, basePlayer142).base.damage += CapBaseDamage(basePlayer142, 1);
           game.gameLog.push(`${CardTitle("SOR_142")}: dealt 1 damage to player ${basePlayer142}'s base.`);
         } else {
           DealDamageToUnit(game.currentGameState, "SOR_142", targetPlayId, 1, game.gameLog);
@@ -9020,13 +9113,23 @@ function applyAbilityEffect(
       }
       break;
     }
+    case "ASH_043_wd": { // Corona Four When Defeated: defeat the chosen non-leader 0-power unit.
+      if (!targetPlayId) break;
+      const target043wd = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target043wd) break;
+      const defeatPend043 = defeatUnit(game.currentGameState, game.gameLog, target043wd);
+      game.gameLog.push(`${CardTitle("ASH_043")}: defeated ${CardTitle(target043wd.cardId)}.`);
+      if (defeatPend043) return injectContinuation(defeatPend043, pending.continuation);
+      return pending.continuation;
+    }
     case "SOR_134": { // Ruthless Raider WP/WD: Deal 2 to enemy base + 2 to chosen enemy unit.
       if (!targetPlayId) break;
       // Base damage is applied here (once, at resolution) rather than in resolveWhenPlayed,
       // which is called twice for units; the no-enemy-unit paths handle the base separately.
       if (pending.player) {
+        const oppPlayer134: PlayerId = pending.player === 1 ? 2 : 1;
         const oppBase134 = pending.player === 1 ? game.currentGameState.player2 : game.currentGameState.player1;
-        oppBase134.base.damage += 2;
+        oppBase134.base.damage += CapBaseDamage(oppPlayer134, 2);
         game.gameLog.push(`${CardTitle("SOR_134")}: dealt 2 damage to opponent's base.`);
       }
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
@@ -9452,10 +9555,10 @@ function applyAbilityEffect(
     case "SOR_158": { // Jedha Agitator On Attack: deal 2 damage to chosen ground unit or base.
       if (!targetPlayId) break;
       if (targetPlayId === "player1.base") {
-        game.currentGameState.player1.base.damage += 2;
+        game.currentGameState.player1.base.damage += CapBaseDamage(1, 2);
         game.gameLog.push(`${CardTitle("SOR_158")}: dealt 2 damage to Player 1's base.`);
       } else if (targetPlayId === "player2.base") {
-        game.currentGameState.player2.base.damage += 2;
+        game.currentGameState.player2.base.damage += CapBaseDamage(2, 2);
         game.gameLog.push(`${CardTitle("SOR_158")}: dealt 2 damage to Player 2's base.`);
       } else {
         DealDamageToUnit(game.currentGameState, "SOR_158", targetPlayId, 2, game.gameLog);
@@ -9660,6 +9763,22 @@ function applyAbilityEffect(
         type: "attack-target",
         attackerPlayId: targetPlayId,
         source: "TWI_014",
+        continuation: null,
+      };
+    }
+    case "ASH_004_leader": { // Grand Admiral Thrawn leader Action: the chosen unit attacks; if you
+                             // control the same number of units as the defending player, it gains
+                             // Restore 2 for this attack.
+      if (!targetPlayId) break;
+      const opponent004: PlayerId = pending.player! === 1 ? 2 : 1;
+      if (GetUnitsForPlayer(pending.player!).length === GetUnitsForPlayer(opponent004).length) {
+        game.currentGameState.currentEffects.push({ cardId: "ASH_004_restore", duration: "ForAttack", affectedPlayer: pending.player!, targetPlayId });
+        game.gameLog.push(`${CardTitle("ASH_004")}: chosen unit gains Restore 2 for this attack (equal unit count).`);
+      }
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "ASH_004",
         continuation: null,
       };
     }

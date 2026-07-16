@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, CapBaseDamage, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects } from "@/server/engine/card-db/generated";
@@ -510,6 +510,26 @@ function resolveInnateOnAttack(
         continuation,
       };
     }
+    case "LAW_079": { // K-2SO — On Attack: You may deal 3 damage to a damaged ground unit.
+      const damagedGround079 = AllGroundUnits().filter(u => u.damage > 0);
+      if (damagedGround079.length === 0) return continuation;
+      return optionalTarget("LAW_079", attacker.controller, damagedGround079.map(u => u.playId),
+        "Deal 3 damage to a damaged ground unit?", { yesLabel: "Deal 3", continuation });
+    }
+    case "ASH_043": { // Corona Four — On Attack: You may give a unit –2/–0 for this phase.
+      const allUnits043 = AllUnits();
+      if (allUnits043.length === 0) return continuation;
+      return optionalTarget("ASH_043", attacker.controller, allUnits043.map(u => u.playId),
+        "Give a unit –2/–0 for this phase?", { continuation });
+    }
+    case "ASH_056": { // Huyang — On Attack: You may give an upgraded unit –4/–0 for this phase.
+      const upgraded056 = AllUnits().filter(u => u.upgrades.length > 0);
+      if (upgraded056.length === 0) return continuation;
+      return optionalTarget("ASH_056", attacker.controller, upgraded056.map(u => u.playId),
+        "Give an upgraded unit –4/–0 for this phase?", { continuation });
+    }
+    // ASH_083 Summa-verminoth's "Defeat all other space units" is handled in
+    // applyAutoOnAttackEffects (dispatch-listener.ts) — it needs defeatUnit(), which lives there.
     case "LAW_173": { // BT-1 — On Attack: Discard a card from your deck. If it's Aggression, you may deal 1 damage to a ground unit.
       const game173 = GetGame();
       if (!game173) return continuation;
@@ -788,9 +808,9 @@ function resolveInnateOnAttack(
       const game = GetGame();
       if (!game) return continuation;
       const gs = game.currentGameState;
-      const opponentId = attacker.controller === 1 ? 2 : 1;
+      const opponentId: PlayerId = attacker.controller === 1 ? 2 : 1;
       const opponent = opponentId === 1 ? gs.player1 : gs.player2;
-      opponent.base.damage += 1;
+      opponent.base.damage += CapBaseDamage(opponentId, 1);
       return continuation;
     }
     case "SHD_012": { // Bo-Katan Kryze (deployed) "On Attack: You may deal 1 damage to a unit. If you attacked with another Mandalorian unit this phase, you may deal 1 damage to a unit."

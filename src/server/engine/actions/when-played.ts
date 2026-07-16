@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyAbilities } from "@/server/engine/core-functions";
+import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, CapBaseDamage, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyAbilities } from "@/server/engine/core-functions";
 import { aspectPenalty, spendableFor } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -616,7 +616,7 @@ export function resolveWhenPlayed(
         p150.hand.push(p150.deck.pop()!);
         game150.gameLog.push(`${CardTitle("SOR_150")}: drew a card.`);
       } else {
-        p150.base.damage += 3;
+        p150.base.damage += CapBaseDamage(player, 3);
         game150.gameLog.push(`${CardTitle("SOR_150")}: drew from empty deck — 3 damage to base.`);
       }
       const attackers150 = GetUnitsForPlayer(player, true);
@@ -1282,13 +1282,14 @@ export function resolveWhenPlayed(
       const game152 = GetGame();
       if (!game152) return null;
       const pState152 = GetPlayer(game152.currentGameState, player);
+      const opponentPlayer152 = player === 1 ? 2 : 1;
       const opponent152 = player === 1 ? game152.currentGameState.player2 : game152.currentGameState.player1;
       const n152 = Math.min(4, pState152.deck.length);
       if (n152 === 0) return null;
       const slice152 = pState152.deck.slice(-n152);
       const heroismCount = slice152.filter(c => CardAspects(c.cardId).includes("Heroism")).length;
       if (heroismCount > 0) {
-        opponent152.base.damage += heroismCount;
+        opponent152.base.damage += CapBaseDamage(opponentPlayer152, heroismCount);
         game152.gameLog.push(`${CardTitle(cardId)}: revealed ${heroismCount} Heroism card(s) — dealt ${heroismCount} damage to enemy base.`);
       }
       pState152.deck.splice(pState152.deck.length - n152, n152);

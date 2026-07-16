@@ -107,7 +107,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   //Secrets of Power
   "SEC_004", "SEC_015",
   //ASH
-  "ASH_009",
+  "ASH_004", "ASH_009",
 ]);
 
 // Non-leader units with an Action ability. Maps cardId → short label for the modal button.
@@ -666,6 +666,10 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     if (resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Base")) {
       // Base abilities say "a base" — send which base was clicked, not just the zone.
       void sendDispatch(createDispatch("choose-target", { targetZones: ["Base"], targetPlayers: [player] }));
+    } else if (resolutionNeeded?.type === "Target" && resolutionNeeded.fromPlayIds?.includes(`player${player}.base`)) {
+      // "Unit or base" abilities (Repair/JTL_075, Daring Raid) encode the base as a literal
+      // playId inside fromPlayIds rather than via fromZones — match that form directly.
+      void sendDispatch(createDispatch("choose-target", { targetPlayIds: [`player${player}.base`] }));
     } else if (!resolutionNeeded && gameState && BASES_WITH_EPIC_ACTION.has(gameState.player1.base.cardId)) {
       void sendDispatch(createDispatch("use-ability", { cardId: gameState.player1.base.cardId }));
     }
@@ -1114,8 +1118,13 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
 
   // Base targets: an attack restricts to the enemy base (baseTargetPlayers); "a base" ability
   // targets leave it undefined, so either base is a legal choice.
-  const selectableBaseForPlayer: PlayerId[] = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Base")
-    ? (resolutionNeeded.baseTargetPlayers ?? [1, 2])
+  // Some "unit or base" abilities (Repair/JTL_075, Daring Raid) don't use fromZones at all —
+  // they fold "playerN.base" literally into fromPlayIds alongside unit playIds. Recognize that
+  // form too, or those bases never render as clickable even though the server accepts them.
+  const selectableBaseForPlayer: PlayerId[] = resolutionNeeded?.type === "Target"
+    ? (resolutionNeeded.fromZones?.includes("Base")
+        ? (resolutionNeeded.baseTargetPlayers ?? [1, 2])
+        : ([1, 2] as PlayerId[]).filter(p => resolutionNeeded.fromPlayIds?.includes(`player${p}.base`)))
     : [];
   // Clickable if deploy is still available (even exhausted) OR ability is ready
   const uiCanClickLeader = !resolutionNeeded && !isGameOver && !player.leader.deployed &&

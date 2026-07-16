@@ -21,6 +21,9 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
       }
 
       switch(currentEffect.cardId) {
+        case "ASH_004_restore"://Grand Admiral Thrawn leader Action
+          amount += 2;
+          break;
         case "TWI_129"://In Defense of Kamino
           amount += 2;
           break;

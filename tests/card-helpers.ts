@@ -213,6 +213,7 @@ export const Cards = {
     ash: {
       ahsokaTano: "ASH_009",
       theMandalorian: "ASH_014",
+      grandAdmiralThrawn: "ASH_004",
     },
     ts26: {
       countDooku: "TS26_001",
@@ -435,6 +436,7 @@ export const Cards = {
     sec: {
       cadBane: "SEC_034",
       unrulyAstromech: "SEC_221",
+      huntingAssassinDroid: "SEC_134",
       chancellorPalpatine: "SEC_082",
       isbShuttle: "SEC_083",
       viceAdmiralRampart: "SEC_085",
@@ -449,6 +451,7 @@ export const Cards = {
       scavengingSandcrawler: "LAW_238",
       bt1: "LAW_173",
       tripleZero: "LAW_174",
+      k2so: "LAW_079",
       galenErso: "LAW_233",
       zebOrellios: "LAW_045",
       chioFain: "LAW_048",
@@ -497,6 +500,12 @@ export const Cards = {
       theGreatMothers: "ASH_101",
       halo: "ASH_223",
       snubFighterSquadron: "ASH_194",
+      marrok: "ASH_030",
+      rancorKeeper: "ASH_032",
+      coronaFour: "ASH_043",
+      huyang: "ASH_056",
+      atAttinSafetyDroid: "ASH_070",
+      summaVerminoth: "ASH_083",
       // Leader units (the deployed side of the ASH leaders)
       ahsokaTano: "ASH_009",
       theMandalorian: "ASH_014",

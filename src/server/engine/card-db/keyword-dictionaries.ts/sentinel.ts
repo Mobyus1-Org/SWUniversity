@@ -105,6 +105,8 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
         return PlayerHasUnitWithTraitInPlay(player, "Official");
       case "SHD_247"://Protector of the Throne
         return upgrades.length > 0;
+      case "ASH_030"://Marrok — Sentinel; while upgraded, loses Sentinel and gains Saboteur instead.
+        return upgrades.length === 0;
       case "SHD_112"://Gamorrean Retainer
           return PlayerHasUnitWithAspectInPlay(player, "Command", true, playId);
       case "SHD_034"://Supercommando Squad
@@ -220,6 +222,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "ASH_097"://Moff Gideon (Remnant Commander)
     case "ASH_239"://Imperial Loyalist
     case "ASH_252"://N5 Sentry Droid
+    case "ASH_083"://Summa-verminoth
       return true;
   }
 

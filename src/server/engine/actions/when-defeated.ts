@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, BaseHealingPrevented, CanDisclose, CaptureVictimsExistFor, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
+import { AllUnits, BaseHealingPrevented, CanDisclose, CapBaseDamage, CaptureVictimsExistFor, CardIsLeader, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardAspects, CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -296,6 +296,12 @@ function resolveOwnWhenDefeated(
       if (enemies221.length === 0) return null;
       return mandatoryTarget("SEC_221", player, enemies221.map(u => u.playId));
     }
+    case "ASH_043": { // Corona Four — "When Defeated: You may defeat a non-leader unit with 0 power."
+      const zeroPower043 = AllUnits().filter(u => !CardIsLeader(u.cardId) && Unit.FromInterface(u).CurrentPower() === 0);
+      if (zeroPower043.length === 0) return null;
+      return optionalTarget("ASH_043_wd", player, zeroPower043.map(u => u.playId),
+        "Defeat a non-leader unit with 0 power?", { yesLabel: "Defeat" });
+    }
     case "TWI_079": { // Confederate Courier — "When Defeated: Create a Battle Droid token."
       const game079 = GetGame();
       if (!game079) return null;
@@ -317,7 +323,8 @@ function resolveOwnWhenDefeated(
       const enemyUnits134 = [...oppState134.groundArena, ...oppState134.spaceArena];
       if (enemyUnits134.length === 0) {
         // No enemy unit to hit — apply the base damage here (the ability-target resolution won't run).
-        oppState134.base.damage += 2;
+        const oppPlayer134: PlayerId = player === 1 ? 2 : 1;
+        oppState134.base.damage += CapBaseDamage(oppPlayer134, 2);
         game134.gameLog.push(`${CardTitle("SOR_134")}: dealt 2 damage to opponent's base.`);
         return null;
       }

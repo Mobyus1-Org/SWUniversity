@@ -86,6 +86,9 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
       case "LOF_212"://Life Wind Sage
         amount += GetUnitsForPlayer(otherPlayer).some(u => !u.ready) ? 2 : 0;
         break;
+      case "SEC_134"://Hunting Assassin Droid — while an enemy unit is damaged, gains Raid 2.
+        amount += GetUnitsForPlayer(otherPlayer).some(u => u.damage > 0) ? 2 : 0;
+        break;
       case "LOF_105"://Oppo Rancisis
         if(isRecursion) return 0; //Prevent recursion
         for(const u of units) {

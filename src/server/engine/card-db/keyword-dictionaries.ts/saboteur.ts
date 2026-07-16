@@ -69,6 +69,8 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
         return PlayerHasUnitWithTraitInPlay(player, "Mandalorian", true, playId);
       case "TWI_143"://Jyn Erso - Stardust
         return UnitWasDefeatedThisPhase(otherPlayer);
+      case "ASH_030"://Marrok — while upgraded, loses Sentinel and gains Saboteur instead.
+        return upgrades.length > 0;
       case "LOF_105"://Oppo Rancisis
         if(isRecursion) return false; //Prevent recursion
         for(const u of units) {
