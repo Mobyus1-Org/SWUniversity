@@ -176,6 +176,7 @@ type PlayerBuilderState = {
   resources: ResourceEntry[];
   handCards: string[];
   deck: string[];
+  discard: string[];
   groundUnits: UnitEntry[];
   spaceUnits: UnitEntry[];
   creditTokens: number;
@@ -205,7 +206,7 @@ function emptyPlayer(): PlayerBuilderState {
   return {
     baseCardId: "", baseDamage: 0, baseEpicActionUsed: false,
     leaderCardId: "", leaderReady: true, leaderDeployed: false, leaderEpicActionUsed: false,
-    resources: [], handCards: [], deck: [], groundUnits: [], spaceUnits: [],
+    resources: [], handCards: [], deck: [], discard: [], groundUnits: [], spaceUnits: [],
     creditTokens: 0, forceToken: false,
   };
 }
@@ -255,6 +256,7 @@ function parseRawPlayer(p: Record<string, unknown>): PlayerBuilderState {
   const resources = (p.resources ?? []) as Record<string, unknown>[];
   const hand = (p.hand ?? []) as Record<string, unknown>[];
   const deck = (p.deck ?? []) as Record<string, unknown>[];
+  const discard = (p.discard ?? []) as Record<string, unknown>[];
   const supplemental = (p.supplemental ?? {}) as Record<string, unknown>;
   return {
     baseCardId: String(base.cardId ?? ""),
@@ -267,6 +269,7 @@ function parseRawPlayer(p: Record<string, unknown>): PlayerBuilderState {
     resources: resources.map((r) => ({ cardId: String(r.cardId ?? ""), ready: r.ready !== false })),
     handCards: hand.map((h) => String((h as Record<string, unknown>).cardId ?? "")),
     deck: deck.map((d) => String(d.cardId ?? "")),
+    discard: discard.map((d) => String(d.cardId ?? "")),
     groundUnits: ground.map((u) => ({
       cardId: String(u.cardId ?? ""), ready: u.ready !== false, damage: Number(u.damage ?? 0),
       upgrades: ((u.upgrades ?? []) as Record<string, unknown>[]).map((ug) => String(ug.cardId ?? "")),
@@ -327,7 +330,9 @@ function toRaw(s: BuilderState): RawPuzzleGameState {
       resources: p.resources.map((r) => ({
         cardId: r.cardId, playId: "@", owner: playerId, controller: playerId, ready: r.ready,
       })),
-      discard: [],
+      discard: p.discard.map((cardId) => ({
+        cardId, playId: "@", owner: playerId, controller: playerId,
+      })),
       deck: p.deck.map((cardId) => ({ cardId })),
       hand: p.handCards.map((cardId) => ({ cardId })),
       supplemental: { creditTokens: p.creditTokens, forceToken: p.forceToken },
@@ -361,6 +366,7 @@ type PlayerSectionProps = {
 
 function PlayerSection({ label, state, cards, onChange }: PlayerSectionProps) {
   const [newHandCardId, setNewHandCardId] = React.useState("");
+  const [newDiscardCardId, setNewDiscardCardId] = React.useState("");
   const [newResourceCardId, setNewResourceCardId] = React.useState("");
   const [newResourceCount, setNewResourceCount] = React.useState(1);
   const [newResourceReady, setNewResourceReady] = React.useState(true);
@@ -509,6 +515,39 @@ function PlayerSection({ label, state, cards, onChange }: PlayerSectionProps) {
                 <button
                   type="button"
                   onClick={() => patch({ handCards: state.handCards.filter((_, j) => j !== i) })}
+                  className="ml-0.5 text-white/40 hover:text-white/70"
+                >×</button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Discard */}
+      <div className="rounded-lg bg-black/20 p-3 space-y-2">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Discard ({state.discard.length})</div>
+        <div className="grid grid-cols-[1fr_auto] items-center gap-2">
+          <CardPicker cards={cards} value={newDiscardCardId} onChange={setNewDiscardCardId} placeholder="Card…" />
+          <button
+            type="button"
+            disabled={!newDiscardCardId}
+            onClick={() => {
+              patch({ discard: [...state.discard, newDiscardCardId] });
+              setNewDiscardCardId("");
+            }}
+            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20 disabled:opacity-40"
+          >
+            Add
+          </button>
+        </div>
+        {state.discard.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {state.discard.map((cardId, i) => (
+              <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/70">
+                {cards.find((c) => c.cardId === cardId)?.label ?? cardId}
+                <button
+                  type="button"
+                  onClick={() => patch({ discard: state.discard.filter((_, j) => j !== i) })}
                   className="ml-0.5 text-white/40 hover:text-white/70"
                 >×</button>
               </span>
@@ -846,6 +885,14 @@ function BoardPreview({ state, cards }: { state: BuilderState; cards: CardCatalo
           <div className="text-[11px] text-white/70">
             <span className="text-white/40">Hand: </span>
             {p.handCards.map((c, i) => (
+              <span key={i}>{i > 0 ? ", " : ""}{cardName(c)}</span>
+            ))}
+          </div>
+        )}
+        {p.discard.length > 0 && (
+          <div className="text-[11px] text-white/70">
+            <span className="text-white/40">Discard: </span>
+            {p.discard.map((c, i) => (
               <span key={i}>{i > 0 ? ", " : ""}{cardName(c)}</span>
             ))}
           </div>
