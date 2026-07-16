@@ -230,10 +230,10 @@ function CardVisual({
         <img src="/assets/tokens/sentinel.png" alt="Sentinel" className="h-[29px] w-[29px]" />
       </div> : null}
       {epicUsed ? <div className="pointer-events-none absolute -bottom-1 right-1.5 z-10">
-        <img src="/assets/tokens/epic-used.png" alt="Epic action used" className="h-[22px] w-[22px] rotate-90" />
+        <img src="/assets/tokens/epic-used.png" alt="Epic action used" className="h-[40px] w-[40px] rotate-90" />
       </div> : null}
       {forceToken ? <div className="pointer-events-none absolute -top-1 right-1.5 z-10">
-        <img src="/assets/force-token.webp" alt="The Force" title="Has the Force" className="h-[24px] w-[24px] drop-shadow-[0_0_4px_rgba(124,58,237,0.85)]" />
+        <img src="/assets/force-token.webp" alt="The Force" title="Has the Force" className="h-[44px] w-[44px] drop-shadow-[0_0_4px_rgba(124,58,237,0.85)]" />
       </div> : null}
     </div>
     {footer ? <div className="mt-2">{footer}</div> : null}
