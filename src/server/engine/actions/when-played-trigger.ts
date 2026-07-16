@@ -2,7 +2,7 @@ import { CardTitle } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
 import { BaseHealingPrevented, CapBaseDamage, DrawCardForPlayer, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
-import { CreateSpy, CreateTieFighter, CreateBattleDroid } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateTieFighter, CreateBattleDroid, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 
 /**
  * Cards whose When Played does something without asking the player anything — i.e. the
@@ -17,7 +17,7 @@ import { CreateSpy, CreateTieFighter, CreateBattleDroid } from "@/server/engine/
 const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
-  "SHD_197",
+  "SHD_197", "ASH_218",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -70,6 +70,11 @@ export function resolveWhenPlayedTrigger(
         self197.upgrades.push({ cardId: "SOR_T02", playId: String(gs.nextPlayId++), owner: self197.owner, controller: self197.controller });
         log.push(`${CardTitle(trigger.cardId)}: no captured card to rescue — gained a Shield token.`);
       }
+      break;
+    }
+    case "ASH_218": { // Ferry Droid — When Played: Give 4 Advantage tokens to this unit.
+      const self218 = [...player.groundArena, ...player.spaceArena].find(u => u.playId === trigger.playId);
+      if (self218) GiveAdvantageTokens(gs, self218, 4, log, trigger.cardId);
       break;
     }
     case "SOR_134": { // Ruthless Raider — When Played with no enemy unit to hit: deal 2 to the enemy base only.

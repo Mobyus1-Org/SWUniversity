@@ -506,6 +506,7 @@ export const Cards = {
       huyang: "ASH_056",
       atAttinSafetyDroid: "ASH_070",
       summaVerminoth: "ASH_083",
+      ferryDroid: "ASH_218",
       // Leader units (the deployed side of the ASH leaders)
       ahsokaTano: "ASH_009",
       theMandalorian: "ASH_014",
