@@ -1615,6 +1615,19 @@ function resolveAttack(
     const defender = GetUnitByPlayId(game, target.playId);
     if (!defender) return null;
 
+    // Chewbacca, Loyal Companion (SOR_196 / promo P25_042) — "When this unit is attacked: Ready
+    // him." Mandatory, targetless, and unaffected by combat outcome, so it fires inline here at
+    // attack declaration (readying before/after damage is equivalent).
+    if (
+      (defender.cardId === "SOR_196" || defender.cardId === "P25_042") &&
+      !Unit.FromInterface(defender).LostAbilities()
+    ) {
+      if (!defender.ready) {
+        defender.ready = true;
+        log.push(`${CardTitle(defender.cardId)}: readied himself after being attacked.`);
+      }
+    }
+
     // Strafing Gunship (SOR_212): defender gets –2/+0 when attacking a ground unit from space.
     const defenderIsGround212 =
       attacker.cardId === "SOR_212" &&

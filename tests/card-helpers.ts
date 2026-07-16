@@ -295,6 +295,7 @@ export const Cards = {
       fightersForFreedom: "SOR_143",
       k2so: "SOR_145",
       wampa: "SOR_164",
+      chewbaccaLoyalCompanion: "SOR_196",
       greedo: "SOR_204",
       craftySmuggler: "SOR_207",
       syndicateLackeys: "SOR_213",
