@@ -365,11 +365,73 @@ function SectionShell({ title, children, className = "" }: { title: string; chil
   </section>;
 }
 
-function StatCard({ label, value }: { label: string; value: React.ReactNode }) {
-  return <div className="rounded-lg bg-black/20 p-3 text-xs text-white/70">
-    <div className="uppercase tracking-[0.2em] text-white/50">{label}</div>
-    <div className="mt-2 text-2xl font-black text-white">{value}</div>
+// A card image locked to the SWUniversity_Cardback aspect ratio (716 × 1000), with a graceful
+// primary→fallback source (mirrors CardVisual's fallback behaviour). Used by the Credits / Deck /
+// Discard stat panels so every pile renders at a consistent card shape regardless of the source art.
+function CardRatioImage({
+  primarySrc,
+  fallbackSrc,
+  alt,
+  onPreviewStart,
+  onPreviewEnd,
+}: {
+  primarySrc: string;
+  fallbackSrc?: string;
+  alt: string;
+  onPreviewStart?: () => void;
+  onPreviewEnd?: () => void;
+}) {
+  const [src, setSrc] = React.useState(primarySrc);
+  React.useEffect(() => { setSrc(primarySrc); }, [primarySrc]);
+  return (
+    <div
+      className="overflow-hidden rounded-md border border-white/10 bg-black/40"
+      style={{ aspectRatio: "716 / 1000" }}
+      onMouseEnter={onPreviewStart}
+      onMouseLeave={onPreviewEnd}
+    >
+      <img
+        src={src}
+        alt={alt}
+        className="h-full w-full object-cover"
+        onError={() => { if (fallbackSrc && src !== fallbackSrc) setSrc(fallbackSrc); }}
+      />
+    </div>
+  );
+}
+
+// Credits / Deck / Discard stat panel: a centered header, a card-ratio image on the left, and a
+// large value on the right. Optionally clickable (Discard opens the pile modal).
+function ZoneStatPanel({
+  title,
+  media,
+  value,
+  onClick,
+  highlight = false,
+}: {
+  title: string;
+  media: React.ReactNode;
+  value: React.ReactNode;
+  onClick?: () => void;
+  highlight?: boolean;
+}) {
+  return <div className={`rounded-lg bg-black/20 p-2${highlight ? " ring-2 ring-sky-400/60" : ""}`}>
+    <div className="text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">{title}</div>
+    <div className="mt-2 flex items-center gap-2">
+      {onClick
+        ? <button type="button" className="w-[42%] shrink-0 cursor-pointer" onClick={onClick}>{media}</button>
+        : <div className="w-[42%] shrink-0">{media}</div>}
+      <div className="flex flex-1 flex-wrap items-baseline justify-center gap-x-1 text-white">{value}</div>
+    </div>
   </div>;
+}
+
+// The large right-hand value for a card pile: "N CARDS" (number big, label small).
+function pileCountValue(n: number) {
+  return <>
+    <span className="text-2xl font-black leading-none">{n}</span>
+    <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">Cards</span>
+  </>;
 }
 
 function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleIds: initialSolvedPuzzleIds = [] }: { showBuilderTools?: boolean; isAdmin?: boolean; solvedPuzzleIds?: string[] }) {
@@ -1225,13 +1287,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
           <ZonePanel title="Board" hideHeader>
           <div className="space-y-1">
           <div className="space-y-3">
-            <div className="grid gap-2 xl:grid-cols-[minmax(0,5fr)_minmax(0,1.5fr)_minmax(0,1.5fr)]">
+            <div className="grid gap-2 xl:grid-cols-[minmax(0,5fr)_minmax(0,4fr)]">
               <div className="relative rounded-lg bg-black/20 p-2">
                 <div className="mb-2 text-xs uppercase tracking-[0.2em] text-white/60">Resources ({opponent.resources.length})</div>
-                <div className="pointer-events-none absolute bottom-2 right-2 top-2 flex flex-col items-center">
-                  <div className="text-center text-[11px] font-semibold text-white/65">{opponent.supplemental.creditTokens ?? 0} Credits</div>
-                  <img src="/assets/tokens/credit.webp" alt="Credit token" className="mt-1 h-[80%] w-auto max-h-[80%] object-contain" />
-                </div>
                 <div className="flex flex-wrap gap-2">
                   {opponent.resources.map((resource) => <FaceDownResource
                     key={resource.playId}
@@ -1241,23 +1299,31 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                   {opponent.resources.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-6 text-sm text-white/40">No resources</div> : null}
                 </div>
               </div>
-              <div className="rounded-lg bg-black/20 p-2">
-                <div className="mb-2 text-xs uppercase tracking-[0.2em] text-white/60">Deck</div>
-                <StatCard label="Count" value={opponent.deck.length} />
-              </div>
-              <div className="rounded-lg bg-black/20 p-2">
-                <div className="mb-2 text-xs uppercase tracking-[0.2em] text-white/60">Discard</div>
-                {latestEnemyDiscard ? <button type="button" className="w-24 text-left" onClick={() => setDiscardModalPlayer(2)}>
-                  <CardVisual
-                    cardId={latestEnemyDiscard.cardId}
-                    selectable={false}
-                    onPreviewStart={handlePreviewStart}
-                    onPreviewEnd={handlePreviewEnd}
-                    compact
-                    square
-                  />
-                </button> : <div className="rounded-lg border border-dashed border-white/10 px-4 py-6 text-sm text-white/40">Empty</div>}
-                <div className="mt-2 text-xs text-white/70">{opponent.discard.length} total</div>
+              <div className="grid grid-cols-3 gap-2">
+                <ZoneStatPanel
+                  title="Credits"
+                  media={<CardRatioImage primarySrc="/assets/tokens/credit.webp" alt="Credit token" />}
+                  value={<span className="text-2xl font-black leading-none">{opponent.supplemental.creditTokens ?? 0}</span>}
+                />
+                <ZoneStatPanel
+                  title="Deck"
+                  media={<CardRatioImage primarySrc="/assets/SWUniversity_Cardback.png" alt="Deck" />}
+                  value={pileCountValue(opponent.deck.length)}
+                />
+                <ZoneStatPanel
+                  title="Discard"
+                  media={latestEnemyDiscard
+                    ? <CardRatioImage
+                        primarySrc={getCardImageLink(latestEnemyDiscard.cardId)}
+                        fallbackSrc={getSWUDBImageLink(latestEnemyDiscard.cardId)}
+                        alt={CardTitle(latestEnemyDiscard.cardId)}
+                        onPreviewStart={() => handlePreviewStart({ imageId: latestEnemyDiscard.cardId, cardId: latestEnemyDiscard.cardId, label: CardTitle(latestEnemyDiscard.cardId) })}
+                        onPreviewEnd={handlePreviewEnd}
+                      />
+                    : <div className="rounded-md border border-dashed border-white/10 bg-black/20" style={{ aspectRatio: "716 / 1000" }} />}
+                  value={pileCountValue(opponent.discard.length)}
+                  onClick={latestEnemyDiscard ? () => setDiscardModalPlayer(2) : undefined}
+                />
               </div>
             </div>
 
@@ -1828,13 +1894,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
               </div>
             </div>
 
-            <div className="grid gap-2 xl:grid-cols-[minmax(0,5fr)_minmax(0,1.5fr)_minmax(0,1.5fr)]">
+            <div className="grid gap-2 xl:grid-cols-[minmax(0,5fr)_minmax(0,4fr)]">
               <div className="relative rounded-lg bg-black/20 p-2">
                 <div className="mb-2 text-xs uppercase tracking-[0.2em] text-white/60">Resources ({player.resources.filter((resource) => resource.ready).length} ready / {player.resources.length})</div>
-                <div className="pointer-events-none absolute bottom-2 right-2 top-2 flex flex-col items-center">
-                  <div className="text-center text-[11px] font-semibold text-white/65">{player.supplemental.creditTokens ?? 0} Credits</div>
-                  <img src="/assets/tokens/credit.webp" alt="Credit token" className="mt-1 h-[80%] w-auto max-h-[80%] object-contain" />
-                </div>
                 <div className="flex flex-wrap gap-2">
                   {player.resources.map((resource) => {
                     const isSmuggleable = smuggleablePlayIds.has(resource.playId);
@@ -1863,23 +1925,32 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                   })}
                 </div>
               </div>
-              <div className="rounded-lg bg-black/20 p-2">
-                <div className="mb-2 text-xs uppercase tracking-[0.2em] text-white/60">Deck</div>
-                <StatCard label="Count" value={player.deck.length} />
-              </div>
-              <div className="rounded-lg bg-black/20 p-2">
-                <div className="mb-2 text-xs uppercase tracking-[0.2em] text-white/60">Discard</div>
-                {latestPlayerDiscard ? <button type="button" className={`w-24 text-left${hasDiscardSelection ? " ring-2 ring-sky-400/60 rounded" : ""}`} onClick={() => setDiscardModalPlayer(1)}>
-                  <CardVisual
-                    cardId={latestPlayerDiscard.cardId}
-                    selectable={hasDiscardSelection}
-                    onPreviewStart={handlePreviewStart}
-                    onPreviewEnd={handlePreviewEnd}
-                    compact
-                    square
-                  />
-                </button> : <div className="rounded-lg border border-dashed border-white/10 px-4 py-6 text-sm text-white/40">Empty</div>}
-                <div className="mt-2 text-xs text-white/70">{player.discard.length} total</div>
+              <div className="grid grid-cols-3 gap-2">
+                <ZoneStatPanel
+                  title="Credits"
+                  media={<CardRatioImage primarySrc="/assets/tokens/credit.webp" alt="Credit token" />}
+                  value={<span className="text-2xl font-black leading-none">{player.supplemental.creditTokens ?? 0}</span>}
+                />
+                <ZoneStatPanel
+                  title="Deck"
+                  media={<CardRatioImage primarySrc="/assets/SWUniversity_Cardback.png" alt="Deck" />}
+                  value={pileCountValue(player.deck.length)}
+                />
+                <ZoneStatPanel
+                  title="Discard"
+                  highlight={hasDiscardSelection}
+                  media={latestPlayerDiscard
+                    ? <CardRatioImage
+                        primarySrc={getCardImageLink(latestPlayerDiscard.cardId)}
+                        fallbackSrc={getSWUDBImageLink(latestPlayerDiscard.cardId)}
+                        alt={CardTitle(latestPlayerDiscard.cardId)}
+                        onPreviewStart={() => handlePreviewStart({ imageId: latestPlayerDiscard.cardId, cardId: latestPlayerDiscard.cardId, label: CardTitle(latestPlayerDiscard.cardId) })}
+                        onPreviewEnd={handlePreviewEnd}
+                      />
+                    : <div className="rounded-md border border-dashed border-white/10 bg-black/20" style={{ aspectRatio: "716 / 1000" }} />}
+                  value={pileCountValue(player.discard.length)}
+                  onClick={latestPlayerDiscard ? () => setDiscardModalPlayer(1) : undefined}
+                />
               </div>
             </div>
           </div>
