@@ -17,6 +17,7 @@ import { CreateSpy, CreateTieFighter, CreateBattleDroid } from "@/server/engine/
 const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
+  "SHD_197",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -61,6 +62,14 @@ export function resolveWhenPlayedTrigger(
         CreateBattleDroid(gs, trigger.fromPlayer, log, trigger.cardId);
       }
       break;
+    case "SHD_197": { // L3-37 — no captured card to rescue → the "If you don't" fallback gives it a Shield token.
+      const self197 = [...player.groundArena, ...player.spaceArena].find(u => u.playId === trigger.playId);
+      if (self197) {
+        self197.upgrades.push({ cardId: "SOR_T02", playId: String(gs.nextPlayId++), owner: self197.owner, controller: self197.controller });
+        log.push(`${CardTitle(trigger.cardId)}: no captured card to rescue — gained a Shield token.`);
+      }
+      break;
+    }
     case "SOR_134": // Ruthless Raider — When Played with no enemy unit to hit: deal 2 to the enemy base only.
       otherPlayer.base.damage += 2;
       log.push(`${CardTitle(trigger.cardId)}: dealt 2 damage to opponent's base.`);

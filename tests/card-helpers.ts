@@ -346,6 +346,8 @@ export const Cards = {
     },
     shd: {
       superlaserTechnician: "SHD_085",
+      l337: "SHD_197",
+      ruthlessAssassin: "SHD_235",
       concordDawnInterceptors: "SHD_042",
       doctorPershing: "SHD_028",
       lurkingTiePhantom: "SHD_187",
@@ -369,6 +371,7 @@ export const Cards = {
     },
     jtl: {
       kijimiPatrollers: "JTL_082",
+      mistHunter: "JTL_186",
       hondoOhnaka: "JTL_056",
       l337: "JTL_049",
       warJuggernaut: "JTL_170",
@@ -431,6 +434,7 @@ export const Cards = {
     },
     sec: {
       cadBane: "SEC_034",
+      unrulyAstromech: "SEC_221",
       chancellorPalpatine: "SEC_082",
       isbShuttle: "SEC_083",
       viceAdmiralRampart: "SEC_085",
@@ -443,6 +447,8 @@ export const Cards = {
     },
     law: {
       scavengingSandcrawler: "LAW_238",
+      bt1: "LAW_173",
+      tripleZero: "LAW_174",
       galenErso: "LAW_233",
       zebOrellios: "LAW_045",
       chioFain: "LAW_048",
@@ -494,6 +500,9 @@ export const Cards = {
       // Leader units (the deployed side of the ASH leaders)
       ahsokaTano: "ASH_009",
       theMandalorian: "ASH_014",
+    },
+    ts26: {
+      deployedDroideka: "TS26_077",
     },
   },
   upgrades: {

@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyAbilities } from "@/server/engine/core-functions";
-import { aspectPenalty } from "@/server/engine/card-playability";
+import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyAbilities } from "@/server/engine/core-functions";
+import { aspectPenalty, spendableFor } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
@@ -1054,6 +1054,43 @@ export function resolveWhenPlayed(
       const spaceUnits194 = AllSpaceUnits();
       if (spaceUnits194.length === 0) return null;
       return mandatoryTarget(cardId, player, spaceUnits194.map(u => u.playId));
+    }
+    case "SHD_197": { // L3-37 — When Played: You may rescue a captured card. If you don't, give a Shield token to this unit.
+      // If there is nothing to rescue, the "If you don't" fallback (Shield to self) auto-resolves in
+      // resolveWhenPlayedTrigger (this preview is called twice for units, so it must stay side-effect-free).
+      if (!playId) return null;
+      if (AllCaptives().length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        sourcePlayId: playId,
+        helperText: "Rescue a captured card? (If you don't, give a Shield token to L3-37.)",
+        yesLabel: "Rescue",
+        noLabel: "Give Shield",
+        onYes: null,
+        continuation: null,
+      };
+    }
+    case "TS26_077": { // Deployed Droideka — When Played: You may pay 2 resources. If you do, give an Experience token and a Shield token to this unit.
+      if (!playId) return null;
+      if (spendableFor(game.currentGameState, player) < 2) return null; // can't afford → no offer
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        sourcePlayId: playId,
+        helperText: "Pay 2 resources to give this unit an Experience token and a Shield token?",
+        yesLabel: "Pay 2",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: null,
+      };
+    }
+    case "SHD_235": { // Ruthless Assassin — When Played: Deal 2 damage to a friendly unit. (mandatory)
+      const friendly235 = GetUnitsForPlayer(player);
+      if (friendly235.length === 0) return null;
+      return mandatoryTarget(cardId, player, friendly235.map(u => u.playId));
     }
     case "LOF_158": { // Hyena Bomber — When Played: If you control another Aggression unit, you may deal 2 damage to a ground unit.
       if (!PlayerHasUnitWithAspectInPlay(player, "Aggression", true, playId)) return null;

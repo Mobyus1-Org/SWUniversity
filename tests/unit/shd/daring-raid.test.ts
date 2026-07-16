@@ -52,6 +52,18 @@ describe.each([
     expect(g.state.player1.base.damage).toBe(2);
   });
 
+  // Regression: the UI picks a base via the zone form (targetZones/targetPlayers), not a
+  // "playerN.base" playId. Daring Raid must honour that path too, or bases become untargetable.
+  it("deals 2 to the enemy base when chosen via the zone form (chooseBaseAsync)", async () => {
+    const g = new GameTestAdapter();
+    g.loadNewState(setupWith(eventId).Build());
+
+    await g.playCardFromHandAsync(1, 0);
+    await g.chooseBaseAsync(1, 2); // targetZones:["Base"], targetPlayers:[2]
+
+    expect(g.state.player2.base.damage).toBe(2);
+  });
+
   it("defeats a unit the 2 damage is lethal to", async () => {
     const g = new GameTestAdapter();
     const s = setupWith(eventId)

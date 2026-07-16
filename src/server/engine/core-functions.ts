@@ -119,6 +119,24 @@ export function GetUnitsForPlayer(player: PlayerId, readyOnly: boolean = false):
   return units;
 }
 
+/**
+ * Every captured card currently held by any unit in play, on either side (CR 8.33 — captives sit
+ * facedown under their captor). Used by cards that can rescue a captured card (e.g. L3-37 SHD_197).
+ */
+export function AllCaptives(): { playId: string; cardId: string; owner: PlayerId }[] {
+  const game = GetGame();
+  if (!game) return [];
+  const out: { playId: string; cardId: string; owner: PlayerId }[] = [];
+  for (const pState of [game.currentGameState.player1, game.currentGameState.player2]) {
+    for (const u of [...pState.groundArena, ...pState.spaceArena]) {
+      for (const captive of u.captives ?? []) {
+        out.push({ playId: captive.playId, cardId: captive.cardId, owner: captive.owner });
+      }
+    }
+  }
+  return out;
+}
+
 export function PlayerHasUnitInPlay(player: PlayerId, cardId: string): boolean {
   const game = GetGame();
   if (!game) {
@@ -977,6 +995,9 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_056": //Bendu
     case "SEC_110": //GNK Power Droid
     case "SOR_067": //Rugged Survivors
+    case "JTL_186": //Mist Hunter — On Attack: if you played a Bounty Hunter or Pilot card this phase, may draw
+    case "LAW_173": //BT-1 — On Attack: discard top of deck; if Aggression, may deal 1 to a ground unit
+    case "LAW_174": //0-0-0 — On Attack: may put an Aggression card from discard on deck bottom; deal 1 to each enemy base
     case "LAW_238": //Scavenging Sandcrawler
     case "JTL_056": //Hondo Ohnaka - You Cannot Run From Your Name
     case "TWI_094": //Shaak Ti - Unity Wins Wars

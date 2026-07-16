@@ -291,6 +291,11 @@ function resolveOwnWhenDefeated(
       CreateBattleDroid(game229.currentGameState, player, game229.gameLog, "TWI_229");
       return null;
     }
+    case "SEC_221": { // Unruly Astromech — "When Defeated: Exhaust an enemy unit."
+      const enemies221 = GetUnitsForPlayer(player === 1 ? 2 : 1);
+      if (enemies221.length === 0) return null;
+      return mandatoryTarget("SEC_221", player, enemies221.map(u => u.playId));
+    }
     case "TWI_079": { // Confederate Courier — "When Defeated: Create a Battle Droid token."
       const game079 = GetGame();
       if (!game079) return null;

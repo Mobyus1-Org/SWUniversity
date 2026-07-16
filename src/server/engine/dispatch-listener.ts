@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -181,6 +181,9 @@ function resolveChooseOne(
 ): PendingResolution | null {
   let next: PendingResolution | null = null;
   switch (pending.cardId) {
+    case "SHD_197": // L3-37 — rescue the captured card the player picked.
+      rescueCaptiveByPlayId(game, log, optionId, "SHD_197");
+      break;
     case "LOF_079": // Shatterpoint
       next = optionId === "defeat_low_hp"
         ? shatterpointModeA(pending.cardId, pending.player)
@@ -3896,6 +3899,27 @@ function handleChooseTarget(
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
+    if (pending.cardId === "LAW_174") {
+      // 0-0-0: move the chosen Aggression card to the bottom of the deck, then deal 1 to each enemy base.
+      const player174 = pending.player;
+      const pState174 = GetPlayer(game, player174);
+      const playId174 = chosen[0];
+      const idx174 = pState174.discard.findIndex(d => d.playId === playId174);
+      if (idx174 !== -1) {
+        const card174 = pState174.discard.splice(idx174, 1)[0];
+        pState174.deck.unshift({ cardId: card174.cardId }); // bottom of deck (top is popped from the end)
+        const enemyState174 = GetPlayer(game, player174 === 1 ? 2 : 1);
+        enemyState174.base.damage += 1;
+        log.push(`${CardTitle("LAW_174")}: put ${CardTitle(card174.cardId)} on the bottom of the deck and dealt 1 damage to the enemy base.`);
+      }
+      const next174 = pending.continuation;
+      if (next174?.type === "resolve-attack") return handleResolveAttack(game, log, next174);
+      if (next174) return { response: resolutionResponse(pendingToResolution(next174, game)), pending: next174, stateChanged: false };
+      const bag174 = drainTriggerBag(game, log);
+      if (bag174) return { response: resolutionResponse(pendingToResolution(bag174, game)), pending: bag174, stateChanged: false };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
     if (pending.cardId === "LAW_238") {
       // Scavenging Sandcrawler: move the chosen card to the bottom of the deck, then create a Credit.
       const player238 = pending.player;
@@ -5327,12 +5351,61 @@ function thrawnsReveal(game: GameState, log: string[], deckOwner: PlayerId, thra
   } satisfies AbilityTargetPending;
 }
 
+/**
+ * Rescue a captured card (CR 34.4): remove it from whichever unit is guarding it and return it to
+ * its owner's arena exhausted. Rescued units do NOT regain Hidden protection (reason
+ * "returned-to-play"). Shared entry point for cards that rescue on demand (L3-37 SHD_197).
+ */
+function rescueCaptiveByPlayId(game: GameState, log: string[], captivePlayId: string, fromCardId: string): boolean {
+  for (const pState of [game.player1, game.player2]) {
+    for (const u of [...pState.groundArena, ...pState.spaceArena]) {
+      const idx = (u.captives ?? []).findIndex(c => c.playId === captivePlayId);
+      if (idx === -1) continue;
+      const [captive] = u.captives.splice(idx, 1);
+      const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
+      const rescued = Unit.FromInterface({ ...captive, ready: false });
+      if (arena === "Ground") GetPlayer(game, captive.owner).groundArena.push(rescued);
+      else GetPlayer(game, captive.owner).spaceArena.push(rescued);
+      game.roundState.cardsEnteredPlayThisPhase.push({
+        fromPlayer: captive.owner, cardId: captive.cardId, playId: captive.playId, reason: "returned-to-play",
+      });
+      log.push(`${CardTitle(fromCardId)}: rescued ${CardTitle(captive.cardId)} — returned to Player ${captive.owner}'s arena exhausted.`);
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Give a Shield token (SOR_T02) to the unit identified by playId. */
+function giveShieldToUnit(game: GameState, playId: string): Unit | null {
+  const unit = GetUnitByPlayId(game, playId);
+  if (unit) {
+    unit.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: unit.owner, controller: unit.controller });
+  }
+  return unit ?? null;
+}
+
 function applyAbilityOptionEffect(
   pending: AbilityOptionPending,
   game: GameState,
   log: string[],
 ): PendingResolution | null {
   switch (pending.cardId) {
+    case "SHD_197": { // L3-37 Yes: rescue a captured card. One captive → rescue it; many → let the player pick.
+      const captives197 = AllCaptives();
+      if (captives197.length === 0) return pending.continuation ?? null; // nothing to rescue (shouldn't happen)
+      if (captives197.length === 1) {
+        rescueCaptiveByPlayId(game, log, captives197[0].playId, "SHD_197");
+        return pending.continuation ?? null;
+      }
+      return {
+        type: "choose-one",
+        cardId: "SHD_197",
+        player: pending.player!,
+        options: captives197.map(c => ({ id: c.playId, label: CardTitle(c.cardId) ?? c.cardId })),
+        continuation: pending.continuation ?? null,
+      } satisfies ChooseOnePending;
+    }
     case "JTL_197": { // Anakin (pilot) Yes — return this upgrade to its owner's hand.
       const upgradePlayId = pending.sourcePlayId;
       if (!upgradePlayId) return pending.continuation ?? null;
@@ -5567,6 +5640,16 @@ function applyAbilityOptionEffect(
     }
     case "SOR_016": // Yes = reveal own deck
       return thrawnsReveal(game, log, pending.player!, pending.player!);
+    case "TS26_077": { // Deployed Droideka Yes: pay 2 resources, give this unit an XP + Shield token.
+      const unit077 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      if (unit077) {
+        payResources(game, unit077.controller, 2, log, "TS26_077");
+        unit077.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: unit077.owner, controller: unit077.controller });
+        unit077.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: unit077.owner, controller: unit077.controller });
+        log.push(`${CardTitle("TS26_077")}: paid 2 resources — gained an Experience token and a Shield token.`);
+      }
+      return pending.continuation ?? null;
+    }
     case "JTL_096": {
       const unit = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (unit) {
@@ -5638,6 +5721,11 @@ function applyAbilityOptionEffect(
       log.push(`${CardTitle("SOR_067")}: drew a card.`);
       return pending.continuation ?? null;
     }
+    case "JTL_186": { // Mist Hunter Yes: draw a card.
+      DrawCardForPlayer(game, log, pending.player!);
+      log.push(`${CardTitle("JTL_186")}: drew a card.`);
+      return pending.continuation ?? null;
+    }
     case "SOR_206": { // Mining Guild TIE Yes: pay 2 resources, draw a card.
       const unit206 = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (unit206) {
@@ -5707,6 +5795,11 @@ function applyAbilityOptionDeclineEffect(
   log: string[],
 ): PendingResolution | null {
   switch (pending.cardId) {
+    case "SHD_197": { // L3-37 No: "If you don't [rescue], give a Shield token to this unit."
+      const l337 = giveShieldToUnit(game, pending.sourcePlayId!);
+      if (l337) log.push(`${CardTitle("SHD_197")}: gave a Shield token to ${CardTitle(l337.cardId)}.`);
+      return pending.continuation ?? null;
+    }
     case "SEC_193": { // Thrawn — the opponent gave up no unit, so "ready this unit."
       const thrawn193 = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (thrawn193) {
@@ -7545,6 +7638,28 @@ function processMillResult(game: GameState, log: string[], pending: MillResultPe
         continuation: pending.continuation ?? null,
       };
     }
+    case "LAW_173": { // BT-1 — if the milled card is Aggression, you may deal 1 damage to a ground unit.
+      const aggressionMilled = pending.milledCardIds.some((id: string) => CardAspects(id).includes("Aggression"));
+      if (!aggressionMilled) break;
+      const ground173 = AllGroundUnits();
+      if (ground173.length === 0) break;
+      return {
+        type: "ability-option",
+        cardId: "LAW_173",
+        player: pending.player,
+        helperText: "Milled an Aggression card — deal 1 damage to a ground unit?",
+        yesLabel: "Deal 1",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "LAW_173",
+          player: pending.player,
+          fromPlayIds: ground173.map(u => u.playId),
+          continuation: pending.continuation ?? null,
+        },
+        continuation: pending.continuation ?? null,
+      };
+    }
     case "SOR_204": { // Greedo — if any non-unit was milled, deal 2 damage to a ground unit
       const nonUnitMilled = pending.milledCardIds.some((id: string) => CardType(id) !== "Unit");
       if (nonUnitMilled) {
@@ -7652,12 +7767,17 @@ function applyAbilityEffect(
     }
     case "SHD_178": // Daring Raid — deal 2 damage to the chosen unit or base (TWI_170 is identical).
     case "TWI_170": {
-      if (!targetPlayId) break;
-      const baseMatch178 = targetPlayId.match(/^player([12])\.base$/);
-      if (baseMatch178) {
-        dealBaseDamage(game.currentGameState, Number(baseMatch178[1]) as PlayerId, 2, pending.player);
-        game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 2 damage to player ${baseMatch178[1]}'s base.`);
+      // A base target may arrive either as a "playerN.base" playId or (from the UI) as the
+      // targetIsBase flag + targetBasePlayer. Honour both, or bases become untargetable.
+      let basePlayer178: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer178 = 1;
+      else if (targetPlayId === "player2.base") basePlayer178 = 2;
+      else if (targetIsBase) basePlayer178 = targetBasePlayer ?? null;
+      if (basePlayer178 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer178, 2, pending.player);
+        game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 2 damage to player ${basePlayer178}'s base.`);
       } else {
+        if (!targetPlayId) break;
         DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
       }
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
@@ -8879,6 +8999,25 @@ function applyAbilityEffect(
     case "LOF_158": { // Hyena Bomber WP: Deal 2 damage to chosen ground unit.
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
+      break;
+    }
+    case "SHD_235": { // Ruthless Assassin WP: Deal 2 damage to the chosen friendly unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
+      break;
+    }
+    case "LAW_173": { // BT-1 On Attack: deal 1 damage to the chosen ground unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "LAW_173", targetPlayId, 1, game.gameLog);
+      break;
+    }
+    case "SEC_221": { // Unruly Astromech When Defeated: exhaust the chosen enemy unit.
+      if (!targetPlayId) break;
+      const target221 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target221) {
+        target221.ready = false;
+        game.gameLog.push(`${CardTitle("SEC_221")}: exhausted ${CardTitle(target221.cardId)}.`);
+      }
       break;
     }
     case "SOR_134": { // Ruthless Raider WP/WD: Deal 2 to enemy base + 2 to chosen enemy unit.

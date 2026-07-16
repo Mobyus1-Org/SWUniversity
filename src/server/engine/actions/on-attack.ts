@@ -4,7 +4,7 @@ import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveA
 import { AllGroundUnits, AllSpaceUnits, AllUnits, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
-import { CardCost, CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
+import { CardCost, CardTitle, CardIsUnique, CardAspects } from "@/server/engine/card-db/generated";
 import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -507,6 +507,58 @@ function resolveInnateOnAttack(
         yesLabel: "Draw",
         noLabel: "Skip",
         onYes: null,
+        continuation,
+      };
+    }
+    case "LAW_173": { // BT-1 — On Attack: Discard a card from your deck. If it's Aggression, you may deal 1 damage to a ground unit.
+      const game173 = GetGame();
+      if (!game173) return continuation;
+      const deck173 = (attacker.controller === 1 ? game173.currentGameState.player1 : game173.currentGameState.player2).deck;
+      if (deck173.length === 0) return continuation;
+      return {
+        type: "mill",
+        cardId: attacker.cardId,
+        player: attacker.controller,
+        millingPlayer: attacker.controller, // discard from your OWN deck
+        count: 1,
+        continuation,
+      } satisfies MillPending;
+    }
+    case "JTL_186": { // Mist Hunter — On Attack: If you played a Bounty Hunter or Pilot card this phase, you may draw a card.
+      if (!CardWasPlayedThisPhase(attacker.controller, "Bounty Hunter")
+          && !CardWasPlayedThisPhase(attacker.controller, "Pilot")) return continuation;
+      return {
+        type: "ability-option",
+        cardId: attacker.cardId,
+        player: attacker.controller,
+        helperText: "You may draw a card.",
+        yesLabel: "Draw",
+        noLabel: "Skip",
+        onYes: null,
+        continuation,
+      };
+    }
+    case "LAW_174": { // 0-0-0 — On Attack: You may put an Aggression card from your discard pile on the bottom of your deck. If you do, deal 1 damage to each enemy base.
+      const game174 = GetGame();
+      if (!game174) return continuation;
+      const discard174 = (attacker.controller === 1 ? game174.currentGameState.player1 : game174.currentGameState.player2).discard;
+      const aggression174 = discard174.filter(d => CardAspects(d.cardId).includes("Aggression"));
+      if (aggression174.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: attacker.cardId,
+        player: attacker.controller,
+        helperText: "Put an Aggression card from your discard on the bottom of your deck and deal 1 damage to each enemy base?",
+        yesLabel: "Yes",
+        noLabel: "Skip",
+        onYes: {
+          type: "return-from-discard",
+          cardId: "LAW_174",
+          player: attacker.controller,
+          maxCount: 1,
+          eligiblePlayIds: aggression174.map(d => d.playId),
+          continuation,
+        },
         continuation,
       };
     }
