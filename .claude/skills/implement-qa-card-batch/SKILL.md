@@ -16,8 +16,8 @@ QA sends card requests in loose human language — one card per line, with infor
 1. **Split** the QA text into entries — one card per line/bullet. Keep parenthetical notes attached.
 2. **Resolve** each entry to a card ID (see Resolution recipe).
 3. **Leaders → both sides** (see below).
-4. **Overflow:** if more than 10 cards resolve, ask the user which 10 to run this session; list the rest.
-5. **Hand off:** invoke `implement-swu-card` with the resolved ID list (≤10). Add no confirmation step of your own, and do NOT pre-check whether a card is already implemented — `implement-swu-card`'s per-card brainstorm is the gate that decides.
+4. **Overflow:** if more than 20 cards resolve, ask the user which 20 to run this session; list the rest.
+5. **Hand off:** invoke `implement-swu-card` with the resolved ID list (≤20). Add no confirmation step of your own, and do NOT pre-check whether a card is already implemented — `implement-swu-card`'s per-card brainstorm is the gate that decides.
 6. **Summarize:** once the batch is implemented, write the Discord-pasteable batch summary in chat (see Batch summary).
 
 ## Resolution recipe (per entry)
@@ -39,7 +39,7 @@ When an entry names a leader or "Leader's ability", the batch implements **BOTH*
 
 - Do **not** implement only the front ability.
 - Do **not** treat the deployed side as optional or defer it back to QA.
-- A leader still counts as **one card** toward the 10-card cap.
+- A leader still counts as **one card** toward the 20-card cap.
 
 ## Handoff
 
@@ -67,7 +67,7 @@ Resolves to:
 | GNK Power Droid (if it's not already) | **SEC_110** | GNK Power Droid | Unique title. Pass through. |
 | Zeb (LAW) | **LAW_045** | Zeb Orellios | Fuzzy "Zeb" → two spellings; `(LAW)` picks LAW_045 over SOR_146. |
 
-Then invoke `implement-swu-card` on `LAW_008 LAW_168 ASH_116 SEC_110 LAW_045` (LAW_008 = both sides). 5 cards, well within the 10-card cap — no overflow prompt.
+Then invoke `implement-swu-card` on `LAW_008 LAW_168 ASH_116 SEC_110 LAW_045` (LAW_008 = both sides). 5 cards, well within the 20-card cap — no overflow prompt.
 
 ## Batch summary (end of batch)
 
@@ -99,4 +99,4 @@ Rules:
 - **Pre-checking or skipping** a card because it "might already be implemented" → pass it through; `implement-swu-card` decides.
 - Asking the user to **confirm the whole mapping** when the hints already resolve it → only ask on genuine ambiguity.
 - Picking a **promo/token ID** (`LAWP_*`, `P25_*`, `*_T0*`) when a base-set printing exists.
-- More than 10 cards and you **silently drop** the extras → ask which 10, and list the deferred IDs.
+- More than 20 cards and you **silently drop** the extras → ask which 20, and list the deferred IDs.
