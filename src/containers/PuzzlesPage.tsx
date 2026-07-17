@@ -1318,7 +1318,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                 />
                 <ZoneStatPanel
                   title="Deck"
-                  media={<CardRatioImage primarySrc="/assets/SWUniversity_Cardback.png" alt="Deck" />}
+                  media={opponent.deck.length > 0
+                    ? <CardRatioImage primarySrc="/assets/SWUniversity_Cardback.png" alt="Deck" />
+                    : <div className="rounded-md border border-dashed border-white/10 bg-black/20" style={{ aspectRatio: "716 / 1000" }} />}
                   value={pileCountValue(opponent.deck.length)}
                 />
                 <ZoneStatPanel
@@ -1944,7 +1946,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                 />
                 <ZoneStatPanel
                   title="Deck"
-                  media={<CardRatioImage primarySrc="/assets/SWUniversity_Cardback.png" alt="Deck" />}
+                  media={player.deck.length > 0
+                    ? <CardRatioImage primarySrc="/assets/SWUniversity_Cardback.png" alt="Deck" />
+                    : <div className="rounded-md border border-dashed border-white/10 bg-black/20" style={{ aspectRatio: "716 / 1000" }} />}
                   value={pileCountValue(player.deck.length)}
                 />
                 <ZoneStatPanel
