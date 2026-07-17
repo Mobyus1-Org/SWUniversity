@@ -116,6 +116,7 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string> = {
   "SHD_028": "Draw a card",
   "LOF_206": "Attack with a Droid",
   "ASH_109": "+2/+2 to a unit",
+  "ASH_142": "1 dmg to up to 3 ground units",
 };
 
 const BASES_WITH_EPIC_ACTION = new Set([

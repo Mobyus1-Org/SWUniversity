@@ -38,6 +38,7 @@ export class GameStateBuilder {
         cardsLeftPlayThisPhase: [],
         unitsAttackedThisPhase: [],
         baseDamagedThisPhase: [],
+        unitsDamagedThisPhase: [],
         lastActionWasPass: false,
         regroupResourcedPlayers: [],
         forceUsedThisPhase: 0,

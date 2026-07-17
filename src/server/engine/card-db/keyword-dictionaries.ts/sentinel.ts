@@ -109,6 +109,8 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
         return upgrades.length === 0;
       case "SHD_112"://Gamorrean Retainer
           return PlayerHasUnitWithAspectInPlay(player, "Command", true, playId);
+      case "ASH_120"://Warrior of Clan Kryze — while you control another exhausted unit
+        return units.some(u => u.playId !== playId && !u.ready);
       case "SHD_034"://Supercommando Squad
         return upgrades.length > 0;
       case "SHD_052"://Sugi

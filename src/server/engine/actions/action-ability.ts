@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, AttackedThisPhasePlayIds, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllUnits, AttackedThisPhasePlayIds, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { CardTraits, CardCost, CardType } from "@/server/engine/card-db/generated";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
@@ -244,6 +244,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         if (others109.length > 0) abilities.push(cardId);
         break;
       }
+      case "ASH_142": // Mortar Trooper — Action [Exhaust]: Deal 1 damage to each of up to 3 ground units.
+        if (AllGroundUnits().length > 0) abilities.push(cardId);
+        break;
       default: break;
     }
   }

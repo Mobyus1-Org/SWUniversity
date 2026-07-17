@@ -61,6 +61,8 @@ export interface GameState {
     cardsLeftPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: ExitReason }[];
     unitsAttackedThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; }[];
     baseDamagedThisPhase: { byPlayer: PlayerId; target: PlayerId }[];
+    /** playIds of units that took damage this phase (e.g. ASH_188 Galvanized Leap). */
+    unitsDamagedThisPhase: string[];
     lastActionWasPass: boolean;
     regroupResourcedPlayers: PlayerId[];
     /** Number of times either player has Used the Force this phase (e.g. LOF_007 Avar Kriss). */

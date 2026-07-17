@@ -1028,6 +1028,9 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "TWI_002": //Nute Gunray (deployed) — On Attack: create a Battle Droid token
     case "TWI_006": //Wat Tambor (deployed) — On Attack: if a friendly unit was defeated this phase, may give +2/+2
     case "TWI_014": //Asajj Ventress (deployed) — On Attack: if you played an event this phase, +1/+0 and first strike
+    case "ASH_132": //Queen Soruna — On Attack: may reveal a unit from hand to deal 3 damage to a unit with the same cost
+    case "ASH_146": //Justifier — On Attack: may deal 1 damage to a unit; if defeated, give an Advantage token to a unit
+    case "ASH_149": //Eviscerator — On Attack: give 2 Advantage tokens to each other friendly unit
       return true;
     default: break;
   }
@@ -1148,6 +1151,14 @@ export function UnitImmuneToEnemyAbilities(cardId: string): boolean {
   return cardId === "SHD_187";
 }
 
+/** Records that a unit took damage this phase (e.g. ASH_188 Galvanized Leap's "was damaged this phase"). */
+export function MarkUnitDamaged(gs: GameState, playId: string): void {
+  gs.roundState.unitsDamagedThisPhase ??= [];
+  if (!gs.roundState.unitsDamagedThisPhase.includes(playId)) {
+    gs.roundState.unitsDamagedThisPhase.push(playId);
+  }
+}
+
 export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: string|undefined, amount: number, withLog?: string[], sourcePlayer?: PlayerId): void {
   if (!targetPlayId) return;
   const target = GetUnitByPlayId(gs, targetPlayId);
@@ -1174,6 +1185,7 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
     return;
   }
   target.damage += amount;
+  MarkUnitDamaged(gs, target.playId);
   if (withLog) {
     withLog.push(`${CardTitle(cardId)}: dealt ${amount} damage to ${CardTitle(target.cardId)}.`);
   }

@@ -151,6 +151,11 @@ export function hydratePuzzleGame(raw: RawPuzzleGameState): GameState {
       cardsEnteredPlayThisPhase: [],
       cardsLeftPlayThisPhase: [],
       unitsAttackedThisPhase: [],
+      baseDamagedThisPhase: [],
+      unitsDamagedThisPhase: [],
+      lastActionWasPass: false,
+      regroupResourcedPlayers: [],
+      forceUsedThisPhase: 0,
     },
   };
 }

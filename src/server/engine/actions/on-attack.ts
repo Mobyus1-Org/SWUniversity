@@ -1,14 +1,14 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, CapBaseDamage, GetGame, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, CapBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
-import { CardCost, CardTitle, CardIsUnique, CardAspects } from "@/server/engine/card-db/generated";
+import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType } from "@/server/engine/card-db/generated";
 import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { CreateCloneTrooper, CreateBattleDroid } from "@/server/engine/token-helpers";
+import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 
 /**
  * On Attack abilities — called after the attack target is chosen.
@@ -107,6 +107,7 @@ export function resolveOnAttackTrigger(
             const self156 = GetUnitsForPlayer(attacker.controller).find(u => u.playId === attacker.playId);
             if (self156) {
               self156.damage += diff156;
+              MarkUnitDamaged(gs156, self156.playId);
               game156.gameLog.push(`${CardTitle("JTL_156")}: dealt ${diff156} unpreventable damage to ${CardTitle(attacker.cardId)}.`);
             }
           }
@@ -279,6 +280,40 @@ function resolveInnateOnAttack(
         game189.gameLog.push(`${CardTitle("ASH_189")}: readied a resource.`);
       }
       return continuation;
+    }
+    case "ASH_149": { // Eviscerator — same effect as its When Played: give 2 Advantage tokens to
+                      // each other friendly unit.
+      const game149 = GetGame();
+      if (game149) {
+        for (const u of GetUnitsForPlayer(attacker.controller).filter(u => u.playId !== attacker.playId)) {
+          GiveAdvantageTokens(game149.currentGameState, u, 2, game149.gameLog, "ASH_149");
+        }
+      }
+      return continuation;
+    }
+    case "ASH_146": { // Justifier — same effect as its When Played.
+      const allUnits146 = AllUnits();
+      if (allUnits146.length === 0) return continuation;
+      return optionalTarget("ASH_146", attacker.controller, allUnits146.map(u => u.playId),
+        "Deal 1 damage to a unit?", { yesLabel: "Deal 1", continuation });
+    }
+    case "ASH_132": { // Queen Soruna — same effect as its When Played.
+      if (!GetHand(attacker.controller).some(c => CardType(c.cardId) === "Unit")) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "ASH_132",
+        sourcePlayId: attacker.playId,
+        helperText: "Reveal a unit from your hand to deal 3 damage to a unit with the same cost?",
+        yesLabel: "Reveal",
+        noLabel: "Skip",
+        onYes: {
+          type: "play-from-hand",
+          cardId: "ASH_132",
+          player: attacker.controller,
+          continuation,
+        },
+        continuation,
+      };
     }
     case "LAW_101": { // Lawbringer — "On Attack: Choose an aspect. Give each enemy unit with that
                       // aspect –2/–2 for this phase." (Same effect as its When Played.)

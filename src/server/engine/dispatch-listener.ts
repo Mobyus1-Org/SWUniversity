@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, CapBaseDamage } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, CapBaseDamage, MarkUnitDamaged, ReadyUnitByPlayId } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -1586,6 +1586,15 @@ function resolveAttack(
     // The attacker's attack has ended — its Advantage tokens defeat. This runs BEFORE any
     // "When Attack Ends" ability, so a token granted by one of those survives (ASH_180).
     DefeatAdvantageTokensAfterCombat([attacker], log);
+    // ASH_144 Vane's Snub Fighter: "When a friendly unit's attack ends: If it dealt combat damage
+    // to a base, give an Advantage token to this unit." Reacts to ANY friendly attack, not just
+    // its own — granted after the cleanup above so the token survives even when Vane's is the
+    // attacker itself.
+    if (atkPower > 0) {
+      const vane144 = GetUnitsForPlayer(attacker.controller)
+        .find(u => u.cardId === "ASH_144" && !Unit.FromInterface(u).LostAbilities());
+      if (vane144) GiveAdvantageTokens(game, vane144, 1, log, "ASH_144");
+    }
     if (stayOnTarget177) {
       DrawCardForPlayer(game, log, attacker.controller);
       log.push(`${CardTitle("JTL_177")}: ${attackerName} damaged the base — drew a card.`);
@@ -1732,6 +1741,7 @@ function resolveAttack(
       log.push(`${defenderName}'s Shield token was defeated, preventing ${effectiveAtkPower} damage.`);
     } else {
       defender.damage += effectiveAtkPower;
+      if (effectiveAtkPower > 0) MarkUnitDamaged(game, defender.playId);
     }
 
     // If first strike is active and defender is now defeated, counter-damage is 0.
@@ -1754,6 +1764,7 @@ function resolveAttack(
       log.push(`${attackerName}'s Shield token was defeated, preventing ${effectiveDefPower} counter-damage.`);
     } else {
       attacker.damage += effectiveDefPower;
+      MarkUnitDamaged(game, attacker.playId);
     }
     log.push(`${attackerName} attacked ${defenderName}.`);
 
@@ -3853,10 +3864,11 @@ function handleChooseTarget(
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
-    if (pending.cardId === "JTL_170" || pending.cardId === "JTL_140") {
+    if (pending.cardId === "JTL_170" || pending.cardId === "JTL_140" || pending.cardId === "ASH_142") {
       // War Juggernaut — deal 1 to each chosen unit (any number).
       // IG-2000 — deal 1 to each chosen unit (up to 3).
-      const cap = pending.cardId === "JTL_140" ? 3 : Infinity;
+      // Mortar Trooper — deal 1 to each of up to 3 chosen ground units.
+      const cap = pending.cardId === "JTL_170" ? Infinity : 3;
       const chosenDmg = (data.targetPlayIds ?? []).slice(0, cap);
       for (const id of chosenDmg) {
         if (!pending.fromPlayIds.includes(id))
@@ -4868,6 +4880,31 @@ function handleChooseTarget(
         const dmgPending2: AbilityTargetPending = { type: "ability-target", cardId: "SEC_182", player: pending.player, fromPlayIds: allUnits182b.map(u => u.playId), continuation: null };
         return { response: resolutionResponse(pendingToResolution(dmgPending2, game)), pending: dmgPending2, stateChanged: false };
       }
+      case "ASH_132": { // Queen Soruna — revealed a unit; deal 3 damage to a unit with the same cost.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Queen Soruna: chosen card is not a Unit."), pending, stateChanged: false };
+        log.push(`${CardTitle("ASH_132")}: revealed ${CardTitle(cardId) ?? cardId}.`);
+        const revealedCost132 = CardCost(cardId) ?? 0;
+        const matching132 = [
+          ...game.player1.groundArena, ...game.player1.spaceArena,
+          ...game.player2.groundArena, ...game.player2.spaceArena,
+        ].filter(u => (CardCost(u.cardId) ?? 0) === revealedCost132);
+        if (matching132.length === 0) {
+          const next132 = pending.continuation ?? null;
+          if (next132?.type === "resolve-attack") return handleResolveAttack(game, log, next132);
+          return next132
+            ? { response: resolutionResponse(pendingToResolution(next132, game)), pending: next132, stateChanged: true }
+            : { response: stateResponse(game), pending: null, stateChanged: true };
+        }
+        const queenPending: AbilityTargetPending = {
+          type: "ability-target",
+          cardId: "ASH_132",
+          player: pending.player,
+          fromPlayIds: matching132.map(u => u.playId),
+          continuation: pending.continuation ?? null,
+        };
+        return { response: resolutionResponse(pendingToResolution(queenPending, game)), pending: queenPending, stateChanged: false };
+      }
       case "SOR_176":
       case "SEC_184": {
         if (CardType(cardId) !== "Event")
@@ -4974,6 +5011,7 @@ function handleChooseTarget(
         log.push(`${CardTitle(unit.cardId)}'s Shield token was defeated, preventing ${assignment.damage} damage.`);
       } else {
         unit.damage += assignment.damage;
+        if (assignment.damage > 0) MarkUnitDamaged(game, unit.playId);
       }
     }
 
@@ -5017,7 +5055,10 @@ function handleChooseTarget(
     // Apply unit damage — shields are NOT removed (CR 8.36.2)
     for (const a of unitAssignments) {
       const unit = GetUnitByPlayId(game, a.playId);
-      if (unit) unit.damage += a.damage;
+      if (unit) {
+        unit.damage += a.damage;
+        if (a.damage > 0) MarkUnitDamaged(game, unit.playId);
+      }
     }
 
     // Apply base damage
@@ -5788,6 +5829,7 @@ function applyAbilityOptionEffect(
     case "SOR_173": { // Bombing Run Yes: deal 3 to each ground unit.
       for (const u of [...game.player1.groundArena, ...game.player2.groundArena]) {
         u.damage += 3;
+        MarkUnitDamaged(game, u.playId);
       }
       log.push(`${CardTitle("SOR_173")}: dealt 3 damage to each ground unit.`);
       updateDefeatedPlayers(game);
@@ -5936,6 +5978,7 @@ function applyAbilityOptionDeclineEffect(
     case "SOR_173": { // Bombing Run No: deal 3 to each space unit.
       for (const u of [...game.player1.spaceArena, ...game.player2.spaceArena]) {
         u.damage += 3;
+        MarkUnitDamaged(game, u.playId);
       }
       log.push(`${CardTitle("SOR_173")}: dealt 3 damage to each space unit.`);
       updateDefeatedPlayers(game);
@@ -7431,6 +7474,19 @@ function resolveActionAbility(
         continuation: null,
       };
     }
+    case "ASH_142": { // Mortar Trooper — Action [Exhaust]: Deal 1 damage to each of up to 3 ground units.
+      const groundUnits142 = [...game.player1.groundArena, ...game.player2.groundArena];
+      if (groundUnits142.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "ASH_142",
+        player,
+        fromPlayIds: groundUnits142.map(u => u.playId),
+        needsMultiple: true,
+        maxTargets: 3,
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "ASH_109": { // T-6 Shuttle 1974 — Action [Exhaust]: Give another unit +2/+2 for this phase.
                       // You may attack with that unit.
       const others109 = GetAllUnits(game).filter(u => u.playId !== playId);
@@ -7857,6 +7913,12 @@ function applyAbilityEffect(
       }
       break;
     }
+    case "ASH_188": { // Galvanized Leap — ready the chosen unit (damaged this phase).
+      if (!targetPlayId) break;
+      const target188 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target188) ReadyUnitByPlayId(targetPlayId, target188.controller, "ASH_188");
+      break;
+    }
     case "SOR_074": // Repair — Heal 3 damage from a unit or base.
     case "JTL_075": {
       if (!targetPlayId) break;
@@ -8212,6 +8274,54 @@ function applyAbilityEffect(
       const target009 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target009) GivePowerMod("ASH_009", target009, 2, "Phase", game.gameLog);
       break;
+    }
+    case "ASH_153": { // Green Leader — When Defeated: deal 2 damage to the chosen unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "ASH_153", targetPlayId, 2, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "ASH_147": { // The Cyborg Mech — 2 damage if the chosen ground unit is undamaged, 5 if damaged.
+      if (!targetPlayId) break;
+      const target147 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target147) break;
+      const amount147 = Unit.FromInterface(target147).IsDamaged() ? 5 : 2;
+      DealDamageToUnit(game.currentGameState, "ASH_147", targetPlayId, amount147, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "ASH_146_advantage": { // Justifier follow-up — give an Advantage token to the chosen unit.
+      if (!targetPlayId) break;
+      const advTarget146 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (advTarget146) GiveAdvantageTokens(game.currentGameState, advTarget146, 1, game.gameLog, "ASH_146");
+      break;
+    }
+    case "ASH_146": { // Justifier — deal 1 damage to the chosen unit; if defeated this way, give an Advantage token to a unit.
+      if (!targetPlayId) break;
+      const target146 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target146) break;
+      const wasAlready0_146 = Unit.FromInterface(target146).CurrentHP() <= 0;
+      DealDamageToUnit(game.currentGameState, "ASH_146", targetPlayId, 1, game.gameLog);
+      const nowDead146 = !wasAlready0_146 && Unit.FromInterface(target146).CurrentHP() <= 0;
+      if (!nowDead146) {
+        return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+      }
+      const afterSweep146 = sweepDeadUnits(game.currentGameState, game.gameLog, null);
+      const allUnits146 = GetAllUnits(game.currentGameState);
+      if (allUnits146.length === 0) {
+        return afterSweep146 ? injectContinuation(afterSweep146, pending.continuation ?? null) : (pending.continuation ?? null);
+      }
+      const advPending146: AbilityTargetPending = {
+        type: "ability-target",
+        cardId: "ASH_146_advantage",
+        player: pending.player,
+        fromPlayIds: allUnits146.map(u => u.playId),
+        continuation: pending.continuation ?? null,
+      };
+      return afterSweep146 ? injectContinuation(afterSweep146, advPending146) : advPending146;
+    }
+    case "ASH_132": { // Queen Soruna — deal 3 damage to the chosen (same-cost) unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "ASH_132", targetPlayId, 3, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "ASH_109": { // T-6 Shuttle 1974 — Action: give the chosen unit +2/+2 for this phase.
                       // You may attack with that unit.

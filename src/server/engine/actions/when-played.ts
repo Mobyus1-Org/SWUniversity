@@ -92,6 +92,44 @@ export function resolveWhenPlayed(
   switch (cardId) {
     case "LOF_082": // Vaneé — When Played/On Attack: may defeat an XP token on a friendly unit, then give one to a friendly unit.
       return buildVaneeAbility(player, null);
+    case "ASH_132": { // Queen Soruna — When Played/On Attack: may reveal a unit from hand; if you
+                      // do, deal 3 damage to a unit with the same cost as the revealed unit.
+      const pStateQueen = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+      if (!pStateQueen.hand.some(c => CardType(c.cardId) === "Unit")) return null;
+      return {
+        type: "ability-option",
+        cardId: "ASH_132",
+        sourcePlayId: playId,
+        helperText: "Reveal a unit from your hand to deal 3 damage to a unit with the same cost?",
+        yesLabel: "Reveal",
+        noLabel: "Skip",
+        onYes: {
+          type: "play-from-hand",
+          cardId: "ASH_132",
+          player,
+        },
+        continuation: null,
+      };
+    }
+    case "ASH_146": { // Justifier — When Played/On Attack: may deal 1 damage to a unit; if
+                      // defeated this way, give an Advantage token to a unit.
+      const allUnits146 = AllUnits();
+      if (allUnits146.length === 0) return null;
+      return optionalTarget("ASH_146", player, allUnits146.map(u => u.playId),
+        "Deal 1 damage to a unit?", { yesLabel: "Deal 1" });
+    }
+    case "ASH_147": { // The Cyborg Mech — deal 2 damage to an undamaged ground unit, or 5 to a
+                      // damaged ground unit. (Amount is decided by the chosen target's state.)
+      const groundUnits147 = AllGroundUnits();
+      if (groundUnits147.length === 0) return null;
+      return mandatoryTarget("ASH_147", player, groundUnits147.map(u => u.playId));
+    }
+    case "ASH_188": { // Galvanized Leap — "Ready a unit that was damaged this phase."
+      const damaged188 = (game.currentGameState.roundState.unitsDamagedThisPhase ?? [])
+        .filter(pid => AllUnits().some(u => u.playId === pid));
+      if (damaged188.length === 0) return null;
+      return mandatoryTarget("ASH_188", player, damaged188);
+    }
     case "JTL_242": // Shuttle ST-149 — When Played/When Defeated: may take control of a token upgrade and attach it to a different eligible unit.
       return buildTakeControlOfUpgrade("JTL_242", player,
         upg => IsTokenUpgrade(upg.cardId),

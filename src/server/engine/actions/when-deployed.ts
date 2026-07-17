@@ -1,6 +1,6 @@
 import { PendingResolution } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, CardIsLeader } from "@/server/engine/core-functions";
+import { GetGame, CardIsLeader, MarkUnitDamaged } from "@/server/engine/core-functions";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -89,6 +89,7 @@ export function resolveWhenDeployed(
           log.push(`${CardTitle(u.cardId)}'s Shield token absorbed Qi'ra's damage.`);
         } else {
           u.damage += damage;
+          if (damage > 0) MarkUnitDamaged(gs, u.playId);
           log.push(`Qi'ra dealt ${damage} damage to ${CardTitle(u.cardId)}.`);
         }
       }

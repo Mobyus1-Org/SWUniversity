@@ -1,8 +1,8 @@
-import { CardTitle } from "@/server/engine/card-db/generated";
+import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { BaseHealingPrevented, CapBaseDamage, DrawCardForPlayer, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
-import { CreateSpy, CreateTieFighter, CreateBattleDroid, GiveAdvantageTokens } from "@/server/engine/token-helpers";
+import { BaseHealingPrevented, CapBaseDamage, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
+import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 
 /**
  * Cards whose When Played does something without asking the player anything — i.e. the
@@ -17,7 +17,7 @@ import { CreateSpy, CreateTieFighter, CreateBattleDroid, GiveAdvantageTokens } f
 const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
-  "SHD_197", "ASH_218", "ASH_112",
+  "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -62,6 +62,16 @@ export function resolveWhenPlayedTrigger(
     case "TWI_112": // Subjugating Starfighter — When Played: If you have the initiative, create a Battle Droid token.
       if (gs.initiativePlayer === trigger.fromPlayer) {
         CreateBattleDroid(gs, trigger.fromPlayer, log, trigger.cardId);
+      }
+      break;
+    case "ASH_124": // Protectorate Fighter — When Played: if you control a unique unit, create a Mandalorian token.
+      if (GetUnitsForPlayer(trigger.fromPlayer).some(u => CardIsUnique(u.cardId))) {
+        CreateMandalorianToken(gs, trigger.fromPlayer, log, trigger.cardId);
+      }
+      break;
+    case "ASH_149": // Eviscerator — When Played: give 2 Advantage tokens to each other friendly unit.
+      for (const u of GetUnitsForPlayer(trigger.fromPlayer).filter(u => u.playId !== trigger.playId)) {
+        GiveAdvantageTokens(gs, u, 2, log, trigger.cardId);
       }
       break;
     case "SHD_197": { // L3-37 — no captured card to rescue → the "If you don't" fallback gives it a Shield token.

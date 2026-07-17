@@ -233,6 +233,7 @@ export const Cards = {
       tieFighter: "JTL_T01",
       xWing: "JTL_T02",
       spy: "SEC_T01",
+      mandalorian: "ASH_T01",
     },
     sor: {
       infernoFour: "SOR_031",
@@ -511,6 +512,15 @@ export const Cards = {
       boKatanKryze: "ASH_105",
       t6Shuttle1974: "ASH_109",
       lukeSkywalker: "ASH_112",
+      warriorOfClanKryze: "ASH_120",
+      protectorateFighter: "ASH_124",
+      queenSoruna: "ASH_132",
+      mortarTrooper: "ASH_142",
+      vanesSnubFighter: "ASH_144",
+      justifier: "ASH_146",
+      theCyborgMech: "ASH_147",
+      eviscerator: "ASH_149",
+      greenLeader: "ASH_153",
       // Leader units (the deployed side of the ASH leaders)
       ahsokaTano: "ASH_009",
       theMandalorian: "ASH_014",
@@ -658,6 +668,7 @@ export const Cards = {
     ash: {
       // Identical reprint of SEC_258 Grassroots Resistance.
       grassrootsResistance: "ASH_258",
+      galvanizedLeap: "ASH_188",
     },
     law: {
       unmarkedCredits: "LAW_244",

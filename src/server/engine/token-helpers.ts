@@ -1,5 +1,6 @@
 import { CardArena, CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
+import { GetUnitsForPlayer } from "@/server/engine/core-functions";
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 
@@ -64,6 +65,23 @@ export function CreateXWing(game: GameState, player: PlayerId, gameLog: string[]
   return spawnToken(game, player, "JTL_T02");
 }
 
+/** ASH_T01 Mandalorian token — Shielded, so it enters play with a Shield token attached. */
+export function CreateMandalorianToken(game: GameState, player: PlayerId, gameLog: string[], fromCardId?: string): Unit {
+  const unit = spawnToken(game, player, "ASH_T01");
+  unit.upgrades.push({
+    cardId: "SOR_T02",
+    playId: String(game.nextPlayId++),
+    owner: player,
+    controller: player,
+  });
+  if (fromCardId) {
+    gameLog.push(`${CardTitle(fromCardId)}: created Mandalorian token.`);
+  } else {
+    gameLog.push("Created Mandalorian token.");
+  }
+  return unit;
+}
+
 export function CreateSpy(gamestate: GameState, player: PlayerId, gameLog: string[], fromCardId?: string): Unit {
   if (fromCardId) {
     gameLog.push(`${CardTitle(fromCardId)}: created a Spy token.`);
@@ -112,6 +130,12 @@ export function DefeatAdvantageTokensAfterCombat(
 ): void {
   for (const unit of units) {
     if (!unit) continue;
+    // ASH_149 Eviscerator: "Advantage tokens on friendly units lose all abilities" — they
+    // are no longer defeated after combat for that controller's units.
+    const eviscerator = GetUnitsForPlayer(unit.controller).some(
+      u => u.cardId === "ASH_149" && !Unit.FromInterface(u).LostAbilities(),
+    );
+    if (eviscerator) continue;
     const before = unit.upgrades.length;
     unit.upgrades = unit.upgrades.filter(u => u.cardId !== ADVANTAGE_TOKEN);
     const defeated = before - unit.upgrades.length;
