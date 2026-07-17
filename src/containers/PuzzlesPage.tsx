@@ -1300,7 +1300,10 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
           <div className="space-y-3">
             <div className="grid gap-2 xl:grid-cols-[minmax(0,5fr)_minmax(0,4fr)]">
               <div className="relative rounded-lg bg-black/20 p-2">
-                <div className="mb-2 text-xs uppercase tracking-[0.2em] text-white/60">Resources ({opponent.resources.length})</div>
+                <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.2em] text-white/60">
+                  <span>Resources ({opponent.resources.length})</span>
+                  <span className="normal-case tracking-normal text-white/65">{opponent.hand.length} cards in hand</span>
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {opponent.resources.map((resource) => <FaceDownResource
                     key={resource.playId}
