@@ -17,7 +17,7 @@ type Props = {
 function DifficultyDots({ value }: { value: number }) {
   return (
     <img
-      src={`/assets/puzzles/dif${value}2.png`}
+      src={`/assets/puzzles/saber${value}.png`}
       alt={`Difficulty ${value}`}
       className="h-6 w-auto"
     />
