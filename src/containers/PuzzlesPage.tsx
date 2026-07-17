@@ -115,6 +115,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
 const UNITS_WITH_ACTION_ABILITY: Record<string, string> = {
   "SHD_028": "Draw a card",
   "LOF_206": "Attack with a Droid",
+  "ASH_109": "+2/+2 to a unit",
 };
 
 const BASES_WITH_EPIC_ACTION = new Set([

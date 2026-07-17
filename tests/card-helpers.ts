@@ -371,6 +371,7 @@ export const Cards = {
       kraytDragon: "SHD_172",
     },
     jtl: {
+      redLeader: "JTL_101",
       kijimiPatrollers: "JTL_082",
       mistHunter: "JTL_186",
       hondoOhnaka: "JTL_056",
@@ -507,6 +508,9 @@ export const Cards = {
       atAttinSafetyDroid: "ASH_070",
       summaVerminoth: "ASH_083",
       ferryDroid: "ASH_218",
+      boKatanKryze: "ASH_105",
+      t6Shuttle1974: "ASH_109",
+      lukeSkywalker: "ASH_112",
       // Leader units (the deployed side of the ASH leaders)
       ahsokaTano: "ASH_009",
       theMandalorian: "ASH_014",

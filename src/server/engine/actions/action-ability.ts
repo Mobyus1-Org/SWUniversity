@@ -239,6 +239,11 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "SOR_129": // Admiral Ozzel — Action [exhaust]: Play an Imperial unit from hand.
         if (PlayerHasUnitsInHand(player, { trait: "Imperial" })) abilities.push(cardId);
         break;
+      case "ASH_109": { // T-6 Shuttle 1974 — Action [Exhaust]: Give another unit +2/+2 for this phase.
+        const others109 = AllUnits().filter(u => u.playId !== playId);
+        if (others109.length > 0) abilities.push(cardId);
+        break;
+      }
       default: break;
     }
   }

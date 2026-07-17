@@ -1,7 +1,7 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId, Resource } from "@/lib/engine/core-models";
 import { CardAspects, CardCost, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
-import { UpgradeEligibleTargets, PilotingEligibleVehicles } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { UpgradeEligibleTargets, PilotingEligibleVehicles, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { Unit } from "@/server/engine/unit";
@@ -144,6 +144,19 @@ function piettCapitalShipDiscount(game: GameState, player: PlayerId, cardId: str
   return 2;
 }
 
+// JTL_101 Red Leader: costs 1 resource less to play for each friendly Pilot unit and upgrade.
+function redLeaderPilotDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (cardId !== "JTL_101") return 0;
+  const p = player === 1 ? game.player1 : game.player2;
+  const friendly = [...p.groundArena, ...p.spaceArena];
+  let count = 0;
+  for (const u of friendly) {
+    if (TraitContains(u.cardId, "Pilot", player, u.playId)) count++;
+    count += u.upgrades.filter(upg => IsPilotUpgrade(upg.cardId)).length;
+  }
+  return count;
+}
+
 /**
  * The full cost to play `cardId` from hand: printed cost + aspect penalty + taxes − discounts.
  * The single definition used by BOTH the playability check (what the UI offers) and the payment
@@ -161,6 +174,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - gnkPowerDroidDiscount(game, player, cardId)
     - piettCapitalShipDiscount(game, player, cardId)
     - morganNextUnitDiscount(game, player, cardId)
+    - redLeaderPilotDiscount(game, player, cardId)
   ;
 }
 

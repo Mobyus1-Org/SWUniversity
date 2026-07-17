@@ -151,6 +151,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "ASH_096": amount += 1; break;//Forest Patroller
     case "ASH_106": amount += 1; break;//Pathfinder Sergeant
     case "ASH_256": amount += 1; break;//Rebel Infiltrators
+    case "ASH_112": amount += 1; break;//Luke Skywalker
     default: break;
   }
 

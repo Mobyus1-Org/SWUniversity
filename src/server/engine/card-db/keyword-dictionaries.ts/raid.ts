@@ -80,6 +80,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
       case "TWI_164": amount += IsCoordinateActive(player) ? 2 : 0; break;//Hevy
       case "TWI_196": amount += IsCoordinateActive(player) ? 3 : 0; break;//Plo Koon
       case "TWI_180": amount += PlayerHasUnitWithTraitInPlay(player, "Separatist", true, playId) ? 2 : 0; break;//Separatist Commando
+      case "ASH_105": amount += PlayerHasUnitWithTraitInPlay(player, "Mandalorian", true, playId) ? 2 : 0; break;//Bo-Katan Kryze
       case "JTL_081": amount += PlayerHasTokenUnitInPlay(player) ? 1 : 0; break;//First Order TIE Fighter
       case "JTL_257": amount += PlayerHasUnitWithTraitInPlay(player, "Fighter", true, playId) ? 2 : 0; break;//Flanking Fang Fighter
       case "JTL_137": amount += (unit.CurrentPower() + amount) >= 6 ? 1 : 0; break;//Vonreg's TIE Interceptor

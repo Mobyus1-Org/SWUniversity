@@ -110,12 +110,12 @@ import { AttackAbilityCardIds, HasSupport, SupportGrantEffectCardId } from "@/se
 import { ActionAbilities, ActionAbilityCost, WeakerThanAFriendlyUnitPlayIds } from "@/server/engine/actions/action-ability";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
-import { IsTokenUpgrade, PilotingEligibleVehicles, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { IsTokenUpgrade, PilotingEligibleVehicles, PilotlessVehiclePlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dictionaries.ts/leader-pilot-deploy";
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
-import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateXWing, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource } from "@/server/engine/core-functions";
 
@@ -719,6 +719,17 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
   if (trigger.triggerType === "when-played") {
     const nextPending = resolveWhenPlayed(trigger.cardId, trigger.fromPlayer, trigger.playId);
     if (nextPending) return nextPending;
+    if (trigger.cardId === "ASH_112") { // Luke Skywalker — if you control 4+ units, deal 3 to each enemy unit.
+      if (GetUnitsForPlayer(trigger.fromPlayer).length >= 4) {
+        const enemy112: PlayerId = trigger.fromPlayer === 1 ? 2 : 1;
+        for (const u of GetUnitsForPlayer(enemy112)) {
+          DealDamageToUnit(game, "ASH_112", u.playId, 3, log);
+        }
+        log.push(`${CardTitle("ASH_112")}: dealt 3 damage to each enemy unit.`);
+        return sweepDeadUnits(game, log, null);
+      }
+      return null;
+    }
     resolveWhenPlayedTrigger(trigger, game, log);
     return null;
   }
@@ -4437,6 +4448,11 @@ function handleChooseTarget(
       transferControl(game, log, targetUnit, pending.player);
     }
 
+    // JTL_101 Red Leader: When a Pilot upgrade attaches to this unit — create an X-Wing token.
+    if (IsPilotUpgrade(pending.upgradeCardId) && targetUnit.cardId === "JTL_101") {
+      CreateXWing(game, pending.player, log, "JTL_101");
+    }
+
     // SHD_073 Mandalorian Armor: When Played — if attached unit is Mandalorian, give Shield.
     if (pending.upgradeCardId === "SHD_073") {
       if (TraitContains(targetUnit.cardId, "Mandalorian", pending.player, targetUnit.playId)) {
@@ -7415,6 +7431,18 @@ function resolveActionAbility(
         continuation: null,
       };
     }
+    case "ASH_109": { // T-6 Shuttle 1974 — Action [Exhaust]: Give another unit +2/+2 for this phase.
+                      // You may attack with that unit.
+      const others109 = GetAllUnits(game).filter(u => u.playId !== playId);
+      if (others109.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "ASH_109",
+        player,
+        fromPlayIds: others109.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "SOR_110": { // Frontline Shuttle — Action [defeat this unit]: Attack with a unit, even if exhausted.
       if (!playId) return null;
       const shuttle110 = GetUnitByPlayId(game, playId);
@@ -8183,6 +8211,30 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target009 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target009) GivePowerMod("ASH_009", target009, 2, "Phase", game.gameLog);
+      break;
+    }
+    case "ASH_109": { // T-6 Shuttle 1974 — Action: give the chosen unit +2/+2 for this phase.
+                      // You may attack with that unit.
+      if (!targetPlayId) break;
+      const target109 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target109) break;
+      GiveStatModForPhase("ASH_109", target109, 2, game.gameLog);
+      if (target109.ready && CanUnitAttack(target109)) {
+        return {
+          type: "ability-option",
+          cardId: "ASH_109",
+          helperText: `Attack with ${CardTitle(target109.cardId)}?`,
+          yesLabel: "Attack",
+          noLabel: "Skip",
+          onYes: {
+            type: "attack-target",
+            attackerPlayId: target109.playId,
+            source: "ASH_109",
+            continuation: null,
+          },
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
       break;
     }
     case "TWI_006":        // Wat Tambor (deployed) On Attack — give another unit +2/+2 this phase.
