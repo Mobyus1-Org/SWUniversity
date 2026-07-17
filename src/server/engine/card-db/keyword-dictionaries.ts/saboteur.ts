@@ -125,6 +125,8 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
     case "LAW_234"://Kage Elite
     case "LAW_250"://Callous Bounty Hunter
     case "ASH_141"://TIE Striker
+    case "ASH_158"://Han Solo
+    case "ASH_172"://Razor Crest
     case "ASH_173"://Shydopp Pirate Skiff
     case "ASH_192"://Fennec Shand
     case "ASH_193"://Emperor's Champion

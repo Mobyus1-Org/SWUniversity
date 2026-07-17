@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, BaseHealingPrevented, CanDisclose, CapBaseDamage, CaptureVictimsExistFor, CardIsLeader, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
+import { AllUnits, BaseHealingPrevented, CanDisclose, CapBaseDamage, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardAspects, CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -109,6 +109,18 @@ function resolveOwnWhenDefeated(
       if (allUnits050.length === 0) return null;
       return optionalTarget("ASH_050", player, allUnits050.map(u => u.playId),
         "Give a unit –2/–2 for this phase?", { yesLabel: "Give –2/–2" });
+    }
+    case "ASH_167": { // Flarestar Attack Shuttle — same effect as its When Played.
+      const allUnits167 = AllUnits();
+      if (allUnits167.length === 0) return null;
+      return optionalTarget("ASH_167", player, allUnits167.map(u => u.playId),
+        "Give an Advantage token to a unit?", { yesLabel: "Give token" });
+    }
+    case "ASH_165": { // Clan Vizsla Soldier — "When Defeated: You may defeat an upgrade."
+      const upgrades165 = DefeatableUpgradePlayIds(player);
+      if (upgrades165.length === 0) return null;
+      return optionalTarget("ASH_165", player, upgrades165,
+        "Defeat an upgrade?", { yesLabel: "Defeat" });
     }
     case "ASH_153": { // Green Leader — "When Defeated: You may deal 2 damage to a unit."
       const allUnits153 = AllUnits();

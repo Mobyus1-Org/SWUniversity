@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, CapBaseDamage, GetGame, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyAbilities } from "@/server/engine/core-functions";
+import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, CapBaseDamage, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyAbilities, DealDamageToUnit } from "@/server/engine/core-functions";
 import { aspectPenalty, spendableFor } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -117,6 +117,53 @@ export function resolveWhenPlayed(
       if (allUnits146.length === 0) return null;
       return optionalTarget("ASH_146", player, allUnits146.map(u => u.playId),
         "Deal 1 damage to a unit?", { yesLabel: "Deal 1" });
+    }
+    case "ASH_174": { // StarFortress Heavy Bomber — When Played: may deal 6 damage to a non-unique ground unit.
+      const nonUniqueGround174 = AllGroundUnits().filter(u => !CardIsUnique(u.cardId));
+      if (nonUniqueGround174.length === 0) return null;
+      return optionalTarget("ASH_174", player, nonUniqueGround174.map(u => u.playId),
+        "Deal 6 damage to a non-unique ground unit?", { yesLabel: "Deal 6" });
+    }
+    case "ASH_171": { // Pegasus Tri-Wing — may defeat a friendly upgrade; if you do, ready this unit.
+      const friendlyUpgrades171 = GetUnitsForPlayer(player).flatMap(u => u.upgrades.map(upg => upg.playId));
+      if (friendlyUpgrades171.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId: "ASH_171",
+        player,
+        sourcePlayId: playId,
+        helperText: "Defeat a friendly upgrade to ready this unit?",
+        yesLabel: "Defeat",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "ASH_171",
+          player,
+          sourcePlayId: playId,
+          fromPlayIds: friendlyUpgrades171,
+          continuation: null,
+        } satisfies AbilityTargetPending,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "ASH_170": { // Desert Sharpshooter — When Played: may deal 2 damage to an upgraded ground unit.
+      const upgradedGround170 = AllGroundUnits().filter(u => u.upgrades.length > 0);
+      if (upgradedGround170.length === 0) return null;
+      return optionalTarget("ASH_170", player, upgradedGround170.map(u => u.playId),
+        "Deal 2 damage to an upgraded ground unit?", { yesLabel: "Deal 2" });
+    }
+    case "ASH_167": { // Flarestar Attack Shuttle — When Played/When Defeated: may give an Advantage token to a unit.
+      const allUnits167 = AllUnits();
+      if (allUnits167.length === 0) return null;
+      return optionalTarget("ASH_167", player, allUnits167.map(u => u.playId),
+        "Give an Advantage token to a unit?", { yesLabel: "Give token" });
+    }
+    case "ASH_158": { // Han Solo — deal 3 damage to this unit, then give 3 Advantage tokens to a unit.
+      const self158 = playId ? GetUnitByPlayId(game.currentGameState, playId) : undefined;
+      if (self158) DealDamageToUnit(game.currentGameState, "ASH_158", self158.playId, 3, game.gameLog);
+      const allUnits158 = AllUnits();
+      if (allUnits158.length === 0) return null;
+      return mandatoryTarget("ASH_158", player, allUnits158.map(u => u.playId));
     }
     case "ASH_147": { // The Cyborg Mech — deal 2 damage to an undamaged ground unit, or 5 to a
                       // damaged ground unit. (Amount is decided by the chosen target's state.)

@@ -281,6 +281,12 @@ function resolveInnateOnAttack(
       }
       return continuation;
     }
+    case "ASH_157": { // Danger Squadron Wingmen — On Attack: may give an Advantage token to another unit.
+      const others157 = AllUnits().filter(u => u.playId !== attacker.playId);
+      if (others157.length === 0) return continuation;
+      return optionalTarget("ASH_157", attacker.controller, others157.map(u => u.playId),
+        "Give an Advantage token to another unit?", { yesLabel: "Give token", continuation });
+    }
     case "ASH_149": { // Eviscerator — same effect as its When Played: give 2 Advantage tokens to
                       // each other friendly unit.
       const game149 = GetGame();
@@ -290,6 +296,26 @@ function resolveInnateOnAttack(
         }
       }
       return continuation;
+    }
+    case "ASH_172": { // Razor Crest — On Attack: may discard a card from hand; if you do, this
+                      // unit gets +2/+0 for this attack.
+      if (GetHand(attacker.controller).length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "ASH_172",
+        player: attacker.controller,
+        helperText: "Discard a card from hand for +2/+0 this attack?",
+        yesLabel: "Discard",
+        noLabel: "Skip",
+        onYes: {
+          type: "discard-from-hand",
+          targetPlayer: attacker.controller,
+          count: 1,
+          continuation,
+          thenAttackBuff: { cardId: "ASH_172", playId: attacker.playId, amount: 2 },
+        },
+        continuation,
+      };
     }
     case "ASH_146": { // Justifier — same effect as its When Played.
       const allUnits146 = AllUnits();

@@ -1031,6 +1031,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_132": //Queen Soruna — On Attack: may reveal a unit from hand to deal 3 damage to a unit with the same cost
     case "ASH_146": //Justifier — On Attack: may deal 1 damage to a unit; if defeated, give an Advantage token to a unit
     case "ASH_149": //Eviscerator — On Attack: give 2 Advantage tokens to each other friendly unit
+    case "ASH_157": //Danger Squadron Wingmen — On Attack: may give an Advantage token to another unit
+    case "ASH_172": //Razor Crest — On Attack: may discard a card from hand for +2/+0 this attack
       return true;
     default: break;
   }

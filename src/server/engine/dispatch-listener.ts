@@ -4297,6 +4297,14 @@ function handleChooseTarget(
       ? { type: "discard-from-hand", targetPlayer: pending.targetPlayer, count: remaining, continuation: pending.continuation }
       : (pending.continuation ?? null);
 
+    // ASH_172 Razor Crest: "If you do, this unit gets +2/+0 for this attack."
+    if (remaining === 0 && pending.thenAttackBuff) {
+      const buffTarget172 = GetUnitByPlayId(game, pending.thenAttackBuff.playId);
+      if (buffTarget172) {
+        GivePowerMod(pending.thenAttackBuff.cardId, buffTarget172, pending.thenAttackBuff.amount, "ForAttack", log);
+      }
+    }
+
     // SOR_167 Force Throw: if a Force unit is in play for the controller, offer damage equal to discarded card's cost.
     if (remaining === 0 && pending.forceThrowControllerPlayer !== undefined && discardedCost > 0) {
       const allUnits167 = GetAllUnits(game);
@@ -4320,6 +4328,9 @@ function handleChooseTarget(
         game.currentEffects.push({ cardId: "SOR_167_damage", duration: "Phase", affectedPlayer: pending.forceThrowControllerPlayer, value: discardedCost });
         nextPending = damageOffer;
       }
+    }
+    if (nextPending?.type === "resolve-attack") {
+      return handleResolveAttack(game, log, nextPending);
     }
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
@@ -8274,6 +8285,50 @@ function applyAbilityEffect(
       const target009 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target009) GivePowerMod("ASH_009", target009, 2, "Phase", game.gameLog);
       break;
+    }
+    case "ASH_174": { // StarFortress Heavy Bomber — deal 6 damage to the chosen non-unique ground unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "ASH_174", targetPlayId, 6, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "ASH_171": { // Pegasus Tri-Wing — defeat the chosen friendly upgrade, then ready this unit.
+      if (!targetPlayId) break;
+      const self171 = pending.sourcePlayId ? GetUnitByPlayId(game.currentGameState, pending.sourcePlayId) : null;
+      if (self171) self171.ready = true;
+      return defeatUpgradeByPlayId(
+        game.currentGameState, game.gameLog, targetPlayId,
+        CardTitle("ASH_171"), pending.continuation ?? null, pending.player,
+      );
+    }
+    case "ASH_170": { // Desert Sharpshooter — deal 2 damage to the chosen upgraded ground unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "ASH_170", targetPlayId, 2, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "ASH_167": { // Flarestar Attack Shuttle — give an Advantage token to the chosen unit.
+      if (!targetPlayId) break;
+      const target167 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target167) GiveAdvantageTokens(game.currentGameState, target167, 1, game.gameLog, "ASH_167");
+      break;
+    }
+    case "ASH_158": { // Han Solo — give 3 Advantage tokens to the chosen unit.
+      if (!targetPlayId) break;
+      const target158 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target158) GiveAdvantageTokens(game.currentGameState, target158, 3, game.gameLog, "ASH_158");
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "ASH_157": { // Danger Squadron Wingmen — give an Advantage token to the chosen unit.
+      if (!targetPlayId) break;
+      const target157 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target157) GiveAdvantageTokens(game.currentGameState, target157, 1, game.gameLog, "ASH_157");
+      break;
+    }
+    case "ASH_165": { // Clan Vizsla Soldier — When Defeated: defeat the chosen upgrade.
+      if (!targetPlayId) break;
+      return defeatUpgradeByPlayId(
+        game.currentGameState, game.gameLog, targetPlayId,
+        CardTitle("ASH_165"), pending.continuation ?? null, pending.player,
+      );
     }
     case "ASH_153": { // Green Leader — When Defeated: deal 2 damage to the chosen unit.
       if (!targetPlayId) break;

@@ -117,6 +117,8 @@ export interface DiscardFromHandPending {
   minCost?: number;
   /** JTL_014 Admiral Trench: after the discard, draw a card for this player ("if you do, draw a card"). */
   thenDrawForPlayer?: PlayerId;
+  /** ASH_172 Razor Crest: after the discard, give the named unit a ForAttack power buff ("if you do, this unit gets +X/+0 for this attack"). */
+  thenAttackBuff?: { cardId: string; playId: string; amount: number };
 }
 
 /**
