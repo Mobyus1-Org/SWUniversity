@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, CapBaseDamage, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyAbilities, DealDamageToUnit } from "@/server/engine/core-functions";
+import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyAbilities, DealDamageToUnit } from "@/server/engine/core-functions";
 import { aspectPenalty, spendableFor } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -396,6 +396,30 @@ export function resolveWhenPlayed(
         fromPlayIds: GetUnitsForPlayer(player, true).map((u) => u.playId),
         continuation: null,
       }
+    case "TWI_224": //Breaking In "Attack with a unit. It gets +2/+0 and gains Saboteur for this attack. (Ignore Sentinel and defeat the defender's Shields.)"
+      return {
+        type: "ability-target",
+        cardId,
+        fromPlayIds: GetUnitsForPlayer(player, true).map((u) => u.playId),
+        continuation: null,
+      }
+    case "ASH_115": { //The Student Guides the Master "Give a friendly unit +1/+0 for this phase for each other friendly unit with less power than it."
+      const friendly115 = GetUnitsForPlayer(player).map(u => u.playId);
+      if (friendly115.length === 0) return null;
+      return mandatoryTarget(cardId, player, friendly115);
+    }
+    case "ASH_139": { //Hold Them Off "Choose a friendly unit. That unit deals damage equal to its power divided as you choose among any number of units in its arena."
+      const friendly139 = GetUnitsForPlayer(player).map(u => u.playId);
+      if (friendly139.length === 0) return null;
+      return mandatoryTarget(cardId, player, friendly139);
+    }
+    case "ASH_137": //Wipe Them Out "Attack with a unit. For this attack, you may deal its excess damage to another unit in the same arena."
+      return {
+        type: "ability-target",
+        cardId,
+        fromPlayIds: GetUnitsForPlayer(player, true).map((u) => u.playId),
+        continuation: null,
+      }
     case "JTL_231": { // Punch It — "Attack with a Vehicle unit. It gets +2/+0 for this attack."
       const vehiclePlayIds = GetUnitsForPlayer(player, true)
         .filter(u => TraitContains(u.cardId, "Vehicle", u.controller, u.playId))
@@ -761,7 +785,7 @@ export function resolveWhenPlayed(
         p150.hand.push(p150.deck.pop()!);
         game150.gameLog.push(`${CardTitle("SOR_150")}: drew a card.`);
       } else {
-        p150.base.damage += CapBaseDamage(player, 3);
+        DealDamageToBase(gs150, player, 3);
         game150.gameLog.push(`${CardTitle("SOR_150")}: drew from empty deck — 3 damage to base.`);
       }
       const attackers150 = GetUnitsForPlayer(player, true);
@@ -1062,6 +1086,24 @@ export function resolveWhenPlayed(
       if (eligible133.length === 0) return null;
       return mandatoryTarget(cardId, player, eligible133.map(u => u.playId));
     }
+    case "ASH_103": { // Long Live the Empire — "Defeat a friendly Imperial unit. If you do, resource the top card of your deck."
+      const eligible103 = AllUnits().filter(u => u.controller === player && TraitContains(u.cardId, "Imperial", player, u.playId));
+      // No eligible friendly Imperial unit → the event still resolves, just with no effect.
+      if (eligible103.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible103.map(u => u.playId));
+    }
+    case "SHD_181": { // Pillage — "Choose a player. They discard 2 cards from their hand."
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        helperText: "Who discards 2 cards?",
+        yesLabel: "You discard 2",
+        noLabel: "Opponent discards 2",
+        onYes: null,
+        continuation: null,
+      };
+    }
     case "SEC_258": // Grassroots Resistance — "Deal 3 damage to a unit. Heal 3 damage from your base."
     case "ASH_258": { // reprint of SEC_258
       const eligible258 = AllUnits();
@@ -1244,6 +1286,12 @@ export function resolveWhenPlayed(
       return optionalTarget(cardId, player, groundUnits158.map(u => u.playId),
         "Deal 2 damage to a ground unit?", { yesLabel: "Deal 2", sourcePlayId: playId });
     }
+    case "ASH_196": { // Gorian Shard's Corsair — When Played/On Attack: may deal 2 damage to a unit.
+      const allUnits196 = AllUnits();
+      if (allUnits196.length === 0) return null;
+      return optionalTarget(cardId, player, allUnits196.map(u => u.playId),
+        "Deal 2 damage to a unit?", { yesLabel: "Deal 2", sourcePlayId: playId });
+    }
     case "SOR_134": { // Ruthless Raider — When Played: Deal 2 to enemy base + 2 to an enemy unit.
       // resolveWhenPlayed must stay side-effect-free (for units it is called both as a preview
       // in queueUnitEntryTriggers AND on trigger-bag drain, so any mutation here double-applies).
@@ -1258,6 +1306,21 @@ export function resolveWhenPlayed(
         cardId,
         player,
         fromPlayIds: enemyUnits134.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "ASH_179": { // Boba Fett's Rancor — When Played: Deal 5 to your base. Then, deal 5 to an
+                      // enemy ground unit. Then, deal 5 more to the same unit.
+      // resolveWhenPlayed must stay side-effect-free (see SOR_134 above). Base damage + both hits
+      // are applied together when the ability-target resolves (applyAbilityEffect), or, when there
+      // is no enemy ground unit, in resolveWhenPlayedTrigger (drained once) — base damage only.
+      const enemyGroundUnits179 = AllGroundUnits().filter(u => u.controller !== player);
+      if (enemyGroundUnits179.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: enemyGroundUnits179.map(u => u.playId),
         continuation: null,
       };
     }
@@ -1428,13 +1491,12 @@ export function resolveWhenPlayed(
       if (!game152) return null;
       const pState152 = GetPlayer(game152.currentGameState, player);
       const opponentPlayer152 = player === 1 ? 2 : 1;
-      const opponent152 = player === 1 ? game152.currentGameState.player2 : game152.currentGameState.player1;
       const n152 = Math.min(4, pState152.deck.length);
       if (n152 === 0) return null;
       const slice152 = pState152.deck.slice(-n152);
       const heroismCount = slice152.filter(c => CardAspects(c.cardId).includes("Heroism")).length;
       if (heroismCount > 0) {
-        opponent152.base.damage += CapBaseDamage(opponentPlayer152, heroismCount);
+        DealDamageToBase(game152.currentGameState, opponentPlayer152, heroismCount);
         game152.gameLog.push(`${CardTitle(cardId)}: revealed ${heroismCount} Heroism card(s) — dealt ${heroismCount} damage to enemy base.`);
       }
       pState152.deck.splice(pState152.deck.length - n152, n152);

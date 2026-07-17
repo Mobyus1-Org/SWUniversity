@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, CapBaseDamage, MarkUnitDamaged, ReadyUnitByPlayId } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, MarkUnitDamaged, ReadyUnitByPlayId, DealDamageToBase, DamageIsUnpreventable } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -497,12 +497,7 @@ function pushEventToDiscard(game: GameState, player: PlayerId, cardId: string): 
 }
 
 function dealBaseDamage(game: GameState, player: PlayerId, amount: number, byPlayer?: PlayerId): void {
-  amount = CapBaseDamage(player, amount); // ASH_070 At Attin Safety Droid
-  GetPlayer(game, player).base.damage += amount;
-  if (byPlayer !== undefined) {
-    game.roundState.baseDamagedThisPhase ??= [];
-    game.roundState.baseDamagedThisPhase.push({ byPlayer, target: player });
-  }
+  DealDamageToBase(game, player, amount, byPlayer);
 }
 
 /**
@@ -992,6 +987,14 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
         maxTargets: 2,
         continuation: null,
       } satisfies AbilityTargetPending;
+    }
+    return null;
+  }
+
+  if (trigger.triggerType === "when-base-damaged") {
+    if (trigger.cardId === "ASH_204" && trigger.playId) { // Blade Three — give itself an Advantage token.
+      const blade204 = GetUnitByPlayId(game, trigger.playId);
+      if (blade204) GiveAdvantageTokens(game, blade204, 1, log, "ASH_204");
     }
     return null;
   }
@@ -1706,12 +1709,16 @@ function resolveAttack(
     // runs over every ability source the attacker has for this attack.
     const damagedDefenderBonus = defender.IsDamaged()
       && AttackAbilityCardIds(Unit.FromInterface(attacker)).includes("ASH_241") ? 2 : 0;
+    // ASH_196: combat damage dealt by a friendly Underworld unit bypasses all prevention.
+    const attackerUnpreventable = DamageIsUnpreventable(attacker.cardId, attacker.controller, attacker.playId);
     // Shien Flurry prevention on the DEFENDER reduces the attacker's damage before the Shield.
-    const effectiveAtkPower = ApplyDamagePrevention(
-      game, defender.playId,
-      Math.max(0, atkPower + damagedDefenderBonus - electrostaffModifier),
-      log,
-    );
+    const effectiveAtkPower = attackerUnpreventable
+      ? Math.max(0, atkPower + damagedDefenderBonus - electrostaffModifier)
+      : ApplyDamagePrevention(
+          game, defender.playId,
+          Math.max(0, atkPower + damagedDefenderBonus - electrostaffModifier),
+          log,
+        );
     const defHpBefore = defender.CurrentHP();
     const defenderName = CardTitle(defender.cardId);
 
@@ -1737,7 +1744,7 @@ function resolveAttack(
     );
 
     // Shield token absorbs the first instance of damage to the defender.
-    const shieldIdx = defender.upgrades.findIndex(u => u.cardId === "SOR_T02");
+    const shieldIdx = attackerUnpreventable ? -1 : defender.upgrades.findIndex(u => u.cardId === "SOR_T02");
     if (shieldIdx !== -1) {
       defender.upgrades.splice(shieldIdx, 1);
       log.push(`${defenderName}'s Shield token was defeated, preventing ${effectiveAtkPower} damage.`);
@@ -1746,19 +1753,20 @@ function resolveAttack(
       if (effectiveAtkPower > 0) MarkUnitDamaged(game, defender.playId);
     }
 
+    // ASH_196: counter-damage dealt by a friendly Underworld unit bypasses all prevention.
+    const defenderUnpreventable = DamageIsUnpreventable(defender.cardId, defender.controller, defender.playId);
     // If first strike is active and defender is now defeated, counter-damage is 0.
     // Shien Flurry prevention on the ATTACKER reduces the counter-damage before its Shield.
-    const effectiveDefPower = ApplyDamagePrevention(
-      game, attacker.playId,
-      hasFirstStrike && defender.CurrentHP() <= 0 ? 0 : defPower,
-      log,
-    );
+    const rawDefPower = hasFirstStrike && defender.CurrentHP() <= 0 ? 0 : defPower;
+    const effectiveDefPower = defenderUnpreventable
+      ? rawDefPower
+      : ApplyDamagePrevention(game, attacker.playId, rawDefPower, log);
     if (hasFirstStrike && effectiveDefPower === 0 && defender.CurrentHP() <= 0) {
       log.push(`Shoot First: ${defenderName} defeated before dealing counter-damage.`);
     }
 
     // Shield token absorbs the first instance of counter-damage to the attacker.
-    const attackerShieldIdx = attacker.upgrades.findIndex(u => u.cardId === "SOR_T02");
+    const attackerShieldIdx = defenderUnpreventable ? -1 : attacker.upgrades.findIndex(u => u.cardId === "SOR_T02");
     if (effectiveDefPower === 0) {
       // No counter-damage — shield is not consumed
     } else if (attackerShieldIdx !== -1) {
@@ -1837,6 +1845,35 @@ function resolveAttack(
     // tokens defeat. Advantage is +1/+0, so removing it can't change who was defeated above.
     DefeatAdvantageTokensAfterCombat([attacker, defender], log);
 
+    // ASH_137 Wipe Them Out — "Attack with a unit. For this attack, you may deal its excess
+    // damage to another unit in the same arena." Wraps the When-Attack-Ends chain with an
+    // optional redirect prompt, mirroring the SOR_088 excess-damage pattern above.
+    const wrapASH137 = (tail: PendingResolution | null): PendingResolution | null => {
+      if (pending.source !== "ASH_137" || excessDamage <= 0) return tail;
+      const arena137 = GetPlayer(game, attacker.controller).groundArena.some(u => u.playId === attacker.playId)
+        ? "Ground" : "Space";
+      const eligible137 = (arena137 === "Ground" ? AllGroundUnits() : AllSpaceUnits())
+        .filter(u => u.playId !== defender.playId);
+      if (eligible137.length === 0) return tail;
+      game.currentEffects.push({ cardId: "ASH_137_excess", duration: "Phase", affectedPlayer: attacker.controller, value: excessDamage });
+      return {
+        type: "ability-option",
+        cardId: "ASH_137",
+        player: attacker.controller,
+        helperText: `Deal ${excessDamage} excess damage to another unit in the same arena?`,
+        yesLabel: `Deal ${excessDamage}`,
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "ASH_137_excess",
+          player: attacker.controller,
+          fromPlayIds: eligible137.map(u => u.playId),
+          continuation: tail,
+        },
+        continuation: tail,
+      };
+    };
+
     // Resolve defeats (defender first per SWU rules)
     let nextPending: PendingResolution | null = null;
     if (defDefeated) nextPending = defeatUnit(game, log, defender, false, defender.CurrentHP() <= 0) ?? nextPending;
@@ -1844,7 +1881,7 @@ function resolveAttack(
     if (nextPending) {
       // Append resolveWhenAttackEnds at the tail of the pending chain.
       // defeatUnit returns BountyPending | WhenDefeatedChoicePending, both have continuation.
-      const whenAttackEnds = resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, null, combatDamagedPlayId, attackerSources);
+      const whenAttackEnds = wrapASH137(resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, null, combatDamagedPlayId, attackerSources));
       type WithContinuation = { continuation: PendingResolution | null | undefined };
       let tail: WithContinuation = nextPending as unknown as WithContinuation;
       while (tail.continuation != null) tail = tail.continuation as unknown as WithContinuation;
@@ -1852,7 +1889,7 @@ function resolveAttack(
       return nextPending;
     }
 
-    return resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, null, combatDamagedPlayId, attackerSources);
+    return wrapASH137(resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, null, combatDamagedPlayId, attackerSources));
   }
 }
 
@@ -3129,6 +3166,18 @@ function completePlayCard(
             return { response: resolutionResponse(pendingToResolution(discard175, game)), pending: discard175, stateChanged: false };
           }
         }
+      } else if (cardId === "ASH_151") {
+        // Operation Cinder — deal 5 damage to your base, then deal 5 damage to each unit.
+        dealBaseDamage(game, player, 5);
+        for (const u of GetAllUnits(game)) {
+          DealDamageToUnit(game, "ASH_151", u.playId, 5, log);
+        }
+        log.push(`${CardTitle("ASH_151")}: dealt 5 damage to your base and 5 damage to each unit.`);
+        const afterSweep151 = sweepDeadUnits(game, log, null);
+        if (afterSweep151) {
+          if (afterSweep151.type === "resolve-attack") return handleResolveAttack(game, log, afterSweep151);
+          return { response: resolutionResponse(pendingToResolution(afterSweep151, game)), pending: afterSweep151, stateChanged: false };
+        }
       } else if (cardId === "SOR_043" || cardId === "TWI_078" || cardId === "LAW_044") {
         const otherPlayer: PlayerId = player === 1 ? 2 : 1;
         // Snapshot trigger-holders before any unit is removed so wiped units still trigger.
@@ -4011,8 +4060,7 @@ function handleChooseTarget(
         const card174 = pState174.discard.splice(idx174, 1)[0];
         pState174.deck.unshift({ cardId: card174.cardId }); // bottom of deck (top is popped from the end)
         const enemyPlayer174: PlayerId = player174 === 1 ? 2 : 1;
-        const enemyState174 = GetPlayer(game, enemyPlayer174);
-        enemyState174.base.damage += CapBaseDamage(enemyPlayer174, 1);
+        dealBaseDamage(game, enemyPlayer174, 1);
         log.push(`${CardTitle("LAW_174")}: put ${CardTitle(card174.cardId)} on the bottom of the deck and dealt 1 damage to the enemy base.`);
       }
       const next174 = pending.continuation;
@@ -4963,10 +5011,11 @@ function handleChooseTarget(
         const baseCost235 = CardCost(cardId) ?? 0;
         hand.splice(idx, 1);
         log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Galactic Ambition (free).`);
-        const result235 = completePlayCard(game, log, cardId, pending.player);
-        GetPlayer(game, pending.player).base.damage += CapBaseDamage(pending.player, baseCost235);
+        // Base damage is applied BEFORE completePlayCard so its when-base-damaged trigger (e.g.
+        // ASH_204) is already queued by the time completePlayCard drains the trigger bag.
+        dealBaseDamage(game, pending.player, baseCost235);
         log.push(`${CardTitle("SOR_235")}: dealt ${baseCost235} damage to Player ${pending.player}'s base.`);
-        return result235;
+        return completePlayCard(game, log, cardId, pending.player);
       }
       case "SOR_219": {
         if (CardType(cardId) !== "Unit")
@@ -5092,10 +5141,8 @@ function handleChooseTarget(
     }
 
     // Apply base damage
-    const targetState = pending.targetPlayer === 1 ? game.player1 : game.player2;
     if (baseDamage > 0) {
-      targetState.base.damage += CapBaseDamage(pending.targetPlayer, baseDamage);
-      game.roundState.baseDamagedThisPhase.push({ byPlayer: pending.sourcePlayer, target: pending.targetPlayer });
+      dealBaseDamage(game, pending.targetPlayer, baseDamage, pending.sourcePlayer);
     }
 
     log.push(`${CardTitle(pending.cardId)}: ${pending.totalDamage} indirect damage assigned by player ${pending.targetPlayer}.`);
@@ -5856,6 +5903,17 @@ function applyAbilityOptionEffect(
       DrawCardForPlayer(game, log, pending.player!);
       return pending.continuation ?? null;
     }
+    case "SHD_181": { // Pillage Yes: the playing player discards 2 cards from their hand.
+      const self181 = pending.player!;
+      const handSize181 = GetPlayer(game, self181).hand.length;
+      if (handSize181 === 0) return pending.continuation ?? null;
+      return {
+        type: "discard-from-hand",
+        targetPlayer: self181,
+        count: Math.min(2, handSize181),
+        continuation: pending.continuation ?? null,
+      } satisfies DiscardFromHandPending;
+    }
     case "SOR_173": { // Bombing Run Yes: deal 3 to each ground unit.
       for (const u of [...game.player1.groundArena, ...game.player2.groundArena]) {
         u.damage += 3;
@@ -5973,6 +6031,9 @@ function applyAbilityOptionDeclineEffect(
     case "SOR_088": // Declined — discard stored excess value
       game.currentEffects = game.currentEffects.filter(e => e.cardId !== "SOR_088_excess");
       return pending.continuation;
+    case "ASH_137": // Declined — discard stored excess value
+      game.currentEffects = game.currentEffects.filter(e => e.cardId !== "ASH_137_excess");
+      return pending.continuation;
     case "SOR_016": // No = reveal opponent's deck
       return thrawnsReveal(game, log, GetOtherPlayer(pending.player!), pending.player!);
     case "JTL_049": {
@@ -6004,6 +6065,17 @@ function applyAbilityOptionDeclineEffect(
       DrawCardForPlayer(game, log, opp171);
       DrawCardForPlayer(game, log, opp171);
       return pending.continuation ?? null;
+    }
+    case "SHD_181": { // Pillage No: the opponent discards 2 cards from their hand.
+      const opp181: PlayerId = pending.player === 1 ? 2 : 1;
+      const handSize181 = GetPlayer(game, opp181).hand.length;
+      if (handSize181 === 0) return pending.continuation ?? null;
+      return {
+        type: "discard-from-hand",
+        targetPlayer: opp181,
+        count: Math.min(2, handSize181),
+        continuation: pending.continuation ?? null,
+      } satisfies DiscardFromHandPending;
     }
     case "SOR_173": { // Bombing Run No: deal 3 to each space unit.
       for (const u of [...game.player1.spaceArena, ...game.player2.spaceArena]) {
@@ -7402,12 +7474,12 @@ function resolveActionAbility(
       } satisfies AbilityOptionPending;
     }
     case "SOR_014": // Sabine Wren - Galvanized Revolutionary: Deal 1 damage to each base.
-      game.player1.base.damage += CapBaseDamage(1, 1);
-      game.player2.base.damage += CapBaseDamage(2, 1);
+      dealBaseDamage(game, 1, 1);
+      dealBaseDamage(game, 2, 1);
       log.push(`${CardTitle(cardId)} dealt 1 damage to each base.`);
       return null;
     case "TWI_012": { // Anakin Skywalker — Action [Exhaust, deal 2 damage to your base]: Attack with a unit. +2/+0 if attacking a unit.
-      GetPlayer(game, player).base.damage += CapBaseDamage(player, 2);
+      dealBaseDamage(game, player, 2);
       log.push(`${CardTitle("TWI_012")}: dealt 2 damage to your base.`);
       const readyUnits012 = GetUnitsForPlayer(player).filter(u => u.ready);
       if (readyUnits012.length === 0) return null;
@@ -8055,6 +8127,14 @@ function applyAbilityEffect(
       if (damage088 > 0) DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, damage088, game.gameLog);
       break;
     }
+    case "ASH_137_excess": { // Wipe Them Out — deal stored excess damage to chosen unit in the same arena
+      if (!targetPlayId) break;
+      const excessEffect137 = game.currentGameState.currentEffects.find(e => e.cardId === "ASH_137_excess");
+      const damage137 = excessEffect137?.value ?? 0;
+      game.currentGameState.currentEffects = game.currentGameState.currentEffects.filter(e => e.cardId !== "ASH_137_excess");
+      if (damage137 > 0) DealDamageToUnit(game.currentGameState, "ASH_137", targetPlayId, damage137, game.gameLog);
+      break;
+    }
     case "SOR_094": { // Bail Organa — give XP to chosen friendly unit
       if (!targetPlayId) break;
       const target094 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -8377,6 +8457,11 @@ function applyAbilityEffect(
       if (advTarget146) GiveAdvantageTokens(game.currentGameState, advTarget146, 1, game.gameLog, "ASH_146");
       break;
     }
+    case "ASH_196": { // Gorian Shard's Corsair — deal 2 damage to the chosen unit.
+      if (!targetPlayId || !pending.player) break;
+      DealDamageToUnit(game.currentGameState, "ASH_196", targetPlayId, 2, game.gameLog, pending.player);
+      break;
+    }
     case "ASH_146": { // Justifier — deal 1 damage to the chosen unit; if defeated this way, give an Advantage token to a unit.
       if (!targetPlayId) break;
       const target146 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -8524,6 +8609,19 @@ function applyAbilityEffect(
       if (basePlayer253 === null) break;
       dealBaseDamage(game.currentGameState, basePlayer253, 2, owner253);
       game.gameLog.push(`${CardTitle("ASH_253")}: dealt 2 damage to player ${basePlayer253}'s base.`);
+      break;
+    }
+    case "ASH_179_onAttack": { // Boba Fett's Rancor On Attack: deal `amount` damage to the chosen base ("a base" — either one).
+      const owner179 = pending.player!;
+      let basePlayer179: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer179 = 1;
+      else if (targetPlayId === "player2.base") basePlayer179 = 2;
+      else if (targetIsBase) basePlayer179 = targetBasePlayer ?? (owner179 === 1 ? 2 : 1);
+      if (basePlayer179 === null) break;
+      const amount179 = pending.amount ?? 0;
+      if (amount179 <= 0) break;
+      dealBaseDamage(game.currentGameState, basePlayer179, amount179, owner179);
+      game.gameLog.push(`${CardTitle("ASH_179")}: dealt ${amount179} damage to player ${basePlayer179}'s base.`);
       break;
     }
     case "LOF_048": { // Itinerant Warrior When Played: use the Force, then heal 3 from the chosen base.
@@ -8718,6 +8816,76 @@ function applyAbilityEffect(
         continuation: pending.continuation,
       };
     }
+    case "TWI_224": { // Breaking In: push ForAttack Saboteur + +2/+0, then attack with chosen unit
+      if (!targetPlayId) break;
+      const unit224 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit224) break;
+      game.currentGameState.currentEffects.push({
+        cardId: "TWI_224",
+        duration: "ForAttack",
+        affectedPlayer: unit224.controller,
+        targetPlayId,
+      });
+      GivePowerMod("TWI_224", unit224, 2, "ForAttack", game.gameLog);
+      game.gameLog.push(`${CardTitle(pending.cardId)}: ${CardTitle(unit224.cardId)} gains Saboteur for this attack.`);
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "TWI_224",
+        continuation: pending.continuation,
+      };
+    }
+    case "ASH_115": { // The Student Guides the Master: +1/+0 ForPhase per other friendly unit with less power, snapshot at resolution.
+      if (!targetPlayId) break;
+      const unit115 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit115) break;
+      const chosenPower115 = Unit.FromInterface(unit115).CurrentPower();
+      const lowerPowerCount115 = GetUnitsForPlayer(unit115.controller)
+        .filter(u => u.playId !== targetPlayId && Unit.FromInterface(u).CurrentPower() < chosenPower115)
+        .length;
+      if (lowerPowerCount115 > 0) {
+        GiveStatModForPhase("ASH_115", unit115, lowerPowerCount115, game.gameLog);
+      } else {
+        game.gameLog.push(`${CardTitle(pending.cardId)}: no other friendly unit has less power than ${CardTitle(unit115.cardId)} — no buff.`);
+      }
+      break;
+    }
+    case "ASH_139": { // Hold Them Off: chosen unit deals damage equal to its power, split as chosen among units in its arena.
+      if (!targetPlayId) break;
+      const unit139 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit139) break;
+      const power139 = Unit.FromInterface(unit139).CurrentPower();
+      if (power139 <= 0) {
+        game.gameLog.push(`${CardTitle(pending.cardId)}: ${CardTitle(unit139.cardId)} has no power — no damage dealt.`);
+        break;
+      }
+      const inGround139 = game.currentGameState.player1.groundArena.some(u => u.playId === targetPlayId)
+        || game.currentGameState.player2.groundArena.some(u => u.playId === targetPlayId);
+      const arenaUnits139 = inGround139
+        ? AllGroundUnits()
+        : AllSpaceUnits();
+      const spreadPending139: SpreadDamagePending = {
+        type: "spread-damage",
+        cardId: "ASH_139",
+        player: pending.player!,
+        totalDamage: power139,
+        optional: false,
+        eligiblePlayIds: arenaUnits139.map(u => u.playId),
+        continuation: pending.continuation,
+      };
+      return spreadPending139;
+    }
+    case "ASH_137": { // Wipe Them Out: attack with chosen unit; excess damage redirect handled in resolveAttack.
+      if (!targetPlayId) break;
+      const unit137 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit137) break;
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "ASH_137",
+        continuation: pending.continuation,
+      };
+    }
     case "SOR_227": // Snowtrooper Lieutenant — if Imperial, give +2/+0 ForAttack, then attack
     case "SHD_236": {
       if (!targetPlayId) break;
@@ -8848,6 +9016,29 @@ function applyAbilityEffect(
       // "If you do" — the unit was defeated, so the heal follows.
       HealBaseForPlayer(game.currentGameState, pending.player!, 3, game.gameLog, pending.cardId);
       if (defeatPend133) return injectContinuation(defeatPend133, pending.continuation);
+      return pending.continuation;
+    }
+    case "ASH_103": { // Long Live the Empire — defeat a friendly Imperial unit, then resource the top card of the deck.
+      if (!targetPlayId) break;
+      const target103 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target103) break;
+      const defeatPend103 = defeatUnit(game.currentGameState, game.gameLog, target103);
+      game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target103.cardId)}.`);
+      // "If you do" — the unit was defeated, so the resource follows.
+      const pState103 = GetPlayer(game.currentGameState, pending.player!);
+      const top103 = pState103.deck.pop();
+      if (top103) {
+        pState103.resources.push({
+          cardId: top103.cardId,
+          playId: nextPlayId(game.currentGameState),
+          owner: pending.player!,
+          controller: pending.player!,
+          ready: false,
+          stolen: false,
+        });
+        game.gameLog.push(`${CardTitle(pending.cardId)}: resourced ${CardTitle(top103.cardId)} from the top of the deck.`);
+      }
+      if (defeatPend103) return injectContinuation(defeatPend103, pending.continuation);
       return pending.continuation;
     }
     case "SEC_258": // Grassroots Resistance — deal 3 to a unit, then heal 3 from your base.
@@ -9252,13 +9443,13 @@ function applyAbilityEffect(
     case "SOR_142": { // Explosives Artist OA: deal 1 damage to chosen unit or base, then proceed.
       if (targetIsBase) {
         const opp142: PlayerId = pending.player === 1 ? 2 : 1;
-        GetPlayer(game.currentGameState, opp142).base.damage += CapBaseDamage(opp142, 1);
+        dealBaseDamage(game.currentGameState, opp142, 1);
         game.gameLog.push(`${CardTitle("SOR_142")}: dealt 1 damage to player ${opp142}'s base.`);
       } else if (targetPlayId) {
         const baseMatch142 = targetPlayId.match(/^player([12])\.base$/);
         if (baseMatch142) {
           const basePlayer142 = Number(baseMatch142[1]) as PlayerId;
-          GetPlayer(game.currentGameState, basePlayer142).base.damage += CapBaseDamage(basePlayer142, 1);
+          dealBaseDamage(game.currentGameState, basePlayer142, 1);
           game.gameLog.push(`${CardTitle("SOR_142")}: dealt 1 damage to player ${basePlayer142}'s base.`);
         } else {
           DealDamageToUnit(game.currentGameState, "SOR_142", targetPlayId, 1, game.gameLog);
@@ -9398,11 +9589,22 @@ function applyAbilityEffect(
       // which is called twice for units; the no-enemy-unit paths handle the base separately.
       if (pending.player) {
         const oppPlayer134: PlayerId = pending.player === 1 ? 2 : 1;
-        const oppBase134 = pending.player === 1 ? game.currentGameState.player2 : game.currentGameState.player1;
-        oppBase134.base.damage += CapBaseDamage(oppPlayer134, 2);
+        dealBaseDamage(game.currentGameState, oppPlayer134, 2);
         game.gameLog.push(`${CardTitle("SOR_134")}: dealt 2 damage to opponent's base.`);
       }
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
+      break;
+    }
+    case "ASH_179": { // Boba Fett's Rancor WP: Deal 5 to your base, then 5 to the chosen enemy
+                      // ground unit, then 5 more to the same unit (fizzles silently if it already died).
+      if (!targetPlayId || !pending.player) break;
+      DealDamageToBase(game.currentGameState, pending.player, 5);
+      game.gameLog.push(`${CardTitle("ASH_179")}: dealt 5 damage to your base.`);
+      DealDamageToUnit(game.currentGameState, "ASH_179", targetPlayId, 5, game.gameLog);
+      const stillAlive179 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (stillAlive179 && Unit.FromInterface(stillAlive179).CurrentHP() > 0) {
+        DealDamageToUnit(game.currentGameState, "ASH_179", targetPlayId, 5, game.gameLog);
+      }
       break;
     }
     case "SOR_051": { // Luke Skywalker — Give –3/–3 (or –6/–6 if friendly died this phase) to chosen enemy.
@@ -9825,10 +10027,10 @@ function applyAbilityEffect(
     case "SOR_158": { // Jedha Agitator On Attack: deal 2 damage to chosen ground unit or base.
       if (!targetPlayId) break;
       if (targetPlayId === "player1.base") {
-        game.currentGameState.player1.base.damage += CapBaseDamage(1, 2);
+        dealBaseDamage(game.currentGameState, 1, 2);
         game.gameLog.push(`${CardTitle("SOR_158")}: dealt 2 damage to Player 1's base.`);
       } else if (targetPlayId === "player2.base") {
-        game.currentGameState.player2.base.damage += CapBaseDamage(2, 2);
+        dealBaseDamage(game.currentGameState, 2, 2);
         game.gameLog.push(`${CardTitle("SOR_158")}: dealt 2 damage to Player 2's base.`);
       } else {
         DealDamageToUnit(game.currentGameState, "SOR_158", targetPlayId, 2, game.gameLog);

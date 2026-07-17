@@ -1,7 +1,7 @@
 import type { GameState, PlayerState } from "@/lib/engine/game";
 import type { DiscardedCard, PlayerId } from "@/lib/engine/core-models";
 import { CardTitle } from "@/server/engine/card-db/generated";
-import { CapBaseDamage } from "@/server/engine/core-functions";
+import { DealDamageToBase } from "@/server/engine/core-functions";
 
 function ps(gs: GameState, player: PlayerId): PlayerState {
   return player === 1 ? gs.player1 : gs.player2;
@@ -87,7 +87,7 @@ export function executeRegroupDraw(gs: GameState, log: string[]): void {
       log.push(`Player ${player} drew ${drawn} card(s).`);
     }
     if (penalty > 0) {
-      p.base.damage += CapBaseDamage(player, penalty); // ASH_070 At Attin Safety Droid
+      DealDamageToBase(gs, player, penalty); // ASH_070 At Attin Safety Droid
       log.push(`Player ${player} drew from an empty deck: ${penalty} damage to base.`);
     }
   }

@@ -562,6 +562,22 @@ export function CapBaseDamage(targetPlayer: PlayerId, amount: number): number {
 }
 
 /**
+ * Applies `amount` damage to `player`'s base: caps it (ASH_070), increments base damage, tracks
+ * `baseDamagedThisPhase` (when `byPlayer` is given), and fires the generic when-base-damaged
+ * reaction (ASH_204). The single choke point for base damage — call this instead of mutating
+ * `base.damage` directly so every future "when your base is dealt damage" card keeps working.
+ */
+export function DealDamageToBase(gs: GameState, player: PlayerId, amount: number, byPlayer?: PlayerId): void {
+  amount = CapBaseDamage(player, amount);
+  GetPlayer(gs, player).base.damage += amount;
+  if (byPlayer !== undefined) {
+    gs.roundState.baseDamagedThisPhase ??= [];
+    gs.roundState.baseDamagedThisPhase.push({ byPlayer, target: player });
+  }
+  QueueWhenBaseDamagedReaction(gs, player, amount);
+}
+
+/**
  * Heals `amount` damage from a player's base, floored at 0. Shared by every card that
  * heals a base (Grassroots Resistance, Lost and Forgotten, …).
  */
@@ -895,6 +911,7 @@ export function DrawCardForPlayer(gs: GameState, log: string[], player: PlayerId
     log.push(`Player ${player} drew a card.`);
   } else {
     p.base.damage += 3;
+    QueueWhenBaseDamagedReaction(gs, player, 3);
     log.push(`Player ${player} drew from an empty deck — 3 damage to their base.`);
   }
 }
@@ -971,6 +988,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_203": //Mando's N-1 Starfighter — On Attack: may exhaust your leader for +2/+0
     case "ASH_209": //Ezra Bridger — On Attack: if upgraded, may give a unit –3/–0 this phase
     case "ASH_253": //Yellow Aces Bomber — On Attack: if upgraded, deal 2 damage to a base
+    case "ASH_179": //Boba Fett's Rancor — On Attack: may deal 1 damage to a base for every 5 damage on your base
+    case "ASH_196": //Gorian Shard's Corsair — On Attack: may deal 2 damage to a unit
     case "ASH_189": //Emperor's Messenger — On Attack: Ready a resource.
     case "SEC_188": //Darth Traya — On Attack: may ready a non-unit leader
     case "SEC_004": //Leia Organa (SEC, deployed) — On Attack: may disclose, then give an XP token
@@ -1153,6 +1172,20 @@ export function UnitImmuneToEnemyAbilities(cardId: string): boolean {
   return cardId === "SHD_187";
 }
 
+/**
+ * ASH_196 Gorian Shard's Corsair: "Damage dealt by friendly Underworld cards is unpreventable."
+ * True when `sourceController` controls a live ASH_196 and the damage-dealing card
+ * (`sourceCardId`) has the Underworld trait — checked at every prevention/Shield hook (combat and
+ * DealDamageToUnit) so the damage bypasses Shield tokens and other prevention effects (e.g.
+ * LOF_220 Shien Flurry).
+ */
+export function DamageIsUnpreventable(sourceCardId: string, sourceController: PlayerId, sourcePlayId?: string): boolean {
+  if (!TraitContains(sourceCardId, "Underworld", sourceController, sourcePlayId)) return false;
+  return GetUnitsForPlayer(sourceController).some(
+    u => u.cardId === "ASH_196" && !Unit.FromInterface(u).LostAbilities(),
+  );
+}
+
 /** Records that a unit took damage this phase (e.g. ASH_188 Galvanized Leap's "was damaged this phase"). */
 export function MarkUnitDamaged(gs: GameState, playId: string): void {
   gs.roundState.unitsDamagedThisPhase ??= [];
@@ -1174,11 +1207,13 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
     if (withLog) withLog.push(`${CardTitle(target.cardId)} can't be damaged by enemy card abilities.`);
     return;
   }
+  // ASH_196: damage from a friendly Underworld card bypasses all prevention, including Shields.
+  const unpreventable = sourcePlayer !== undefined && DamageIsUnpreventable(cardId, sourcePlayer);
   // Shien Flurry prevention applies before the Shield, so a fully-prevented hit spares the Shield.
-  amount = ApplyDamagePrevention(gs, targetPlayId, amount, withLog);
+  if (!unpreventable) amount = ApplyDamagePrevention(gs, targetPlayId, amount, withLog);
   if (amount <= 0) return;
   // Shield token absorbs the entire instance of damage: prevent it and defeat one Shield token.
-  const shieldIdx = target.upgrades.findIndex(u => u.cardId === "SOR_T02");
+  const shieldIdx = unpreventable ? -1 : target.upgrades.findIndex(u => u.cardId === "SOR_T02");
   if (shieldIdx !== -1) {
     target.upgrades.splice(shieldIdx, 1);
     if (withLog) {
@@ -1226,6 +1261,31 @@ export function QueueRancorKeeperReaction(gs: GameState, damaged: Unit): void {
   );
   if (usedThisRound) return;
   gs.triggerBag.push({ triggerType: "when-unit-takes-damage", cardId: "ASH_032", fromPlayer: controller, playId: damaged.playId, nested: true });
+}
+
+/**
+ * Generic "when your base is dealt damage" dispatch (WhenBaseDamagedContext). Base damage is not
+ * centralized — every call site that increments a base's damage total calls this immediately
+ * after, so any card with a "When your base is dealt damage" reaction (currently only ASH_204
+ * Blade Three) hooks in without each site needing its own per-card check. One trigger per
+ * instance of damage applied (not per point) — call this once per application site regardless of
+ * `amount`, mirroring how QueueRancorKeeperReaction/QueueJangoDamageReaction fire once per hit.
+ */
+export function QueueWhenBaseDamagedReaction(gs: GameState, targetPlayer: PlayerId, amount: number): void {
+  if (amount <= 0) return;
+  const reactive = GetUnitsForPlayer(targetPlayer).filter(
+    u => u.cardId === "ASH_204" && !Unit.FromInterface(u).LostAbilities(),
+  );
+  for (const u of reactive) {
+    gs.triggerBag.push({
+      triggerType: "when-base-damaged",
+      cardId: "ASH_204",
+      fromPlayer: targetPlayer,
+      playId: u.playId,
+      context: { sourcePlayer: targetPlayer, damageTaken: amount },
+      nested: true,
+    });
+  }
 }
 
 /**

@@ -1,9 +1,9 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, BaseHealingPrevented, CanDisclose, CapBaseDamage, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
+import { AllUnits, BaseHealingPrevented, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { CardAspects, CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
+import { CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { CreateBattleDroid, CreateTieFighter } from "@/server/engine/token-helpers";
 
@@ -353,7 +353,7 @@ function resolveOwnWhenDefeated(
       if (enemyUnits134.length === 0) {
         // No enemy unit to hit — apply the base damage here (the ability-target resolution won't run).
         const oppPlayer134: PlayerId = player === 1 ? 2 : 1;
-        oppState134.base.damage += CapBaseDamage(oppPlayer134, 2);
+        DealDamageToBase(gs134, oppPlayer134, 2);
         game134.gameLog.push(`${CardTitle("SOR_134")}: dealt 2 damage to opponent's base.`);
         return null;
       }

@@ -533,6 +533,9 @@ export const Cards = {
       imposingScoutWalker: "ASH_176",
       executor: "ASH_197",
       shinHatisFiendFighter: "ASH_191",
+      bladeThree: "ASH_204",
+      bobaFettsRancor: "ASH_179",
+      gorianShardsCorsair: "ASH_196",
       // Leader units (the deployed side of the ASH leaders)
       ahsokaTano: "ASH_009",
       theMandalorian: "ASH_014",
@@ -593,6 +596,7 @@ export const Cards = {
       chooseSides: "SHD_132",
       midnightRepairs: "SHD_054",
       daringRaid: "SHD_178",
+      pillage: "SHD_181",
     },
     sor: {
       searchYourFeelings: "SOR_042",
@@ -658,6 +662,7 @@ export const Cards = {
       takeCaptive: "TWI_128",
       daringRaid: "TWI_170",
       unnaturalLife: "TWI_189",
+      breakingIn: "TWI_224",
     },
     jtl: {
       repair: "JTL_075",
@@ -683,6 +688,11 @@ export const Cards = {
       galvanizedLeap: "ASH_188",
       strongerTogether: "ASH_140",
       foundlingRescue: "ASH_092",
+      wipeThemOut: "ASH_137",
+      holdThemOff: "ASH_139",
+      studentGuidesTheMaster: "ASH_115",
+      longLiveTheEmpire: "ASH_103",
+      operationCinder: "ASH_151",
     },
     law: {
       unmarkedCredits: "LAW_244",

@@ -14,13 +14,18 @@ type Props = {
   refreshSignal?: number;
 };
 
-function DifficultyDots({ value }: { value: number }) {
+function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
   return (
-    <img
-      src={`/assets/puzzles/saber${value}.png`}
-      alt={`Difficulty ${value}`}
-      className="h-6 w-auto"
-    />
+    <span className="flex items-center gap-0.5">
+      {Array.from({ length: max }, (_, i) => {
+        const isFull = value - i >= 1;
+        return (
+          <span key={i} className="relative inline-block h-6 w-6 rounded-full bg-white/20 overflow-hidden">
+            {isFull && <span className="absolute inset-0 bg-primary" />}
+          </span>
+        );
+      })}
+    </span>
   );
 }
 

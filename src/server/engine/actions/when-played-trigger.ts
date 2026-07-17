@@ -1,7 +1,7 @@
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { BaseHealingPrevented, CapBaseDamage, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
+import { BaseHealingPrevented, DealDamageToBase, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
 import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 
 /**
@@ -17,7 +17,7 @@ import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateMandalorianToken,
 const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
-  "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149",
+  "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149", "ASH_179",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -48,8 +48,8 @@ export function resolveWhenPlayedTrigger(
       break;
     case "SHD_160": { // Reckless Gunslinger — When Played: Deal 1 damage to each base.
       const otherPlayer160: 1 | 2 = trigger.fromPlayer === 1 ? 2 : 1;
-      player.base.damage += CapBaseDamage(trigger.fromPlayer, 1);
-      otherPlayer.base.damage += CapBaseDamage(otherPlayer160, 1);
+      DealDamageToBase(gs, trigger.fromPlayer, 1);
+      DealDamageToBase(gs, otherPlayer160, 1);
       log.push(`${CardTitle(trigger.cardId)} dealt 1 damage to each base.`);
       break;
     }
@@ -89,8 +89,13 @@ export function resolveWhenPlayedTrigger(
     }
     case "SOR_134": { // Ruthless Raider — When Played with no enemy unit to hit: deal 2 to the enemy base only.
       const otherPlayer134: 1 | 2 = trigger.fromPlayer === 1 ? 2 : 1;
-      otherPlayer.base.damage += CapBaseDamage(otherPlayer134, 2);
+      DealDamageToBase(gs, otherPlayer134, 2);
       log.push(`${CardTitle(trigger.cardId)}: dealt 2 damage to opponent's base.`);
+      break;
+    }
+    case "ASH_179": { // Boba Fett's Rancor — When Played with no enemy ground unit to hit: deal 5 to your own base only.
+      DealDamageToBase(gs, trigger.fromPlayer, 5);
+      log.push(`${CardTitle(trigger.cardId)}: dealt 5 damage to your base.`);
       break;
     }
     case "SEC_082": { // Chancellor Palpatine — When Played: If you control a leader unit, create 2 Spy tokens and give those tokens Sentinel for this phase.

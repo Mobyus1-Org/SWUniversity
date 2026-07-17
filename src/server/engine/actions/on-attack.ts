@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, CapBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType } from "@/server/engine/card-db/generated";
@@ -541,6 +541,35 @@ function resolveInnateOnAttack(
         continuation,
       };
     }
+    case "ASH_179": { // Boba Fett's Rancor — On Attack: may deal 1 damage to a base for every 5
+                      // damage on your base.
+      const amount179 = Math.floor(GetBaseDamage(attacker.controller) / 5);
+      if (amount179 <= 0) return continuation; // nothing to offer — no prompt at all
+      return {
+        type: "ability-option",
+        cardId: "ASH_179_onAttack",
+        player: attacker.controller,
+        helperText: `Deal ${amount179} damage to a base?`,
+        yesLabel: "Deal damage",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "ASH_179_onAttack",
+          player: attacker.controller,
+          fromPlayIds: [],
+          fromZones: ["Base"],
+          amount: amount179,
+          continuation,
+        },
+        continuation,
+      };
+    }
+    case "ASH_196": { // Gorian Shard's Corsair — When Played/On Attack: may deal 2 damage to a unit.
+      const allUnits196 = AllUnits();
+      if (allUnits196.length === 0) return continuation;
+      return optionalTarget("ASH_196", attacker.controller, allUnits196.map(u => u.playId),
+        "Deal 2 damage to a unit?", { yesLabel: "Deal 2", sourcePlayId: attacker.playId, continuation });
+    }
     case "LOF_082": // Vaneé — When Played/On Attack: may defeat an XP token on a friendly unit, then give one to a friendly unit.
       return buildVaneeAbility(attacker.controller, continuation) ?? continuation;
     case "LOF_003": { // Ahsoka Tano (deployed) — On Attack: you may give a friendly unit Sentinel for this phase.
@@ -870,8 +899,7 @@ function resolveInnateOnAttack(
       if (!game) return continuation;
       const gs = game.currentGameState;
       const opponentId: PlayerId = attacker.controller === 1 ? 2 : 1;
-      const opponent = opponentId === 1 ? gs.player1 : gs.player2;
-      opponent.base.damage += CapBaseDamage(opponentId, 1);
+      DealDamageToBase(gs, opponentId, 1);
       return continuation;
     }
     case "SHD_012": { // Bo-Katan Kryze (deployed) "On Attack: You may deal 1 damage to a unit. If you attacked with another Mandalorian unit this phase, you may deal 1 damage to a unit."
