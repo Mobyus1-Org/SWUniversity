@@ -671,8 +671,9 @@ function resolveWhenDefeatedWithThrawn(
   game: GameState,
   unit: Unit,
   player: PlayerId,
+  causedByCombatDamage = false,
 ): PendingResolution | null {
-  const whenDefeated = resolveWhenDefeated(unit, player);
+  const whenDefeated = resolveWhenDefeated(unit, player, causedByCombatDamage);
   const thrawn = thrawnReplayPending(game, unit, player);
   if (!thrawn) return whenDefeated;
   if (!whenDefeated) return thrawn;
@@ -1187,6 +1188,7 @@ function defeatUnit(
   log: string[],
   unit: Unit,
   bypassL337 = false,
+  causedByCombatDamage = false,
 ): PendingResolution | null {
   // L3-37 replacement effect: intercept BEFORE removing from arena.
   if (!bypassL337 && unit.cardId === "JTL_049") {
@@ -1271,7 +1273,7 @@ function defeatUnit(
   }
 
   // When-Defeated triggers fire after bounty collection (CR 13c).
-  const whenDefeated = resolveWhenDefeatedWithThrawn(game, unit, removed.player);
+  const whenDefeated = resolveWhenDefeatedWithThrawn(game, unit, removed.player, causedByCombatDamage);
   const collectingPlayer: PlayerId = removed.player === 1 ? 2 : 1;
   const chainedDefeated = collectBounties(unit, collectingPlayer, whenDefeated) ?? whenDefeated;
 
@@ -1837,8 +1839,8 @@ function resolveAttack(
 
     // Resolve defeats (defender first per SWU rules)
     let nextPending: PendingResolution | null = null;
-    if (defDefeated) nextPending = defeatUnit(game, log, defender) ?? nextPending;
-    if (atkDefeated) nextPending = defeatUnit(game, log, attacker) ?? nextPending;
+    if (defDefeated) nextPending = defeatUnit(game, log, defender, false, defender.CurrentHP() <= 0) ?? nextPending;
+    if (atkDefeated) nextPending = defeatUnit(game, log, attacker, false, attacker.CurrentHP() <= 0) ?? nextPending;
     if (nextPending) {
       // Append resolveWhenAttackEnds at the tail of the pending chain.
       // defeatUnit returns BountyPending | WhenDefeatedChoicePending, both have continuation.
@@ -3861,6 +3863,23 @@ function handleChooseTarget(
       updateDefeatedPlayers(game);
       const bagAsh032 = drainTriggerBag(game, log);
       if (bagAsh032) return { response: resolutionResponse(pendingToResolution(bagAsh032, game)), pending: bagAsh032, stateChanged: false };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    if (pending.cardId === "ASH_205") {
+      // Inspiring Veteran — give an Advantage token to each of up to 3 chosen exhausted units.
+      const chosen205 = (data.targetPlayIds ?? []).slice(0, 3);
+      for (const id of chosen205) {
+        if (!pending.fromPlayIds.includes(id))
+          return { response: invalidResponse(`Unit ${id} is not a valid target for ${CardTitle(pending.cardId)}.`), pending, stateChanged: false };
+      }
+      for (const id of chosen205) {
+        const target205 = GetUnitByPlayId(game, id);
+        if (target205) GiveAdvantageTokens(game, target205, 1, log, "ASH_205");
+      }
+      const next205 = pending.continuation ?? null;
+      if (next205?.type === "resolve-attack") return handleResolveAttack(game, log, next205);
+      if (next205) return { response: resolutionResponse(pendingToResolution(next205, game)), pending: next205, stateChanged: true };
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
@@ -8343,6 +8362,15 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, "ASH_147", targetPlayId, amount147, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
+    case "ASH_191_2":
+    case "ASH_191_3": { // Shin Hati's Fiend Fighter — give 2 (combat damage) or 3 (otherwise)
+                        // Advantage tokens to the chosen unit.
+      if (!targetPlayId) break;
+      const target191 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      const amount191 = pending.cardId === "ASH_191_3" ? 3 : 2;
+      if (target191) GiveAdvantageTokens(game.currentGameState, target191, amount191, game.gameLog, "ASH_191");
+      break;
+    }
     case "ASH_146_advantage": { // Justifier follow-up — give an Advantage token to the chosen unit.
       if (!targetPlayId) break;
       const advTarget146 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -8372,6 +8400,20 @@ function applyAbilityEffect(
         continuation: pending.continuation ?? null,
       };
       return afterSweep146 ? injectContinuation(afterSweep146, advPending146) : advPending146;
+    }
+    case "ASH_176": { // Imposing Scout Walker — deal 3 damage to the chosen ground unit; if
+                      // defeated this way, give 3 Advantage tokens to this unit.
+      if (!targetPlayId) break;
+      const target176 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target176) break;
+      const wasAlready0_176 = Unit.FromInterface(target176).CurrentHP() <= 0;
+      DealDamageToUnit(game.currentGameState, "ASH_176", targetPlayId, 3, game.gameLog);
+      const nowDead176 = !wasAlready0_176 && Unit.FromInterface(target176).CurrentHP() <= 0;
+      if (nowDead176 && pending.sourcePlayId) {
+        const self176 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
+        if (self176) GiveAdvantageTokens(game.currentGameState, self176, 3, game.gameLog, "ASH_176");
+      }
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "ASH_132": { // Queen Soruna — deal 3 damage to the chosen (same-cost) unit.
       if (!targetPlayId) break;
@@ -8835,6 +8877,17 @@ function applyAbilityEffect(
       const defeatPend = defeatUnit(game.currentGameState, game.gameLog, target034);
       game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target034.cardId)}.`);
       if (defeatPend) return injectContinuation(defeatPend, pending.continuation);
+      return pending.continuation;
+    }
+    case "ASH_092": { // Foundling Rescue — defeat a unit with ≤2 remaining HP
+      if (!targetPlayId) break;
+      const target092 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target092) break;
+      const target092Unit = Unit.FromInterface(target092);
+      if (target092Unit.CurrentHP() > 2) break;
+      const defeatPend092 = defeatUnit(game.currentGameState, game.gameLog, target092);
+      game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target092.cardId)}.`);
+      if (defeatPend092) return injectContinuation(defeatPend092, pending.continuation);
       return pending.continuation;
     }
     case "SOR_224": { // Change of Heart — take control of a non-leader unit (reverts at start of regroup)

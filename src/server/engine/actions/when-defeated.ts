@@ -13,7 +13,8 @@ import { CreateBattleDroid, CreateTieFighter } from "@/server/engine/token-helpe
  */
 export function resolveWhenDefeated(
   unit: Unit,
-  player: PlayerId
+  player: PlayerId,
+  causedByCombatDamage: boolean = false,
 ): PendingResolution | null {
   // TWI_218 Droid Cohort: attached unit gains "When Defeated: Create a Battle Droid token."
   const droidCohortCount = unit.upgrades.filter(u => u.cardId === "TWI_218").length;
@@ -86,11 +87,11 @@ export function resolveWhenDefeated(
       yesLabel: "Draw",
       noLabel: "Skip",
       onYes: null,
-      continuation: resolveOwnWhenDefeated(unit, player),
+      continuation: resolveOwnWhenDefeated(unit, player, causedByCombatDamage),
     };
   }
 
-  return resolveOwnWhenDefeated(unit, player);
+  return resolveOwnWhenDefeated(unit, player, causedByCombatDamage);
 }
 
 /** Power of a unit that has just left play: printed power plus its upgrades' contributions. */
@@ -101,9 +102,19 @@ function LastKnownPower(unit: Unit): number {
 
 function resolveOwnWhenDefeated(
   unit: Unit,
-  player: PlayerId
+  player: PlayerId,
+  causedByCombatDamage: boolean = false,
 ): PendingResolution | null {
   switch (unit.cardId) {
+    case "ASH_191": { // Shin Hati's Fiend Fighter — "When Defeated: You may give 2 Advantage
+                      // tokens to a unit. If this unit wasn't defeated by combat damage, you
+                      // may give 3 Advantage tokens to that unit instead."
+      const allUnits191 = AllUnits();
+      if (allUnits191.length === 0) return null;
+      const amount191 = causedByCombatDamage ? 2 : 3;
+      return optionalTarget(`ASH_191_${amount191}`, player, allUnits191.map(u => u.playId),
+        `Give ${amount191} Advantage tokens to a unit?`, { yesLabel: `Give ${amount191}` });
+    }
     case "ASH_050": { // Morgan Elsbeth — "When Defeated: You may give a unit –2/–2 for this phase."
       const allUnits050 = AllUnits();
       if (allUnits050.length === 0) return null;

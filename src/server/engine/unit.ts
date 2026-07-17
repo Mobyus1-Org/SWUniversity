@@ -276,6 +276,13 @@ export class Unit implements UnitInterface {
       power += [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].filter(u => u.damage > 0).length;
     }
 
+    // Executor — "This unit gets +1/+0 for each upgrade on other friendly units."
+    if (this.cardId === "ASH_197" && !this.LostAbilities()) {
+      power += GetUnitsForPlayer(this.controller)
+        .filter(u => u.playId !== this.playId)
+        .reduce((sum, u) => sum + u.upgrades.length, 0);
+    }
+
     if (isAttacking) {
       power += RaidAmount(this.cardId, this.playId, this.controller);
     }

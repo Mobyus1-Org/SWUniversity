@@ -529,6 +529,10 @@ export const Cards = {
       pegasusTriWing: "ASH_171",
       razorCrest: "ASH_172",
       starfortressHeavyBomber: "ASH_174",
+      inspiringVeteran: "ASH_205",
+      imposingScoutWalker: "ASH_176",
+      executor: "ASH_197",
+      shinHatisFiendFighter: "ASH_191",
       // Leader units (the deployed side of the ASH leaders)
       ahsokaTano: "ASH_009",
       theMandalorian: "ASH_014",
@@ -677,6 +681,8 @@ export const Cards = {
       // Identical reprint of SEC_258 Grassroots Resistance.
       grassrootsResistance: "ASH_258",
       galvanizedLeap: "ASH_188",
+      strongerTogether: "ASH_140",
+      foundlingRescue: "ASH_092",
     },
     law: {
       unmarkedCredits: "LAW_244",

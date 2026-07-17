@@ -16,7 +16,14 @@ Orient before doing anything else. This repo already auto-loads `.claude/CLAUDE.
    to whatever the user is about to ask for (e.g. if the task is a card batch, check
    `engine-*` and `feedback-*` entries before writing engine code).
 
-2. **Check git state.**
+2. **Read the retro log.**
+   `.claude/skills/swuniversity-session-close/references/lessons-learned.md` is the accumulated
+   self-retro from every prior session's close (see that skill's step 6) — short, dated, process
+   lessons. Read it and actually apply the most recent entries this session; this is what makes
+   the session-start/session-close pair self-improving instead of session-close just writing
+   into a file nobody reads.
+
+3. **Check git state.**
    ```
    git status
    git log --oneline -10
@@ -24,17 +31,17 @@ Orient before doing anything else. This repo already auto-loads `.claude/CLAUDE.
    Note the current branch, whether the tree is clean, and whether recent commits already cover
    in-flight work (the user commits manually — never assume uncommitted work is abandoned).
 
-3. **Check open implementation trackers.** `ls *.md` in the repo root for `<set>-implement.md`
+4. **Check open implementation trackers.** `ls *.md` in the repo root for `<set>-implement.md`
    files (e.g. `sor-implement.md`). These track per-card implementation status for a given card
    set. If one exists for the set in question, read its summary table before starting card work —
    it tells you what's done vs. outstanding. Most sets (ASH, JTL, LOF, …) do NOT have one; for
    those, "what's next" is whatever the user pastes as a QA batch, not tracked in a file.
 
-4. **Skim `mechanics.md`** (repo root) if the session involves engine mechanics rather than
+5. **Skim `mechanics.md`** (repo root) if the session involves engine mechanics rather than
    individual cards — it's a rules-coverage gap analysis (✅/⚠️/❌ per mechanic area) separate
    from the per-card trackers.
 
-5. **Confirm test baseline if engine code will be touched.** `npm test` should be green before
+6. **Confirm test baseline if engine code will be touched.** `npm test` should be green before
    you start; if it isn't, that's pre-existing breakage to flag, not something to silently fix
    as a side effect of unrelated work.
 

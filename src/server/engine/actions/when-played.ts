@@ -5,7 +5,7 @@ import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
-import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy, CreateCreditToken } from "@/server/engine/token-helpers";
+import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits, CardIsUnique } from "@/server/engine/card-db/generated";
 
 /**
@@ -519,6 +519,66 @@ export function resolveWhenPlayed(
       CreateXWing(gs254, player, game.gameLog, cardId);
       CreateXWing(gs254, player, game.gameLog, cardId);
       return null;
+    }
+    case "ASH_140": { // Stronger Together — "Create 2 Mandalorian tokens."
+      const gs140 = game.currentGameState;
+      CreateMandalorianToken(gs140, player, game.gameLog, cardId);
+      CreateMandalorianToken(gs140, player, game.gameLog, cardId);
+      return null;
+    }
+    case "ASH_197": { // Executor — "When Played: Give an Advantage token to each other friendly unit."
+      const gs197 = game.currentGameState;
+      const friendly197 = GetUnitsForPlayer(player).filter(u => u.playId !== playId);
+      for (const u of friendly197) {
+        GiveAdvantageTokens(gs197, u, 1, game.gameLog, cardId);
+      }
+      return null;
+    }
+    case "ASH_176": { // Imposing Scout Walker — "When Played: You may deal 3 damage to a ground
+                      // unit. If it's defeated this way, give 3 Advantage tokens to this unit."
+      const groundUnits176 = AllGroundUnits();
+      if (groundUnits176.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId: "ASH_176",
+        player,
+        sourcePlayId: playId,
+        helperText: "Deal 3 damage to a ground unit?",
+        yesLabel: "Deal 3",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "ASH_176",
+          player,
+          sourcePlayId: playId,
+          fromPlayIds: groundUnits176.map(u => u.playId),
+          continuation: null,
+        } satisfies AbilityTargetPending,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "ASH_205": { // Inspiring Veteran — "When Played: Give an Advantage token to each of up
+                      // to 3 exhausted units."
+      const exhausted205 = AllUnits().filter(u => !u.ready);
+      if (exhausted205.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "ASH_205",
+        player,
+        fromPlayIds: exhausted205.map(u => u.playId),
+        needsMultiple: true,
+        maxTargets: 3,
+        continuation: null,
+      };
+    }
+    case "ASH_092": { // Foundling Rescue — "You may defeat a unit with 2 or less remaining HP.
+                      // Create a Mandalorian token."
+      const gs092 = game.currentGameState;
+      const eligible092 = AllUnits().filter(u => Unit.FromInterface(u).CurrentHP() <= 2);
+      CreateMandalorianToken(gs092, player, game.gameLog, cardId);
+      if (eligible092.length === 0) return null;
+      return optionalTarget(cardId, player, eligible092.map(u => u.playId),
+        "Defeat a unit with 2 or less remaining HP?");
     }
     case "SEC_082": // Chancellor Palpatine — When Played: handled in when-played-trigger.ts
     case "SEC_083": // ISB Shuttle — When Played: handled in when-played-trigger.ts
