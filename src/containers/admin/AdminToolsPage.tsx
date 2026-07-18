@@ -7,9 +7,14 @@ type AdminUser = {
   createdAt: string;
 };
 
+type UserSortKey = "username" | "email" | "role" | "createdAt";
+type SortDir = "asc" | "desc";
+
 export default function AdminToolsPage() {
   const [users, setUsers] = React.useState<AdminUser[]>([]);
   const [search, setSearch] = React.useState("");
+  const [sortKey, setSortKey] = React.useState<UserSortKey>("createdAt");
+  const [sortDir, setSortDir] = React.useState<SortDir>("desc");
   const [previewUsers, setPreviewUsers] = React.useState<string[]>([]);
   const [newPreviewUser, setNewPreviewUser] = React.useState("");
   const [previewError, setPreviewError] = React.useState("");
@@ -33,6 +38,28 @@ export default function AdminToolsPage() {
       (u) => u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q),
     );
   }, [users, search]);
+
+  const sortedUsers = React.useMemo(() => {
+    const mul = sortDir === "asc" ? 1 : -1;
+    return [...filteredUsers].sort((a, b) => {
+      if (sortKey === "createdAt") {
+        return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * mul;
+      }
+      return a[sortKey].localeCompare(b[sortKey]) * mul;
+    });
+  }, [filteredUsers, sortKey, sortDir]);
+
+  const handleSortClick = (key: UserSortKey) => {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const sortLabel = (key: UserSortKey, label: string) =>
+    key === sortKey ? `${label} ${sortDir === "asc" ? "↑" : "↓"}` : label;
 
   const addPreviewUser = async () => {
     const username = newPreviewUser.trim();
@@ -101,14 +128,30 @@ export default function AdminToolsPage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-white/15 text-gray-300">
-                <th className="py-2 pr-4">Username</th>
-                <th className="py-2 pr-4">Email</th>
-                <th className="py-2 pr-4">Role</th>
-                <th className="py-2 pr-4">Joined</th>
+                <th className="py-2 pr-4">
+                  <button type="button" onClick={() => handleSortClick("username")} className="font-semibold hover:text-white">
+                    {sortLabel("username", "Username")}
+                  </button>
+                </th>
+                <th className="py-2 pr-4">
+                  <button type="button" onClick={() => handleSortClick("email")} className="font-semibold hover:text-white">
+                    {sortLabel("email", "Email")}
+                  </button>
+                </th>
+                <th className="py-2 pr-4">
+                  <button type="button" onClick={() => handleSortClick("role")} className="font-semibold hover:text-white">
+                    {sortLabel("role", "Role")}
+                  </button>
+                </th>
+                <th className="py-2 pr-4">
+                  <button type="button" onClick={() => handleSortClick("createdAt")} className="font-semibold hover:text-white">
+                    {sortLabel("createdAt", "Joined")}
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => (
+              {sortedUsers.map((user) => (
                 <tr key={user.username} className="border-b border-white/10">
                   <td className="py-2 pr-4 font-semibold">{user.username}</td>
                   <td className="py-2 pr-4 text-gray-300">{user.email}</td>
