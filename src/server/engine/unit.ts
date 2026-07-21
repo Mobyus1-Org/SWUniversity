@@ -258,6 +258,12 @@ export class Unit implements UnitInterface {
       power += this.upgrades.filter(upg => TraitContains(upg.cardId, "Pilot")).length;
     }
 
+    // Resistance X-Wing — "While this unit has a Pilot on it, it gets +1/+1." (HP half in TotalHP.)
+    if (this.cardId === "JTL_247" && !this.LostAbilities()
+      && this.upgrades.some(upg => TraitContains(upg.cardId, "Pilot"))) {
+      power += 1;
+    }
+
     if (HasGrit(this.cardId, this.playId, this.controller) && !this.LostAbilities()) {
       power += this.damage;
     }
@@ -334,6 +340,12 @@ export class Unit implements UnitInterface {
     }
 
     if (this.cardId === "SHD_056" && this.upgrades.length > 0) {
+      hp += 1;
+    }
+
+    // Resistance X-Wing — "While this unit has a Pilot on it, it gets +1/+1." (Power half above.)
+    if (this.cardId === "JTL_247" && !this.LostAbilities()
+      && this.upgrades.some(upg => TraitContains(upg.cardId, "Pilot"))) {
       hp += 1;
     }
 

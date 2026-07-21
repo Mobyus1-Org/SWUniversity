@@ -165,6 +165,11 @@ export function resolveWhenPlayed(
       if (allUnits158.length === 0) return null;
       return mandatoryTarget("ASH_158", player, allUnits158.map(u => u.playId));
     }
+    case "JTL_248": { // Dilapidated Ski Speeder — "When Played: Deal 3 damage to this unit."
+      const self248 = playId ? GetUnitByPlayId(game.currentGameState, playId) : undefined;
+      if (self248) DealDamageToUnit(game.currentGameState, "JTL_248", self248.playId, 3, game.gameLog);
+      return null; // 7 HP, so it survives — no sweep needed.
+    }
     case "ASH_147": { // The Cyborg Mech — deal 2 damage to an undamaged ground unit, or 5 to a
                       // damaged ground unit. (Amount is decided by the chosen target's state.)
       const groundUnits147 = AllGroundUnits();
@@ -303,6 +308,25 @@ export function resolveWhenPlayed(
           continuation: null,
         },
         continuation: null,
+      };
+    }
+    case "JTL_261": { // Attack Run — "Attack with 2 space units (one at a time)."
+      const spacePlayIds261 = AllSpaceUnits()
+        .filter(u => u.controller === player && u.ready)
+        .map(u => u.playId);
+      if (spacePlayIds261.length === 0) return null; // no ready friendly space unit — soft pass
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: spacePlayIds261,
+        continuation: {
+          type: "ability-target",
+          cardId,
+          player,
+          fromPlayIds: spacePlayIds261,
+          continuation: null,
+        },
       };
     }
     case "SOR_103": { //Rebel Assault "Attack with a Rebel unit. It gets +1/+0 for this attack. Then, attack with another Rebel unit. It gets +1/+0 for this attack."
@@ -458,6 +482,28 @@ export function resolveWhenPlayed(
         },
         continuation: null,
       };
+    case "JTL_102": { // Resistance Blue Squadron — "When Played: You may deal damage to a unit equal
+                      // to the number of friendly space units." Blue Squadron is already in play, so
+                      // it counts itself. The count is read live at resolution (applyAbilityEffect).
+      const allUnits102 = AllUnits();
+      if (allUnits102.length === 0) return null; // nothing to damage
+      return {
+        type: "ability-option",
+        cardId,
+        sourcePlayId: playId,
+        helperText: "Deal damage to a unit equal to the number of friendly space units?",
+        yesLabel: "Deal Damage",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId,
+          sourcePlayId: playId,
+          fromPlayIds: allUnits102.map(u => u.playId),
+          continuation: null,
+        },
+        continuation: null,
+      };
+    }
     case "JTL_206": { // Fly Casual — "Ready a Vehicle unit. It can't attack bases for this phase."
       const vehicles206 = GetUnitsForPlayer(player).filter(u => TraitContains(u.cardId, "Vehicle", player, u.playId));
       if (vehicles206.length === 0) return null;

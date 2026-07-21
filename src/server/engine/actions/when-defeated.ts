@@ -240,6 +240,23 @@ function resolveOwnWhenDefeated(
       CreateTieFighter(game039.currentGameState, player, game039.gameLog, "JTL_039");
       return null;
     }
+    case "JTL_104": { // Raddus — When Defeated: Deal damage equal to this unit's power to an enemy unit.
+      const opponent104 = player === 1 ? 2 : 1;
+      const enemies104 = GetUnitsForPlayer(opponent104);
+      if (enemies104.length === 0) return null;
+      // CR 8.11 last known information — Raddus has already left play, so its power can't be
+      // recomputed live. Carry printed power + upgrade contributions as the `amount`.
+      const power104 = LastKnownPower(unit);
+      if (power104 <= 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "JTL_104",
+        player,
+        fromPlayIds: enemies104.map(u => u.playId),
+        amount: power104,
+        continuation: null,
+      };
+    }
     case "JTL_060": { // Desperate Commando — When Defeated: You may give a unit –1/–1 for this phase.
       const units060 = AllUnits();
       if (units060.length === 0) return null;

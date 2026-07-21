@@ -8758,6 +8758,27 @@ function applyAbilityEffect(
         continuation: pending.continuation,
       };
     }
+    case "JTL_261": { // Attack Run: attack with the chosen space unit; recompute the 2nd prompt to
+                      // exclude it (the "another" of two space units, one at a time). No buff.
+      if (!targetPlayId) break;
+      const attacker261 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!attacker261) break;
+      let continuation261 = pending.continuation;
+      if (continuation261?.type === "ability-target") {
+        const freshSpace261 = AllSpaceUnits()
+          .filter(u => u.controller === attacker261.controller && u.ready && u.playId !== targetPlayId)
+          .map(u => u.playId);
+        continuation261 = freshSpace261.length > 0
+          ? { ...continuation261, fromPlayIds: freshSpace261 }
+          : (continuation261.continuation ?? null);
+      }
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "JTL_261",
+        continuation: continuation261,
+      };
+    }
     case "SOR_103": { // Rebel Assault: push ForAttack +1 on chosen Rebel unit, then initiate attack with it
       if (!targetPlayId) break;
       const rebelUnit = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -8914,6 +8935,14 @@ function applyAbilityEffect(
       const handSize = GetPlayer(game.currentGameState, sourceUnit.controller).hand.length;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, handSize, game.gameLog);
       break;
+    }
+    case "JTL_102": { // Resistance Blue Squadron: deal damage equal to the caster's space-unit count.
+      if (!targetPlayId) break;
+      const source102 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId!);
+      const controller102 = source102?.controller ?? pending.player!;
+      const spaceCount102 = GetPlayer(game.currentGameState, controller102).spaceArena.length;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, spaceCount102, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "LAW_247": { // Backed by the Hutts: deal damage equal to friendly Credit count to chosen unit
       if (!targetPlayId) break;
@@ -10103,6 +10132,11 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, "LOF_091", targetPlayId, pending.amount ?? 0, game.gameLog);
       break;
+    }
+    case "JTL_104": { // Raddus When Defeated: deal `amount` (Raddus's last-known power) to chosen enemy unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "JTL_104", targetPlayId, pending.amount ?? 0, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "SOR_049": { // Obi-Wan Kenobi When Defeated: give 2 XP to chosen friendly unit; if Force, draw a card.
       if (!targetPlayId) break;

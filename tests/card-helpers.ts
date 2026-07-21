@@ -395,6 +395,10 @@ export const Cards = {
       anakinSkywalker: "JTL_197",
       blackOne: "JTL_147",
       poeDameron: "JTL_100",
+      raddus: "JTL_104",
+      resistanceBlueSquadron: "JTL_102",
+      resistanceXWing: "JTL_247",
+      dilapidatedSkiSpeeder: "JTL_248",
     },
     lof: {
       kelleranBeq: "LOF_100",
@@ -674,6 +678,7 @@ export const Cards = {
       flyCasual: "JTL_206",
       noGloryOnlyResults: "JTL_043",
       punchIt: "JTL_231",
+      attackRun: "JTL_261",
     },
     ts26: {
       backedByThePykes: "TS26_058",
