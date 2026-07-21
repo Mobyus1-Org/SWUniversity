@@ -17,7 +17,8 @@ import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateMandalorianToken,
 const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
-  "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149", "ASH_179",
+  "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149", "ASH_179", "ASH_251",
+  "ASH_237", "ASH_248",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -80,6 +81,21 @@ export function resolveWhenPlayedTrigger(
         self197.upgrades.push({ cardId: "SOR_T02", playId: String(gs.nextPlayId++), owner: self197.owner, controller: self197.controller });
         log.push(`${CardTitle(trigger.cardId)}: no captured card to rescue — gained a Shield token.`);
       }
+      break;
+    }
+    case "ASH_237": // Mouse Droid — When Played: The next Imperial unit you play this phase costs
+                    // 1 resource less. Read by imperialNextUnitDiscount, consumed in completePlayCard.
+      gs.currentEffects.push({ cardId: "ASH_237", duration: "Phase", affectedPlayer: trigger.fromPlayer });
+      log.push(`${CardTitle(trigger.cardId)}: the next Imperial unit you play this phase costs 1 resource less.`);
+      break;
+    case "ASH_248": // Neel — When Played/On Attack: The next unit you play this phase with 1 or less
+                    // power enters play ready. Consumed in completePlayCard by the qualifying unit.
+      gs.currentEffects.push({ cardId: "ASH_248", duration: "Phase", affectedPlayer: trigger.fromPlayer });
+      log.push(`${CardTitle(trigger.cardId)}: the next unit you play this phase with 1 or less power enters play ready.`);
+      break;
+    case "ASH_251": { // Zealous Soldier — When Played: Give an Advantage token to this unit.
+      const self251 = [...player.groundArena, ...player.spaceArena].find(u => u.playId === trigger.playId);
+      if (self251) GiveAdvantageTokens(gs, self251, 1, log, trigger.cardId);
       break;
     }
     case "ASH_218": { // Ferry Droid — When Played: Give 4 Advantage tokens to this unit.

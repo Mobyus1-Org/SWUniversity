@@ -150,6 +150,13 @@ function morganNextUnitDiscount(game: GameState, player: PlayerId, cardId: strin
   return shares ? 1 : 0;
 }
 
+// ASH_237 Mouse Droid: the NEXT Imperial unit you play this phase costs 1 resource less. The
+// effect is consumed in completePlayCard once an Imperial unit is played.
+function imperialNextUnitDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Unit" || !CardTraits(cardId).includes("Imperial")) return 0;
+  return game.currentEffects.some(e => e.cardId === "ASH_237" && e.affectedPlayer === player) ? 1 : 0;
+}
+
 // JTL_005 Admiral Piett (deployed): each Capital Ship unit you play costs 2 resources less.
 function piettCapitalShipDiscount(game: GameState, player: PlayerId, cardId: string): number {
   if (CardType(cardId) !== "Unit" || !CardTraits(cardId).includes("Capital Ship")) return 0;
@@ -191,6 +198,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - gnkPowerDroidDiscount(game, player, cardId)
     - piettCapitalShipDiscount(game, player, cardId)
     - morganNextUnitDiscount(game, player, cardId)
+    - imperialNextUnitDiscount(game, player, cardId)
     - redLeaderPilotDiscount(game, player, cardId)
   ;
 }

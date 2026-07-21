@@ -172,6 +172,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "LAW_220": amount += 2; break; //Wookiee Guerilla
     case "LAW_234": amount += 2; break; //Kage Elite
     case "ASH_154": amount += 1; break; //Honorable Nite Owl
+    case "ASH_237": amount += 1; break; //Mouse Droid
     default: break;
   }
 

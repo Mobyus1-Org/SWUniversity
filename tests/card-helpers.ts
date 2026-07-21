@@ -236,6 +236,7 @@ export const Cards = {
       mandalorian: "ASH_T01",
     },
     sor: {
+      consularSecurityForce: "SOR_046", // 3/7 Ground, no abilities — a durable test defender
       infernoFour: "SOR_031",
       lieutenantChildsen: "SOR_035",
       gideonHask: "SOR_036",
@@ -348,6 +349,8 @@ export const Cards = {
     },
     shd: {
       superlaserTechnician: "SHD_085",
+      rhokaiGunship: "SHD_164",
+      bazineNetal: "SHD_184",
       l337: "SHD_197",
       ruthlessAssassin: "SHD_235",
       concordDawnInterceptors: "SHD_042",
@@ -402,6 +405,7 @@ export const Cards = {
     },
     lof: {
       kelleranBeq: "LOF_100",
+      hyperspaceWayfarer: "LOF_119", // 4/10 Space, no abilities — a durable test defender
       grogu: "LOF_246",
       gungi: "LOF_093",
       babuFrik: "LOF_206",
@@ -540,6 +544,20 @@ export const Cards = {
       bladeThree: "ASH_204",
       bobaFettsRancor: "ASH_179",
       gorianShardsCorsair: "ASH_196",
+      kelleranBeq: "ASH_206",
+      heroicPurrgil: "ASH_207",
+      sabineWren: "ASH_208",
+      mandalorianScout: "ASH_216",
+      remnantLookouts: "ASH_220",
+      qira: "ASH_226",
+      mouseDroid: "ASH_237",
+      attendantNavigator: "ASH_238",
+      mandalorianSuperCommandos: "ASH_240",
+      darthVader: "ASH_243",
+      neel: "ASH_248",
+      zealousSoldier: "ASH_251",
+      gallofreeTransport: "ASH_254",
+      lepRatcatcher: "ASH_259",
       // Leader units (the deployed side of the ASH leaders)
       ahsokaTano: "ASH_009",
       theMandalorian: "ASH_014",

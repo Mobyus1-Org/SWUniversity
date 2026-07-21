@@ -624,6 +624,49 @@ export function resolveWhenPlayed(
       CreateMandalorianToken(gs140, player, game.gameLog, cardId);
       return null;
     }
+    case "ASH_226": { // Qi'ra (Master of Teräs Käsi) — "When Played: You may discard a card from
+                      // your hand. If you do, deal 3 damage to a unit."
+      const hand226 = GetPlayer(game.currentGameState, player).hand;
+      const units226 = AllUnits();
+      if (hand226.length === 0 || units226.length === 0) return null;
+      // Discard first, then choose the damage target — the discard is what pays for the damage.
+      const damage226: AbilityTargetPending = {
+        type: "ability-target",
+        cardId: "ASH_226",
+        player,
+        fromPlayIds: units226.map(u => u.playId),
+        continuation: null,
+      };
+      return {
+        type: "ability-option",
+        cardId: "ASH_226",
+        player,
+        sourcePlayId: playId,
+        helperText: "Discard a card from your hand to deal 3 damage to a unit?",
+        yesLabel: "Discard",
+        noLabel: "Skip",
+        onYes: {
+          type: "discard-from-hand",
+          targetPlayer: player,
+          count: 1,
+          continuation: damage226,
+        },
+        continuation: null,
+      };
+    }
+    case "ASH_238": { // Attendant Navigator — "When Played: You may give 2 Advantage tokens to a
+                      // space unit." Any space unit, friendly or enemy.
+      const spaceUnits238 = AllSpaceUnits();
+      if (spaceUnits238.length === 0) return null;
+      return optionalTarget("ASH_238", player, spaceUnits238.map(u => u.playId),
+        "Give 2 Advantage tokens to a space unit?", { yesLabel: "Give 2", sourcePlayId: playId });
+    }
+    case "ASH_259": { // LEP Ratcatcher — "When Played: You may deal 1 damage to a ground unit."
+      const groundUnits259 = AllGroundUnits();
+      if (groundUnits259.length === 0) return null;
+      return optionalTarget("ASH_259", player, groundUnits259.map(u => u.playId),
+        "Deal 1 damage to a ground unit?", { yesLabel: "Deal 1", sourcePlayId: playId });
+    }
     case "ASH_197": { // Executor — "When Played: Give an Advantage token to each other friendly unit."
       const gs197 = game.currentGameState;
       const friendly197 = GetUnitsForPlayer(player).filter(u => u.playId !== playId);
@@ -1816,6 +1859,23 @@ export function resolveWhenPlayed(
         targetPlayer: opponent201,
         mustDiscard: true,
         discardFilter: "non-unit",
+        continuation: null,
+      } satisfies PeekHandPending;
+    }
+    // ASH_220 Remnant Lookouts / SHD_184 Bazine Netal — "When Played: Look at an opponent's hand.
+    // You may discard a card from it. If you do, they draw a card."
+    case "ASH_220":
+    case "SHD_184": {
+      const opponent220: PlayerId = player === 1 ? 2 : 1;
+      const hand220 = player === 1 ? game.currentGameState.player2.hand : game.currentGameState.player1.hand;
+      if (hand220.length === 0) return null;
+      return {
+        type: "peek-hand",
+        peekingPlayer: player,
+        targetPlayer: opponent220,
+        mustDiscard: true,
+        optionalDiscard: true,
+        thenDrawForTarget: true,
         continuation: null,
       } satisfies PeekHandPending;
     }

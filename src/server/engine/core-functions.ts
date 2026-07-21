@@ -991,6 +991,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_179": //Boba Fett's Rancor — On Attack: may deal 1 damage to a base for every 5 damage on your base
     case "ASH_196": //Gorian Shard's Corsair — On Attack: may deal 2 damage to a unit
     case "ASH_189": //Emperor's Messenger — On Attack: Ready a resource.
+    case "ASH_248": //Neel — On Attack: next unit with 1 or less power enters play ready
     case "SEC_188": //Darth Traya — On Attack: may ready a non-unit leader
     case "SEC_004": //Leia Organa (SEC, deployed) — On Attack: may disclose, then give an XP token
     case "LOF_002": //Mother Talzin (deployed) — On Attack: may give a unit -1/-1 this phase

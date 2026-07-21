@@ -86,6 +86,8 @@ export function HasShielded(cardId: string, playId?: string, player?: PlayerId, 
     case "ASH_048"://Imperial Armored Commando
     case "ASH_069"://Noti Nomad
     case "ASH_193"://Emperor's Champion
+    case "ASH_208"://Sabine Wren (I Learned the Hard Way)
+    case "ASH_243"://Darth Vader (Meet Your Destiny)
     case "ASH_T01"://Mandalorian token
       return true;
 

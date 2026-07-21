@@ -117,7 +117,7 @@ import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateXWing, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource } from "@/server/engine/core-functions";
+import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -642,6 +642,20 @@ function addUnitFromSearch(game: GameState, log: string[], cardId: string, playe
 }
 
 /**
+ * ASH_208 Sabine Wren — "When 1 or more upgrades attach to this unit (including from Shielded):
+ * You may exhaust a ground unit." Called from every site that attaches an upgrade to a unit;
+ * returns the prompt when the attach target is Sabine, otherwise null.
+ */
+function sabineWrenAttachReaction(game: GameState, attachedTo: UnitInterface): AbilityOptionPending | null {
+  if (attachedTo.cardId !== "ASH_208") return null;
+  if (Unit.FromInterface(attachedTo).LostAbilities()) return null;
+  const groundUnits = [...game.player1.groundArena, ...game.player2.groundArena];
+  if (groundUnits.length === 0) return null;
+  return optionalTarget("ASH_208", attachedTo.controller, groundUnits.map(u => u.playId),
+    "Exhaust a ground unit?", { yesLabel: "Exhaust", sourcePlayId: attachedTo.playId });
+}
+
+/**
  * Drains the trigger bag after an action resolves.
  * - 0 triggers: no-op
  * - 1 trigger: auto-resolve without player input
@@ -759,6 +773,9 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
     if (unit) {
       unit.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: trigger.fromPlayer, controller: trigger.fromPlayer });
       log.push(`Shielded: ${CardTitle(trigger.cardId)} enters play with a Shield token.`);
+      // ASH_208 Sabine Wren reacts to upgrades attaching to her — "including from Shielded".
+      const sabine208 = sabineWrenAttachReaction(game, unit);
+      if (sabine208) return sabine208;
     }
     return null;
   }
@@ -2579,6 +2596,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         type: "PeekHand",
         targetPlayer: pending.targetPlayer,
         mustDiscard: pending.mustDiscard,
+        ...(pending.optionalDiscard && { optionalDiscard: true }),
         eligibleIndices,
       } satisfies NeedsPeekHand;
     }
@@ -3076,8 +3094,27 @@ function completePlayCard(
     if (morganIdx !== -1) game.currentEffects.splice(morganIdx, 1);
   }
 
+  // ASH_237 Mouse Droid: "the next IMPERIAL unit you play this phase" — consumed by an Imperial
+  // unit only, so a non-Imperial unit played in between leaves the discount armed.
+  if (CardType(cardId) === "Unit" && CardTraits(cardId).includes("Imperial")) {
+    const mouseIdx = game.currentEffects.findIndex(e => e.cardId === "ASH_237" && e.affectedPlayer === player);
+    if (mouseIdx !== -1) game.currentEffects.splice(mouseIdx, 1);
+  }
+
+  // ASH_248 Neel: "the next unit you play this phase with 1 or less power enters play ready."
+  // Only a qualifying (≤1 power) unit consumes it; bigger units played first leave it armed.
+  let neelReady = false;
+  if (CardType(cardId) === "Unit" && (CardPower(cardId) ?? 0) <= 1) {
+    const neelIdx = game.currentEffects.findIndex(e => e.cardId === "ASH_248" && e.affectedPlayer === player);
+    if (neelIdx !== -1) {
+      game.currentEffects.splice(neelIdx, 1);
+      neelReady = true;
+      log.push(`${CardTitle("ASH_248")}: ${CardTitle(cardId)} enters play ready.`);
+    }
+  }
+
   if (CardType(cardId) === "Unit") {
-    const unit = addToArena(game, player, cardId, opts?.enterReady ?? cardId === "SOR_193");
+    const unit = addToArena(game, player, cardId, opts?.enterReady ?? (neelReady || cardId === "SOR_193"));
     log.push(`${CardTitle(cardId) ?? cardId} entered the ${CardArena(cardId) ?? "ground"} arena.`);
     game.roundState.cardsPlayedThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId });
     game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: unit.playId, playedAs: "Unit" });
@@ -3737,6 +3774,13 @@ function handleChooseTarget(
       log.push(`${CardTitle("TWI_012")}: attacking a unit — +2/+0 for this attack.`);
     }
 
+    // Heroic Purrgil (ASH_207) — "While attacking using Ambush, this unit gets +2/+0." The buff is
+    // scoped to the attack the Ambush trigger started, so it is applied here (where the ambush
+    // attack's target is locked in) rather than as a constant ability.
+    if (pending.source === "ambush" && attacker?.cardId === "ASH_207" && !attacker.LostAbilities()) {
+      GivePowerMod("ASH_207", attacker, 2, "ForAttack", log);
+    }
+
     // Grand Inquisitor (LOF_014) leader Action / On Attack: the defender gets -2/-0 for this attack.
     if (pending.source === "LOF_014" && target.type === "unit") {
       const def014 = GetUnitByPlayId(game, target.playId);
@@ -4326,8 +4370,19 @@ function handleChooseTarget(
     }
 
     const idx = data.targetIndices?.[0];
-    if (idx == null)
-      return { response: invalidResponse("Choose a card to discard from the opponent's hand."), pending, stateChanged: false };
+    if (idx == null) {
+      // "You may discard a card from it" — an empty selection declines. A mandatory discard
+      // still rejects it, so a missing index can't silently skip the effect.
+      if (!pending.optionalDiscard)
+        return { response: invalidResponse("Choose a card to discard from the opponent's hand."), pending, stateChanged: false };
+      log.push(`Player ${pending.peekingPlayer} looked at Player ${pending.targetPlayer}'s hand and discarded nothing.`);
+      const contSkip = pending.continuation ?? null;
+      if (contSkip) return { response: resolutionResponse(pendingToResolution(contSkip, game)), pending: contSkip, stateChanged: false };
+      const bagSkip = drainTriggerBag(game, log);
+      if (bagSkip) return { response: resolutionResponse(pendingToResolution(bagSkip, game)), pending: bagSkip, stateChanged: false };
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
     const targetHand = GetPlayer(game, pending.targetPlayer).hand;
     if (idx < 0 || idx >= targetHand.length)
       return { response: invalidResponse("Invalid hand index."), pending, stateChanged: false };
@@ -4338,6 +4393,8 @@ function handleChooseTarget(
     const [discarded] = targetHand.splice(idx, 1);
     pushEventToDiscard(game, pending.targetPlayer, discarded.cardId);
     log.push(`Player ${pending.peekingPlayer} discarded ${CardTitle(discarded.cardId)} from Player ${pending.targetPlayer}'s hand.`);
+    // "If you do, they draw a card" (ASH_220 Remnant Lookouts, SHD_184 Bazine Netal).
+    if (pending.thenDrawForTarget) DrawCardForPlayer(game, log, pending.targetPlayer);
     const cont = pending.continuation ?? null;
     if (cont) return { response: resolutionResponse(pendingToResolution(cont, game)), pending: cont, stateChanged: false };
     const bag = drainTriggerBag(game, log);
@@ -4580,6 +4637,15 @@ function handleChooseTarget(
         && CardCost(targetUnit.cardId) <= 3
         && targetUnit.controller !== pending.player) {
       transferControl(game, log, targetUnit, pending.player);
+    }
+
+    // ASH_208 Sabine Wren: "When 1 or more upgrades attach to this unit: You may exhaust a ground unit."
+    {
+      const sabine208 = sabineWrenAttachReaction(game, targetUnit);
+      if (sabine208) {
+        updateDefeatedPlayers(game);
+        return { response: resolutionResponse(pendingToResolution(sabine208, game)), pending: sabine208, stateChanged: true };
+      }
     }
 
     // JTL_101 Red Leader: When a Pilot upgrade attaches to this unit — create an X-Wing token.
@@ -8529,6 +8595,52 @@ function applyAbilityEffect(
     case "ASH_170": { // Desert Sharpshooter — deal 2 damage to the chosen upgraded ground unit.
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, "ASH_170", targetPlayId, 2, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "ASH_208": { // Sabine Wren — exhaust the chosen ground unit.
+      if (!targetPlayId) break;
+      const target208 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target208) {
+        target208.ready = false;
+        game.gameLog.push(`${CardTitle("ASH_208")}: exhausted ${CardTitle(target208.cardId)}.`);
+      }
+      break;
+    }
+    case "ASH_226": { // Qi'ra — the discard already happened; deal 3 damage to the chosen unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "ASH_226", targetPlayId, 3, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "ASH_254": { // Gallofree Transport — When Defeated: give 2 Advantage tokens to the chosen friendly unit.
+      if (!targetPlayId) break;
+      const target254 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target254) GiveAdvantageTokens(game.currentGameState, target254, 2, game.gameLog, "ASH_254");
+      break;
+    }
+    case "SHD_164": { // Rhokai Gunship — When Defeated: deal 1 damage to the chosen unit or base.
+      const owner164 = pending.player!;
+      let basePlayer164: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer164 = 1;
+      else if (targetPlayId === "player2.base") basePlayer164 = 2;
+      else if (targetIsBase) basePlayer164 = targetBasePlayer ?? (owner164 === 1 ? 2 : 1);
+      if (basePlayer164 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer164, 1, owner164);
+        game.gameLog.push(`${CardTitle("SHD_164")}: dealt 1 damage to player ${basePlayer164}'s base.`);
+        break;
+      }
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "SHD_164", targetPlayId, 1, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "ASH_238": { // Attendant Navigator — give 2 Advantage tokens to the chosen space unit.
+      if (!targetPlayId) break;
+      const target238 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target238) GiveAdvantageTokens(game.currentGameState, target238, 2, game.gameLog, "ASH_238");
+      break;
+    }
+    case "ASH_259": { // LEP Ratcatcher — deal 1 damage to the chosen ground unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "ASH_259", targetPlayId, 1, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "ASH_167": { // Flarestar Attack Shuttle — give an Advantage token to the chosen unit.

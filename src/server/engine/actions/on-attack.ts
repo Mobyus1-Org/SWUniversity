@@ -1172,6 +1172,15 @@ function resolveInnateOnAttack(
         continuation,
       };
     }
+    case "ASH_248": { // Neel — On Attack: The next unit you play this phase with 1 or less power
+                      // enters play ready. Same effect as his When Played; re-arming is idempotent.
+      const game248 = GetGame();
+      if (game248 && !game248.currentGameState.currentEffects.some(e => e.cardId === "ASH_248" && e.affectedPlayer === attacker.controller)) {
+        game248.currentGameState.currentEffects.push({ cardId: "ASH_248", duration: "Phase", affectedPlayer: attacker.controller });
+        game248.gameLog.push(`${CardTitle("ASH_248")}: the next unit you play this phase with 1 or less power enters play ready.`);
+      }
+      return continuation;
+    }
     case "LOF_005": { // Morgan Elsbeth (deployed) — On Attack: The next unit you play this phase costs
                       // 1 resource less if it shares a keyword with a friendly unit.
       const game005 = GetGame();

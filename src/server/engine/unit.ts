@@ -1,11 +1,18 @@
 import { CardInPlay, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard } from "@/server/engine/core-functions";
 import { CardHp, CardPower } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasGrit } from "./card-db/keyword-dictionaries.ts/grit";
+
+/**
+ * Re-entrancy guard for ASH_206 Kelleran Beq, whose power depends on other units' current power.
+ * With two Kellerans in play the lookup would otherwise recurse forever; while non-zero, a nested
+ * Kelleran computes its power without the "+1 per 0-power unit" term.
+ */
+let kelleranPowerDepth = 0;
 
 export class Unit implements UnitInterface {
   cardId: string;
@@ -287,6 +294,35 @@ export class Unit implements UnitInterface {
       power += GetUnitsForPlayer(this.controller)
         .filter(u => u.playId !== this.playId)
         .reduce((sum, u) => sum + u.upgrades.length, 0);
+    }
+
+    // Qi'ra (Master of Teräs Käsi) — "This unit gets –1/–0 for each card in your hand."
+    // The final Math.max keeps her from going negative on a huge hand.
+    if (this.cardId === "ASH_226" && !this.LostAbilities()) {
+      power -= GetHand(this.controller).length;
+    }
+
+    // Kelleran Beq — "This unit gets +1/+0 for each other unit (friendly and enemy) with 0 power."
+    // Reading another unit's CurrentPower can come straight back here (two Kellerans in play), so
+    // the re-entrant call is served from the flat computation instead — see kelleranPowerDepth.
+    if (this.cardId === "ASH_206" && !this.LostAbilities() && kelleranPowerDepth === 0) {
+      kelleranPowerDepth++;
+      try {
+        power += [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+          .filter(u => u.playId !== this.playId)
+          .filter(u => Unit.FromInterface(u).CurrentPower() === 0)
+          .length;
+      } finally {
+        kelleranPowerDepth--;
+      }
+    }
+
+    // Mandalorian Super Commandos — "While you control a leader unit, this unit gets +2/+0."
+    // A leader deployed as a Pilot upgrade is a leader UPGRADE, not a leader unit, so this only
+    // looks at the cardIds of units in the arena.
+    if (this.cardId === "ASH_240" && !this.LostAbilities()
+      && GetUnitsForPlayer(this.controller).some(u => CardIsLeader(u.cardId))) {
+      power += 2;
     }
 
     if (isAttacking) {

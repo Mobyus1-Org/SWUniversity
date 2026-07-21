@@ -95,6 +95,8 @@ export interface NeedsPeekHand {
   type: "PeekHand";
   targetPlayer: PlayerId;
   mustDiscard: boolean;
+  /** When true the discard is a "you may" — an empty selection declines it. */
+  optionalDiscard?: boolean;
   /** Indices of cards in the target hand that are eligible to be discarded. */
   eligibleIndices: number[];
 }

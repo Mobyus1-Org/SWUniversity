@@ -2237,7 +2237,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
           ) : resolutionNeeded?.type === "PeekHand" ? (
             <>
               <p className="-mt-2 mb-3 text-xs text-white/60">
-                {resolutionNeeded.mustDiscard ? "Choose a card to discard." : "Opponent's hand — no action required."}
+                {resolutionNeeded.optionalDiscard
+                  ? "You may discard a card."
+                  : resolutionNeeded.mustDiscard ? "Choose a card to discard." : "Opponent's hand — no action required."}
               </p>
               <div className="flex flex-wrap gap-3 justify-center mb-3">
                 {(resolutionNeeded.targetPlayer === 2 ? opponent : player).hand.map((card, i) => {
@@ -2262,11 +2264,11 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                   );
                 })}
               </div>
-              {!resolutionNeeded.mustDiscard ? (
+              {!resolutionNeeded.mustDiscard || resolutionNeeded.optionalDiscard ? (
                 <button type="button" disabled={isResolving}
                   onClick={() => void sendDispatch(createDispatch("choose-target", { targetIndices: [] }))}
                   className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20">
-                  Got it
+                  {resolutionNeeded.optionalDiscard ? "Discard Nothing" : "Got it"}
                 </button>
               ) : null}
             </>

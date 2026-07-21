@@ -640,6 +640,13 @@ export interface PeekHandPending {
   mustDiscard: boolean;
   /** If set, only cards of this type are eligible to be discarded. */
   discardFilter?: "non-unit";
+  /**
+   * "You may discard a card from it" (ASH_220, SHD_184) — the peeking player picks a card OR
+   * declines with an empty selection. Only meaningful together with mustDiscard.
+   */
+  optionalDiscard?: boolean;
+  /** "If you do, they draw a card" — the peeked player draws after a card is actually discarded. */
+  thenDrawForTarget?: boolean;
   continuation: PendingResolution | null;
 }
 

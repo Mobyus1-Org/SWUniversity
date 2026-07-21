@@ -319,6 +319,32 @@ function resolveOwnWhenDefeated(
       if (captors193.length === 0) return null;
       return mandatoryTarget("SEC_193_wd", player, captors193.map(u => u.playId));
     }
+    case "ASH_216": { // Mandalorian Scout — "When Defeated: Exhaust a ready friendly resource."
+      // Resources are interchangeable, so there is nothing to choose — exhaust the first ready one.
+      const game216 = GetGame();
+      if (!game216) return null;
+      const ready216 = GetPlayer(game216.currentGameState, player).resources.find(r => r.ready);
+      if (!ready216) return null;
+      ready216.ready = false;
+      game216.gameLog.push(`${CardTitle("ASH_216")}: exhausted a friendly resource.`);
+      return null;
+    }
+    case "ASH_254": { // Gallofree Transport — "When Defeated: Give 2 Advantage tokens to a friendly unit."
+      // The Transport itself is already out of the arena, so this only sees survivors.
+      const friendly254 = GetUnitsForPlayer(player);
+      if (friendly254.length === 0) return null;
+      return mandatoryTarget("ASH_254", player, friendly254.map(u => u.playId));
+    }
+    case "SHD_164": { // Rhokai Gunship — "When Defeated: Deal 1 damage to a unit or base."
+      return {
+        type: "ability-target",
+        cardId: "SHD_164",
+        player,
+        fromPlayIds: AllUnits().map(u => u.playId),
+        fromZones: ["Base"],
+        continuation: null,
+      };
+    }
     case "SOR_108": { // Vanguard Infantry — "When Defeated: You may give an Experience token to a unit."
       const units108 = AllUnits();
       if (units108.length === 0) return null;
