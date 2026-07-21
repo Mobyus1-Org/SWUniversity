@@ -115,9 +115,9 @@ import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dict
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
-import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateXWing, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget } from "@/server/engine/core-functions";
+import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyAbilities, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -181,6 +181,40 @@ function resolveChooseOne(
 ): PendingResolution | null {
   let next: PendingResolution | null = null;
   switch (pending.cardId) {
+    case "ASH_235": { // Sense Through the Force — remember the number, then search the top 5.
+      // DeckSearchPending carries no payload of its own, so the chosen number rides on a
+      // currentEffect that the deck-search draw step reads (and removes).
+      game.currentEffects.push({
+        cardId: "ASH_235_number",
+        duration: "Phase",
+        affectedPlayer: pending.player,
+        value: Number(optionId),
+      });
+      log.push(`${CardTitle("ASH_235")}: chose ${optionId}.`);
+      next = searchDeck("ASH_235", pending.player, 5, "draw", { maxChoices: 1 });
+      break;
+    }
+    case "ASH_186": { // Treacherous Minefield — mine the chosen arena for the phase.
+      // The effect is arena-wide and hits both players, so it is stored once (not per unit) and
+      // read when an attack starts. `value` encodes the arena: 0 = Ground, 1 = Space.
+      const isSpace186 = optionId === "space";
+      game.currentEffects.push({
+        cardId: "ASH_186",
+        duration: "Phase",
+        affectedPlayer: pending.player,
+        value: isSpace186 ? 1 : 0,
+      });
+      log.push(`${CardTitle("ASH_186")}: the ${isSpace186 ? "space" : "ground"} arena is mined for this phase.`);
+      break;
+    }
+    case "ASH_257": // Choose Your Path — one of the two conditional modes.
+      if (optionId === "heal") {
+        HealBaseForPlayer(game, pending.player, 5, log, "ASH_257");
+      } else {
+        const token257 = CreateMandalorianToken(game, pending.player, log, "ASH_257");
+        GiveAdvantageTokens(game, token257, 1, log, "ASH_257");
+      }
+      break;
     case "SHD_197": // L3-37 — rescue the captured card the player picked.
       rescueCaptiveByPlayId(game, log, optionId, "SHD_197");
       break;
@@ -1241,6 +1275,15 @@ function defeatUnit(
     leader.deployed = false;
     leader.ready = false;
     leader.deployedPlayId = undefined;
+    // A leader unit goes to the leader zone rather than the discard, but it still LEFT PLAY —
+    // cards that ask "did a friendly unit leave play this phase" (ASH_211 Fateful Goodbye) must
+    // see it. Consumers that replay from the discard are unaffected: it never lands there.
+    game.roundState.cardsLeftPlayThisPhase.push({
+      fromPlayer: removed.player,
+      cardId: unit.cardId,
+      playId: unit.playId,
+      reason: "defeated",
+    });
     log.push(
       `${CardTitle(unit.cardId)} was defeated and returned to the leader zone.`,
     );
@@ -1342,6 +1385,12 @@ function defeatForExploit(game: GameState, log: string[], unit: Unit): void {
     leader.deployed = false;
     leader.ready = false;
     leader.deployedPlayId = undefined;
+    game.roundState.cardsLeftPlayThisPhase.push({
+      fromPlayer: removed.player,
+      cardId: unit.cardId,
+      playId: unit.playId,
+      reason: "defeated",
+    });
     log.push(`${CardTitle(unit.cardId)} was defeated via Exploit and returned to the leader zone.`);
     return;
   }
@@ -1430,6 +1479,12 @@ function boardWipeDefeat(
       leader.deployed = false;
       leader.ready = false;
       leader.deployedPlayId = undefined;
+      game.roundState.cardsLeftPlayThisPhase.push({
+        fromPlayer: removed.player,
+        cardId: unit.cardId,
+        playId: unit.playId,
+        reason: "defeated",
+      });
       log.push(`${CardTitle(unit.cardId)} was defeated and returned to the leader zone.`);
       continue; // leaders have no when-defeated effect and go to leader zone, not discard
     }
@@ -3774,6 +3829,20 @@ function handleChooseTarget(
       log.push(`${CardTitle("TWI_012")}: attacking a unit — +2/+0 for this attack.`);
     }
 
+    // Masterstroke (ASH_234) — "It gets +1/+0 for this attack for each unit the defending player
+    // controls in its arena." Counted here, where the defender (and so the defending player) is
+    // known; units entering that arena later in the attack do not raise it.
+    if (pending.source === "ASH_234" && attacker) {
+      const defendingPlayer234: PlayerId = target.type === "base"
+        ? target.player
+        : GetUnitByPlayId(game, target.playId)?.controller ?? GetOtherPlayer(attacker.controller);
+      const arena234 = CardArena(attacker.cardId) ?? "Ground";
+      const count234 = GetUnitsForPlayer(defendingPlayer234)
+        .filter(u => (CardArena(u.cardId) ?? "Ground") === arena234).length;
+      if (count234 > 0) GivePowerMod("ASH_234", attacker, count234, "ForAttack", log);
+      else log.push(`${CardTitle("ASH_234")}: no enemy units in that arena — no bonus.`);
+    }
+
     // Heroic Purrgil (ASH_207) — "While attacking using Ambush, this unit gets +2/+0." The buff is
     // scoped to the attack the Ambush trigger started, so it is applied here (where the ambush
     // attack's target is locked in) rather than as a constant ability.
@@ -3787,6 +3856,28 @@ function handleChooseTarget(
       if (def014) {
         GivePowerMod("LOF_014", def014, -2, "ForAttack", log);
         log.push(`${CardTitle("LOF_014")}: defender gets -2/-0 for this attack.`);
+      }
+    }
+
+    // Treacherous Minefield (ASH_186) — "each unit in that arena gains: 'On Attack: Deal 2 damage
+    // to this unit.'" A granted On Attack, so it hits the attacker itself and applies to BOTH
+    // players' units in the mined arena. Resolved before combat; if it kills the attacker, the
+    // attack ends here with no combat damage.
+    if (attacker) {
+      const minedArena = game.currentEffects.find(
+        e => e.cardId === "ASH_186" && e.value === ((CardArena(attacker!.cardId) ?? "Ground") === "Space" ? 1 : 0),
+      );
+      if (minedArena && !attacker.LostAbilities()) {
+        DealDamageToUnit(game, "ASH_186", attacker.playId, 2, log);
+        const stillAlive = GetUnitByPlayId(game, pending.attackerPlayId);
+        if (!stillAlive || Unit.FromInterface(stillAlive).CurrentHP() <= 0) {
+          const afterMine = sweepDeadUnits(game, log, pending.continuation ?? null);
+          updateDefeatedPlayers(game);
+          if (afterMine) return { response: resolutionResponse(pendingToResolution(afterMine, game)), pending: afterMine, stateChanged: true };
+          const bagMine = drainTriggerBag(game, log);
+          if (bagMine) return { response: resolutionResponse(pendingToResolution(bagMine, game)), pending: bagMine, stateChanged: true };
+          return { response: stateResponse(game), pending: null, stateChanged: true };
+        }
       }
     }
 
@@ -3833,6 +3924,7 @@ function handleChooseTarget(
 
     const nextPending = resolveAttack(game, log, pending, target);
     updateDefeatedPlayers(game);
+    refreshPostAttackTargets(game, nextPending);
 
     if (nextPending) {
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
@@ -4261,6 +4353,26 @@ function handleChooseTarget(
         enterReady: true,
         injectEffect: { cardId: "TWI_189", duration: "UntilStartOfRegroup", affectedPlayer: pending.player },
       });
+    }
+
+    // ASH_247 One Must Destroy to Create: "you may play that unit from your discard pile for free."
+    // An empty selection declines; the unit simply stays in the discard.
+    if (pending.cardId === "ASH_247") {
+      const playId247 = chosen[0];
+      if (!playId247) {
+        log.push(`${CardTitle("ASH_247")}: declined to replay the defeated unit.`);
+        const bag247 = drainTriggerBag(game, log);
+        if (bag247) return { response: resolutionResponse(pendingToResolution(bag247, game)), pending: bag247, stateChanged: true };
+        return { response: stateResponse(game), pending: null, stateChanged: true };
+      }
+      const pState247 = GetPlayer(game, pending.player);
+      const idx247 = pState247.discard.findIndex(d => d.playId === playId247);
+      if (idx247 === -1)
+        return { response: invalidResponse("One Must Destroy to Create: card not found in discard."), pending, stateChanged: false };
+      const cardId247 = pState247.discard[idx247].cardId;
+      pState247.discard.splice(idx247, 1);
+      log.push(`${CardTitle("ASH_247")}: played ${CardTitle(cardId247)} from discard for free.`);
+      return completePlayCard(game, log, cardId247, pending.player);
     }
 
     // SOR_183 Bounty Hunter Crew (Han Solo): return an event from either player's discard to its owner's hand.
@@ -5092,6 +5204,34 @@ function handleChooseTarget(
         const dmgPending2: AbilityTargetPending = { type: "ability-target", cardId: "SEC_182", player: pending.player, fromPlayIds: allUnits182b.map(u => u.playId), continuation: null };
         return { response: resolutionResponse(pendingToResolution(dmgPending2, game)), pending: dmgPending2, stateChanged: false };
       }
+      case "ASH_163": { // Reckless Sacrifice — discard the chosen unit, then deal 5 damage to a
+                        // unit costing MORE than it (strictly greater — equal cost is not legal).
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Reckless Sacrifice: chosen card is not a Unit."), pending, stateChanged: false };
+        hand.splice(idx, 1);
+        pushEventToDiscard(game, pending.player, cardId);
+        log.push(`${CardTitle("ASH_163")}: discarded ${CardTitle(cardId)}.`);
+        const discardedCost163 = CardCost(cardId) ?? 0;
+        const bigger163 = [
+          ...game.player1.groundArena, ...game.player1.spaceArena,
+          ...game.player2.groundArena, ...game.player2.spaceArena,
+        ].filter(u => (CardCost(u.cardId) ?? 0) > discardedCost163);
+        if (bigger163.length === 0) {
+          log.push(`${CardTitle("ASH_163")}: no unit costs more than ${CardTitle(cardId)} — no damage dealt.`);
+          const next163 = pending.continuation ?? null;
+          return next163
+            ? { response: resolutionResponse(pendingToResolution(next163, game)), pending: next163, stateChanged: true }
+            : { response: stateResponse(game), pending: null, stateChanged: true };
+        }
+        const damage163: AbilityTargetPending = {
+          type: "ability-target",
+          cardId: "ASH_163",
+          player: pending.player,
+          fromPlayIds: bigger163.map(u => u.playId),
+          continuation: pending.continuation ?? null,
+        };
+        return { response: resolutionResponse(pendingToResolution(damage163, game)), pending: damage163, stateChanged: true };
+      }
       case "ASH_132": { // Queen Soruna — revealed a unit; deal 3 damage to a unit with the same cost.
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("Queen Soruna: chosen card is not a Unit."), pending, stateChanged: false };
@@ -5418,6 +5558,27 @@ function handleChooseTarget(
         drawnTitles.push(CardTitle(choice.cardId) ?? choice.cardId);
       }
       log.push(`${CardTitle(pending.cardId)}: drew ${drawnTitles.join(", ")}.`);
+      // ASH_235 Sense Through the Force — "If its cost is the chosen number, you may give 3
+      // Advantage tokens to a Force unit." The number was stashed when it was picked.
+      if (pending.cardId === "ASH_235") {
+        const numIdx235 = game.currentEffects.findIndex(
+          e => e.cardId === "ASH_235_number" && e.affectedPlayer === pending.player,
+        );
+        const chosenNumber235 = numIdx235 !== -1 ? game.currentEffects[numIdx235].value ?? -1 : -1;
+        if (numIdx235 !== -1) game.currentEffects.splice(numIdx235, 1);
+        const drawnCard235 = eligibleMap.get(chosen[0])!;
+        if ((CardCost(drawnCard235.cardId) ?? 0) === chosenNumber235) {
+          const forceUnits235 = GetAllUnits(game).filter(
+            u => TraitContains(u.cardId, "Force", u.controller, u.playId),
+          );
+          if (forceUnits235.length > 0) {
+            const bonus235 = optionalTarget("ASH_235", pending.player, forceUnits235.map(u => u.playId),
+              "Give 3 Advantage tokens to a Force unit?", { yesLabel: "Give 3", continuation: pending.continuation ?? null });
+            return { response: resolutionResponse(pendingToResolution(bonus235, game)), pending: bonus235, stateChanged: true };
+          }
+          log.push(`${CardTitle("ASH_235")}: cost matched, but no Force unit is in play.`);
+        }
+      }
       const contDraw = pending.continuation ?? null;
       if (contDraw) return { response: resolutionResponse(pendingToResolution(contDraw, game)), pending: contDraw, stateChanged: false };
       const bagDraw = drainTriggerBag(game, log);
@@ -6866,6 +7027,22 @@ function handleChooseOption(
  * next pending resolution (e.g. when-defeated triggers, RA continuation).
  * Used as the auto-resolve step after on-attack triggers finish.
  */
+/**
+ * ASH_184 Follow Me — "After completing the attack, give 3 Advantage tokens to a unit." The
+ * recipient is chosen once combat is over, so its eligible list can only be built here; anything
+ * that died in the attack must not be offered.
+ */
+function refreshPostAttackTargets(game: GameState, next: PendingResolution | null): void {
+  // Combat deaths can push defeat prompts in front of the token step, so walk the whole
+  // continuation chain rather than only looking at the pending that surfaced first.
+  for (let node = next; node; node = ("continuation" in node ? node.continuation : null) ?? null) {
+    if (node.type === "ability-target" && node.cardId === "ASH_184_tokens") {
+      node.fromPlayIds = GetAllUnits(game).map(u => u.playId);
+      return;
+    }
+  }
+}
+
 function handleResolveAttack(
   game: GameState,
   log: string[],
@@ -6880,6 +7057,7 @@ function handleResolveAttack(
   };
   const nextPending = resolveAttack(game, log, attackPending, pending.target);
   updateDefeatedPlayers(game);
+  refreshPostAttackTargets(game, nextPending);
   if (nextPending) {
     return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
   }
@@ -8736,6 +8914,187 @@ function applyAbilityEffect(
       if (nowDead176 && pending.sourcePlayId) {
         const self176 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
         if (self176) GiveAdvantageTokens(game.currentGameState, self176, 3, game.gameLog, "ASH_176");
+      }
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "ASH_184": { // Follow Me — the chosen unit attacks; afterwards, 3 Advantage tokens to a unit.
+      if (!targetPlayId) break;
+      // The token target is picked AFTER combat, so it can't be a fixed list built now — the
+      // handler for ASH_184_tokens rebuilds it from whoever is still in play.
+      const tokenStep184: AbilityTargetPending = {
+        type: "ability-target",
+        cardId: "ASH_184_tokens",
+        player: pending.player,
+        fromPlayIds: [],
+        continuation: pending.continuation ?? null,
+      };
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "ASH_184",
+        continuation: tokenStep184,
+      };
+    }
+    case "ASH_235": { // Sense Through the Force — give 3 Advantage tokens to the chosen Force unit.
+      if (!targetPlayId) break;
+      const target235 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target235) GiveAdvantageTokens(game.currentGameState, target235, 3, game.gameLog, "ASH_235");
+      break;
+    }
+    case "ASH_184_tokens": { // Follow Me — give 3 Advantage tokens to the chosen unit.
+      if (!targetPlayId) break;
+      const target184 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target184) GiveAdvantageTokens(game.currentGameState, target184, 3, game.gameLog, "ASH_184");
+      break;
+    }
+    case "ASH_234": { // Masterstroke — the chosen unit attacks with +1/+0 per enemy unit in its arena.
+      if (!targetPlayId) break;
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "ASH_234",
+        continuation: pending.continuation ?? null,
+      };
+    }
+    case "ASH_247": { // One Must Destroy to Create — defeat the chosen friendly non-leader unit,
+                      // then offer to replay it from the discard pile for free. The defeat's own
+                      // When Defeated triggers resolve first (the replay rides as their continuation).
+      if (!targetPlayId || !pending.player) break;
+      const unit247 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit247 || CardIsLeader(unit247.cardId)) break;
+      const isToken247 = Unit.FromInterface(unit247).IsTokenUnit();
+      const defeatPend247 = defeatUnit(game.currentGameState, game.gameLog, unit247);
+      game.gameLog.push(`${CardTitle("ASH_247")}: defeated ${CardTitle(unit247.cardId)}.`);
+      // Token units don't go to a discard pile, so there is nothing to replay.
+      const inDiscard247 = !isToken247 && GetPlayer(game.currentGameState, pending.player)
+        .discard.some(d => d.playId === targetPlayId);
+      const replay247: PendingResolution | null = inDiscard247 ? {
+        type: "return-from-discard",
+        cardId: "ASH_247",
+        player: pending.player,
+        maxCount: 1,
+        eligiblePlayIds: [targetPlayId],
+        continuation: pending.continuation ?? null,
+      } : null;
+      const after247 = replay247 ?? pending.continuation ?? null;
+      if (defeatPend247) return injectContinuation(defeatPend247, after247);
+      return after247;
+    }
+    case "ASH_232_upgrade": { // Full of Surprises — return the chosen cheap upgrade to its owner's hand.
+      if (!targetPlayId) break;
+      const gs232 = game.currentGameState;
+      const host232 = GetAllUnits(gs232).find(u => u.upgrades.some(upg => upg.playId === targetPlayId));
+      const upg232 = host232?.upgrades.find(u => u.playId === targetPlayId);
+      if (host232 && upg232) {
+        host232.upgrades = host232.upgrades.filter(u => u.playId !== targetPlayId);
+        GetPlayer(gs232, upg232.owner).hand.push({ cardId: upg232.cardId });
+        game.gameLog.push(`${CardTitle("ASH_232")}: returned ${CardTitle(upg232.cardId)} to its owner's hand.`);
+      }
+      // Losing an upgrade can drop a unit's HP below its damage.
+      return sweepDeadUnits(gs232, game.gameLog, pending.continuation ?? null);
+    }
+    case "ASH_232_shield": { // Full of Surprises — give a Shield token to the chosen unit.
+      if (!targetPlayId) break;
+      const target232s = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target232s) {
+        target232s.upgrades.push({
+          cardId: "SOR_T02",
+          playId: nextPlayId(game.currentGameState),
+          owner: target232s.owner,
+          controller: target232s.controller,
+        });
+        game.gameLog.push(`${CardTitle("ASH_232")}: Shield token given to ${CardTitle(target232s.cardId)}.`);
+      }
+      break;
+    }
+    case "ASH_200": { // Rehabilitation — –3/–0 this phase, then take control until start of regroup.
+      if (!targetPlayId || !pending.player) break;
+      const unit200 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit200 || CardIsLeader(unit200.cardId)) break;
+      const originalOwner200 = unit200.owner;
+      // Take control first: GivePowerMod files the effect under the unit's CURRENT controller,
+      // so applying it before the transfer would leave the debuff invisible to the new one.
+      transferControl(game.currentGameState, game.gameLog, unit200, pending.player);
+      GivePowerMod("ASH_200", unit200, -3, "Phase", game.gameLog);
+      game.currentGameState.currentEffects.push({
+        cardId: "SOR_224", // same revert path as Change of Heart — handled in regroup.ts
+        duration: "UntilStartOfRegroup",
+        affectedPlayer: originalOwner200,
+        targetPlayId: unit200.playId,
+      });
+      break;
+    }
+    case "ASH_231_friendly": { // Diplomatic Pageantry — friendly unit chosen; now pick the enemy one.
+      if (!targetPlayId) break;
+      const enemy231 = GetUnitsForPlayer(pending.player === 1 ? 2 : 1);
+      if (enemy231.length === 0) break; // the opponent's last unit left between the two choices
+      const enemyStep231: AbilityTargetPending = {
+        type: "ability-target",
+        cardId: "ASH_231_enemy",
+        player: pending.player,
+        sourcePlayId: targetPlayId, // remember the friendly unit — it receives the tokens
+        fromPlayIds: enemy231.map(u => u.playId),
+        continuation: pending.continuation ?? null,
+      };
+      return enemyStep231;
+    }
+    case "ASH_231_enemy": { // Diplomatic Pageantry — exhaust both, then 2 Advantage to the friendly one.
+      if (!targetPlayId) break;
+      const enemyUnit231 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      const friendlyUnit231 = pending.sourcePlayId
+        ? GetUnitByPlayId(game.currentGameState, pending.sourcePlayId) : null;
+      if (!enemyUnit231 || !friendlyUnit231) break; // "If you do" — both must still be there
+      enemyUnit231.ready = false;
+      friendlyUnit231.ready = false;
+      game.gameLog.push(`${CardTitle("ASH_231")}: exhausted ${CardTitle(friendlyUnit231.cardId)} and ${CardTitle(enemyUnit231.cardId)}.`);
+      GiveAdvantageTokens(game.currentGameState, friendlyUnit231, 2, game.gameLog, "ASH_231");
+      break;
+    }
+    case "ASH_236_friendly": { // Far Far Away — bounce the friendly unit, then pick an enemy one.
+      if (!targetPlayId) break;
+      const gs236 = game.currentGameState;
+      const bounced236 = removeFromArena(gs236, targetPlayId);
+      if (!bounced236) break;
+      if (!bounced236.unit.IsTokenUnit()) {
+        GetPlayer(gs236, bounced236.unit.owner).hand.push({ cardId: bounced236.unit.cardId });
+      }
+      game.gameLog.push(`${CardTitle("ASH_236")}: returned ${CardTitle(bounced236.unit.cardId)} to its owner's hand.`);
+      // "If you do" — the enemy half only happens because the friendly bounce succeeded.
+      const enemy236 = GetUnitsForPlayer(pending.player === 1 ? 2 : 1).filter(u => !CardIsLeader(u.cardId));
+      if (enemy236.length === 0) break;
+      const enemyStep236: AbilityTargetPending = {
+        type: "ability-target",
+        cardId: "ASH_236_enemy",
+        player: pending.player,
+        fromPlayIds: enemy236.map(u => u.playId),
+        continuation: pending.continuation ?? null,
+      };
+      return enemyStep236;
+    }
+    case "ASH_236_enemy": { // Far Far Away — bounce the chosen enemy non-leader unit.
+      if (!targetPlayId) break;
+      const gs236e = game.currentGameState;
+      const bounced236e = removeFromArena(gs236e, targetPlayId);
+      if (bounced236e) {
+        if (!bounced236e.unit.IsTokenUnit()) {
+          GetPlayer(gs236e, bounced236e.unit.owner).hand.push({ cardId: bounced236e.unit.cardId });
+        }
+        game.gameLog.push(`${CardTitle("ASH_236")}: returned ${CardTitle(bounced236e.unit.cardId)} to its owner's hand.`);
+      }
+      break;
+    }
+    case "ASH_163": { // Reckless Sacrifice — deal 5 damage to the chosen (costlier) unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "ASH_163", targetPlayId, 5, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "ASH_187": { // Reckoning — deal the total damage on the caster's units to the chosen unit.
+      if (!targetPlayId) break;
+      const total187 = GetUnitsForPlayer(pending.player!).reduce((sum, u) => sum + u.damage, 0);
+      if (total187 > 0) {
+        DealDamageToUnit(game.currentGameState, "ASH_187", targetPlayId, total187, game.gameLog);
+      } else {
+        game.gameLog.push(`${CardTitle("ASH_187")}: no damage on your units — dealt 0 damage.`);
       }
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }

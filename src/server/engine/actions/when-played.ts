@@ -1,9 +1,9 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyAbilities, DealDamageToUnit } from "@/server/engine/core-functions";
+import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyAbilities, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
 import { aspectPenalty, spendableFor } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
+import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits, CardIsUnique } from "@/server/engine/card-db/generated";
@@ -110,6 +110,139 @@ export function resolveWhenPlayed(
         },
         continuation: null,
       };
+    }
+    case "ASH_235": { // Sense Through the Force (Event) — "Choose a number, then search the top 5
+                      // cards of your deck for a card, reveal it, and draw it. If its cost is the
+                      // chosen number, you may give 3 Advantage tokens to a Force unit."
+                      // The number is picked first, as an Option prompt over the printable costs.
+      return {
+        type: "choose-one",
+        cardId: "ASH_235",
+        player,
+        options: Array.from({ length: 9 }, (_, n) => ({ id: String(n), label: String(n) })),
+        continuation: null,
+      } satisfies ChooseOnePending;
+    }
+    case "ASH_186": { // Treacherous Minefield (Event) — "Choose an arena. For this phase, each unit
+                      // in that arena gains: 'On Attack: Deal 2 damage to this unit.'"
+                      // The chosen arena rides on the effect's `value` (0 = Ground, 1 = Space).
+      return {
+        type: "choose-one",
+        cardId: "ASH_186",
+        player,
+        options: [
+          { id: "ground", label: "Ground arena" },
+          { id: "space", label: "Space arena" },
+        ],
+        continuation: null,
+      } satisfies ChooseOnePending;
+    }
+    case "ASH_184": { // Follow Me (Event) — "Attack with a unit. After completing the attack, give
+                      // 3 Advantage tokens to a unit."
+      const attackers184 = GetUnitsForPlayer(player, true).filter(u => CanUnitAttack(u));
+      if (attackers184.length === 0) return null;
+      return mandatoryTarget("ASH_184", player, attackers184.map(u => u.playId));
+    }
+    case "ASH_234": { // Masterstroke (Event) — "Attack with a unit. It gets +1/+0 for this attack
+                      // for each unit the defending player controls in its arena."
+      const attackers234 = GetUnitsForPlayer(player, true).filter(u => CanUnitAttack(u));
+      if (attackers234.length === 0) return null;
+      return mandatoryTarget("ASH_234", player, attackers234.map(u => u.playId));
+    }
+    case "ASH_257": { // Choose Your Path (Event) — "Choose one: If you control a Force unit, heal 5
+                      // damage from your base. / If you control a Mandalorian unit, create a
+                      // Mandalorian token and give an Advantage token to it."
+                      // Each mode is offered only while its condition holds.
+      const options257: { id: string; label: string }[] = [];
+      if (PlayerHasUnitWithTraitInPlay(player, "Force")) {
+        options257.push({ id: "heal", label: "Heal 5 damage from your base" });
+      }
+      if (PlayerHasUnitWithTraitInPlay(player, "Mandalorian")) {
+        options257.push({ id: "mandalorian", label: "Create a Mandalorian token with an Advantage token" });
+      }
+      if (options257.length === 0) return null;
+      return {
+        type: "choose-one",
+        cardId: "ASH_257",
+        player,
+        options: options257,
+        continuation: null,
+      } satisfies ChooseOnePending;
+    }
+    case "ASH_247": { // One Must Destroy to Create (Event) — "Defeat a friendly non-leader unit.
+                      // Then, you may play that unit from your discard pile for free."
+      const friendly247 = GetUnitsForPlayer(player).filter(u => !CardIsLeader(u.cardId));
+      if (friendly247.length === 0) return null;
+      return mandatoryTarget("ASH_247", player, friendly247.map(u => u.playId));
+    }
+    case "ASH_211": { // Fateful Goodbye (Event) — "If a friendly unit left play this phase,
+                      // distribute 3 Advantage tokens among friendly units. If a friendly leader
+                      // unit left play this phase, distribute 5 Advantage tokens instead."
+      const gs211 = game.currentGameState;
+      const left211 = gs211.roundState.cardsLeftPlayThisPhase.filter(c => c.fromPlayer === player);
+      if (left211.length === 0) return null;
+      const total211 = left211.some(c => CardIsLeader(c.cardId)) ? 5 : 3;
+      const friendly211 = GetUnitsForPlayer(player);
+      if (friendly211.length === 0) return null; // nothing left to receive the tokens
+      return {
+        type: "spread-tokens",
+        cardId: "ASH_211",
+        player,
+        totalTokens: total211,
+        optional: false,
+        eligiblePlayIds: friendly211.map(u => u.playId),
+        continuation: null,
+      } satisfies SpreadTokensPending;
+    }
+    case "ASH_232": { // Full of Surprises (Event) — "Return an upgrade that costs 2 or less to its
+                      // owner's hand." + "Give a Shield token to a unit." Two independent mandatory
+                      // clauses: each is skipped only when it has no legal target.
+      const cheapUpgrades232 = AllUnits().flatMap(u =>
+        u.upgrades
+          .filter(upg => !IsTokenUpgrade(upg.cardId) && (CardCost(upg.cardId) ?? 0) <= 2)
+          .map(upg => upg.playId),
+      );
+      const units232 = AllUnits();
+      const shieldStep232 = units232.length > 0
+        ? mandatoryTarget("ASH_232_shield", player, units232.map(u => u.playId))
+        : null;
+      if (cheapUpgrades232.length === 0) return shieldStep232;
+      return mandatoryTarget("ASH_232_upgrade", player, cheapUpgrades232, shieldStep232);
+    }
+    case "ASH_200": { // Rehabilitation (Event) — "Choose a non-leader unit. Give that unit –3/–0 for
+                      // this phase, then take control of it. At the start of the regroup phase, its
+                      // owner takes control of it."
+      const nonLeaders200 = AllUnits().filter(u => !CardIsLeader(u.cardId));
+      if (nonLeaders200.length === 0) return null;
+      return mandatoryTarget("ASH_200", player, nonLeaders200.map(u => u.playId));
+    }
+    case "ASH_231": { // Diplomatic Pageantry (Event) — "Exhaust a friendly unit and an enemy unit.
+                      // If you do, give 2 Advantage tokens to that friendly unit." Both halves are
+                      // required, so the whole event fizzles unless each side has a unit.
+      const friendly231 = GetUnitsForPlayer(player);
+      const enemy231 = GetUnitsForPlayer(player === 1 ? 2 : 1);
+      if (friendly231.length === 0 || enemy231.length === 0) return null;
+      return mandatoryTarget("ASH_231_friendly", player, friendly231.map(u => u.playId));
+    }
+    case "ASH_236": { // Far Far Away (Event) — "Return a friendly non-leader unit to its owner's
+                      // hand. If you do, return an enemy non-leader unit to its owner's hand."
+      const friendly236 = GetUnitsForPlayer(player).filter(u => !CardIsLeader(u.cardId));
+      if (friendly236.length === 0) return null;
+      return mandatoryTarget("ASH_236_friendly", player, friendly236.map(u => u.playId));
+    }
+    case "ASH_163": { // Reckless Sacrifice (Event) — "Discard a unit from your hand. Deal 5 damage
+                      // to a unit that costs more than the discarded card." The legal targets
+                      // depend on which unit was discarded, so they are computed in the handler.
+      const hand163 = GetPlayer(game.currentGameState, player).hand;
+      if (!hand163.some(c => CardType(c.cardId) === "Unit")) return null;
+      return { type: "play-from-hand", cardId: "ASH_163", player };
+    }
+    case "ASH_187": { // Reckoning (Event) — "Deal damage to a unit equal to the total amount of
+                      // damage on all units you control." The amount is read when the target
+                      // resolves, so a unit dying in between cannot inflate it.
+      const allUnits187 = AllUnits();
+      if (allUnits187.length === 0) return null;
+      return mandatoryTarget("ASH_187", player, allUnits187.map(u => u.playId));
     }
     case "ASH_146": { // Justifier — When Played/On Attack: may deal 1 damage to a unit; if
                       // defeated this way, give an Advantage token to a unit.
