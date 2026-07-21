@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, BaseHealingPrevented, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
+import { AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -318,6 +318,13 @@ function resolveOwnWhenDefeated(
       const captors193 = friendly193.filter(u => CaptureVictimsExistFor(u));
       if (captors193.length === 0) return null;
       return mandatoryTarget("SEC_193_wd", player, captors193.map(u => u.playId));
+    }
+    case "LAW_097": { // Imperial Door Technician — "When Defeated: Heal 2 damage from your base."
+      // "your" = the controller of the unit as it was defeated, which is what `player` holds.
+      // HealBaseForPlayer clamps to the damage present and honours TWI_132's healing lock.
+      const game097 = GetGame();
+      if (game097) HealBaseForPlayer(game097.currentGameState, player, 2, game097.gameLog, "LAW_097");
+      return null;
     }
     case "ASH_216": { // Mandalorian Scout — "When Defeated: Exhaust a ready friendly resource."
       // Resources are interchangeable, so there is nothing to choose — exhaust the first ready one.
