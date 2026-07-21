@@ -7187,6 +7187,43 @@ function resolveActionAbility(
       }
       return { type: "play-from-hand", cardId: "JTL_005", player } satisfies PlayFromHandPending;
     }
+    case "IBH_016": // Ion Cannon — Action [Exhaust]: Deal 3 damage to a space unit.
+    case "IBH_027": {
+      const spaceUnits016 = AllSpaceUnits();
+      if (spaceUnits016.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: spaceUnits016.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "IBH_023": // General Rieekan — Action [Exhaust]: Attack with another Heroism unit. It gets +2/+0.
+    case "IBH_036": {
+      const heroism023 = GetUnitsForPlayer(player, true)
+        .filter(u => u.playId !== playId && (CardAspects(u.cardId)?.includes("Heroism") ?? false));
+      if (heroism023.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: heroism023.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "IBH_062": // Imperial Deck Officer — Action [Exhaust]: Heal 2 damage from a Villainy unit.
+    case "IBH_100": {
+      const villainy062 = GetAllUnits(game).filter(u => CardAspects(u.cardId)?.includes("Villainy") ?? false);
+      if (villainy062.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: villainy062.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "JTL_014": { // Admiral Trench — Action [Exhaust]: Discard a card that costs 3 or more from
                       // your hand. If you do, draw a card.
       if (!GetPlayer(game, player).hand.some(c => (CardCost(c.cardId) ?? 0) >= 3)) {
@@ -8600,6 +8637,19 @@ function applyAbilityEffect(
       if (target056) GivePowerMod("ASH_056", target056, -4, "Phase", game.gameLog);
       break;
     }
+    case "IBH_006": // Rebellion Y-Wing On Attack: deal 1 damage to the chosen base ("a base" — either one).
+    case "IBH_024":
+    case "IBH_032": {
+      const owner006 = pending.player!;
+      let basePlayer006: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer006 = 1;
+      else if (targetPlayId === "player2.base") basePlayer006 = 2;
+      else if (targetIsBase) basePlayer006 = targetBasePlayer ?? (owner006 === 1 ? 2 : 1);
+      if (basePlayer006 === null) break;
+      dealBaseDamage(game.currentGameState, basePlayer006, 1, owner006);
+      game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 1 damage to player ${basePlayer006}'s base.`);
+      break;
+    }
     case "ASH_253": { // Yellow Aces Bomber On Attack: deal 2 damage to the chosen base ("a base" — either one).
       const owner253 = pending.player!;
       let basePlayer253: PlayerId | null = null;
@@ -8805,6 +8855,19 @@ function applyAbilityEffect(
         attackerPlayId: targetPlayId,
         source: "SOR_103",
         continuation: continuationSOR103,
+      };
+    }
+    case "IBH_064": // Hoth Lieutenant When Played: the chosen other unit attacks with +2/+0 for this attack.
+    case "IBH_092": {
+      if (!targetPlayId) break;
+      const unit064 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit064) break;
+      GivePowerMod(pending.cardId, unit064, 2, "ForAttack", game.gameLog);
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: pending.cardId,
+        continuation: pending.continuation ?? null,
       };
     }
     case "JTL_231": { // Punch It: give the chosen Vehicle +2/+0 for this attack, then attack with it.
@@ -9076,6 +9139,17 @@ function applyAbilityEffect(
       // The heal is unconditional — it is a second sentence, not an "if you do".
       HealBaseForPlayer(game.currentGameState, pending.player!, 3, game.gameLog, pending.cardId);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "IBH_099": { // Blizzard One When Played: defeat the chosen non-leader ground unit (≤3 remaining HP).
+      if (!targetPlayId) break;
+      const target099 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target099) break;
+      if (CardIsLeader(target099.cardId)) break;
+      if (Unit.FromInterface(target099).CurrentHP() > 3) break;
+      const defeatPend099 = defeatUnit(game.currentGameState, game.gameLog, target099);
+      game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target099.cardId)}.`);
+      if (defeatPend099) return injectContinuation(defeatPend099, pending.continuation);
+      return pending.continuation;
     }
     case "SOR_078": // Vanquish — defeat a non-leader unit.
     case "TWI_077": { // reprint of SOR_078
@@ -9495,6 +9569,31 @@ function applyAbilityEffect(
       if (!targetPlayId) return pending.continuation;
       healTarget(game.currentGameState, targetPlayId, 2, game.gameLog, "JTL_004");
       return pending.continuation;
+    }
+    case "IBH_062": // Imperial Deck Officer — heal 2 from the chosen Villainy unit.
+    case "IBH_100": {
+      if (!targetPlayId) return pending.continuation;
+      healTarget(game.currentGameState, targetPlayId, 2, game.gameLog, pending.cardId);
+      return pending.continuation;
+    }
+    case "IBH_016": // Ion Cannon — deal 3 damage to the chosen space unit.
+    case "IBH_027": {
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "IBH_023": // General Rieekan — the chosen other Heroism unit attacks with +2/+0 for this attack.
+    case "IBH_036": {
+      if (!targetPlayId) break;
+      const unit023 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit023) break;
+      GivePowerMod(pending.cardId, unit023, 2, "ForAttack", game.gameLog);
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: pending.cardId,
+        continuation: pending.continuation ?? null,
+      };
     }
     case "LOF_009_a": { // Darth Maul — deal 1 to the first chosen unit, then target a different unit.
       if (!targetPlayId) return pending.continuation;

@@ -117,6 +117,12 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string> = {
   "LOF_206": "Attack with a Droid",
   "ASH_109": "+2/+2 to a unit",
   "ASH_142": "1 dmg to up to 3 ground units",
+  "IBH_016": "3 dmg to a space unit", // Ion Cannon
+  "IBH_027": "3 dmg to a space unit",
+  "IBH_023": "Attack w/ another Heroism unit (+2/+0)", // General Rieekan
+  "IBH_036": "Attack w/ another Heroism unit (+2/+0)",
+  "IBH_062": "Heal 2 from a Villainy unit", // Imperial Deck Officer
+  "IBH_100": "Heal 2 from a Villainy unit",
 };
 
 const BASES_WITH_EPIC_ACTION = new Set([

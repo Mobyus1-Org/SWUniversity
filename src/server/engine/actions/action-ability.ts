@@ -1,7 +1,8 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { AllGroundUnits, AllUnits, AttackedThisPhasePlayIds, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
-import { CardTraits, CardCost, CardType } from "@/server/engine/card-db/generated";
+import { CardTraits, CardCost, CardType, CardAspects } from "@/server/engine/card-db/generated";
+import { AllSpaceUnits } from "@/server/engine/core-functions";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
 import { PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 
@@ -246,6 +247,22 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       }
       case "ASH_142": // Mortar Trooper — Action [Exhaust]: Deal 1 damage to each of up to 3 ground units.
         if (AllGroundUnits().length > 0) abilities.push(cardId);
+        break;
+      case "IBH_016": // Ion Cannon — Action [Exhaust]: Deal 3 damage to a space unit.
+      case "IBH_027":
+        if (AllSpaceUnits().length > 0) abilities.push(cardId);
+        break;
+      case "IBH_023": // General Rieekan — Action [Exhaust]: Attack with another Heroism unit (+2/+0).
+      case "IBH_036":
+        if (GetUnitsForPlayer(player, true).some(u => u.playId !== playId && (CardAspects(u.cardId)?.includes("Heroism") ?? false))) {
+          abilities.push(cardId);
+        }
+        break;
+      case "IBH_062": // Imperial Deck Officer — Action [Exhaust]: Heal 2 damage from a Villainy unit.
+      case "IBH_100":
+        if (AllUnits().some(u => CardAspects(u.cardId)?.includes("Villainy") ?? false)) {
+          abilities.push(cardId);
+        }
         break;
       default: break;
     }

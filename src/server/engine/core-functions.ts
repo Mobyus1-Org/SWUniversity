@@ -1052,6 +1052,13 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_149": //Eviscerator — On Attack: give 2 Advantage tokens to each other friendly unit
     case "ASH_157": //Danger Squadron Wingmen — On Attack: may give an Advantage token to another unit
     case "ASH_172": //Razor Crest — On Attack: may discard a card from hand for +2/+0 this attack
+    case "IBH_006": //Rebellion Y-Wing — On Attack: deal 1 damage to a base
+    case "IBH_024":
+    case "IBH_032":
+    case "IBH_010": //Han Solo — On Attack: the defender gets -2/-0 for this attack
+    case "IBH_042":
+    case "IBH_060": //Admiral Piett — On Attack: if you control an Aggression unit, draw a card
+    case "IBH_065":
       return true;
     default: break;
   }

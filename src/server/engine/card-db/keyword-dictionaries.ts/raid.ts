@@ -150,10 +150,16 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "LOF_157": amount += 2; break; //Cartel Interceptor
     case "LOF_132": amount += 1; break; //Grand Inquisitor LOF
     case "LOF_209": amount += 2; break; //Tusken Tracker
-    case "IBH_004": amount += 2; break; //Rogue Squadron Speeder
-    case "IBH_069": amount += 3; break; //E-Web Gunner
-    case "IBH_078": amount += 1; break; //Surface Assault Bomber
-    case "IBH_010": amount += 2; break; //Han Solo
+    case "IBH_004": //Rogue Squadron Speeder — Raid 1
+    case "IBH_017":
+    case "IBH_034": amount += 1; break;
+    case "IBH_069": //E-Web Gunner — Raid 4
+    case "IBH_083": amount += 4; break;
+    case "IBH_078": //Surface Assault Bomber — Raid 1
+    case "IBH_093":
+    case "IBH_094": amount += 1; break;
+    case "IBH_010": //Han Solo — Raid 2
+    case "IBH_042": amount += 2; break;
     case "SEC_T01": amount += 2; break; //Spy token
     case "SEC_213": amount += 1; break; //A-Wing
     case "LAW_050": amount += 2; break; //Honnah

@@ -554,6 +554,34 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "IBH_064": // Hoth Lieutenant — "When Played: You may attack with another unit. It gets +2/+0
+    case "IBH_092": { // for this attack." Optional; the +2/+0 and the attack are applied in applyAbilityEffect.
+      const readyOthers064 = GetUnitsForPlayer(player).filter(u => u.ready && u.playId !== playId);
+      if (readyOthers064.length === 0) return null;
+      return optionalTarget(cardId, player, readyOthers064.map(u => u.playId),
+        "Attack with another unit? It gets +2/+0 for this attack.", { yesLabel: "Attack" });
+    }
+    case "IBH_068": // General Veers — "When Played: If you control a Vigilance unit, deal 2 damage to an
+    case "IBH_088": { // enemy base and heal 2 damage from your base." Mandatory + conditional, no target.
+      const game068 = GetGame();
+      if (!game068) return null;
+      if (!PlayerHasUnitWithAspectInPlay(player, "Vigilance")) return null; // soft pass — no Vigilance unit
+      const opponent068 = player === 1 ? 2 : 1;
+      DealDamageToBase(game068.currentGameState, opponent068, 2, player);
+      game068.gameLog.push(`${CardTitle(cardId)}: dealt 2 damage to player ${opponent068}'s base.`);
+      HealBaseForPlayer(game068.currentGameState, player, 2, game068.gameLog, cardId);
+      return null;
+    }
+    case "IBH_099": { // Blizzard One — "When Played: You may defeat a non-leader ground unit with 3 or
+                      // less remaining HP."
+      const targets099 = AllGroundUnits().filter(u => {
+        const unit = Unit.FromInterface(u);
+        return !unit.IsLeader() && unit.CurrentHP() <= 3;
+      });
+      if (targets099.length === 0) return null;
+      return optionalTarget("IBH_099", player, targets099.map(u => u.playId),
+        "Defeat a non-leader ground unit with 3 or less remaining HP?", { yesLabel: "Defeat" });
+    }
     case "SEC_034": { // Cad Bane — "When Played: You may defeat a unit with 2 or less remaining HP."
       const eligible034 = AllUnits().filter(u => Unit.FromInterface(u).CurrentHP() <= 2);
       if (eligible034.length === 0) return null;

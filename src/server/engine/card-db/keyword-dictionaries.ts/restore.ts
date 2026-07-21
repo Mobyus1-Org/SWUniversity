@@ -136,7 +136,9 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "LOF_247": amount += 1; break;//Gungan Warrior
     case "LOF_253": amount += 1; break;//Longbeam Cruiser
     case "IBH_020": amount += 2; break;//Luke Skywalker
-    case "IBH_058": amount += 1; break;//Lambda Shuttle
+    case "IBH_058": //Lambda Shuttle
+    case "IBH_084":
+    case "IBH_090": amount += 1; break;
     case "SEC_005": amount += 4; break;//Satine Kryze
     case "SEC_043": amount += 2; break;//Chandrilan Sponsor
     case "SEC_094": amount += 1; break;//Mina Bonteri

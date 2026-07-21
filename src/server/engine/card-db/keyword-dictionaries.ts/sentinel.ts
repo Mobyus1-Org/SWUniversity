@@ -200,9 +200,14 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "LOF_067"://Chirrut Imwe
     case "LOF_069"://Graceful Purrgil
     case "IBH_003"://Chewbacca
+    case "IBH_046"://Chewbacca (alt printing)
     case "IBH_014"://Bright Hope
+    case "IBH_026"://Bright Hope (alt printing)
     case "IBH_070"://Blizzard Force AT-ST
+    case "IBH_089"://Blizzard Force AT-ST (alt printing)
+    case "IBH_103"://Blizzard Force AT-ST (alt printing)
     case "IBH_079"://Death Squadron Star Destroyer
+    case "IBH_098"://Death Squadron Star Destroyer (alt printing)
     case "SEC_036"://Dogmatic Shock Squad
     case "SEC_049"://Jade Squadron Patrol
     case "SEC_057"://Lobot

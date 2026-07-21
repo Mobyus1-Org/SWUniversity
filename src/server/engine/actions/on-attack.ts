@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType } from "@/server/engine/card-db/generated";
@@ -278,6 +278,38 @@ function resolveInnateOnAttack(
       if (exhausted189) {
         exhausted189.ready = true;
         game189.gameLog.push(`${CardTitle("ASH_189")}: readied a resource.`);
+      }
+      return continuation;
+    }
+    case "IBH_006": // Rebellion Y-Wing — On Attack: Deal 1 damage to a base. (Mandatory, either base.)
+    case "IBH_024":
+    case "IBH_032":
+      return {
+        type: "ability-target",
+        cardId: sourceCardId,
+        player: attacker.controller,
+        fromPlayIds: [],
+        fromZones: ["Base"],
+        continuation,
+      };
+    case "IBH_010": // Han Solo — On Attack: The defender gets -2/-0 for this attack. (Same as LOF_014.)
+    case "IBH_042": {
+      if (continuation.target.type === "unit") {
+        const game010 = GetGame();
+        const def010 = AllUnits().find(u => u.playId === (continuation.target as { playId: string }).playId);
+        if (game010 && def010) {
+          GivePowerMod(sourceCardId, def010, -2, "ForAttack", game010.gameLog);
+          game010.gameLog.push(`${CardTitle(sourceCardId)}: defender gets -2/-0 for this attack.`);
+        }
+      }
+      return continuation;
+    }
+    case "IBH_060": // Admiral Piett — On Attack: If you control an Aggression unit, draw a card. (Mandatory.)
+    case "IBH_065": {
+      const game060 = GetGame();
+      if (game060 && PlayerHasUnitWithAspectInPlay(attacker.controller, "Aggression")) {
+        DrawCardForPlayer(game060.currentGameState, game060.gameLog, attacker.controller);
+        game060.gameLog.push(`${CardTitle(sourceCardId)}: drew a card.`);
       }
       return continuation;
     }

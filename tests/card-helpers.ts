@@ -547,6 +547,26 @@ export const Cards = {
     ts26: {
       deployedDroideka: "TS26_077",
     },
+    ibh: {
+      // Each card has multiple identical printings within IBH; suffix letters are alternate printings.
+      chewbacca: "IBH_003", chewbaccaB: "IBH_046",
+      rogueSquadronSpeeder: "IBH_004", rogueSquadronSpeederB: "IBH_017", rogueSquadronSpeederC: "IBH_034",
+      rebellionYWing: "IBH_006", rebellionYWingB: "IBH_024", rebellionYWingC: "IBH_032",
+      brightHope: "IBH_014", brightHopeB: "IBH_026",
+      ionCannon: "IBH_016", ionCannonB: "IBH_027",
+      generalRieekan: "IBH_023", generalRieekanB: "IBH_036",
+      hanSolo: "IBH_010", hanSoloB: "IBH_042",
+      admiralPiett: "IBH_060", admiralPiettB: "IBH_065",
+      hothLieutenant: "IBH_064", hothLieutenantB: "IBH_092",
+      imperialDeckOfficer: "IBH_062", imperialDeckOfficerB: "IBH_100",
+      ewebGunner: "IBH_069", ewebGunnerB: "IBH_083",
+      blizzardForceAtst: "IBH_070", blizzardForceAtstB: "IBH_089", blizzardForceAtstC: "IBH_103",
+      deathSquadronStarDestroyer: "IBH_079", deathSquadronStarDestroyerB: "IBH_098",
+      lambdaShuttle: "IBH_058", lambdaShuttleB: "IBH_084", lambdaShuttleC: "IBH_090",
+      generalVeers: "IBH_068", generalVeersB: "IBH_088",
+      surfaceAssaultBomber: "IBH_078", surfaceAssaultBomberB: "IBH_093", surfaceAssaultBomberC: "IBH_094",
+      blizzardOne: "IBH_099",
+    },
   },
   upgrades: {
     token: {
