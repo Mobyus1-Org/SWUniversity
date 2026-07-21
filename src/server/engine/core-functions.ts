@@ -834,17 +834,59 @@ export function UpgradeImmuneToEnemyAbilities(upgradeCardId: string): boolean {
   return upgradeCardId === "JTL_012";
 }
 
-/** Readies the unit with this playId, if it is still in play. */
+/**
+ * Upgrades whose text is "Attached unit can't ready" — a persistent restriction, not a one-off
+ * exhaust. Listed here so every readying path shares one definition.
+ */
+const CANT_READY_UPGRADES = [
+  "SHD_193", // Frozen in Carbonite
+];
+
+/**
+ * True when this unit is allowed to ready right now. Two things forbid it:
+ *  - SOR_186 No Good to Me Dead — "that unit can't ready this round" (tracked as a Round effect);
+ *  - an attached "can't ready" Condition such as Frozen in Carbonite (SHD_193).
+ *
+ * Every path that readies a unit already in play must consult this; readying is otherwise
+ * scattered across dozens of per-card cases with no shared gate.
+ */
+export function CanUnitReady(
+  gs: GameState,
+  unit: { playId: string; upgrades: Array<{ cardId: string }> },
+): boolean {
+  if (gs.currentEffects.some(e => e.cardId === "SOR_186_no_ready" && e.targetPlayId === unit.playId)) {
+    return false;
+  }
+  return !unit.upgrades.some(u => CANT_READY_UPGRADES.includes(u.cardId));
+}
+
+/**
+ * Readies a unit that is already in play, unless something forbids it (see CanUnitReady).
+ * Returns true when the unit actually readied. Units *entering* play ready bypass this — they
+ * are not being readied, they arrive ready.
+ */
+export function ReadyUnit(
+  gs: GameState,
+  unit: { playId: string; upgrades: Array<{ cardId: string }>; ready: boolean },
+): boolean {
+  if (!CanUnitReady(gs, unit)) return false;
+  unit.ready = true;
+  return true;
+}
+
+/** Readies the unit with this playId, if it is still in play and allowed to ready. */
 export function ReadyUnitByPlayId(playId: string | undefined, player: PlayerId, fromCardId?: string): void {
   if (!playId) return;
   const unit = GetUnitsForPlayer(player).find(u => u.playId === playId);
   if (!unit) return;
-  unit.ready = true;
   const game = GetGame();
-  if (game) {
-    const prefix = fromCardId ? `${CardTitle(fromCardId)}: ` : "";
-    game.gameLog.push(`${prefix}readied ${CardTitle(unit.cardId)}.`);
+  if (!game) {
+    unit.ready = true;
+    return;
   }
+  if (!ReadyUnit(game.currentGameState, unit)) return;
+  const prefix = fromCardId ? `${CardTitle(fromCardId)}: ` : "";
+  game.gameLog.push(`${prefix}readied ${CardTitle(unit.cardId)}.`);
 }
 
 /** True when `captor` has at least one enemy non-leader unit in its arena to capture. */

@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, MarkUnitDamaged, ReadyUnitByPlayId, DealDamageToBase, DamageIsUnpreventable } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, MarkUnitDamaged, ReadyUnit, ReadyUnitByPlayId, DealDamageToBase, DamageIsUnpreventable } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -724,6 +724,31 @@ function sabineWrenAttachReaction(game: GameState, attachedTo: UnitInterface): A
   if (groundUnits.length === 0) return null;
   return optionalTarget("ASH_208", attachedTo.controller, groundUnits.map(u => u.playId),
     "Exhaust a ground unit?", { yesLabel: "Exhaust", sourcePlayId: attachedTo.playId });
+}
+
+/**
+ * SHD_133 Dengar — "When you play an upgrade on a unit: You may deal 1 damage to that unit."
+ * Watches from the arena, so the attach target may be any unit (friendly, enemy, or Dengar
+ * himself); only the *playing* player's Dengar reacts. Called from the upgrade attach path.
+ */
+function dengarAttachReaction(
+  game: GameState,
+  attachedTo: UnitInterface,
+  playingPlayer: PlayerId,
+): AbilityOptionPending | null {
+  const dengar = (GetUnitsForPlayer(playingPlayer) as Unit[])
+    .find(u => u.cardId === "SHD_133" && !u.LostAbilities());
+  if (!dengar) return null;
+  return {
+    type: "ability-option",
+    cardId: "SHD_133",
+    player: playingPlayer,
+    sourcePlayId: attachedTo.playId, // the unit that takes the damage
+    helperText: `${CardTitle("SHD_133")}: deal 1 damage to ${CardTitle(attachedTo.cardId)}?`,
+    yesLabel: "Deal 1",
+    noLabel: "Skip",
+    continuation: null,
+  };
 }
 
 /**
@@ -1753,8 +1778,7 @@ function resolveAttack(
       (defender.cardId === "SOR_196" || defender.cardId === "P25_042") &&
       !Unit.FromInterface(defender).LostAbilities()
     ) {
-      if (!defender.ready) {
-        defender.ready = true;
+      if (!defender.ready && ReadyUnit(game, defender)) {
         log.push(`${CardTitle(defender.cardId)}: readied himself after being attacked.`);
       }
     }
@@ -2124,8 +2148,7 @@ function innateWhenAttackEnds(
   switch (sourceCardId) {
     case "ASH_033": { // Grand Admiral Thrawn — "When Attack Ends: If the defending unit was
                       // defeated, ready this unit."
-      if (defDefeated) {
-        attacker.ready = true;
+      if (defDefeated && ReadyUnit(game, attacker)) {
         log.push(`${CardTitle("ASH_033")}: readied ${CardTitle(attacker.cardId)}.`);
       }
       return continuation;
@@ -2201,7 +2224,7 @@ function innateWhenAttackEnds(
     }
     case "SOR_149": { // Mace Windu — when attacks and defeats a unit: Ready him.
       if (defDefeated && !Unit.FromInterface(attacker).LostAbilities()) {
-        attacker.ready = true;
+        ReadyUnit(game, attacker);
       }
       return continuation;
     }
@@ -4753,6 +4776,16 @@ function handleChooseTarget(
       }
     }
 
+    // SHD_133 Dengar: "When you play an upgrade on a unit: You may deal 1 damage to that unit."
+    // Token upgrades (Experience/Shield) are given, not played, so they don't trigger him.
+    if (!IsTokenUpgrade(pending.upgradeCardId)) {
+      const dengar133 = dengarAttachReaction(game, targetUnit, pending.player);
+      if (dengar133) {
+        updateDefeatedPlayers(game);
+        return { response: resolutionResponse(pendingToResolution(dengar133, game)), pending: dengar133, stateChanged: true };
+      }
+    }
+
     // JTL_101 Red Leader: When a Pilot upgrade attaches to this unit — create an X-Wing token.
     if (IsPilotUpgrade(pending.upgradeCardId) && targetUnit.cardId === "JTL_101") {
       CreateXWing(game, pending.player, log, "JTL_101");
@@ -4780,6 +4813,13 @@ function handleChooseTarget(
     // ASH_087 Cybernetic Enhancements: When Played — draw a card.
     if (pending.upgradeCardId === "ASH_087") {
       DrawCardForPlayer(game, log, pending.player);
+    }
+
+    // SHD_193 Frozen in Carbonite: When Played — exhaust the attached unit. (It then can't ready
+    // while this Condition stays attached — see CanUnitReady.)
+    if (pending.upgradeCardId === "SHD_193") {
+      targetUnit.ready = false;
+      log.push(`${CardTitle("SHD_193")}: exhausted ${CardTitle(targetUnit.cardId)}.`);
     }
 
     // ASH_228 Preparation: When Played — exhaust the attached unit.
@@ -5890,6 +5930,10 @@ function applyAbilityOptionEffect(
         continuation: pending.continuation ?? null,
       } satisfies ChooseOnePending;
     }
+    case "SHD_133": { // Dengar Yes — deal 1 damage to the unit the upgrade was played on.
+      DealDamageToUnit(game, "SHD_133", pending.sourcePlayId, 1, log, pending.player);
+      return pending.continuation ?? null;
+    }
     case "JTL_197": { // Anakin (pilot) Yes — return this upgrade to its owner's hand.
       const upgradePlayId = pending.sourcePlayId;
       if (!upgradePlayId) return pending.continuation ?? null;
@@ -6298,8 +6342,7 @@ function applyAbilityOptionDeclineEffect(
     }
     case "SEC_193": { // Thrawn — the opponent gave up no unit, so "ready this unit."
       const thrawn193 = GetUnitByPlayId(game, pending.sourcePlayId!);
-      if (thrawn193) {
-        thrawn193.ready = true;
+      if (thrawn193 && ReadyUnit(game, thrawn193)) {
         log.push(`${CardTitle("SEC_193")}: no unit was given up — readied ${CardTitle(thrawn193.cardId)}.`);
       }
       return pending.continuation ?? null;
@@ -6777,6 +6820,20 @@ function handleChooseOption(
           updateDefeatedPlayers(game);
           if (nextPending) {
             return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+          }
+          return { response: stateResponse(game), pending: null, stateChanged: true };
+        }
+        case "SHD_221": { // Wanted — ready 2 of the collector's resources.
+          let readied221 = 0;
+          for (const r of GetPlayer(game, pending.collectingPlayer).resources) {
+            if (readied221 >= 2) break;
+            if (!r.ready) { r.ready = true; readied221++; }
+          }
+          log.push(`${CardTitle("SHD_221")}: Player ${pending.collectingPlayer} readied ${readied221} resource(s).`);
+          const nextPending221 = pending.continuation ?? null;
+          updateDefeatedPlayers(game);
+          if (nextPending221) {
+            return { response: resolutionResponse(pendingToResolution(nextPending221, game)), pending: nextPending221, stateChanged: false };
           }
           return { response: stateResponse(game), pending: null, stateChanged: true };
         }
@@ -8656,8 +8713,7 @@ function applyAbilityEffect(
     case "SOR_226": { // Admiral Motti when-defeated: ready chosen Villainy unit
       if (!targetPlayId) break;
       const target226 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target226) {
-        target226.ready = true;
+      if (target226 && ReadyUnit(game.currentGameState, target226)) {
         game.gameLog.push(`${CardTitle("SOR_226")}: readied ${CardTitle(target226.cardId)}.`);
       }
       break;
@@ -8758,7 +8814,7 @@ function applyAbilityEffect(
     case "ASH_171": { // Pegasus Tri-Wing — defeat the chosen friendly upgrade, then ready this unit.
       if (!targetPlayId) break;
       const self171 = pending.sourcePlayId ? GetUnitByPlayId(game.currentGameState, pending.sourcePlayId) : null;
-      if (self171) self171.ready = true;
+      if (self171) ReadyUnit(game.currentGameState, self171);
       return defeatUpgradeByPlayId(
         game.currentGameState, game.gameLog, targetPlayId,
         CardTitle("ASH_171"), pending.continuation ?? null, pending.player,
@@ -9617,7 +9673,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const unit206 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!unit206) break;
-      unit206.ready = true;
+      ReadyUnit(game.currentGameState, unit206);
       game.currentGameState.currentEffects.push({
         cardId: "JTL_206_no_base",
         duration: "Phase",
@@ -9868,6 +9924,34 @@ function applyAbilityEffect(
         revealedCards: revealedCards223,
       };
       return dgcPending;
+    }
+    case "SHD_229": { // Ma Klounkee step 1 — return the chosen friendly Underworld unit to hand.
+      if (!targetPlayId) break;
+      const bounce229 = removeFromArena(game.currentGameState, targetPlayId);
+      if (!bounce229) break;
+      const { unit: bounced229 } = bounce229;
+      if (bounced229.IsTokenUnit()) {
+        // Tokens are set aside rather than returned, but they did leave play — "if you do" is met.
+        game.gameLog.push(`${CardTitle("SHD_229")}: ${CardTitle(bounced229.cardId)} set aside (token).`);
+      } else {
+        GetPlayer(game.currentGameState, bounced229.owner).hand.push({ cardId: bounced229.cardId });
+        game.gameLog.push(`${CardTitle("SHD_229")}: ${CardTitle(bounced229.cardId)} returned to Player ${bounced229.owner}'s hand.`);
+      }
+      updateDefeatedPlayers(game.currentGameState);
+      // "If you do, deal 3 damage to a unit." — step 2, over every unit still in play.
+      const damageTargets229 = GetAllUnits(game.currentGameState);
+      if (damageTargets229.length === 0) break;
+      return {
+        type: "ability-target",
+        cardId: "SHD_229_damage",
+        player: pending.player,
+        fromPlayIds: damageTargets229.map(u => u.playId),
+        continuation: pending.continuation ?? null,
+      } satisfies AbilityTargetPending;
+    }
+    case "SHD_229_damage": { // Ma Klounkee step 2 — deal 3 damage to the chosen unit.
+      DealDamageToUnit(game.currentGameState, "SHD_229", targetPlayId, 3, game.gameLog, pending.player);
+      break;
     }
     case "SOR_222": // Waylay — "Return a non-leader unit to its owner's hand."
     case "TWI_226": { // reprint of SOR_222
@@ -10558,11 +10642,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target169 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target169) {
-        const prevented169 = game.currentGameState.currentEffects.some(
-          e => e.cardId === "SOR_186_no_ready" && e.targetPlayId === target169.playId,
-        );
-        if (!prevented169) {
-          target169.ready = true;
+        if (ReadyUnit(game.currentGameState, target169)) {
           game.gameLog.push(`${CardTitle("SOR_169")}: readied ${CardTitle(target169.cardId)}.`);
         } else {
           game.gameLog.push(`${CardTitle("SOR_169")}: ${CardTitle(target169.cardId)} can't ready this round.`);
@@ -11081,8 +11161,7 @@ function applyAbilityEffect(
     case "SOR_129_ready": { // Admiral Ozzel: opponent chose a unit to ready.
       if (!targetPlayId) break;
       const readyTarget = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (readyTarget) {
-        readyTarget.ready = true;
+      if (readyTarget && ReadyUnit(game.currentGameState, readyTarget)) {
         game.gameLog.push(`${CardTitle("SOR_129")}: opponent readied ${CardTitle(readyTarget.cardId)}.`);
       }
       break;
@@ -11433,8 +11512,7 @@ function applyAbilityEffect(
     case "SOR_155_ready_unit_3pow": {
       if (!targetPlayId) break;
       const target155r = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target155r) {
-        target155r.ready = true;
+      if (target155r && ReadyUnit(game.currentGameState, target155r)) {
         game.gameLog.push(`${CardTitle("SOR_155")}: readied ${CardTitle(target155r.cardId)}.`);
       }
       return pending.continuation;

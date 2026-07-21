@@ -1,7 +1,7 @@
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { BaseHealingPrevented, DealDamageToBase, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay } from "@/server/engine/core-functions";
+import { BaseHealingPrevented, DealDamageToBase, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit } from "@/server/engine/core-functions";
 import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 
 /**
@@ -191,8 +191,7 @@ export function resolveWhenPlayedTrigger(
       const self148 = [...gs.player1.groundArena, ...gs.player2.groundArena,
                        ...gs.player1.spaceArena, ...gs.player2.spaceArena]
         .find(u => u.playId === trigger.playId);
-      if (self148) {
-        self148.ready = true;
+      if (self148 && ReadyUnit(gs, self148)) {
         log.push(`${CardTitle(trigger.cardId)}: readied because a base has 15 or more damage.`);
       }
       break;

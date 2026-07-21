@@ -2,7 +2,7 @@ import type { PlayerId } from "@/lib/engine/core-models";
 import type { Unit } from "@/server/engine/unit";
 import type { BountyPending, PendingResolution } from "@/server/engine/pending-resolution";
 
-type BountyEffect = { kind: "draw-card" | "give-shield"; sourceCardId: string };
+type BountyEffect = { kind: "draw-card" | "give-shield" | "ready-2-resources"; sourceCardId: string };
 
 /**
  * Returns the bounty effects on a unit at the moment of defeat/capture.
@@ -21,6 +21,9 @@ function getBountyEffects(unit: Unit): BountyEffect[] {
     switch (upgrade.cardId) {
       case "SHD_068": // Public Enemy — grants Bounty: Give a Shield token to a unit
         effects.push({ kind: "give-shield", sourceCardId: "SHD_068" });
+        break;
+      case "SHD_221": // Wanted — grants Bounty: Ready 2 friendly resources
+        effects.push({ kind: "ready-2-resources", sourceCardId: "SHD_221" });
         break;
     }
   }

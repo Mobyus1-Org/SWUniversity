@@ -902,6 +902,19 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SHD_229": { // Ma Klounkee — "Return a friendly non-leader Underworld unit to its owner's
+                      // hand. If you do, deal 3 damage to a unit."
+      const underworld229 = GetUnitsForPlayer(player)
+        .filter(u => !CardIsLeader(u.cardId) && TraitContains(u.cardId, "Underworld", player, u.playId));
+      if (underworld229.length === 0) return null; // no bounce target — the whole card fizzles
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: underworld229.map(u => u.playId),
+        continuation: null,
+      };
+    }
     case "SOR_222": // Waylay — "Return a non-leader unit to its owner's hand."
     case "TWI_226": { // reprint of SOR_222
       const allNonLeaders = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]

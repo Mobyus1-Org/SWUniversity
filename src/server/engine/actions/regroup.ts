@@ -1,7 +1,7 @@
 import type { GameState, PlayerState } from "@/lib/engine/game";
 import type { DiscardedCard, PlayerId } from "@/lib/engine/core-models";
 import { CardTitle } from "@/server/engine/card-db/generated";
-import { DealDamageToBase } from "@/server/engine/core-functions";
+import { DealDamageToBase, ReadyUnit } from "@/server/engine/core-functions";
 
 function ps(gs: GameState, player: PlayerId): PlayerState {
   return player === 1 ? gs.player1 : gs.player2;
@@ -102,10 +102,7 @@ function executeRegroupReady(gs: GameState, log: string[]): void {
   for (const player of [1, 2] as PlayerId[]) {
     const p = ps(gs, player);
     for (const unit of [...p.groundArena, ...p.spaceArena]) {
-      const prevented = gs.currentEffects.some(
-        e => e.cardId === "SOR_186_no_ready" && e.targetPlayId === unit.playId,
-      );
-      if (!prevented) unit.ready = true;
+      ReadyUnit(gs, unit);
     }
     p.leader.ready = true;
     for (const resource of p.resources) {

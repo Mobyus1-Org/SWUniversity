@@ -362,6 +362,7 @@ export const Cards = {
       fourLom: "SHD_188",
       zuckuss: "SHD_190",
       hylobonEnforcer: "SHD_027",
+      dengar: "SHD_133",
       tech: "SHD_248",
       warbirdStowaway: "SHD_086",
       chewbaccaPykesbane: "SHD_050",
@@ -614,6 +615,8 @@ export const Cards = {
       theDarksaber: "SHD_126",
       mandalorianArmor: "SHD_073",
       vambraceFlamethrower: "SHD_177",
+      frozenInCarbonite: "SHD_193",
+      wanted: "SHD_221",
     },
     jtl: {
       jarekYeager: "JTL_109",
@@ -654,6 +657,7 @@ export const Cards = {
       midnightRepairs: "SHD_054",
       daringRaid: "SHD_178",
       pillage: "SHD_181",
+      maKlounkee: "SHD_229",
     },
     sor: {
       searchYourFeelings: "SOR_042",

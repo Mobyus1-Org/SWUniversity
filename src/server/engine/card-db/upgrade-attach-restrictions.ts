@@ -111,6 +111,11 @@ export function UpgradeEligibleTargets(
         return true;
       }).map(u => u.playId);
 
+    // "Attach to a non-leader unit."
+    case "SHD_193": //Frozen in Carbonite
+      return everyone.filter(u => !CardIsLeader(u.cardId) && !u.upgrades.some(upg => CardIsLeader(upg.cardId)))
+        .map(u => u.playId);
+
     // "Attach to a Force unit."
     case "LOF_074": //Bolstered Endurance
     case "LOF_261": //Constructed Lightsaber
