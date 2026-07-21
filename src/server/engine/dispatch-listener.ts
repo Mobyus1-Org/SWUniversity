@@ -541,6 +541,12 @@ function defeatUpgradeByPlayId(
     }
     const [defeated] = u.upgrades.splice(upgradeIdx, 1);
     log.push(`${sourceLabel} defeated ${CardTitle(defeated.cardId)} on ${CardTitle(u.cardId)}.`);
+    // ASH_055 Blade of Talzin — When Defeated: if it was on a friendly Night unit, return it to hand.
+    if (defeated.cardId === "ASH_055" && defeated.owner === defeated.controller
+        && TraitContains(u.cardId, "Night")) {
+      GetPlayer(game, defeated.owner as PlayerId).hand.push({ cardId: defeated.cardId });
+      log.push(`${CardTitle("ASH_055")} returned to Player ${defeated.owner}'s hand.`);
+    }
     // Traitorous unattach: owner reclaims control when the upgrade is removed.
     if (defeated.cardId === "SOR_122" && u.controller !== u.owner) {
       transferControl(game, log, u, u.owner);
@@ -1239,6 +1245,16 @@ function defeatUnit(
   log.push(`${CardTitle(unit.cardId)} was defeated.`);
   queueBobaLeftPlayReaction(game, removed.player);
 
+  // ASH_055 Blade of Talzin — "When Defeated: If this upgrade was on a friendly Night unit, return
+  // this upgrade from your discard pile to your hand." Fires when its host unit is defeated.
+  for (const upg of unit.upgrades) {
+    if (upg.cardId === "ASH_055" && upg.owner === upg.controller
+        && TraitContains(unit.cardId, "Night")) {
+      GetPlayer(game, upg.owner).hand.push({ cardId: upg.cardId });
+      log.push(`${CardTitle("ASH_055")} returned to Player ${upg.owner}'s hand.`);
+    }
+  }
+
   // Rescue any units the defeated unit was guarding (CR 34.4).
   for (const captive of unit.captives ?? []) {
     const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
@@ -1719,6 +1735,8 @@ function resolveAttack(
           Math.max(0, atkPower + damagedDefenderBonus - electrostaffModifier),
           log,
         );
+    // ASH_150 Deadly Vulnerability: a unit carrying it takes twice as much combat damage.
+    const atkPowerToDefender = defender.upgrades.some(u => u.cardId === "ASH_150") ? effectiveAtkPower * 2 : effectiveAtkPower;
     const defHpBefore = defender.CurrentHP();
     const defenderName = CardTitle(defender.cardId);
 
@@ -1747,10 +1765,10 @@ function resolveAttack(
     const shieldIdx = attackerUnpreventable ? -1 : defender.upgrades.findIndex(u => u.cardId === "SOR_T02");
     if (shieldIdx !== -1) {
       defender.upgrades.splice(shieldIdx, 1);
-      log.push(`${defenderName}'s Shield token was defeated, preventing ${effectiveAtkPower} damage.`);
+      log.push(`${defenderName}'s Shield token was defeated, preventing ${atkPowerToDefender} damage.`);
     } else {
-      defender.damage += effectiveAtkPower;
-      if (effectiveAtkPower > 0) MarkUnitDamaged(game, defender.playId);
+      defender.damage += atkPowerToDefender;
+      if (atkPowerToDefender > 0) MarkUnitDamaged(game, defender.playId);
     }
 
     // ASH_196: counter-damage dealt by a friendly Underworld unit bypasses all prevention.
@@ -1766,14 +1784,16 @@ function resolveAttack(
     }
 
     // Shield token absorbs the first instance of counter-damage to the attacker.
+    // ASH_150 Deadly Vulnerability on the ATTACKER doubles the counter-damage it takes.
+    const defPowerToAttacker = attacker.upgrades.some(u => u.cardId === "ASH_150") ? effectiveDefPower * 2 : effectiveDefPower;
     const attackerShieldIdx = defenderUnpreventable ? -1 : attacker.upgrades.findIndex(u => u.cardId === "SOR_T02");
     if (effectiveDefPower === 0) {
       // No counter-damage — shield is not consumed
     } else if (attackerShieldIdx !== -1) {
       attacker.upgrades.splice(attackerShieldIdx, 1);
-      log.push(`${attackerName}'s Shield token was defeated, preventing ${effectiveDefPower} counter-damage.`);
+      log.push(`${attackerName}'s Shield token was defeated, preventing ${defPowerToAttacker} counter-damage.`);
     } else {
-      attacker.damage += effectiveDefPower;
+      attacker.damage += defPowerToAttacker;
       MarkUnitDamaged(game, attacker.playId);
     }
     log.push(`${attackerName} attacked ${defenderName}.`);
@@ -1956,6 +1976,10 @@ function attackerOwnWhenAttackEnds(
   // Upgrade-granted When-Attack-Ends abilities
   for (const upgrade of attacker.upgrades) {
     switch (upgrade.cardId) {
+      case "ASH_180": { // Bokken Saber — grants "When Attack Ends: Give an Advantage token to this unit."
+        GiveAdvantageTokens(game, attacker, 1, GetGame()?.gameLog ?? [], "ASH_180");
+        break;
+      }
       case "ASH_183": { // Whistling Birds — "When Attack Ends: If this unit dealt combat damage to
                         // an opponent's base, deal 2 damage to each unit that opponent controls in
                         // this unit's arena."
@@ -3932,6 +3956,26 @@ function handleChooseTarget(
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
+    if (pending.cardId === "IBH_104") {
+      // The Desolation of Hoth — defeat up to 2 chosen enemy units (each cost ≤3).
+      const chosen104 = (data.targetPlayIds ?? []).slice(0, 2);
+      for (const id of chosen104) {
+        if (!pending.fromPlayIds.includes(id))
+          return { response: invalidResponse(`Unit ${id} is not a valid target for ${CardTitle(pending.cardId)}.`), pending, stateChanged: false };
+      }
+      for (const id of chosen104) {
+        const target104 = GetUnitByPlayId(game, id);
+        if (target104) {
+          defeatUnit(game, log, target104);
+          log.push(`${CardTitle("IBH_104")} defeated ${CardTitle(target104.cardId)}.`);
+        }
+      }
+      updateDefeatedPlayers(game);
+      const bag104 = drainTriggerBag(game, log);
+      if (bag104) return { response: resolutionResponse(pendingToResolution(bag104, game)), pending: bag104, stateChanged: false };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
     if (pending.cardId === "JTL_170" || pending.cardId === "JTL_140" || pending.cardId === "ASH_142") {
       // War Juggernaut — deal 1 to each chosen unit (any number).
       // IG-2000 — deal 1 to each chosen unit (up to 3).
@@ -4554,6 +4598,30 @@ function handleChooseTarget(
         });
         log.push(`Mandalorian Armor: Shield token given to ${CardTitle(targetUnit.cardId)}.`);
       }
+    }
+
+    // ASH_086 Durasteel Plating: When Played — give a Shield token to the attached unit.
+    if (pending.upgradeCardId === "ASH_086") {
+      targetUnit.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: targetUnit.owner, controller: targetUnit.controller });
+      log.push(`${CardTitle("ASH_086")}: Shield token given to ${CardTitle(targetUnit.cardId)}.`);
+    }
+
+    // ASH_087 Cybernetic Enhancements: When Played — draw a card.
+    if (pending.upgradeCardId === "ASH_087") {
+      DrawCardForPlayer(game, log, pending.player);
+    }
+
+    // ASH_228 Preparation: When Played — exhaust the attached unit.
+    if (pending.upgradeCardId === "ASH_228") {
+      targetUnit.ready = false;
+      log.push(`${CardTitle("ASH_228")}: exhausted ${CardTitle(targetUnit.cardId)}.`);
+    }
+
+    // ASH_182 Unfettered Ambition: When Played — give an Advantage token to the attached unit for each
+    // upgrade on it not named Advantage (including this one, which is already attached above).
+    if (pending.upgradeCardId === "ASH_182") {
+      const nonAdvantageCount = targetUnit.upgrades.filter(u => u.cardId !== "ASH_T02").length;
+      if (nonAdvantageCount > 0) GiveAdvantageTokens(game, targetUnit, nonAdvantageCount, log, "ASH_182");
     }
 
     // SOR_053 Luke's Lightsaber: When Played — if attached unit is Luke Skywalker, heal all damage and give Shield.
@@ -6929,11 +6997,13 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
     case "JTL_010": // Captain Phasma — If you control 5 or more resources.
     case "LOF_005": // Morgan Elsbeth — If you control 5 or more resources.
     case "LOF_014": // Grand Inquisitor — If you control 5 or more resources.
+    case "IBH_001": // Leia Organa — If you control 5 or more resources.
       return p.resources.length >= 5;
     case "LOF_015": // Cal Kestis — If you control 4 or more resources.
       return p.resources.length >= 4;
     case "LOF_009": // Darth Maul — If you control 6 or more resources.
     case "LOF_016": // Qui-Gon Jinn — If you control 6 or more resources.
+    case "IBH_053": // Darth Vader — If you control 6 or more resources.
       return p.resources.length >= 6;
     case "LOF_012": // Rey — If you control 7 or more resources.
       return p.resources.length >= 7;
@@ -7251,6 +7321,26 @@ function resolveActionAbility(
         player,
         fromPlayIds: [],
         fromZones: ["Base"],
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "IBH_053": // Darth Vader — Action [1 resource, Exhaust]: Deal 1 damage to a base.
+      return {
+        type: "ability-target",
+        cardId: "IBH_053",
+        player,
+        fromPlayIds: [],
+        fromZones: ["Base"],
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    case "IBH_001": { // Leia Organa — Action [1 resource, Exhaust]: Heal 1 from a friendly unit.
+      const friendly001 = GetUnitsForPlayer(player);
+      if (friendly001.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "IBH_001",
+        player,
+        fromPlayIds: friendly001.map(u => u.playId),
         continuation: null,
       } satisfies AbilityTargetPending;
     }
@@ -8728,6 +8818,22 @@ function applyAbilityEffect(
       if (targetPlayId) DealDamageToUnit(game.currentGameState, "JTL_010", targetPlayId, 1, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
+    case "IBH_053": { // Darth Vader (both sides) — deal 1 to the chosen base.
+      const ownerV53 = pending.player!;
+      let baseV53: PlayerId | null = null;
+      if (targetPlayId === "player1.base") baseV53 = 1;
+      else if (targetPlayId === "player2.base") baseV53 = 2;
+      else if (targetIsBase) baseV53 = targetBasePlayer ?? (ownerV53 === 1 ? 2 : 1);
+      if (baseV53 === null) break;
+      dealBaseDamage(game.currentGameState, baseV53, 1, ownerV53);
+      game.gameLog.push(`${CardTitle("IBH_053")}: dealt 1 damage to player ${baseV53}'s base.`);
+      break;
+    }
+    case "IBH_001": { // Leia Organa (both sides) — heal 1 from the chosen friendly unit.
+      if (!targetPlayId) break;
+      healTarget(game.currentGameState, targetPlayId, 1, game.gameLog, "IBH_001");
+      break;
+    }
     case "SOR_009": { // Leia Organa: chosen Rebel unit attacks (no buff)
       if (!targetPlayId) break;
       return {
@@ -9613,6 +9719,81 @@ function applyAbilityEffect(
     case "LOF_009_b": { // Darth Maul — deal 1 to the second (different) chosen unit.
       if (targetPlayId) DealDamageToUnit(game.currentGameState, "LOF_009", targetPlayId, 1, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "IBH_066": // Too Strong for Blasters — heal 2 from the chosen unit.
+    case "IBH_091": {
+      if (!targetPlayId) break;
+      healTarget(game.currentGameState, targetPlayId, 2, game.gameLog, pending.cardId);
+      break;
+    }
+    case "IBH_061": // We're In Trouble — deal 3 to the chosen unit.
+    case "IBH_086": {
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "IBH_059": // Target the Main Generator — deal 2 to the chosen base.
+    case "IBH_071": {
+      const owner059 = pending.player!;
+      let basePlayer059: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer059 = 1;
+      else if (targetPlayId === "player2.base") basePlayer059 = 2;
+      else if (targetIsBase) basePlayer059 = targetBasePlayer ?? (owner059 === 1 ? 2 : 1);
+      if (basePlayer059 === null) break;
+      dealBaseDamage(game.currentGameState, basePlayer059, 2, owner059);
+      game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 2 damage to player ${basePlayer059}'s base.`);
+      break;
+    }
+    case "IBH_005_a": { // I'll Cover For You — deal 1 to the first enemy unit, then a different enemy unit.
+      if (!targetPlayId) return pending.continuation;
+      DealDamageToUnit(game.currentGameState, "IBH_005", targetPlayId, 1, game.gameLog);
+      const opponent005 = pending.player === 1 ? 2 : 1;
+      const others005 = GetUnitsForPlayer(opponent005).filter(u => u.playId !== targetPlayId);
+      const step2 = others005.length > 0
+        ? { type: "ability-target" as const, cardId: "IBH_005_b", player: pending.player!, fromPlayIds: others005.map(u => u.playId), continuation: pending.continuation }
+        : pending.continuation;
+      return sweepDeadUnits(game.currentGameState, game.gameLog, step2);
+    }
+    case "IBH_005_b": { // I'll Cover For You — deal 1 to the second (different) enemy unit.
+      if (targetPlayId) DealDamageToUnit(game.currentGameState, "IBH_005", targetPlayId, 1, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
+    }
+    case "IBH_021": // Improvised Detonation — the chosen unit attacks with +2/+0 for this attack.
+    case "IBH_030": {
+      if (!targetPlayId) break;
+      const unit021 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit021) break;
+      GivePowerMod(pending.cardId, unit021, 2, "ForAttack", game.gameLog);
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: pending.cardId,
+        continuation: pending.continuation ?? null,
+      };
+    }
+    case "IBH_095": { // You Have Failed Me — defeat the chosen friendly unit, then ready a friendly unit (power ≤5).
+      if (!targetPlayId) break;
+      const target095 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target095) break;
+      const defeatPend095 = defeatUnit(game.currentGameState, game.gameLog, target095);
+      game.gameLog.push(`${CardTitle("IBH_095")} defeated ${CardTitle(target095.cardId)}.`);
+      // "If you do" — the unit was defeated, so offer the ready step (friendly units with power ≤ 5).
+      const readyTargets095 = GetUnitsForPlayer(pending.player!)
+        .filter(u => u.playId !== targetPlayId && Unit.FromInterface(u).CurrentPower() <= 5);
+      const readyStep095 = readyTargets095.length > 0
+        ? { type: "ability-target" as const, cardId: "IBH_095_ready", player: pending.player!, fromPlayIds: readyTargets095.map(u => u.playId), continuation: pending.continuation }
+        : pending.continuation;
+      if (defeatPend095) return injectContinuation(defeatPend095, readyStep095);
+      return readyStep095;
+    }
+    case "IBH_095_ready": { // You Have Failed Me — ready the chosen friendly unit.
+      if (!targetPlayId) return pending.continuation;
+      const readyUnit095 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (readyUnit095) {
+        ReadyUnitByPlayId(targetPlayId, readyUnit095.controller, "IBH_095");
+        game.gameLog.push(`${CardTitle("IBH_095")}: readied ${CardTitle(readyUnit095.cardId)}.`);
+      }
+      return pending.continuation;
     }
     case "LOF_012": { // Rey (front) — deal 1 damage to the chosen unit.
       if (targetPlayId) DealDamageToUnit(game.currentGameState, "LOF_012", targetPlayId, 1, game.gameLog);

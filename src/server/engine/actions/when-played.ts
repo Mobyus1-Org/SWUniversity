@@ -1517,6 +1517,49 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "IBH_066": // Too Strong for Blasters — "Heal 2 damage from a unit."
+    case "IBH_091":
+    case "IBH_061": // We're In Trouble — "Deal 3 damage to a unit."
+    case "IBH_086": {
+      const units066 = AllUnits();
+      if (units066.length === 0) return null;
+      return { type: "ability-target", cardId, player, fromPlayIds: units066.map(u => u.playId), continuation: null };
+    }
+    case "IBH_059": // Target the Main Generator — "Deal 2 damage to a base." (either base)
+    case "IBH_071":
+      return { type: "ability-target", cardId, player, fromPlayIds: [], fromZones: ["Base"], continuation: null };
+    case "IBH_005": // I'll Cover For You — "Deal 1 damage to an enemy unit and 1 damage to another enemy unit."
+    case "IBH_039": {
+      const opponent005 = player === 1 ? 2 : 1;
+      const enemies005 = GetUnitsForPlayer(opponent005);
+      if (enemies005.length === 0) return null;
+      return { type: "ability-target", cardId: "IBH_005_a", player, fromPlayIds: enemies005.map(u => u.playId), continuation: null };
+    }
+    case "IBH_021": // Improvised Detonation — "Attack with a unit. It gets +2/+0 for this attack."
+    case "IBH_030": {
+      const ready021 = GetUnitsForPlayer(player, true);
+      if (ready021.length === 0) return null;
+      return { type: "ability-target", cardId, player, fromPlayIds: ready021.map(u => u.playId), continuation: null };
+    }
+    case "IBH_104": { // The Desolation of Hoth — "Defeat up to 2 enemy units that each cost 3 or less."
+      const opponent104 = player === 1 ? 2 : 1;
+      const targets104 = GetUnitsForPlayer(opponent104).filter(u => (CardCost(u.cardId) ?? 0) <= 3);
+      if (targets104.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "IBH_104",
+        player,
+        fromPlayIds: targets104.map(u => u.playId),
+        needsMultiple: true,
+        maxTargets: 2,
+        continuation: null,
+      };
+    }
+    case "IBH_095": { // You Have Failed Me — "Defeat a friendly unit. If you do, ready a friendly unit with 5 or less power."
+      const friendly095 = GetUnitsForPlayer(player);
+      if (friendly095.length === 0) return null;
+      return mandatoryTarget("IBH_095", player, friendly095.map(u => u.playId));
+    }
     case "SOR_076": { // Make an Opening — Give a unit –2/–2 for this phase. Heal 2 from own base.
       const allUnits076 = AllUnits();
       if (allUnits076.length === 0) return null;

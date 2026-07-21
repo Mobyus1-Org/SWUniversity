@@ -80,6 +80,9 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
           hasSentinel ||= NumberOfUnitsInArena(player, "Ground") > 0
             && NumberOfUnitsInArena(player, "Space") > 0;
             break;
+        case "SEC_071"://Disciples' Devotion — while attached unit is exhausted, it gains Sentinel.
+          hasSentinel ||= !unit.ready;
+          break;
         case "LOF_261"://Constructed Lightsaber
           if(!CardAspects(cardId)?.includes("Villainy") && !(CardAspects(cardId)?.includes("Heroism"))) hasSentinel = true;
           break;

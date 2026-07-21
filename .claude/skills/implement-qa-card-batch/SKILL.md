@@ -73,10 +73,14 @@ Then invoke `implement-swu-card` on `LAW_008 LAW_168 ASH_116 SEC_110 LAW_045` (L
 
 After `implement-swu-card` finishes the batch, produce a **Discord-pasteable summary in chat** (not a file). This is the last step of every batch.
 
-Format — a plain `Added:` list, then an optional `Mechanics:` list:
+Format — a plain `Added:` list, then a `Was Already Done:` list (only if any), then an optional `Mechanics:` list:
 
 ```
 Added:
+- <Card Title> (<SET>) <Type>
+- ...
+
+Was Already Done:
 - <Card Title> (<SET>) <Type>
 - ...
 
@@ -86,7 +90,7 @@ Mechanics:
 
 Rules:
 
-- **Only list cards that were actually implemented this batch** (skip any the per-card brainstorm found already done).
+- **`Added:` lists only cards actually implemented this batch.** Any card the per-card brainstorm found already implemented goes under **`Was Already Done:`** instead (same `- <Card Title> (<SET>) <Type>` line format, grouped by type in the same order). Omit the whole `Was Already Done:` section if every card was newly implemented.
 - **Group by type in this order:** Leaders, Bases, Units, Events, Upgrades. Within a group, keep the batch order.
 - Use the card's **display title** (no subtitle needed) and its **set code** in parens (`SOR`, `SHD`, `TWI`, `JTL`, `LAW`, `SEC`, `ASH`, …). A leader is one line, `<Name> (<SET>) Leader` — do not split its two sides.
 - Include a card that was implemented incidentally to make the batch work (e.g. a combo partner), under its own type.

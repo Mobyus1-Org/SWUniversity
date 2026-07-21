@@ -108,6 +108,8 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "SEC_004", "SEC_015",
   //ASH
   "ASH_004", "ASH_009",
+  //IBH
+  "IBH_053", "IBH_001",
 ]);
 
 // Non-leader units with an Action ability. Maps cardId → short label for the modal button.

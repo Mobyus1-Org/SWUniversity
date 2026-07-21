@@ -1206,6 +1206,9 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
   const target = GetUnitByPlayId(gs, targetPlayId);
   if (!target) return;
   if (amount <= 0) return;
+  // ASH_150 Deadly Vulnerability: the attached unit takes twice as much damage. Applied before
+  // prevention and Shield so downstream absorption sees the doubled instance.
+  if (target.upgrades.some(u => u.cardId === "ASH_150")) amount *= 2;
   // Immunity to enemy card abilities: all DealDamageToUnit is ability damage (combat damage is
   // applied directly in resolveAttack, never here). Prevent unless the source is the unit's own
   // controller. `sourcePlayer` is undefined for most callers, so enemy AoE/targeted damage is

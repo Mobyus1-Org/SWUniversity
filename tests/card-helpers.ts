@@ -609,9 +609,23 @@ export const Cards = {
       camtono: "ASH_229",
       nowhereToHide: "ASH_198",
       whistlingBirds: "ASH_183",
+      bladeOfTalzin: "ASH_055",
+      durasteelPlating: "ASH_086",
+      cyberneticEnhancements: "ASH_087",
+      deadlyVulnerability: "ASH_150",
+      bokkenSaber: "ASH_180",
+      markMyWords: "ASH_181",
+      unfetteredAmbition: "ASH_182",
+      preparation: "ASH_228",
+      faithInTheEmpire: "ASH_262",
+      theWayOfTheMandalor: "ASH_263",
+    },
+    twi: {
+      unshakeableWill: "TWI_071",
     },
     sec: {
       clandestineConnections: "SEC_264",
+      disciplesDevotion: "SEC_071",
     },
   },
   events: {
@@ -733,6 +747,16 @@ export const Cards = {
       shatterpoint: "LOF_079",
       protectThePod: "LOF_128",
       shienFlurry: "LOF_220",
+    },
+    ibh: {
+      // Suffix letters are alternate identical printings within IBH.
+      theDesolationOfHoth: "IBH_104",
+      youHaveFailedMe: "IBH_095",
+      tooStrongForBlasters: "IBH_066", tooStrongForBlastersB: "IBH_091",
+      wereInTrouble: "IBH_061", wereInTroubleB: "IBH_086",
+      targetTheMainGenerator: "IBH_059", targetTheMainGeneratorB: "IBH_071",
+      illCoverForYou: "IBH_005", illCoverForYouB: "IBH_039",
+      improvisedDetonation: "IBH_021", improvisedDetonationB: "IBH_030",
     },
   },
 }

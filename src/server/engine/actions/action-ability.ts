@@ -96,7 +96,11 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "JTL_012": // Luke Skywalker — Action [Exhaust]: 1 damage to a unit, if a Fighter attacked this phase.
       case "JTL_010": // Captain Phasma — Action [Exhaust]: 1 damage to a base, if you played a First Order card this phase (soft-pass condition).
       case "LOF_012": // Rey — Action [Exhaust]: 1 damage to a unit, if you played a non-unit Force card this phase (soft-pass condition).
+      case "IBH_053": // Darth Vader — Action [1 resource, Exhaust]: Deal 1 damage to a base.
         abilities.push(cardId);
+        break;
+      case "IBH_001": // Leia Organa — Action [1 resource, Exhaust]: Heal 1 from a friendly unit.
+        if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
         break;
       case "JTL_004": // Rose Tico — Action [Exhaust]: Heal 2 from a Vehicle unit that attacked this phase.
         if (AttackedThisPhasePlayIds({ trait: "Vehicle" }).length > 0) abilities.push(cardId);
@@ -247,6 +251,12 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       }
       case "ASH_142": // Mortar Trooper — Action [Exhaust]: Deal 1 damage to each of up to 3 ground units.
         if (AllGroundUnits().length > 0) abilities.push(cardId);
+        break;
+      case "IBH_053": // Darth Vader (deployed) — Action [1 resource, Exhaust]: Deal 1 damage to a base.
+        abilities.push(cardId);
+        break;
+      case "IBH_001": // Leia Organa (deployed) — Action [1 resource, Exhaust]: Heal 1 from a friendly unit.
+        if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
         break;
       case "IBH_016": // Ion Cannon — Action [Exhaust]: Deal 3 damage to a space unit.
       case "IBH_027":

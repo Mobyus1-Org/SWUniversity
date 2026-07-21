@@ -81,6 +81,22 @@ function guardianOfTheWhillsDiscount(game: GameState, player: PlayerId, cardId: 
   return hasEligibleGuardian ? 1 : 0;
 }
 
+// ASH_262 Faith in the Empire (Imperial) / ASH_263 The Way of the Mand'alor (Mandalorian):
+// this upgrade costs 1 less to play on a unit with the matching trait. Effective cost is computed
+// before the target is chosen, so — like Guardian of the Whills — any eligible qualifying target
+// grants the discount.
+function traitAttachUpgradeDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  const trait = cardId === "ASH_262" ? "Imperial" : cardId === "ASH_263" ? "Mandalorian" : null;
+  if (!trait) return 0;
+  const eligible = UpgradeEligibleTargets(cardId, game, player);
+  const allUnits = [
+    ...game.player1.groundArena, ...game.player1.spaceArena,
+    ...game.player2.groundArena, ...game.player2.spaceArena,
+  ];
+  const hasQualifying = allUnits.some(u => eligible.includes(u.playId) && CardTraits(u.cardId).includes(trait));
+  return hasQualifying ? 1 : 0;
+}
+
 // SOR_181 Jabba the Hutt: each TRICK event costs 1 less.
 function jabbaTheTrickDiscount(game: GameState, player: PlayerId, cardId: string): number {
   if (CardType(cardId) !== "Event" || !CardTraits(cardId).includes("Trick")) return 0;
@@ -167,6 +183,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     + aspectPenalty(game, player, cardId)
     + delMeekoEventTax(game, player, cardId)
     - guardianOfTheWhillsDiscount(game, player, cardId)
+    - traitAttachUpgradeDiscount(game, player, cardId)
     - forceChokeDiscount(game, player, cardId)
     - sizeMattersNotDiscount(game, player, cardId)
     - jabbaTheTrickDiscount(game, player, cardId)

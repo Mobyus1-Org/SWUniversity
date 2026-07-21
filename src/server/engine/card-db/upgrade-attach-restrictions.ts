@@ -72,7 +72,13 @@ export function UpgradeEligibleTargets(
     case "TS26_055": //Blade of Talzin
     case "ASH_066": //Luke's Jedi Lightsaber
     case "ASH_183": //Whistling Birds
+    case "ASH_055": //Blade of Talzin
+    case "ASH_180": //Bokken Saber
       return everyone.filter(u => !TraitContains(u.cardId, "Vehicle")).map(u => u.playId);
+
+    // "Attach to a damaged unit."
+    case "ASH_181": //Mark My Words
+      return everyone.filter(u => u.damage > 0).map(u => u.playId);
 
     // "Attach to a Jedi non-Vehicle unit."
     case "LOF_151": //Knight's Saber

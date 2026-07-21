@@ -25,6 +25,12 @@ export function HasOverwhelm(cardId: string,
     const unit = GetUnitInPlay(playId, player);
     if (!unit) throw new Error("Unit not found for given playId and player in HasOverwhelm");
     if(unit.LostAbilities()) return false;
+    // ASH_150 Deadly Vulnerability: while the defending unit has this upgrade, the attacker loses
+    // Overwhelm for this attack. Checked before any grant path so it always wins.
+    if (defenderPlayId && defenderPlayer) {
+      const defender150 = GetUnitInPlay(defenderPlayId, defenderPlayer);
+      if (defender150 && defender150.upgrades.some(u => u.cardId === "ASH_150")) return false;
+    }
     //Support: the attacker has gained the supporting unit's keywords for this attack.
     const supported = SupportGrantedCardId(playId, player);
     if (supported && HasOverwhelm(supported)) return true;
@@ -73,6 +79,7 @@ export function HasOverwhelm(cardId: string,
       switch(u.cardId) {
         case "TWI_236"://Grievous's Wheel Bike
         case "TWI_119"://Nameless Valor
+        case "ASH_181"://Mark My Words — attached unit gains Overwhelm
           return true;
         case "JTL_150"://Biggs Darklighter
           if(TraitContains(u.cardId, "Fighter", player)) return true;
