@@ -3,6 +3,7 @@ import { processDispatch } from "@/server/engine/dispatch-listener";
 import { CardCost, CardRarity } from "@/server/engine/card-db/generated";
 import { SetGame } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
+import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import type { EngineContext, PendingResolution } from "@/server/engine/pending-resolution";
 import type { GameState } from "@/lib/engine/game";
 import type { GameDispatch, DispatchResponse } from "@/lib/engine/message-types";
@@ -86,6 +87,66 @@ function pickOpponentTargetAmongMyUnits(
 }
 
 /**
+ * When an ability makes P2 choose one of their OWN units, pick the answer that is worst for the
+ * solver — and deterministically, so a puzzle replays identically.
+ *
+ *   "give-up"  — the unit P2 surrenders (Thrawn's capture). Losing a blocker hurts them, so they
+ *                hand over the cheapest unit that isn't holding the line, i.e. the cheapest
+ *                non-Sentinel. If every unit has Sentinel one must still go: the most damaged
+ *                (least remaining HP), keeping the healthiest blockers up.
+ *   "soak"     — the unit P2 feeds to incoming damage (Cad Bane's ping). They spend a unit that
+ *                isn't a blocker and can absorb it, i.e. the non-Sentinel with the MOST remaining
+ *                HP, so the damage is wasted.
+ *
+ * Sentinel is evaluated live (it is often conditional), and ties break toward the earliest
+ * `fromPlayIds` entry, which mirrors arena order.
+ */
+function pickOpponentOwnUnit(
+  fromPlayIds: string[],
+  gameState: GameState,
+  mode: "give-up" | "soak",
+): string | null {
+  const theirUnits = [...gameState.player2.spaceArena, ...gameState.player2.groundArena];
+  const byPlayId = new Map(theirUnits.map(u => [u.playId, u]));
+
+  type Candidate = { playId: string; sentinel: boolean; cost: number; remainingHp: number };
+  const candidates: Candidate[] = [];
+  for (const playId of fromPlayIds) {
+    const raw = byPlayId.get(playId);
+    if (!raw) continue;
+    const unit = Unit.FromInterface(raw);
+    candidates.push({
+      playId,
+      sentinel: HasSentinel(raw.cardId, raw.playId, 2),
+      cost: CardCost(raw.cardId) ?? 0,
+      remainingHp: unit.CurrentHP(),
+    });
+  }
+  if (candidates.length === 0) return null;
+
+  // Non-Sentinel units are preferred in both modes; only fall back to Sentinels if that is all
+  // they have.
+  const nonSentinel = candidates.filter(c => !c.sentinel);
+  const pool = nonSentinel.length > 0 ? nonSentinel : candidates;
+
+  let best = pool[0];
+  for (const c of pool.slice(1)) {
+    if (mode === "soak") {
+      if (c.remainingHp > best.remainingHp) best = c;
+      continue;
+    }
+    // "give-up": cheapest first; among Sentinel-only pools cost is meaningless, so the
+    // least-remaining-HP rule from the card's guidance decides.
+    if (nonSentinel.length > 0) {
+      if (c.cost < best.cost) best = c;
+    } else if (c.remainingHp < best.remainingHp) {
+      best = c;
+    }
+  }
+  return best.playId;
+}
+
+/**
  * Puzzle-mode dispatch wrapper.
  *
  * Calls processDispatch normally, then automatically resolves any Player 2
@@ -165,6 +226,29 @@ function resolveAutoOption(
   }
   if (pending.type === "ability-target" && pending.cardId === "SHD_172" && pending.player === 2) {
     return { dispatchType: "choose-target", dispatchData: { targetPlayIds: ["player1.base"] } };
+  }
+
+  // SEC_193 Grand Admiral Thrawn: "An opponent may choose a non-leader unit they control. If they
+  // do, this unit captures that unit. If they don't, ready this unit." Both halves are P2's call.
+  // Giving up a unit is strictly worse for the solver than letting Thrawn ready, so P2 always
+  // gives one up when they can — the engine already readies Thrawn outright when they cannot.
+  if (pending.type === "ability-option" && pending.cardId === "SEC_193" && pending.player === 2) {
+    return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };
+  }
+  if (pending.type === "ability-target" && pending.cardId === "SEC_193" && pending.player === 2) {
+    const targetPlayId = pickOpponentOwnUnit(pending.fromPlayIds, gameState, "give-up");
+    if (targetPlayId) {
+      return { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } };
+    }
+  }
+
+  // SHD_014 Cad Bane (either side): "an opponent chooses a unit they control. Deal N damage to it."
+  // P2 picks which of their own units eats it — see pickOpponentOwnUnit's "soak" mode.
+  if (pending.type === "ability-target" && pending.cardId === "SHD_014" && pending.player === 2) {
+    const targetPlayId = pickOpponentOwnUnit(pending.fromPlayIds, gameState, "soak");
+    if (targetPlayId) {
+      return { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } };
+    }
   }
 
   // JTL_104 Raddus controlled by the opponent (P2): its When Defeated deals damage equal to its

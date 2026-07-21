@@ -489,9 +489,44 @@ function addToArena(
   return unit;
 }
 
+/**
+ * Rescues every card the unit was guarding (CR 34.4). A rescued captive returns to play exhausted
+ * under its OWNER's control — control never follows the captor — and is cleared off the guard so
+ * it cannot be released twice.
+ */
+function releaseCaptives(game: GameState, unit: Unit, log: string[]): void {
+  for (const captive of unit.captives ?? []) {
+    const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
+    // Reset controller to owner: a take-control effect on the captive (or a stale stored value)
+    // must not survive the rescue, the same way pushToDiscard restores ownership.
+    const rescued = Unit.FromInterface({ ...captive, controller: captive.owner, ready: false });
+    if (arena === "Ground") GetPlayer(game, captive.owner).groundArena.push(rescued);
+    else GetPlayer(game, captive.owner).spaceArena.push(rescued);
+    game.roundState.cardsEnteredPlayThisPhase.push({
+      fromPlayer: captive.owner,
+      cardId: captive.cardId,
+      playId: captive.playId,
+      reason: "returned-to-play",
+    });
+    log.push(`${CardTitle(captive.cardId)} was rescued and returned to Player ${captive.owner}'s arena exhausted.`);
+  }
+  unit.captives = [];
+}
+
+/**
+ * Removes a unit from whichever arena holds it.
+ *
+ * Leaving the arena frees anything the unit was guarding, so the rescue happens HERE rather than
+ * in each defeat handler — a captive used to survive only the defeat paths and was silently lost
+ * to every other exit (bounce, becoming a pilot upgrade, …).
+ *
+ * `keepCaptives` is for the one caller that isn't a departure: transferControl moves a unit
+ * between arenas, and a guard that merely changes hands keeps its captives.
+ */
 function removeFromArena(
   game: GameState,
   playId: string,
+  opts: { keepCaptives?: boolean; log?: string[] } = {},
 ): { player: PlayerId; unit: Unit; zone: "groundArena" | "spaceArena" } | null {
   for (const player of [1, 2] as PlayerId[]) {
     const p = GetPlayer(game, player);
@@ -499,6 +534,7 @@ function removeFromArena(
       const idx = p[zone].findIndex((u) => u.playId === playId);
       if (idx !== -1) {
         const [unit] = p[zone].splice(idx, 1);
+        if (!opts.keepCaptives) releaseCaptives(game, unit as Unit, opts.log ?? GetGame()?.gameLog ?? []);
         return { player, unit: unit as Unit, zone };
       }
     }
@@ -539,7 +575,8 @@ function dealBaseDamage(game: GameState, player: PlayerId, amount: number, byPla
  * Does not fire any triggers. Used for Take Control effects (Traitorous, Change of Heart).
  */
 function transferControl(game: GameState, log: string[], unit: Unit, newController: PlayerId): void {
-  const removed = removeFromArena(game, unit.playId);
+  // Not a departure — the guard stays in play, so it keeps anything it is guarding.
+  const removed = removeFromArena(game, unit.playId, { keepCaptives: true, log });
   unit.controller = newController;
   const zone = removed?.zone ?? ((CardArena(unit.cardId) ?? "Ground") === "Ground" ? "groundArena" : "spaceArena");
   GetPlayer(game, newController)[zone].push(unit);
@@ -1315,21 +1352,6 @@ function defeatUnit(
     }
   }
 
-  // Rescue any units the defeated unit was guarding (CR 34.4).
-  for (const captive of unit.captives ?? []) {
-    const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
-    const rescued = Unit.FromInterface({ ...captive, ready: false });
-    if (arena === "Ground") GetPlayer(game, captive.owner).groundArena.push(rescued);
-    else GetPlayer(game, captive.owner).spaceArena.push(rescued);
-    game.roundState.cardsEnteredPlayThisPhase.push({
-      fromPlayer: captive.owner,
-      cardId: captive.cardId,
-      playId: captive.playId,
-      reason: "returned-to-play",
-    });
-    log.push(`${CardTitle(captive.cardId)} was rescued and returned to Player ${captive.owner}'s arena exhausted.`);
-  }
-
   // When an enemy unit is defeated
   const otherPlayer: PlayerId = removed.player === 1 ? 2 : 1;
   for (const unit of GetUnitsForPlayer(otherPlayer)) {
@@ -1407,21 +1429,6 @@ function defeatForExploit(game: GameState, log: string[], unit: Unit): void {
   log.push(`${CardTitle(unit.cardId)} was defeated via Exploit.`);
   queueBobaLeftPlayReaction(game, removed.player);
 
-  // Rescue captives (CR 34.4)
-  for (const captive of unit.captives ?? []) {
-    const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
-    const rescued = Unit.FromInterface({ ...captive, ready: false });
-    if (arena === "Ground") GetPlayer(game, captive.owner).groundArena.push(rescued);
-    else GetPlayer(game, captive.owner).spaceArena.push(rescued);
-    game.roundState.cardsEnteredPlayThisPhase.push({
-      fromPlayer: captive.owner,
-      cardId: captive.cardId,
-      playId: captive.playId,
-      reason: "returned-to-play",
-    });
-    log.push(`${CardTitle(captive.cardId)} was rescued from Exploit-defeated unit.`);
-  }
-
   // Gideon Hask (SOR_036): react to exploit-defeated enemy unit.
   const gideonPlayerE: PlayerId = removed.player === 1 ? 2 : 1;
   const gideonUnitE = GetPlayer(game, gideonPlayerE).groundArena.find(u => u.cardId === "SOR_036");
@@ -1497,20 +1504,6 @@ function boardWipeDefeat(
       reason: unit.IsTokenUnit() ? "token-defeated" : "defeated",
     });
     queueBobaLeftPlayReaction(game, removed.player);
-
-    for (const captive of unit.captives ?? []) {
-      const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
-      const rescued = Unit.FromInterface({ ...captive, ready: false });
-      if (arena === "Ground") GetPlayer(game, captive.owner).groundArena.push(rescued);
-      else GetPlayer(game, captive.owner).spaceArena.push(rescued);
-      game.roundState.cardsEnteredPlayThisPhase.push({
-        fromPlayer: captive.owner,
-        cardId: captive.cardId,
-        playId: captive.playId,
-        reason: "returned-to-play",
-      });
-      log.push(`${CardTitle(captive.cardId)} was rescued.`);
-    }
 
     log.push(`${CardTitle(unit.cardId)} was defeated.`);
 
@@ -5853,7 +5846,8 @@ function rescueCaptiveByPlayId(game: GameState, log: string[], captivePlayId: st
       if (idx === -1) continue;
       const [captive] = u.captives.splice(idx, 1);
       const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
-      const rescued = Unit.FromInterface({ ...captive, ready: false });
+      // Control reverts to the owner — see releaseCaptives.
+      const rescued = Unit.FromInterface({ ...captive, controller: captive.owner, ready: false });
       if (arena === "Ground") GetPlayer(game, captive.owner).groundArena.push(rescued);
       else GetPlayer(game, captive.owner).spaceArena.push(rescued);
       game.roundState.cardsEnteredPlayThisPhase.push({
@@ -11358,13 +11352,6 @@ function applyAbilityEffect(
       removeFromArena(game.currentGameState, l3.playId);
       for (const upg of l3.upgrades) {
         game.gameLog.push(`${CardTitle(upg.cardId)} on L3-37 was defeated.`);
-      }
-      for (const captive of l3.captives ?? []) {
-        const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
-        const rescued = Unit.FromInterface({ ...captive, ready: false });
-        if (arena === "Ground") GetPlayer(game.currentGameState, captive.owner).groundArena.push(rescued);
-        else GetPlayer(game.currentGameState, captive.owner).spaceArena.push(rescued);
-        game.gameLog.push(`${CardTitle(captive.cardId)} was rescued from L3-37.`);
       }
       vehicle.upgrades.push({
         cardId: "JTL_049",

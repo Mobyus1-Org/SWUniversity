@@ -35,51 +35,40 @@ type SolvedFilter = "all" | "solved" | "unsolved";
 // Admin-only: filter the list by deploy status. Deployed = live, Hidden = not yet deployed.
 type DeployFilter = "all" | "deployed" | "hidden";
 
-const DIFF_LO = 1;
-const DIFF_HI = 5;
-const DIFF_STEP = 1;
+const DIFFICULTIES = [1, 2, 3, 4, 5] as const;
 
 // Tutorial puzzle pinned to the top of the Difficulty-sorted list (matched by exact title).
 // Only reorders puzzles already visible, so it disappears when its difficulty tier is filtered out.
 const PINNED_TUTORIAL_TITLE = "We Have to Start Somewhere";
 
-const rangeThumbClass =
-  "pointer-events-none absolute inset-0 h-6 w-full cursor-pointer appearance-none bg-transparent " +
-  "[&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/40 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow " +
-  "[&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow";
-
-function DifficultyRange({ min, max, onChange }: { min: number; max: number; onChange: (min: number, max: number) => void }) {
-  const pct = (v: number) => ((v - DIFF_LO) / (DIFF_HI - DIFF_LO)) * 100;
+/**
+ * Difficulty filter: one toggle per tier, so non-contiguous picks like "1 and 3" are possible.
+ *
+ * This replaced a two-thumb range slider. Both thumbs shared one track, and the max thumb — being
+ * painted on top — captured every drag; once min and max met at 5 the only draggable thumb was one
+ * that refused to go below min, leaving the filter stuck.
+ *
+ * Nothing selected is the default and means "not filtering by difficulty": every puzzle shows and
+ * no button is lit. So picking a single tier is one click, and the lit buttons always read as
+ * exactly the tiers being filtered to.
+ */
+function DifficultyFilter({ selected, onToggle }: { selected: Set<number>; onToggle: (value: number) => void }) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">Diff</span>
-      <span className="w-14 shrink-0 text-[11px] tabular-nums text-white/70">{min}–{max}</span>
-      <div className="relative h-6 w-36">
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white/15" />
-        <div
-          className="pointer-events-none absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-primary"
-          style={{ left: `${pct(min)}%`, right: `${100 - pct(max)}%` }}
-        />
-        <input
-          type="range"
-          aria-label="Minimum difficulty"
-          min={DIFF_LO}
-          max={DIFF_HI}
-          step={DIFF_STEP}
-          value={min}
-          onChange={(e) => onChange(Math.min(Number(e.target.value), max), max)}
-          className={rangeThumbClass}
-        />
-        <input
-          type="range"
-          aria-label="Maximum difficulty"
-          min={DIFF_LO}
-          max={DIFF_HI}
-          step={DIFF_STEP}
-          value={max}
-          onChange={(e) => onChange(min, Math.max(Number(e.target.value), min))}
-          className={rangeThumbClass}
-        />
+      <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 p-0.5 text-xs">
+        {DIFFICULTIES.map((d) => (
+          <button
+            key={d}
+            type="button"
+            aria-pressed={selected.has(d)}
+            aria-label={`Difficulty ${d}`}
+            onClick={() => onToggle(d)}
+            className={`rounded px-2 py-0.5 font-medium tabular-nums transition-colors ${selected.has(d) ? "bg-white/15 text-white" : "text-white/50 hover:text-white/80"}`}
+          >
+            {d}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -94,8 +83,17 @@ export function LoadPuzzlePanel(props: Props) {
   const [sortDir, setSortDir] = React.useState<SortDir>("asc");
   const [solvedFilter, setSolvedFilter] = React.useState<SolvedFilter>("all");
   const [deployFilter, setDeployFilter] = React.useState<DeployFilter>("all");
-  const [diffMin, setDiffMin] = React.useState(DIFF_LO);
-  const [diffMax, setDiffMax] = React.useState(DIFF_HI);
+  // Empty = no difficulty filtering (every tier shows). See DifficultyFilter.
+  const [diffSelected, setDiffSelected] = React.useState<Set<number>>(() => new Set());
+
+  const toggleDifficulty = React.useCallback((value: number) => {
+    setDiffSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return next;
+    });
+  }, []);
 
   const fetchList = React.useCallback(() => {
     setLoading(true);
@@ -148,7 +146,7 @@ export function LoadPuzzlePanel(props: Props) {
       if (deployFilter === "deployed" && !p.deploy) return false;
       if (deployFilter === "hidden" && p.deploy) return false;
     }
-    if (p.difficulty < diffMin || p.difficulty > diffMax) return false;
+    if (diffSelected.size > 0 && !diffSelected.has(p.difficulty)) return false;
     return true;
   });
 
@@ -197,7 +195,7 @@ export function LoadPuzzlePanel(props: Props) {
             </button>
           ))}
         </div>
-        <DifficultyRange min={diffMin} max={diffMax} onChange={(lo, hi) => { setDiffMin(lo); setDiffMax(hi); }} />
+        <DifficultyFilter selected={diffSelected} onToggle={toggleDifficulty} />
         {isAdmin ? (
           <div
             className="flex items-center gap-1 rounded-lg border border-emerald-400/20 bg-emerald-500/5 p-0.5 text-xs"
