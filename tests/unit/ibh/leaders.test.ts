@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { GameTestAdapter } from "../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { Cards } from "../../card-helpers";
-import { ActionAbilities } from "@/server/engine/actions/action-ability";
 
 // IBH_053 Darth Vader — "Action [1 resource, Exhaust]: Deal 1 damage to a base."
 //                        "Epic Action: If you control 6 or more resources, deploy this leader."
@@ -89,32 +88,44 @@ describe("IBH_001 Leia Organa (leader) — Action: heal 1 from a friendly unit",
   });
 });
 
-// The deployed leader-unit keeps the same Action ability. The engine's use-ability dispatch can't
-// re-trigger a leader once it's deployed, but the deployed-side registration is what makes the
-// ability available on the unit — assert it via ActionAbilities with the deployed unit's playId.
-describe("Deployed-side action registration", () => {
-  it("deployed Darth Vader's unit still exposes its Action ability", () => {
+// Deployed-side abilities (from cardLeaderUnitText) are On Attack triggers, distinct from the
+// front-side Action. Deploy the leader as a unit and attack to fire them.
+describe("IBH_053 Darth Vader (deployed) — On Attack: deal 2 to a base", () => {
+  it("deals 2 to a chosen base on top of combat damage", async () => {
     const g = new GameTestAdapter();
     g.loadNewState(
       vaderBase()
         .MyLeader(Cards.leaders.ibh.darthVader, true, true, true)
-        .WithGroundUnitForPlayer(1, Cards.leaders.ibh.darthVader)
+        .WithGroundUnitForPlayer(1, Cards.leaders.ibh.darthVader) // deployed unit, 3 power
         .Build(),
     );
-    const playId = g.state.player1.groundArena[0].playId;
-    expect(ActionAbilities(Cards.leaders.ibh.darthVader, 1, playId)).toContain(Cards.leaders.ibh.darthVader);
-  });
 
-  it("deployed Leia's unit exposes its Action ability while controlling a friendly unit", () => {
+    await g.attackWithGroundUnitAsync(1, 0); // Vader attacks
+    await g.chooseBaseAsync(1, 2); // attack the enemy base
+    await g.chooseBaseAsync(1, 2); // On Attack: deal 2 to the enemy base
+
+    expect(g.state.player2.base.damage).toBe(5); // 2 (On Attack) + 3 (combat)
+  });
+});
+
+describe("IBH_001 Leia Organa (deployed) — On Attack: heal 1 from a friendly unit and 1 from another", () => {
+  it("heals 1 from each of two chosen friendly units", async () => {
     const g = new GameTestAdapter();
     g.loadNewState(
       leiaBase()
         .MyLeader(Cards.leaders.ibh.leiaOrgana, true, true, true)
-        .WithGroundUnitForPlayer(1, Cards.leaders.ibh.leiaOrgana)
+        .WithGroundUnitForPlayer(1, Cards.leaders.ibh.leiaOrgana) // deployed unit [0]
+        .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine, true, 2) // damaged [1]
+        .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine, true, 2) // damaged [2]
         .Build(),
     );
-    const playId = g.state.player1.groundArena[0].playId;
-    // Leia's Action needs a friendly unit to heal — the deployed Leia unit itself qualifies.
-    expect(ActionAbilities(Cards.leaders.ibh.leiaOrgana, 1, playId)).toContain(Cards.leaders.ibh.leiaOrgana);
+
+    await g.attackWithGroundUnitAsync(1, 0); // Leia attacks
+    await g.chooseBaseAsync(1, 2);
+    await g.chooseGroundUnitAsync(1, 1); // heal the first friendly
+    await g.chooseGroundUnitAsync(1, 2); // heal another friendly
+
+    expect(g.state.player1.groundArena[1].damage).toBe(1); // 2 - 1
+    expect(g.state.player1.groundArena[2].damage).toBe(1); // 2 - 1
   });
 });

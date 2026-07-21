@@ -252,12 +252,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "ASH_142": // Mortar Trooper — Action [Exhaust]: Deal 1 damage to each of up to 3 ground units.
         if (AllGroundUnits().length > 0) abilities.push(cardId);
         break;
-      case "IBH_053": // Darth Vader (deployed) — Action [1 resource, Exhaust]: Deal 1 damage to a base.
-        abilities.push(cardId);
-        break;
-      case "IBH_001": // Leia Organa (deployed) — Action [1 resource, Exhaust]: Heal 1 from a friendly unit.
-        if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
-        break;
+      // NB: IBH_053 Darth Vader / IBH_001 Leia Organa are leaders whose DEPLOYED side is an On Attack
+      // ability (see on-attack.ts + cardLeaderUnitText), NOT a repeat of the front-side Action — so
+      // they are deliberately NOT registered here in the deployed-unit action block.
       case "IBH_016": // Ion Cannon — Action [Exhaust]: Deal 3 damage to a space unit.
       case "IBH_027":
         if (AllSpaceUnits().length > 0) abilities.push(cardId);

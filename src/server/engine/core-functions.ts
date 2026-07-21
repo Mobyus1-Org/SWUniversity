@@ -1059,6 +1059,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "IBH_042":
     case "IBH_060": //Admiral Piett — On Attack: if you control an Aggression unit, draw a card
     case "IBH_065":
+    case "IBH_053": //Darth Vader (deployed) — On Attack: deal 2 damage to a base
+    case "IBH_001": //Leia Organa (deployed) — On Attack: heal 1 from a friendly unit and 1 from another
       return true;
     default: break;
   }

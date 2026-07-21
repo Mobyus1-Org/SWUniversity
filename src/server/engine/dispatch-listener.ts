@@ -8740,6 +8740,35 @@ function applyAbilityEffect(
       game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 1 damage to player ${basePlayer006}'s base.`);
       break;
     }
+    case "IBH_053_onAttack": { // Darth Vader (deployed) On Attack: deal 2 to the chosen base.
+      const owner53a = pending.player!;
+      let base53a: PlayerId | null = null;
+      if (targetPlayId === "player1.base") base53a = 1;
+      else if (targetPlayId === "player2.base") base53a = 2;
+      else if (targetIsBase) base53a = targetBasePlayer ?? (owner53a === 1 ? 2 : 1);
+      if (base53a !== null) {
+        dealBaseDamage(game.currentGameState, base53a, 2, owner53a);
+        game.gameLog.push(`${CardTitle("IBH_053")}: dealt 2 damage to player ${base53a}'s base.`);
+      }
+      return pending.continuation; // resume combat (the On Attack continuation is the resolve-attack)
+    }
+    case "IBH_001_onAttack_a": { // Leia (deployed) On Attack: heal 1 from the first friendly, then another.
+      if (!targetPlayId) return pending.continuation;
+      healTarget(game.currentGameState, targetPlayId, 1, game.gameLog, "IBH_001");
+      const others001 = GetUnitsForPlayer(pending.player!).filter(u => u.playId !== targetPlayId);
+      if (others001.length === 0) return pending.continuation;
+      return {
+        type: "ability-target",
+        cardId: "IBH_001_onAttack_b",
+        player: pending.player!,
+        fromPlayIds: others001.map(u => u.playId),
+        continuation: pending.continuation,
+      } satisfies AbilityTargetPending;
+    }
+    case "IBH_001_onAttack_b": { // Leia (deployed) On Attack: heal 1 from the second (different) friendly.
+      if (targetPlayId) healTarget(game.currentGameState, targetPlayId, 1, game.gameLog, "IBH_001");
+      return pending.continuation;
+    }
     case "ASH_253": { // Yellow Aces Bomber On Attack: deal 2 damage to the chosen base ("a base" — either one).
       const owner253 = pending.player!;
       let basePlayer253: PlayerId | null = null;

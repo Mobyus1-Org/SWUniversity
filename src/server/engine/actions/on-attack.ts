@@ -281,6 +281,26 @@ function resolveInnateOnAttack(
       }
       return continuation;
     }
+    case "IBH_053": // Darth Vader (deployed) — On Attack: Deal 2 damage to a base. (Mandatory, either base.)
+      return {
+        type: "ability-target",
+        cardId: "IBH_053_onAttack",
+        player: attacker.controller,
+        fromPlayIds: [],
+        fromZones: ["Base"],
+        continuation,
+      };
+    case "IBH_001": { // Leia Organa (deployed) — On Attack: Heal 1 from a friendly unit and 1 from another.
+      const friendly001 = GetUnitsForPlayer(attacker.controller);
+      if (friendly001.length === 0) return continuation;
+      return {
+        type: "ability-target",
+        cardId: "IBH_001_onAttack_a",
+        player: attacker.controller,
+        fromPlayIds: friendly001.map(u => u.playId),
+        continuation,
+      };
+    }
     case "IBH_006": // Rebellion Y-Wing — On Attack: Deal 1 damage to a base. (Mandatory, either base.)
     case "IBH_024":
     case "IBH_032":
