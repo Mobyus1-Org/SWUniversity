@@ -63,6 +63,9 @@ export class Unit implements UnitInterface {
     return this.upgrades.some(u => CardIsLeader(u.cardId) && !exceptions.includes(u.cardId));
   }
 
+  // Keep in sync with the token unit IDs spawnToken() can create in token-helpers.ts — a token
+  // missing from this list is treated as a real card, so it wrongly goes to a hand/discard and
+  // can be held captive.
   IsTokenUnit(): boolean {
     switch(this.cardId) {
       case "TWI_T01": //Battle Drod
@@ -70,6 +73,7 @@ export class Unit implements UnitInterface {
       case "JTL_T01": //TIE Fighter
       case "JTL_T02": //X-Wing
       case "SEC_T01": //Spy
+      case "ASH_T01": //Mandalorian
         return true;
       default: break;
     }

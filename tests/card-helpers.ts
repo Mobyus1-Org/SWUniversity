@@ -714,6 +714,7 @@ export const Cards = {
     twi: {
       christophsis: "TWI_078",
       vanquish: "TWI_077",
+      waylay: "TWI_226", // reprint of SOR_222
       droidDeployment: "TWI_237",
       dropIn: "TWI_251",
       takeCaptive: "TWI_128",

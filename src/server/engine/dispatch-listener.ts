@@ -9875,7 +9875,8 @@ function applyAbilityEffect(
       };
       return dgcPending;
     }
-    case "SOR_222": { // Waylay — "Return a non-leader unit to its owner's hand."
+    case "SOR_222": // Waylay — "Return a non-leader unit to its owner's hand."
+    case "TWI_226": { // reprint of SOR_222
       if (!targetPlayId) break;
       const waylayResult = removeFromArena(game.currentGameState, targetPlayId);
       if (!waylayResult) break;

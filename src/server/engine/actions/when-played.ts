@@ -902,7 +902,8 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
-    case "SOR_222": { // Waylay — "Return a non-leader unit to its owner's hand."
+    case "SOR_222": // Waylay — "Return a non-leader unit to its owner's hand."
+    case "TWI_226": { // reprint of SOR_222
       const allNonLeaders = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
         .filter(u => !CardIsLeader(u.cardId));
       if (allNonLeaders.length === 0) return null;
