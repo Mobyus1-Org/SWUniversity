@@ -3,8 +3,15 @@ import { CardRefField } from "@/components/Shared/CardRefField";
 import { globalBackgroundStyle } from "@/util/style-const";
 import { isKnownCardId, parseCardRefs } from "@/util/card-ref";
 import { normalizePuzzleAssetPath, puzzleImageSrc, DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
-import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
 import type { GamePhase } from "@/lib/engine/core-models";
+import {
+  fromRaw,
+  initialBuilderState,
+  toRaw,
+  type BuilderState,
+  type PlayerBuilderState,
+  type UnitEntry,
+} from "./puzzle-builder-state";
 import type { SolverResult } from "@/server/puzzle/solver";
 
 export type CardCatalogEntry = {
@@ -158,200 +165,6 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v
   );
 }
 
-// ---------------------------------------------------------------------------
-// Builder state types
-// ---------------------------------------------------------------------------
-
-type UnitEntry = { cardId: string; ready: boolean; damage: number; upgrades: string[]; captives: string[] };
-type ResourceEntry = { cardId: string; ready: boolean };
-
-type PlayerBuilderState = {
-  baseCardId: string;
-  baseDamage: number;
-  baseEpicActionUsed: boolean;
-  leaderCardId: string;
-  leaderReady: boolean;
-  leaderDeployed: boolean;
-  leaderEpicActionUsed: boolean;
-  resources: ResourceEntry[];
-  handCards: string[];
-  deck: string[];
-  discard: string[];
-  groundUnits: UnitEntry[];
-  spaceUnits: UnitEntry[];
-  creditTokens: number;
-  forceToken: boolean;
-};
-
-type BuilderState = {
-  name: string;
-  description: string;
-  infoText: string;
-  difficulty: number;
-  author: string;
-  inspiredBy?: string;
-  intendedSolution: string[];
-  hints: string[];
-  assetPath: string;
-  activePlayer: 1 | 2;
-  gamePhase: GamePhase;
-  currentRound: number;
-  initiativePlayer: 1 | 2;
-  initiativeClaimed: boolean;
-  player1: PlayerBuilderState;
-  player2: PlayerBuilderState;
-};
-
-function emptyPlayer(): PlayerBuilderState {
-  return {
-    baseCardId: "", baseDamage: 0, baseEpicActionUsed: false,
-    leaderCardId: "", leaderReady: true, leaderDeployed: false, leaderEpicActionUsed: false,
-    resources: [], handCards: [], deck: [], discard: [], groundUnits: [], spaceUnits: [],
-    creditTokens: 0, forceToken: false,
-  };
-}
-
-function initialBuilderState(): BuilderState {
-  return {
-    name: "",
-    description: "",
-    infoText:
-      "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nWin the game.",
-    difficulty: 1,
-    author: "",
-    inspiredBy: "",
-    intendedSolution: [],
-    hints: [],
-    assetPath: "",
-    activePlayer: 1,
-    gamePhase: "ActionPhase" as GamePhase,
-    currentRound: 1,
-    initiativePlayer: 2,
-    initiativeClaimed: true,
-    player1: emptyPlayer(),
-    player2: {
-      ...emptyPlayer(),
-      deck: ["LAW_260", "LAW_260", "LOF_254", "LOF_254", "LOF_254"],
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Convert RawGameState → builder state (used for JSON import)
-// ---------------------------------------------------------------------------
-
-const PHASE_NAMES = ["ActionPhase", "RegroupDraw", "RegroupResource", "RegroupReady"] as const;
-
-function resolvePhase(raw: unknown): GamePhase {
-  if (typeof raw === "number") return (PHASE_NAMES[raw] ?? "ActionPhase") as GamePhase;
-  if (typeof raw === "string" && (PHASE_NAMES as readonly string[]).includes(raw)) return raw as GamePhase;
-  return "ActionPhase" as GamePhase;
-}
-
-function parseRawPlayer(p: Record<string, unknown>): PlayerBuilderState {
-  const base = (p.base ?? {}) as Record<string, unknown>;
-  const leader = (p.leader ?? {}) as Record<string, unknown>;
-  const ground = (p.groundArena ?? []) as Record<string, unknown>[];
-  const space = (p.spaceArena ?? []) as Record<string, unknown>[];
-  const resources = (p.resources ?? []) as Record<string, unknown>[];
-  const hand = (p.hand ?? []) as Record<string, unknown>[];
-  const deck = (p.deck ?? []) as Record<string, unknown>[];
-  const discard = (p.discard ?? []) as Record<string, unknown>[];
-  const supplemental = (p.supplemental ?? {}) as Record<string, unknown>;
-  return {
-    baseCardId: String(base.cardId ?? ""),
-    baseDamage: Number(base.damage ?? 0),
-    baseEpicActionUsed: Boolean(base.epicActionUsed),
-    leaderCardId: String(leader.cardId ?? ""),
-    leaderReady: leader.ready !== false,
-    leaderDeployed: Boolean(leader.deployed),
-    leaderEpicActionUsed: Boolean(leader.epicActionUsed),
-    resources: resources.map((r) => ({ cardId: String(r.cardId ?? ""), ready: r.ready !== false })),
-    handCards: hand.map((h) => String((h as Record<string, unknown>).cardId ?? "")),
-    deck: deck.map((d) => String(d.cardId ?? "")),
-    discard: discard.map((d) => String(d.cardId ?? "")),
-    groundUnits: ground.map((u) => ({
-      cardId: String(u.cardId ?? ""), ready: u.ready !== false, damage: Number(u.damage ?? 0),
-      upgrades: ((u.upgrades ?? []) as Record<string, unknown>[]).map((ug) => String(ug.cardId ?? "")),
-      captives: ((u.captives ?? []) as Record<string, unknown>[]).map((c) => String(c.cardId ?? "")),
-    })),
-    spaceUnits: space.map((u) => ({
-      cardId: String(u.cardId ?? ""), ready: u.ready !== false, damage: Number(u.damage ?? 0),
-      upgrades: ((u.upgrades ?? []) as Record<string, unknown>[]).map((ug) => String(ug.cardId ?? "")),
-      captives: ((u.captives ?? []) as Record<string, unknown>[]).map((c) => String(c.cardId ?? "")),
-    })),
-    creditTokens: Number(supplemental.creditTokens ?? 0),
-    forceToken: Boolean(supplemental.forceToken),
-  };
-}
-
-function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; infoText?: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; assetPath?: string }): BuilderState {
-  return {
-    name: meta.name,
-    description: meta.description,
-    infoText: meta.infoText ?? "",
-    difficulty: meta.difficulty,
-    author: meta.author ?? "",
-    inspiredBy: meta.inspiredBy ?? "",
-    intendedSolution: meta.intendedSolution ?? [],
-    hints: meta.hints ?? [],
-    assetPath: meta.assetPath ?? "",
-    activePlayer: Number(raw.activePlayer) === 2 ? 2 : 1,
-    gamePhase: resolvePhase(raw.gamePhase),
-    currentRound: Number(raw.currentRound ?? 1),
-    initiativePlayer: Number(raw.initiativePlayer) === 2 ? 2 : 1,
-    initiativeClaimed: raw.initiativeClaimed !== false,
-    player1: parseRawPlayer((raw.player1 ?? {}) as Record<string, unknown>),
-    player2: parseRawPlayer((raw.player2 ?? {}) as Record<string, unknown>),
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Convert builder state → RawGameState
-// ---------------------------------------------------------------------------
-
-function toRaw(s: BuilderState): RawPuzzleGameState {
-  function mapPlayer(p: PlayerBuilderState, playerId: 1 | 2) {
-    return {
-      base: { cardId: p.baseCardId, damage: p.baseDamage, epicActionUsed: p.baseEpicActionUsed },
-      leader: { cardId: p.leaderCardId, ready: p.leaderReady, deployed: p.leaderDeployed, epicActionUsed: p.leaderEpicActionUsed },
-      groundArena: p.groundUnits.map((u) => ({
-        cardId: u.cardId, playId: "@", owner: playerId, controller: playerId,
-        ready: u.ready, damage: u.damage,
-        upgrades: u.upgrades.map((cardId) => ({ cardId, playId: "@", owner: playerId, controller: playerId })),
-        captives: u.captives.map((cardId) => ({ cardId, playId: "@", owner: playerId, controller: playerId })),
-      })),
-      spaceArena: p.spaceUnits.map((u) => ({
-        cardId: u.cardId, playId: "@", owner: playerId, controller: playerId,
-        ready: u.ready, damage: u.damage,
-        upgrades: u.upgrades.map((cardId) => ({ cardId, playId: "@", owner: playerId, controller: playerId })),
-        captives: u.captives.map((cardId) => ({ cardId, playId: "@", owner: playerId, controller: playerId })),
-      })),
-      resources: p.resources.map((r) => ({
-        cardId: r.cardId, playId: "@", owner: playerId, controller: playerId, ready: r.ready,
-      })),
-      discard: p.discard.map((cardId) => ({
-        cardId, playId: "@", owner: playerId, controller: playerId,
-      })),
-      deck: p.deck.map((cardId) => ({ cardId })),
-      hand: p.handCards.map((cardId) => ({ cardId })),
-      supplemental: { creditTokens: p.creditTokens, forceToken: p.forceToken },
-    };
-  }
-
-  return {
-    activePlayer: s.activePlayer,
-    gamePhase: s.gamePhase,
-    nextPlayId: 1,
-    currentRound: s.currentRound,
-    initiativePlayer: s.initiativePlayer,
-    initiativeClaimed: s.initiativeClaimed,
-    player1: mapPlayer(s.player1, 1),
-    player2: mapPlayer(s.player2, 2),
-    currentEffects: [],
-    triggerBag: [],
-  } as unknown as RawPuzzleGameState;
-}
 
 // ---------------------------------------------------------------------------
 // Per-player section
@@ -359,12 +172,14 @@ function toRaw(s: BuilderState): RawPuzzleGameState {
 
 type PlayerSectionProps = {
   label: string;
+  /** Which side this section edits — captives under its units belong to the OTHER player. */
+  playerId: 1 | 2;
   state: PlayerBuilderState;
   cards: CardCatalogEntry[];
   onChange: (next: PlayerBuilderState) => void;
 };
 
-function PlayerSection({ label, state, cards, onChange }: PlayerSectionProps) {
+function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectionProps) {
   const [newHandCardId, setNewHandCardId] = React.useState("");
   const [newDiscardCardId, setNewDiscardCardId] = React.useState("");
   const [newResourceCardId, setNewResourceCardId] = React.useState("");
@@ -628,6 +443,7 @@ function PlayerSection({ label, state, cards, onChange }: PlayerSectionProps) {
       <div className="rounded-lg bg-black/20 p-3 space-y-2">
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Ground Arena ({state.groundUnits.length})</div>
         <UnitAdder
+          playerId={playerId}
           unitCards={unitCards}
           units={state.groundUnits}
           cards={cards}
@@ -641,6 +457,7 @@ function PlayerSection({ label, state, cards, onChange }: PlayerSectionProps) {
       <div className="rounded-lg bg-black/20 p-3 space-y-2">
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Space Arena ({state.spaceUnits.length})</div>
         <UnitAdder
+          playerId={playerId}
           unitCards={unitCards}
           units={state.spaceUnits}
           cards={cards}
@@ -660,13 +477,15 @@ function PlayerSection({ label, state, cards, onChange }: PlayerSectionProps) {
 type UnitEditDialogProps = {
   unit: UnitEntry;
   type: "upgrades" | "captives";
+  /** Player who owns anything this unit is guarding — always the guard controller's opponent. */
+  captiveOwner: 1 | 2;
   cards: CardCatalogEntry[];
   unitCards: CardCatalogEntry[];
   onUpdate: (next: UnitEntry) => void;
   onClose: () => void;
 };
 
-function UnitEditDialog({ unit, type, cards, unitCards, onUpdate, onClose }: UnitEditDialogProps) {
+function UnitEditDialog({ unit, type, captiveOwner, cards, unitCards, onUpdate, onClose }: UnitEditDialogProps) {
   const [newCardId, setNewCardId] = React.useState("");
   const isUpgrades = type === "upgrades";
   const items = isUpgrades ? unit.upgrades : unit.captives;
@@ -697,6 +516,13 @@ function UnitEditDialog({ unit, type, cards, unitCards, onUpdate, onClose }: Uni
           </div>
           <button type="button" onClick={onClose} className="text-lg leading-none text-white/30 hover:text-white">×</button>
         </div>
+        {!isUpgrades && (
+          <p className="rounded-md border border-amber-400/25 bg-amber-400/10 px-2 py-1.5 text-[10px] leading-relaxed text-amber-200/80">
+            Captives are owned by <span className="font-semibold">Player {captiveOwner}</span> — a unit
+            can only capture an enemy unit. If this guard is defeated or leaves play, they return to
+            Player {captiveOwner}&apos;s arena exhausted.
+          </p>
+        )}
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <CardPicker
             cards={pickerCards}
@@ -732,7 +558,9 @@ function UnitEditDialog({ unit, type, cards, unitCards, onUpdate, onClose }: Uni
 
 // ---------------------------------------------------------------------------
 
-function UnitAdder({ unitCards, units, cards, onAdd, onRemove, onUpdate }: {
+function UnitAdder({ playerId, unitCards, units, cards, onAdd, onRemove, onUpdate }: {
+  /** The side these units belong to — captives under them are owned by the opponent. */
+  playerId: 1 | 2;
   unitCards: CardCatalogEntry[];
   units: UnitEntry[];
   cards: CardCatalogEntry[];
@@ -744,6 +572,9 @@ function UnitAdder({ unitCards, units, cards, onAdd, onRemove, onUpdate }: {
   const [ready, setReady] = React.useState(true);
   const [damage, setDamage] = React.useState(0);
   const [editDialog, setEditDialog] = React.useState<{ index: number; type: "upgrades" | "captives" } | null>(null);
+  // A unit can only capture an ENEMY non-leader unit (CR 8.33), so anything held by this side's
+  // units belongs to the other player — and returns to them when rescued.
+  const captiveOwner: 1 | 2 = playerId === 1 ? 2 : 1;
 
   return (
     <>
@@ -789,6 +620,7 @@ function UnitAdder({ unitCards, units, cards, onAdd, onRemove, onUpdate }: {
                 <button
                   type="button"
                   onClick={() => setEditDialog({ index: i, type: "captives" })}
+                  title={`Units this one is guarding. They are owned by Player ${captiveOwner} and return to Player ${captiveOwner} when rescued.`}
                   className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-white/50 bg-white/10 hover:bg-white/20 transition-colors"
                 >
                   {u.captives.length > 0 ? `Captives (${u.captives.length})` : "Captives"}
@@ -809,6 +641,19 @@ function UnitAdder({ unitCards, units, cards, onAdd, onRemove, onUpdate }: {
                   ))}
                 </div>
               )}
+              {u.captives.length > 0 && (
+                <div className="ml-3 flex flex-wrap items-center gap-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-300/60">
+                    Guarding (Player {captiveOwner}&apos;s):
+                  </span>
+                  {u.captives.map((cardId, j) => (
+                    <span key={j} className="text-[10px] text-amber-200/70">
+                      {cards.find((c) => c.cardId === cardId)?.label ?? cardId}
+                      {j < u.captives.length - 1 ? "," : ""}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -817,6 +662,7 @@ function UnitAdder({ unitCards, units, cards, onAdd, onRemove, onUpdate }: {
         <UnitEditDialog
           unit={units[editDialog.index]}
           type={editDialog.type}
+          captiveOwner={captiveOwner}
           cards={cards}
           unitCards={unitCards}
           onUpdate={(next) => onUpdate(editDialog.index, next)}
@@ -1284,12 +1130,14 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
               <div className="grid sm:grid-cols-2 gap-6">
                 <PlayerSection
                   label="Player 1 (You)"
+                  playerId={1}
                   state={state.player1}
                   cards={cards}
                   onChange={(p) => setState((s) => ({ ...s, player1: p }))}
                 />
                 <PlayerSection
                   label="Player 2 (Opponent)"
+                  playerId={2}
                   state={state.player2}
                   cards={cards}
                   onChange={(p) => setState((s) => ({ ...s, player2: p }))}
