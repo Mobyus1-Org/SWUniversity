@@ -1064,6 +1064,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_006": //Emperor Palpatine - Galactic Ruler
     case "LAW_013": //Chewbacca - Hero of Kessel (deployed)
     case "JTL_018": //Kazuda Xiono - Best Pilot in the Galaxy (deployed)
+    case "SOR_005": //Luke Skywalker - Faithful Friend (deployed)
     case "SOR_010": //Darth Vader - Dark Lord of the Sith
     case "SOR_014": //Sabine Wren - Galvanized Revolutionary
     case "SHD_012": //Bo-Katan Kryze - Princess in Exile

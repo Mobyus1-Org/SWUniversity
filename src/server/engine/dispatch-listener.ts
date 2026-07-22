@@ -7453,6 +7453,28 @@ function resolveActionAbility(
   playId?: string,
 ): PendingResolution | null {
   switch (cardId) {
+    case "SOR_005": { // Luke Skywalker (leader) — Action [1 resource, Exhaust]: Give a Shield token
+                      // to a Heroism unit you played this phase. Having no legal target is a
+                      // targeting restriction, not a cost gate, so it soft-passes (cost is paid).
+      const playedThisPhase005 = new Set(
+        game.roundState.cardsPlayedThisPhase
+          .filter(e => e.fromPlayer === player)
+          .map(e => e.playId),
+      );
+      const eligible005 = GetUnitsForPlayer(player)
+        .filter(u => playedThisPhase005.has(u.playId) && CardAspects(u.cardId).includes("Heroism"));
+      if (eligible005.length === 0) {
+        log.push(`${CardTitle("SOR_005")}: no Heroism unit played this phase — soft pass.`);
+        return null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "SOR_005",
+        player,
+        fromPlayIds: eligible005.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "SEC_015": { // C-3PO (leader) — Action [1 resource, Exhaust]: If you control an exhausted
                       // unit, exhaust a unit. The "if" is a soft condition (soft-pass if unmet).
       if (!GetUnitsForPlayer(player).some(u => !u.ready)) {
@@ -8478,6 +8500,14 @@ function applyAbilityEffect(
       if (target016) {
         target016.ready = false;
         game.gameLog.push(`${CardTitle("SOR_016")}: exhausted ${CardTitle(target016.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_005": { // Luke Skywalker (both sides) — give the chosen unit a Shield token.
+      if (!targetPlayId) break;
+      const target005 = giveShieldToUnit(game.currentGameState, targetPlayId);
+      if (target005) {
+        game.gameLog.push(`${CardTitle("SOR_005")}: gave a Shield token to ${CardTitle(target005.cardId)}.`);
       }
       break;
     }

@@ -922,6 +922,13 @@ function resolveInnateOnAttack(
       return optionalTarget("JTL_151", attacker.controller, damaged151.map(u => u.playId),
         "You may deal 2 damage to a damaged unit.", { continuation });
     }
+    case "SOR_005": { // Luke Skywalker (deployed) "On Attack: You may give another unit a Shield
+                      // token." "Another" excludes Luke himself; either side's units are legal.
+      const others005 = AllUnits().filter(u => u.playId !== attacker.playId);
+      if (others005.length === 0) return continuation;
+      return optionalTarget("SOR_005", attacker.controller, others005.map(u => u.playId),
+        "You may give another unit a Shield token.", { yesLabel: "Give Shield", continuation });
+    }
     case "SOR_010": { // Darth Vader "On Attack: You may deal 2 damage to a unit."
       return optionalTarget("SOR_010", attacker.controller, AllUnits().map(u => u.playId),
         "You may deal 2 damage to a unit.", { continuation });
