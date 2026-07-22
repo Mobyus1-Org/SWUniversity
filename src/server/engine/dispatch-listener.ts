@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, MarkUnitDamaged, ReadyUnit, ReadyUnitByPlayId, DealDamageToBase, DamageIsUnpreventable } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, GetLeaderForPlayer, HealBaseForPlayer, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, DealDamageToBase, DamageIsUnpreventable } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -54,7 +54,7 @@ import type {
   ResolutionRequest,
   UseAbilityDispatchData,
 } from "@/lib/engine/message-types";
-import { effectiveSmuggleCost, spendableFor, playCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks } from "@/server/engine/card-playability";
+import { aspectPenalty, effectiveSmuggleCost, spendableFor, playCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks } from "@/server/engine/card-playability";
 import type { Game, GameState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { PHASE_STAT_MOD } from "@/lib/engine/core-models";
@@ -95,6 +95,7 @@ import type {
 } from "@/server/engine/pending-resolution";
 import type { TriggerEntry, CardPlayedContext } from "@/lib/engine/trigger-types";
 import { collectBounties } from "@/server/engine/actions/bounty";
+import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB, anakinMortisAbility } from "@/server/engine/actions/when-played";
@@ -3866,6 +3867,21 @@ function handleChooseTarget(
       GivePowerMod("ASH_207", attacker, 2, "ForAttack", log);
     }
 
+    // Jyn Erso (SOR_018) leader Action: the defender gets -1/-0 for this attack.
+    if (pending.source === "SOR_018_leader" && target.type === "unit") {
+      const def018 = GetUnitByPlayId(game, target.playId);
+      if (def018) {
+        GivePowerMod("SOR_018", def018, -1, "ForAttack", log);
+        log.push(`${CardTitle("SOR_018")}: defender gets -1/-0 for this attack.`);
+      }
+    }
+
+    // Moff Gideon (SHD_007) leader Action: the attacker gets +1/+0, but only when attacking a UNIT.
+    if (pending.source === "SHD_007_leader" && target.type === "unit" && attacker) {
+      GivePowerMod("SHD_007", attacker, 1, "ForAttack", log);
+      log.push(`${CardTitle("SHD_007")}: attacker gets +1/+0 for this attack.`);
+    }
+
     // Grand Inquisitor (LOF_014) leader Action / On Attack: the defender gets -2/-0 for this attack.
     if (pending.source === "LOF_014" && target.type === "unit") {
       const def014 = GetUnitByPlayId(game, target.playId);
@@ -5069,6 +5085,76 @@ function handleChooseTarget(
         log.push(`Player ${pending.player} is playing ${CardTitle(cardId) ?? cardId} via ${CardTitle(pending.cardId)}${discount > 0 ? " (1 aspect penalty ignored)" : ""}.`);
         return playCardFromHand(game, log, pending.player, cardId, discount);
       }
+      case "SOR_003": // Chewbacca — unit costing 3 or less; gains Sentinel for this phase.
+      case "SHD_016": // Fennec Shand — unit costing 4 or less; gains Ambush for this phase.
+      case "SEC_007": { // Dryden Vos — unit costing 5 or less; gains Ambush for this phase.
+        const spec = {
+          SOR_003: { maxCost: 3, effect: "SOR_003", keyword: "Sentinel" },
+          SHD_016: { maxCost: 4, effect: "SHD_016", keyword: "Ambush" },
+          SEC_007: { maxCost: 5, effect: "SEC_007", keyword: "Ambush" },
+        }[pending.cardId as "SOR_003" | "SHD_016" | "SEC_007"];
+        const who = CardTitle(pending.cardId);
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse(`${who}: chosen card is not a Unit.`), pending, stateChanged: false };
+        if ((CardCost(cardId) ?? 0) > spec.maxCost)
+          return { response: invalidResponse(`${who}: chosen unit costs more than ${spec.maxCost}.`), pending, stateChanged: false };
+        const costK = playCost(game, pending.player, cardId);
+        if (spendableFor(game, pending.player) < costK)
+          return { response: invalidResponse(`${who}: not enough resources to play this unit.`), pending, stateChanged: false };
+        payResources(game, pending.player, costK, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${who} (gains ${spec.keyword} this phase).`);
+        return completePlayCard(game, log, cardId, pending.player, {
+          injectEffect: { cardId: spec.effect, duration: "Phase", affectedPlayer: pending.player },
+        });
+      }
+      case "SHD_013": { // Han Solo — play a unit for 1 less, then deal 2 damage to it.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Han Solo: chosen card is not a Unit."), pending, stateChanged: false };
+        const cost013 = Math.max(0, playCost(game, pending.player, cardId) - (pending.costReduction ?? 0));
+        if (spendableFor(game, pending.player) < cost013)
+          return { response: invalidResponse("Han Solo: not enough resources to play this unit."), pending, stateChanged: false };
+        payResources(game, pending.player, cost013, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("SHD_013")} (1 resource less).`);
+        const res013 = completePlayCard(game, log, cardId, pending.player);
+        // "Deal 2 damage to it" — the unit just played, found by the playId recorded on entry.
+        const entered013 = game.roundState.cardsPlayedThisPhase[game.roundState.cardsPlayedThisPhase.length - 1];
+        if (entered013) {
+          DealDamageToUnit(game, "SHD_013", entered013.playId, 2, log, pending.player);
+        }
+        return res013;
+      }
+      case "LAW_003": // Agent Kallus — any card, aspect penalties ignored.
+      case "LOF_018": { // Anakin Skywalker — Villainy NON-UNIT card, aspect penalties ignored.
+        const who003 = CardTitle(pending.cardId);
+        if (pending.cardId === "LOF_018") {
+          if (CardType(cardId) === "Unit")
+            return { response: invalidResponse("Anakin Skywalker: chosen card is a Unit."), pending, stateChanged: false };
+          if (!CardAspects(cardId).includes("Villainy"))
+            return { response: invalidResponse("Anakin Skywalker: chosen card is not Villainy."), pending, stateChanged: false };
+        }
+        // "Ignoring its aspect penalties" — pay the full cost minus whatever the penalty added.
+        const full003 = playCost(game, pending.player, cardId);
+        const cost003 = Math.max(0, full003 - aspectPenalty(game, pending.player, cardId));
+        if (spendableFor(game, pending.player) < cost003)
+          return { response: invalidResponse(`${who003}: not enough resources to play this card.`), pending, stateChanged: false };
+        payResources(game, pending.player, cost003, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${who003} (ignoring aspect penalties).`);
+        return completePlayCard(game, log, cardId, pending.player);
+      }
+      case "LOF_013": { // Barriss Offee — play an EVENT for 1 resource less.
+        if (CardType(cardId) !== "Event")
+          return { response: invalidResponse("Barriss Offee: chosen card is not an Event."), pending, stateChanged: false };
+        const cost013b = Math.max(0, playCost(game, pending.player, cardId) - (pending.costReduction ?? 0));
+        if (spendableFor(game, pending.player) < cost013b)
+          return { response: invalidResponse("Barriss Offee: not enough resources to play this event."), pending, stateChanged: false };
+        payResources(game, pending.player, cost013b, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("LOF_013")} (1 resource less).`);
+        return completePlayCard(game, log, cardId, pending.player);
+      }
       case "SOR_022": {
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("ECL: chosen card is not a Unit."), pending, stateChanged: false };
@@ -5900,6 +5986,12 @@ function rescueCaptiveByPlayId(game: GameState, log: string[], captivePlayId: st
   return false;
 }
 
+/** playIds of every upgrade this player controls, across both arenas — Finn (SHD_003). */
+function FriendlyUpgradePlayIds(game: GameState, player: PlayerId): string[] {
+  return GetAllUnits(game)
+    .flatMap(u => u.upgrades.filter(upg => upg.controller === player).map(upg => upg.playId));
+}
+
 /** Give a Shield token (SOR_T02) to the unit identified by playId. */
 function giveShieldToUnit(game: GameState, playId: string): Unit | null {
   const unit = GetUnitByPlayId(game, playId);
@@ -5929,6 +6021,14 @@ function applyAbilityOptionEffect(
         options: captives197.map(c => ({ id: c.playId, label: CardTitle(c.cardId) ?? c.cardId })),
         continuation: pending.continuation ?? null,
       } satisfies ChooseOnePending;
+    }
+    case "SHD_010_buff": { // Bossk Yes — give the damaged bountied unit +1/+0 for this phase.
+      const t010b = GetUnitByPlayId(game, pending.sourcePlayId!);
+      if (t010b) {
+        GivePowerMod("SHD_010", t010b, 1, "Phase", log);
+        log.push(`${CardTitle("SHD_010")}: ${CardTitle(t010b.cardId)} gets +1/+0 for this phase.`);
+      }
+      return pending.continuation ?? null;
     }
     case "SHD_133": { // Dengar Yes — deal 1 damage to the unit the upgrade was played on.
       DealDamageToUnit(game, "SHD_133", pending.sourcePlayId, 1, log, pending.player);
@@ -7453,6 +7553,223 @@ function resolveActionAbility(
   playId?: string,
 ): PendingResolution | null {
   switch (cardId) {
+    case "SOR_003": { // Chewbacca (leader) — Action [Exhaust]: Play a unit that costs 3 or less
+                      // from your hand (paying its cost). It gains Sentinel for this phase.
+      if (!GetHand(player).some(c => CardType(c.cardId) === "Unit" && (CardCost(c.cardId) ?? 0) <= 3)) {
+        log.push(`${CardTitle("SOR_003")}: no unit costing 3 or less in hand — soft pass.`);
+        return null;
+      }
+      return { type: "play-from-hand", cardId: "SOR_003", player } satisfies PlayFromHandPending;
+    }
+    case "SHD_016": { // Fennec Shand (leader) — Action [1 resource, Exhaust]: Play a unit that costs
+                      // 4 or less from your hand (paying its cost). Give it Ambush for this phase.
+      if (!GetHand(player).some(c => CardType(c.cardId) === "Unit" && (CardCost(c.cardId) ?? 0) <= 4)) {
+        log.push(`${CardTitle("SHD_016")}: no unit costing 4 or less in hand — soft pass.`);
+        return null;
+      }
+      return { type: "play-from-hand", cardId: "SHD_016", player } satisfies PlayFromHandPending;
+    }
+    case "SHD_013": { // Han Solo (leader) — Action [Exhaust]: Play a unit from your hand. It costs
+                      // 1 resource less. Deal 2 damage to it.
+      if (!GetHand(player).some(c => CardType(c.cardId) === "Unit")) {
+        log.push(`${CardTitle("SHD_013")}: no unit in hand — soft pass.`);
+        return null;
+      }
+      return { type: "play-from-hand", cardId: "SHD_013", player, costReduction: 1 } satisfies PlayFromHandPending;
+    }
+    case "SEC_007": { // Dryden Vos (leader) — Action [Exhaust, discard a card that costs 6 or more]:
+                      // Play a unit that costs 5 or less (paying its cost). It gains Ambush.
+                      // The discard is a cost, so it is paid first.
+      return {
+        type: "discard-from-hand",
+        targetPlayer: player,
+        count: 1,
+        minCost: 6,
+        continuation: { type: "play-from-hand", cardId: "SEC_007", player } satisfies PlayFromHandPending,
+      } satisfies DiscardFromHandPending;
+    }
+    case "LAW_003": { // Agent Kallus (leader) — Action [1 resource, Exhaust]: Play a card from your
+                      // hand, ignoring its aspect penalties.
+      if (GetHand(player).length === 0) return null;
+      return { type: "play-from-hand", cardId: "LAW_003", player } satisfies PlayFromHandPending;
+    }
+    case "LOF_013": { // Barriss Offee (leader) — Action [Exhaust, use the Force]: Play an event from
+                      // your hand. It costs 1 resource less.
+      if (!GetHand(player).some(c => CardType(c.cardId) === "Event")) {
+        log.push(`${CardTitle("LOF_013")}: no event in hand — soft pass.`);
+        return null;
+      }
+      if (!UseTheForce(player, log, "LOF_013")) return null; // no Force token → cost unpayable
+      return { type: "play-from-hand", cardId: "LOF_013", player, costReduction: 1 } satisfies PlayFromHandPending;
+    }
+    case "LOF_018": { // Anakin Skywalker (leader) — Action [Exhaust, use the Force]: Play a Villainy
+                      // non-unit card from your hand, ignoring its aspect penalties.
+      if (!GetHand(player).some(c => CardType(c.cardId) !== "Unit" && CardAspects(c.cardId).includes("Villainy"))) {
+        log.push(`${CardTitle("LOF_018")}: no Villainy non-unit card in hand — soft pass.`);
+        return null;
+      }
+      if (!UseTheForce(player, log, "LOF_018")) return null;
+      return { type: "play-from-hand", cardId: "LOF_018", player } satisfies PlayFromHandPending;
+    }
+    case "SOR_004": { // Chirrut Îmwe (leader) — Action [Exhaust]: Give a unit +0/+2 for this phase.
+      const all004 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      if (all004.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_004",
+        player,
+        fromPlayIds: all004.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "SHD_011": { // Kylo Ren (leader) — Action [Exhaust, discard a card from your hand]: Give a
+                      // unit +2/+0 for this phase. The discard is part of the cost, so it happens
+                      // first; the buff target is chosen afterwards.
+      const all011 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      if (all011.length === 0) return null;
+      return {
+        type: "discard-from-hand",
+        targetPlayer: player,
+        count: 1,
+        continuation: {
+          type: "ability-target",
+          cardId: "SHD_011",
+          player,
+          fromPlayIds: all011.map(u => u.playId),
+          continuation: null,
+        } satisfies AbilityTargetPending,
+      } satisfies DiscardFromHandPending;
+    }
+    case "SOR_018": { // Jyn Erso (leader) — Action [Exhaust]: Attack with a unit. The defender gets
+                      // -1/-0 for this attack.
+      const ready018 = GetUnitsForPlayer(player).filter(u => u.ready && CanUnitAttack(u as Unit));
+      if (ready018.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SOR_018_leader",
+        player,
+        fromPlayIds: ready018.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "SHD_007": { // Moff Gideon (leader) — Action [Exhaust]: Attack with a unit that costs 3 or
+                      // less. If it's attacking a unit, it gets +1/+0 for this attack.
+      const ready007 = GetUnitsForPlayer(player)
+        .filter(u => u.ready && CanUnitAttack(u as Unit) && (CardCost(u.cardId) ?? 0) <= 3);
+      if (ready007.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SHD_007_leader",
+        player,
+        fromPlayIds: ready007.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "SHD_002": { // Qi'ra (leader) — Action [1 resource, Exhaust]: Deal 2 damage to a friendly
+                      // unit. Then, give a Shield token to it.
+      const friendly002 = GetUnitsForPlayer(player);
+      if (friendly002.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SHD_002",
+        player,
+        fromPlayIds: friendly002.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "SHD_010": { // Bossk (leader) — Action [Exhaust]: Deal 1 damage to a unit with a Bounty.
+                      // You may give it +1/+0 for this phase.
+      const bountied010 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+        .filter(u => CountBounties(u.cardId, u.playId, u.controller) > 0);
+      if (bountied010.length === 0) {
+        log.push(`${CardTitle("SHD_010")}: no unit with a Bounty — soft pass.`);
+        return null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "SHD_010",
+        player,
+        fromPlayIds: bountied010.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "SOR_013": { // Cassian Andor (leader) — Action [1 resource, Exhaust]: If you've dealt 3 or
+                      // more damage to an enemy base this phase, draw a card.
+      const opp013 = GetOtherPlayer(player);
+      const dealt013 = (game.roundState.baseDamagedThisPhase ?? [])
+        .filter(e => e.byPlayer === player && e.target === opp013)
+        .reduce((sum, e) => sum + (e.amount ?? 0), 0);
+      if (dealt013 < 3) {
+        log.push(`${CardTitle("SOR_013")}: only ${dealt013} damage dealt to the enemy base this phase — soft pass.`);
+        return null;
+      }
+      DrawCardForPlayer(game, log, player);
+      log.push(`${CardTitle("SOR_013")}: drew a card.`);
+      return null;
+    }
+    case "SOR_007": { // Grand Moff Tarkin (leader) — Action [1 resource, Exhaust]: Give an
+                      // Experience token to an Imperial unit (either side's).
+      const imperial007 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+        .filter(u => TraitContains(u.cardId, "Imperial", u.controller, u.playId));
+      if (imperial007.length === 0) {
+        log.push(`${CardTitle("SOR_007")}: no Imperial unit in play — soft pass.`);
+        return null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "SOR_007",
+        player,
+        fromPlayIds: imperial007.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "SOR_011": { // Grand Inquisitor (leader) — Action [Exhaust]: Deal 2 damage to a friendly
+                      // unit with 3 or less power and ready it.
+      const eligible011 = GetUnitsForPlayer(player)
+        .filter(u => Unit.FromInterface(u).CurrentPower() <= 3);
+      if (eligible011.length === 0) {
+        log.push(`${CardTitle("SOR_011")}: no friendly unit with 3 or less power — soft pass.`);
+        return null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "SOR_011",
+        player,
+        fromPlayIds: eligible011.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "SHD_004": { // Rey (leader) — Action [1 resource, Exhaust]: Give an Experience token to a
+                      // unit with 2 or less power (either side's).
+      const eligible004 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+        .filter(u => Unit.FromInterface(u).CurrentPower() <= 2);
+      if (eligible004.length === 0) {
+        log.push(`${CardTitle("SHD_004")}: no unit with 2 or less power — soft pass.`);
+        return null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "SHD_004",
+        player,
+        fromPlayIds: eligible004.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "SHD_003": { // Finn (leader) — Action [Exhaust]: Defeat a friendly upgrade on a unit.
+                      // If you do, give a Shield token to that unit.
+      const upgrades003 = FriendlyUpgradePlayIds(game, player);
+      if (upgrades003.length === 0) {
+        log.push(`${CardTitle("SHD_003")}: no friendly upgrade in play — soft pass.`);
+        return null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "SHD_003",
+        player,
+        fromPlayIds: upgrades003,
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "SOR_005": { // Luke Skywalker (leader) — Action [1 resource, Exhaust]: Give a Shield token
                       // to a Heroism unit you played this phase. Having no legal target is a
                       // targeting restriction, not a cost gate, so it soft-passes (cost is paid).
@@ -8501,6 +8818,106 @@ function applyAbilityEffect(
         target016.ready = false;
         game.gameLog.push(`${CardTitle("SOR_016")}: exhausted ${CardTitle(target016.cardId)}.`);
       }
+      break;
+    }
+    case "SOR_004": { // Chirrut Îmwe — the chosen unit gets +0/+2 for this phase.
+      if (!targetPlayId) break;
+      const t004 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (t004) GiveHpMod("SOR_004", t004, 2, "Phase", game.gameLog);
+      break;
+    }
+    case "SHD_011": { // Kylo Ren — the chosen unit gets +2/+0 for this phase.
+      if (!targetPlayId) break;
+      const t011k = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (t011k) GivePowerMod("SHD_011", t011k, 2, "Phase", game.gameLog);
+      break;
+    }
+    case "SOR_018_leader": { // Jyn Erso — the chosen unit attacks; the defender gets -1/-0.
+      if (!targetPlayId) break;
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "SOR_018_leader",
+        continuation: null,
+      };
+    }
+    case "SHD_007_leader": { // Moff Gideon — the chosen cheap unit attacks; +1/+0 if it attacks a unit.
+      if (!targetPlayId) break;
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "SHD_007_leader",
+        continuation: null,
+      };
+    }
+    case "SHD_002": { // Qi'ra — 2 damage to the chosen friendly unit, then a Shield token on it.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "SHD_002", targetPlayId, 2, game.gameLog, pending.player);
+      // "Then, give a Shield token to it" — only if it survived the damage.
+      const t002 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (t002) {
+        giveShieldToUnit(game.currentGameState, targetPlayId);
+        game.gameLog.push(`${CardTitle("SHD_002")}: gave a Shield token to ${CardTitle(t002.cardId)}.`);
+      }
+      break;
+    }
+    case "SHD_010": { // Bossk — 1 damage to the chosen bountied unit, then optionally +1/+0.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "SHD_010", targetPlayId, 1, game.gameLog, pending.player);
+      const t010 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!t010) break; // died to the damage — nothing left to buff
+      return {
+        type: "ability-option",
+        cardId: "SHD_010_buff",
+        player: pending.player,
+        sourcePlayId: targetPlayId,
+        helperText: `Give ${CardTitle(t010.cardId)} +1/+0 for this phase?`,
+        yesLabel: "Give +1/+0",
+        noLabel: "Skip",
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "SOR_007": { // Grand Moff Tarkin (both sides) — Experience token to the chosen Imperial unit.
+      if (!targetPlayId) break;
+      const t007 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (t007) {
+        t007.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: t007.owner, controller: t007.controller });
+        game.gameLog.push(`${CardTitle("SOR_007")}: gave an Experience token to ${CardTitle(t007.cardId)}.`);
+      }
+      break;
+    }
+    case "SHD_004": { // Rey (both sides) — Experience token to the chosen low-power unit.
+      if (!targetPlayId) break;
+      const t004 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (t004) {
+        t004.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: t004.owner, controller: t004.controller });
+        game.gameLog.push(`${CardTitle("SHD_004")}: gave an Experience token to ${CardTitle(t004.cardId)}.`);
+      }
+      break;
+    }
+    case "SOR_011": // Grand Inquisitor (leader side) — 2 damage to the chosen unit, then ready it.
+    case "SOR_011_onattack": { // …deployed side deals 1 instead.
+      if (!targetPlayId) break;
+      const amount011 = pending.cardId === "SOR_011" ? 2 : 1;
+      DealDamageToUnit(game.currentGameState, "SOR_011", targetPlayId, amount011, game.gameLog, pending.player);
+      // Ready it even if the damage killed it? No — a defeated unit is gone; ReadyUnit no-ops.
+      const t011 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (t011 && ReadyUnit(game.currentGameState, t011)) {
+        game.gameLog.push(`${CardTitle("SOR_011")}: readied ${CardTitle(t011.cardId)}.`);
+      }
+      break;
+    }
+    case "SHD_003": { // Finn (both sides) — defeat the chosen friendly upgrade, then Shield its host.
+      if (!targetPlayId) break;
+      const host003 = GetAllUnits(game.currentGameState)
+        .find(u => u.upgrades.some(upg => upg.playId === targetPlayId));
+      if (!host003) break;
+      const defeatPend003 = defeatUpgradeByPlayId(
+        game.currentGameState, game.gameLog, targetPlayId, CardTitle("SHD_003") ?? "Finn", null, pending.player,
+      );
+      giveShieldToUnit(game.currentGameState, host003.playId);
+      game.gameLog.push(`${CardTitle("SHD_003")}: gave a Shield token to ${CardTitle(host003.cardId)}.`);
+      if (defeatPend003) return defeatPend003;
       break;
     }
     case "SOR_005": { // Luke Skywalker (both sides) — give the chosen unit a Shield token.

@@ -1,4 +1,4 @@
-import { CardInPlay, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import { CardInPlay, HP_MOD, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { GetCurrentEffectsForPlayer, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard } from "@/server/engine/core-functions";
 import { CardHp, CardPower } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -397,6 +397,7 @@ export class Unit implements UnitInterface {
       if (effect.targetPlayId && effect.targetPlayId !== this.playId) continue;
       switch (effect.cardId) {
         case PHASE_STAT_MOD: hp += effect.value ?? 0; break; // generic +X/+X or –X/–X for this phase
+        case HP_MOD: hp += effect.value ?? 0; break; // generic +0/+X or –0/–X (power untouched)
         case "SOR_106_3": hp += 3; break; // Attack Pattern Delta
         case "SOR_106_2": hp += 2; break;
         case "SOR_106_1": hp += 1; break;

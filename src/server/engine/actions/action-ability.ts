@@ -59,6 +59,28 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "SHD_017": //Lando Calrissian - With Impeccable Taste
         abilities.push(cardId);
         break;
+      // These four carry an Action on BOTH sides. The entries in the playId branch below serve the
+      // deployed side; the front side needs its own gate because its costs differ (it also
+      // exhausts, and Dryden must discard a 6+ card rather than any card).
+      case "LAW_003": // Agent Kallus — Action [1 resource, Exhaust]: play a card ignoring aspect penalties.
+        if (GetResources(player, true).length > 0 && GetHand(player).length > 0) abilities.push(cardId);
+        break;
+      case "SEC_007": // Dryden Vos — Action [Exhaust, discard a card costing 6+]: the discard is a cost.
+        if (GetHand(player).some(c => (CardCost(c.cardId) ?? 0) >= 6)) abilities.push(cardId);
+        break;
+      case "LOF_013": // Barriss Offee — Action [Exhaust, use the Force]: play an event for 1 less.
+        if (HasTheForce(player) && GetHand(player).some(c => CardType(c.cardId) === "Event")) abilities.push(cardId);
+        break;
+      case "LOF_018": // Anakin Skywalker — Action [Exhaust, use the Force]: play a Villainy non-unit.
+        if (HasTheForce(player)
+            && GetHand(player).some(c => CardType(c.cardId) !== "Unit" && CardAspects(c.cardId).includes("Villainy"))) {
+          abilities.push(cardId);
+        }
+        break;
+      case "SHD_011": // Kylo Ren — Action [Exhaust, DISCARD a card from your hand]: the discard is
+                      // part of the cost, so the ability is unavailable with an empty hand.
+        if (GetHand(player).length > 0) abilities.push(cardId);
+        break;
       case "TWI_005": // Count Dooku — needs Separatist card in hand
         if (GetHand(player).some(c => CardTraits(c.cardId).includes("Separatist"))) abilities.push(cardId);
         break;
@@ -168,7 +190,6 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "SEC_006": // Colonel Yularen — Action [Exhaust]: Attack with a unit, then optionally a cheaper one (needs a ready unit)
         if (GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
         break;
-      case "SHD_011": //Kylo Ren - Rash and Deadly
         if (GetHand(player).length > 0) abilities.push(cardId);
         break;
       default: break;
@@ -286,6 +307,8 @@ export function ActionAbilityCost(cardId: string): number {
     case "SEC_004"://Leia Organa - Of A Secret Bloodline
       return 1;
     case "SEC_015"://C-3PO - Human-Cyborg Relations
+      return 1;
+    case "LAW_003"://Agent Kallus - Action [1 resource, Exhaust]
       return 1;
     case "SOR_005"://Luke Skywalker
       return 1;

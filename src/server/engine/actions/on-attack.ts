@@ -922,6 +922,41 @@ function resolveInnateOnAttack(
       return optionalTarget("JTL_151", attacker.controller, damaged151.map(u => u.playId),
         "You may deal 2 damage to a damaged unit.", { continuation });
     }
+    case "SOR_007": { // Grand Moff Tarkin (deployed) "On Attack: You may give an Experience token
+                      // to another Imperial unit." "Another" excludes Tarkin himself.
+      const imperial007 = AllUnits().filter(u =>
+        u.playId !== attacker.playId && TraitContains(u.cardId, "Imperial", u.controller, u.playId));
+      if (imperial007.length === 0) return continuation;
+      return optionalTarget("SOR_007", attacker.controller, imperial007.map(u => u.playId),
+        "You may give an Experience token to another Imperial unit.",
+        { yesLabel: "Give Experience", continuation });
+    }
+    case "SOR_011": { // Grand Inquisitor (deployed) "On Attack: You may deal 1 damage to another
+                      // friendly unit with 3 or less power and ready it."
+      const eligible011 = GetUnitsForPlayer(attacker.controller).filter(u =>
+        u.playId !== attacker.playId && Unit.FromInterface(u).CurrentPower() <= 3);
+      if (eligible011.length === 0) return continuation;
+      return optionalTarget("SOR_011_onattack", attacker.controller, eligible011.map(u => u.playId),
+        "You may deal 1 damage to another friendly unit with 3 or less power and ready it.",
+        { yesLabel: "Deal 1 and ready", continuation });
+    }
+    case "SHD_004": { // Rey (deployed) "On Attack: You may give an Experience token to a unit with
+                      // 2 or less power." No "another" clause — Rey herself is legal if she fits.
+      const eligible004 = AllUnits().filter(u => Unit.FromInterface(u).CurrentPower() <= 2);
+      if (eligible004.length === 0) return continuation;
+      return optionalTarget("SHD_004", attacker.controller, eligible004.map(u => u.playId),
+        "You may give an Experience token to a unit with 2 or less power.",
+        { yesLabel: "Give Experience", continuation });
+    }
+    case "SHD_003": { // Finn (deployed) "On Attack: You may defeat a friendly upgrade on a unit.
+                      // If you do, give a Shield token to that unit."
+      const upgrades003 = AllUnits()
+        .flatMap(u => u.upgrades.filter(upg => upg.controller === attacker.controller).map(upg => upg.playId));
+      if (upgrades003.length === 0) return continuation;
+      return optionalTarget("SHD_003", attacker.controller, upgrades003,
+        "You may defeat a friendly upgrade to give its unit a Shield token.",
+        { yesLabel: "Defeat upgrade", continuation });
+    }
     case "SOR_005": { // Luke Skywalker (deployed) "On Attack: You may give another unit a Shield
                       // token." "Another" excludes Luke himself; either side's units are legal.
       const others005 = AllUnits().filter(u => u.playId !== attacker.playId);

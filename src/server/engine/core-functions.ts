@@ -1,6 +1,6 @@
 import { CardArena, CardAspects, CardCost, CardIsUnique, CardText, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
-import { Card, CardInPlay, CardTypes, CurrentEffect, EffectDuration, Leader, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import { Card, CardInPlay, CardTypes, CurrentEffect, EffectDuration, HP_MOD, Leader, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { Game, GameState, PlayerState } from "@/lib/engine/game";
 import { Unit } from "@/server/engine/unit";
 import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
@@ -572,7 +572,7 @@ export function DealDamageToBase(gs: GameState, player: PlayerId, amount: number
   GetPlayer(gs, player).base.damage += amount;
   if (byPlayer !== undefined) {
     gs.roundState.baseDamagedThisPhase ??= [];
-    gs.roundState.baseDamagedThisPhase.push({ byPlayer, target: player });
+    gs.roundState.baseDamagedThisPhase.push({ byPlayer, target: player, amount });
   }
   QueueWhenBaseDamagedReaction(gs, player, amount);
 }
@@ -640,6 +640,28 @@ export function GiveStatModForPhase(
  * GiveStatModForPhase for cards that move power without touching HP; `duration` lets the same
  * helper serve "for this phase" and "for this attack" cards.
  */
+/**
+ * Gives `target` an HP-only modifier (+0/+X or –0/–X). The counterpart of GivePowerMod — used by
+ * cards whose buff must not raise power, e.g. Chirrut Îmwe (SOR_004) "+0/+2 for this phase".
+ */
+export function GiveHpMod(
+  sourceCardId: string,
+  target: UnitInterface,
+  amount: number,
+  duration: EffectDuration,
+  gameLog: string[],
+): void {
+  const gs = GetGameState();
+  gs.currentEffects.push({
+    cardId: HP_MOD,
+    duration,
+    affectedPlayer: target.controller,
+    targetPlayId: target.playId,
+    value: amount,
+  });
+  gameLog.push(`${CardTitle(sourceCardId)}: ${CardTitle(target.cardId)} gets +0/${amount >= 0 ? "+" : ""}${amount}.`);
+}
+
 export function GivePowerMod(
   sourceCardId: string,
   target: UnitInterface,
@@ -1065,6 +1087,10 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "LAW_013": //Chewbacca - Hero of Kessel (deployed)
     case "JTL_018": //Kazuda Xiono - Best Pilot in the Galaxy (deployed)
     case "SOR_005": //Luke Skywalker - Faithful Friend (deployed)
+    case "SOR_007": //Grand Moff Tarkin - Ruthless Strategist (deployed)
+    case "SOR_011": //Grand Inquisitor - Hunting the Jedi (deployed)
+    case "SHD_003": //Finn - This is a Rescue (deployed)
+    case "SHD_004": //Rey - More Than a Scavenger (deployed)
     case "SOR_010": //Darth Vader - Dark Lord of the Sith
     case "SOR_014": //Sabine Wren - Galvanized Revolutionary
     case "SHD_012": //Bo-Katan Kryze - Princess in Exile

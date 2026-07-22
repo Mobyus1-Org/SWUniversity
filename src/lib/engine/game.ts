@@ -60,7 +60,8 @@ export interface GameState {
     cardsEnteredPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: EntryReason }[];
     cardsLeftPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: ExitReason }[];
     unitsAttackedThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; }[];
-    baseDamagedThisPhase: { byPlayer: PlayerId; target: PlayerId }[];
+    /** `amount` is the damage actually applied (after caps) — Cassian Andor (SOR_013) sums it. */
+    baseDamagedThisPhase: { byPlayer: PlayerId; target: PlayerId; amount?: number }[];
     /** playIds of units that took damage this phase (e.g. ASH_188 Galvanized Leap). */
     unitsDamagedThisPhase: string[];
     lastActionWasPass: boolean;

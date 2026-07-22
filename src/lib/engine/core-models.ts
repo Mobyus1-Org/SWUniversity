@@ -86,6 +86,9 @@ export const PHASE_STAT_MOD = "stat-mod";
 /** Generic power-only modifier (+X/+0 or –X/–0). Unlike PHASE_STAT_MOD, it leaves HP alone. */
 export const POWER_MOD = "power-mod";
 
+/** Generic HP-only modifier (+0/+X or –0/–X). The counterpart of POWER_MOD: leaves power alone. */
+export const HP_MOD = "hp-mod";
+
 export interface CurrentEffect {
   cardId: string;
   duration: EffectDuration;

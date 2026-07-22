@@ -101,11 +101,12 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   //Jump to Lightspeed
   "JTL_004", "JTL_005", "JTL_010", "JTL_012", "JTL_013", "JTL_014", "JTL_018",
   //Legends of the Underworld
-  "LAW_008", "LAW_010", "LAW_013",
+  "LAW_003", "LAW_008", "LAW_010", "LAW_013",
   //Legacy of the Force
-  "LOF_002", "LOF_003", "LOF_005", "LOF_007", "LOF_009", "LOF_012", "LOF_014", "LOF_015", "LOF_016",
+  "LOF_002", "LOF_003", "LOF_005", "LOF_007", "LOF_009", "LOF_012", "LOF_013", "LOF_014", "LOF_015",
+  "LOF_016", "LOF_018",
   //Secrets of Power
-  "SEC_004", "SEC_015",
+  "SEC_004", "SEC_006", "SEC_007", "SEC_015",
   //ASH
   "ASH_004", "ASH_009",
   //IBH
