@@ -252,11 +252,14 @@ export function LoadPuzzlePanel(props: Props) {
               <img
                 src={puzzleImageSrc(entry.assetPath)}
                 alt=""
+                draggable={false}
                 onError={(e) => {
                   const img = e.currentTarget;
                   if (!img.src.endsWith(DEFAULT_PUZZLE_IMAGE)) img.src = `/assets/${DEFAULT_PUZZLE_IMAGE}`;
                 }}
-                className={cls}
+                // pointer-events-none reroutes the long-press to the <li> (a div has no iOS image
+                // callout menu); the -webkit-* rules kill the "Save to Photos"/save-image gesture.
+                className={`${cls} pointer-events-none select-none [-webkit-touch-callout:none] [-webkit-user-select:none]`}
               />
             );
             const solvedChip = solvedPuzzleIds.includes(id) ? (
@@ -352,11 +355,12 @@ export function LoadPuzzlePanel(props: Props) {
           <img
             src={previewSrc}
             alt="Puzzle preview"
+            draggable={false}
             onError={(e) => {
               const img = e.currentTarget;
               if (!img.src.endsWith(DEFAULT_PUZZLE_IMAGE)) img.src = `/assets/${DEFAULT_PUZZLE_IMAGE}`;
             }}
-            className="max-h-[90dvh] max-w-[95vw] rounded-lg border-2 border-white/80 object-contain"
+            className="pointer-events-none max-h-[90dvh] max-w-[95vw] select-none rounded-lg border-2 border-white/80 object-contain [-webkit-touch-callout:none] [-webkit-user-select:none]"
           />
         </div>
       ) : null}
