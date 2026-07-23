@@ -96,6 +96,30 @@ export function LoadPuzzlePanel(props: Props) {
     });
   }, []);
 
+  // Mobile: touch-and-hold a card to open a full-size preview of its image.
+  const [previewSrc, setPreviewSrc] = React.useState<string | null>(null);
+  const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set once the hold fires, so the touch-release's synthetic click doesn't also load the puzzle.
+  const longPressFired = React.useRef(false);
+
+  const clearLongPress = React.useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const startLongPress = React.useCallback((src: string) => {
+    longPressFired.current = false;
+    clearLongPress();
+    longPressTimer.current = setTimeout(() => {
+      longPressFired.current = true;
+      setPreviewSrc(src);
+    }, 450);
+  }, [clearLongPress]);
+
+  React.useEffect(() => clearLongPress, [clearLongPress]);
+
   const fetchList = React.useCallback(() => {
     setLoading(true);
     setError(null);
@@ -274,8 +298,17 @@ export function LoadPuzzlePanel(props: Props) {
             return (
               <li
                 key={id}
-                onClick={() => handleLoad(entry)}
-                className={`group ${globalBackgroundStyle} border rounded cursor-pointer p-2 sm:p-3 transition-all hover:ring-2 hover:ring-primary/60`}
+                onClick={() => {
+                  // A completed touch-hold opened the preview — swallow the trailing click so it
+                  // doesn't also load the puzzle.
+                  if (longPressFired.current) { longPressFired.current = false; return; }
+                  handleLoad(entry);
+                }}
+                onTouchStart={() => startLongPress(puzzleImageSrc(entry.assetPath))}
+                onTouchMove={clearLongPress}
+                onTouchEnd={clearLongPress}
+                onTouchCancel={clearLongPress}
+                className={`group ${globalBackgroundStyle} border rounded cursor-pointer select-none [-webkit-touch-callout:none] p-2 sm:p-3 transition-all hover:ring-2 hover:ring-primary/60`}
               >
                 {/* Mobile layout: [img title chip] / [description] / [difficulty author] / [admin] */}
                 <div className="flex flex-col gap-1 sm:hidden">
@@ -311,6 +344,22 @@ export function LoadPuzzlePanel(props: Props) {
           })}
         </ul>
       )}
+      {previewSrc ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4"
+          onClick={() => setPreviewSrc(null)}
+        >
+          <img
+            src={previewSrc}
+            alt="Puzzle preview"
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (!img.src.endsWith(DEFAULT_PUZZLE_IMAGE)) img.src = `/assets/${DEFAULT_PUZZLE_IMAGE}`;
+            }}
+            className="max-h-[90dvh] max-w-[95vw] rounded-lg border-2 border-white/80 object-contain"
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
