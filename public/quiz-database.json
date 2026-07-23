@@ -2056,7 +2056,7 @@
          "SOR_122",
          "SHD_036"
       ],
-      "relevantRule": "Any of the mentioned units are valid targets. In the case of the **_TIE Fighter_** token, just because it has 1 HP doesn't mean you can't deal 4 damage to it. While the **_Secretive Sage's_** shield token would prevent the damage, that prevention is considered a \"repalcement effect\" and still satisfies **_First Light's_** requirement. Since the **_Lurking TIE_** is now considered \"friendly\", it will be damaged and defeated if chosen.\n\n**1.8.10** - If a replacement effect replaces part or all of a cost with another effect, the cost is still considered paid as long as that other effect can be resolved. If a replacement effect can’t be resolved, the original cost must be paid in full.",
+      "relevantRule": "Any of the mentioned units are valid targets. In the case of the **_TIE Fighter_** token, just because it has 1 HP doesn't mean you can't deal 4 damage to it. While the **_Secretive Sage's_** shield token would prevent the damage, that prevention is considered a \"replacement effect\" and still satisfies **_First Light's_** requirement. Since the **_Lurking TIE_** is now considered \"friendly\", it will be damaged and defeated if chosen.\n\n**1.8.10** - If a replacement effect replaces part or all of a cost with another effect, the cost is still considered paid as long as that other effect can be resolved. If a replacement effect can’t be resolved, the original cost must be paid in full.",
       "tags": [
          "tie fighter",
          "token",
