@@ -311,6 +311,9 @@ export function LoadPuzzlePanel(props: Props) {
                 onTouchMove={clearLongPress}
                 onTouchEnd={clearLongPress}
                 onTouchCancel={clearLongPress}
+                // iOS fires contextmenu on long-press; preventing it is what actually suppresses the
+                // "Share / Save to Photos" image menu (-webkit-touch-callout alone does not).
+                onContextMenu={(e) => e.preventDefault()}
                 className={`group ${globalBackgroundStyle} border rounded cursor-pointer select-none [-webkit-touch-callout:none] p-2 sm:p-3 transition-all hover:ring-2 hover:ring-primary/60`}
               >
                 {/* Mobile layout: [img title chip] / [description] / [difficulty author] / [admin] */}
@@ -351,6 +354,7 @@ export function LoadPuzzlePanel(props: Props) {
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4"
           onClick={() => setPreviewSrc(null)}
+          onContextMenu={(e) => e.preventDefault()}
         >
           <img
             src={previewSrc}
