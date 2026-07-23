@@ -3,6 +3,9 @@ import { CardRefField } from "@/components/Shared/CardRefField";
 import { globalBackgroundStyle } from "@/util/style-const";
 import { isKnownCardId, parseCardRefs } from "@/util/card-ref";
 import { normalizePuzzleAssetPath, puzzleImageSrc, DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
+import { useIsWide } from "@/util/use-is-wide";
+import { buildStepList, STEP_LABELS } from "./puzzle-wizard-steps";
+import { StaticBoard } from "./StaticBoard";
 import type { GamePhase } from "@/lib/engine/core-models";
 import {
   fromRaw,
@@ -12,7 +15,6 @@ import {
   type PlayerBuilderState,
   type UnitEntry,
 } from "./puzzle-builder-state";
-import type { SolverResult } from "@/server/puzzle/solver";
 
 export type CardCatalogEntry = {
   cardId: string;
@@ -674,95 +676,6 @@ function UnitAdder({ playerId, unitCards, units, cards, onAdd, onRemove, onUpdat
 }
 
 // ---------------------------------------------------------------------------
-// Board preview
-// ---------------------------------------------------------------------------
-
-function BoardPreview({ state, cards }: { state: BuilderState; cards: CardCatalogEntry[] }) {
-  function cardName(cardId: string) {
-    return cards.find((c) => c.cardId === cardId)?.label ?? cardId;
-  }
-
-  function PlayerPreview({ p, label }: { p: PlayerBuilderState; label: string }) {
-    return (
-      <div className="space-y-1">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">{label}</div>
-        <div className="text-[11px] text-white/70">
-          <span className="text-white/40">Base: </span>
-          {p.baseCardId ? `${cardName(p.baseCardId)} (${p.baseDamage} dmg)` : "—"}
-        </div>
-        <div className="text-[11px] text-white/70">
-          <span className="text-white/40">Leader: </span>
-          {p.leaderCardId ? cardName(p.leaderCardId) : "—"}
-          {p.leaderDeployed ? " [deployed]" : ""}
-        </div>
-        {p.groundUnits.length > 0 && (
-          <div className="text-[11px] text-white/70">
-            <span className="text-white/40">Ground: </span>
-            {p.groundUnits.map((u, i) => (
-              <span key={i}>{i > 0 ? ", " : ""}{cardName(u.cardId)}{u.damage > 0 ? ` (${u.damage})` : ""}</span>
-            ))}
-          </div>
-        )}
-        {p.spaceUnits.length > 0 && (
-          <div className="text-[11px] text-white/70">
-            <span className="text-white/40">Space: </span>
-            {p.spaceUnits.map((u, i) => (
-              <span key={i}>{i > 0 ? ", " : ""}{cardName(u.cardId)}{u.damage > 0 ? ` (${u.damage})` : ""}</span>
-            ))}
-          </div>
-        )}
-        <div className="text-[11px] text-white/70">
-          <span className="text-white/40">Resources: </span>
-          {p.resources.length > 0
-            ? `${p.resources.filter((r) => r.ready).length} ready / ${p.resources.length} total`
-            : "0"}
-        </div>
-        <div className="text-[11px] text-white/70">
-          <span className="text-white/40">Tokens: </span>
-          {p.creditTokens} credit{p.creditTokens !== 1 ? "s" : ""}{p.forceToken ? " · has the Force" : ""}
-        </div>
-        {p.deck.length > 0 && (
-          <div className="text-[11px] text-white/70">
-            <span className="text-white/40">Deck: </span>
-            {p.deck.length} card{p.deck.length !== 1 ? "s" : ""}
-          </div>
-        )}
-        {p.handCards.length > 0 && (
-          <div className="text-[11px] text-white/70">
-            <span className="text-white/40">Hand: </span>
-            {p.handCards.map((c, i) => (
-              <span key={i}>{i > 0 ? ", " : ""}{cardName(c)}</span>
-            ))}
-          </div>
-        )}
-        {p.discard.length > 0 && (
-          <div className="text-[11px] text-white/70">
-            <span className="text-white/40">Discard: </span>
-            {p.discard.map((c, i) => (
-              <span key={i}>{i > 0 ? ", " : ""}{cardName(c)}</span>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg bg-black/20 p-3 space-y-3">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/50">Preview</div>
-      <div className="text-[11px] text-white/60 space-y-0.5">
-        <div>Round {state.currentRound} · Phase {state.gamePhase} · Active: P{state.activePlayer}</div>
-        <div>Initiative: P{state.initiativePlayer}{state.initiativeClaimed ? " (claimed)" : ""}</div>
-      </div>
-      <div className="grid sm:grid-cols-2 gap-3">
-        <PlayerPreview p={state.player1} label="Player 1 (You)" />
-        <PlayerPreview p={state.player2} label="Player 2 (Opponent)" />
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
@@ -781,46 +694,15 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
   const [state, setState] = React.useState<BuilderState>(initialBuilderState);
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
-  const [solverResult, setSolverResult] = React.useState<SolverResult | null>(null);
-  const [solverError, setSolverError] = React.useState<string | null>(null);
-  const [showSolutions, setShowSolutions] = React.useState(false);
-  const [importError, setImportError] = React.useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [showDiscardConfirm, setShowDiscardConfirm] = React.useState(false);
 
-  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const json = JSON.parse(ev.target?.result as string) as Record<string, unknown>;
-        let gamestate: Record<string, unknown>;
-        let meta = { name: "New Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [] as string[], hints: [] as string[], assetPath: "" };
-        if (json.initialGamestate !== undefined) {
-          gamestate = json.initialGamestate as Record<string, unknown>;
-          meta = {
-            name: String(json.name ?? "New Puzzle"),
-            description: String(json.description ?? ""),
-            infoText: String(json.infoText ?? ""),
-            difficulty: Number(json.difficulty ?? 1),
-            author: String(json.author ?? ""),
-            inspiredBy: String(json.inspiredBy ?? ""),
-            intendedSolution: Array.isArray(json.intendedSolution) ? json.intendedSolution.map(String) : [],
-            hints: Array.isArray(json.hints) ? json.hints.map(String) : [],
-            assetPath: String(json.assetPath ?? ""),
-          };
-        } else {
-          gamestate = json;
-        }
-        setState(fromRaw(gamestate, meta));
-        setImportError(null);
-      } catch {
-        setImportError("Invalid JSON file.");
-      }
-    };
-    reader.readAsText(file);
-  }
+  const isWide = useIsWide(640);
+  const steps = buildStepList(isWide);
+  const [stepIndex, setStepIndex] = React.useState(0);
+  // Clamp when the step list shrinks (viewport crossed the breakpoint mid-edit).
+  const clampedIndex = Math.min(stepIndex, steps.length - 1);
+  const currentStep = steps[clampedIndex];
+  const isLastStep = clampedIndex === steps.length - 1;
 
   React.useEffect(() => {
     fetch("/api/internal/card-catalog")
@@ -906,91 +788,44 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
     }
   }
 
-  function handleExport() {
-    const doc = {
-      name: state.name.trim(),
-      description: state.description.trim(),
-      infoText: state.infoText,
-      author: state.author?.trim() ?? "",
-      inspiredBy: state.inspiredBy?.trim() ?? "",
-      intendedSolution: state.intendedSolution ?? [],
-      hints: state.hints ?? [],
-      difficulty: state.difficulty,
-      assetPath: normalizePuzzleAssetPath(state.assetPath),
-      initialGamestate: toRaw(state),
-    };
-    const blob = new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const slug = state.name.trim()
-      ? state.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-      : "puzzle";
-    a.download = `${slug}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  async function handleSolve() {
-    setSolverResult(null);
-    setSolverError(null);
-    setShowSolutions(false);
-    setSaving(true);
-    try {
-      const res = await fetch("/api/puzzles/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ puzzle: toRaw(state) }),
-      });
-      if (!res.ok) throw new Error((await res.json() as { error?: string }).error ?? "Solver failed");
-      const data = await res.json() as SolverResult;
-      setSolverResult(data);
-    } catch (err) {
-      setSolverError(err instanceof Error ? err.message : "Solver failed.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
     <div className="fixed inset-x-0 top-0 bottom-12 z-50 bg-[rgba(5,8,20,0.88)] backdrop-blur-sm">
-      <div className="mx-auto max-w-4xl px-4 mt-20 mb-12 pb-24 max-h-[calc(100vh-7rem)] overflow-y-auto">
-        <div className={`rounded-2xl border border-white/10 p-6 ${globalBackgroundStyle} space-y-6`}>
+      <div className="mx-auto max-w-4xl px-1.5 sm:px-4 mt-[5.5rem] sm:mt-20 mb-12 pb-24 max-h-[calc(100dvh-7rem)] sm:max-h-[calc(100vh-7rem)] overflow-y-auto">
+        <div className={`rounded-2xl border border-white/10 p-3 sm:p-6 [zoom:0.75] sm:[zoom:1] ${globalBackgroundStyle} space-y-4 sm:space-y-6`}>
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-black uppercase tracking-[0.24em] text-white">{initialId ? "Edit Puzzle" : "Build Puzzle"}</h2>
-            <div className="flex items-center gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json,application/json"
-                className="hidden"
-                onChange={handleImport}
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20"
-              >
-                Import JSON
-              </button>
-              {importError && <span className="text-xs text-rose-300">{importError}</span>}
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20"
-              >
-                Cancel
-              </button>
-            </div>
+            {!cardsLoading ? (
+              <div className="flex flex-wrap items-center gap-1">
+                {steps.map((id, i) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setStepIndex(i)}
+                    className={`rounded px-2 py-0.5 text-[11px] font-semibold transition-colors ${i === clampedIndex ? "bg-white/20 text-white" : "text-white/50 hover:text-white/80"}`}
+                  >
+                    {i + 1}. {STEP_LABELS[id]}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setShowDiscardConfirm(true)}
+              className="rounded-lg border border-white/15 bg-white/10 px-2.5 py-1 text-base font-semibold leading-none text-white hover:bg-white/20"
+            >
+              ×
+            </button>
           </div>
 
           {cardsLoading ? (
             <p className="text-xs text-white/50">Loading card catalog…</p>
           ) : (
             <>
+              {currentStep === "info" && (<>
               {/* Puzzle metadata */}
-              <div className="rounded-lg bg-black/20 p-4 space-y-3">
+              <div className="rounded-lg bg-black/20 p-3 sm:p-4 space-y-3">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Puzzle Info</div>
                 <FieldRow label="Name">
                   <input
@@ -1077,7 +912,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
               </div>
 
               {/* Global state */}
-              <div className="rounded-lg bg-black/20 p-4 space-y-3">
+              <div className="rounded-lg bg-black/20 p-3 sm:p-4 space-y-3">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Game State</div>
                 <div className="grid sm:grid-cols-3 gap-3">
                   <FieldRow label="Round">
@@ -1125,9 +960,32 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                   />
                 </div>
               </div>
+              </>)}
 
               {/* Player sections */}
-              <div className="grid sm:grid-cols-2 gap-6">
+              {currentStep === "boards" && (
+              <div className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-3 sm:gap-6">
+                  <PlayerSection
+                    label="Player 1 (You)"
+                    playerId={1}
+                    state={state.player1}
+                    cards={cards}
+                    onChange={(p) => setState((s) => ({ ...s, player1: p }))}
+                  />
+                  <PlayerSection
+                    label="Player 2 (Opponent)"
+                    playerId={2}
+                    state={state.player2}
+                    cards={cards}
+                    onChange={(p) => setState((s) => ({ ...s, player2: p }))}
+                  />
+                </div>
+                <StaticBoard state={state} cards={cards} side="both" compact />
+              </div>
+              )}
+              {currentStep === "p1" && (
+              <div className="space-y-4">
                 <PlayerSection
                   label="Player 1 (You)"
                   playerId={1}
@@ -1135,6 +993,11 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                   cards={cards}
                   onChange={(p) => setState((s) => ({ ...s, player1: p }))}
                 />
+                <StaticBoard state={state} cards={cards} side={1} compact />
+              </div>
+              )}
+              {currentStep === "p2" && (
+              <div className="space-y-4">
                 <PlayerSection
                   label="Player 2 (Opponent)"
                   playerId={2}
@@ -1142,13 +1005,13 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                   cards={cards}
                   onChange={(p) => setState((s) => ({ ...s, player2: p }))}
                 />
+                <StaticBoard state={state} cards={cards} side={2} compact />
               </div>
+              )}
 
-              {/* Preview */}
-              <BoardPreview state={state} cards={cards} />
-
+              {currentStep === "solution" && (<>
               {/* Intended solution */}
-              <div className="rounded-lg bg-black/20 p-4 space-y-3">
+              <div className="rounded-lg bg-black/20 p-3 sm:p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Intended Solution</div>
                   <button
@@ -1179,7 +1042,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
               </div>
 
               {/* Hints */}
-              <div className="rounded-lg bg-black/20 p-4 space-y-3">
+              <div className="rounded-lg bg-black/20 p-3 sm:p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Hints</div>
                   <button
@@ -1211,97 +1074,76 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                   ))}
                 </div>
               </div>
+              </>)}
 
-              {/* Save */}
-              <div className="flex items-center gap-4">
+              {currentStep === "preview" && (
+              <div className="space-y-4">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Preview</div>
+                <StaticBoard state={state} cards={cards} side="both" />
+                {/* Save */}
+                <div className="flex flex-wrap items-center gap-4">
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={handleSave}
+                    className="rounded-xl border border-emerald-400/40 bg-emerald-500/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500/30 disabled:opacity-40"
+                  >
+                    {saving ? "Saving…" : "Save Puzzle"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={handleTest}
+                    className="rounded-xl border border-sky-400/40 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/20 disabled:opacity-40"
+                  >
+                    {saving ? "Testing…" : "Test"}
+                  </button>
+                  {saveError ? <span className="text-xs text-rose-300">{saveError}</span> : null}
+                  {unknownCardRefs.length > 0 ? (
+                    <span className="text-xs text-amber-300">
+                      {unknownCardRefs.length} unknown card reference{unknownCardRefs.length === 1 ? "" : "s"} ({unknownCardRefs.join(", ")}) — {unknownCardRefs.length === 1 ? "it" : "they"} will not render
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              )}
+
+              {/* Wizard navigation */}
+              <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-4">
                 <button
                   type="button"
-                  disabled={saving}
-                  onClick={handleSave}
-                  className="rounded-xl border border-emerald-400/40 bg-emerald-500/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500/30 disabled:opacity-40"
+                  disabled={clampedIndex === 0}
+                  onClick={() => setStepIndex(clampedIndex - 1)}
+                  className="rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold text-white hover:bg-white/20 disabled:opacity-30"
                 >
-                  {saving ? "Saving…" : "Save Puzzle"}
+                  ‹ Back
                 </button>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={handleTest}
-                  className="rounded-xl border border-sky-400/40 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/20 disabled:opacity-40"
-                >
-                  {saving ? "Testing…" : "Test"}
-                </button>
-                {process.env.NODE_ENV === "development" && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleExport}
-                      className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
-                    >
-                      Export JSON
-                    </button>
-                    <button
-                      type="button"
-                      disabled={saving}
-                      onClick={handleSolve}
-                      className="rounded-xl border border-violet-400/40 bg-violet-500/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500/20 disabled:opacity-40"
-                    >
-                      {saving ? "Checking…" : "Solvable?"}
-                    </button>
-                  </>
-                )}
-                {saveError ? <span className="text-xs text-rose-300">{saveError}</span> : null}
-                {unknownCardRefs.length > 0 ? (
-                  <span className="text-xs text-amber-300">
-                    {unknownCardRefs.length} unknown card reference{unknownCardRefs.length === 1 ? "" : "s"} ({unknownCardRefs.join(", ")}) — {unknownCardRefs.length === 1 ? "it" : "they"} will not render
-                  </span>
+                {!isLastStep ? (
+                  <button
+                    type="button"
+                    onClick={() => setStepIndex(clampedIndex + 1)}
+                    className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-5 py-2 text-xs font-semibold text-white hover:bg-sky-500/30"
+                  >
+                    Next ›
+                  </button>
                 ) : null}
               </div>
-              {/* Solver result (dev only) */}
-              {process.env.NODE_ENV === "development" && solverError && (
-                <p className="text-xs text-rose-300">✗ {solverError}</p>
-              )}
-              {process.env.NODE_ENV === "development" && solverResult && !solverError && (
-                <div className="flex flex-col gap-1">
-                  {solverResult.timedOut && (
-                    <p className="text-xs text-amber-300">⚠ Solver timed out — puzzle may still be solvable</p>
-                  )}
-                  {solverResult.solvable ? (
-                    <>
-                      <p className="text-xs text-emerald-300">
-                        ✓ Solvable — {solverResult.steps.length} solution(s) found
-                        {" "}
-                        <button
-                          type="button"
-                          onClick={() => setShowSolutions((v) => !v)}
-                          className="underline opacity-70 hover:opacity-100"
-                        >
-                          {showSolutions ? "hide" : "show"}
-                        </button>
-                      </p>
-                      {showSolutions && (
-                        <div className="mt-1 flex flex-col gap-3 text-xs text-white/70">
-                          {solverResult.steps.map((solution, si) => (
-                            <div key={si}>
-                              <p className="font-semibold text-white/50">Solution {si + 1}:</p>
-                              <ol className="ml-3 list-decimal">
-                                {solution.map((step, i) => (
-                                  <li key={i}>{step}</li>
-                                ))}
-                              </ol>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-xs text-rose-300">✗ No solution found</p>
-                  )}
-                </div>
-              )}
             </>
           )}
         </div>
       </div>
+      {showDiscardConfirm ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={() => setShowDiscardConfirm(false)}>
+          <div className="w-[min(92vw,420px)] rounded-xl border border-white/15 bg-[rgba(8,12,26,0.96)] p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-2 text-sm font-bold text-white">Discard unsaved changes?</h3>
+            <p className="mb-5 text-xs text-white/60">Your in-progress puzzle edits will be lost.</p>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowDiscardConfirm(false)} className="rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold text-white/80 hover:bg-white/20">Keep editing</button>
+              <button type="button" onClick={onClose} className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-500/30">Discard</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
