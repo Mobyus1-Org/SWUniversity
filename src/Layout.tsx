@@ -251,7 +251,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
     {renderModal()}
     {mobileNav && (
       <div
-        className={`fixed top-0 left-0 z-20 h-1/2 w-2/3 sm:w-1/2 lg:w-[24rem] border-r border-b p-4 flex flex-col ${globalBackgroundStyleOpaque}`}
+        className={`fixed top-0 left-0 z-20 max-h-[90dvh] w-2/3 sm:w-1/2 lg:w-[24rem] border-r border-b p-4 flex flex-col ${globalBackgroundStyleOpaque}`}
       >
         <div
           className="w-1/4 mx-auto mb-8"

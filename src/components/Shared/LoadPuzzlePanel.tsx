@@ -21,7 +21,7 @@ function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
       {Array.from({ length: max }, (_, i) => {
         const isFull = value - i >= 1;
         return (
-          <span key={i} className="relative inline-block h-6 w-6 rounded-full bg-white/20 overflow-hidden">
+          <span key={i} className="relative inline-block h-3 w-3 rounded-full bg-white/20 overflow-hidden">
             {isFull && <span className="absolute inset-0 bg-primary" />}
           </span>
         );
@@ -240,49 +240,45 @@ export function LoadPuzzlePanel(props: Props) {
                   className="h-16 w-16 shrink-0 self-center rounded border-2 border-white/80 bg-black/30 object-cover"
                 />
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-semibold truncate">{name}</span>
-                    {solvedPuzzleIds.includes(id) ? (
-                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
-                        ✓ Solved
-                      </span>
-                    ) : null}
-                  </div>
-                  {isAdmin ? (
-                    <div className="ml-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      {onEditPuzzle ? (
-                        <button
-                          type="button"
-                          onClick={() => onEditPuzzle(entry)}
-                          className="rounded-md border border-sky-400/30 bg-sky-500/15 px-2 py-1 text-[11px] font-semibold text-white transition hover:bg-sky-500/25"
-                        >
-                          Edit
-                        </button>
-                      ) : null}
-                      <select
-                        value={entry.status}
-                        onChange={(e) => void setPuzzleStatus(id, e.target.value as PuzzleStatus)}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label="Puzzle visibility status"
-                        className="rounded-md border border-white/15 bg-black/40 px-2 py-1 text-xs font-semibold text-white/90 outline-none"
-                      >
-                        <option value="hidden">Hidden</option>
-                        <option value="test">Test</option>
-                        <option value="deployed">Deployed</option>
-                      </select>
-                    </div>
+                <div className="flex items-start gap-2 min-w-0">
+                  <span className="font-semibold break-words">{name}</span>
+                  {solvedPuzzleIds.includes(id) ? (
+                    <span className="shrink-0 mt-0.5 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                      ✓ Solved
+                    </span>
                   ) : null}
                 </div>
-                <div className="flex items-center gap-2 text-sm opacity-70">
-                  <DifficultyDots value={difficulty} />
-                  {description ? <span className="truncate">{description}</span> : null}
-                </div>
+                <DifficultyDots value={difficulty} />
+                {description ? <p className="text-sm opacity-70 line-clamp-2">{description}</p> : null}
                 {(entry.author || entry.inspiredBy) ? (
                   <div className="text-xs text-white/40 truncate">
                     {entry.author ? <span>By {entry.author}</span> : null}
                     {entry.author && entry.inspiredBy ? <span className="mx-1">·</span> : null}
                     {entry.inspiredBy ? <span>Inspired by {entry.inspiredBy}</span> : null}
+                  </div>
+                ) : null}
+                {isAdmin ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-white/10 pt-2" onClick={(e) => e.stopPropagation()}>
+                    {onEditPuzzle ? (
+                      <button
+                        type="button"
+                        onClick={() => onEditPuzzle(entry)}
+                        className="rounded-md border border-sky-400/30 bg-sky-500/15 px-3 py-1 text-[11px] font-semibold text-white transition hover:bg-sky-500/25"
+                      >
+                        Edit
+                      </button>
+                    ) : null}
+                    <select
+                      value={entry.status}
+                      onChange={(e) => void setPuzzleStatus(id, e.target.value as PuzzleStatus)}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label="Puzzle visibility status"
+                      className="rounded-md border border-white/15 bg-black/40 px-2 py-1 text-xs font-semibold text-white/90 outline-none"
+                    >
+                      <option value="hidden">Hidden</option>
+                      <option value="test">Test</option>
+                      <option value="deployed">Deployed</option>
+                    </select>
                   </div>
                 ) : null}
                 </div>

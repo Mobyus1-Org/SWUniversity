@@ -2348,7 +2348,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     })() : null}
 
     {showInfoModal && puzzleMeta ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowInfoModal(false)}>
-      <div className="w-[min(90vw,720px)] rounded-xl border border-sky-400/30 bg-[rgba(8,12,26,0.94)] p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="w-[min(92vw,720px)] max-h-[85dvh] overflow-y-auto rounded-xl border border-sky-400/30 bg-[rgba(8,12,26,0.94)] p-5 sm:p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="mb-4 border-b border-white/10 pb-4">
           <h3 className="text-lg font-black uppercase tracking-[0.2em] text-white">{puzzleMeta.name || puzzleName}</h3>
           {puzzleMeta.author ? <p className="mt-1 text-xs text-white/50">By {puzzleMeta.author}{puzzleMeta.inspiredBy ? <span className="ml-2 text-white/35">· Inspired by {puzzleMeta.inspiredBy}</span> : null}</p> : null}
@@ -2361,7 +2361,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     </div> : null}
 
     {showSolutionModal && puzzleMeta ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowSolutionModal(false)}>
-      <div className="w-[min(90vw,1080px)] rounded-xl border border-emerald-400/30 bg-[rgba(8,12,26,0.92)] p-12 shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="w-[min(92vw,1080px)] max-h-[85dvh] overflow-y-auto rounded-xl border border-emerald-400/30 bg-[rgba(8,12,26,0.92)] p-5 sm:p-10 shadow-2xl" onClick={e => e.stopPropagation()}>
         <h3 className="mb-3 text-base font-bold text-emerald-300">Congratulations! You&apos;ve solved the puzzle!</h3>
         <div className="mb-4 border-b border-white/10 pb-4">
           <p className="text-sm font-semibold text-white">{puzzleMeta.name || puzzleName}</p>
@@ -2372,9 +2372,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
           <p className="mb-3 text-sm text-white/60">Here&apos;s the author&apos;s intended solution:</p>
           <ul className="mb-5 space-y-2">
             {puzzleMeta.intendedSolution.map((step, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-white/90">
+              <li key={i} className="flex items-start gap-2 text-sm text-white/90 min-w-0">
                 <img src="/assets/puzzle.svg" alt="" className="mt-1.25 h-2.5 w-2.5 shrink-0 brightness-0 invert" />
-                <span><CardLinkText text={step} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} /></span>
+                <span className="min-w-0 break-words"><CardLinkText text={step} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} /></span>
               </li>
             ))}
           </ul>
