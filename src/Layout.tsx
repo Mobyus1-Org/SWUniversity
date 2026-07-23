@@ -39,7 +39,6 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
   const [showPlayModesDropdown, setShowPlayModesDropdown] = React.useState(false);
   const [showMobilePlayModesDropdown, setShowMobilePlayModesDropdown] = React.useState(false);
   const [authState, setAuthState] = React.useState<"loading" | "authed" | "anon">("loading");
-  const [canAccessPuzzles, setCanAccessPuzzles] = React.useState(false);
   const lightsaberColorRef = React.useRef<HTMLDivElement>(null);
   const settingsModalRef = React.useRef<HTMLDivElement>(null);
   const settingsButtonRef = React.useRef<HTMLDivElement>(null);
@@ -59,14 +58,11 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
         user: {
           id: string;
         } | null;
-        canAccessPuzzles?: boolean;
       };
 
       setAuthState(data.user ? "authed" : "anon");
-      setCanAccessPuzzles(Boolean(data.user && data.canAccessPuzzles));
     } catch {
       setAuthState("anon");
-      setCanAccessPuzzles(false);
     }
   }, []);
 
@@ -213,7 +209,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
           >
             <MenuButton />
           </div>
-          <LeftSideNavTray sfx={sfx} playModesRef={playModesRef} styles={styles} handleNavClick={handleNavClick} showPlayModesDropdown={showPlayModesDropdown} setShowPlayModesDropdown={setShowPlayModesDropdown} currentHover={currentHover} canAccessPuzzles={canAccessPuzzles} />
+          <LeftSideNavTray sfx={sfx} playModesRef={playModesRef} styles={styles} handleNavClick={handleNavClick} showPlayModesDropdown={showPlayModesDropdown} setShowPlayModesDropdown={setShowPlayModesDropdown} currentHover={currentHover} />
           <RightSideTray
             authState={authState}
             onLogout={handleLogout}
@@ -318,16 +314,14 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
                 >
                   DYKSWU?
                 </Link>
-                {canAccessPuzzles && (
-                  <Link
-                    href="/puzzles"
-                    className={`block w-full text-left px-4 py-3 text-xl lg:text-2xl
-                      hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
-                    onClick={(e) => handleNavClick(e, "/puzzles")}
-                  >
-                    Puzzles
-                  </Link>
-                )}
+                <Link
+                  href="/puzzles"
+                  className={`block w-full text-left px-4 py-3 text-xl lg:text-2xl
+                    hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
+                  onClick={(e) => handleNavClick(e, "/puzzles")}
+                >
+                  Puzzles
+                </Link>
               </div>
             )}
           </div>

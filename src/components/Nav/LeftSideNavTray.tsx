@@ -13,11 +13,10 @@ interface IProps {
   handleNavClick: (e: React.MouseEvent<HTMLElement>, path: string) => void;
   showPlayModesDropdown: boolean;
   setShowPlayModesDropdown: React.Dispatch<React.SetStateAction<boolean>>;
-  canAccessPuzzles: boolean;
 
 }
 
-export function LeftSideNavTray({ sfx, playModesRef, styles, handleNavClick, showPlayModesDropdown, setShowPlayModesDropdown, currentHover, canAccessPuzzles }: IProps) {
+export function LeftSideNavTray({ sfx, playModesRef, styles, handleNavClick, showPlayModesDropdown, setShowPlayModesDropdown, currentHover }: IProps) {
   return <div className="hidden xl:flex flex-row flex-nowrap gap-4 xl:gap-8 uwd:!gap-24 4k:!gap-30 uwd:py-4 4k:py-10 overflow-visible px-2 w-full items-center">
     <Link
       href="/"
@@ -69,16 +68,14 @@ export function LeftSideNavTray({ sfx, playModesRef, styles, handleNavClick, sho
           >
             DYKSWU?
           </Link>
-          {canAccessPuzzles && (
-            <Link
-              href="/puzzles"
-              className={`block w-full text-left px-4 py-3 text-lg lg:text-xl uwd:!text-2xl 4k:!text-3xl
-                hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
-              onClick={(e) => handleNavClick(e, "/puzzles")}
-            >
-              Puzzles
-            </Link>
-          )}
+          <Link
+            href="/puzzles"
+            className={`block w-full text-left px-4 py-3 text-lg lg:text-xl uwd:!text-2xl 4k:!text-3xl
+              hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
+            onClick={(e) => handleNavClick(e, "/puzzles")}
+          >
+            Puzzles
+          </Link>
         </div>
       )}
     </div>

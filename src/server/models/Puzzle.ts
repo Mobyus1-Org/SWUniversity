@@ -1,5 +1,6 @@
 import { Schema, model, models, type Model } from "mongoose";
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
+import type { PuzzleStatus } from "@/server/puzzle/puzzle-status";
 import { DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 
 export type PuzzleDocument = {
@@ -8,7 +9,9 @@ export type PuzzleDocument = {
   infoText: string;
   difficulty: number;
   initialGamestate: RawPuzzleGameState;
-  deploy: boolean;
+  /** @deprecated superseded by `status`; kept for back-compat reads of old docs. */
+  deploy?: boolean;
+  status?: PuzzleStatus;
   author: string;
   inspiredBy?: string;
   intendedSolution: string[];
@@ -24,7 +27,8 @@ const puzzleSchema = new Schema<PuzzleDocument>(
     infoText: { type: String, default: "" },
     difficulty: { type: Number, required: true, min: 1, max: 5, set: (v: number) => Math.round(parseFloat(String(v))) },
     initialGamestate: { type: Schema.Types.Mixed, required: true },
-    deploy: { type: Boolean, default: false },
+    deploy: { type: Boolean }, // deprecated — no longer written
+    status: { type: String, enum: ["hidden", "test", "deployed"], default: "hidden" },
     author: { type: String, default: "" },
     inspiredBy: { type: String },
     intendedSolution: { type: [String], default: [] },

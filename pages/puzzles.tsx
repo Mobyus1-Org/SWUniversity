@@ -15,38 +15,16 @@ async function fetchSolvedPuzzleIds(userId: string): Promise<string[]> {
 }
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
+  // Puzzles is public — everyone (including logged-out visitors) may open this page. Admins get the
+  // builder tools; visibility of individual puzzles is enforced server-side by the list endpoint.
   const request = context.req as NextApiRequest;
   const session = await getSessionFromRequest(request);
+  const isAdmin = session?.user.role === "admin";
 
-  // Not signed in -> redirect
-  if (!session) {
-    return { redirect: { destination: "/", permanent: false } };
-  }
+  await connectToDatabase();
+  const solvedPuzzleIds = session ? await fetchSolvedPuzzleIds(session.user.id) : [];
 
-  const isAdmin = session.user.role === "admin";
-
-  if (isAdmin) {
-    await connectToDatabase();
-    const solvedPuzzleIds = await fetchSolvedPuzzleIds(session.user.id);
-    return { props: { showBuilderTools: true, isAdmin: true, solvedPuzzleIds } };
-  }
-
-  // Not admin — check previewUsers in authz collection
-  try {
-    const mongoose = await connectToDatabase();
-    const coll = mongoose.connection.collection("authz");
-    const authz = await coll.findOne({});
-    const previewUsers = (authz && Array.isArray((authz as any).previewUsers)) ? (authz as any).previewUsers : [];
-    if (previewUsers.includes(session.user.username)) {
-      const solvedPuzzleIds = await fetchSolvedPuzzleIds(session.user.id);
-      return { props: { showBuilderTools: false, isAdmin: false, solvedPuzzleIds } };
-    }
-  } catch (err) {
-    // fallthrough to redirect
-    console.error("authz check failed", err);
-  }
-
-  return { redirect: { destination: "/", permanent: false } };
+  return { props: { showBuilderTools: isAdmin, isAdmin, solvedPuzzleIds } };
 };
 
 export default PuzzlesPage;

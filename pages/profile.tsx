@@ -1,12 +1,8 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import type { GetServerSideProps } from "next";
-import type { NextApiRequest } from "next";
 import type { UserProfile } from "@/util/profile-api";
 import { deriveProfileStats, type DerivedAppStats, type DatabankCompletion } from "@/util/profile-data";
-import { getSessionFromRequest } from "@/server/auth/session";
-import { canAccessPuzzles } from "@/server/auth/puzzle-access";
 
 type MeResponse = {
   user: {
@@ -73,13 +69,7 @@ function ModeStatsBoxes({ stats, databank }: { stats: DerivedAppStats; databank?
   );
 }
 
-export const getServerSideProps: GetServerSideProps = async (context) => {
-  const request = context.req as NextApiRequest;
-  const session = await getSessionFromRequest(request);
-  return { props: { canAccessPuzzles: await canAccessPuzzles(session) } };
-};
-
-export default function ProfilePage({ canAccessPuzzles = false }: { canAccessPuzzles?: boolean }) {
+export default function ProfilePage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -286,7 +276,7 @@ export default function ProfilePage({ canAccessPuzzles = false }: { canAccessPuz
           )}
         </div>
 
-        {canAccessPuzzles ? <div>
+        <div>
           <h2 className="text-xl font-semibold">Puzzles</h2>
           <div className="mt-4 space-y-3">
             {showResetPuzzleConfirm ? (
@@ -322,7 +312,7 @@ export default function ProfilePage({ canAccessPuzzles = false }: { canAccessPuz
             {resetPuzzleError && <p className="text-red-300 text-sm">{resetPuzzleError}</p>}
             {resetPuzzleMessage && <p className="text-green-300 text-sm">{resetPuzzleMessage}</p>}
           </div>
-        </div> : null}
+        </div>
 
         <div>
           <h2 className="text-xl font-semibold">Change Password</h2>

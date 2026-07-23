@@ -21,7 +21,8 @@ Board-state challenges backed by a full SWU rules engine (`src/lib/engine`, `src
 - `src/util/` — shared client logic (stats derivation, data loaders, profile API client).
 - `src/server/` — server-only: `auth/`, `models/` (Mongoose), `db.ts`, `engine/`, stats loaders.
 - `public/*.json` — quiz/DYKSWU question data (read client-side via fetch, server-side via `fs`).
-- `tests/unit/` — Vitest suites. `docs/superpowers/` — specs & plans (gitignored).
+- `tests/unit/` — Vitest suites.
+- `docs/superpowers/` — specs & plans (gitignored).
 
 ## Stats & profiles
 User progress lives on the `UserProfile` Mongo doc (`gamesCompleted`, `endlessModeStats`, badges, mastered-question sets). Derived view models come from `src/util/profile-data.ts`; the profile page is `pages/profile.tsx`.
@@ -39,3 +40,4 @@ User progress lives on the `UserProfile` Mongo doc (`gamesCompleted`, `endlessMo
 
 ## Repo rules
 1. You will never do git commit or push. I will commit manually.
+2. Verify tests with `npm test` to exlcude the integration tests from a `vitest` run

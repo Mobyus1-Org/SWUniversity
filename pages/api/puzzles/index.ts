@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { methodNotAllowed } from "@/server/auth/http";
 import { requireAdminApi } from "@/server/auth/guards";
 import { getSessionFromRequest } from "@/server/auth/session";
+import { puzzleAccessLevel } from "@/server/auth/puzzle-access";
 import { hydratePuzzleGame } from "@/server/puzzle/adapters/puzzle-runtime";
 import { MongoDBPuzzleRepository } from "@/server/puzzle/adapters/mongodb-puzzle-repository";
 import { SetGame } from "@/server/engine/core-functions";
@@ -43,8 +44,8 @@ export default async function handler(
 
     try {
       const session = await getSessionFromRequest(request);
-      const isAdmin = session?.user.role === "admin";
-      const puzzles = await repo.list(isAdmin);
+      const level = await puzzleAccessLevel(session);
+      const puzzles = await repo.list(level);
       return response.status(200).json({ puzzles });
     } catch {
       return response.status(200).json({ puzzles: [] });

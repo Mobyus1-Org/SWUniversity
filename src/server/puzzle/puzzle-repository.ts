@@ -1,4 +1,5 @@
 import type { RawPuzzleGameState } from "./adapters/puzzle-runtime";
+import type { PuzzleStatus, PuzzleAccessLevel } from "@/server/puzzle/puzzle-status";
 
 export type PuzzleData = {
   id: string;
@@ -7,7 +8,7 @@ export type PuzzleData = {
   infoText: string;
   difficulty: number;
   initialGamestate: RawPuzzleGameState;
-  deploy: boolean;
+  status: PuzzleStatus;
   author: string;
   inspiredBy?: string;
   intendedSolution: string[];
@@ -17,7 +18,7 @@ export type PuzzleData = {
 };
 
 export interface PuzzleRepository {
-  list(): Promise<PuzzleData[]>;
+  list(level: PuzzleAccessLevel): Promise<PuzzleData[]>;
   load(id: string): Promise<RawPuzzleGameState>;
   save(puzzle: PuzzleData): Promise<PuzzleData>;
 }

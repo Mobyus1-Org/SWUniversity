@@ -2,8 +2,9 @@ import React from "react";
 import { globalBackgroundStyle } from "@/util/style-const";
 import { puzzleImageSrc, DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
+import type { PuzzleStatus } from "@/server/puzzle/puzzle-status";
 
-type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints: string[]; deploy?: boolean; assetPath?: string; initialGamestate: RawPuzzleGameState };
+type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints: string[]; status: PuzzleStatus; assetPath?: string; initialGamestate: RawPuzzleGameState };
 
 type Props = {
   onPuzzleLoaded: (id: string, meta: PuzzleEntry) => void;
@@ -32,8 +33,8 @@ function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
 type SortKey = "title" | "difficulty";
 type SortDir = "asc" | "desc";
 type SolvedFilter = "all" | "solved" | "unsolved";
-// Admin-only: filter the list by deploy status. Deployed = live, Hidden = not yet deployed.
-type DeployFilter = "all" | "deployed" | "hidden";
+// Admin-only: filter the list by visibility status.
+type StatusFilter = "all" | "hidden" | "test" | "deployed";
 
 const DIFFICULTIES = [1, 2, 3, 4, 5] as const;
 
@@ -82,7 +83,7 @@ export function LoadPuzzlePanel(props: Props) {
   const [sortKey, setSortKey] = React.useState<SortKey>("difficulty");
   const [sortDir, setSortDir] = React.useState<SortDir>("asc");
   const [solvedFilter, setSolvedFilter] = React.useState<SolvedFilter>("all");
-  const [deployFilter, setDeployFilter] = React.useState<DeployFilter>("all");
+  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
   // Empty = no difficulty filtering (every tier shows). See DifficultyFilter.
   const [diffSelected, setDiffSelected] = React.useState<Set<number>>(() => new Set());
 
@@ -107,18 +108,18 @@ export function LoadPuzzlePanel(props: Props) {
 
   React.useEffect(() => { fetchList(); }, [fetchList, refreshSignal]);
 
-  async function toggleDeploy(id: string, current: boolean | undefined) {
+  async function setPuzzleStatus(id: string, status: PuzzleStatus) {
     try {
       setLoading(true);
-      const res = await fetch("/api/puzzles/deploy", {
+      const res = await fetch("/api/puzzles/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, deploy: !current }),
+        body: JSON.stringify({ id, status }),
       });
       if (!res.ok) throw new Error("Failed");
       await fetchList();
     } catch (err) {
-      setError("Failed to update deploy flag.");
+      setError("Failed to update puzzle status.");
     } finally {
       setLoading(false);
     }
@@ -141,11 +142,8 @@ export function LoadPuzzlePanel(props: Props) {
     const isSolved = solvedPuzzleIds.includes(p.id);
     if (solvedFilter === "solved" && !isSolved) return false;
     if (solvedFilter === "unsolved" && isSolved) return false;
-    // Admin-only deploy filter; ignored entirely for non-admins.
-    if (isAdmin) {
-      if (deployFilter === "deployed" && !p.deploy) return false;
-      if (deployFilter === "hidden" && p.deploy) return false;
-    }
+    // Admin-only status filter; ignored entirely for non-admins.
+    if (isAdmin && statusFilter !== "all" && p.status !== statusFilter) return false;
     if (diffSelected.size > 0 && !diffSelected.has(p.difficulty)) return false;
     return true;
   });
@@ -199,14 +197,14 @@ export function LoadPuzzlePanel(props: Props) {
         {isAdmin ? (
           <div
             className="flex items-center gap-1 rounded-lg border border-emerald-400/20 bg-emerald-500/5 p-0.5 text-xs"
-            title="Admin only — filter by deploy status"
+            title="Admin only — filter by status"
           >
-            {(["all", "deployed", "hidden"] as DeployFilter[]).map((v) => (
+            {(["all", "hidden", "test", "deployed"] as StatusFilter[]).map((v) => (
               <button
                 key={v}
                 type="button"
-                onClick={() => setDeployFilter(v)}
-                className={`rounded px-2 py-0.5 font-medium capitalize transition-colors ${deployFilter === v ? "bg-emerald-600/80 text-white" : "text-white/50 hover:text-white/80"}`}
+                onClick={() => setStatusFilter(v)}
+                className={`rounded px-2 py-0.5 font-medium capitalize transition-colors ${statusFilter === v ? "bg-emerald-600/80 text-white" : "text-white/50 hover:text-white/80"}`}
               >
                 {v}
               </button>
@@ -262,22 +260,17 @@ export function LoadPuzzlePanel(props: Props) {
                           Edit
                         </button>
                       ) : null}
-                      <label
-                        className="inline-flex items-center cursor-pointer"
-                        aria-label={entry.deploy ? "Mark hidden" : "Mark deployed"}
+                      <select
+                        value={entry.status}
+                        onChange={(e) => void setPuzzleStatus(id, e.target.value as PuzzleStatus)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Puzzle visibility status"
+                        className="rounded-md border border-white/15 bg-black/40 px-2 py-1 text-xs font-semibold text-white/90 outline-none"
                       >
-                        <input
-                          type="checkbox"
-                          checked={Boolean(entry.deploy)}
-                          onChange={() => void toggleDeploy(id, entry.deploy)}
-                          className="sr-only"
-                          aria-checked={Boolean(entry.deploy)}
-                        />
-                        <span className={`relative inline-block h-6 w-12 rounded-full transition-colors ${entry.deploy ? "bg-emerald-600" : "bg-white/10"}`}>
-                          <span className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${entry.deploy ? "translate-x-6" : "translate-x-0"}`} />
-                        </span>
-                        <span className="ml-2 text-xs font-semibold text-white/90">{entry.deploy ? "Deployed" : "Hidden"}</span>
-                      </label>
+                        <option value="hidden">Hidden</option>
+                        <option value="test">Test</option>
+                        <option value="deployed">Deployed</option>
+                      </select>
                     </div>
                   ) : null}
                 </div>

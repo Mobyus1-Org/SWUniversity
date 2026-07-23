@@ -3,30 +3,33 @@ import { PuzzleModel } from "@/server/models/Puzzle";
 import type { PuzzleRepository, PuzzleData } from "../puzzle-repository";
 import type { RawPuzzleGameState } from "./puzzle-runtime";
 import { DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
+import { puzzleStatusOf, isPuzzleVisibleTo } from "@/server/puzzle/puzzle-status";
+import type { PuzzleAccessLevel } from "@/server/puzzle/puzzle-status";
 
 export class MongoDBPuzzleRepository implements PuzzleRepository {
   private async connect() {
     await connectToDatabase();
   }
 
-  async list(showAll = false): Promise<PuzzleData[]> {
+  async list(level: PuzzleAccessLevel): Promise<PuzzleData[]> {
     await this.connect();
     const docs = await PuzzleModel.find().lean();
-    return docs.map((doc) => ({
-      id: doc._id.toString(),
-      name: doc.name,
-      description: doc.description ?? "",
-      infoText: doc.infoText ?? "",
-      difficulty: doc.difficulty,
-      initialGamestate: doc.initialGamestate as RawPuzzleGameState,
-      deploy: doc.deploy,
-      author: doc.author ?? "",
-      inspiredBy: doc.inspiredBy,
-      intendedSolution: doc.intendedSolution ?? [],
-      hints: doc.hints ?? [],
-      assetPath: doc.assetPath || DEFAULT_PUZZLE_IMAGE,
-    }))
-    .filter((p) => showAll || p.deploy);
+    return docs
+      .map((doc) => ({
+        id: doc._id.toString(),
+        name: doc.name,
+        description: doc.description ?? "",
+        infoText: doc.infoText ?? "",
+        difficulty: doc.difficulty,
+        initialGamestate: doc.initialGamestate as RawPuzzleGameState,
+        status: puzzleStatusOf(doc),
+        author: doc.author ?? "",
+        inspiredBy: doc.inspiredBy,
+        intendedSolution: doc.intendedSolution ?? [],
+        hints: doc.hints ?? [],
+        assetPath: doc.assetPath || DEFAULT_PUZZLE_IMAGE,
+      }))
+      .filter((p) => isPuzzleVisibleTo(p.status, level));
   }
 
   async load(id: string): Promise<RawPuzzleGameState> {
