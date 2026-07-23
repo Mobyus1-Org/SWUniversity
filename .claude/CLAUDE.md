@@ -41,3 +41,4 @@ User progress lives on the `UserProfile` Mongo doc (`gamesCompleted`, `endlessMo
 ## Repo rules
 1. You will never do git commit or push. I will commit manually.
 2. Verify tests with `npm test` to exlcude the integration tests from a `vitest` run
+3. Local work is always done on "main". As there are only 2 contributors, this is safe. I should do `git pull --rebase` often.

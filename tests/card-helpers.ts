@@ -428,6 +428,7 @@ export const Cards = {
       karis: "LOF_031",
       anakinSkywalkerChampionOfMortis: "LOF_070",
       hyenaBomber: "LOF_158",
+      lukeSkywalker: "LOF_249", // A Hero's Beginning — 3/5 Ground, unique
     },
     twi: {
       infiltratingDemolisher: "TWI_182",

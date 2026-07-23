@@ -965,6 +965,24 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
           continuation: null,
         } satisfies AbilityOptionPending;
       }
+      case "LOF_249": { // Luke Skywalker: when you play another unique unit, may use the Force to give Luke an XP + Shield token.
+        if (!trigger.playId) return null;
+        const luke249 = GetUnitByPlayId(game, trigger.playId);
+        if (!luke249) return null; // Luke already left play
+        // "You may use the Force" is unpayable without a Force token → no prompt, nothing happens.
+        if (GetPlayer(game, trigger.fromPlayer).supplemental.forceToken !== true) return null;
+        return {
+          type: "ability-option",
+          cardId: "LOF_249",
+          player: trigger.fromPlayer,
+          sourcePlayId: trigger.playId,
+          helperText: `Use the Force to give ${CardTitle("LOF_249")} an Experience token and a Shield token?`,
+          yesLabel: "Use the Force",
+          noLabel: "Skip",
+          onYes: null,
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
       case "SHD_172": { // Krayt Dragon: when an opponent plays a card, may deal damage = its cost to their base or a ground unit they control.
         const ctx = trigger.context as CardPlayedContext | undefined;
         const amount = ctx?.playedCardCost ?? 0;
@@ -2992,6 +3010,26 @@ function queueRavagerReactions(game: GameState, player: PlayerId, playedPlayId: 
   }
 }
 
+/**
+ * LOF_249 Luke Skywalker — A Hero's Beginning: "When you play another unique unit: You may use
+ * the Force (lose your Force token). If you do, give an Experience token and a Shield token to
+ * this unit." Fires only for another UNIQUE unit YOU play (never off Luke's own entry).
+ */
+function queueLukeSkywalkerReactions(game: GameState, player: PlayerId, cardId: string, playedPlayId: string, nested: boolean): void {
+  if (!CardIsUnique(cardId)) return; // only "another unique unit" triggers
+  const lukes = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
+    .filter(u => u.cardId === "LOF_249" && u.playId !== playedPlayId && !Unit.FromInterface(u).LostAbilities());
+  for (const luke of lukes) {
+    game.triggerBag.push({
+      triggerType: "card-played-reaction",
+      cardId: "LOF_249",
+      fromPlayer: player,
+      playId: luke.playId,
+      nested,
+    });
+  }
+}
+
 function queueLeaderPlayReactions(game: GameState, player: PlayerId, cardId: string, nested: boolean): void {
   const leader = GetPlayer(game, player).leader;
   const canFront = !leader.deployed && leader.ready; // front: exhausting the leader is the cost
@@ -3082,6 +3120,9 @@ function queueUnitEntryTriggers(
 
   // ASH_102 Ravager: "When you play a unit" — your own Ravagers react to this unit entering.
   queueRavagerReactions(game, player, unit.playId, nested);
+
+  // LOF_249 Luke Skywalker: "When you play another unique unit" — your own Lukes react.
+  queueLukeSkywalkerReactions(game, player, cardId, unit.playId, nested);
 
   // Leader "when you play a unit" reactions (e.g. TWI_018 Quinlan Vos).
   queueLeaderPlayReactions(game, player, cardId, nested);
@@ -6268,6 +6309,17 @@ function applyAbilityOptionEffect(
     }
     case "SOR_016": // Yes = reveal own deck
       return thrawnsReveal(game, log, pending.player!, pending.player!);
+    case "LOF_249": { // Luke Skywalker Yes: use the Force, then give Luke an XP + Shield token.
+      const luke249 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      if (!luke249) return pending.continuation ?? null; // Luke left play
+      if (!UseTheForce(pending.player!, log, "LOF_249")) {
+        return pending.continuation ?? null; // no token (shouldn't happen — prompt was gated)
+      }
+      luke249.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: luke249.owner, controller: luke249.controller });
+      giveShieldToUnit(game, luke249.playId);
+      log.push(`${CardTitle("LOF_249")}: used the Force — gained an Experience token and a Shield token.`);
+      return pending.continuation ?? null;
+    }
     case "TS26_077": { // Deployed Droideka Yes: pay 2 resources, give this unit an XP + Shield token.
       const unit077 = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (unit077) {
