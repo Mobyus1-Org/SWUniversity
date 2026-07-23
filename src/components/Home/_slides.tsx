@@ -14,10 +14,10 @@ export interface ICarouselItemProps {
 
 export const slides: ICarouselData[] = [
   {
-    type: "paragraph",
-    title: "SWUniversity Is Live!",
-    src: "/assets/WelcomeToSWU.png",
-    description: "Welcome to SWUniversity.net — your ultimate training ground for Star Wars: Unlimited!\n\nWhether you’re just opening your first booster pack or looking to refine your competitive edge, SWUniversity.net is here to guide you through every step of the journey.\n\nOur \"Quiz\" game mode offers a way to learn both the fundamentals of the game, as well as some of the most obscure card interactions! All of the questions in our database are verified by actual SWU judges before being added to the site!\n\nIf you're looking for something a little different, our \"Do You Know SWU?\" mode lets you test your knowledge of individual cards! How well *DO* you know SWU?\n\nDon't forget to check out our Discord server where you can learn, play, and have fun with a community of fans who love Star Wars: Unlimited just as much as you do!",
+    type: "embed",
+    title: "Puzzle Mode is Here!",
+    src: "https://www.youtube.com/embed/P6sN_z0GP7M",
+    description: "Introducing SWUniversity's third game mode: Puzzle Mode!\n\nNow you can test your ability to analyze a game state and find the path to victory!  Challenge yourself on puzzles of varying difficulties, ranging from the level 1 beginner-friendly puzzles all the way to the level 5 hardcore competitive SWU player puzzles!\n\nBy registering, you can also track which puzzles you've solved already and which ones you're still working on!\n\nWe also welcome users to join our Discord server (link in the top-right of the screen!) and share their own puzzle ideas they may like to see included on the site!\n\nHope you enjoy!",
   },
   {
     type: "paragraph",
