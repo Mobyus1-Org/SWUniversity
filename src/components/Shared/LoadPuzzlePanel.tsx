@@ -228,7 +228,7 @@ export function LoadPuzzlePanel(props: Props) {
               <li
                 key={id}
                 onClick={() => handleLoad(entry)}
-                className={`group ${globalBackgroundStyle} border rounded cursor-pointer p-3 flex gap-3 transition-all hover:ring-2 hover:ring-primary/60`}
+                className={`group ${globalBackgroundStyle} border rounded cursor-pointer p-2 sm:p-3 flex gap-2 sm:gap-3 transition-all hover:ring-2 hover:ring-primary/60`}
               >
                 <img
                   src={puzzleImageSrc(entry.assetPath)}
@@ -241,7 +241,7 @@ export function LoadPuzzlePanel(props: Props) {
                 />
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex items-start gap-2 min-w-0">
-                  <span className="font-semibold break-words">{name}</span>
+                  <span className="font-semibold break-words text-xs sm:text-base">{name}</span>
                   {solvedPuzzleIds.includes(id) ? (
                     <span className="shrink-0 mt-0.5 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
                       ✓ Solved
@@ -249,9 +249,9 @@ export function LoadPuzzlePanel(props: Props) {
                   ) : null}
                 </div>
                 <DifficultyDots value={difficulty} />
-                {description ? <p className="text-sm opacity-70 line-clamp-2">{description}</p> : null}
+                {description ? <p className="text-[11px] sm:text-sm opacity-70 line-clamp-none sm:line-clamp-2">{description}</p> : null}
                 {(entry.author || entry.inspiredBy) ? (
-                  <div className="text-xs text-white/40 truncate">
+                  <div className="text-[10px] sm:text-xs text-white/40 truncate">
                     {entry.author ? <span>By {entry.author}</span> : null}
                     {entry.author && entry.inspiredBy ? <span className="mx-1">·</span> : null}
                     {entry.inspiredBy ? <span>Inspired by {entry.inspiredBy}</span> : null}

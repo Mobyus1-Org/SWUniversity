@@ -929,7 +929,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
   }, [isHealMode, gameState]);
 
   if (!gameState) {
-    return <div className="relative z-10 mx-auto w-full max-w-[1920px] px-3 py-4 text-white sm:px-4 lg:px-6">
+    return <div className="relative z-10 mx-auto w-full max-w-[1920px] px-1.5 py-4 text-white sm:px-4 lg:px-6">
       {showBuilderPanelOpen && showBuilderTools ? (
         <PuzzleBuilderPanel
           onClose={() => { setShowBuilderPanelOpen(false); setEditState(null); }}
@@ -1020,7 +1020,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             ) : null}
           </div>
         ) : null}
-        <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+        <div className="rounded-xl border border-white/10 bg-black/30 px-2 py-2 sm:px-4 sm:py-3">
           <LoadPuzzlePanel
             onPuzzleLoaded={(filename, meta) => {
               setSelectedPuzzleFilename(filename);
