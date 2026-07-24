@@ -63,13 +63,13 @@ export function QuestionContent({
   setCurrentVariant,
   setQuestionsEnded
 }: IProps) {
-  const currentQuestion = currentQuestionSet.find(q => q.id === currentQuestionId)!;
+  const currentQuestion = currentQuestionSet.find(q => q.id === currentQuestionId);
   const currentFullQuestion = allQuestions.find(q => q.id === currentQuestionId);
-  const currentVariantQuestion = currentQuestion.variants[currentVariant];
+  const currentVariantQuestion = currentQuestion?.variants[currentVariant];
 
   const recordDykswuMastery = () => {
     const fullVariants = currentFullQuestion?.variants ?? [];
-    const fullIndex = fullVariants.indexOf(currentVariantQuestion);
+    const fullIndex = currentVariantQuestion ? fullVariants.indexOf(currentVariantQuestion) : -1;
     const variantIndex = fullIndex >= 0 ? fullIndex : currentVariant;
     void masterQuestion("dykswu", `${currentQuestionId}:${variantIndex}`);
   };
@@ -102,7 +102,7 @@ export function QuestionContent({
       }
     }, [currentVariantQuestion, currentFollowUpKeys.length, setCurrentFollowUpKeys]);
 
-  if (!currentQuestion) return <p className="text-lg">Loading question...</p>;
+  if (!currentQuestion || !currentVariantQuestion) return <p className="text-lg">Loading question...</p>;
 
   const currentHover = getLightsaberGlowHover(userSettings?.lightsaberColor || 'blue');
   const showFirstChoices = !currentVariantQuestion.followUp

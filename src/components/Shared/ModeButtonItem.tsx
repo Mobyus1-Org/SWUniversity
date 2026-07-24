@@ -40,7 +40,11 @@ export function ModeButtonItem({mode, title, description, modeSet, initModeId, i
             ? modeSet.filter((entry) => isFinished ? !isFinished(entry, mode) : true)
             : modeSet;
 
-          if (useFilter && activeSet.length === 0) {
+          // An empty set can arise either from the not-finished filter (user has
+          // completed everything) or from a base set with no entries for this mode
+          // (e.g. testing a single question that lacks the selected difficulty).
+          // Both must bail before the random-pick below indexes into an empty array.
+          if (activeSet.length === 0) {
             setAllFinishedMessage(true);
             return;
           }

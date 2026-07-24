@@ -1476,7 +1476,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
               </div>
             </div>
 
-            <div className="hidden gap-2 xl:grid xl:grid-cols-[minmax(0,1fr)_165px_minmax(0,1fr)]">
+            <div className="hidden gap-2 xl:grid xl:grid-cols-[minmax(0,1fr)_10.3125rem_minmax(0,1fr)]">
               <div className="relative rounded-lg bg-black/20 p-2">
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibold uppercase tracking-[0.2em] text-white/30">Space</div>
                 <div className="relative z-10 flex flex-row-reverse flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
@@ -1760,7 +1760,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
               </div>
             </div>
 
-            <div className="hidden gap-2 xl:grid xl:grid-cols-[minmax(0,1fr)_165px_minmax(0,1fr)]">
+            <div className="hidden gap-2 xl:grid xl:grid-cols-[minmax(0,1fr)_10.3125rem_minmax(0,1fr)]">
               <div className="relative rounded-lg bg-black/20 p-2">
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-semibond uppercase tracking-[0.2em] text-white/30">Space</div>
                 <div className="relative z-10 flex flex-row-reverse flex-nowrap items-start gap-1 overflow-x-auto overflow-y-hidden">
@@ -2080,7 +2080,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     )}
 
     {hasPrompt ? <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className={`rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl${resolutionNeeded?.type === "DeckSearch" ? " w-[min(90vw,700px)]" : " w-[min(90vw,700px)]"}`}>
+      <div className={`rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl${resolutionNeeded?.type === "DeckSearch" ? " w-[min(90vw,43.75rem)]" : " w-[min(90vw,43.75rem)]"}`}>
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
           {isNameCardPrompt ? "Name a Card" : resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry" ? "Look at the top cards" : resolutionNeeded?.type === "DeckSearch" ? "Deck Search" : "Choose"}
         </h3>
@@ -2282,7 +2282,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
       const discardCards = discardModalPlayer === 1 ? player.discard : opponent.discard;
       const ownerLabel = discardModalPlayer === 1 ? "Your" : "Opponent's";
       return <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setDiscardModalPlayer(null)}>
-        <div className="max-h-[80vh] w-[min(90vw,640px)] overflow-y-auto rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="max-h-[80vh] w-[min(90vw,40rem)] overflow-y-auto rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/80">{ownerLabel} Discard ({discardCards.length})</h3>
             <button type="button" onClick={() => setDiscardModalPlayer(null)} className="text-white/40 hover:text-white/80 text-lg leading-none">✕</button>
@@ -2348,7 +2348,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     })() : null}
 
     {showInfoModal && puzzleMeta ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowInfoModal(false)}>
-      <div className="w-[min(92vw,720px)] max-h-[85dvh] overflow-y-auto rounded-xl border border-sky-400/30 bg-[rgba(8,12,26,0.94)] p-5 sm:p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="w-[min(92vw,45rem)] max-h-[85dvh] overflow-y-auto rounded-xl border border-sky-400/30 bg-[rgba(8,12,26,0.94)] p-5 sm:p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="mb-4 border-b border-white/10 pb-4">
           <h3 className="text-lg font-black uppercase tracking-[0.2em] text-white">{puzzleMeta.name || puzzleName}</h3>
           {puzzleMeta.author ? <p className="mt-1 text-xs text-white/50">By {puzzleMeta.author}{puzzleMeta.inspiredBy ? <span className="ml-2 text-white/35">· Inspired by {puzzleMeta.inspiredBy}</span> : null}</p> : null}
@@ -2361,7 +2361,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     </div> : null}
 
     {showSolutionModal && puzzleMeta ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowSolutionModal(false)}>
-      <div className="w-[min(92vw,1080px)] max-h-[85dvh] overflow-y-auto rounded-xl border border-emerald-400/30 bg-[rgba(8,12,26,0.92)] p-5 sm:p-10 shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="w-[min(92vw,67.5rem)] max-h-[85dvh] overflow-y-auto rounded-xl border border-emerald-400/30 bg-[rgba(8,12,26,0.92)] p-5 sm:p-10 shadow-2xl" onClick={e => e.stopPropagation()}>
         <h3 className="mb-3 text-base font-bold text-emerald-300">Congratulations! You&apos;ve solved the puzzle!</h3>
         <div className="mb-4 border-b border-white/10 pb-4">
           <p className="text-sm font-semibold text-white">{puzzleMeta.name || puzzleName}</p>
@@ -2392,7 +2392,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     </div> : null}
 
     {showHintsModal && (puzzleMeta?.hints?.length ?? 0) > 0 ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowHintsModal(false)}>
-      <div className="w-[min(90vw,640px)] max-h-[80vh] overflow-y-auto rounded-xl border border-amber-400/30 bg-[rgba(8,12,26,0.94)] p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="w-[min(90vw,40rem)] max-h-[80vh] overflow-y-auto rounded-xl border border-amber-400/30 bg-[rgba(8,12,26,0.94)] p-8 shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="mb-4 border-b border-white/10 pb-4">
           <h3 className="text-lg font-black uppercase tracking-[0.2em] text-white">Hints</h3>
           <p className="mt-1 text-xs text-white/45">Open only as many as you need.</p>
@@ -2430,7 +2430,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     </div> : null}
 
     {showFailModal ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowFailModal(false)}>
-      <div className="w-[min(90vw,560px)] rounded-xl border border-rose-400/40 bg-[rgba(8,12,26,0.94)] p-10 shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="w-[min(90vw,35rem)] rounded-xl border border-rose-400/40 bg-[rgba(8,12,26,0.94)] p-10 shadow-2xl" onClick={e => e.stopPropagation()}>
         <h3 className="mb-2 text-base font-bold text-rose-300">Puzzle failed</h3>
         <p className="mb-6 text-sm text-white/70">Your base was defeated. Reset to try again, or head back to the puzzles menu.</p>
         <div className="flex gap-2">
