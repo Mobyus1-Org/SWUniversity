@@ -154,7 +154,7 @@ export function ModeEndScreen({
   };
 
   return <div className="text-center m-[10%_10%] lg:m-[1%_10%]">
-    <p className="text-lg md:text-4xl font-bold w-3/4 mx-auto my-8 uwd:my-12">{renderPoints()}</p>
+    <p className="text-lg md:text-4xl font-bold w-3/4 mx-auto my-8">{renderPoints()}</p>
     <button className="btn btn-primary text-lg p-4" onClick={() => {
       sfx("confirm");
       switch (app) {

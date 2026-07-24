@@ -128,12 +128,12 @@ export function QuestionContent({
       return "";
     };
 
-    const divs = <div className="grid grid-cols-2 gap-2.5 uwd:gap-3.8 4k:gap-5">
+    const divs = <div className="grid grid-cols-2 gap-2.5">
       {
         showFirstChoices && DYKSWUChoices.map((_, index) => <div key={"choice-" + index} className={`${highlighted(index)}`}>
           <button
             type="button"
-            className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 ${currentHover}
+            className={`w-full text-left px-4 py-2 border rounded-lg hover:bg-slate-700/50 ${currentHover}
               ${selectedAnswer === DYKSWUChoices[index] ? 'border-white bg-slate-600/50' : 'border-slate-600'}
               ${questionResult ? 'cursor-not-allowed' : 'cursor-pointer'}
             `}
@@ -145,7 +145,7 @@ export function QuestionContent({
             }}
             disabled={questionResult}
           >
-            <div className="text-md md:text-lg uwd:!text-3xl 4k:!text-5xl">
+            <div className="text-md md:text-lg">
               {renderDYKSWUChoiceTitle(DYKSWUChoices[index])}
             </div>
           </button>
@@ -153,8 +153,8 @@ export function QuestionContent({
       }
       {
         currentVariantQuestion.followUp && showFollowUpChoices && <div className="col-span-2">
-          <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">{renderItalicsAndBold(currentVariantQuestion.followUp.question)}</p>
-          <div className="grid grid-cols-1 gap-2.5 uwd:gap-3.8 4k:gap-5">
+          <p className="mb-2.5 text-lg md:text-xl">{renderItalicsAndBold(currentVariantQuestion.followUp.question)}</p>
+          <div className="grid grid-cols-1 gap-2.5">
           {
             currentFollowUpKeys.length > 0 && currentFollowUpKeys.map((key, index) => {
               const highlighted = () => {
@@ -167,7 +167,7 @@ export function QuestionContent({
               return <div key={"follow-up-" + index} className={`${highlighted()}`}>
               <button
                 type="button"
-                className={`w-full text-left px-4 uwd:px-8 py-2 uwd:py-4 4k:px-16 4k:py-8 border rounded-lg hover:bg-slate-700/50 ${currentHover}
+                className={`w-full text-left px-4 py-2 border rounded-lg hover:bg-slate-700/50 ${currentHover}
                   ${followUpAnswer === key ? 'border-white bg-slate-600/50' : 'border-slate-600'}
                   ${followUpSubmitted ? 'cursor-not-allowed' : 'cursor-pointer'}
                 `}
@@ -176,7 +176,7 @@ export function QuestionContent({
                   setFollowUpAnswer(key);
                 }}
               >
-                <div className="text-md md:text-lg uwd:!text-3xl 4k:!text-5xl">
+                <div className="text-md md:text-lg">
                   {renderItalicsAndBold(currentVariantQuestion.followUp!.choices[key])}
                 </div>
               </button>
@@ -186,7 +186,7 @@ export function QuestionContent({
           {
             !followUpSubmitted &&<button
               type="button"
-              className={`btn btn-primary mt-20 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${currentHover}
+              className={`btn btn-primary mt-20 text-lg p-4 ${currentHover}
                 ${followUpAnswer === "" ? "opacity-50 cursor-not-allowed" : ""}
               `}
               onClick={() => {
@@ -208,7 +208,7 @@ export function QuestionContent({
       }
       {
         currentVariantQuestion.followUp && showFollowUpAnswer && <div className="col-span-2">
-          <button className={`btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${currentHover}`} onClick={() =>
+          <button className={`btn btn-secondary mt-18 text-lg p-4 ${currentHover}`} onClick={() =>
             void onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentVariant, currentVariantQuestion,
               currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses,
               followUpSubmitted, followUpAnswer,
@@ -217,15 +217,15 @@ export function QuestionContent({
               resetCurrentQuestionState, setFollowUpSubmitted, setFollowUpAnswer, setCurrentVariant, setQuestionsEnded)}>
             Next Question
           </button>
-          <p className={`text-xl font-bold mt-4 uwd:mt-8 4k:mt-10 ${followUpAnswer === currentVariantQuestion.followUp.answer ? "text-green-500" : "text-red-500"} `}>
+          <p className={`text-xl font-bold mt-4 ${followUpAnswer === currentVariantQuestion.followUp.answer ? "text-green-500" : "text-red-500"} `}>
             {followUpAnswer === currentVariantQuestion.followUp.answer ? "Correct!" : "Incorrect!"}
             {questionMode === "iron-man" && followUpAnswer === currentVariantQuestion.followUp.answer && (
-              <span className="block text-sm md:text-base uwd:!text-xl 4k:!text-2xl text-green-600 mt-2">
+              <span className="block text-sm md:text-base text-green-600 mt-2">
                 ({questionsCompleted.length + 1}/{currentQuestionSet.length} total)
               </span>
             )}
             {questionMode === "standard" && (
-              <span className="block text-sm md:text-base uwd:!text-xl 4k:!text-2xl text-gray-400 mt-2">
+              <span className="block text-sm md:text-base text-gray-400 mt-2">
                 Question {questionsCompleted.length + 1} of {standardQuestionLength} ({userResponses.filter(r => r.selected === r.correct && (!r.followUp || r.followUp.followUpSelected === r.followUp.followUpCorrect)).length + (selectedAnswer === currentVariantQuestion.answer && followUpAnswer === currentVariantQuestion.followUp.answer ? 1 : 0)} correct)
               </span>
             )}
@@ -256,7 +256,7 @@ export function QuestionContent({
      !questionsEnded && questionsCompleted.length < currentQuestionSet.length && <div className={`grid ${globalBackgroundStyle} shadow-md md:grid-cols-[40%_60%] border p-8 rounded gap-4`}>
       {/* Question and choices */}
       <div>
-        {!showFollowUpChoices && !followUpSubmitted && <p className="mb-2.5 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">What's been changed?</p>}
+        {!showFollowUpChoices && !followUpSubmitted && <p className="mb-2.5 text-lg md:text-xl">What's been changed?</p>}
         <form onSubmit={(e) => {
           e.preventDefault();
           if (selectedAnswer !== "") {
@@ -267,10 +267,10 @@ export function QuestionContent({
           }
         }}>
           {renderChoices()}
-          {!questionResult && <button type="submit" className={`btn btn-primary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${currentHover}`}>Submit Answer</button>}
+          {!questionResult && <button type="submit" className={`btn btn-primary mt-18 text-lg p-4 ${currentHover}`}>Submit Answer</button>}
           {
             showAnswer && questionsCompleted.length < currentQuestionSet.length
-              ? <button className={`btn btn-secondary mt-18 text-lg p-4 uwd:text-2xl uwd:p-8 4k:text-4xl 4k:p-12 ${currentHover}`} onClick={() =>
+              ? <button className={`btn btn-secondary mt-18 text-lg p-4 ${currentHover}`} onClick={() =>
                 void onNextQuestion(questionMode, selectedAnswer, currentQuestionId, currentVariant, currentVariantQuestion,
                   currentQuestionSet, questionsCompleted, lastEndlessQuestions, standardQuestionLength, userResponses,
                   followUpSubmitted, followUpAnswer,
@@ -286,7 +286,7 @@ export function QuestionContent({
       {/* Images */}
       <div className="flex flex-wrap justify-center items-center gap-4">
         <div className="flex flex-col items-center">
-          <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">Real?</p>
+          <p className="h-8 text-lg md:text-xl">Real?</p>
           <img
             src={getDYKSWUImageLink(currentVariantQuestion.img)}
             onError={(e) => {
@@ -295,11 +295,11 @@ export function QuestionContent({
               target.src = getDYKSWUImageLinkFallback(currentVariantQuestion.img);
             }}
             alt="Potentially changed SWU card"
-            className="h-48 md:h-64 lg:h-120 uwd:!h-180 4k:!h-240 w-auto object-contain rounded shadow-lg"
+            className="h-48 md:h-64 lg:h-120 w-auto object-contain rounded shadow-lg"
           />
         </div>
         <div className="flex flex-col items-center">
-          <p className="h-8 uwd:h-18 4k:h-32 text-lg md:text-xl uwd:!text-3xl 4k:!text-5xl 4k:p-8">Real Card</p>
+          <p className="h-8 text-lg md:text-xl">Real Card</p>
           <img
             src={(showAnswer || showFollowUpAnswer) ? getCardImageLink(currentQuestion.actualCard) : "/assets/SWUniversity_Cardback.png"}
             onError={(e) => {
@@ -308,7 +308,7 @@ export function QuestionContent({
               target.src = getSWUDBImageLink(currentQuestion.actualCard);
             }}
             alt={(showAnswer || showFollowUpAnswer) ? "Real Card" : "SWUniversity Cardback"}
-            className={`h-48 md:h-64 lg:h-120 uwd:!h-180 4k:!h-240 w-auto object-contain 4k:ml-16 rounded shadow-lg transition-all duration-500 ${(revealCard && (showAnswer || showFollowUpAnswer)) ? "wipe-enter" : ""}`}
+            className={`h-48 md:h-64 lg:h-120 w-auto object-contain rounded shadow-lg transition-all duration-500 ${(revealCard && (showAnswer || showFollowUpAnswer)) ? "wipe-enter" : ""}`}
           />
         </div>
       </div>
@@ -318,12 +318,12 @@ export function QuestionContent({
           <p className={`${currentVariantQuestion.answer === selectedAnswer ? "text-green-500" : "text-red-500"} text-xl font-bold mb-4`}>
             {currentVariantQuestion.answer === selectedAnswer ? "Correct!" : "Incorrect!"}
             {questionMode === "iron-man" && currentVariantQuestion.answer === selectedAnswer && (
-              <span className="block text-sm md:text-base uwd:!text-xl 4k:!text-2xl text-green-600 mt-2">
+              <span className="block text-sm md:text-base text-green-600 mt-2">
                 ({questionsCompleted.length + 1}/{currentQuestionSet.length} total)
               </span>
             )}
             {questionMode === "standard" && (
-              <span className="block text-sm md:text-base uwd:!text-xl 4k:!text-2xl text-gray-400 mt-2">
+              <span className="block text-sm md:text-base text-gray-400 mt-2">
                 Question {questionsCompleted.length + 1} of {standardQuestionLength} ({userResponses.filter(r => r.selected === r.correct && (!r.followUp || r.followUp.followUpSelected === r.followUp.followUpCorrect)).length + (currentVariantQuestion.answer === selectedAnswer ? 1 : 0)} correct)
               </span>
             )}

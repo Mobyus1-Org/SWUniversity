@@ -137,7 +137,7 @@ export function CardRefField({ value, onChange, multiline = false, rows = 2, cla
                 className={`flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-xs ${i === highlight ? "bg-white/15 text-white" : "text-white/80"}`}
               >
                 <span>{s.label}</span>
-                <span className="shrink-0 font-mono text-[10px] text-white/40">{s.cardId}</span>
+                <span className="shrink-0 font-mono text-3xs text-white/40">{s.cardId}</span>
               </button>
             </li>
           ))}
@@ -148,8 +148,8 @@ export function CardRefField({ value, onChange, multiline = false, rows = 2, cla
         <div className="mt-1 space-y-0.5">
           {refs.map((r, i) => (
             isKnownCardId(r.cardId)
-              ? <div key={i} className="text-[10px] text-emerald-300/80">✓ {r.cardId} → {CardTitle(r.cardId)}{r.showLeaderUnit ? " (leader unit side)" : ""}</div>
-              : <div key={i} className="text-[10px] text-rose-300">✗ {r.cardId} → unknown card ID</div>
+              ? <div key={i} className="text-3xs text-emerald-300/80">✓ {r.cardId} → {CardTitle(r.cardId)}{r.showLeaderUnit ? " (leader unit side)" : ""}</div>
+              : <div key={i} className="text-3xs text-rose-300">✗ {r.cardId} → unknown card ID</div>
           ))}
         </div>
       )}

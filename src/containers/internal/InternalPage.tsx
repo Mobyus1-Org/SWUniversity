@@ -48,9 +48,9 @@ function QuizStatsPage() {
     );
   }, [quizCounts?.tagCounts, tagSearchFilter]);
 
-  return <div className={`${globalBackgroundStyle} border p-4 m-4 4k:p-8 4k:m-8 flex flex-row gap-4 4k:gap-8 h-[80vh]`}>
+  return <div className={`${globalBackgroundStyle} border p-4 m-4 flex flex-row gap-4 h-[80vh]`}>
     <div className="overflow-y-auto border p-8 w-1/2 space-y-6">
-      <h1 className="text-2xl xl:text-3xl uwd:!text-4xl 4k:!text-6xl mb-4 4k:mb-8">Quiz Counts</h1>
+      <h1 className="text-2xl xl:text-3xl mb-4">Quiz Counts</h1>
 
       {/* Difficulty Counts Section */}
       <div className="space-y-4">
@@ -94,7 +94,7 @@ function QuizStatsPage() {
 
       {/* Tag Counts Section */}
       <div className="space-y-4">
-        <h2 className="text-xl xl:text-2xl uwd:!text-3xl 4k:!text-4xl font-semibold">Tag Distribution</h2>
+        <h2 className="text-xl xl:text-2xl font-semibold">Tag Distribution</h2>
 
         {/* Search Filter */}
         <div className="relative">
@@ -140,7 +140,7 @@ function QuizStatsPage() {
     </div>
 
     <div className="overflow-y-auto border p-8 w-1/2 space-y-6">
-      <h1 className="text-2xl xl:text-3xl uwd:!text-4xl 4k:!text-6xl mb-4 4k:mb-8">Do You Know SWU Counts</h1>
+      <h1 className="text-2xl xl:text-3xl mb-4">Do You Know SWU Counts</h1>
 
       {/* Regular Difficulty Counts Section */}
       <div className="space-y-4">
@@ -194,7 +194,7 @@ function QuizStatsPage() {
 
       {/* Follow-up Counts Section */}
       <div className="space-y-4">
-        <h2 className="text-xl xl:text-2xl uwd:!text-3xl 4k:!text-4xl font-semibold">Follow-up Distribution</h2>
+        <h2 className="text-xl xl:text-2xl font-semibold">Follow-up Distribution</h2>
         <div className="border border-gray-400 rounded-lg overflow-hidden bg-gray-200">
           <table className="w-full">
             <thead className="bg-gray-600">
@@ -235,7 +235,7 @@ function QuizStatsPage() {
 
       {/* Set Counts Section */}
       <div className="space-y-4">
-        <h2 className="text-xl xl:text-2xl uwd:!text-3xl 4k:!text-4xl font-semibold">Set Distribution by Difficulty</h2>
+        <h2 className="text-xl xl:text-2xl font-semibold">Set Distribution by Difficulty</h2>
         <div className="border border-gray-400 rounded-lg overflow-hidden bg-gray-200">
           <table className="w-full">
             <thead className="bg-gray-600">

@@ -17,7 +17,7 @@ interface IProps {
 }
 
 export function LeftSideNavTray({ sfx, playModesRef, styles, handleNavClick, showPlayModesDropdown, setShowPlayModesDropdown, currentHover }: IProps) {
-  return <div className="hidden xl:flex flex-row flex-nowrap gap-4 xl:gap-8 uwd:!gap-24 4k:!gap-30 uwd:py-4 4k:py-10 overflow-visible px-2 w-full items-center">
+  return <div className="hidden xl:flex flex-row flex-nowrap gap-4 xl:gap-8 overflow-visible px-2 w-full items-center">
     <Link
       href="/"
       className={styles.desktopNavLink}
@@ -37,7 +37,7 @@ export function LeftSideNavTray({ sfx, playModesRef, styles, handleNavClick, sho
       >
         Play Modes
         <svg
-          className={`w-4 h-4 lg:w-5 lg:h-5 uwd:!w-6 uwd:!h-6 4k:!w-8 4k:!h-8 transition-transform ${
+          className={`w-4 h-4 lg:w-5 lg:h-5 transition-transform ${
             showPlayModesDropdown ? 'rotate-180' : ''
           }`}
           fill="none"
@@ -54,7 +54,7 @@ export function LeftSideNavTray({ sfx, playModesRef, styles, handleNavClick, sho
         >
           <Link
             href="/quiz"
-            className={`block w-full text-left px-4 py-3 text-lg lg:text-xl uwd:!text-2xl 4k:!text-3xl
+            className={`block w-full text-left px-4 py-3 text-lg lg:text-xl
               hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
             onClick={(e) => handleNavClick(e, "/quiz")}
           >
@@ -62,7 +62,7 @@ export function LeftSideNavTray({ sfx, playModesRef, styles, handleNavClick, sho
           </Link>
           <Link
             href="/do-you-know-swu"
-            className={`block w-full text-left px-4 py-3 text-lg lg:text-xl uwd:!text-2xl 4k:!text-3xl
+            className={`block w-full text-left px-4 py-3 text-lg lg:text-xl
               hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
             onClick={(e) => handleNavClick(e, "/do-you-know-swu")}
           >
@@ -70,7 +70,7 @@ export function LeftSideNavTray({ sfx, playModesRef, styles, handleNavClick, sho
           </Link>
           <Link
             href="/puzzles"
-            className={`block w-full text-left px-4 py-3 text-lg lg:text-xl uwd:!text-2xl 4k:!text-3xl
+            className={`block w-full text-left px-4 py-3 text-lg lg:text-xl
               hover:bg-blue-500/20 hover:border-l-4 hover:border-blue-400 rounded transition-all duration-150 ${currentHover}`}
             onClick={(e) => handleNavClick(e, "/puzzles")}
           >

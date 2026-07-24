@@ -28,8 +28,8 @@ export function Settings({ userSettings, setUserSettings, sfx, settingsModalRef,
     ref={settingsModalRef}
     role="dialog"
     aria-modal="true"
-    className={`z-[100] text-sm md:text-lg uwd:!text-xl 4k:!text-2xl
-    ${globalBackgroundStyleOpaque} border p-4 fixed top-20 uwd:!top-28 4k:!top-40 right-32 uwd:right-48 4k:right-80`}
+    className={`z-[100] text-sm md:text-lg
+    ${globalBackgroundStyleOpaque} border p-4 fixed top-20 right-32`}
   >
     <div
       onClick={() => {
@@ -44,33 +44,33 @@ export function Settings({ userSettings, setUserSettings, sfx, settingsModalRef,
           soundEnabled: !userSettings.soundEnabled,
         });
       }}
-      className="flex items-center gap-4 uwd:gap-6 4k:gap-8 cursor-pointer hover:bg-white/10 p-2 rounded transition-colors"
+      className="flex items-center gap-4 cursor-pointer hover:bg-white/10 p-2 rounded transition-colors"
     >
       {userSettings.soundEnabled ? (
         <img
           src="/assets/speaker1.png"
           alt="Sound On"
-          className="w-6 lg:w-8 uwd:!w-11 4k:!w-15"
+          className="w-6 lg:w-8"
         />
       ) : (
         <img
           src="/assets/speaker2.png"
           alt="Sound Off"
-          className="w-6 lg:w-8 uwd:!w-11 4k:!w-15"
+          className="w-6 lg:w-8"
         />
       )}
       <label className="cursor-pointer">Enable Sound Effects</label>
     </div>
     <div className="mt-4 relative" ref={lightsaberColorRef}>
       <div
-        className="flex items-center gap-4 uwd:gap-6 4k:gap-8 mb-2 cursor-pointer hover:bg-white/10 p-2 rounded"
+        className="flex items-center gap-4 mb-2 cursor-pointer hover:bg-white/10 p-2 rounded"
         onClick={() => {
           setShowLightsaberColorDropdown((p) => !p);
           //open lightsaber color menu
           sfx("transition");
         }}
       >
-        <svg width="32" height="32" viewBox="0 0 32 32" className="lg:w-8 uwd:!w-11 4k:!w-15">
+        <svg width="32" height="32" viewBox="0 0 32 32" className="lg:w-8">
           <rect x="14" y="22" width="4" height="8" fill="#888888" />
           <rect
             x="14"
@@ -81,7 +81,7 @@ export function Settings({ userSettings, setUserSettings, sfx, settingsModalRef,
             filter="drop-shadow(0 0 4px currentColor)"
           />
         </svg>
-        <label className="text-lg lg:text-xl uwd:text-2xl 4k:text-4xl cursor-pointer">Lightsaber Color</label>
+        <label className="text-lg lg:text-xl cursor-pointer">Lightsaber Color</label>
       </div>
       {/* Lightsaber Color Dropdown */}
       {showLightsaberColorDropdown && (
@@ -119,7 +119,7 @@ export function Settings({ userSettings, setUserSettings, sfx, settingsModalRef,
                     boxShadow: colorKey === 'none' ? 'none' : `0 0 8px ${getRGB(colorKey as keyof typeof LightsaberColors)}`
                   }}>
                   </div>
-                  <span className="text-sm lg:text-base uwd:text-lg 4k:text-2xl">
+                  <span className="text-sm lg:text-base">
                     {colorKey === 'none'
                       ? 'Turn Off'
                       : colorKey.charAt(0).toUpperCase() + colorKey.slice(1).replace(/([A-Z])/g, ' $1')}

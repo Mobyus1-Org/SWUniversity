@@ -59,7 +59,7 @@ export default function InternalSecurityPage() {
   const allUsersOnActiveVersion = data ? data.usersNotOnActivePepperVersion === 0 : false;
 
   return (
-    <div className={`${globalBackgroundStyle} m-4 h-[80vh] overflow-y-auto border p-6 4k:m-8 4k:p-10`}>
+    <div className={`${globalBackgroundStyle} m-4 h-[80vh] overflow-y-auto border p-6`}>
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

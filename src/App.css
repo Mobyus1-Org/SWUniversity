@@ -4,8 +4,42 @@
 }
 
 @theme {
-  --breakpoint-uwd: 2560px;
-  --breakpoint-4k: 3840px;
+  /*
+   * Sub-12px sizes used across the puzzle board and builder. Named rather than
+   * written as ~76 scattered arbitrary values so the whole micro-type scale can be
+   * retuned in one place.
+   */
+  --text-4xs: 0.5625rem;
+  --text-3xs: 0.625rem;
+  --text-2xs: 0.6875rem;
+}
+
+/*
+ * Fluid root font-size — the single mechanism that scales the app at large resolutions.
+ *
+ * Tailwind's type and spacing scales are rem-based, so this carries text, padding, gaps
+ * and heights together without per-component breakpoint classes. It replaces an opt-in
+ * uwd:/4k: tier system whose per-component annotations were routinely forgotten (the nav
+ * dropdown scaled its trigger but not its menu).
+ *
+ * Anchored so it is a NO-OP at <=1920px (16px) and reaches 26px at 3840px. The reporter
+ * case — 3840x2160 at 125% Windows text scale — is a 3072px CSS viewport, which lands at
+ * 22px. Note that a 4k breakpoint keyed to 3840 CSS px never fired for them at all.
+ *
+ * Expressed in rem, not px: inside html { font-size }, rem resolves against the browser's
+ * base size, so a user who raised their default font size keeps that preference and gets
+ * it scaled. A px clamp would silently override it.
+ *
+ * No feedback loop with breakpoints: per CSS spec, rem inside a media query always
+ * resolves against the browser's initial font size, never against this rule.
+ *
+ * The exact slope is 10px/1920px = 0.52083..vw. It is rounded DOWN to 0.5208vw so that at
+ * 1920px the middle term lands at 15.99936px — just under the floor — and the clamp
+ * returns exactly 1rem. Rounding up would put 1920px at 16.0032px and make the "no change
+ * at or below 1920px" guarantee technically false.
+ */
+html {
+  font-size: clamp(1rem, 0.5208vw + 0.375rem, 1.625rem);
 }
 
 :root {

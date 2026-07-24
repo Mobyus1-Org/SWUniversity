@@ -69,7 +69,7 @@ export default function NewsCarousel() {
 		return (
 			<div className="w-full flex flex-col items-center mt-4 select-none">
 				<div className="w-full flex flex-col items-center">
-					<h1 className="text-3xl uwd:text-4xl 4k:text-5xl mb-4 font-bold text-center">
+					<h1 className="text-3xl mb-4 font-bold text-center">
 						{slides[current].title}
 					</h1>
 					<div

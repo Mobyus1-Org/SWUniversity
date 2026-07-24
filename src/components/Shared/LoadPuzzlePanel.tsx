@@ -56,7 +56,7 @@ const PINNED_TUTORIAL_TITLE = "We Have to Start Somewhere";
 function DifficultyFilter({ selected, onToggle }: { selected: Set<number>; onToggle: (value: number) => void }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">Diff</span>
+      <span className="text-2xs font-medium uppercase tracking-wider text-white/40">Diff</span>
       <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 p-0.5 text-xs">
         {DIFFICULTIES.map((d) => (
           <button
@@ -263,7 +263,7 @@ export function LoadPuzzlePanel(props: Props) {
               />
             );
             const solvedChip = solvedPuzzleIds.includes(id) ? (
-              <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+              <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-3xs font-semibold text-emerald-300">
                 ✓ Solved
               </span>
             ) : null;
@@ -280,7 +280,7 @@ export function LoadPuzzlePanel(props: Props) {
                   <button
                     type="button"
                     onClick={() => onEditPuzzle(entry)}
-                    className="rounded-md border border-sky-400/30 bg-sky-500/15 px-3 py-1 text-[11px] font-semibold text-white transition hover:bg-sky-500/25"
+                    className="rounded-md border border-sky-400/30 bg-sky-500/15 px-3 py-1 text-2xs font-semibold text-white transition hover:bg-sky-500/25"
                   >
                     Edit
                   </button>
@@ -323,10 +323,10 @@ export function LoadPuzzlePanel(props: Props) {
                     <span className="min-w-0 flex-1 font-semibold break-words text-xs">{name}</span>
                     {solvedChip}
                   </div>
-                  {description ? <p className="text-[11px] opacity-70">{description}</p> : null}
+                  {description ? <p className="text-2xs opacity-70">{description}</p> : null}
                   <div className="flex items-center gap-2 min-w-0">
                     <DifficultyDots value={difficulty} />
-                    {renderAuthor("min-w-0 truncate text-[10px] text-white/40")}
+                    {renderAuthor("min-w-0 truncate text-3xs text-white/40")}
                   </div>
                   {adminControls}
                 </div>

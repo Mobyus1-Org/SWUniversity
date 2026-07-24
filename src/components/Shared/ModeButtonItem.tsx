@@ -30,10 +30,10 @@ export function ModeButtonItem({mode, title, description, modeSet, initModeId, i
   const displayDescription = notFinishedOnly
     ? description.replace(/(Total (?:Questions|Cards): )\d+/, `$1${notFinishedCount}`)
     : description;
-  return <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1 4k:p-8 4k:m-4`}>
+  return <div className={`${globalBackgroundStyle} border p-4 rounded flex flex-col items-center justify-center flex-1`}>
     {
       title !== "" && <button
-      className="btn btn-primary text-lg xl:text-2xl uwd:!text-3xl 4k:!text-5xl py-8 lg:py-6 xl:py-8 uwd:!py-10 4k:!py-20 w-1/2"
+      className="btn btn-primary text-lg xl:text-2xl py-8 lg:py-6 xl:py-8 w-1/2"
         onClick={() => {
           const useFilter = isDifficultyMode && notFinishedOnly && !!isFinished;
           const activeSet = useFilter
@@ -75,6 +75,6 @@ export function ModeButtonItem({mode, title, description, modeSet, initModeId, i
     {
       allFinishedMessage && <p className="mt-2 text-center text-yellow-400">You&apos;ve finished every card here!</p>
     }
-    <h3 className="text-xl xl:text-2xl uwd:!text-3xl 4k:!text-5xl 4k:!p-5 mt-4">{displayDescription.split("\n").map((line, index) => <span key={"desc-line-" + index}>{line}<br /></span>)}</h3>
+    <h3 className="text-xl xl:text-2xl mt-4">{displayDescription.split("\n").map((line, index) => <span key={"desc-line-" + index}>{line}<br /></span>)}</h3>
   </div>
 }

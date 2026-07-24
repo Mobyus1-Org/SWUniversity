@@ -245,7 +245,7 @@ export function renderItalicsAndBold(text: string): React.JSX.Element {
               "Vigilance": "/assets/SWH_Aspects_Vigilance.png",
               "Cunning": "/assets/SWH_Aspects_Cunning.png",
             };
-            return <img key={"part-" + partIndex} src={iconMap[emphText]} alt={emphText} className="inline h-8 uwd:h-14 4k:h-20 w-8 uwd:w-14 4k:w-20 mx-1" />;
+            return <img key={"part-" + partIndex} src={iconMap[emphText]} alt={emphText} className="inline h-8 w-8 mx-1" />;
           }
           return <em key={"part-" + partIndex}>{processText(emphText, partIndex)}</em>;
         } else {

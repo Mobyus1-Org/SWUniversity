@@ -58,7 +58,7 @@ function DoYouKnowSWUPage() {
   }, [dykswuMode])
 
   const renderQuestionContent = () => loading
-    ? <p className="text-lg uwd:text-3xl 4k:text-5xl">Loading questions...</p>
+    ? <p className="text-lg">Loading questions...</p>
     : <QuestionContent
       currentQuestionSet={currentQuestionSet}
       allQuestions={allQuestions}
@@ -154,18 +154,18 @@ function DoYouKnowSWUPage() {
   );
 
   return <div>
-    <h1 className="text-center text-4xl font-bold md:text-4xl uwd:!text-5xl 4k:!text-7xl mb-4">{getModeTitle("dykswu", dykswuMode)}</h1>
+    <h1 className="text-center text-4xl font-bold md:text-4xl mb-4">{getModeTitle("dykswu", dykswuMode)}</h1>
     {
       dykswuMode === "" && <div className={`${globalBackgroundStyle}
-        xl:w-3/4 m-auto text-xl uwd:text-3xl 4k:text-5xl text-center
-        md:flex justify-center p-2 mb-4 4k:p-4 4k:mb-8 border`}>
-      <img src="/assets/dykswu-mode-splash.png" alt="Do You Know SWU?" className="md:w-2/5 p-8 my-auto uwd:mb-8 4k:mb-12" />
+        xl:w-3/4 m-auto text-xl text-center
+        md:flex justify-center p-2 mb-4 border`}>
+      <img src="/assets/dykswu-mode-splash.png" alt="Do You Know SWU?" className="md:w-2/5 p-8 my-auto" />
       <div>
         <p>
           Welcome to "Do You Know SWU?"!
           <br/>How well do you know the details of SWU cards? Find out!
         </p>
-        <div className="md:w-3/4 uwd:w-1/2 4k:w-1/4 m-auto">
+        <div className="md:w-3/4 m-auto">
           <p className="text-sm text-left">
             <br/>-Standard, Marathon, and Endless pull cards randomly from our entire databank (no filtering).
             <br/><br/>-Padawan (easy), Knight (medium), or Master (hard) modes will filter selected cards to those difficulties.

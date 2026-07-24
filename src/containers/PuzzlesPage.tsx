@@ -238,13 +238,13 @@ function CardVisual({
         </div> : null}
       </div>
       {sentinel ? <div className="pointer-events-none absolute top-0 right-0 z-10">
-        <img src="/assets/tokens/sentinel.png" alt="Sentinel" className="h-[29px] w-[29px]" />
+        <img src="/assets/tokens/sentinel.png" alt="Sentinel" className="h-[1.8125rem] w-[1.8125rem]" />
       </div> : null}
       {epicUsed ? <div className="pointer-events-none absolute -bottom-1 right-1.5 z-10">
-        <img src="/assets/tokens/epic-used.png" alt="Epic action used" className="h-[40px] w-[40px] rotate-90" />
+        <img src="/assets/tokens/epic-used.png" alt="Epic action used" className="h-[2.5rem] w-[2.5rem] rotate-90" />
       </div> : null}
       {forceToken ? <div className="pointer-events-none absolute -top-1 right-1.5 z-10">
-        <img src="/assets/force-token.webp" alt="The Force" title="Has the Force" className="h-[44px] w-[44px] drop-shadow-[0_0_4px_rgba(124,58,237,0.85)]" />
+        <img src="/assets/force-token.webp" alt="The Force" title="Has the Force" className="h-[2.75rem] w-[2.75rem] drop-shadow-[0_0_4px_rgba(124,58,237,0.85)]" />
       </div> : null}
     </div>
     {footer ? <div className="mt-2">{footer}</div> : null}
@@ -350,7 +350,7 @@ function CaptiveStrip({
       onMouseEnter={() => onPreviewStart({ imageId: cardId, cardId, label: title })}
       onMouseLeave={onPreviewEnd}
     >
-      <span className="block w-full text-center text-[9px] font-semibold uppercase leading-[18px] tracking-wide text-white/70">
+      <span className="block w-full text-center text-4xs font-semibold uppercase leading-[1.125rem] tracking-wide text-white/70">
         Captive
       </span>
     </div>
@@ -427,7 +427,7 @@ function ZoneStatPanel({
   highlight?: boolean;
 }) {
   return <div className={`rounded-lg bg-black/20 p-2${highlight ? " ring-2 ring-sky-400/60" : ""}`}>
-    <div className="text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/60">{title}</div>
+    <div className="text-center text-2xs font-bold uppercase tracking-[0.2em] text-white/60">{title}</div>
     <div className="mt-2 flex items-center gap-2">
       {onClick
         ? <button type="button" className="w-[42%] shrink-0 cursor-pointer" onClick={onClick}>{media}</button>
@@ -441,7 +441,7 @@ function ZoneStatPanel({
 function pileCountValue(n: number) {
   return <>
     <span className="text-2xl font-black leading-none">{n}</span>
-    <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">Cards</span>
+    <span className="text-3xs font-bold uppercase tracking-widest text-white/60">Cards</span>
   </>;
 }
 
@@ -929,7 +929,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
   }, [isHealMode, gameState]);
 
   if (!gameState) {
-    return <div className="relative z-10 mx-auto w-full max-w-[1920px] px-1.5 py-4 text-white sm:px-4 lg:px-6">
+    return <div className="relative z-10 mx-auto w-full max-w-[120rem] px-1.5 py-4 text-white sm:px-4 lg:px-6">
       {showBuilderPanelOpen && showBuilderTools ? (
         <PuzzleBuilderPanel
           onClose={() => { setShowBuilderPanelOpen(false); setEditState(null); }}
@@ -1175,7 +1175,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
         ? "border-amber-400/40 bg-amber-500/15 text-amber-100"
         : "border-white/10 bg-white/5 text-white";
 
-  return <div className="relative z-10 mx-auto w-full max-w-[1920px] px-3 py-4 text-white sm:px-4 lg:px-6">
+  return <div className="relative z-10 mx-auto w-full max-w-[120rem] px-3 py-4 text-white sm:px-4 lg:px-6">
     {showBuilderPanelOpen && showBuilderTools ? (
       <PuzzleBuilderPanel
         onClose={() => { setShowBuilderPanelOpen(false); setEditState(null); }}
@@ -1264,45 +1264,45 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
       <aside className="hidden xl:block xl:absolute xl:left-0 xl:top-0 xl:w-44">
         <section className={`rounded-lg border border-white/10 p-2 ${globalBackgroundStyle}`}>
           <div className="mb-1.5 flex items-center justify-between">
-            <h2 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/70">Game Log</h2>
-            <span className="text-[10px] text-white/50">{gameLog.length}</span>
+            <h2 className="text-3xs font-semibold uppercase tracking-[0.2em] text-white/70">Game Log</h2>
+            <span className="text-3xs text-white/50">{gameLog.length}</span>
           </div>
-          <div ref={gameLogRef} className="h-[23vh] space-y-1.5 overflow-y-auto pr-1 text-[10px] leading-4 text-white/80">
+          <div ref={gameLogRef} className="h-[23vh] space-y-1.5 overflow-y-auto pr-1 text-3xs leading-4 text-white/80">
             {gameLog.map((entry, index) => <div key={`${entry}-${index}`} className="rounded-md bg-black/25 px-1.5 py-1"><CardLinkText text={entry} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} /></div>)}
           </div>
         </section>
         <SectionShell title="Actions" className="mt-2 rounded-lg p-2">
           <div className="mt-2 grid gap-1.5">
             {puzzleMeta?.infoText && puzzleMeta.infoText.trim() ? (
-              <button type="button" onClick={() => setShowInfoModal(true)} className="rounded-lg border border-sky-400/30 bg-sky-500/15 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-sky-500/25">Puzzle Info</button>
+              <button type="button" onClick={() => setShowInfoModal(true)} className="rounded-lg border border-sky-400/30 bg-sky-500/15 px-2 py-1.5 text-left text-2xs font-semibold text-white transition hover:bg-sky-500/25">Puzzle Info</button>
             ) : null}
-            <button type="button" onClick={() => void handleUndo()} disabled={isResolving || historyLength === 0} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Undo</button>
-            <button type="button" onClick={handlePass} disabled={isResolving || isGameOver || !!resolutionNeeded} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass</button>
-            <button type="button" onClick={handleClaimInitiative} disabled={isResolving || gameState.initiativeClaimed || isGameOver || !!resolutionNeeded} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Initiative</button>
+            <button type="button" onClick={() => void handleUndo()} disabled={isResolving || historyLength === 0} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-2xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Undo</button>
+            <button type="button" onClick={handlePass} disabled={isResolving || isGameOver || !!resolutionNeeded} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-2xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Pass</button>
+            <button type="button" onClick={handleClaimInitiative} disabled={isResolving || gameState.initiativeClaimed || isGameOver || !!resolutionNeeded} className="rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-left text-2xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">Initiative</button>
             {(puzzleMeta?.hints?.length ?? 0) > 0 ? (
-              <button type="button" onClick={() => setShowHintsModal(true)} className="rounded-lg border border-amber-400/30 bg-amber-500/15 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-amber-500/25">Hints</button>
+              <button type="button" onClick={() => setShowHintsModal(true)} className="rounded-lg border border-amber-400/30 bg-amber-500/15 px-2 py-1.5 text-left text-2xs font-semibold text-white transition hover:bg-amber-500/25">Hints</button>
             ) : null}
             <div className="h-3" />
-            <button type="button" onClick={() => { if (selectedPuzzleFilename !== null) void loadPuzzle(selectedPuzzleFilename); }} disabled={isResolving || selectedPuzzleFilename === null} className="rounded-lg border border-white/15 bg-rose-500/20 px-2 py-1.5 text-left text-[11px] font-semibold text-white transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40">Reset</button>
+            <button type="button" onClick={() => { if (selectedPuzzleFilename !== null) void loadPuzzle(selectedPuzzleFilename); }} disabled={isResolving || selectedPuzzleFilename === null} className="rounded-lg border border-white/15 bg-rose-500/20 px-2 py-1.5 text-left text-2xs font-semibold text-white transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-40">Reset</button>
           </div>
-          <div className={`mt-1 text-[10px] ${lastActionMs !== null && lastActionMs > 600 ? "text-amber-200" : "text-white/55"}`}>
+          <div className={`mt-1 text-3xs ${lastActionMs !== null && lastActionMs > 600 ? "text-amber-200" : "text-white/55"}`}>
             {isResolving ? "Resolving..." : lastActionMs !== null ? `Last action ${lastActionMs} ms` : "Last action --"}
           </div>
         </SectionShell>
         <SectionShell title="Initiative" className="mt-2 rounded-lg p-2">
-          <div className="mt-2 rounded-lg bg-black/25 px-2 py-1.5 text-[10px] text-white/75">
+          <div className="mt-2 rounded-lg bg-black/25 px-2 py-1.5 text-3xs text-white/75">
             {gameState.initiativePlayer === 1 ? "Player" : "Enemy"}
           </div>
         </SectionShell>
         <SectionShell title="Status" className="mt-2 rounded-lg p-2">
-          <div className={`mt-2 rounded-lg border px-2 py-1.5 text-[10px] ${statusTone}`}>
+          <div className={`mt-2 rounded-lg border px-2 py-1.5 text-3xs ${statusTone}`}>
             <div>{formatStatus(status, resolutionNeeded)}</div>
-            {actionError ? <div className="mt-1 text-[10px] text-rose-200">{actionError}</div> : null}
+            {actionError ? <div className="mt-1 text-3xs text-rose-200">{actionError}</div> : null}
           </div>
         </SectionShell>
       </aside>
 
-      <div className="mx-auto xl:pl-[188px] xl:pr-0 2xl:pl-[200px]">
+      <div className="mx-auto xl:pl-[11.75rem] xl:pr-0 2xl:pl-[12.5rem]">
         <div className="space-y-0">
           <ZonePanel title="Board" hideHeader>
           <div className="space-y-1">
@@ -1447,7 +1447,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
 
               <div className="rounded-lg bg-black/20 p-2">
                 <div className="grid grid-cols-2 gap-2">
-                  {!opponent.leader.deployed ? <div className="mx-auto w-full max-w-[140px]"><CardVisual
+                  {!opponent.leader.deployed ? <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={opponent.leader.cardId}
                     selectable={false}
                     onPreviewStart={handlePreviewStart}
@@ -1457,10 +1457,10 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                     compact
                     square
                     epicUsed={opponent.leader.epicActionUsed}
-                  /></div> : <div className="mx-auto w-full max-w-[140px] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
+                  /></div> : <div className="mx-auto w-full max-w-[8.75rem] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
                     Leader deployed to Ground Arena
                   </div>}
-                  <div className="mx-auto w-full max-w-[140px]"><CardVisual
+                  <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={opponent.base.cardId}
                     selectable={selectableBaseForPlayer.includes(2)}
                     onClick={selectableBaseForPlayer.includes(2) ? () => handleBaseClick(2) : undefined}
@@ -1525,7 +1525,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
 
               <div className="rounded-lg bg-black/20 p-2">
                 <div className="grid grid-cols-2 gap-2 xl:hidden">
-                  {!opponent.leader.deployed ? <div className="mx-auto w-full max-w-[140px]"><CardVisual
+                  {!opponent.leader.deployed ? <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={opponent.leader.cardId}
                     selectable={false}
                     onPreviewStart={handlePreviewStart}
@@ -1535,10 +1535,10 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                     compact
                     square
                     epicUsed={opponent.leader.epicActionUsed}
-                  /></div> : <div className="mx-auto w-full max-w-[140px] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
+                  /></div> : <div className="mx-auto w-full max-w-[8.75rem] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
                     Leader deployed to Ground Arena
                   </div>}
-                  <div className="mx-auto w-full max-w-[140px]"><CardVisual
+                  <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={opponent.base.cardId}
                     selectable={selectableBaseForPlayer.includes(2)}
                     onClick={selectableBaseForPlayer.includes(2) ? () => handleBaseClick(2) : undefined}
@@ -1635,7 +1635,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             <div className="space-y-2 xl:hidden">
               <div className="rounded-lg bg-black/20 p-2">
                 <div className="grid grid-cols-2 gap-2">
-                  {!player.leader.deployed ? <div className="mx-auto w-full max-w-[140px]"><CardVisual
+                  {!player.leader.deployed ? <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={player.leader.cardId}
                     selectable={uiCanClickLeader}
                     onClick={uiCanClickLeader ? () => { if (LEADERS_WITH_ACTION_ABILITY.has(player.leader.cardId) && player.leader.ready) { setLeaderModalOpen(true); } else { handleLeaderDeploy(); } } : undefined}
@@ -1646,10 +1646,10 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                     compact
                     square
                     epicUsed={player.leader.epicActionUsed}
-                  /></div> : <div className="mx-auto w-full max-w-[140px] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
+                  /></div> : <div className="mx-auto w-full max-w-[8.75rem] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
                     Leader deployed to Ground Arena
                   </div>}
-                  <div className="mx-auto w-full max-w-[140px]"><CardVisual
+                  <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={player.base.cardId}
                     selectable={uiCanClickBase || selectableBaseForPlayer.includes(1)}
                     onClick={uiCanClickBase || selectableBaseForPlayer.includes(1) ? () => handleBaseClick(1) : undefined}
@@ -1809,7 +1809,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
 
               <div className="rounded-lg bg-black/20 p-2">
                 <div className="grid grid-cols-2 gap-2 xl:hidden">
-                  {!player.leader.deployed ? <div className="mx-auto w-full max-w-[140px]"><CardVisual
+                  {!player.leader.deployed ? <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={player.leader.cardId}
                     selectable={uiCanClickLeader}
                     onClick={uiCanClickLeader ? () => { if (LEADERS_WITH_ACTION_ABILITY.has(player.leader.cardId) && player.leader.ready) { setLeaderModalOpen(true); } else { handleLeaderDeploy(); } } : undefined}
@@ -1820,10 +1820,10 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                     compact
                     square
                     epicUsed={player.leader.epicActionUsed}
-                  /></div> : <div className="mx-auto w-full max-w-[140px] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
+                  /></div> : <div className="mx-auto w-full max-w-[8.75rem] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
                     Leader deployed to Ground Arena
                   </div>}
-                  <div className="mx-auto w-full max-w-[140px]"><CardVisual
+                  <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={player.base.cardId}
                     selectable={uiCanClickBase || selectableBaseForPlayer.includes(1)}
                     onClick={uiCanClickBase || selectableBaseForPlayer.includes(1) ? () => handleBaseClick(1) : undefined}

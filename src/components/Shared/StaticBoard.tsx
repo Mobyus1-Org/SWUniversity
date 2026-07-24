@@ -24,7 +24,7 @@ function CardTile({ cardId, sub, widthClass }: { cardId: string; sub?: string; w
         onError={() => setStage((s) => Math.min(s + 1, 3))}
         className="pointer-events-none w-full rounded border border-white/20 bg-black/30 select-none"
       />
-      {sub ? <div className="mt-0.5 text-center text-[9px] text-white/50">{sub}</div> : null}
+      {sub ? <div className="mt-0.5 text-center text-4xs text-white/50">{sub}</div> : null}
     </div>
   );
 }
@@ -41,26 +41,26 @@ function PlayerRow({ p, label, compact }: { p: PlayerBuilderState; label: string
   const w = compact ? "w-10" : "w-16";
   const zone = (title: string, children: React.ReactNode) => (
     <div className="flex flex-col gap-0.5">
-      <div className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/40">{title}</div>
+      <div className="text-4xs font-semibold uppercase tracking-[0.2em] text-white/40">{title}</div>
       <div className="flex flex-wrap items-start gap-1">{children}</div>
     </div>
   );
   return (
     <div className="rounded-lg border border-white/10 bg-black/20 p-2 space-y-2">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/60">{label}</div>
+      <div className="text-3xs font-semibold uppercase tracking-[0.2em] text-white/60">{label}</div>
       <div className="flex flex-wrap gap-3">
         {zone("Base", p.baseCardId
           ? <CardTile cardId={p.baseCardId} sub={p.baseDamage > 0 ? `${p.baseDamage} dmg` : undefined} widthClass={w} />
-          : <span className="text-[10px] text-white/30">—</span>)}
+          : <span className="text-3xs text-white/30">—</span>)}
         {zone("Leader", p.leaderCardId
           ? <CardTile cardId={p.leaderDeployed ? `${p.leaderCardId}_BACK` : p.leaderCardId} sub={p.leaderDeployed ? "deployed" : undefined} widthClass={w} />
-          : <span className="text-[10px] text-white/30">—</span>)}
+          : <span className="text-3xs text-white/30">—</span>)}
       </div>
       {p.spaceUnits.length > 0 && zone("Space",
         p.spaceUnits.map((u, i) => <CardTile key={i} cardId={u.cardId} sub={unitSub(u)} widthClass={w} />))}
       {p.groundUnits.length > 0 && zone("Ground",
         p.groundUnits.map((u, i) => <CardTile key={i} cardId={u.cardId} sub={unitSub(u)} widthClass={w} />))}
-      <div className="text-[10px] text-white/50">
+      <div className="text-3xs text-white/50">
         Resources {p.resources.filter((r) => r.ready).length}/{p.resources.length}
         {" · "}Hand {p.handCards.length}
         {" · "}Deck {p.deck.length}

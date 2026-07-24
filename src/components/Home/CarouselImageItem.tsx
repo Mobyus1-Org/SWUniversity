@@ -8,7 +8,7 @@ export function CarouselImageItem({ data }: ICarouselItemProps) {
         <img src={src} alt={alt || 'news image'} className="w-full h-full object-cover" />
       </div>
       <div className="overflow-y-auto w-full flex-1 px-2">
-        <p className="text-lg uwd:text-2xl 4k:text-4xl mb-4">{description}</p>
+        <p className="text-lg mb-4">{description}</p>
       </div>
     </div>
   );

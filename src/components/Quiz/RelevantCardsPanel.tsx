@@ -19,9 +19,9 @@ export function RelevantCardsPanel({ currentQuiz, setShowModal, setModalKey }: I
   {
     currentQuiz.relevantCards.length > 0
     ? <div>
-      <div className="text-xl mb-2.5 mr-2 uwd:text-3xl 4k:text-5xl">Relevant Cards</div>
-      <div className="text-sm uwd:text-xl 4k:text-3xl"><u onClick={setRelevantCardsModal}>(Click here to see enlarged images)</u></div>
-      <div className="flex flex-wrap justify-center items-center max-h-180 uwd:max-h-240 4k:max-h-320 overflow-y-auto">
+      <div className="text-xl mb-2.5 mr-2">Relevant Cards</div>
+      <div className="text-sm"><u onClick={setRelevantCardsModal}>(Click here to see enlarged images)</u></div>
+      <div className="flex flex-wrap justify-center items-center max-h-180 overflow-y-auto">
         {
           currentQuiz.relevantCards.map((cardName: string, index: number) => {
             const scaleClass = isHorizontalCard(cardName) ? "w-fit" : "h-fit";

@@ -27,7 +27,7 @@ interface IProps {
 
 export function ModeButtons({mode, appModeSets, standardModeLength, modeDescriptions, initVariant,
     setMode, setCurrentModeSet, setCurrentModeId, setStandardModeLength, setVariant, loggedIn, isFinished}: IProps) {
-  const renderButtons = () => <div className="grid md:grid-cols-3 gap-4 uwd:gap-5 mb-8 h-full text-center">
+  const renderButtons = () => <div className="grid md:grid-cols-3 gap-4 mb-8 h-full text-center">
     <ModeButtonItem
       mode="padawan"
       loggedIn={loggedIn}

@@ -137,7 +137,7 @@ function CardPicker({ cards, value, onChange, placeholder = "Search cards…", f
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[6rem_1fr] items-start gap-2">
-      <label className="pt-1.5 text-[11px] text-white/55">{label}</label>
+      <label className="pt-1.5 text-2xs text-white/55">{label}</label>
       <div>{children}</div>
     </div>
   );
@@ -202,11 +202,11 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
 
   return (
     <div className="space-y-3">
-      <h3 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/60">{label}</h3>
+      <h3 className="text-2xs font-semibold uppercase tracking-[0.25em] text-white/60">{label}</h3>
 
       {/* Base */}
       <div className="rounded-lg bg-black/20 p-3 space-y-2">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Base</div>
+        <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Base</div>
         <FieldRow label="Card">
           <CardPicker
             cards={cards}
@@ -224,7 +224,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
 
       {/* Tokens */}
       <div className="rounded-lg bg-black/20 p-3 space-y-2">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Tokens</div>
+        <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Tokens</div>
         <FieldRow label="Credits">
           <NumberInput value={state.creditTokens} onChange={(v) => patch({ creditTokens: v })} />
         </FieldRow>
@@ -233,7 +233,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
 
       {/* Leader */}
       <div className="rounded-lg bg-black/20 p-3 space-y-2">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Leader</div>
+        <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Leader</div>
         <FieldRow label="Card">
           <CardPicker
             cards={cards}
@@ -253,12 +253,12 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
       {/* Resources */}
       <div className="rounded-lg bg-black/20 p-3 space-y-2">
         <div className="flex items-center justify-between">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Resources ({state.resources.length})</div>
+          <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Resources ({state.resources.length})</div>
           {state.resources.length > 0 && (
             <button
               type="button"
               onClick={() => patch({ resources: [] })}
-              className="text-[10px] text-white/30 hover:text-rose-300"
+              className="text-3xs text-white/30 hover:text-rose-300"
             >
               Clear all
             </button>
@@ -286,7 +286,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
               setNewResourceCardId("");
               setNewResourceCount(1);
             }}
-            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20 disabled:opacity-40"
+            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-2xs font-semibold text-white hover:bg-white/20 disabled:opacity-40"
           >
             Add
           </button>
@@ -294,7 +294,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
         {state.resources.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-1">
             {state.resources.map((r, i) => (
-              <span key={i} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] ${r.ready ? "bg-blue-500/20 text-blue-200" : "bg-white/10 text-white/50"}`}>
+              <span key={i} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-3xs ${r.ready ? "bg-blue-500/20 text-blue-200" : "bg-white/10 text-white/50"}`}>
                 {cards.find((c) => c.cardId === r.cardId)?.label ?? r.cardId}
                 <button
                   type="button"
@@ -309,7 +309,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
 
       {/* Hand */}
       <div className="rounded-lg bg-black/20 p-3 space-y-2">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Hand ({state.handCards.length})</div>
+        <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Hand ({state.handCards.length})</div>
         <div className="grid grid-cols-[1fr_auto] items-center gap-2">
           <CardPicker cards={cards} value={newHandCardId} onChange={setNewHandCardId} placeholder="Card…" />
           <button
@@ -319,7 +319,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
               patch({ handCards: [...state.handCards, newHandCardId] });
               setNewHandCardId("");
             }}
-            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20 disabled:opacity-40"
+            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-2xs font-semibold text-white hover:bg-white/20 disabled:opacity-40"
           >
             Add
           </button>
@@ -327,7 +327,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
         {state.handCards.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {state.handCards.map((cardId, i) => (
-              <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/70">
+              <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-3xs text-white/70">
                 {cards.find((c) => c.cardId === cardId)?.label ?? cardId}
                 <button
                   type="button"
@@ -342,7 +342,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
 
       {/* Discard */}
       <div className="rounded-lg bg-black/20 p-3 space-y-2">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Discard ({state.discard.length})</div>
+        <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Discard ({state.discard.length})</div>
         <div className="grid grid-cols-[1fr_auto] items-center gap-2">
           <CardPicker cards={cards} value={newDiscardCardId} onChange={setNewDiscardCardId} placeholder="Card…" />
           <button
@@ -352,7 +352,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
               patch({ discard: [...state.discard, newDiscardCardId] });
               setNewDiscardCardId("");
             }}
-            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20 disabled:opacity-40"
+            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-2xs font-semibold text-white hover:bg-white/20 disabled:opacity-40"
           >
             Add
           </button>
@@ -360,7 +360,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
         {state.discard.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {state.discard.map((cardId, i) => (
-              <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/70">
+              <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-3xs text-white/70">
                 {cards.find((c) => c.cardId === cardId)?.label ?? cardId}
                 <button
                   type="button"
@@ -376,13 +376,13 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
       {/* Deck */}
       <div className="rounded-lg bg-black/20 p-3 space-y-2">
         <div className="flex items-center justify-between">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Deck ({state.deck.length})</div>
+          <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Deck ({state.deck.length})</div>
           <div className="flex items-center gap-2">
             {state.deck.length > 0 && (
               <button
                 type="button"
                 onClick={() => setShowDeck((v) => !v)}
-                className="text-[10px] text-white/40 hover:text-white/70 underline-offset-2 underline"
+                className="text-3xs text-white/40 hover:text-white/70 underline-offset-2 underline"
               >
                 {showDeck ? "Hide" : "See Deck"}
               </button>
@@ -391,7 +391,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
               <button
                 type="button"
                 onClick={() => patch({ deck: [] })}
-                className="text-[10px] text-white/30 hover:text-rose-300"
+                className="text-3xs text-white/30 hover:text-rose-300"
               >
                 Clear all
               </button>
@@ -417,7 +417,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
               setNewDeckCardId("");
               setNewDeckCount(1);
             }}
-            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20 disabled:opacity-40"
+            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-2xs font-semibold text-white hover:bg-white/20 disabled:opacity-40"
           >
             Add
           </button>
@@ -427,7 +427,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
             {[...state.deck].reverse().map((cardId, i) => {
               const originalIndex = state.deck.length - 1 - i;
               return (
-                <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/70">
+                <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-3xs text-white/70">
                   {cards.find((c) => c.cardId === cardId)?.label ?? cardId}
                   <button
                     type="button"
@@ -443,7 +443,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
 
       {/* Ground Arena */}
       <div className="rounded-lg bg-black/20 p-3 space-y-2">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Ground Arena ({state.groundUnits.length})</div>
+        <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Ground Arena ({state.groundUnits.length})</div>
         <UnitAdder
           playerId={playerId}
           unitCards={unitCards}
@@ -457,7 +457,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
 
       {/* Space Arena */}
       <div className="rounded-lg bg-black/20 p-3 space-y-2">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Space Arena ({state.spaceUnits.length})</div>
+        <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Space Arena ({state.spaceUnits.length})</div>
         <UnitAdder
           playerId={playerId}
           unitCards={unitCards}
@@ -514,12 +514,12 @@ function UnitEditDialog({ unit, type, captiveOwner, cards, unitCards, onUpdate, 
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-white">
               {isUpgrades ? "Upgrades" : "Captives"}
             </div>
-            <div className="text-[11px] text-white/40">{unitName}</div>
+            <div className="text-2xs text-white/40">{unitName}</div>
           </div>
           <button type="button" onClick={onClose} className="text-lg leading-none text-white/30 hover:text-white">×</button>
         </div>
         {!isUpgrades && (
-          <p className="rounded-md border border-amber-400/25 bg-amber-400/10 px-2 py-1.5 text-[10px] leading-relaxed text-amber-200/80">
+          <p className="rounded-md border border-amber-400/25 bg-amber-400/10 px-2 py-1.5 text-3xs leading-relaxed text-amber-200/80">
             Captives are owned by <span className="font-semibold">Player {captiveOwner}</span> — a unit
             can only capture an enemy unit. If this guard is defeated or leaves play, they return to
             Player {captiveOwner}&apos;s arena exhausted.
@@ -536,7 +536,7 @@ function UnitEditDialog({ unit, type, captiveOwner, cards, unitCards, onUpdate, 
             type="button"
             disabled={!newCardId}
             onClick={addItem}
-            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20 disabled:opacity-40"
+            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-2xs font-semibold text-white hover:bg-white/20 disabled:opacity-40"
           >
             Add
           </button>
@@ -544,14 +544,14 @@ function UnitEditDialog({ unit, type, captiveOwner, cards, unitCards, onUpdate, 
         {items.length > 0 ? (
           <div className="space-y-1">
             {items.map((cardId, i) => (
-              <div key={i} className="flex items-center justify-between rounded-md bg-black/20 px-2 py-1 text-[11px]">
+              <div key={i} className="flex items-center justify-between rounded-md bg-black/20 px-2 py-1 text-2xs">
                 <span className="text-white/80">{cards.find((c) => c.cardId === cardId)?.label ?? cardId}</span>
                 <button type="button" onClick={() => removeItem(i)} className="text-white/30 hover:text-rose-300">×</button>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-[11px] text-white/30">None added.</p>
+          <p className="text-2xs text-white/30">None added.</p>
         )}
       </div>
     </div>
@@ -597,7 +597,7 @@ function UnitAdder({ playerId, unitCards, units, cards, onAdd, onRemove, onUpdat
           type="button"
           disabled={!cardId}
           onClick={() => { onAdd({ cardId, ready, damage, upgrades: [], captives: [] }); setCardId(""); setDamage(0); setReady(true); }}
-          className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20 disabled:opacity-40"
+          className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-2xs font-semibold text-white hover:bg-white/20 disabled:opacity-40"
         >
           Add
         </button>
@@ -606,7 +606,7 @@ function UnitAdder({ playerId, unitCards, units, cards, onAdd, onRemove, onUpdat
         <div className="space-y-1.5">
           {units.map((u, i) => (
             <div key={i} className="space-y-0.5">
-              <div className="flex items-center gap-1.5 rounded-md bg-black/20 px-2 py-1 text-[11px]">
+              <div className="flex items-center gap-1.5 rounded-md bg-black/20 px-2 py-1 text-2xs">
                 <span className="text-white/80 mr-0.5">
                   {cards.find((c) => c.cardId === u.cardId)?.label ?? u.cardId}
                   {u.damage > 0 ? <span className="ml-1.5 text-rose-300">({u.damage} dmg)</span> : null}
@@ -615,7 +615,7 @@ function UnitAdder({ playerId, unitCards, units, cards, onAdd, onRemove, onUpdat
                 <button
                   type="button"
                   onClick={() => setEditDialog({ index: i, type: "upgrades" })}
-                  className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-blue-300 bg-blue-500/15 hover:bg-blue-500/30 transition-colors"
+                  className="rounded px-1.5 py-0.5 text-3xs font-semibold text-blue-300 bg-blue-500/15 hover:bg-blue-500/30 transition-colors"
                 >
                   {u.upgrades.length > 0 ? `Upgrades (${u.upgrades.length})` : "Upgrades"}
                 </button>
@@ -623,7 +623,7 @@ function UnitAdder({ playerId, unitCards, units, cards, onAdd, onRemove, onUpdat
                   type="button"
                   onClick={() => setEditDialog({ index: i, type: "captives" })}
                   title={`Units this one is guarding. They are owned by Player ${captiveOwner} and return to Player ${captiveOwner} when rescued.`}
-                  className="rounded px-1.5 py-0.5 text-[10px] font-semibold text-white/50 bg-white/10 hover:bg-white/20 transition-colors"
+                  className="rounded px-1.5 py-0.5 text-3xs font-semibold text-white/50 bg-white/10 hover:bg-white/20 transition-colors"
                 >
                   {u.captives.length > 0 ? `Captives (${u.captives.length})` : "Captives"}
                 </button>
@@ -636,7 +636,7 @@ function UnitAdder({ playerId, unitCards, units, cards, onAdd, onRemove, onUpdat
               {u.upgrades.length > 0 && (
                 <div className="ml-3 flex flex-wrap gap-1">
                   {u.upgrades.map((cardId, j) => (
-                    <span key={j} className="text-[10px] text-blue-300/70">
+                    <span key={j} className="text-3xs text-blue-300/70">
                       {cards.find((c) => c.cardId === cardId)?.label ?? cardId}
                       {j < u.upgrades.length - 1 ? "," : ""}
                     </span>
@@ -645,11 +645,11 @@ function UnitAdder({ playerId, unitCards, units, cards, onAdd, onRemove, onUpdat
               )}
               {u.captives.length > 0 && (
                 <div className="ml-3 flex flex-wrap items-center gap-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-300/60">
+                  <span className="text-3xs font-semibold uppercase tracking-wider text-amber-300/60">
                     Guarding (Player {captiveOwner}&apos;s):
                   </span>
                   {u.captives.map((cardId, j) => (
-                    <span key={j} className="text-[10px] text-amber-200/70">
+                    <span key={j} className="text-3xs text-amber-200/70">
                       {cards.find((c) => c.cardId === cardId)?.label ?? cardId}
                       {j < u.captives.length - 1 ? "," : ""}
                     </span>
@@ -801,7 +801,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                     key={id}
                     type="button"
                     onClick={() => setStepIndex(i)}
-                    className={`rounded px-2 py-0.5 text-[11px] font-semibold transition-colors ${i === clampedIndex ? "bg-white/20 text-white" : "text-white/50 hover:text-white/80"}`}
+                    className={`rounded px-2 py-0.5 text-2xs font-semibold transition-colors ${i === clampedIndex ? "bg-white/20 text-white" : "text-white/50 hover:text-white/80"}`}
                   >
                     {i + 1}. {STEP_LABELS[id]}
                   </button>
@@ -824,7 +824,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
               {currentStep === "info" && (<>
               {/* Puzzle metadata */}
               <div className="rounded-lg bg-black/20 p-3 sm:p-4 space-y-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Puzzle Info</div>
+                <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Puzzle Info</div>
                 <FieldRow label="Name">
                   <input
                     type="text"
@@ -911,7 +911,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
 
               {/* Global state */}
               <div className="rounded-lg bg-black/20 p-3 sm:p-4 space-y-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Game State</div>
+                <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Game State</div>
                 <div className="grid sm:grid-cols-3 gap-3">
                   <FieldRow label="Round">
                     <NumberInput value={state.currentRound} onChange={(v) => patchGlobal({ currentRound: v })} min={1} />
@@ -941,7 +941,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                 </div>
                 <div className="flex flex-wrap gap-4">
                   <div className="flex items-center gap-2">
-                    <label className="text-[11px] text-white/55">Initiative:</label>
+                    <label className="text-2xs text-white/55">Initiative:</label>
                     <select
                       value={state.initiativePlayer}
                       onChange={(e) => patchGlobal({ initiativePlayer: Number(e.target.value) as 1 | 2 })}
@@ -1011,11 +1011,11 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
               {/* Intended solution */}
               <div className="rounded-lg bg-black/20 p-3 sm:p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Intended Solution</div>
+                  <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Intended Solution</div>
                   <button
                     type="button"
                     onClick={() => patchGlobal({ intendedSolution: [ ...(state.intendedSolution ?? []), "" ] })}
-                    className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20"
+                    className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-2xs font-semibold text-white hover:bg-white/20"
                   >
                     +
                   </button>
@@ -1030,7 +1030,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                       <button
                         type="button"
                         onClick={() => patchGlobal({ intendedSolution: (state.intendedSolution ?? []).filter((_, j) => j !== i) })}
-                        className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20"
+                        className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-2xs font-semibold text-white hover:bg-white/20"
                       >
                         ×
                       </button>
@@ -1042,11 +1042,11 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
               {/* Hints */}
               <div className="rounded-lg bg-black/20 p-3 sm:p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Hints</div>
+                  <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Hints</div>
                   <button
                     type="button"
                     onClick={() => patchGlobal({ hints: [ ...(state.hints ?? []), "" ] })}
-                    className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20"
+                    className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-2xs font-semibold text-white hover:bg-white/20"
                   >
                     +
                   </button>
@@ -1054,7 +1054,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                 <div className="space-y-2">
                   {(state.hints ?? []).map((line, i) => (
                     <div key={i} className="flex items-start gap-2">
-                      <span className="pt-1.5 text-[11px] text-white/40 shrink-0">Hint {i + 1}</span>
+                      <span className="pt-1.5 text-2xs text-white/40 shrink-0">Hint {i + 1}</span>
                       <CardRefField
                         multiline
                         rows={2}
@@ -1064,7 +1064,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                       <button
                         type="button"
                         onClick={() => patchGlobal({ hints: (state.hints ?? []).filter((_, j) => j !== i) })}
-                        className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[11px] font-semibold text-white hover:bg-white/20"
+                        className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-2xs font-semibold text-white hover:bg-white/20"
                       >
                         ×
                       </button>
@@ -1076,7 +1076,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
 
               {currentStep === "preview" && (
               <div className="space-y-4">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/50">Preview</div>
+                <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">Preview</div>
                 <StaticBoard state={state} cards={cards} side="both" />
                 {/* Save */}
                 <div className="flex flex-wrap items-center gap-4">

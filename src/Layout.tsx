@@ -166,7 +166,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
           {
             modalData.currentQuiz && modalData.currentQuiz.relevantCards.map((cardName: string, index: number) => <div
               key={"relevant-card-" + index}
-              className="w-fit h-100 lg:h-120 uwd:!h-190 4k:!h-280 m-2.5"
+              className="w-fit h-100 lg:h-120 m-2.5"
             >
               <img
                 src={getSWUDBImageLink(cardName)}
@@ -191,10 +191,10 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
   const currentHover = getLightsaberGlowHover(userSettings.lightsaberColor);
 
   const styles = {
-    desktopNavLink: `btn btn-ghost text-md lg:text-2xl uwd:!text-4xl 4k:!text-7xl
-      border-gray-400 bg-blue-500/20 rounded mx-4 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`,
-    mobileNavLink: `btn btn-ghost w-full text-md lg:text-2xl uwd:!text-4xl 4k:!text-7xl
-      border-gray-400 bg-blue-500/20 rounded mx-auto 4k:mx-7 py-5 uwd:py-8 4k:py-15 4k:px-8 ${currentHover}`,
+    desktopNavLink: `btn btn-ghost text-md lg:text-2xl
+      border-gray-400 bg-blue-500/20 rounded mx-4 py-5 ${currentHover}`,
+    mobileNavLink: `btn btn-ghost w-full text-md lg:text-2xl
+      border-gray-400 bg-blue-500/20 rounded mx-auto py-5 ${currentHover}`,
   }
 
   return <div className="layout">
@@ -228,7 +228,7 @@ function Layout({ userSettings, setUserSettings, children }: IProps) {
       </div>
     </main>
     {modalKey !== "relevant-cards" && (
-      <footer className="text-center text-sm uwd:text-lg 4k:text-2xl mt-8 border-t pt-4 space-y-2 text-gray-400 z-0 relative">
+      <footer className="text-center text-sm mt-8 border-t pt-4 space-y-2 text-gray-400 z-0 relative">
         <p className="p-2">
           For educational purposes only. Check out our <a
             href={DiscordLink}
