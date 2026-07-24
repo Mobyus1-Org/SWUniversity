@@ -694,7 +694,6 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
   const [state, setState] = React.useState<BuilderState>(initialBuilderState);
   const [saving, setSaving] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
-  const [showDiscardConfirm, setShowDiscardConfirm] = React.useState(false);
 
   const isWide = useIsWide(640);
   const steps = buildStepList(isWide);
@@ -811,11 +810,10 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
             ) : null}
             <button
               type="button"
-              aria-label="Close"
-              onClick={() => setShowDiscardConfirm(true)}
-              className="rounded-lg border border-white/15 bg-white/10 px-2.5 py-1 text-base font-semibold leading-none text-white hover:bg-white/20"
+              onClick={onClose}
+              className="rounded-lg border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20"
             >
-              ×
+              Cancel
             </button>
           </div>
 
@@ -1119,31 +1117,30 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                   ‹ Back
                 </button>
                 {!isLastStep ? (
-                  <button
-                    type="button"
-                    onClick={() => setStepIndex(clampedIndex + 1)}
-                    className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-5 py-2 text-xs font-semibold text-white hover:bg-sky-500/30"
-                  >
-                    Next ›
-                  </button>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {saveError ? <span className="text-xs text-rose-300">{saveError}</span> : null}
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={handleSave}
+                      className="rounded-lg border border-emerald-400/40 bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500/30 disabled:opacity-40"
+                    >
+                      {saving ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStepIndex(clampedIndex + 1)}
+                      className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-5 py-2 text-xs font-semibold text-white hover:bg-sky-500/30"
+                    >
+                      Next ›
+                    </button>
+                  </div>
                 ) : null}
               </div>
             </>
           )}
         </div>
       </div>
-      {showDiscardConfirm ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={() => setShowDiscardConfirm(false)}>
-          <div className="w-[min(92vw,420px)] rounded-xl border border-white/15 bg-[rgba(8,12,26,0.96)] p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-2 text-sm font-bold text-white">Discard unsaved changes?</h3>
-            <p className="mb-5 text-xs text-white/60">Your in-progress puzzle edits will be lost.</p>
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowDiscardConfirm(false)} className="rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold text-white/80 hover:bg-white/20">Keep editing</button>
-              <button type="button" onClick={onClose} className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-500/30">Discard</button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
