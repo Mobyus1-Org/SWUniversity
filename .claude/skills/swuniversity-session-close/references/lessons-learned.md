@@ -56,3 +56,42 @@ memory system (see `MEMORY.md`), not just here.
   confirmed the prior "trace every consumer when extending shared plumbing" lesson: the double-damage
   upgrade needed hooks in BOTH combat-damage sites in resolveAttack AND the ability path in
   DealDamageToUnit — the mapping caught all three.
+
+## 2026-07-25
+
+- **Claimed an audit complete when the regex only caught one form of the pattern.** The
+  large-res scaling work converted hardcoded px→rem using `grep -rnoE "\[[0-9]+px\]"`, which
+  only matches px that is the *entire* Tailwind arbitrary value. It MISSED px embedded in
+  compound expressions — `grid-cols-[minmax(0,1fr)_165px_minmax(0,1fr)]`, `w-[min(90vw,700px)]`
+  — so I reported the scaling done and the user then hit "squished leader/base cards at 4K"
+  (the 165px arena track never scaled). Lesson: a grep-based "found all N occurrences" claim is
+  only as good as the regex's coverage of variant forms. Before claiming a pattern sweep
+  complete, enumerate the forms the pattern can take (standalone, embedded in minmax/min/calc/
+  gradient, inline style) and sweep the broad form (`[0-9]+px`), then classify. Memory'd as
+  [[ui-px-audit-compound-values]]. This is a sibling of the standing "trace every consumer when
+  extending shared plumbing" lesson — same failure shape (partial coverage), different domain.
+- **Fixed symptoms before finding a data root cause; needed a user nudge to check the data file.**
+  For the DYKSWU crashes I added client guards first (good defense) but my initial root-cause
+  theory was "empty difficulty sets." The user asked "were you able to find the root cause from
+  the database?" — and the actual cause was duplicate `id`s (70, 91) in `dykswu-database.json`,
+  which the whole id-keyed flow can't tolerate. Lesson: for data-driven crashes (undefined from a
+  `.find`/index into config/JSON), inspect the data file for integrity (dup keys, empty fields)
+  EARLY, in parallel with reading code paths — don't wait to be pointed at it. Memory'd as
+  [[data-dykswu-id-keyed-flow]].
+- **Designed an access-gated feature without stating the real security boundary; user caught it.**
+  My first "Show Solution" design was a client-only disabled-button gate. The user asked whether a
+  savvy user could just remove the `disabled` prop — which exposed that the solution was ALREADY
+  shipped to every client in the `/api/puzzles` payload, making the whole gate cosmetic. Lesson:
+  when a feature is "only X users may see Y," proactively trace where Y is actually delivered and
+  state the enforceable boundary (and what stays soft) IN the design phase, rather than presenting
+  a client-only gate and waiting for the user to notice. Led to a server-side strip. Policy
+  memory'd as [[project-puzzle-solution-gate]].
+- **What worked well (keep doing):** (1) The brainstorm→spec→plan→inline-execute flow with an
+  approval gate at each transition was smooth across three features and let scope changes (the
+  server-hardening pivot) fold in cleanly by editing spec+plan before touching code. (2) Adapting
+  the plan template honestly to this repo instead of following it blindly — no commit steps
+  (rule 1), and explicitly writing "verification is tsc/build + manual UI checks, npm test can't
+  see this" and "lint baseline is 40 problems, clean = no NEW problems" rather than inventing fake
+  TDD cycles or asserting a false clean-lint. (3) Catching my own clamp arithmetic slip
+  (0.521vw put 1920px 0.003px above the floor, breaking the no-op-at-1920 guarantee) during
+  execution and rounding down to 0.5208vw, keeping spec/plan/code in sync.

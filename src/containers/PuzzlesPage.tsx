@@ -2377,7 +2377,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
       </div>
     </div> : null}
 
-    {showSolutionModal && puzzleMeta ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => { if (solutionReason === "revealed") returnToPuzzleMenu(); else setShowSolutionModal(false); }}>
+    {showSolutionModal && puzzleMeta ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowSolutionModal(false)}>
       <div className="w-[min(92vw,67.5rem)] max-h-[85dvh] overflow-y-auto rounded-xl border border-emerald-400/30 bg-[rgba(8,12,26,0.92)] p-5 sm:p-10 shadow-2xl" onClick={e => e.stopPropagation()}>
         <h3 className="mb-3 text-base font-bold text-emerald-300">{solutionReason === "revealed" ? "Puzzle Solution" : "Congratulations! You've solved the puzzle!"}</h3>
         <div className="mb-4 border-b border-white/10 pb-4">
@@ -2399,8 +2399,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
         <p className="mb-4 text-xs text-white/50">If your solution was different, feel free to let us know on our <a href="https://discord.gg/swuniversity" target="_blank" rel="noopener noreferrer" className="text-sky-400 underline hover:text-sky-300">Discord</a>!</p>
         <div className="flex gap-2">
           {solutionReason === "revealed" ? (
-            <button type="button" onClick={returnToPuzzleMenu} className="flex-1 rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500/25">
-              Return to Puzzle Menu
+            <button type="button" onClick={() => setShowSolutionModal(false)} className="flex-1 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/20">
+              Close
             </button>
           ) : (
             <>
