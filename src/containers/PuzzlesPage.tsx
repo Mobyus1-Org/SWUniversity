@@ -1,6 +1,7 @@
 import React from "react";
 import { CardSubtitle, CardTitle } from "@/server/engine/card-db/generated";
 import { getCardImageLink, getSWUDBImageLink } from "@/util/func";
+import { getMasteredIds } from "@/util/profile-api";
 import { globalBackgroundStyle, lightsaberGlow } from "@/util/style-const";
 import { LoadPuzzlePanel } from "@/components/Shared/LoadPuzzlePanel";
 import { PuzzleBuilderPanel } from "@/components/Shared/PuzzleBuilderPanel";
@@ -472,6 +473,21 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
   const [puzzleMeta, setPuzzleMeta] = React.useState<{ name: string; author: string; inspiredBy?: string; intendedSolution: string[]; infoText?: string; description?: string; hints?: string[] } | null>(null);
   const [showInfoModal, setShowInfoModal] = React.useState(false);
   const [showSolutionModal, setShowSolutionModal] = React.useState(false);
+  const [loggedIn, setLoggedIn] = React.useState(false);
+  const [solutionReason, setSolutionReason] = React.useState<"solved" | "revealed">("solved");
+  React.useEffect(() => {
+    let cancelled = false;
+    void getMasteredIds().then(r => { if (!cancelled) setLoggedIn(r.loggedIn); });
+    return () => { cancelled = true; };
+  }, []);
+  const returnToPuzzleMenu = React.useCallback(() => {
+    setShowSolutionModal(false);
+    setGameState(null);
+    setPuzzleName(null);
+    setPuzzleMeta(null);
+    setShowInfoModal(false);
+    setActionError(null);
+  }, []);
   const [showHintsModal, setShowHintsModal] = React.useState(false);
   const [openHints, setOpenHints] = React.useState<Set<number>>(new Set());
   const [showFailModal, setShowFailModal] = React.useState(false);
@@ -883,6 +899,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
   // Show solution modal and mark solved when puzzle is won
   React.useEffect(() => {
     if (gameState && deriveStatus(gameState) === "won" && puzzleMeta) {
+      setSolutionReason("solved");
       setShowSolutionModal(true);
       if (selectedPuzzleFilename) {
         setSolvedPuzzleIds(prev => [...new Set([...prev, selectedPuzzleFilename])]);
@@ -2360,9 +2377,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
       </div>
     </div> : null}
 
-    {showSolutionModal && puzzleMeta ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowSolutionModal(false)}>
+    {showSolutionModal && puzzleMeta ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => { if (solutionReason === "revealed") returnToPuzzleMenu(); else setShowSolutionModal(false); }}>
       <div className="w-[min(92vw,67.5rem)] max-h-[85dvh] overflow-y-auto rounded-xl border border-emerald-400/30 bg-[rgba(8,12,26,0.92)] p-5 sm:p-10 shadow-2xl" onClick={e => e.stopPropagation()}>
-        <h3 className="mb-3 text-base font-bold text-emerald-300">Congratulations! You&apos;ve solved the puzzle!</h3>
+        <h3 className="mb-3 text-base font-bold text-emerald-300">{solutionReason === "revealed" ? "Puzzle Solution" : "Congratulations! You've solved the puzzle!"}</h3>
         <div className="mb-4 border-b border-white/10 pb-4">
           <p className="text-sm font-semibold text-white">{puzzleMeta.name || puzzleName}</p>
           {puzzleMeta.author ? <p className="mt-0.5 text-xs text-white/50">By {puzzleMeta.author}</p> : null}
@@ -2381,12 +2398,20 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
         </> : null}
         <p className="mb-4 text-xs text-white/50">If your solution was different, feel free to let us know on our <a href="https://discord.gg/swuniversity" target="_blank" rel="noopener noreferrer" className="text-sky-400 underline hover:text-sky-300">Discord</a>!</p>
         <div className="flex gap-2">
-          <button type="button" onClick={() => setShowSolutionModal(false)} className="flex-1 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/20">
-            Close
-          </button>
-          <button type="button" onClick={() => { setShowSolutionModal(false); setGameState(null); setPuzzleName(null); setPuzzleMeta(null); setShowInfoModal(false); setActionError(null); }} className="flex-1 rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500/25">
-            Puzzle Home
-          </button>
+          {solutionReason === "revealed" ? (
+            <button type="button" onClick={returnToPuzzleMenu} className="flex-1 rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500/25">
+              Return to Puzzle Menu
+            </button>
+          ) : (
+            <>
+              <button type="button" onClick={() => setShowSolutionModal(false)} className="flex-1 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/20">
+                Close
+              </button>
+              <button type="button" onClick={returnToPuzzleMenu} className="flex-1 rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500/25">
+                Puzzle Home
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div> : null}
@@ -2404,15 +2429,12 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
               <div key={i} className="rounded-lg border border-white/10 bg-black/20">
                 <button
                   type="button"
-                  onClick={() => setOpenHints(prev => {
-                    const next = new Set(prev);
-                    if (next.has(i)) next.delete(i); else next.add(i);
-                    return next;
-                  })}
-                  className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-semibold text-white/90 hover:bg-white/5"
+                  disabled={isOpen}
+                  onClick={() => setOpenHints(prev => new Set(prev).add(i))}
+                  className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-semibold text-white/90 enabled:hover:bg-white/5 disabled:cursor-default"
                 >
                   <span>Hint {i + 1}</span>
-                  <span className="text-white/40">{isOpen ? "−" : "+"}</span>
+                  <span className="text-white/40">{isOpen ? "" : "+"}</span>
                 </button>
                 {isOpen ? (
                   <p className="whitespace-pre-wrap border-t border-white/10 px-4 py-3 text-sm leading-6 text-white/80">
@@ -2423,6 +2445,28 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             );
           })}
         </div>
+        {(() => {
+          const hintCount = puzzleMeta?.hints?.length ?? 0;
+          const allHintsRevealed = hintCount > 0 && openHints.size === hintCount;
+          const canShowSolution = loggedIn && allHintsRevealed;
+          return (
+            <div className="mt-4 border-t border-white/10 pt-4">
+              <button
+                type="button"
+                disabled={!canShowSolution}
+                onClick={() => { setShowHintsModal(false); setSolutionReason("revealed"); setShowSolutionModal(true); }}
+                className="w-full rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-white transition enabled:hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Show Solution
+              </button>
+              {!loggedIn ? (
+                <p className="mt-2 text-center text-xs text-white/40">
+                  To see this puzzle&apos;s solution, please register an account.
+                </p>
+              ) : null}
+            </div>
+          );
+        })()}
         <button type="button" onClick={() => setShowHintsModal(false)} className="mt-6 w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/20">
           Close
         </button>

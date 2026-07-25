@@ -46,7 +46,12 @@ export default async function handler(
       const session = await getSessionFromRequest(request);
       const level = await puzzleAccessLevel(session);
       const puzzles = await repo.list(level);
-      return response.status(200).json({ puzzles });
+      // The intended solution is gated to registered users. Anonymous clients never
+      // receive it over the wire (the client-side button gate is only UX). hints stay.
+      const gated = session
+        ? puzzles
+        : puzzles.map((p) => ({ ...p, intendedSolution: [] }));
+      return response.status(200).json({ puzzles: gated });
     } catch {
       return response.status(200).json({ puzzles: [] });
     }
