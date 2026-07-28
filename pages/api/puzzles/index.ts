@@ -6,6 +6,7 @@ import { getSessionFromRequest } from "@/server/auth/session";
 import { puzzleAccessLevel } from "@/server/auth/puzzle-access";
 import { hydratePuzzleGame } from "@/server/puzzle/adapters/puzzle-runtime";
 import { MongoDBPuzzleRepository } from "@/server/puzzle/adapters/mongodb-puzzle-repository";
+import { devFixturePuzzles } from "@/server/puzzle/dev-fixtures";
 import { SetGame } from "@/server/engine/core-functions";
 import { hydrateGame, computeSentinelPlayIds, computeUnitBuffs } from "@/server/engine/dispatch-listener";
 import type { PuzzleData } from "@/server/puzzle/puzzle-repository";
@@ -45,7 +46,9 @@ export default async function handler(
     try {
       const session = await getSessionFromRequest(request);
       const level = await puzzleAccessLevel(session);
-      const puzzles = await repo.list(level);
+      // In dev, append synthetic fixtures (one per status + the two legacy deploy derivations),
+      // filtered by the same visibility rules as real puzzles. No-op in production.
+      const puzzles = [...(await repo.list(level)), ...devFixturePuzzles(level)];
       // The intended solution is gated to registered users. Anonymous clients never
       // receive it over the wire (the client-side button gate is only UX). hints stay.
       const gated = session

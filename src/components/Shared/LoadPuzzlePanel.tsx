@@ -267,6 +267,14 @@ export function LoadPuzzlePanel(props: Props) {
                 ✓ Solved
               </span>
             ) : null;
+            // Deployed puzzles carry no badge; only Test puzzles get a neutral "Testing" marker so
+            // preview users can tell them apart from live puzzles. (Regular users never receive
+            // Test puzzles, so this only ever renders for preview users and admins.)
+            const testingChip = entry.status === "test" ? (
+              <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-3xs font-semibold text-white/60">
+                Testing
+              </span>
+            ) : null;
             const renderAuthor = (cls: string) => (entry.author || entry.inspiredBy) ? (
               <div className={cls}>
                 {entry.author ? <span>By {entry.author}</span> : null}
@@ -321,6 +329,7 @@ export function LoadPuzzlePanel(props: Props) {
                   <div className="flex items-center gap-2 min-w-0">
                     {renderImg("h-12 w-12 shrink-0 rounded border-2 border-white/80 bg-black/30 object-cover")}
                     <span className="min-w-0 flex-1 font-semibold break-words text-xs">{name}</span>
+                    {testingChip}
                     {solvedChip}
                   </div>
                   {description ? <p className="text-2xs opacity-70">{description}</p> : null}
@@ -337,6 +346,7 @@ export function LoadPuzzlePanel(props: Props) {
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <div className="flex items-start gap-2 min-w-0">
                       <span className="font-semibold break-words text-base">{name}</span>
+                      {testingChip}
                       {solvedChip}
                     </div>
                     <DifficultyDots value={difficulty} />

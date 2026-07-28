@@ -3,6 +3,7 @@ import { CardSubtitle, CardTitle } from "@/server/engine/card-db/generated";
 import { getCardImageLink, getSWUDBImageLink } from "@/util/func";
 import { getMasteredIds } from "@/util/profile-api";
 import { globalBackgroundStyle, lightsaberGlow } from "@/util/style-const";
+import { DiscordLink } from "@/util/const";
 import { LoadPuzzlePanel } from "@/components/Shared/LoadPuzzlePanel";
 import { PuzzleBuilderPanel } from "@/components/Shared/PuzzleBuilderPanel";
 import { CardLinkText } from "@/components/Shared/CardLink";
@@ -2396,7 +2397,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             ))}
           </ul>
         </> : null}
-        <p className="mb-4 text-xs text-white/50">If your solution was different, feel free to let us know on our <a href="https://discord.gg/swuniversity" target="_blank" rel="noopener noreferrer" className="text-sky-400 underline hover:text-sky-300">Discord</a>!</p>
+        <p className="mb-4 text-xs text-white/50">If your solution was different, feel free to let us know on our <a href={DiscordLink} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline hover:text-sky-300">Discord</a>!</p>
         <div className="flex gap-2">
           {solutionReason === "revealed" ? (
             <button type="button" onClick={() => setShowSolutionModal(false)} className="flex-1 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/20">
