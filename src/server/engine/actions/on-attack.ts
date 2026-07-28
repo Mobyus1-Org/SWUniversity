@@ -117,26 +117,33 @@ export function resolveOnAttackTrigger(
     }
   }
 
-  //Upgrade-granted On Attack abilities
+  //Upgrade-granted On Attack abilities.
+  // An interactive upgrade (one that needs player input) is captured in `deferredPending` rather
+  // than returned immediately, so that any auto (fire-and-forget) upgrade abilities later in the
+  // list — e.g. The Darksaber's Experience-token grant — still resolve instead of being dropped.
+  let deferredPending: PendingResolution | null = null;
   for (const upgrade of activeUpgrades) {
     switch (upgrade.cardId) {
       case "JTL_018": // Kazuda Xiono piloting — same On Attack as his deployed side.
-        return kazudaSilencePending(attacker, continuation);
+        deferredPending ??= kazudaSilencePending(attacker, continuation);
+        break;
       case "JTL_012": { // Luke Skywalker piloting a Fighter — "On Attack: You may deal 3 damage to a unit."
-        const allUnits012 = AllUnits();
-        if (allUnits012.length > 0) {
-          return optionalTarget("JTL_012_pilot", attacker.controller, allUnits012.map(u => u.playId),
-            "Deal 3 damage to a unit?", { continuation });
+        if (!deferredPending) {
+          const allUnits012 = AllUnits();
+          if (allUnits012.length > 0) {
+            deferredPending = optionalTarget("JTL_012_pilot", attacker.controller, allUnits012.map(u => u.playId),
+              "Deal 3 damage to a unit?", { continuation });
+          }
         }
         break;
       }
       case "SOR_121": { // Hardpoint Heavy Blaster
-        if (continuation.target.type === "unit") {
+        if (!deferredPending && continuation.target.type === "unit") {
           const defenderPlayId = continuation.target.playId;
           const inGround = AllGroundUnits().some(u => u.playId === defenderPlayId);
           const arenaUnits = inGround ? AllGroundUnits() : AllSpaceUnits();
           if (arenaUnits.length > 0) {
-            return optionalTarget("SOR_121", attacker.controller, arenaUnits.map(u => u.playId),
+            deferredPending = optionalTarget("SOR_121", attacker.controller, arenaUnits.map(u => u.playId),
               "Deal 2 damage to a unit in the defender's arena?", { continuation });
           }
         }
@@ -190,58 +197,68 @@ export function resolveOnAttackTrigger(
         break;
       }
       case "SEC_264": { // Clandestine Connections — On Attack: You may pay 2 resources. If you do, deal 2 damage to a base.
-        const game264 = GetGame();
-        if (!game264) break;
-        const pState264 = attacker.controller === 1 ? game264.currentGameState.player1 : game264.currentGameState.player2;
-        const ready264 = pState264.resources.filter(r => r.ready).length;
-        const credits264 = pState264.supplemental.creditTokens ?? 0;
-        if (ready264 + credits264 < 2) break; // can't afford
-        return {
-          type: "ability-option",
-          cardId: "SEC_264",
-          player: attacker.controller,
-          sourcePlayId: attacker.playId,
-          helperText: "Pay 2 to deal 2 damage to a base?",
-          yesLabel: "Pay 2",
-          noLabel: "Skip",
-          onYes: null,
-          continuation,
-        };
+        if (!deferredPending) {
+          const game264 = GetGame();
+          if (game264) {
+            const pState264 = attacker.controller === 1 ? game264.currentGameState.player1 : game264.currentGameState.player2;
+            const ready264 = pState264.resources.filter(r => r.ready).length;
+            const credits264 = pState264.supplemental.creditTokens ?? 0;
+            if (ready264 + credits264 >= 2) { // can afford
+              deferredPending = {
+                type: "ability-option",
+                cardId: "SEC_264",
+                player: attacker.controller,
+                sourcePlayId: attacker.playId,
+                helperText: "Pay 2 to deal 2 damage to a base?",
+                yesLabel: "Pay 2",
+                noLabel: "Skip",
+                onYes: null,
+                continuation,
+              };
+            }
+          }
+        }
+        break;
       }
       case "SHD_126": { // The Darksaber
         applyDarksaberOnAttack(attacker);
         break;
       }
       case "SHD_177": { // Vambrace Flamethrower
-        const game = GetGame();
-        if (game) {
-          const gs = game.currentGameState;
-          const opponent = attacker.controller === 1 ? 2 : 1;
-          const enemyGround = (opponent === 1 ? gs.player1.groundArena : gs.player2.groundArena)
-            .map(u => u.playId);
-          if (enemyGround.length > 0) {
-            const spreadPending: SpreadDamagePending = {
-              type: "spread-damage",
-              cardId: "SHD_177",
-              player: attacker.controller,
-              totalDamage: 3,
-              optional: true,
-              eligiblePlayIds: enemyGround,
-              continuation,
-            };
-            return {
-              type: "ability-option",
-              cardId: "SHD_177",
-              helperText: "Deal 3 damage divided among enemy ground units?",
-              onYes: spreadPending,
-              continuation,
-            };
+        if (!deferredPending) {
+          const game = GetGame();
+          if (game) {
+            const gs = game.currentGameState;
+            const opponent = attacker.controller === 1 ? 2 : 1;
+            const enemyGround = (opponent === 1 ? gs.player1.groundArena : gs.player2.groundArena)
+              .map(u => u.playId);
+            if (enemyGround.length > 0) {
+              const spreadPending: SpreadDamagePending = {
+                type: "spread-damage",
+                cardId: "SHD_177",
+                player: attacker.controller,
+                totalDamage: 3,
+                optional: true,
+                eligiblePlayIds: enemyGround,
+                continuation,
+              };
+              deferredPending = {
+                type: "ability-option",
+                cardId: "SHD_177",
+                helperText: "Deal 3 damage divided among enemy ground units?",
+                onYes: spreadPending,
+                continuation,
+              };
+            }
           }
         }
         break;
       }
     }
   }
+  // A captured interactive upgrade ability resolves now (its continuation runs combat); all auto
+  // upgrade abilities above have already applied.
+  if (deferredPending) return deferredPending;
   // Innate On Attack abilities — the attacker's own, plus any it gained from a Support unit for
   // this attack. The granted ability resolves with `attacker` as its subject, so "this unit" in
   // the borrowed text correctly means the unit that is attacking.

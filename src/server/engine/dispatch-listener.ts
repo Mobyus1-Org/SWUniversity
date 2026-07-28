@@ -1788,7 +1788,22 @@ function resolveAttack(
     return whenAttackEnds;
   } else {
     const defender = GetUnitByPlayId(game, target.playId);
-    if (!defender) return null;
+    if (!defender) {
+      // The defender was defeated before combat damage — e.g. an On Attack ability (resolved via
+      // the attack's continuation) killed it first. Per the excess-damage rule, if the attacker has
+      // Overwhelm, all of its combat damage is excess and spills to the opponent's base.
+      let overwhelm = false;
+      try {
+        overwhelm = HasOverwhelm(attacker.cardId, attacker.playId, attacker.controller) ?? false;
+      } catch {
+        // HasOverwhelm may throw if the unit isn't in the singleton (test setup); treat as none.
+      }
+      if (overwhelm && atkPower > 0) {
+        dealBaseDamage(game, GetOtherPlayer(attacker.controller), atkPower);
+        log.push(`Overwhelm: ${atkPower} excess damage dealt to the base (defender already defeated).`);
+      }
+      return null;
+    }
 
     // Chewbacca, Loyal Companion (SOR_196 / promo P25_042) — "When this unit is attacked: Ready
     // him." Mandatory, targetless, and unaffected by combat outcome, so it fires inline here at

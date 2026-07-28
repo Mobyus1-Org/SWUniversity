@@ -358,6 +358,7 @@ export const Cards = {
       lurkingTiePhantom: "SHD_187",
       generalTagge: "SHD_081",
       sundariPeaceKeeper: "SHD_098",
+      clanChallengers: "SHD_169",
       recklessGunslinger: "SHD_160",
       fourLom: "SHD_188",
       zuckuss: "SHD_190",

@@ -103,4 +103,37 @@ describe("SHD_126 The Darksaber — On Attack", () => {
 
     expect(g.state.player1.groundArena[1].upgrades).toHaveLength(0);
   });
+
+  it("still distributes XP when another On Attack upgrade (Vambrace) resolves first", async () => {
+    // Regression: the carrier holds two On Attack upgrades. Vambrace Flamethrower is interactive
+    // (it prompts), and the upgrade-on-attack loop used to return that prompt and drop every
+    // later upgrade's On Attack — so the Darksaber's XP distribution was silently skipped.
+    const g = new GameTestAdapter();
+    const state = new GameStateBuilder()
+      .MyBase(Cards.bases.common.green30HP)
+      .MyLeader(Cards.leaders.shd.boKatanKryze)
+      .TheirBase(Cards.bases.common.green30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      // Carrier (Mandalorian) holds Vambrace FIRST, then the Darksaber.
+      .WithGroundUnitForPlayer(1, Cards.units.shd.sundariPeaceKeeper)
+      .WithUpgradesOnGroundUnitForPlayer(1, 0, [
+        GameStateBuilder.Upgrade(Cards.upgrades.shd.vambraceFlamethrower, 1),
+        GameStateBuilder.Upgrade(Cards.upgrades.shd.theDarksaber, 1),
+      ])
+      // Another friendly Mandalorian that must receive the Experience token.
+      .WithGroundUnitForPlayer(1, Cards.units.shd.theMandalorian)
+      // Enemy ground unit so Vambrace's On Attack actually fires and prompts.
+      .WithGroundUnitForPlayer(2, Cards.units.sor.battlefieldMarine)
+      .Build();
+    g.loadNewState(state);
+
+    await g.attackWithGroundUnitAsync(1, 0);
+    await g.chooseBaseAsync(1, 2);
+    await g.chooseNoAsync(1); // decline the Flamethrower's damage
+
+    // The Darksaber's XP must still land on the other Mandalorian.
+    expect(
+      g.state.player1.groundArena[1].upgrades.filter(u => u.cardId === "SOR_T01"),
+    ).toHaveLength(1);
+  });
 });
