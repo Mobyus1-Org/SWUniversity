@@ -623,6 +623,7 @@ export const Cards = {
       vambraceFlamethrower: "SHD_177",
       frozenInCarbonite: "SHD_193",
       wanted: "SHD_221",
+      unrefusableOffer: "SHD_226",
     },
     jtl: {
       jarekYeager: "JTL_109",

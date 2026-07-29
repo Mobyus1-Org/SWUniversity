@@ -73,6 +73,13 @@ export interface GameState {
      * priority instead of passing the turn. Consumed by the next advanceTurn.
      */
     extraActionPlayer?: PlayerId;
+    /**
+     * The player whose action is currently resolving. `activePlayer` flips as soon as a top-level
+     * action is dispatched, so it is already the OPPONENT by the time that action's pendings
+     * resolve — this is what "the active player" means for anything decided mid-resolution, such
+     * as the order of simultaneous triggers (CR 7.6.10).
+     */
+    actingPlayer?: PlayerId;
   };
   triggerBag: TriggerEntry[];
   /**

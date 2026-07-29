@@ -586,6 +586,55 @@ function bounceUnitToHand(
   return { unit, pending: null };
 }
 
+/**
+ * Removes the card with `playId` from its owner's discard pile, or from whichever unit holds it
+ * captive, and returns it. Null when it is in neither — a token that ceased to exist, or a card
+ * some other ability already moved somewhere this lookup can't see (a resource row, a hand).
+ * Backs SHD_226 Unrefusable Offer's "from its owner's discard pile or from capture".
+ */
+function takeCardFromDiscardOrCapture(
+  game: GameState,
+  playId: string | undefined,
+  owner: PlayerId | undefined,
+): { cardId: string; owner: PlayerId } | null {
+  if (!playId) return null;
+  for (const player of [1, 2] as PlayerId[]) {
+    const discard = GetPlayer(game, player).discard;
+    const idx = discard.findIndex(d => d.playId === playId);
+    if (idx !== -1) {
+      const [card] = discard.splice(idx, 1);
+      return { cardId: card.cardId, owner: (card.owner ?? owner ?? player) as PlayerId };
+    }
+  }
+  for (const unit of GetAllUnits(game)) {
+    const idx = unit.captives.findIndex(c => c.playId === playId);
+    if (idx !== -1) {
+      const [captive] = unit.captives.splice(idx, 1);
+      return { cardId: captive.cardId, owner: (captive.owner ?? owner) as PlayerId };
+    }
+  }
+  return null;
+}
+
+/**
+ * Strips every pending in a continuation chain that is keyed to `playId`. Used when a card leaves
+ * and re-enters play as a new object (CR 8.6.4): abilities queued against the old object — its own
+ * When Defeated most of all — must not resolve, and must not leave a dead prompt behind.
+ */
+function dropPendingsForPlayId(
+  chain: PendingResolution | null,
+  playId: string | undefined,
+): PendingResolution | null {
+  if (!chain || !playId) return chain;
+  const tail = "continuation" in chain && chain.continuation
+    ? dropPendingsForPlayId(chain.continuation, playId)
+    : null;
+  const keyed = (chain as { sourcePlayId?: string; defeatedPlayId?: string });
+  if (keyed.sourcePlayId === playId || keyed.defeatedPlayId === playId) return tail;
+  if ("continuation" in chain) return { ...chain, continuation: tail } as PendingResolution;
+  return chain;
+}
+
 function pushToDiscard(game: GameState, player: PlayerId, unit: Unit): void {
   const discarded: DiscardedCard = {
     cardId: unit.cardId,
@@ -1460,10 +1509,22 @@ function defeatUnit(
     }
   }
 
-  // When-Defeated triggers fire after bounty collection (CR 13c).
+  // The bounty (the opponent's trigger) and the unit's own When Defeated (its controller's) go off
+  // simultaneously, so they resolve in active-player-first order. Which one lands first is not
+  // cosmetic: SHD_226 Unrefusable Offer replays the card out of the discard, while SOR_083
+  // Superlaser Technician moves it to the resource row — whichever resolves first takes the card,
+  // and the other finds nothing.
   const whenDefeated = resolveWhenDefeatedWithThrawn(game, unit, removed.player, causedByCombatDamage);
   const collectingPlayer: PlayerId = removed.player === 1 ? 2 : 1;
-  const chainedDefeated = collectBounties(unit, collectingPlayer, whenDefeated) ?? whenDefeated;
+  const bounty = collectBounties(unit, collectingPlayer, null);
+  let chainedDefeated: PendingResolution | null;
+  if (!bounty) chainedDefeated = whenDefeated;
+  else if (!whenDefeated) chainedDefeated = bounty;
+  else if ((game.roundState.actingPlayer ?? game.activePlayer) === collectingPlayer) {
+    chainedDefeated = injectContinuation(bounty, whenDefeated);
+  } else {
+    chainedDefeated = injectContinuation(whenDefeated, bounty);
+  }
 
   // Luke Skywalker (JTL_094) as a pilot upgrade: when his vehicle is defeated, he may eject.
   const lukeUpgrade = unit.upgrades.find(upg => upg.cardId === "JTL_094");
@@ -6393,9 +6454,14 @@ function applyAbilityOptionEffect(
     case "SHD_085": {
       const pState083 = GetPlayer(game, pending.player!);
       const discardIdx083 = pState083.discard.findIndex(d => d.playId === pending.sourcePlayId);
-      const playId083 = discardIdx083 >= 0
-        ? pState083.discard.splice(discardIdx083, 1)[0].playId
-        : nextPlayId(game);
+      if (discardIdx083 < 0) {
+        // The card already left the discard — something resolving earlier took it (SHD_226
+        // Unrefusable Offer replays it under the opponent's control). "This unit" no longer refers
+        // to anything, so nothing is resourced; without this guard a second copy is conjured.
+        log.push(`${CardTitle(pending.cardId)}: no longer in the discard pile — nothing to resource.`);
+        return pending.continuation ?? null;
+      }
+      const playId083 = pState083.discard.splice(discardIdx083, 1)[0].playId;
       pState083.resources.push({
         cardId: pending.cardId,
         playId: playId083,
@@ -7107,6 +7173,39 @@ function handleChooseOption(
             return { response: resolutionResponse(pendingToResolution(nextPending221, game)), pending: nextPending221, stateChanged: false };
           }
           return { response: stateResponse(game), pending: null, stateChanged: true };
+        }
+        case "SHD_226": { // Unrefusable Offer — "Play this unit from its owner's discard pile or
+                          // from capture for free (under your control). It enters play ready. At
+                          // the start of the regroup phase, defeat it."
+          const next226 = pending.continuation ?? null;
+          const taken = takeCardFromDiscardOrCapture(game, pending.targetPlayId, pending.targetOwner);
+          if (!taken) {
+            // The card is no longer anywhere this ability can reach — its own When Defeated already
+            // moved it (SOR_083 resources itself, a hidden zone), or it was a token and ceased to
+            // exist. The bounty simply does nothing.
+            log.push(`${CardTitle("SHD_226")}: ${CardTitle(pending.targetCardId ?? "")} is no longer in a zone this ability can reach.`);
+            updateDefeatedPlayers(game);
+            if (next226) return { response: resolutionResponse(pendingToResolution(next226, game)), pending: next226, stateChanged: false };
+            return { response: stateResponse(game), pending: null, stateChanged: true };
+          }
+          log.push(`${CardTitle("SHD_226")}: Player ${pending.collectingPlayer} plays ${CardTitle(taken.cardId)} for free.`);
+          const result226 = completePlayCard(game, log, taken.cardId, pending.collectingPlayer, {
+            enterReady: true, // "It enters play ready"
+            injectEffect: { cardId: "SHD_226", duration: "UntilStartOfRegroup", affectedPlayer: pending.collectingPlayer },
+          });
+          // "Under your control" — the collector controls it, but ownership never moves, so it
+          // returns to its owner's discard when it is defeated at regroup.
+          const played226 = GetUnitsForPlayer(pending.collectingPlayer).find(u => u.cardId === taken.cardId && u.owner !== taken.owner);
+          if (played226) played226.owner = taken.owner;
+          // The card is a new object in a new zone (CR 8.6.4), so any ability still queued against
+          // the old one — its own When Defeated, above all — no longer has anything to resolve.
+          const survivingTail = dropPendingsForPlayId(next226, pending.targetPlayId);
+          if (result226.pending) {
+            const merged = injectContinuation(result226.pending, survivingTail);
+            return { response: resolutionResponse(pendingToResolution(merged, game)), pending: merged, stateChanged: result226.stateChanged };
+          }
+          if (survivingTail) return { response: resolutionResponse(pendingToResolution(survivingTail, game)), pending: survivingTail, stateChanged: false };
+          return result226;
         }
         case "SHD_068": {
           const allUnits = [...game.player1.groundArena, ...game.player1.spaceArena,
@@ -12370,6 +12469,10 @@ function runDispatch(
     if (isTopLevelAction && dispatch.fromPlayer !== gs.activePlayer) {
       result = { response: invalidResponse("It is not your turn."), pending, stateChanged: false };
     } else {
+      // Remember whose action this is. advanceTurn flips activePlayer as soon as this handler
+      // returns — before the action's pendings are answered — so anything resolved later needs
+      // this to know who is acting.
+      if (isTopLevelAction) gs.roundState.actingPlayer = dispatch.fromPlayer;
       switch (dispatch.dispatchType) {
         case "play-card":         result = handlePlayCard(gs, log, dispatch); break;
         case "play-smuggle":      result = handlePlaySmuggle(gs, log, dispatch); break;

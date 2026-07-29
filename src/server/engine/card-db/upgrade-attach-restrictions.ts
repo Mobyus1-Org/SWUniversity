@@ -113,6 +113,7 @@ export function UpgradeEligibleTargets(
 
     // "Attach to a non-leader unit."
     case "SHD_193": //Frozen in Carbonite
+    case "SHD_226": //Unrefusable Offer
       return everyone.filter(u => !CardIsLeader(u.cardId) && !u.upgrades.some(upg => CardIsLeader(upg.cardId)))
         .map(u => u.playId);
 

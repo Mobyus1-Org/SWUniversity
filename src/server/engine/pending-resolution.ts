@@ -200,6 +200,14 @@ export interface BountyPending {
   cardId: string;
   /** The player who may collect (always the opponent of the bounty unit's controller). */
   collectingPlayer: PlayerId;
+  /**
+   * The unit that carried the bounty, captured at the moment it left play. Only bounties that act
+   * on the card itself need it (SHD_226 Unrefusable Offer replays it); `targetPlayId` is how the
+   * card is located afterwards, in the owner's discard or in a capture zone.
+   */
+  targetCardId?: string;
+  targetPlayId?: string;
+  targetOwner?: PlayerId;
   continuation: PendingResolution | null;
 }
 

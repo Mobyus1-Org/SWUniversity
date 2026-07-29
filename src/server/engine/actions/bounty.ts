@@ -2,7 +2,10 @@ import type { PlayerId } from "@/lib/engine/core-models";
 import type { Unit } from "@/server/engine/unit";
 import type { BountyPending, PendingResolution } from "@/server/engine/pending-resolution";
 
-type BountyEffect = { kind: "draw-card" | "give-shield" | "ready-2-resources"; sourceCardId: string };
+type BountyEffect = {
+  kind: "draw-card" | "give-shield" | "ready-2-resources" | "play-free-under-control";
+  sourceCardId: string;
+};
 
 /**
  * Returns the bounty effects on a unit at the moment of defeat/capture.
@@ -24,6 +27,10 @@ function getBountyEffects(unit: Unit): BountyEffect[] {
         break;
       case "SHD_221": // Wanted — grants Bounty: Ready 2 friendly resources
         effects.push({ kind: "ready-2-resources", sourceCardId: "SHD_221" });
+        break;
+      case "SHD_226": // Unrefusable Offer — grants Bounty: play this unit from its owner's discard
+                      // pile or from capture for free, under your control.
+        effects.push({ kind: "play-free-under-control", sourceCardId: "SHD_226" });
         break;
     }
   }
@@ -56,6 +63,11 @@ export function collectBounties(
       type: "bounty",
       cardId: effect.sourceCardId,
       collectingPlayer,
+      // Recorded now, while the unit is still in hand: by the time the prompt is answered it has
+      // left play, and SHD_226 needs its identity to find the card again.
+      targetCardId: unit.cardId,
+      targetPlayId: unit.playId,
+      targetOwner: unit.owner,
       continuation: chain,
     } satisfies BountyPending;
   }
