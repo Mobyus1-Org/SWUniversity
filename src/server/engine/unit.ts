@@ -97,6 +97,7 @@ export class Unit implements UnitInterface {
         case "JTL_018": //Kazuda Xiono
         case "JTL_244": //There Is No Escape
         case "LOF_202": //Mind Trick
+        case "LAW_132": //The Tree Remembers
           return true;
         default: break;
       }

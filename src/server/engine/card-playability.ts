@@ -204,6 +204,16 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
 }
 
 /**
+ * SHD_094 Palpatine's Return: what it costs to play `cardId` out of the discard — 6 resources less,
+ * or 8 less when it's a Force unit. Shared by the eligibility filter (which units are offered) and
+ * the payment path, so the two can't disagree.
+ */
+export function palpatinesReturnCost(game: GameState, player: PlayerId, cardId: string): number {
+  const discount = TraitContains(cardId, "Force") ? 8 : 6;
+  return Math.max(0, playCost(game, player, cardId) - discount);
+}
+
+/**
  * The cost to play a Pilot card as an upgrade on a Vehicle: its piloting cost plus the same
  * aspect penalty. Card-cost discounts (Bendu, GNK, …) key off the printed cost and do not apply.
  */

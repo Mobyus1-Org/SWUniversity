@@ -919,7 +919,7 @@ export function CaptureVictimsExistFor(captor: UnitInterface): boolean {
   const enemy: PlayerId = captor.controller === 1 ? 2 : 1;
   const enemyState = enemy === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
   const units = arena === "Ground" ? enemyState.groundArena : enemyState.spaceArena;
-  return units.some(u => !CardIsLeader(u.cardId) && !UnitImmuneToEnemyAbilities(u.cardId));
+  return units.some(u => !CardIsLeader(u.cardId) && !UnitImmuneToEnemyCapture(u));
 }
 
 /** The upgrade with this playId, wherever it is attached, or null. */
@@ -1243,12 +1243,42 @@ export function ApplyDamagePrevention(gs: GameState, targetPlayId: string, amoun
 }
 
 /**
- * Units that "can't be captured, damaged, or defeated by enemy card abilities" (SHD_187 Lurking
- * TIE Phantom). Combat is not a card ability, so it still damages/defeats them — every such vector
+ * Card ids granting a unit immunity to enemy card abilities, whether printed on the unit itself or
+ * granted by an attached Pilot upgrade. Empty once the unit loses its abilities — the protection is
+ * an ability like any other (LAW_132 The Tree Remembers strips it).
+ *
+ * Combat is not a card ability, so combat still damages/defeats these units — every immunity vector
  * routes through a card ability's target selection or DealDamageToUnit, never through combat.
  */
-export function UnitImmuneToEnemyAbilities(cardId: string): boolean {
-  return cardId === "SHD_187";
+function ImmunityGrants(unit: UnitInterface): string[] {
+  if (Unit.FromInterface(unit).LostAbilities()) return [];
+  const grants: string[] = [];
+  // SHD_187 Lurking TIE Phantom — "can't be captured, damaged, or defeated by enemy card abilities."
+  if (unit.cardId === "SHD_187") grants.push("SHD_187");
+  // JTL_103 Chewbacca (Faithful First Mate) — "can't be defeated or returned to hand by enemy card
+  // abilities", printed on the unit and granted to the vehicle it pilots.
+  if (unit.cardId === "JTL_103" || unit.upgrades?.some(u => u.cardId === "JTL_103")) grants.push("JTL_103");
+  return grants;
+}
+
+/** Units enemy card abilities can't DAMAGE. */
+export function UnitImmuneToEnemyDamage(unit: UnitInterface): boolean {
+  return ImmunityGrants(unit).includes("SHD_187");
+}
+
+/** Units enemy card abilities can't DEFEAT. */
+export function UnitImmuneToEnemyDefeat(unit: UnitInterface): boolean {
+  return ImmunityGrants(unit).length > 0;
+}
+
+/** Units enemy card abilities can't CAPTURE. */
+export function UnitImmuneToEnemyCapture(unit: UnitInterface): boolean {
+  return ImmunityGrants(unit).includes("SHD_187");
+}
+
+/** Units enemy card abilities can't RETURN TO HAND. */
+export function UnitImmuneToEnemyBounce(unit: UnitInterface): boolean {
+  return ImmunityGrants(unit).includes("JTL_103");
 }
 
 /**
@@ -1263,6 +1293,32 @@ export function DamageIsUnpreventable(sourceCardId: string, sourceController: Pl
   return GetUnitsForPlayer(sourceController).some(
     u => u.cardId === "ASH_196" && !Unit.FromInterface(u).LostAbilities(),
   );
+}
+
+/**
+ * `player` discards one card chosen at random from their hand. Shared by every "discards a random
+ * card from their hand" card (SOR_190 Lothal Insurgent, LOF_227 The Will of the Force). No-op on an
+ * empty hand.
+ */
+export function DiscardRandomCardFromHand(
+  gs: GameState,
+  player: PlayerId,
+  gameLog: string[],
+  sourceCardId: string,
+): void {
+  const pState = GetPlayer(gs, player);
+  if (pState.hand.length === 0) return;
+  const idx = Math.floor(Math.random() * pState.hand.length);
+  const [discarded] = pState.hand.splice(idx, 1);
+  pState.discard.push({
+    cardId: discarded.cardId,
+    playId: String(gs.nextPlayId++),
+    owner: player,
+    controller: player,
+    turnDiscarded: gs.currentRound,
+    discardEffect: "",
+  });
+  gameLog.push(`${CardTitle(sourceCardId)}: Player ${player} discarded ${CardTitle(discarded.cardId)} at random.`);
 }
 
 /** Records that a unit took damage this phase (e.g. ASH_188 Galvanized Leap's "was damaged this phase"). */
@@ -1285,7 +1341,7 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
   // applied directly in resolveAttack, never here). Prevent unless the source is the unit's own
   // controller. `sourcePlayer` is undefined for most callers, so enemy AoE/targeted damage is
   // blocked by default; a friendly effect must pass sourcePlayer to damage its own immune unit.
-  if (UnitImmuneToEnemyAbilities(target.cardId) && sourcePlayer !== target.controller) {
+  if (UnitImmuneToEnemyDamage(target) && sourcePlayer !== target.controller) {
     if (withLog) withLog.push(`${CardTitle(target.cardId)} can't be damaged by enemy card abilities.`);
     return;
   }
@@ -1395,7 +1451,7 @@ export function chooseAndDefeatUnit(
   const game = GetGame();
   if (!game) throw new Error("Game not found in chooseAndDefeatUnit");
   const opponent = GetOtherPlayer(player);
-  const opponentUnits = GetUnitsForPlayer(opponent).filter(u => !UnitImmuneToEnemyAbilities(u.cardId));
+  const opponentUnits = GetUnitsForPlayer(opponent).filter(u => !UnitImmuneToEnemyDefeat(u));
   const eligible = includeLeaders ? opponentUnits : opponentUnits.filter(u => !CardIsLeader(u.cardId));
   if (eligible.length === 0) return null;
   return {

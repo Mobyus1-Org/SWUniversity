@@ -143,6 +143,21 @@ function resolveOwnWhenDefeated(
       return buildTakeControlOfUpgrade("JTL_242", player,
         upg => IsTokenUpgrade(upg.cardId),
         "Take control of a token upgrade and attach it to a different eligible unit?", null);
+    case "LOF_097": { // Eeth Koth — "When Defeated: You may use the Force. If you do, put this card
+                      // into play as a resource." (Exhausted — no "and ready it" clause.)
+      if (!HasTheForce(player)) return null; // no token to spend → no prompt
+      return {
+        type: "ability-option",
+        cardId: "LOF_097",
+        player,
+        sourcePlayId: unit.playId, // locates the card in the discard
+        helperText: `Use the Force to put ${CardTitle("LOF_097")} into play as a resource?`,
+        yesLabel: "Use the Force",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: null,
+      };
+    }
     case "SOR_083": // Superlaser Technician (SOR_083 / SHD_085 reprint): "When Defeated: You may put this unit into play as a resource and ready it."
     case "SHD_085": {
       return {

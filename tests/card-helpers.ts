@@ -404,6 +404,8 @@ export const Cards = {
       resistanceBlueSquadron: "JTL_102",
       resistanceXWing: "JTL_247",
       dilapidatedSkiSpeeder: "JTL_248",
+      phoenixSquadronAWing: "JTL_095", // 2-cost Space Vehicle, no abilities — a cheap pilot host
+      chewbacca: "JTL_103", // Faithful First Mate — grants "can't be defeated/returned by enemy abilities"
     },
     lof: {
       kelleranBeq: "LOF_100",
@@ -430,6 +432,7 @@ export const Cards = {
       anakinSkywalkerChampionOfMortis: "LOF_070",
       hyenaBomber: "LOF_158",
       lukeSkywalker: "LOF_249", // A Hero's Beginning — 3/5 Ground, unique
+      eethKoth: "LOF_097",
     },
     twi: {
       infiltratingDemolisher: "TWI_182",
@@ -445,6 +448,7 @@ export const Cards = {
       hailfireTank: "TWI_233",
       subjugatingStarfighter: "TWI_112",
       confederateTriFighter: "TWI_132",
+      the501stLiberator: "TWI_109",
     },
     sec: {
       cadBane: "SEC_034",
@@ -660,6 +664,8 @@ export const Cards = {
       daringRaid: "SHD_178",
       pillage: "SHD_181",
       maKlounkee: "SHD_229",
+      palpatinesReturn: "SHD_094",
+      rivalsFall: "SHD_079",
     },
     sor: {
       searchYourFeelings: "SOR_042",
@@ -739,6 +745,7 @@ export const Cards = {
       noGloryOnlyResults: "JTL_043",
       punchIt: "JTL_231",
       attackRun: "JTL_261",
+      outTheAirlock: "JTL_079",
     },
     ts26: {
       backedByThePykes: "TS26_058",
@@ -779,6 +786,8 @@ export const Cards = {
       lostAndForgotten: "LAW_133",
       singleReactorIgnition: "LAW_044",
       doubleCross: "LAW_170",
+      theTreeRemembers: "LAW_132",
+      theAxeForgets: "LAW_246",
     },
     lof: {
       cureWounds: "LOF_075",
@@ -786,6 +795,8 @@ export const Cards = {
       shatterpoint: "LOF_079",
       protectThePod: "LOF_128",
       shienFlurry: "LOF_220",
+      theWillOfTheForce: "LOF_227",
+      nimanStrike: "LOF_124",
     },
     ibh: {
       // Suffix letters are alternate identical printings within IBH.

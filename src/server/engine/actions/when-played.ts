@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyAbilities, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
-import { aspectPenalty, spendableFor } from "@/server/engine/card-playability";
+import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
+import { aspectPenalty, palpatinesReturnCost, spendableFor } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
@@ -23,6 +23,17 @@ export function anakinMortisAbility(
   return optionalTarget(`LOF_070_${which}`, player, units.map(u => u.playId),
     `${aspect} card in your discard: give a unit -3/-3 for this phase?`,
     { continuation });
+}
+
+/**
+ * Non-leader units `player` may legally return to hand: either side's, minus enemy units whose
+ * abilities say they can't be returned by enemy card abilities (JTL_103 Chewbacca, incl. as pilot).
+ */
+function bounceableUnits(player: PlayerId): Unit[] {
+  return AllUnits().filter(u =>
+    !Unit.FromInterface(u).IsLeader()
+    && !(UnitImmuneToEnemyBounce(u) && u.controller !== player),
+  );
 }
 
 /** Returns playIds for all units on both sides plus both base identifiers. */
@@ -1041,6 +1052,43 @@ export function resolveWhenPlayed(
         onYes: null,
         continuation: null,
       };
+    case "LAW_132": { // The Tree Remembers — "An enemy unit loses all abilities for this phase. If
+                      // it costs 3 or less, defeat it." Every enemy unit is a legal target: a unit
+                      // that can't be defeated by enemy abilities loses that protection too, so it
+                      // is never filtered out here.
+      const enemy132 = GetUnitsForPlayer(GetOtherPlayer(player));
+      if (enemy132.length === 0) return null;
+      return mandatoryTarget(cardId, player, enemy132.map(u => u.playId));
+    }
+    case "SHD_079": { // Rival's Fall — "Defeat a unit." Either side, leaders included.
+      const eligible079 = AllUnits().filter(u => !(UnitImmuneToEnemyDefeat(u) && u.controller !== player));
+      if (eligible079.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible079.map(u => u.playId));
+    }
+    case "JTL_079": { // Out the Airlock — "Give a unit –5/–5 for this phase." Either side.
+      const units079 = AllUnits();
+      if (units079.length === 0) return null;
+      return mandatoryTarget(cardId, player, units079.map(u => u.playId));
+    }
+    case "LOF_124": { // Niman Strike — "Attack with a Force unit, even if it's exhausted. It gets
+                      // +1/+0 and can't attack bases for this attack." Exhausted units are eligible:
+                      // the ready check lives on the initiate-attack path, not this one.
+      const attackers124 = GetUnitsForPlayer(player).filter(u =>
+        TraitContains(u.cardId, "Force", player, u.playId) && CanUnitAttack(u),
+      );
+      if (attackers124.length === 0) return null;
+      return mandatoryTarget(cardId, player, attackers124.map(u => u.playId));
+    }
+    case "LOF_227": { // The Will of the Force — "Return a non-leader unit to its owner's hand. …"
+      const eligible227 = bounceableUnits(player);
+      if (eligible227.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible227.map(u => u.playId));
+    }
+    case "LAW_246": { // The Axe Forgets — "Return a non-leader unit that costs 3 or less to its owner's hand."
+      const eligible246 = bounceableUnits(player).filter(u => CardCost(u.cardId) <= 3);
+      if (eligible246.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible246.map(u => u.playId));
+    }
     case "SOR_150": { // Heroic Sacrifice — "Draw a card, then attack with a unit. It gets +2/+0 and dies when it deals combat damage."
       const game150 = game!;
       const gs150 = game150.currentGameState;
@@ -1206,6 +1254,27 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies AbilityOptionPending;
     }
+    case "TWI_109": { // 501st Liberator — "When Played: If you control another Republic unit, you
+                      // may heal 3 damage from a base." Either base is a legal choice.
+      if (!PlayerHasUnitWithTraitInPlay(player, "Republic", true, playId)) return null;
+      return {
+        type: "ability-option",
+        cardId: "TWI_109",
+        player,
+        helperText: "Heal 3 damage from a base?",
+        yesLabel: "Heal 3",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "TWI_109",
+          player,
+          fromPlayIds: [],
+          fromZones: ["Base"],
+          continuation: null,
+        },
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
     case "LAW_078": { // Sabine Wren (Spectre Five) — "When Played: You may defeat a non-unique
                       // upgrade. If you control a Vigilance or Command unit, you may defeat an
                       // upgrade instead." The condition only WIDENS the legal targets.
@@ -1312,7 +1381,7 @@ export function resolveWhenPlayed(
       const eligible078 = AllUnits().filter(u =>
         !Unit.FromInterface(u).IsLeader()
         // A unit immune to enemy card abilities (SHD_187) can't be defeated by an opponent's Vanquish.
-        && !(UnitImmuneToEnemyAbilities(u.cardId) && u.controller !== player),
+        && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player),
       );
       if (eligible078.length === 0) return null;
       return mandatoryTarget(cardId, player, eligible078.map(u => u.playId));
@@ -2213,6 +2282,25 @@ export function resolveWhenPlayed(
         } satisfies ReturnFromDiscardPending,
         continuation: null,
       } satisfies AbilityOptionPending;
+    }
+    case "SHD_094": { // Palpatine's Return — "Play a unit from your discard pile. It costs 6
+                      // resources less. If it's a Force unit, it costs 8 resources less instead."
+      const gs094 = game.currentGameState;
+      const pState094 = player === 1 ? gs094.player1 : gs094.player2;
+      const ready094 = pState094.resources.filter(r => r.ready).length;
+      const eligible094 = pState094.discard.filter(d => {
+        if (CardType(d.cardId) !== "Unit") return false;
+        return palpatinesReturnCost(gs094, player, d.cardId) <= ready094;
+      });
+      if (eligible094.length === 0) return null;
+      return {
+        type: "return-from-discard",
+        cardId,
+        player,
+        maxCount: 1,
+        eligiblePlayIds: eligible094.map(d => d.playId),
+        continuation: null,
+      } satisfies ReturnFromDiscardPending;
     }
     case "TWI_189": { // Unnatural Life — "Play a unit that was defeated this phase from your discard
                       // pile. It costs 2 resources less and enters play ready. At the start of the
