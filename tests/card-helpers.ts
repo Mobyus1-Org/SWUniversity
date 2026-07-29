@@ -375,6 +375,7 @@ export const Cards = {
       followerOfTheWay: "SHD_056",
       ketsuOnyo: "SHD_147",
       kraytDragon: "SHD_172",
+      collectionsStarhopper: "SHD_111", // 2/2 Space, Smuggle [3, Command] and no other ability
     },
     jtl: {
       redLeader: "JTL_101",

@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, DealDamageToBase, DamageIsUnpreventable } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, DealDamageToBase, DamageIsUnpreventable } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 
 import type {
@@ -1052,6 +1052,42 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
             sourcePlayId: playedPlayId,
             fromPlayIds: sameArena.map(u => u.playId),
             amount: power102,
+            continuation: null,
+          },
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
+      case "SHD_005_leader": { // Hondo Ohnaka (leader) — "When you play a card using Smuggle: You may
+                               // exhaust this leader. If you do, give an Experience token to a unit."
+        const leader005 = GetPlayer(game, trigger.fromPlayer).leader;
+        if (leader005.deployed || !leader005.ready) return null; // the exhaust can no longer be paid
+        if (GetAllUnits(game).length === 0) return null;
+        return {
+          type: "ability-option",
+          cardId: "SHD_005_leader",
+          player: trigger.fromPlayer,
+          helperText: "Exhaust Hondo Ohnaka to give an Experience token to a unit?",
+          yesLabel: "Exhaust",
+          noLabel: "Skip",
+          onYes: null,
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
+      case "SHD_005": { // Hondo Ohnaka (deployed) — "When you play a card using Smuggle: You may give
+                        // an Experience token to a unit." No cost, so no readiness check.
+        if (GetAllUnits(game).length === 0) return null;
+        return {
+          type: "ability-option",
+          cardId: "SHD_005",
+          player: trigger.fromPlayer,
+          helperText: "Give an Experience token to a unit?",
+          yesLabel: "Give a token",
+          noLabel: "Skip",
+          onYes: {
+            type: "ability-target",
+            cardId: "SHD_005_xp",
+            player: trigger.fromPlayer,
+            fromPlayIds: GetAllUnits(game).map(u => u.playId),
             continuation: null,
           },
           continuation: null,
@@ -3645,16 +3681,34 @@ function handlePlaySmuggle(
   dispatch: GameDispatch,
 ): HandlerResult {
   const { playId } = dispatch.dispatchData as PlaySmuggleDispatchData;
-  const player = dispatch.fromPlayer;
+  return performSmugglePlay(game, log, dispatch.fromPlayer, playId);
+}
+
+/**
+ * Plays the resource `playId` using Smuggle: pay its smuggle cost, replace it from the top of the
+ * deck, then resolve it as a normal play. `discount` is for cards that reduce that cost (SHD_017
+ * Lando Calrissian, "It costs 2 resources less").
+ *
+ * A ready resource that leaves the row already costs its controller 1 available resource, so the
+ * charge is reduced by 1 in that case — the smuggled card pays for part of itself.
+ */
+function performSmugglePlay(
+  game: GameState,
+  log: string[],
+  player: PlayerId,
+  playId: string,
+  discount = 0,
+): HandlerResult {
   const p = GetPlayer(game, player);
 
   const resource = p.resources.find(r => r.playId === playId);
   if (!resource)
     return { response: invalidResponse(`Resource ${playId} not found for player ${player}.`), pending: null, stateChanged: false };
 
-  const cost = effectiveSmuggleCost(game, player, resource);
-  if (cost === null)
+  const baseCost = effectiveSmuggleCost(game, player, resource);
+  if (baseCost === null)
     return { response: invalidResponse(`Resource ${playId} (${resource.cardId}) cannot be Smuggled.`), pending: null, stateChanged: false };
+  const cost = Math.max(0, baseCost - discount);
 
   const readyCount = spendableFor(game, player);
   if (readyCount < cost)
@@ -3681,7 +3735,36 @@ function handlePlaySmuggle(
   }
 
   log.push(`Player ${player} played ${CardTitle(cardId)} via Smuggle.`);
+  queueSmugglePlayReactions(game, player);
   return completePlayCard(game, log, cardId, player);
+}
+
+/**
+ * "When you play a card using Smuggle" reactions, for the player who smuggled. Queued from the one
+ * place a Smuggle play happens, so a new reacting card only needs a case in the trigger resolver.
+ * SHD_005 Hondo Ohnaka reacts from both the leader zone (paying an exhaust) and the arena (free).
+ */
+function queueSmugglePlayReactions(game: GameState, player: PlayerId): void {
+  const leader = GetPlayer(game, player).leader;
+  if (leader.cardId === "SHD_005" && !leader.deployed && leader.ready && !LeaderAbilitiesIgnored()) {
+    game.triggerBag.push({
+      triggerType: "card-played-reaction",
+      cardId: "SHD_005_leader",
+      fromPlayer: player,
+      nested: game.triggerBag.length > 0,
+    });
+  }
+  const hondoUnit = GetUnitsForPlayer(player)
+    .find(u => u.cardId === "SHD_005" && !Unit.FromInterface(u).LostAbilities());
+  if (hondoUnit) {
+    game.triggerBag.push({
+      triggerType: "card-played-reaction",
+      cardId: "SHD_005",
+      fromPlayer: player,
+      playId: hondoUnit.playId,
+      nested: game.triggerBag.length > 0,
+    });
+  }
 }
 
 function handleInitiateAttack(
@@ -3796,7 +3879,9 @@ function handleUseAbility(
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
-    unit.ready = false;
+    // Most unit Actions cost "[Exhaust]", but not all: SHD_017 Lando Calrissian's deployed Action
+    // is plain "Action:" — it is limited by "once each round" instead, so using it leaves him ready.
+    if (unit.cardId !== "SHD_017") unit.ready = false;
     payResources(game, player, unitAbilityCost, log, unit.cardId);
 
     const nextPending = resolveActionAbility(game, log, player, unit.cardId, unit.playId);
@@ -5175,6 +5260,24 @@ function handleChooseTarget(
     const cardId = hand[idx].cardId;
 
     switch (pending.cardId) {
+      case "SOR_017": { // Han Solo (leader) — the chosen card becomes a ready resource; the delayed
+                        // defeat is scheduled regardless of which card was picked.
+        const pStateHan = GetPlayer(game, pending.player);
+        const [card017] = pStateHan.hand.splice(idx, 1);
+        pStateHan.resources.push({
+          cardId: card017.cardId,
+          playId: nextPlayId(game),
+          owner: pending.player,
+          controller: pending.player,
+          ready: true, // "and ready it"
+          stolen: false,
+        });
+        log.push(`${CardTitle("SOR_017")}: put ${CardTitle(card017.cardId)} into play as a ready resource.`);
+        scheduleDelayedResourceDefeat(game, log, pending.player, "SOR_017");
+        const bag017 = drainTriggerBag(game, log);
+        if (bag017) return { response: resolutionResponse(pendingToResolution(bag017, game)), pending: bag017, stateChanged: true };
+        return { response: stateResponse(game), pending: null, stateChanged: true };
+      }
       case "SOR_129": { // Admiral Ozzel — play an Imperial unit at normal cost, enters ready.
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("Admiral Ozzel: chosen card is not a Unit."), pending, stateChanged: false };
@@ -6424,6 +6527,21 @@ function applyAbilityOptionEffect(
       DrawCardForPlayer(game, log, pending.player!);
       log.push(`${CardTitle("SOR_147")}: discarded hand and drew 3 cards.`);
       return pending.continuation ?? null;
+    }
+    case "SHD_005_leader": { // Hondo Ohnaka (leader) Yes — pay the exhaust, then choose who gets the token.
+      const leader005 = GetPlayer(game, pending.player!).leader;
+      if (leader005.deployed || !leader005.ready) return pending.continuation ?? null;
+      leader005.ready = false;
+      log.push(`${CardTitle("SHD_005")}: exhausted to give an Experience token.`);
+      const units005 = GetAllUnits(game);
+      if (units005.length === 0) return pending.continuation ?? null;
+      return {
+        type: "ability-target",
+        cardId: "SHD_005_xp",
+        player: pending.player!,
+        fromPlayIds: units005.map(u => u.playId),
+        continuation: pending.continuation ?? null,
+      } satisfies AbilityTargetPending;
     }
     case "LOF_227": { // The Will of the Force Yes — spend the Force, then the returned unit's owner
                       // discards a random card from their hand.
@@ -8062,6 +8180,86 @@ function resolveActionAbility(
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    case "SHD_017": { // Lando Calrissian (both sides) — Action: play a card using Smuggle for 2 less,
+                      // then defeat a resource you own and control. The deployed side is free but
+                      // limited to once each round; `playId` is what tells the two apart.
+      // Affordability is judged at the DISCOUNTED cost — a resource out of reach at its printed
+      // Smuggle cost may be playable once Lando takes 2 off it.
+      const ready017 = spendableFor(game, player);
+      const smuggleable017 = GetPlayer(game, player).resources.filter(r => {
+        const cost = effectiveSmuggleCost(game, player, r);
+        return cost !== null && Math.max(0, cost - 2) <= ready017;
+      });
+      if (smuggleable017.length === 0) return null;
+      if (playId) {
+        // Deployed: mark the once-per-round use as soon as the ability is taken.
+        game.currentEffects.push({ cardId: "SHD_017_usedThisRound", duration: "Round", affectedPlayer: player });
+      }
+      return {
+        type: "ability-target",
+        cardId: "SHD_017_smuggle",
+        player,
+        fromPlayIds: smuggleable017.map(r => r.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "SOR_017": { // Han Solo (leader) — Action [Exhaust]: put a card from your hand into play as
+                      // a resource and ready it, then schedule the start-of-next-action-phase defeat.
+      if (GetPlayer(game, player).hand.length === 0) return null;
+      return {
+        type: "play-from-hand",
+        cardId: "SOR_017",
+        player,
+      } satisfies PlayFromHandPending;
+    }
+    case "SHD_009": { // Hunter (leader) — Action [1 resource, Exhaust]: reveal a resource you
+                      // control; if it shares a name with a friendly unique unit, return it to hand
+                      // and resource the top card of your deck. Shared with the deployed On Attack.
+      const resources009 = GetPlayer(game, player).resources;
+      if (resources009.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SHD_009_reveal",
+        player,
+        fromPlayIds: resources009.map(r => r.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "LOF_004": { // Kanan Jarrus (leader) — Action [1 resource, Exhaust]: give a Shield token to
+                      // a Creature or Spectre unit. Either side's — the text names no controller.
+      const shieldable004 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+        .filter(u => TraitContains(u.cardId, "Creature", u.controller, u.playId)
+                  || TraitContains(u.cardId, "Spectre", u.controller, u.playId));
+      if (shieldable004.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LOF_004",
+        player,
+        fromPlayIds: shieldable004.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "LOF_011": { // Kit Fisto (leader) — Action [1 resource, Exhaust]: If you attacked with a
+                      // Jedi unit this phase, deal 2 damage to a unit. The "if" is a soft condition
+                      // (soft-pass if unmet). Read straight off roundState rather than
+                      // AttackedThisPhasePlayIds, which drops attackers that have since left play —
+                      // the attack still happened.
+      const jediAttacked011 = game.roundState.unitsAttackedThisPhase
+        .some(a => a.fromPlayer === player && TraitContains(a.cardId, "Jedi"));
+      if (!jediAttacked011) {
+        log.push(`${CardTitle("LOF_011")}: no Jedi unit attacked this phase — soft pass.`);
+        return null;
+      }
+      const allUnits011 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      if (allUnits011.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LOF_011",
+        player,
+        fromPlayIds: allUnits011.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "SEC_015": { // C-3PO (leader) — Action [1 resource, Exhaust]: If you control an exhausted
                       // unit, exhaust a unit. The "if" is a soft condition (soft-pass if unmet).
       if (!GetUnitsForPlayer(player).some(u => !u.ready)) {
@@ -9197,6 +9395,93 @@ function applyAbilityEffect(
         game.gameLog.push(`${CardTitle("SOR_005")}: gave a Shield token to ${CardTitle(target005.cardId)}.`);
       }
       break;
+    }
+    case "SHD_017_smuggle": { // Lando Calrissian (both sides) — play the chosen resource using
+                              // Smuggle at -2, then defeat a resource you own and control.
+      if (!targetPlayId) break;
+      const player017 = pending.player!;
+      const result017 = performSmugglePlay(game.currentGameState, game.gameLog, player017, targetPlayId, 2);
+      if (result017.response.invalidAction) break;
+      // "Defeat a resource you own and control" — owned AND controlled, so a stolen resource is out.
+      const ownAndControlled = GetPlayer(game.currentGameState, player017).resources
+        .filter(r => (r.owner ?? player017) === player017 && !r.stolen);
+      const defeatPending017: PendingResolution | null = ownAndControlled.length > 0
+        ? {
+            type: "ability-target",
+            cardId: "SHD_017_defeat",
+            player: player017,
+            fromPlayIds: ownAndControlled.map(r => r.playId),
+            continuation: pending.continuation ?? null,
+          } satisfies AbilityTargetPending
+        : pending.continuation ?? null;
+      // The smuggled card may itself need input (a When Played); that resolves first.
+      if (result017.pending) return injectContinuation(result017.pending, defeatPending017);
+      return defeatPending017;
+    }
+    case "SHD_017_defeat": { // Lando Calrissian (both sides) — defeat the chosen resource.
+      if (!targetPlayId) break;
+      DefeatResource(game.currentGameState, pending.player!, targetPlayId, game.gameLog, "SHD_017");
+      break;
+    }
+    case "SHD_005_xp": { // Hondo Ohnaka (both sides) — give an Experience token to the chosen unit.
+      if (!targetPlayId) break;
+      const target005 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target005) break;
+      target005.upgrades.push({
+        cardId: "SOR_T01",
+        playId: nextPlayId(game.currentGameState),
+        owner: target005.owner,
+        controller: target005.controller,
+      });
+      game.gameLog.push(`${CardTitle("SHD_005")}: Experience token given to ${CardTitle(target005.cardId)}.`);
+      break;
+    }
+    case "SOR_017_delayed_resource_defeat": { // Han Solo (both sides) — the scheduled start-of-phase defeat.
+      if (!targetPlayId) break;
+      DefeatResource(game.currentGameState, pending.player!, targetPlayId, game.gameLog, "SOR_017");
+      break;
+    }
+    case "SHD_009_reveal": { // Hunter (both sides) — the revealed resource is returned to hand and
+                             // replaced from the deck, but only if its name matches a friendly
+                             // unique unit. Revealing a non-matching resource is a legal, empty result.
+      if (!targetPlayId) break;
+      const owner009 = pending.player!;
+      const pState009 = GetPlayer(game.currentGameState, owner009);
+      const idx009 = pState009.resources.findIndex(r => r.playId === targetPlayId);
+      if (idx009 === -1) break;
+      const revealed009 = pState009.resources[idx009];
+      game.gameLog.push(`${CardTitle("SHD_009")}: revealed ${CardTitle(revealed009.cardId)}.`);
+      const matches009 = GetUnitsForPlayer(owner009).some(
+        u => CardIsUnique(u.cardId) && CardTitle(u.cardId) === CardTitle(revealed009.cardId),
+      );
+      if (!matches009) {
+        game.gameLog.push(`${CardTitle("SHD_009")}: no friendly unique unit shares that name.`);
+        break;
+      }
+      pState009.resources.splice(idx009, 1);
+      GetPlayer(game.currentGameState, (revealed009.owner ?? owner009) as PlayerId)
+        .hand.push({ cardId: revealed009.cardId });
+      game.gameLog.push(`${CardTitle("SHD_009")}: ${CardTitle(revealed009.cardId)} returned to hand.`);
+      ResourceTopCardOfDeck(game.currentGameState, owner009, game.gameLog, "SHD_009");
+      break;
+    }
+    case "LOF_004": { // Kanan Jarrus (leader) — give a Shield token to the chosen unit.
+      if (!targetPlayId) break;
+      const target004 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target004) break;
+      target004.upgrades.push({
+        cardId: "SOR_T02",
+        playId: nextPlayId(game.currentGameState),
+        owner: target004.owner,
+        controller: target004.controller,
+      });
+      game.gameLog.push(`${CardTitle("LOF_004")}: Shield token placed on ${CardTitle(target004.cardId)}.`);
+      break;
+    }
+    case "LOF_011": { // Kit Fisto (leader) — deal 2 damage to the chosen unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "LOF_011", targetPlayId, 2, game.gameLog, pending.player);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
     case "SEC_015": { // C-3PO (both sides) — exhaust the chosen unit.
       if (!targetPlayId) break;
@@ -12354,6 +12639,57 @@ function applyAbilityEffect(
 // Main entry point
 // ---------------------------------------------------------------------------
 
+/**
+ * Records "at the start of the next action phase, defeat a resource you control" (SOR_017 Han Solo,
+ * both sides). The effect rides on currentEffects with a duration the regroup sweep leaves alone —
+ * it is consumed by checkStartOfActionPhase, not by a duration filter.
+ */
+function scheduleDelayedResourceDefeat(
+  game: GameState,
+  log: string[],
+  player: PlayerId,
+  sourceCardId: string,
+): void {
+  game.currentEffects.push({
+    cardId: `${sourceCardId}_delayed_resource_defeat`,
+    duration: "UntilStartOfNextActionPhase",
+    affectedPlayer: player,
+  });
+  log.push(`${CardTitle(sourceCardId)}: at the start of the next action phase, Player ${player} defeats a resource.`);
+}
+
+/**
+ * The prompts owed at the moment an action phase begins, chained in resolution order:
+ * the Millennium Falcon tax first, then any delayed resource defeats. That order matters — paying
+ * the Falcon's 1 resource exhausts one, and Han Solo's delayed defeat can then take that very
+ * resource, leaving the phase to open with everything ready.
+ */
+function checkStartOfActionPhase(gs: GameState): PendingResolution | null {
+  let chain: PendingResolution | null = null;
+  // Built back-to-front so the players resolve in order 1 then 2.
+  for (const player of [2, 1] as PlayerId[]) {
+    const idx = gs.currentEffects.findIndex(
+      e => e.duration === "UntilStartOfNextActionPhase"
+        && e.cardId.endsWith("_delayed_resource_defeat")
+        && e.affectedPlayer === player,
+    );
+    if (idx === -1) continue;
+    const [effect] = gs.currentEffects.splice(idx, 1); // consumed — it must not fire again
+    const resources = GetPlayer(gs, player).resources;
+    if (resources.length === 0) continue; // nothing to defeat
+    chain = {
+      type: "ability-target",
+      cardId: effect.cardId,
+      player,
+      fromPlayIds: resources.map(r => r.playId),
+      continuation: chain,
+    } satisfies AbilityTargetPending;
+  }
+  const mfTax = checkMillenniumFalconTax(gs);
+  if (mfTax) return injectContinuation(mfTax, chain);
+  return chain;
+}
+
 function checkMillenniumFalconTax(gs: GameState): AbilityOptionPending | null {
   for (const player of [1, 2] as PlayerId[]) {
     const p = GetPlayer(gs, player);
@@ -12488,7 +12824,7 @@ function runDispatch(
           if (err) {
             result = { response: invalidResponse(err), pending: null, stateChanged: false };
           } else {
-            const mfPending = gs.gamePhase === "ActionPhase" ? checkMillenniumFalconTax(gs) : null;
+            const mfPending = gs.gamePhase === "ActionPhase" ? checkStartOfActionPhase(gs) : null;
             result = mfPending
               ? { response: resolutionResponse(pendingToResolution(mfPending, gs)), pending: mfPending, stateChanged: false }
               : { response: stateResponse(gs), pending: null, stateChanged: true };
@@ -12500,7 +12836,7 @@ function runDispatch(
           if (err) {
             result = { response: invalidResponse(err), pending: null, stateChanged: false };
           } else {
-            const mfPending = gs.gamePhase === "ActionPhase" ? checkMillenniumFalconTax(gs) : null;
+            const mfPending = gs.gamePhase === "ActionPhase" ? checkStartOfActionPhase(gs) : null;
             result = mfPending
               ? { response: resolutionResponse(pendingToResolution(mfPending, gs)), pending: mfPending, stateChanged: false }
               : { response: stateResponse(gs), pending: null, stateChanged: true };

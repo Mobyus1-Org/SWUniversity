@@ -1039,6 +1039,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
   //cards with innate on-attack abilities
   switch (cardId) {
     case "LAW_101": //Lawbringer — On Attack: choose an aspect, give enemy units with it –2/–2
+    case "SOR_017": //Han Solo (deployed) — On Attack: resource the top card of your deck (ready), then defeat a resource next action phase
+    case "SHD_009": //Hunter (deployed) — On Attack: may reveal a resource; if it shares a name with a friendly unique unit, swap it for the top of your deck
     case "SEC_015": //C-3PO (deployed) — On Attack: if you control another exhausted unit, may exhaust a unit
     case "LAW_048": //Chio Fain — On Attack: may have both players each draw a card
     case "LOF_037": //Darth Vader — On Attack: defeat an enemy unit with a Shield token on it
@@ -1293,6 +1295,36 @@ export function DamageIsUnpreventable(sourceCardId: string, sourceController: Pl
   return GetUnitsForPlayer(sourceController).some(
     u => u.cardId === "ASH_196" && !Unit.FromInterface(u).LostAbilities(),
   );
+}
+
+/**
+ * Puts the top card of `player`'s deck into play as a resource. Shared by every "put the top card
+ * of your deck into play as a resource" card. Pass `ready` for the cards that add "and ready it".
+ * Returns false when the deck is empty — the rest of such an ability still resolves.
+ */
+export function ResourceTopCardOfDeck(
+  gs: GameState,
+  player: PlayerId,
+  gameLog: string[],
+  sourceCardId: string,
+  opts: { ready?: boolean } = {},
+): boolean {
+  const pState = GetPlayer(gs, player);
+  const top = pState.deck.pop();
+  if (!top) {
+    gameLog.push(`${CardTitle(sourceCardId)}: deck is empty — no resource put into play.`);
+    return false;
+  }
+  pState.resources.push({
+    cardId: top.cardId,
+    playId: String(gs.nextPlayId++),
+    owner: player,
+    controller: player,
+    ready: opts.ready ?? false,
+    stolen: false,
+  });
+  gameLog.push(`${CardTitle(sourceCardId)}: put ${CardTitle(top.cardId)} into play as a${opts.ready ? " ready" : "n exhausted"} resource.`);
+  return true;
 }
 
 /**

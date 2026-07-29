@@ -67,16 +67,10 @@ const report = (ids: string[]) => ids.sort().map(label).join("\n  ");
 
 // Cards still awaiting implementation. Each entry is a known bug — shrink, never grow.
 const KNOWN_GAPS: Record<"noExecution" | "noUiButton" | "deployedOnAttackUnregistered" | "onAttackNoHandler", string[]> = {
-  // Leader Actions that still pay their cost and do nothing. Mostly the "play a card from your
-  // hand" family (needs per-card validation on PlayFromHandPending) plus three that need new
-  // engine plumbing: SOR_017/SHD_009 (delayed start-of-next-action-phase defeat, resource reveal)
-  // and SOR_009 (attack twice).
+  // Leader Actions that still pay their cost and do nothing.
   noExecution: [
     "SHD_006", // Jabba the Hutt — grant a Bounty that discounts your next unit
-    "SHD_009", // Hunter — reveal a resource, name-match a unique unit
-    "SHD_017", // Lando Calrissian — play via Smuggle for 2 less, defeat a resource
     "SOR_009", // Leia Organa — attack with a Rebel unit, then optionally another
-    "SOR_017", // Han Solo — resource from hand, defeat a resource next action phase
   ],
   // Implemented in the engine but with no button in the Puzzles UI. Each is blocked on its
   // execution case above — adding a button first would just surface a no-op.
@@ -84,9 +78,7 @@ const KNOWN_GAPS: Record<"noExecution" | "noUiButton" | "deployedOnAttackUnregis
   // Deployed leader sides whose On Attack never fires.
   deployedOnAttackUnregistered: [
     "ASH_004", // Grand Admiral Thrawn — may defeat an enemy unit if you control more units
-    "SHD_009", // Hunter — reveal a resource (same machinery as his leader side)
     "SOR_016", // Grand Admiral Thrawn — reveal a deck card, exhaust a unit costing <= it
-    "SOR_017", // Han Solo — resource from deck, defeat a resource next action phase
   ],
   // Events that grant an On Attack the engine never resolves: AttackAbilityCardIds() returns only
   // the unit's own (and Support-granted) cardId, so an effect-granted ability has no handler.

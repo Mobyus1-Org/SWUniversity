@@ -19,6 +19,15 @@ export function WeakerThanAFriendlyUnitPlayIds(player: PlayerId): string[] {
     .map(u => u.playId);
 }
 
+/** SHD_017 Lando Calrissian's DEPLOYED Action is "use this ability only once each round". */
+function LandoUsedThisRound(player: PlayerId): boolean {
+  const game = GetGame();
+  if (!game) return false;
+  return game.currentGameState.currentEffects.some(
+    e => e.cardId === "SHD_017_usedThisRound" && e.affectedPlayer === player,
+  );
+}
+
 export function ActionAbilities(cardId: string, player: PlayerId, playId?: string): string[] {
   const game = GetGame();
   if (!game) throw new Error("Game not found in ActionAbilities");
@@ -43,7 +52,6 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "SOR_013": //Cassian Andor - Dedicated to the Rebellion
       case "SOR_014": //Sabine Wren - Galvanized Revolutionary
       case "SOR_016": //Grand Admiral Thrawn - Patient and Insightful
-      case "SOR_017": //Han Solo - Audacious Smuggler
       case "SOR_018": //Jyn Erso - Resisting Oppression
       case "SHD_002": //Qi'Ra - I Alone Survived
       case "SHD_003": //Finn - This is a Rescue
@@ -52,11 +60,11 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "SHD_007": //Moff Gideon - Formidable Commander
       case "SHD_009": //Hunter - Outcast Sergeant
       case "SHD_010": //Bossk - Hunting His Prey
+      case "LOF_011": //Kit Fisto - Focused Jedi Master: Action [1 resource, Exhaust]: if you attacked with a Jedi unit this phase, deal 2 damage to a unit. (Soft-passes if the condition isn't met.)
       case "SEC_015": //C-3PO - Human-Cyborg Relations: Action [1 resource, Exhaust]: if you control an exhausted unit, exhaust a unit. (Soft-passes if the condition isn't met.)
       case "SHD_012": //Bo-Katan Kryze - Princess in Exile
       case "SHD_013": //Han Solo - Worth the Risk
       case "SHD_016": //Fennec Shand - Honoring the Deal
-      case "SHD_017": //Lando Calrissian - With Impeccable Taste
         abilities.push(cardId);
         break;
       // These four carry an Action on BOTH sides. The entries in the playId branch below serve the
@@ -91,6 +99,22 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         // Needs a resource to defeat on top of the 1 paid (the paid one may itself be defeated).
         if (GetResources(player).length > 0) abilities.push(cardId);
         break;
+      case "SOR_017": // Han Solo (Audacious Smuggler) — Action [Exhaust]: put a card from your hand
+                      // into play as a ready resource. Needs a card in hand to put there.
+        if (GetHand(player).length > 0) abilities.push(cardId);
+        break;
+      case "SHD_017": // Lando Calrissian — Action [Exhaust]: play a card using Smuggle for 2 less,
+                      // then defeat a resource you own. Needs a resource that can be Smuggled.
+        if (PlayerHasCardsToSmuggle(player)) abilities.push(cardId);
+        break;
+      case "LOF_004": { // Kanan Jarrus — Action [1 resource, Exhaust]: give a Shield token to a
+                        // Creature or Spectre unit (either side). Needs such a unit to target.
+        const shieldable004 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
+          .filter(u => TraitContains(u.cardId, "Creature", u.controller, u.playId)
+                    || TraitContains(u.cardId, "Spectre", u.controller, u.playId));
+        if (shieldable004.length > 0) abilities.push(cardId);
+        break;
+      }
       case "LOF_007": // Avar Kriss — Action [Exhaust]: The Force is with you (create your Force token).
         abilities.push(cardId);
         break;
@@ -215,8 +239,8 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
           abilities.push(cardId);
         }
         break;
-      case "SHD_017": //Lando Calrissian - With Impeccable Taste
-        if (PlayerHasCardsToSmuggle(player)) {
+      case "SHD_017": //Lando Calrissian - With Impeccable Taste (deployed: once each round)
+        if (PlayerHasCardsToSmuggle(player) && !LandoUsedThisRound(player)) {
           abilities.push(cardId);
         }
         break;

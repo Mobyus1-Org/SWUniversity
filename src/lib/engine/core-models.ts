@@ -14,7 +14,9 @@ export type PlayerId = 1 | 2;
 
 export type DiscardEffect = "" | "TTFREE" | "OTTFREE";
 
-export type EffectDuration = "Phase" | "Round" | "Permanent" | "ForAttack" | "ForDefense" | "UntilStartOfRegroup";
+export type EffectDuration = "Phase" | "Round" | "Permanent" | "ForAttack" | "ForDefense" | "UntilStartOfRegroup"
+  /** Consumed by checkStartOfActionPhase when the next action phase begins (SOR_017 Han Solo). */
+  | "UntilStartOfNextActionPhase";
 
 export type GamePhase = "ActionPhase" | "RegroupDraw" | "RegroupResource" | "RegroupReady";
 

@@ -288,6 +288,15 @@ export class Unit implements UnitInterface {
       if (this.cardId === "TWI_012") power += Math.floor(GetBaseDamage(this.controller) / 5); // Anakin Skywalker (leader unit)
     }
 
+    power += kananSurvivalBonus(this);
+
+    // Kit Fisto (deployed leader) — "This unit gets +1/+0 for each other friendly Jedi unit."
+    if (this.cardId === "LOF_011" && !this.LostAbilities()) {
+      power += GetUnitsForPlayer(this.controller)
+        .filter(u => u.playId !== this.playId && TraitContains(u.cardId, "Jedi", this.controller, u.playId))
+        .length;
+    }
+
     // War Juggernaut — "This unit gets +1/+0 for each damaged unit." (Any unit in play with damage,
     // both sides, including itself.) A constant ability, so it is lost if the unit loses abilities.
     if (this.cardId === "JTL_170" && !this.LostAbilities()) {
@@ -394,6 +403,8 @@ export class Unit implements UnitInterface {
       hp += GetResources(this.controller).length; // 97th Legion
     }
 
+    hp += kananSurvivalBonus(this);
+
     for (const effect of GetCurrentEffectsForPlayer(this.controller)) {
       if (effect.targetPlayId && effect.targetPlayId !== this.playId) continue;
       switch (effect.cardId) {
@@ -440,4 +451,17 @@ export class Unit implements UnitInterface {
   CanUseLimitedAbility(): boolean {
     return this.numUses > 0;
   }
+}
+
+/**
+ * LOF_004 Kanan Jarrus (deployed) — "While you control another Creature or Spectre unit, this unit
+ * gets +2/+2." A while-condition, so it is worth +2 once however many such units are out.
+ */
+function kananSurvivalBonus(unit: Unit): number {
+  if (unit.cardId !== "LOF_004" || unit.LostAbilities()) return 0;
+  const hasOther = GetUnitsForPlayer(unit.controller).some(u =>
+    u.playId !== unit.playId
+    && (TraitContains(u.cardId, "Creature", unit.controller, u.playId)
+      || TraitContains(u.cardId, "Spectre", unit.controller, u.playId)));
+  return hasOther ? 2 : 0;
 }

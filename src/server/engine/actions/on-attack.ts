@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, ResourceTopCardOfDeck } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType } from "@/server/engine/card-db/generated";
@@ -1108,6 +1108,43 @@ function resolveInnateOnAttack(
     }
     case "JTL_018": // Kazuda Xiono (deployed) — "On Attack: Choose any number of friendly units. They lose all abilities for this round."
       return kazudaSilencePending(attacker, continuation);
+    case "SOR_017": { // Han Solo (deployed) — "On Attack: Put the top card of your deck into play as
+                      // a resource and ready it. At the start of the next action phase, defeat a
+                      // resource you control." Both halves are mandatory — no prompt.
+      const game017 = GetGame()!;
+      ResourceTopCardOfDeck(game017.currentGameState, attacker.controller, game017.gameLog, "SOR_017", { ready: true });
+      game017.currentGameState.currentEffects.push({
+        cardId: "SOR_017_delayed_resource_defeat",
+        duration: "UntilStartOfNextActionPhase",
+        affectedPlayer: attacker.controller,
+      });
+      game017.gameLog.push(`${CardTitle("SOR_017")}: at the start of the next action phase, Player ${attacker.controller} defeats a resource.`);
+      return continuation;
+    }
+    case "SHD_009": { // Hunter (deployed) — "On Attack: You may reveal a resource you control. If it
+                      // shares a name with a friendly unique unit, return the resource to its
+                      // owner's hand and put the top card of your deck into play as a resource."
+      const gs009 = GetGame()!.currentGameState;
+      const resources009 = (attacker.controller === 1 ? gs009.player1 : gs009.player2).resources;
+      if (resources009.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "SHD_009_OA",
+        player: attacker.controller,
+        helperText: "Reveal a resource you control? (If it shares a name with a friendly unique unit, return it to hand and resource the top card of your deck.)",
+        yesLabel: "Reveal",
+        noLabel: "Skip",
+        onYes: {
+          // Shares the leader Action's resolution.
+          type: "ability-target",
+          cardId: "SHD_009_reveal",
+          player: attacker.controller,
+          fromPlayIds: resources009.map(r => r.playId),
+          continuation,
+        },
+        continuation,
+      };
+    }
     case "LAW_013": { // Chewbacca (deployed) — "On Attack: You may defeat a friendly resource. If you do, deal 2 damage to a unit and create a Credit token."
       const gs013 = GetGame()!.currentGameState;
       const resources013 = (attacker.controller === 1 ? gs013.player1 : gs013.player2).resources;
