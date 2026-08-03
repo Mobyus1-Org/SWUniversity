@@ -1497,7 +1497,13 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
   if (nestedTriggers.length > 0 && hasOuter) {
     if (nestedTriggers.length === 1) {
       game.triggerBag.splice(game.triggerBag.indexOf(nestedTriggers[0]), 1);
-      return processSingleTrigger(nestedTriggers[0], game, log);
+      const nestedPending = processSingleTrigger(nestedTriggers[0], game, log);
+      // A trigger that needs no player input returns null. Returning that straight out would
+      // end the drain with the outer triggers still sitting in the bag — they would then fire
+      // on whatever dispatch happened to drain next, on the wrong player's turn. Every other
+      // branch of this function keeps draining past an auto-resolving trigger; so must this one.
+      if (nestedPending !== null) return nestedPending;
+      return drainTriggerBag(game, log);
     }
     return {
       type: "trigger-order",

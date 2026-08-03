@@ -91,6 +91,41 @@ describe("SHD_005 Hondo Ohnaka — leader (front) ability", () => {
     expect(g.state.player1.leader.ready).toBe(true);
   });
 
+  // Regression: smuggling a unit whose own When Played resolves AUTOMATICALLY used to strand
+  // Hondo's reaction in the trigger bag — the player got no prompt on that play, and the
+  // stranded trigger then fired on some later dispatch (looking like "twice the next time").
+  it("still prompts when the smuggled unit has an automatic When Played", async () => {
+    const g = new GameTestAdapter();
+    const state = frontState().Build();
+    // SHD_160 Reckless Gunslinger — "When Played: Deal 1 damage to each base." No player input.
+    state.player1.resources[0].cardId = Cards.units.shd.recklessGunslinger;
+    g.loadNewState(state);
+
+    await g.smuggleResourceAsync(1, 0);
+
+    expect(g.lastDispatchResponse?.resolutionNeeded?.type).toBe("Option");
+    expect(g.state.triggerBag.length).toBe(0);
+    expect(g.state.player1.base.damage).toBe(1); // the unit's own When Played still resolved
+  });
+
+  it("resolves both triggers on the same play, leaving nothing for the next dispatch", async () => {
+    const g = new GameTestAdapter();
+    const state = frontState().Build();
+    state.player1.resources[0].cardId = Cards.units.shd.recklessGunslinger;
+    g.loadNewState(state);
+
+    await g.smuggleResourceAsync(1, 0);
+    await g.chooseYesAsync(1);
+    await g.chooseGroundUnitAsync(1, 0);
+
+    expect(xpOn(g.state.player1.groundArena[0])).toBe(1);
+    expect(g.state.triggerBag.length).toBe(0);
+
+    // The opponent's turn must NOT surface a leftover Hondo prompt.
+    await g.dispatchAsync(2, "pass-action", {});
+    expect(g.lastDispatchResponse?.resolutionNeeded).toBeFalsy();
+  });
+
   it("does not trigger when the OPPONENT smuggles ('when YOU play')", async () => {
     const g = new GameTestAdapter();
     g.loadNewState(
