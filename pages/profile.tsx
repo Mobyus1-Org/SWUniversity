@@ -71,6 +71,9 @@ function ModeStatsBoxes({ stats, databank }: { stats: DerivedAppStats; databank?
 
 export default function ProfilePage() {
   const router = useRouter();
+  // Admin-only read-only view of someone else's profile: /profile?user=<username>
+  const viewingUsername = typeof router.query.user === "string" ? router.query.user : "";
+  const isViewingOther = viewingUsername !== "";
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [user, setUser] = React.useState<MeResponse["user"]>(null);
@@ -89,10 +92,15 @@ export default function ProfilePage() {
   const loadUser = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/auth/me", {
-        method: "GET",
-        credentials: "include",
-      });
+      const url = isViewingOther
+        ? `/api/admin/user-profile?username=${encodeURIComponent(viewingUsername)}`
+        : "/api/auth/me";
+      const response = await fetch(url, { method: "GET", credentials: "include" });
+      if (!response.ok) {
+        // 403 (not an admin) or 404 (no such user) — show the empty state, never a partial profile.
+        setUser(null);
+        return;
+      }
       const data = (await response.json()) as MeResponse;
       setUser(data.user);
     } catch {
@@ -100,7 +108,7 @@ export default function ProfilePage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isViewingOther, viewingUsername]);
 
   React.useEffect(() => {
     loadUser();
@@ -235,8 +243,17 @@ export default function ProfilePage() {
     return (
       <div className="max-w-md mx-auto mt-8 p-6 border rounded-lg bg-black/30 space-y-3">
         <h1 className="text-2xl font-semibold">Profile</h1>
-        <p>You need to log in first.</p>
-        <Link href="/login" className="underline">Go to Login</Link>
+        {isViewingOther ? (
+          <>
+            <p>That profile could not be loaded. It may not exist, or you may not have access.</p>
+            <Link href="/admin/tools" className="underline">Back to Admin Tools</Link>
+          </>
+        ) : (
+          <>
+            <p>You need to log in first.</p>
+            <Link href="/login" className="underline">Go to Login</Link>
+          </>
+        )}
       </div>
     );
   }
@@ -246,6 +263,16 @@ export default function ProfilePage() {
       <div className="border rounded-lg bg-black/30 space-y-6 p-6">
         <div>
           <h1 className="text-2xl font-semibold">Profile</h1>
+          {isViewingOther && (
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2">
+              <p className="text-sm text-amber-200">
+                Viewing <span className="font-semibold">{viewingUsername}</span> — read only.
+              </p>
+              <Link href="/admin/tools" className="text-xs underline text-amber-200/80 hover:text-amber-100">
+                Back to Admin Tools
+              </Link>
+            </div>
+          )}
           <div className="mt-4 text-sm space-y-1">
             <p><span className="font-semibold">Username:</span> {user.username}</p>
             <p><span className="font-semibold">Email:</span> {user.email}</p>
@@ -276,6 +303,7 @@ export default function ProfilePage() {
           )}
         </div>
 
+        {!isViewingOther && (
         <div>
           <h2 className="text-xl font-semibold">Puzzles</h2>
           <div className="mt-4 space-y-3">
@@ -313,7 +341,9 @@ export default function ProfilePage() {
             {resetPuzzleMessage && <p className="text-green-300 text-sm">{resetPuzzleMessage}</p>}
           </div>
         </div>
+        )}
 
+        {!isViewingOther && (
         <div>
           <h2 className="text-xl font-semibold">Change Password</h2>
           <form className="space-y-4 mt-4" onSubmit={onChangePassword}>
@@ -349,6 +379,7 @@ export default function ProfilePage() {
             </button>
           </form>
         </div>
+        )}
       </div>
 
       <div className="border rounded-lg bg-black/30 p-6 space-y-4 h-fit">
@@ -357,14 +388,14 @@ export default function ProfilePage() {
           <summary className="cursor-pointer text-lg font-semibold">Quiz Mode</summary>
           <div className="mt-4">
             <ModeStatsBoxes stats={profileStats.quiz} databank={user.profile?.databankCompletion?.quiz} />
-            {renderResetStats("quiz", "Quiz")}
+            {!isViewingOther && renderResetStats("quiz", "Quiz")}
           </div>
         </details>
         <details className="rounded border border-white/15 bg-black/20 p-4" open>
           <summary className="cursor-pointer text-lg font-semibold">Do You Know SWU Mode</summary>
           <div className="mt-4">
             <ModeStatsBoxes stats={profileStats.dykswu} databank={user.profile?.databankCompletion?.dykswu} />
-            {renderResetStats("dykswu", "DYKSWU")}
+            {!isViewingOther && renderResetStats("dykswu", "DYKSWU")}
           </div>
         </details>
       </div>

@@ -15,6 +15,8 @@ import {
   type PlayerBuilderState,
   type UnitEntry,
 } from "./puzzle-builder-state";
+import { CardTraits } from "@/server/engine/card-db/generated";
+import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 
 export type CardCatalogEntry = {
   cardId: string;
@@ -158,10 +160,25 @@ function NumberInput({ value, onChange, min = 0, max = 99 }: {
   );
 }
 
-function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+function Checkbox({ checked, onChange, label, disabled = false, title }: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  disabled?: boolean;
+  title?: string;
+}) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 text-xs text-white/70">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="accent-blue-400" />
+    <label
+      title={title}
+      className={`flex items-center gap-2 text-xs text-white/70 ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="accent-blue-400"
+      />
       {label}
     </label>
   );
@@ -195,6 +212,14 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
     () => cards.filter((c) => c.type === "Unit" || c.type === "Leader"),
     [cards],
   );
+
+  // A leader sitting on a unit as a Pilot IS deployed — there is no other way to spell it — so
+  // the Deployed toggle is forced on and locked while one is attached.
+  const attachedLeaderCardIds = [...state.groundUnits, ...state.spaceUnits]
+    .flatMap((u) => u.upgrades)
+    .filter((ug) => cards.find((c) => c.cardId === ug.cardId)?.type === "Leader")
+    .map((ug) => ug.cardId);
+  const leaderAttachedAsPilot = attachedLeaderCardIds.length > 0;
 
   function patch(delta: Partial<PlayerBuilderState>) {
     onChange({ ...state, ...delta });
@@ -245,7 +270,13 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
         </FieldRow>
         <div className="flex flex-wrap gap-3">
           <Checkbox checked={state.leaderReady} onChange={(v) => patch({ leaderReady: v })} label="Ready" />
-          <Checkbox checked={state.leaderDeployed} onChange={(v) => patch({ leaderDeployed: v })} label="Deployed" />
+          <Checkbox
+            checked={state.leaderDeployed || leaderAttachedAsPilot}
+            onChange={(v) => patch({ leaderDeployed: v })}
+            label="Deployed"
+            disabled={leaderAttachedAsPilot}
+            title={leaderAttachedAsPilot ? "Attached to a unit as a Pilot — deployed is implied." : undefined}
+          />
           <Checkbox checked={state.leaderEpicActionUsed} onChange={(v) => patch({ leaderEpicActionUsed: v })} label="Epic Used" />
         </div>
       </div>
@@ -449,6 +480,8 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
           unitCards={unitCards}
           units={state.groundUnits}
           cards={cards}
+          leaderCardId={state.leaderCardId}
+          attachedLeaderCardIds={attachedLeaderCardIds}
           onAdd={(u) => patch({ groundUnits: [...state.groundUnits, u] })}
           onRemove={(i) => patch({ groundUnits: state.groundUnits.filter((_, j) => j !== i) })}
           onUpdate={(i, u) => patch({ groundUnits: state.groundUnits.map((x, j) => j === i ? u : x) })}
@@ -463,6 +496,8 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
           unitCards={unitCards}
           units={state.spaceUnits}
           cards={cards}
+          leaderCardId={state.leaderCardId}
+          attachedLeaderCardIds={attachedLeaderCardIds}
           onAdd={(u) => patch({ spaceUnits: [...state.spaceUnits, u] })}
           onRemove={(i) => patch({ spaceUnits: state.spaceUnits.filter((_, j) => j !== i) })}
           onUpdate={(i, u) => patch({ spaceUnits: state.spaceUnits.map((x, j) => j === i ? u : x) })}
@@ -483,27 +518,62 @@ type UnitEditDialogProps = {
   captiveOwner: 1 | 2;
   cards: CardCatalogEntry[];
   unitCards: CardCatalogEntry[];
+  /** The player's configured leader, so a Pilot leader can be offered as an upgrade. */
+  leaderCardId: string;
+  /** Leader cardIds already attached to one of this player's units — at most one may be. */
+  attachedLeaderCardIds: string[];
   onUpdate: (next: UnitEntry) => void;
   onClose: () => void;
 };
 
-function UnitEditDialog({ unit, type, captiveOwner, cards, unitCards, onUpdate, onClose }: UnitEditDialogProps) {
+function UnitEditDialog({ unit, type, captiveOwner, cards, unitCards, leaderCardId, attachedLeaderCardIds, onUpdate, onClose }: UnitEditDialogProps) {
   const [newCardId, setNewCardId] = React.useState("");
   const isUpgrades = type === "upgrades";
-  const items = isUpgrades ? unit.upgrades : unit.captives;
-  const pickerCards = isUpgrades ? cards.filter((c) => c.type === "Upgrade") : unitCards;
+  const items: Array<{ cardId: string; enemy?: boolean }> =
+    isUpgrades ? unit.upgrades : unit.captives.map((cardId) => ({ cardId }));
+
+  // Upgrades a unit can carry: real Upgrade cards, plus any card playable as a Pilot.
+  // PilotingCost is >= 0 for a Pilot — R2-D2 (JTL_245) costs 0, so `> 0` would wrongly exclude it.
+  // A Pilot LEADER is offered separately: it must be this player's own leader, and only one
+  // leader can be deployed, so free-form leader search would invite unrepresentable states.
+  const pilotLeaderEligible =
+    isUpgrades
+    && leaderCardId !== ""
+    && CardTraits(leaderCardId).includes("Pilot")
+    && !attachedLeaderCardIds.includes(leaderCardId);
+
+  const pickerCards = isUpgrades
+    ? [
+        ...cards.filter((c) => c.type === "Upgrade" || (c.type !== "Leader" && PilotingCost(c.cardId) >= 0)),
+        ...(pilotLeaderEligible ? cards.filter((c) => c.cardId === leaderCardId) : []),
+      ]
+    : unitCards;
   const unitName = cards.find((c) => c.cardId === unit.cardId)?.label ?? unit.cardId;
 
   function addItem() {
     if (!newCardId) return;
-    const next = [...items, newCardId];
-    onUpdate(isUpgrades ? { ...unit, upgrades: next } : { ...unit, captives: next });
+    if (isUpgrades) {
+      onUpdate({ ...unit, upgrades: [...unit.upgrades, { cardId: newCardId }] });
+    } else {
+      onUpdate({ ...unit, captives: [...unit.captives, newCardId] });
+    }
     setNewCardId("");
   }
 
   function removeItem(i: number) {
-    const next = items.filter((_, j) => j !== i);
-    onUpdate(isUpgrades ? { ...unit, upgrades: next } : { ...unit, captives: next });
+    if (isUpgrades) {
+      onUpdate({ ...unit, upgrades: unit.upgrades.filter((_, j) => j !== i) });
+    } else {
+      onUpdate({ ...unit, captives: unit.captives.filter((_, j) => j !== i) });
+    }
+  }
+
+  /** Flip a single upgrade between friendly and enemy ownership. */
+  function toggleEnemy(i: number) {
+    onUpdate({
+      ...unit,
+      upgrades: unit.upgrades.map((ug, j) => (j === i ? { ...ug, enemy: !ug.enemy } : ug)),
+    });
   }
 
   return (
@@ -543,10 +613,28 @@ function UnitEditDialog({ unit, type, captiveOwner, cards, unitCards, onUpdate, 
         </div>
         {items.length > 0 ? (
           <div className="space-y-1">
-            {items.map((cardId, i) => (
-              <div key={i} className="flex items-center justify-between rounded-md bg-black/20 px-2 py-1 text-2xs">
-                <span className="text-white/80">{cards.find((c) => c.cardId === cardId)?.label ?? cardId}</span>
-                <button type="button" onClick={() => removeItem(i)} className="text-white/30 hover:text-rose-300">×</button>
+            {items.map((item, i) => (
+              <div key={i} className="flex items-center justify-between gap-2 rounded-md bg-black/20 px-2 py-1 text-2xs">
+                <span className="min-w-0 truncate text-white/80">
+                  {cards.find((c) => c.cardId === item.cardId)?.label ?? item.cardId}
+                </span>
+                <div className="flex shrink-0 items-center gap-1">
+                  {isUpgrades && (
+                    <button
+                      type="button"
+                      onClick={() => toggleEnemy(i)}
+                      title="Who owns this upgrade — an enemy upgrade is owned and controlled by the opposing player"
+                      className={`rounded-md border px-1.5 py-0.5 text-3xs font-semibold transition ${
+                        item.enemy
+                          ? "border-rose-400/40 bg-rose-500/20 text-rose-200"
+                          : "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+                      }`}
+                    >
+                      {item.enemy ? "Enemy" : "Friendly"}
+                    </button>
+                  )}
+                  <button type="button" onClick={() => removeItem(i)} className="text-white/30 hover:text-rose-300">×</button>
+                </div>
               </div>
             ))}
           </div>
@@ -560,12 +648,16 @@ function UnitEditDialog({ unit, type, captiveOwner, cards, unitCards, onUpdate, 
 
 // ---------------------------------------------------------------------------
 
-function UnitAdder({ playerId, unitCards, units, cards, onAdd, onRemove, onUpdate }: {
+function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLeaderCardIds, onAdd, onRemove, onUpdate }: {
   /** The side these units belong to — captives under them are owned by the opponent. */
   playerId: 1 | 2;
   unitCards: CardCatalogEntry[];
   units: UnitEntry[];
   cards: CardCatalogEntry[];
+  /** This player's configured leader, so a Pilot leader can be offered as an upgrade. */
+  leaderCardId: string;
+  /** Leader cardIds already attached to one of this player's units — at most one may be. */
+  attachedLeaderCardIds: string[];
   onAdd: (u: UnitEntry) => void;
   onRemove: (i: number) => void;
   onUpdate: (i: number, u: UnitEntry) => void;
@@ -635,9 +727,10 @@ function UnitAdder({ playerId, unitCards, units, cards, onAdd, onRemove, onUpdat
               </div>
               {u.upgrades.length > 0 && (
                 <div className="ml-3 flex flex-wrap gap-1">
-                  {u.upgrades.map((cardId, j) => (
-                    <span key={j} className="text-3xs text-blue-300/70">
-                      {cards.find((c) => c.cardId === cardId)?.label ?? cardId}
+                  {u.upgrades.map((ug, j) => (
+                    <span key={j} className={ug.enemy ? "text-3xs text-rose-300/70" : "text-3xs text-blue-300/70"}>
+                      {cards.find((c) => c.cardId === ug.cardId)?.label ?? ug.cardId}
+                      {ug.enemy ? " (enemy)" : ""}
                       {j < u.upgrades.length - 1 ? "," : ""}
                     </span>
                   ))}
@@ -667,6 +760,8 @@ function UnitAdder({ playerId, unitCards, units, cards, onAdd, onRemove, onUpdat
           captiveOwner={captiveOwner}
           cards={cards}
           unitCards={unitCards}
+          leaderCardId={leaderCardId}
+          attachedLeaderCardIds={attachedLeaderCardIds}
           onUpdate={(next) => onUpdate(editDialog.index, next)}
           onClose={() => setEditDialog(null)}
         />

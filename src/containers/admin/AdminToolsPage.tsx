@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 
 type AdminUser = {
   username: string;
@@ -153,7 +154,14 @@ export default function AdminToolsPage() {
             <tbody>
               {sortedUsers.map((user) => (
                 <tr key={user.username} className="border-b border-white/10">
-                  <td className="py-2 pr-4 font-semibold">{user.username}</td>
+                  <td className="py-2 pr-4 font-semibold">
+                    <Link
+                      href={`/profile?user=${encodeURIComponent(user.username)}`}
+                      className="underline decoration-white/30 underline-offset-2 hover:decoration-white"
+                    >
+                      {user.username}
+                    </Link>
+                  </td>
                   <td className="py-2 pr-4 text-gray-300">{user.email}</td>
                   <td className="py-2 pr-4">{user.role}</td>
                   <td className="py-2 pr-4 text-gray-400">{new Date(user.createdAt).toLocaleDateString()}</td>

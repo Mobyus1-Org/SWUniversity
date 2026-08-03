@@ -80,7 +80,7 @@ describe("puzzle builder — captive ownership", () => {
 
   it("leaves upgrades owned by the unit's controller", () => {
     const raw = toRaw(builderState(
-      player({ groundUnits: [{ cardId: "SOR_051", ready: true, damage: 0, upgrades: ["SOR_120"], captives: [] }] }),
+      player({ groundUnits: [{ cardId: "SOR_051", ready: true, damage: 0, upgrades: [{ cardId: "SOR_120" }], captives: [] }] }),
       player(),
     )) as unknown as { player1: { groundArena: Array<{ upgrades: Array<{ owner: number; controller: number }> }> } };
 

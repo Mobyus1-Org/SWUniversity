@@ -1,5 +1,6 @@
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
 import type { GamePhase } from "@/lib/engine/core-models";
+import { CardType } from "@/server/engine/card-db/generated";
 
 // ---------------------------------------------------------------------------
 // Pure puzzle-builder state: the shapes the builder UI edits, and the two
@@ -13,7 +14,12 @@ import type { GamePhase } from "@/lib/engine/core-models";
 // Builder state types
 // ---------------------------------------------------------------------------
 
-export type UnitEntry = { cardId: string; ready: boolean; damage: number; upgrades: string[]; captives: string[] };
+/**
+ * An upgrade sitting on a unit. `enemy` is relative to the unit's CONTROLLER: an enemy upgrade
+ * (Frozen in Carbonite, Traitorous) is owned and controlled by that unit's opponent.
+ */
+export type UpgradeEntry = { cardId: string; enemy?: boolean };
+export type UnitEntry = { cardId: string; ready: boolean; damage: number; upgrades: UpgradeEntry[]; captives: string[] };
 export type ResourceEntry = { cardId: string; ready: boolean };
 
 export type PlayerBuilderState = {
@@ -99,7 +105,15 @@ function resolvePhase(raw: unknown): GamePhase {
   return "ActionPhase" as GamePhase;
 }
 
-function parseRawPlayer(p: Record<string, unknown>): PlayerBuilderState {
+/** Rebuilds the builder's `enemy` flag from stored ownership, relative to the unit's player. */
+function parseUpgrades(raw: unknown, playerId: 1 | 2): UpgradeEntry[] {
+  return ((raw ?? []) as Record<string, unknown>[]).map((ug) => ({
+    cardId: String(ug.cardId ?? ""),
+    enemy: Number(ug.controller ?? playerId) !== playerId,
+  }));
+}
+
+function parseRawPlayer(p: Record<string, unknown>, playerId: 1 | 2): PlayerBuilderState {
   const base = (p.base ?? {}) as Record<string, unknown>;
   const leader = (p.leader ?? {}) as Record<string, unknown>;
   const ground = (p.groundArena ?? []) as Record<string, unknown>[];
@@ -123,12 +137,12 @@ function parseRawPlayer(p: Record<string, unknown>): PlayerBuilderState {
     discard: discard.map((d) => String(d.cardId ?? "")),
     groundUnits: ground.map((u) => ({
       cardId: String(u.cardId ?? ""), ready: u.ready !== false, damage: Number(u.damage ?? 0),
-      upgrades: ((u.upgrades ?? []) as Record<string, unknown>[]).map((ug) => String(ug.cardId ?? "")),
+      upgrades: parseUpgrades(u.upgrades, playerId),
       captives: ((u.captives ?? []) as Record<string, unknown>[]).map((c) => String(c.cardId ?? "")),
     })),
     spaceUnits: space.map((u) => ({
       cardId: String(u.cardId ?? ""), ready: u.ready !== false, damage: Number(u.damage ?? 0),
-      upgrades: ((u.upgrades ?? []) as Record<string, unknown>[]).map((ug) => String(ug.cardId ?? "")),
+      upgrades: parseUpgrades(u.upgrades, playerId),
       captives: ((u.captives ?? []) as Record<string, unknown>[]).map((c) => String(c.cardId ?? "")),
     })),
     creditTokens: Number(supplemental.creditTokens ?? 0),
@@ -152,8 +166,8 @@ export function fromRaw(raw: Record<string, unknown>, meta: { name: string; desc
     currentRound: Number(raw.currentRound ?? 1),
     initiativePlayer: Number(raw.initiativePlayer) === 2 ? 2 : 1,
     initiativeClaimed: raw.initiativeClaimed !== false,
-    player1: parseRawPlayer((raw.player1 ?? {}) as Record<string, unknown>),
-    player2: parseRawPlayer((raw.player2 ?? {}) as Record<string, unknown>),
+    player1: parseRawPlayer((raw.player1 ?? {}) as Record<string, unknown>, 1),
+    player2: parseRawPlayer((raw.player2 ?? {}) as Record<string, unknown>, 2),
   };
 }
 
@@ -166,19 +180,48 @@ export function toRaw(s: BuilderState): RawPuzzleGameState {
     // A unit can only capture an ENEMY non-leader unit (CR 8.33), so anything held captive by
     // this player's unit is owned by their opponent — that is where it returns when rescued.
     const captiveOwner = playerId === 1 ? 2 : 1;
+    // An upgrade marked `enemy` belongs to the opposing player even though it sits on this
+    // player's unit — the same asymmetry captives already have, in the other direction.
+    const enemyOwner = playerId === 1 ? 2 : 1;
+    // A leader attached as a Pilot upgrade needs leader.deployedPlayId to point at that exact
+    // upgrade. Hydration assigns ids only to "@" placeholders and counts up from "1", so a
+    // non-numeric literal is both stable and collision-free.
+    const leaderUpgradePlayId = `L${playerId}`;
+    const hasLeaderUpgrade = [...p.groundUnits, ...p.spaceUnits]
+      .some((u) => u.upgrades.some((ug) => CardType(ug.cardId) === "Leader"));
+
+    const upgradePlayId = (ug: UpgradeEntry) =>
+      CardType(ug.cardId) === "Leader" ? leaderUpgradePlayId : "@";
     return {
       base: { cardId: p.baseCardId, damage: p.baseDamage, epicActionUsed: p.baseEpicActionUsed },
-      leader: { cardId: p.leaderCardId, ready: p.leaderReady, deployed: p.leaderDeployed, epicActionUsed: p.leaderEpicActionUsed },
+      leader: {
+        cardId: p.leaderCardId,
+        ready: p.leaderReady,
+        // A leader sitting on a unit as a Pilot IS deployed — the state has no other spelling.
+        deployed: p.leaderDeployed || hasLeaderUpgrade,
+        epicActionUsed: p.leaderEpicActionUsed,
+        ...(hasLeaderUpgrade && { deployedPlayId: leaderUpgradePlayId }),
+      },
       groundArena: p.groundUnits.map((u) => ({
         cardId: u.cardId, playId: "@", owner: playerId, controller: playerId,
         ready: u.ready, damage: u.damage,
-        upgrades: u.upgrades.map((cardId) => ({ cardId, playId: "@", owner: playerId, controller: playerId })),
+        upgrades: u.upgrades.map((ug) => ({
+          cardId: ug.cardId,
+          playId: upgradePlayId(ug),
+          owner: ug.enemy ? enemyOwner : playerId,
+          controller: ug.enemy ? enemyOwner : playerId,
+        })),
         captives: u.captives.map((cardId) => ({ cardId, playId: "@", owner: captiveOwner, controller: captiveOwner })),
       })),
       spaceArena: p.spaceUnits.map((u) => ({
         cardId: u.cardId, playId: "@", owner: playerId, controller: playerId,
         ready: u.ready, damage: u.damage,
-        upgrades: u.upgrades.map((cardId) => ({ cardId, playId: "@", owner: playerId, controller: playerId })),
+        upgrades: u.upgrades.map((ug) => ({
+          cardId: ug.cardId,
+          playId: upgradePlayId(ug),
+          owner: ug.enemy ? enemyOwner : playerId,
+          controller: ug.enemy ? enemyOwner : playerId,
+        })),
         captives: u.captives.map((cardId) => ({ cardId, playId: "@", owner: captiveOwner, controller: captiveOwner })),
       })),
       resources: p.resources.map((r) => ({

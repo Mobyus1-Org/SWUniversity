@@ -235,6 +235,11 @@ export function LoadPuzzlePanel(props: Props) {
             ))}
           </div>
         ) : null}
+        {/* Last child of the filter row: lands after the admin status filter for admins and
+            after the difficulty buttons for everyone else, since the admin block is conditional. */}
+        <span className="text-xs font-medium text-white/40">
+          {sortedPuzzles.length} {sortedPuzzles.length === 1 ? "Puzzle" : "Puzzles"}
+        </span>
       </div>
       {loading ? (
         <p className="text-sm opacity-60">Scanning…</p>
