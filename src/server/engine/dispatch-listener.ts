@@ -117,7 +117,7 @@ import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dict
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
-import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck } from "@/server/engine/core-functions";
 
@@ -4740,6 +4740,44 @@ function handleChooseTarget(
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
+    // SHD_102 The Marauder / SHD_105 Spark of Hope — both put a chosen discard card into play as
+    // a resource, gated on a different condition. Nothing happens when the condition fails; the
+    // card simply stays in the discard.
+    if (pending.cardId === "SHD_102" || pending.cardId === "SHD_105") {
+      const pStateRes = GetPlayer(game, pending.player);
+      const chosenId = chosen[0];
+      const idxRes = chosenId ? pStateRes.discard.findIndex(d => d.playId === chosenId) : -1;
+      if (idxRes !== -1) {
+        const card = pStateRes.discard[idxRes];
+        const qualifies = pending.cardId === "SHD_102"
+          // "if it shares a name with a unit you control"
+          ? GetUnitsForPlayer(pending.player).some(u => CardTitle(u.cardId) === CardTitle(card.cardId))
+          // "if it was defeated this phase" — matched by playId, which pushToDiscard preserves,
+          // so a same-named copy already sitting in the discard does not qualify.
+          : game.roundState.cardsLeftPlayThisPhase.some(
+              e => e.playId === card.playId && e.reason === "defeated");
+        if (qualifies) {
+          pStateRes.discard.splice(idxRes, 1);
+          pStateRes.resources.push({
+            cardId: card.cardId,
+            playId: card.playId,
+            owner: pending.player,
+            controller: pending.player,
+            ready: false,
+            stolen: false,
+          });
+          log.push(`${CardTitle(pending.cardId)}: put ${CardTitle(card.cardId)} into play as a resource.`);
+        } else {
+          log.push(`${CardTitle(pending.cardId)}: ${CardTitle(card.cardId)} does not qualify — it stays in the discard.`);
+        }
+      }
+      const nextRes = pending.continuation;
+      if (nextRes) return { response: resolutionResponse(pendingToResolution(nextRes, game)), pending: nextRes, stateChanged: true };
+      const bagRes = drainTriggerBag(game, log);
+      if (bagRes) return { response: resolutionResponse(pendingToResolution(bagRes, game)), pending: bagRes, stateChanged: true };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
     if (pending.cardId === "LAW_174") {
       // 0-0-0: move the chosen Aggression card to the bottom of the deck, then deal 1 to each enemy base.
       const player174 = pending.player;
@@ -5140,6 +5178,24 @@ function handleChooseTarget(
         : (pending.continuation ?? null);
     }
 
+    // SHD_099 Echo (Restored): "Give 2 Experience tokens to a unit in play with the same name as
+    // the discarded card." Matched on TITLE, so any printing of that card counts, on either side.
+    if (remaining === 0 && pending.thenXpSameNameFor) {
+      const discardedTitle = CardTitle(discardedCard.cardId);
+      const sameName = GetAllUnits(game).filter(u => CardTitle(u.cardId) === discardedTitle);
+      if (sameName.length === 0) {
+        log.push(`${CardTitle(pending.thenXpSameNameFor)}: no unit named ${discardedTitle} in play.`);
+      } else {
+        nextPending = {
+          type: "ability-target",
+          cardId: "SHD_099_xp",
+          player: pending.targetPlayer,
+          fromPlayIds: sameName.map(u => u.playId),
+          continuation: pending.continuation ?? null,
+        } satisfies AbilityTargetPending;
+      }
+    }
+
     // ASH_172 Razor Crest: "If you do, this unit gets +2/+0 for this attack."
     if (remaining === 0 && pending.thenAttackBuff) {
       const buffTarget172 = GetUnitByPlayId(game, pending.thenAttackBuff.playId);
@@ -5394,6 +5450,57 @@ function handleChooseTarget(
         targetUnit.damage = 0;
         targetUnit.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: targetUnit.owner, controller: targetUnit.controller });
         log.push(`Luke's Lightsaber: healed all damage from ${CardTitle(targetUnit.cardId)} and gave a Shield token.`);
+      }
+    }
+
+    // LOF_102 Yoda's Lightsaber: When Played — you may use the Force to heal 3 damage from a base.
+    // Same ability as LOF_048 Itinerant Warrior, so it reuses that resolution case.
+    if (pending.upgradeCardId === "LOF_102" && HasTheForce(pending.player)) {
+      const yodaSaberPending: AbilityOptionPending = {
+        type: "ability-option",
+        cardId: "LOF_048",
+        player: pending.player,
+        helperText: "Use the Force to heal 3 damage from a base?",
+        yesLabel: "Use the Force",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "LOF_048",
+          player: pending.player,
+          fromPlayIds: [],
+          fromZones: ["Base"],
+          continuation: null,
+        } satisfies AbilityTargetPending,
+        continuation: null,
+      };
+      updateDefeatedPlayers(game);
+      return { response: resolutionResponse(pendingToResolution(yodaSaberPending, game)), pending: yodaSaberPending, stateChanged: true };
+    }
+
+    // JTL_006 Darth Vader (Victor Squadron Leader): "When deployed as an upgrade: Create 2 TIE
+    // Fighter tokens." Only the pilot-deploy path reaches here with him as the upgrade.
+    if (pending.upgradeCardId === "JTL_006") {
+      CreateTieFighter(game, pending.player, log, "JTL_006");
+      CreateTieFighter(game, pending.player, log, "JTL_006");
+    }
+
+    // JTL_084 Wingman Victor Two: "When played as an upgrade: Create a TIE Fighter token."
+    // Reached only from the pilot-play path, which is what "played as an upgrade" means.
+    if (pending.upgradeCardId === "JTL_084") {
+      CreateTieFighter(game, pending.player, log, "JTL_084");
+    }
+
+    // JTL_086 Wingman Victor Three: "When played as an upgrade: You may give an Experience token
+    // to another unit." "Another" excludes the host he just attached to.
+    if (pending.upgradeCardId === "JTL_086") {
+      const others086 = GetAllUnits(game).filter(u => u.playId !== targetUnit.playId);
+      if (others086.length > 0) {
+        const victorThreePending = optionalTarget(
+          "JTL_086", pending.player, others086.map(u => u.playId),
+          "Give an Experience token to another unit?", { yesLabel: "Give Experience" },
+        );
+        updateDefeatedPlayers(game);
+        return { response: resolutionResponse(pendingToResolution(victorThreePending, game)), pending: victorThreePending, stateChanged: true };
       }
     }
 
@@ -5697,6 +5804,17 @@ function handleChooseTarget(
         payResources(game, pending.player, cost003, log, cardId);
         hand.splice(idx, 1);
         log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${who003} (ignoring aspect penalties).`);
+        return completePlayCard(game, log, cardId, pending.player);
+      }
+      case "LOF_094": { // Jedi Consular — play a UNIT for 2 resources less.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Jedi Consular: chosen card is not a Unit."), pending, stateChanged: false };
+        const cost094 = Math.max(0, playCost(game, pending.player, cardId) - (pending.costReduction ?? 0));
+        if (spendableFor(game, pending.player) < cost094)
+          return { response: invalidResponse("Jedi Consular: not enough resources to play this unit."), pending, stateChanged: false };
+        payResources(game, pending.player, cost094, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("LOF_094")} (2 resources less).`);
         return completePlayCard(game, log, cardId, pending.player);
       }
       case "SHD_067": { // Fenn Rau — play an UPGRADE for 2 resources less.
@@ -6599,6 +6717,11 @@ function applyAbilityOptionEffect(
     case "SHD_133": { // Dengar Yes — deal 1 damage to the unit the upgrade was played on.
       DealDamageToUnit(game, "SHD_133", pending.sourcePlayId, 1, log, pending.player);
       return pending.continuation ?? null;
+    }
+    case "JTL_051": { // Red Squadron X-Wing Yes — 2 damage to itself, then draw.
+      DealDamageToUnit(game, "JTL_051", pending.sourcePlayId, 2, log, pending.player);
+      DrawCardForPlayer(game, log, pending.player!);
+      return sweepDeadUnits(game, log, pending.continuation ?? null);
     }
     case "SHD_139": { // Krrsantan When Played Yes — ready him.
       ReadyUnitByPlayId(pending.sourcePlayId, pending.player!, "SHD_139");
@@ -9081,6 +9204,29 @@ function resolveActionAbility(
         continuation: null,
       };
     }
+    case "JTL_006": { // Darth Vader (Victor Squadron Leader) — Action [Exhaust]: if you attacked
+                      // with a NON-TOKEN Vehicle unit this phase, create a TIE Fighter token.
+      const attackedVehicles = AttackedThisPhasePlayIds({ player, trait: "Vehicle" });
+      const nonToken = attackedVehicles.some(pid => {
+        const attacked = GetAllUnits(game).find(u => u.playId === pid);
+        // A unit that already left play can't be inspected; fall back to the recorded cardId.
+        const cardIdOf = attacked?.cardId
+          ?? game.roundState.unitsAttackedThisPhase.find(e => e.playId === pid)?.cardId;
+        if (!cardIdOf) return false;
+        return !new Unit(cardIdOf, pid, player).IsTokenUnit();
+      });
+      if (!nonToken) {
+        log.push(`${CardTitle("JTL_006")}: no non-token Vehicle unit attacked this phase — soft pass.`);
+        return null;
+      }
+      CreateTieFighter(game, player, log, "JTL_006");
+      return null;
+    }
+    case "LOF_094": { // Jedi Consular — Action [Exhaust, use the Force]: Play a unit from your
+                      // hand at -2. Using the Force is part of the cost, so it is spent up front.
+      if (!UseTheForce(player, log, "LOF_094")) return null;
+      return { type: "play-from-hand", cardId: "LOF_094", player, costReduction: 2 } satisfies PlayFromHandPending;
+    }
     case "SHD_080": { // Salacious Crumb — Action [Exhaust, return this unit to his owner's hand]:
                       // Deal 1 damage to a ground unit. The bounce is a COST, so it happens first
                       // and he is no longer a legal target for his own damage.
@@ -9617,6 +9763,26 @@ function applyAbilityEffect(
     case "SHD_087-2": { // Crosshair Action 2: deal his snapshotted power to the chosen enemy ground unit.
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, "SHD_087", targetPlayId, pending.amount ?? 0, game.gameLog);
+      break;
+    }
+    case "SHD_099_xp": { // Echo (Restored): 2 Experience tokens onto the chosen same-named unit.
+      if (!targetPlayId) break;
+      const t099 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (t099) {
+        for (let i = 0; i < 2; i++) {
+          t099.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: t099.owner, controller: t099.controller });
+        }
+        game.gameLog.push(`${CardTitle("SHD_099")}: gave 2 Experience tokens to ${CardTitle(t099.cardId)}.`);
+      }
+      break;
+    }
+    case "JTL_086": { // Wingman Victor Three: give an Experience token to the chosen other unit.
+      if (!targetPlayId) break;
+      const t086 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (t086) {
+        t086.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: t086.owner, controller: t086.controller });
+        game.gameLog.push(`${CardTitle("JTL_086")}: gave an Experience token to ${CardTitle(t086.cardId)}.`);
+      }
       break;
     }
     case "SHD_150": { // Koska Reeves On Attack: 2 damage to the chosen ground unit.

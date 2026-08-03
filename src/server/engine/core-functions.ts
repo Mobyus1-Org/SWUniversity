@@ -216,6 +216,13 @@ export function PlayerHasUnitsInHand(player: PlayerId, filters?: {
   const hand = GetHand(player);
 
   return hand.some(card => {
+    // Every caller is a "play a UNIT from your hand" ability. Without this the check passed on
+    // any card at all, so an ability could be offered with a hand of only events — and then eat
+    // its cost with nothing legal to play.
+    if (CardType(card.cardId) !== "Unit") {
+      return false;
+    }
+
     if (filters?.trait && !CardTraits(card.cardId).includes(filters.trait)) {
       return false;
     }
@@ -1071,6 +1078,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "JTL_147": //Black One — On Attack: if you control Poe Dameron, may deal 1 damage to a unit
     case "JTL_151": //Red Five — On Attack: may deal 2 damage to a damaged unit
     case "LOF_045": //Yaddle — On Attack: each other friendly Jedi gains Restore 1 this phase
+    case "SEC_087": //Dedra Meero — On Attack: create a Spy token
+    case "JTL_149": //Red Squadron Y-Wing — On Attack: 3 indirect damage to the defending player
     case "SHD_153": //Poe Dameron — On Attack: discard up to 3, then one different option per discard
     case "SHD_064": //Survivors' Gauntlet — When Played/On Attack: may move an upgrade between units of the same controller
     case "SHD_150": //Koska Reeves — On Attack: if upgraded, may deal 2 damage to a ground unit

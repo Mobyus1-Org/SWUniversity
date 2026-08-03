@@ -349,6 +349,8 @@ export const Cards = {
     },
     shd: {
       superlaserTechnician: "SHD_085",
+      echoRestored: "SHD_099",
+      theMarauder: "SHD_102",
       rhokaiGunship: "SHD_164",
       bazineNetal: "SHD_184",
       l337: "SHD_197",
@@ -393,6 +395,13 @@ export const Cards = {
     },
     jtl: {
       redLeader: "JTL_101",
+      victorLeader: "JTL_085",
+      cloneCombatSquadron: "JTL_115",
+      wingmanVictorTwo: "JTL_084",
+      wingmanVictorThree: "JTL_086",
+      redSquadronXWing: "JTL_051",
+      redSquadronYWing: "JTL_149",
+      biggsDarklighter: "JTL_150",
       kijimiPatrollers: "JTL_082",
       mistHunter: "JTL_186",
       hondoOhnaka: "JTL_056",
@@ -424,6 +433,7 @@ export const Cards = {
     },
     lof: {
       kelleranBeq: "LOF_100",
+      jediConsular: "LOF_094",
       hyperspaceWayfarer: "LOF_119", // 4/10 Space, no abilities — a durable test defender
       grogu: "LOF_246",
       gungi: "LOF_093",
@@ -451,6 +461,7 @@ export const Cards = {
     },
     twi: {
       infiltratingDemolisher: "TWI_182",
+      echoArcTrooper: "TWI_090",
       shaakTi: "TWI_094",
       anakinsInterceptor: "TWI_142",
       admiralTrench: "TWI_086",
@@ -467,6 +478,7 @@ export const Cards = {
     },
     sec: {
       cadBane: "SEC_034",
+      dedraMeeroUnit: "SEC_087",
       unrulyAstromech: "SEC_221",
       huntingAssassinDroid: "SEC_134",
       chancellorPalpatine: "SEC_082",
@@ -645,6 +657,7 @@ export const Cards = {
       jarekYeager: "JTL_109",
     },
     lof: {
+      yodasLightsaber: "LOF_102",
       bolsteredEndurance: "LOF_074",
       constructedLightsaber: "LOF_261",
       sizeMattersNot: "LOF_056",
@@ -688,6 +701,7 @@ export const Cards = {
       fellTheDragon: "SHD_078",
       momentOfGlory: "SHD_130",
       takeCaptiveShd: "SHD_131",
+      sparkOfHope: "SHD_105",
     },
     sor: {
       searchYourFeelings: "SOR_042",

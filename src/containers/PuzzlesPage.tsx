@@ -101,7 +101,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   //Twilight of the Republic
   "TWI_002", "TWI_004", "TWI_005", "TWI_006", "TWI_007", "TWI_011", "TWI_012", "TWI_014",
   //Jump to Lightspeed
-  "JTL_004", "JTL_005", "JTL_010", "JTL_012", "JTL_013", "JTL_014", "JTL_018",
+  "JTL_004", "JTL_005", "JTL_006", "JTL_010", "JTL_012", "JTL_013", "JTL_014", "JTL_018",
   //Legends of the Underworld
   "LAW_003", "LAW_008", "LAW_010", "LAW_013",
   //Legacy of the Force
@@ -127,6 +127,7 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
   "LOF_206": "Attack with a Droid",
   "ASH_109": "+2/+2 to a unit",
   "ASH_142": "1 dmg to up to 3 ground units",
+  "LOF_094": "Use the Force: play a unit for 2 less", // Jedi Consular
   "SHD_080": "Return to hand, 1 dmg to a ground unit", // Salacious Crumb
   "SHD_087": [ // Crosshair — two Actions
     { abilityId: "SHD_087-1", label: "2 resources: +1/+0 this phase" },

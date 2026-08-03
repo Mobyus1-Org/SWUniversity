@@ -1,6 +1,6 @@
 import { CardInPlay, HP_MOD, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { GetCurrentEffectsForPlayer, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard } from "@/server/engine/core-functions";
-import { CardHp, CardPower } from "@/server/engine/card-db/generated";
+import { CardArena, CardHp, CardPower } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
@@ -182,6 +182,8 @@ export class Unit implements UnitInterface {
       }
     }
 
+    power += selfStatBonus(this);
+    power += friendlyAuraBonus(this);
     power -= enemyAuraDebuff(this);
 
     // Gar Saxon (SHD_001) grants friendly upgraded units +1/+0 from the leader zone too. When he is
@@ -387,10 +389,18 @@ export class Unit implements UnitInterface {
        }
     }
 
+    hp += selfStatBonus(this);
+    hp += friendlyAuraBonus(this);
     hp -= enemyAuraDebuff(this);
 
     for (const upgrade of this.upgrades) {
       hp += UpgradeHpOf(upgrade.cardId);
+      // JTL_150 Biggs Darklighter — "If attached unit is a Transport, it gets +0/+1." His other
+      // two conditional grants (Overwhelm on a Fighter, Grit on a Speeder) live in the keyword
+      // dictionaries; this is the stat-only third.
+      if (upgrade.cardId === "JTL_150" && TraitContains(this.cardId, "Transport", this.controller, this.playId)) {
+        hp += 1;
+      }
     }
 
     if (this.cardId === "SHD_056" && this.upgrades.length > 0) {
@@ -455,6 +465,56 @@ export class Unit implements UnitInterface {
   CanUseLimitedAbility(): boolean {
     return this.numUses > 0;
   }
+}
+
+/** True when this unit sits in the Space arena. */
+function isSpaceUnit(unit: UnitInterface): boolean {
+  return (CardArena(unit.cardId) ?? "Ground") === "Space";
+}
+
+/**
+ * The number of OTHER friendly space units — the count JTL_115 Clone Combat Squadron scales on
+ * and the condition JTL_085 Victor Leader's aura reads.
+ */
+function otherFriendlySpaceUnitCount(unit: Unit): number {
+  return GetUnitsForPlayer(unit.controller)
+    .filter(u => u.playId !== unit.playId && isSpaceUnit(u))
+    .length;
+}
+
+/**
+ * Stat bonuses a unit grants ITSELF from its own printed text, returned as a single amount added
+ * to both power and HP. Kept in one helper called from CurrentPower and TotalHP so a +X/+X can
+ * never end up applied to only one half.
+ */
+function selfStatBonus(unit: Unit): number {
+  if (unit.LostAbilities()) return 0;
+  switch (unit.cardId) {
+    // TWI_090 Echo — "Coordinate — This unit gets +2/+2." Coordinate turns on at 3+ friendly units.
+    case "TWI_090":
+      return IsCoordinateActive(unit.controller) ? 2 : 0;
+    // JTL_115 Clone Combat Squadron — "+1/+1 for each other friendly space unit."
+    case "JTL_115":
+      return otherFriendlySpaceUnitCount(unit);
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Stat bonuses OTHER friendly units grant `unit`, as a single amount added to both power and HP.
+ * The switch-based loops above cover the older auras; new ones land here so the +X/+X halves
+ * stay in lockstep. Unlike those loops, this one respects the SOURCE losing its abilities.
+ *
+ * JTL_085 Victor Leader — "Each other friendly space unit gets +1/+1."
+ */
+function friendlyAuraBonus(unit: Unit): number {
+  if (!isSpaceUnit(unit)) return 0; // every aura here is space-only
+  return GetUnitsForPlayer(unit.controller)
+    .filter(u => u.cardId === "JTL_085"
+      && u.playId !== unit.playId
+      && !Unit.FromInterface(u).LostAbilities())
+    .length;
 }
 
 /**

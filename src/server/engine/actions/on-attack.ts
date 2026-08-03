@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
-import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
+import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending, IndirectDamagePending } from "@/server/engine/pending-resolution";
 import { AllGroundUnits, AllSpaceUnits, AllUnits, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, ResourceTopCardOfDeck } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
@@ -8,7 +8,7 @@ import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType } from "@/serv
 import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens } from "@/server/engine/token-helpers";
+import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens, CreateSpy } from "@/server/engine/token-helpers";
 import { jabbasRancorDamage } from "@/server/engine/actions/when-played";
 
 /**
@@ -425,6 +425,28 @@ function resolveInnateOnAttack(
         discardedSoFar: 0,
         continuation,
       } satisfies DiscardFromHandPending;
+    }
+    case "SEC_087": { // Dedra Meero — "On Attack: Create a Spy token."
+      const game087 = GetGame();
+      if (game087) CreateSpy(game087.currentGameState, attacker.controller, game087.gameLog, "SEC_087");
+      return continuation;
+    }
+    case "JTL_149": { // Red Squadron Y-Wing — "On Attack: Deal 3 indirect damage to the DEFENDING
+                      // PLAYER." That is whoever owns the attack's target, not simply the opponent.
+      const target149 = continuation.target;
+      const defender149: PlayerId = target149.type === "base"
+        ? target149.player
+        : (AllUnits().find(u => u.playId === target149.playId)?.controller
+           ?? (attacker.controller === 1 ? 2 : 1));
+      return {
+        type: "indirect-damage",
+        cardId: "JTL_149",
+        sourcePlayer: attacker.controller,
+        targetPlayer: defender149,
+        totalDamage: 3,
+        eligibleUnitPlayIds: GetUnitsForPlayer(defender149).map(u => u.playId),
+        continuation,
+      } satisfies IndirectDamagePending;
     }
     case "SHD_064": // Survivors' Gauntlet — "On Attack: You may attach an upgrade on a unit to
                     // another eligible unit controlled by the same player." (Same as When Played.)

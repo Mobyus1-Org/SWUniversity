@@ -1347,6 +1347,74 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SHD_099": { // Echo (Restored) — "When Played: You may discard a card from your hand.
+                      // Give 2 Experience tokens to a unit in play with the same name as the
+                      // discarded card." The name is only known after the discard, so the
+                      // follow-up is built by the discard handler.
+      if (GetHand(player).length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId: "SHD_099",
+        player,
+        helperText: "Discard a card to give 2 Experience tokens to a same-named unit?",
+        yesLabel: "Discard",
+        noLabel: "Skip",
+        onYes: {
+          type: "discard-from-hand",
+          targetPlayer: player,
+          count: 1,
+          thenXpSameNameFor: "SHD_099",
+          continuation: null,
+        } satisfies DiscardFromHandPending,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "SHD_102": { // The Marauder — "When Played: Choose a card in your discard pile. Put it
+                      // into play as a resource if it shares a name with a unit you control."
+                      // Any discard card may be chosen; the name check happens on resolution.
+      const game102 = GetGame();
+      if (!game102) return null;
+      const discard102 = GetPlayer(game102.currentGameState, player).discard;
+      if (discard102.length === 0) return null;
+      return {
+        type: "return-from-discard",
+        cardId: "SHD_102",
+        player,
+        maxCount: 1,
+        eligiblePlayIds: discard102.map(d => d.playId),
+        continuation: null,
+      } satisfies ReturnFromDiscardPending;
+    }
+    case "SHD_105": { // Spark of Hope — "Choose a unit in your discard pile. If it was defeated
+                      // this phase, put it into play as a resource."
+      const game105 = GetGame();
+      if (!game105) return null;
+      const units105 = GetPlayer(game105.currentGameState, player).discard
+        .filter(d => CardType(d.cardId) === "Unit");
+      if (units105.length === 0) return null;
+      return {
+        type: "return-from-discard",
+        cardId: "SHD_105",
+        player,
+        maxCount: 1,
+        eligiblePlayIds: units105.map(d => d.playId),
+        continuation: null,
+      } satisfies ReturnFromDiscardPending;
+    }
+    case "JTL_051": { // Red Squadron X-Wing — "When Played: You may deal 2 damage to this unit.
+                      // If you do, draw a card."
+      return {
+        type: "ability-option",
+        cardId: "JTL_051",
+        player,
+        sourcePlayId: playId, // the X-Wing takes the damage itself
+        helperText: "Deal 2 damage to this unit to draw a card?",
+        yesLabel: "Deal 2 & draw",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
     case "LOF_048": { // Itinerant Warrior — "When Played: You may use the Force (lose your Force
                       // token). If you do, heal 3 damage from a base."
       if (!HasTheForce(player)) return null; // no token → nothing to spend, no prompt

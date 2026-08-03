@@ -132,6 +132,11 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "TWI_007": // Captain Rex — Action [2 resources, Exhaust]: create a Clone Trooper if a friendly unit attacked.
         abilities.push(cardId);
         break;
+      case "JTL_006": // Darth Vader (Victor Squadron Leader) — Action [Exhaust]: if you attacked
+                      // with a non-token Vehicle this phase, create a TIE Fighter (soft-pass
+                      // condition, checked at resolution like the other "if you attacked" leaders).
+        abilities.push(cardId);
+        break;
       case "TWI_004": // Yoda — Action [Exhaust]: draw + top/bottom, if a unit left play this phase.
         abilities.push(cardId);
         break;
@@ -296,6 +301,11 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       }
       case "ASH_142": // Mortar Trooper — Action [Exhaust]: Deal 1 damage to each of up to 3 ground units.
         if (AllGroundUnits().length > 0) abilities.push(cardId);
+        break;
+      case "LOF_094": // Jedi Consular — Action [Exhaust, use the Force]: Play a unit from your hand
+                      // at -2. The Force token is part of the cost, so both it and a unit in hand
+                      // are required for the ability to be offered at all.
+        if (HasTheForce(player) && PlayerHasUnitsInHand(player)) abilities.push(cardId);
         break;
       case "SHD_080": // Salacious Crumb — Action [Exhaust, return this unit to his owner's hand]:
                       // Deal 1 damage to a ground unit. He is himself a ground unit, so a target

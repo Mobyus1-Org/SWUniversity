@@ -81,8 +81,11 @@ export function HasOverwhelm(cardId: string,
         case "TWI_119"://Nameless Valor
         case "ASH_181"://Mark My Words — attached unit gains Overwhelm
           return true;
-        case "JTL_150"://Biggs Darklighter
-          if(TraitContains(u.cardId, "Fighter", player)) return true;
+        case "JTL_150"://Biggs Darklighter — "If ATTACHED UNIT is a Fighter, it gains Overwhelm."
+                       // The trait belongs to the host, not to Biggs (a Rebel Pilot): reading
+                       // u.cardId here made the grant dead code.
+          if(TraitContains(cardId, "Fighter", player, playId)) return true;
+          break;
       }
     }
 

@@ -131,6 +131,12 @@ export interface DiscardFromHandPending {
   thenChooseModes?: string;
   /** SHD_153 Poe Dameron: how many cards this discard step has taken so far. */
   discardedSoFar?: number;
+  /**
+   * SHD_099 Echo (Restored): after the discard, give 2 Experience tokens to a unit in play whose
+   * NAME matches the discarded card. The name is only known once the card is chosen, so the
+   * follow-up prompt is built inside the discard handler. Value is the source cardId, for logging.
+   */
+  thenXpSameNameFor?: string;
 }
 
 /**

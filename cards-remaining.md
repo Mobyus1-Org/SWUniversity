@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 925 cards across 10 sets.**
+**Total: 919 cards across 10 sets.**
 
 ---
 
@@ -24,7 +24,7 @@ SOR_238: C-3PO - Protocol Droid Unit
 SOR_246: You're My Only Hope Event
 ```
 
-## SHD — Shadows of the Galaxy (66)
+## SHD — Shadows of the Galaxy (65)
 
 **Message 1 of 2**
 ```
@@ -45,7 +45,6 @@ SHD_083: Seasoned Shoretrooper Unit
 SHD_088: Ephant Mon - Head of Security Unit
 SHD_093: Remnant Reserves Event
 SHD_101: Adelphi Patrol Wing Unit
-SHD_105: Spark of Hope Event
 SHD_106: Rule with Respect Event
 SHD_108: Enforced Loyalty Event
 SHD_109: Endless Legions Event
@@ -225,7 +224,7 @@ TWI_254: Volunteer Soldier Unit
 TWI_257: Private Manufacturing Event
 ```
 
-## JTL — Jump to Lightspeed (109)
+## JTL — Jump to Lightspeed (105)
 
 **Message 1 of 3**
 ```
@@ -238,7 +237,6 @@ JTL_037: Banshee - Crippling Command Unit
 JTL_041: Annihilator - Tagge's Flagship Unit
 JTL_042: Power from Pain Event
 JTL_044: Echo Base Engineer Unit
-JTL_051: Red Squadron X-Wing Unit
 JTL_052: D'Qar Cargo Frigate Unit
 JTL_055: You're All Clear, Kid Event
 JTL_062: Silver Angel - Trace's Hope Unit
@@ -251,13 +249,11 @@ JTL_076: Covering the Wing Event
 JTL_078: Direct Hit Event
 JTL_080: Nebula Ignition Event
 JTL_083: Pantoran Starship Thief Unit
-JTL_085: Victor Leader - Leading from the Front Unit
 JTL_088: Captain Phasma - On My Command Unit
 JTL_089: The Invisible Hand - Crawling With Vultures Unit
 JTL_091: Apology Accepted Event
 JTL_092: Scramble Fighters Event
 JTL_099: Veteran Fleet Officer Unit
-JTL_115: Clone Combat Squadron Unit
 JTL_116: Dornean Gunship Unit
 JTL_117: General Draven - Doing What Must Be Done Unit
 JTL_119: Resupply Carrier Unit
@@ -277,7 +273,6 @@ JTL_133: Allegiant General Pryde - Ruthless and Loyal Unit
 JTL_135: Special Forces TIE Fighter Unit
 JTL_144: No Disintegrations Event
 JTL_146: Massassi Tactical Officer Unit
-JTL_149: Red Squadron Y-Wing Unit
 JTL_152: Tactical Heavy Bomber Unit
 JTL_155: They Hate That Ship Event
 JTL_157: Relentless Firespray Unit
@@ -351,7 +346,7 @@ JTL_260: Death Star Plans Upgrade
 JTL_262: Evasive Maneuver Event
 ```
 
-## LOF — Legends of the Force (108)
+## LOF — Legends of the Force (107)
 
 **Message 1 of 3**
 ```
@@ -382,7 +377,6 @@ LOF_078: Whirlwind of Power Event
 LOF_081: Sith Legionnaire Unit
 LOF_083: Captain Enoch - Captain of the Guard Unit
 LOF_092: Point Rain Reclaimer Unit
-LOF_094: Jedi Consular Unit
 LOF_095: Lor San Tekka - Secret Keeper Unit
 LOF_096: Obi-Wan Kenobi - Protective Padawan Unit
 LOF_098: Leia Organa - Extraordinary Unit
