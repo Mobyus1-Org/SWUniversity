@@ -1,11 +1,12 @@
 import { randomUUID } from "crypto";
 import { processDispatch } from "@/server/engine/dispatch-listener";
-import { CardCost, CardRarity } from "@/server/engine/card-db/generated";
+import { CardCost, CardRarity, CardTitle, CardSubtitle } from "@/server/engine/card-db/generated";
 import { SetGame } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import type { EngineContext, PendingResolution } from "@/server/engine/pending-resolution";
 import type { GameState } from "@/lib/engine/game";
+import type { PlayerId } from "@/lib/engine/core-models";
 import type { GameDispatch, DispatchResponse } from "@/lib/engine/message-types";
 import type { DispatchType, DispatchData } from "@/lib/engine/message-types";
 
@@ -170,7 +171,16 @@ export function processPuzzleDispatch(
     // so restore it here before we inspect the just-produced state.
     SetGame(result.context.game);
     const auto = resolveAutoOption(pending, result.context.game.currentGameState);
-    if (!auto) break;
+    if (auto === NOTHING_TO_DO) break; // accounted for; P2 simply cannot act
+    if (!auto) {
+      // A decision that belongs to P2 must never reach the solver — they would resolve an enemy
+      // ability, spending the opponent's Force token and choosing their targets. Fail loudly so
+      // the missing entry gets added, rather than guessing an answer and hiding the gap.
+      if (pendingOwner(pending) === 2) {
+        throw new Error(`Puzzle Auto Target not set for ${describePendingCard(pending)}`);
+      }
+      break;
+    }
 
     const autoDispatch: GameDispatch = {
       dispatchId: randomUUID(),
@@ -186,18 +196,78 @@ export function processPuzzleDispatch(
 }
 
 /**
- * Returns the dispatch type + data to auto-fire for Player 2, or null if no
- * auto-response is configured for this pending.
+ * Which player must answer this pending, when the pending says so unambiguously.
+ *
+ * Returns undefined when there is no explicit owner — those are left alone rather than guessed
+ * at, since wrongly claiming a P1 pending belongs to P2 would break a working puzzle.
+ */
+function pendingOwner(pending: PendingResolution): PlayerId | undefined {
+  switch (pending.type) {
+    case "when-defeated-choice": return pending.controlledBy;
+    case "discard-from-hand":    return pending.targetPlayer;
+    case "bounty":               return pending.collectingPlayer;
+    case "peek-hand":            return pending.peekingPlayer;
+    case "piloting-option":      return pending.playingPlayer;
+    case "exploit-option":
+    case "exploit-target":       return pending.playingPlayer;
+    case "ability-option":
+    case "ability-target":
+    case "choose-one":
+    case "give-xp-multiple":
+    case "spread-damage":
+    case "spread-tokens":
+    case "spread-heal":
+    case "return-from-discard":
+    case "deck-search":
+    case "hand-to-deck":
+    case "play-from-hand":
+    case "upgrade-target":
+    case "reveal-from-hand":
+    case "thrawn-replay":
+    case "plot-window":          return pending.player;
+    default:                     return undefined;
+  }
+}
+
+/** "<Card Title> - <Subtitle>" for the card a pending came from, for the fail-fast message. */
+function describePendingCard(pending: PendingResolution): string {
+  const raw =
+    ("cardId" in pending && typeof pending.cardId === "string" && pending.cardId) ? pending.cardId
+    : ("defeatedCardId" in pending && typeof pending.defeatedCardId === "string") ? pending.defeatedCardId
+    : ("leaderCardId" in pending && typeof pending.leaderCardId === "string") ? pending.leaderCardId
+    : undefined;
+  if (!raw) return `a "${pending.type}" decision`;
+  // Ability ids carry suffixes the card DB does not know (SHD_005_leader, SHD_087-1, SEC_193_wd).
+  const baseId = raw.match(/^[A-Z0-9]+_\d+/)?.[0] ?? raw;
+  const title = CardTitle(baseId);
+  if (!title) return raw;
+  const subtitle = CardSubtitle(baseId);
+  return subtitle ? `${title} - ${subtitle}` : title;
+}
+
+/** "This pending IS accounted for, but there is legitimately nothing for P2 to do." */
+const NOTHING_TO_DO = "nothing-to-do" as const;
+
+type AutoResponse =
+  | { dispatchType: DispatchType; dispatchData: DispatchData }
+  | typeof NOTHING_TO_DO;
+
+/**
+ * Returns the dispatch type + data to auto-fire for Player 2, NOTHING_TO_DO when the card is
+ * accounted for but cannot act, or null when no auto-response is configured at all.
+ *
+ * The null case is a bug, not a fallback — see the throw in processPuzzleDispatch.
  */
 function resolveAutoOption(
   pending: PendingResolution,
   gameState: GameState,
-): { dispatchType: DispatchType; dispatchData: DispatchData } | null {
+): AutoResponse | null {
   if (pending.type === "when-defeated-choice" && pending.controlledBy === 2) {
     const option = PUZZLE_AUTO_RESPONSES[pending.defeatedCardId];
     if (option && pending.options.includes(option)) {
       return { dispatchType: "choose-option", dispatchData: { option } };
     }
+    return null; // unmapped — surfaces as the "Puzzle Auto Target not set" error
   }
 
   // An effect that makes the OPPONENT discard (e.g. K-2SO's When Defeated) is their choice
@@ -207,7 +277,7 @@ function resolveAutoOption(
     const p2Hand = gameState.player2.hand;
     // No cards to discard: returning null (rather than an unsatisfiable index) stops the
     // auto-resolve loop instead of spinning on a dispatch the engine always rejects.
-    if (p2Hand.length === 0) return null;
+    if (p2Hand.length === 0) return NOTHING_TO_DO;
     return { dispatchType: "choose-target", dispatchData: { targetIndices: [pickDiscardIndex(p2Hand)] } };
   }
 
@@ -237,18 +307,18 @@ function resolveAutoOption(
   }
   if (pending.type === "ability-target" && pending.cardId === "SEC_193" && pending.player === 2) {
     const targetPlayId = pickOpponentOwnUnit(pending.fromPlayIds, gameState, "give-up");
-    if (targetPlayId) {
-      return { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } };
-    }
+    return targetPlayId
+      ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
+      : NOTHING_TO_DO;
   }
 
   // SHD_014 Cad Bane (either side): "an opponent chooses a unit they control. Deal N damage to it."
   // P2 picks which of their own units eats it — see pickOpponentOwnUnit's "soak" mode.
   if (pending.type === "ability-target" && pending.cardId === "SHD_014" && pending.player === 2) {
     const targetPlayId = pickOpponentOwnUnit(pending.fromPlayIds, gameState, "soak");
-    if (targetPlayId) {
-      return { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } };
-    }
+    return targetPlayId
+      ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
+      : NOTHING_TO_DO;
   }
 
   // JTL_104 Raddus controlled by the opponent (P2): its When Defeated deals damage equal to its
@@ -256,9 +326,9 @@ function resolveAutoOption(
   // highest current power (see pickOpponentTargetAmongMyUnits).
   if (pending.type === "ability-target" && pending.cardId === "JTL_104" && pending.player === 2) {
     const targetPlayId = pickOpponentTargetAmongMyUnits(pending.fromPlayIds, gameState);
-    if (targetPlayId) {
-      return { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } };
-    }
+    return targetPlayId
+      ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
+      : NOTHING_TO_DO;
   }
 
   return null;

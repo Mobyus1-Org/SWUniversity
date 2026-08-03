@@ -507,14 +507,25 @@ function selfStatBonus(unit: Unit): number {
  * stay in lockstep. Unlike those loops, this one respects the SOURCE losing its abilities.
  *
  * JTL_085 Victor Leader — "Each other friendly space unit gets +1/+1."
+ * LAW_139 Admiral Motti — "Friendly leader units get +2/+2."
  */
 function friendlyAuraBonus(unit: Unit): number {
-  if (!isSpaceUnit(unit)) return 0; // every aura here is space-only
-  return GetUnitsForPlayer(unit.controller)
-    .filter(u => u.cardId === "JTL_085"
-      && u.playId !== unit.playId
-      && !Unit.FromInterface(u).LostAbilities())
-    .length;
+  const friendly = GetUnitsForPlayer(unit.controller);
+  const active = (u: UnitInterface) => !Unit.FromInterface(u).LostAbilities();
+  let bonus = 0;
+
+  // Victor Leader: other friendly SPACE units only.
+  if (isSpaceUnit(unit)) {
+    bonus += friendly.filter(u => u.cardId === "JTL_085" && u.playId !== unit.playId && active(u)).length;
+  }
+
+  // Admiral Motti: friendly LEADER units. IsLeader() also covers a Vehicle carrying a pilot
+  // leader — those print "Attached unit is a leader unit" on the leader's deployed side.
+  if (unit.IsLeader()) {
+    bonus += friendly.filter(u => u.cardId === "LAW_139" && u.playId !== unit.playId && active(u)).length * 2;
+  }
+
+  return bonus;
 }
 
 /**

@@ -18,7 +18,7 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
   "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149", "ASH_179", "ASH_251",
-  "ASH_237", "ASH_248",
+  "ASH_237", "ASH_248", "SEC_119",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -156,6 +156,15 @@ export function resolveWhenPlayedTrigger(
           unit191.upgrades.push({ cardId: "SOR_T01", playId: String(gs.nextPlayId++), owner: unit191.owner, controller: unit191.controller });
         }
         log.push(`${CardTitle(trigger.cardId)}: gained ${xpCount} Experience token(s).`);
+      }
+      break;
+    }
+    case "SEC_119": { // Crucible — Give an Experience token to each OTHER friendly unit.
+      const pState119 = trigger.fromPlayer === 1 ? gs.player1 : gs.player2;
+      for (const u of [...pState119.groundArena, ...pState119.spaceArena]) {
+        if (u.playId === trigger.playId) continue; // "each OTHER friendly unit"
+        u.upgrades.push({ cardId: "SOR_T01", playId: String(gs.nextPlayId++), owner: u.owner, controller: u.controller });
+        log.push(`${CardTitle(trigger.cardId)}: gave Experience to ${CardTitle(u.cardId)}.`);
       }
       break;
     }

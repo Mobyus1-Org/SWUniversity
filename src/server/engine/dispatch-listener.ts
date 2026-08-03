@@ -6843,6 +6843,10 @@ function applyAbilityOptionEffect(
       DrawCardForPlayer(game, log, pending.player!);
       return sweepDeadUnits(game, log, pending.continuation ?? null);
     }
+    case "LOF_234": { // Darth Malak When Played Yes — ready him.
+      ReadyUnitByPlayId(pending.sourcePlayId, pending.player!, "LOF_234");
+      return pending.continuation ?? null;
+    }
     case "SHD_139": { // Krrsantan When Played Yes — ready him.
       ReadyUnitByPlayId(pending.sourcePlayId, pending.player!, "SHD_139");
       return pending.continuation ?? null;

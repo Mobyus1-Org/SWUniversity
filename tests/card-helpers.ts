@@ -433,6 +433,8 @@ export const Cards = {
     },
     lof: {
       kelleranBeq: "LOF_100",
+      darthMalak: "LOF_234",
+      sithLegionnaire: "LOF_081", // Sith/Trooper Ground — non-unique Sith unit, not a leader
       jediConsular: "LOF_094",
       hyperspaceWayfarer: "LOF_119", // 4/10 Space, no abilities — a durable test defender
       grogu: "LOF_246",
@@ -478,6 +480,7 @@ export const Cards = {
     },
     sec: {
       cadBane: "SEC_034",
+      crucible: "SEC_119",
       dedraMeeroUnit: "SEC_087",
       unrulyAstromech: "SEC_221",
       huntingAssassinDroid: "SEC_134",
@@ -492,6 +495,7 @@ export const Cards = {
       grandAdmiralThrawn: "SEC_193",
     },
     law: {
+      admiralMottiLaw: "LAW_139",
       imperialDoorTechnician: "LAW_097",
       scavengingSandcrawler: "LAW_238",
       bt1: "LAW_173",
@@ -658,6 +662,7 @@ export const Cards = {
     },
     lof: {
       yodasLightsaber: "LOF_102",
+      darthRevansLightsabers: "LOF_238",
       bolsteredEndurance: "LOF_074",
       constructedLightsaber: "LOF_261",
       sizeMattersNot: "LOF_056",
@@ -785,6 +790,7 @@ export const Cards = {
     },
     ts26: {
       backedByThePykes: "TS26_058",
+      takeCharge: "TS26_060",
     },
     sec: {
       iAmTheSenate: "SEC_092",

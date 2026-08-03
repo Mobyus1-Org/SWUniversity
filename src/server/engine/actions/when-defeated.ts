@@ -278,6 +278,16 @@ function resolveOwnWhenDefeated(
       return optionalTarget("JTL_060", player, units060.map(u => u.playId),
         "Give a unit –1/–1 for this phase?");
     }
+    case "SEC_119": { // Crucible — Give an Experience token to each other friendly unit. She is
+                      // already out of the arena by now, so every remaining friendly unit is
+                      // "other". Automatic: no choice to present, so this returns null.
+      const gs119 = GetGameState();
+      for (const u of GetUnitsForPlayer(player)) {
+        u.upgrades.push({ cardId: "SOR_T01", playId: String(gs119.nextPlayId++), owner: u.owner, controller: u.controller });
+        GetGame()?.gameLog.push(`${CardTitle("SEC_119")}: gave Experience to ${CardTitle(u.cardId)}.`);
+      }
+      return null;
+    }
     case "LOF_031": { // Karis — When Defeated: You may use the Force. If you do, give a unit –2/–2 for this phase.
       if (!HasTheForce(player)) return null;
       if (AllUnits().length === 0) return null; // nothing to debuff — don't burn the Force token

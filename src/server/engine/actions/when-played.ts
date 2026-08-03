@@ -474,6 +474,23 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies AbilityOptionPending;
     }
+    case "LOF_234": { // Darth Malak — "When Played: If you control a Sith leader unit, you may
+                      // ready this unit." A leader still in the leader zone is not a leader UNIT.
+      const hasSithLeader = GetUnitsForPlayer(player).some(u =>
+        Unit.FromInterface(u).IsLeader() && TraitContains(u.cardId, "Sith", player, u.playId));
+      if (!hasSithLeader) return null;
+      return {
+        type: "ability-option",
+        cardId: "LOF_234",
+        player,
+        sourcePlayId: playId,
+        helperText: `Ready ${CardTitle("LOF_234")}?`,
+        yesLabel: "Ready",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
     case "SHD_139": { // Krrsantan — "When Played: If an enemy unit has a Bounty, you may ready
                       // this unit." (His On Attack lives in on-attack.ts.)
       const enemyHasBounty139 = GetUnitsForPlayer(GetOtherPlayer(player)).some(u => u.HasBounty());
@@ -1166,6 +1183,20 @@ export function resolveWhenPlayed(
         && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player));
       if (eligible039.length === 0) return null;
       return mandatoryTarget(cardId, player, eligible039.map(u => u.playId));
+    }
+    case "TS26_060": { // Take Charge — "Give an Experience token to each of up to 3 units."
+                       // "units", not "friendly units" — either side is a legal recipient.
+                       // (The cost discount lives in card-playability's playCost chain.)
+      const units060 = AllUnits();
+      if (units060.length === 0) return null;
+      return {
+        type: "give-xp-multiple",
+        cardId: "TS26_060",
+        player,
+        maxCount: 3,
+        eligiblePlayIds: units060.map(u => u.playId),
+        continuation: null,
+      } satisfies GiveXpMultiplePending;
     }
     case "SHD_130": { // Moment of Glory — "Give a unit +4/+4 for this phase." Either side.
       const units130 = AllUnits();

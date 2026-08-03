@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 919 cards across 10 sets.**
+**Total: 916 cards across 10 sets.**
 
 ---
 
@@ -470,7 +470,7 @@ LOF_263: Last Words Event
 LOF_264: It's Worse Event
 ```
 
-## LAW — Legends of the Underworld (176)
+## LAW — Legends of the Underworld (175)
 
 **Message 1 of 4**
 ```
@@ -580,7 +580,6 @@ LAW_134: Bib Fortuna - Die Wanna Wanga? Unit
 LAW_136: Syndicate Spice Runner Unit
 LAW_137: Ruthless Duo Unit
 LAW_138: Undercity Hunting Team Unit
-LAW_139: Admiral Motti - Chain of Command Unit
 LAW_140: Intimidator - Citadel Overwatch Unit
 LAW_141: Targeted For Removal Upgrade
 LAW_142: Scarif Lieutenant Unit
@@ -668,7 +667,7 @@ LAW_262: Bank Job Fugitives Unit
 LAW_264: From a Certain Point of View Event
 ```
 
-## SEC — Secrets of Power (163)
+## SEC — Secrets of Power (162)
 
 **Message 1 of 4**
 ```
@@ -737,7 +736,6 @@ SEC_109: Diplomatic Envoy Unit
 SEC_112: Orn Free Taa - Political Power Broker Unit
 SEC_114: Kino Loy - You Answer to Me Unit
 SEC_115: Taylander Shuttle Unit
-SEC_119: Crucible - Centuries of Wisdom Unit
 SEC_120: Naboo Security Force Unit
 SEC_122: Vuutun Palaa - Droid Control Ship Unit
 SEC_124: Budget Scheming Event
@@ -1000,7 +998,7 @@ IBH_085: Admiral Ozzel - As Clumsy as He Is Stupid Unit
 IBH_102: I Want Proof, Not Leads Event
 ```
 
-## TS26 — Trade Set 2026 (71)
+## TS26 — Trade Set 2026 (70)
 
 **Message 1 of 2**
 ```
@@ -1060,7 +1058,6 @@ TS26_054: Wartime Mercenaries Unit
 TS26_056: Galactic Escalation Event
 TS26_057: Mechanize Event
 TS26_059: Brothers Event
-TS26_060: Take Charge Event
 TS26_061: Encircle Event
 TS26_062: R2-D2 - Getting His Chance Unit
 TS26_064: Urgent Mission Event
