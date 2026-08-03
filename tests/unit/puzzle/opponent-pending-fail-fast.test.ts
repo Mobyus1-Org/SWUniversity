@@ -8,7 +8,7 @@ import type { Game } from "@/lib/engine/game";
 // A decision that belongs to Player 2 must never reach the solver. Before this guard, a P2
 // pending with no configured auto-response simply fell through and the human answered it —
 // resolving an ENEMY ability, spending the opponent's Force token and choosing their targets.
-// That is how QA hit Karis (LOF_031).
+// That is how QA hit Karis (LOF_031), who now has a configured auto-target of her own.
 //
 // Rather than guess an answer (which would silently pick a line nobody chose), puzzle dispatch
 // now throws and names the card, so the missing entry gets added.
@@ -60,14 +60,17 @@ function dispatch(ctx: EngineContext, type: string, data: Record<string, unknown
 }
 
 describe("puzzle mode — an unaccounted-for opponent decision fails fast", () => {
-  it("throws, naming the card, when P2's Karis dies with no auto-response configured", () => {
-    const ctx = newCtx([{ cardId: "LOF_031" }], [{ cardId: "SOR_095" }]); // a unit must survive for her to debuff
+  it("throws, naming card and subtitle, for a P2 decision with no auto-response configured", () => {
+    // ASH_195 Helgait — "When Defeated: You may distribute Advantage tokens equal to this unit's
+    // power among friendly units." P2's call, and not in the auto registry. If it ever IS mapped,
+    // swap this for another unmapped card rather than deleting the case.
+    const ctx = newCtx([{ cardId: "ASH_195" }, { cardId: "SOR_095" }]); // needs a friendly survivor
     const res = dispatch(ctx, "play-card", { cardId: "SOR_078", fromZone: "Hand" });
-    const karis = res.context.game.currentGameState.player2.groundArena[0];
+    const helgait = res.context.game.currentGameState.player2.groundArena[0];
 
     expect(() =>
-      dispatch(res.context, "choose-target", { targetPlayIds: [karis.playId] }),
-    ).toThrow("Puzzle Auto Target not set for Karis - We Don't Like Strangers");
+      dispatch(res.context, "choose-target", { targetPlayIds: [helgait.playId] }),
+    ).toThrow("Puzzle Auto Target not set for Helgait - Dooku Was a Visionary");
   });
 
   it("names a card that has no subtitle without a trailing dash", () => {

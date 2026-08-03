@@ -54,37 +54,59 @@ function pickDiscardIndex(hand: { cardId: string }[]): number {
  *
  *   1. Prefer READY units over exhausted ones. A ready unit still gets to attack this turn, so
  *      knocking it out (or degrading it) costs the solver more than hitting an already-tapped unit.
- *   2. Among the preferred set, take the highest CURRENT power (buffs/upgrades/debuffs included).
- *   3. If no unit is ready, fall back to the highest-power exhausted unit — even if some exhausted
+ *   2. (`preferUnguardedArena` only) Prefer a unit in an arena where P2 has NO Sentinel. A P2
+ *      Sentinel already forces the solver's units in that arena to swing into it, so the units P2
+ *      cannot otherwise answer — the ones in the unguarded arena — are the ones worth degrading.
+ *   3. Among the preferred set, take the highest CURRENT power (buffs/upgrades/debuffs included).
+ *   4. If no unit is ready, fall back to the highest-power exhausted unit — even if some exhausted
  *      unit outpowers every ready one, the ready units are still chosen first (step 1 wins).
- *   4. Ties break toward the earliest `fromPlayIds` position, which mirrors arena order.
+ *   5. Ties break toward the earliest `fromPlayIds` position, which mirrors arena order.
+ *
+ * `fromPlayIds` may legitimately name units on BOTH sides (Karis targets "a unit"); anything that
+ * is not a P1 unit in play is skipped, so P2 never turns one of these effects on itself.
  *
  * Returns null if none of `fromPlayIds` resolves to a P1 unit in play.
  */
 function pickOpponentTargetAmongMyUnits(
   fromPlayIds: string[],
   gameState: GameState,
+  opts: { preferUnguardedArena?: boolean } = {},
 ): string | null {
+  const space = new Set(gameState.player1.spaceArena.map(u => u.playId));
   const myUnits = [...gameState.player1.spaceArena, ...gameState.player1.groundArena];
   const byPlayId = new Map(myUnits.map(u => [u.playId, u]));
 
-  let best: { playId: string; ready: boolean; power: number } | null = null;
+  // Sentinel is a property of P2's board, not of the candidate, so compute it once per arena.
+  const p2Guards = (arena: { cardId: string; playId: string }[]) =>
+    arena.some(u => HasSentinel(u.cardId, u.playId, 2));
+  const guardedSpace = opts.preferUnguardedArena && p2Guards(gameState.player2.spaceArena);
+  const guardedGround = opts.preferUnguardedArena && p2Guards(gameState.player2.groundArena);
+
+  let best: { playId: string; ready: boolean; unguarded: boolean; power: number } | null = null;
   for (const playId of fromPlayIds) {
     const raw = byPlayId.get(playId);
     if (!raw) continue;
     const ready = !!raw.ready;
+    const unguarded = !(space.has(playId) ? guardedSpace : guardedGround);
     const power = Unit.FromInterface(raw).CurrentPower();
     if (
       best === null ||
-      // A ready unit always beats an exhausted one, regardless of power (step 1 wins step 3).
+      // A ready unit always beats an exhausted one, regardless of power (step 1 wins step 4).
       (ready && !best.ready) ||
-      // Within the same readiness tier, higher current power wins; ties keep the earlier entry.
-      (ready === best.ready && power > best.power)
+      // Within the same readiness tier, an unguarded arena wins before power is consulted.
+      (ready === best.ready && unguarded && !best.unguarded) ||
+      // Same readiness and same guard status: higher current power wins; ties keep the earlier entry.
+      (ready === best.ready && unguarded === best.unguarded && power > best.power)
     ) {
-      best = { playId, ready, power };
+      best = { playId, ready, unguarded, power };
     }
   }
   return best ? best.playId : null;
+}
+
+/** Does P1 have any unit the opponent could point an effect at? */
+function solverHasAnyUnit(gameState: GameState): boolean {
+  return gameState.player1.spaceArena.length > 0 || gameState.player1.groundArena.length > 0;
 }
 
 /**
@@ -316,6 +338,27 @@ function resolveAutoOption(
   // P2 picks which of their own units eats it — see pickOpponentOwnUnit's "soak" mode.
   if (pending.type === "ability-target" && pending.cardId === "SHD_014" && pending.player === 2) {
     const targetPlayId = pickOpponentOwnUnit(pending.fromPlayIds, gameState, "soak");
+    return targetPlayId
+      ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
+      : NOTHING_TO_DO;
+  }
+
+  // LOF_031 Karis controlled by the opponent (P2): "When Defeated: You may use the Force. If you
+  // do, give a unit –2/–2 for this phase." Both halves are P2's call.
+  //
+  // Note the –2/–2 deliberately does NOT chase a kill. A unit with a When Defeated ability is
+  // often worth MORE to the solver dead than alive, so defeating one can hand them the puzzle;
+  // blunting the biggest live threat is the reliably worse outcome for them.
+  if (pending.type === "ability-option" && pending.cardId === "LOF_031" && pending.player === 2) {
+    // The engine offers this whenever ANY unit is in play, including when they are all P2's own.
+    // Spending the Force to debuff yourself is strictly worse than skipping, so decline instead.
+    const option = solverHasAnyUnit(gameState) ? "Yes" : "No";
+    return { dispatchType: "choose-option", dispatchData: { option } };
+  }
+  if (pending.type === "ability-target" && pending.cardId === "LOF_031" && pending.player === 2) {
+    const targetPlayId = pickOpponentTargetAmongMyUnits(pending.fromPlayIds, gameState, {
+      preferUnguardedArena: true,
+    });
     return targetPlayId
       ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
       : NOTHING_TO_DO;
