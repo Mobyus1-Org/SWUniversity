@@ -1347,6 +1347,22 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SHD_213": { // DJ (Blatant Thief) — "When played using Smuggle: Take control of an enemy
+                      // resource." The smuggle-only condition is enforced upstream in
+                      // queueUnitEntryTriggers; by here the play is known to have used Smuggle.
+      const game213 = GetGame();
+      if (!game213) return null;
+      const enemyResources = GetPlayer(game213.currentGameState, GetOtherPlayer(player)).resources;
+      if (enemyResources.length === 0) return null; // nothing to take
+      return {
+        type: "ability-target",
+        cardId: "SHD_213",
+        player,
+        sourcePlayId: playId, // DJ himself — the return is keyed to him leaving play
+        fromPlayIds: enemyResources.map(r => r.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "SHD_099": { // Echo (Restored) — "When Played: You may discard a card from your hand.
                       // Give 2 Experience tokens to a unit in play with the same name as the
                       // discarded card." The name is only known after the discard, so the

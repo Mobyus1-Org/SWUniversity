@@ -1123,10 +1123,12 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
       : new Set();
   // Abilities that target a RESOURCE (e.g. LAW_013 Chewbacca's "defeat a friendly resource"
   // cost) put resource playIds in fromPlayIds, so the resource row becomes clickable.
+  // Both rows are checked: SHD_213 DJ takes control of an ENEMY resource, so the opponent's
+  // row has to be selectable too, not just your own.
   const selectableResourcePlayIds: Set<string> =
     resolutionNeeded?.type === "Target" && (resolutionNeeded.fromPlayIds ?? []).length > 0
       ? new Set(
-          player.resources
+          [...player.resources, ...opponent.resources]
             .filter(r => (resolutionNeeded.fromPlayIds ?? []).includes(r.playId))
             .map(r => r.playId)
         )
@@ -1350,11 +1352,18 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
                   <span className="normal-case tracking-normal text-white/65">{opponent.hand.length} cards in hand</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {opponent.resources.map((resource) => <FaceDownResource
-                    key={resource.playId}
-                    cardId={resource.cardId}
-                    exhausted={!resource.ready}
-                  />)}
+                  {opponent.resources.map((resource) => {
+                    const isTarget = selectableResourcePlayIds.has(resource.playId);
+                    return <FaceDownResource
+                      key={resource.playId}
+                      cardId={resource.cardId}
+                      exhausted={!resource.ready}
+                      selectable={isTarget && !isResolving}
+                      onClick={isTarget && !isResolving
+                        ? () => { void sendDispatch(createDispatch("choose-target", { targetPlayIds: [resource.playId] })); }
+                        : undefined}
+                    />;
+                  })}
                   {opponent.resources.length === 0 ? <div className="rounded-lg border border-dashed border-white/10 px-4 py-6 text-sm text-white/40">No resources</div> : null}
                 </div>
               </div>

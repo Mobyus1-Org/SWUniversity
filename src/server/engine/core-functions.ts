@@ -1,6 +1,6 @@
 import { CardArena, CardAspects, CardCost, CardIsUnique, CardText, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
-import { Card, CardInPlay, CardTypes, CurrentEffect, EffectDuration, HP_MOD, Leader, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import { Card, CardInPlay, CardTypes, CurrentEffect, EffectDuration, HP_MOD, Leader, PHASE_STAT_MOD, POWER_MOD, PlayerId, Resource, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { Game, GameState, PlayerState } from "@/lib/engine/game";
 import { Unit } from "@/server/engine/unit";
 import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
@@ -1317,6 +1317,44 @@ export function DamageIsUnpreventable(sourceCardId: string, sourceController: Pl
  * of your deck into play as a resource" card. Pass `ready` for the cards that add "and ready it".
  * Returns false when the deck is empty — the rest of such an ability still resolves.
  */
+/**
+ * Removes a resource from `player`'s row, preserving how many resources they have AVAILABLE.
+ *
+ * Resource readiness is fungible in paper: the cards sit facedown and are interchangeable, so a
+ * player paying costs always arranges for the resource an effect takes away to be an exhausted
+ * one. Splicing a READY resource out directly would quietly cost them an available resource that
+ * a physical game never would — so when the removed one was ready, an exhausted resource is
+ * readied in its place. With nothing exhausted to trade, the ready slot is genuinely lost.
+ *
+ * Use this for any effect that takes a resource OUT of the row without charging a cost for it
+ * (returning it to hand, and so on). Cost-paying paths like Smuggle handle the same asymmetry by
+ * discounting the cost instead.
+ *
+ * The returned resource carries the state it ACTUALLY left in: when a trade happened, the card
+ * that physically departs is the exhausted one, so `ready` comes back false. Callers that hand the
+ * card to another player (SHD_213 DJ returning a stolen resource) can pass it straight on.
+ *
+ * Returns the removed resource, or null when `playId` is not in that player's row.
+ */
+export function RemoveResourcePreservingReady(
+  gs: GameState,
+  player: PlayerId,
+  playId: string,
+): Resource | null {
+  const pState = GetPlayer(gs, player);
+  const idx = pState.resources.findIndex(r => r.playId === playId);
+  if (idx === -1) return null;
+  const [removed] = pState.resources.splice(idx, 1);
+  if (removed.ready) {
+    const exhausted = pState.resources.find(r => !r.ready);
+    if (exhausted) {
+      exhausted.ready = true;
+      removed.ready = false; // the card handed over is the one that was exhausted
+    }
+  }
+  return removed;
+}
+
 export function ResourceTopCardOfDeck(
   gs: GameState,
   player: PlayerId,

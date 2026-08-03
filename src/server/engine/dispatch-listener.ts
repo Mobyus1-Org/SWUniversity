@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, DealDamageToBase, DamageIsUnpreventable } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -603,6 +603,45 @@ function addToArena(
  * under its OWNER's control — control never follows the captor — and is cleared off the guard so
  * it cannot be released twice.
  */
+/** Cards whose "When Played" only fires when the card was played using Smuggle (SHD_213 DJ). */
+function WhenPlayedRequiresSmuggle(cardId: string): boolean {
+  return cardId === "SHD_213";
+}
+
+/** The currentEffect that remembers which resource a given DJ (SHD_213) has stolen. */
+function djStolenEffectId(djPlayId: string): string {
+  return `SHD_213_stolen:${djPlayId}`;
+}
+
+/**
+ * SHD_213 DJ — "When this unit leaves play, that resource's owner takes control of it."
+ *
+ * Runs from removeFromArena so EVERY exit returns the resource, not just defeat: bounce, capture,
+ * and becoming a pilot upgrade all leave play too. The resource goes back exhausted whenever the
+ * thief still has an exhausted resource to trade for it — they have had time to arrange which of
+ * their resources is the spent one, which is what RemoveResourcePreservingReady models.
+ */
+function returnDjStolenResource(game: GameState, unit: Unit, log: string[]): void {
+  const effectId = djStolenEffectId(unit.playId);
+  const idx = game.currentEffects.findIndex(e => e.cardId === effectId);
+  if (idx === -1) return;
+  const [effect] = game.currentEffects.splice(idx, 1);
+  const resourcePlayId = effect.targetPlayId;
+  if (!resourcePlayId) return;
+
+  const thief = effect.affectedPlayer;
+  const taken = RemoveResourcePreservingReady(game, thief, resourcePlayId);
+  if (!taken) return; // the resource already left the row — nothing to give back
+
+  const owner = (taken.owner ?? thief) as PlayerId;
+  GetPlayer(game, owner).resources.push({
+    ...taken,
+    controller: owner,
+    stolen: false,
+  });
+  log.push(`${CardTitle("SHD_213")} left play — ${CardTitle(taken.cardId)} returned to Player ${owner}'s control.`);
+}
+
 function releaseCaptives(game: GameState, unit: Unit, log: string[]): void {
   for (const captive of unit.captives ?? []) {
     const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
@@ -643,7 +682,11 @@ function removeFromArena(
       const idx = p[zone].findIndex((u) => u.playId === playId);
       if (idx !== -1) {
         const [unit] = p[zone].splice(idx, 1);
-        if (!opts.keepCaptives) releaseCaptives(game, unit as Unit, opts.log ?? GetGame()?.gameLog ?? []);
+        if (!opts.keepCaptives) {
+          const exitLog = opts.log ?? GetGame()?.gameLog ?? [];
+          releaseCaptives(game, unit as Unit, exitLog);
+          returnDjStolenResource(game, unit as Unit, exitLog);
+        }
         return { player, unit: unit as Unit, zone };
       }
     }
@@ -3445,7 +3488,7 @@ function queueUnitEntryTriggers(
   unit: Unit,
   cardId: string,
   player: PlayerId,
-  opts: { injectEffect?: Omit<CurrentEffect, "targetPlayId"> } | undefined,
+  opts: { injectEffect?: Omit<CurrentEffect, "targetPlayId">; viaSmuggle?: boolean } | undefined,
   deferWhenPlayed: boolean,
 ): PendingResolution | null {
   // Colonel Yularen (SOR_109): when a Command unit is played, heal 1 from base.
@@ -3523,7 +3566,11 @@ function queueUnitEntryTriggers(
     game.triggerBag.push({ triggerType: "support", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
   }
 
-  if (hasAmbush && CardHasWhenPlayed(unit.cardId)) {
+  // SHD_213 DJ reads "When played USING SMUGGLE" — his When Played must stay silent on an
+  // ordinary hand play. performSmugglePlay is the only caller that sets viaSmuggle.
+  const smuggleGated = WhenPlayedRequiresSmuggle(unit.cardId) && !opts?.viaSmuggle;
+
+  if (hasAmbush && CardHasWhenPlayed(unit.cardId) && !smuggleGated) {
     // Both Ambush and When Played — put both in bag for player to choose ordering.
     // Add WhenPlayed if it has interactive targets (non-null preview) OR is a no-input
     // auto-effect (e.g. TWI_112 Subjugating Starfighter's "create a Battle Droid token");
@@ -3533,7 +3580,7 @@ function queueUnitEntryTriggers(
       game.triggerBag.push({ triggerType: "when-played", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
     }
     // If WhenPlayed has no targets and no auto-effect, skip adding it — Ambush proceeds alone.
-  } else if (!hasAmbush && CardHasWhenPlayed(unit.cardId)) {
+  } else if (!hasAmbush && CardHasWhenPlayed(unit.cardId) && !smuggleGated) {
     const whenPlayedPending = resolveWhenPlayed(unit.cardId, player, unit.playId);
     if (whenPlayedPending && !deferWhenPlayed) {
       // Interactive WP — hand back to the caller to present immediately; it implicitly
@@ -3562,6 +3609,8 @@ function completePlayCard(
   opts?: {
     injectEffect?: Omit<CurrentEffect, "targetPlayId">;
     enterReady?: boolean;
+    /** SHD_213 DJ — "When played USING SMUGGLE"; the trigger must not fire on a normal hand play. */
+    viaSmuggle?: boolean;
   },
 ): HandlerResult {
   // SOR_056 Bendu: consume the discount after a qualifying non-Heroism non-Villainy card is played.
@@ -3955,7 +4004,7 @@ function performSmugglePlay(
 
   log.push(`Player ${player} played ${CardTitle(cardId)} via Smuggle.`);
   queueSmugglePlayReactions(game, player);
-  return completePlayCard(game, log, cardId, player);
+  return completePlayCard(game, log, cardId, player, { viaSmuggle: true });
 }
 
 /**
@@ -5004,13 +5053,15 @@ function handleChooseTarget(
 
     // SOR_197 Lando Calrissian: return chosen resources to hand (reuses give-xp-multiple multi-select UI)
     if (pending.cardId === "SOR_197") {
-      const pState197 = GetPlayer(game, pending.player);
       const returned197: string[] = [];
       for (const rPlayId of chosen) {
-        const idx197 = pState197.resources.findIndex(r => r.playId === rPlayId);
-        if (idx197 !== -1) {
-          const card197 = pState197.resources.splice(idx197, 1)[0];
-          pState197.hand.push({ cardId: card197.cardId });
+        // Same rule as SHD_009 Hunter: readiness is fungible, so returning a ready resource
+        // must not cost an available one while an exhausted resource can be traded instead.
+        const card197 = RemoveResourcePreservingReady(game, pending.player, rPlayId);
+        if (card197) {
+          // "to their OWNERS' hands" — a resource you control but do not own (LAW_159, DJ SHD_213)
+          // goes back to whoever owns it, not to the player returning it.
+          GetPlayer(game, (card197.owner ?? pending.player) as PlayerId).hand.push({ cardId: card197.cardId });
           returned197.push(CardTitle(card197.cardId) ?? card197.cardId);
         }
       }
@@ -9771,6 +9822,32 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, "SHD_087", targetPlayId, pending.amount ?? 0, game.gameLog);
       break;
     }
+    case "SHD_213": { // DJ (Blatant Thief): take control of the chosen enemy resource, and remember
+                      // it so it can go back when he leaves play.
+      if (!targetPlayId || !pending.sourcePlayId) break;
+      const thief213 = pending.player!;
+      const victim213 = GetOtherPlayer(thief213);
+      const gs213 = game.currentGameState;
+      // The victim gets no chance to rearrange — DJ picks and takes it — so the resource keeps
+      // whatever ready state it had. A plain splice is correct here, unlike the return path.
+      const vicResources = GetPlayer(gs213, victim213).resources;
+      const idx213 = vicResources.findIndex(r => r.playId === targetPlayId);
+      if (idx213 === -1) break;
+      const [taken213] = vicResources.splice(idx213, 1);
+      GetPlayer(gs213, thief213).resources.push({
+        ...taken213,
+        controller: thief213,
+        stolen: true,
+      });
+      gs213.currentEffects.push({
+        cardId: djStolenEffectId(pending.sourcePlayId),
+        duration: "Permanent",
+        affectedPlayer: thief213,
+        targetPlayId: taken213.playId,
+      });
+      game.gameLog.push(`${CardTitle("SHD_213")}: took control of ${CardTitle(taken213.cardId)} from Player ${victim213}.`);
+      break;
+    }
     case "SHD_099_xp": { // Echo (Restored): 2 Experience tokens onto the chosen same-named unit.
       if (!targetPlayId) break;
       const t099 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -9997,7 +10074,9 @@ function applyAbilityEffect(
         game.gameLog.push(`${CardTitle("SHD_009")}: no friendly unique unit shares that name.`);
         break;
       }
-      pState009.resources.splice(idx009, 1);
+      // Readiness is fungible in paper, so returning a ready resource must not cost an available
+      // one while an exhausted resource is there to be given up instead.
+      RemoveResourcePreservingReady(game.currentGameState, owner009, targetPlayId);
       GetPlayer(game.currentGameState, (revealed009.owner ?? owner009) as PlayerId)
         .hand.push({ cardId: revealed009.cardId });
       game.gameLog.push(`${CardTitle("SHD_009")}: ${CardTitle(revealed009.cardId)} returned to hand.`);

@@ -58,6 +58,55 @@ describe("SHD_009 Hunter — leader (front) ability", () => {
     expect(fromDeck?.ready).toBe(false);
   });
 
+  // Resource readiness is fungible in paper: the cards are facedown and interchangeable, so a
+  // player choosing which resource to exhaust for a cost would always arrange for the one being
+  // returned to be an exhausted one. Returning a READY resource must therefore not cost the
+  // player an available resource, as long as they have an exhausted one to give up instead.
+  it("returning a READY resource does not reduce the available resource count", async () => {
+    const g = new GameTestAdapter();
+    const state = frontState().WithGroundUnitForPlayer(1, Cards.units.sor.lukeSkywalker).Build();
+    // 4 ready, 4 exhausted — the ability's own 1-resource cost exhausts one of the ready ones.
+    state.player1.resources.forEach((r, i) => { r.ready = i < 4; });
+    g.loadNewState(state);
+
+    await g.useLeaderAbilityAsync(1);
+    const readyBefore = g.state.player1.resources.filter(r => r.ready).length;
+    // Reveal a resource that is currently READY.
+    const readyIdx = g.state.player1.resources.findIndex(r => r.ready);
+    await revealResource(g, readyIdx);
+
+    expect(g.state.player1.resources.filter(r => r.ready).length).toBe(readyBefore);
+  });
+
+  it("returning an EXHAUSTED resource leaves the ready count alone", async () => {
+    const g = new GameTestAdapter();
+    const state = frontState().WithGroundUnitForPlayer(1, Cards.units.sor.lukeSkywalker).Build();
+    state.player1.resources.forEach((r, i) => { r.ready = i < 4; });
+    g.loadNewState(state);
+
+    await g.useLeaderAbilityAsync(1);
+    const readyBefore = g.state.player1.resources.filter(r => r.ready).length;
+    const exhaustedIdx = g.state.player1.resources.findIndex(r => !r.ready);
+    await revealResource(g, exhaustedIdx);
+
+    expect(g.state.player1.resources.filter(r => r.ready).length).toBe(readyBefore);
+  });
+
+  it("with NO exhausted resource to trade, returning a ready one does cost the ready slot", async () => {
+    const g = new GameTestAdapter();
+    const state = frontState().WithGroundUnitForPlayer(1, Cards.units.sor.lukeSkywalker).Build();
+    g.loadNewState(state); // every resource ready; the ability's cost exhausts exactly one
+
+    await g.useLeaderAbilityAsync(1);
+    const readyBefore = g.state.player1.resources.filter(r => r.ready).length;
+    const readyIdx = g.state.player1.resources.findIndex(r => r.ready);
+    await revealResource(g, readyIdx);
+
+    // One exhausted resource exists (the one the ability's cost paid), so it is traded away and
+    // the ready count still holds.
+    expect(g.state.player1.resources.filter(r => r.ready).length).toBe(readyBefore);
+  });
+
   it("does nothing when the revealed resource matches no friendly unique unit", async () => {
     const g = new GameTestAdapter();
     g.loadNewState(frontState().WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine).Build());
