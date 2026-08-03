@@ -33,7 +33,11 @@ function funcBody(src: string, re: RegExp): string {
   throw new Error("unbalanced braces");
 }
 
-const caseIds = (body: string) => [...body.matchAll(/case\s+"([A-Z0-9]+_[A-Z0-9]+)"/g)].map(m => m[1]);
+// A unit carrying more than one Action uses suffixed ability ids (`SHD_087-1`, `SHD_087-2`).
+// Both halves of the suffix belong to the same card, so ids are normalised back to the base
+// cardId — otherwise a two-Action card reads as "offered but never executed".
+const caseIds = (body: string) =>
+  [...body.matchAll(/case\s+"([A-Z0-9]+_[A-Z0-9]+)(?:-\d+)?"/g)].map(m => m[1]);
 const quotedIds = (body: string) => [...body.matchAll(/"([A-Z0-9]+_[0-9]+)"/g)].map(m => m[1]);
 
 const dispatch = read("src/server/engine/dispatch-listener.ts");

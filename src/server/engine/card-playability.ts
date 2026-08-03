@@ -167,6 +167,29 @@ function piettCapitalShipDiscount(game: GameState, player: PlayerId, cardId: str
   return 2;
 }
 
+// SHD_117 Reputable Hunter: "If an enemy unit has a Bounty, this unit costs 1 resource less to
+// play." Enemy = the opponent of the player playing it, so a Bounty on one of your own units
+// (or one you put there yourself, e.g. Wanted) does not discount it.
+function reputableHunterDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (cardId !== "SHD_117") return 0;
+  const opp = player === 1 ? game.player2 : game.player1;
+  const hasBounty = [...opp.groundArena, ...opp.spaceArena]
+    .some(u => Unit.FromInterface(u).HasBounty());
+  return hasBounty ? 1 : 0;
+}
+
+// SHD_091 Jabba's Rancor: "If you control Jabba the Hutt (as a leader or unit), this unit costs 1
+// resource less to play." Matched by TITLE so every Jabba printing counts, and the leader zone
+// counts whether or not he is deployed (a leader in the zone is still a leader you control).
+function jabbasRancorDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (cardId !== "SHD_091") return 0;
+  const p = player === 1 ? game.player1 : game.player2;
+  if (CardTitle(p.leader.cardId) === "Jabba the Hutt") return 1;
+  const hasJabbaUnit = [...p.groundArena, ...p.spaceArena]
+    .some(u => CardTitle(u.cardId) === "Jabba the Hutt");
+  return hasJabbaUnit ? 1 : 0;
+}
+
 // JTL_101 Red Leader: costs 1 resource less to play for each friendly Pilot unit and upgrade.
 function redLeaderPilotDiscount(game: GameState, player: PlayerId, cardId: string): number {
   if (cardId !== "JTL_101") return 0;
@@ -200,6 +223,8 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - morganNextUnitDiscount(game, player, cardId)
     - imperialNextUnitDiscount(game, player, cardId)
     - redLeaderPilotDiscount(game, player, cardId)
+    - reputableHunterDiscount(game, player, cardId)
+    - jabbasRancorDiscount(game, player, cardId)
   ;
 }
 

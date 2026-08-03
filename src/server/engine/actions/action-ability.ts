@@ -297,6 +297,18 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "ASH_142": // Mortar Trooper — Action [Exhaust]: Deal 1 damage to each of up to 3 ground units.
         if (AllGroundUnits().length > 0) abilities.push(cardId);
         break;
+      case "SHD_080": // Salacious Crumb — Action [Exhaust, return this unit to his owner's hand]:
+                      // Deal 1 damage to a ground unit. He is himself a ground unit, so a target
+                      // always exists while he is in play.
+        if (AllGroundUnits().length > 0) abilities.push(cardId);
+        break;
+      case "SHD_087": { // Crosshair — TWO Actions, so they get suffixed ability ids:
+                        // -1 [2 resources]: +1/+0 this phase.  -2 [Exhaust]: deal his power to an
+                        // enemy ground unit (needs one to target).
+        abilities.push("SHD_087-1");
+        if (AllGroundUnits().some(u => u.controller !== player)) abilities.push("SHD_087-2");
+        break;
+      }
       // NB: IBH_053 Darth Vader / IBH_001 Leia Organa are leaders whose DEPLOYED side is an On Attack
       // ability (see on-attack.ts + cardLeaderUnitText), NOT a repeat of the front-side Action — so
       // they are deliberately NOT registered here in the deployed-unit action block.
@@ -321,6 +333,31 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
   }
 
   return abilities;
+}
+
+/**
+ * Whether using this Action exhausts the unit. Almost every Action reads "[Exhaust]", but a few
+ * do not and are limited some other way — those must stay ready, or the unit silently loses its
+ * turn. Keyed by ABILITY id (see the `<cardId>-<n>` suffix convention for multi-Action units).
+ */
+export function ActionAbilityExhausts(abilityId: string): boolean {
+  switch (abilityId) {
+    case "SHD_017":   // Lando Calrissian (deployed) — plain "Action:", limited once each round
+    case "SHD_087-1": // Crosshair — "Action [2 resources]", no exhaust in the cost
+      return false;
+    default:
+      return true;
+  }
+}
+
+/**
+ * The unit whose Action is being used, given the ability id the client sent. Units with a single
+ * Action use their bare cardId; multi-Action units suffix it (`SHD_087-1`). Everything that needs
+ * the underlying card reads through this.
+ */
+export function ActionAbilityCardId(abilityId: string): string {
+  const dash = abilityId.indexOf("-");
+  return dash === -1 ? abilityId : abilityId.slice(0, dash);
 }
 
 export function ActionAbilityCost(cardId: string): number {

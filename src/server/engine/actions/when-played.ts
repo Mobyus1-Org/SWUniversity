@@ -1,12 +1,43 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
+import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
 import { aspectPenalty, palpatinesReturnCost, spendableFor } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
-import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits, CardIsUnique } from "@/server/engine/card-db/generated";
+import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits, CardIsUnique, CardArena } from "@/server/engine/card-db/generated";
+
+/**
+ * SHD_091 Jabba's Rancor — "Deal 3 damage to another friendly ground unit and 3 damage to an
+ * enemy ground unit." Shared by its When Played and its On Attack (identical text). Both halves
+ * are mandatory, so the whole ability fizzles unless BOTH a legal friendly and enemy target exist.
+ * `selfPlayId` is the Rancor, excluded from the friendly list by "another".
+ */
+export function jabbasRancorDamage(
+  player: PlayerId,
+  selfPlayId: string | undefined,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const friendly091 = GetUnitsForPlayer(player)
+    .filter(u => u.playId !== selfPlayId && (CardArena(u.cardId) ?? "Ground") === "Ground");
+  const enemy091 = GetUnitsForPlayer(GetOtherPlayer(player))
+    .filter(u => (CardArena(u.cardId) ?? "Ground") === "Ground");
+  if (friendly091.length === 0 || enemy091.length === 0) return continuation;
+  return {
+    type: "ability-target",
+    cardId: "SHD_091",
+    player,
+    fromPlayIds: friendly091.map(u => u.playId),
+    continuation: {
+      type: "ability-target",
+      cardId: "SHD_091",
+      player,
+      fromPlayIds: enemy091.map(u => u.playId),
+      continuation,
+    } satisfies AbilityTargetPending,
+  } satisfies AbilityTargetPending;
+}
 
 /**
  * One of LOF_070 Anakin's two "you may give a unit -3/-3 for this phase" abilities.
@@ -414,7 +445,57 @@ export function resolveWhenPlayed(
         },
       };
     }
+    case "SHD_080": { // Salacious Crumb — "When Played: Heal 1 damage from your base."
+                      // (His Action lives in resolveActionAbility.)
+      const game080 = GetGame();
+      if (game080) HealBaseForPlayer(game080.currentGameState, player, 1, game080.gameLog, "SHD_080");
+      return null;
+    }
+    case "SHD_064": // Survivors' Gauntlet — "When Played/On Attack: You may attach an upgrade on a
+                    // unit to another eligible unit controlled by the same player."
+      return buildMoveUpgradeSameController(cardId, player, null);
+    case "SHD_067": { // Fenn Rau — "When Played: You may play an upgrade from your hand. It costs
+                      // 2 resources less." (His attach reaction lives in dispatch-listener.ts.)
+      const hasUpgrade067 = GetHand(player).some(c => CardType(c.cardId) === "Upgrade");
+      if (!hasUpgrade067) return null;
+      return {
+        type: "ability-option",
+        cardId: "SHD_067",
+        player,
+        helperText: "Play an upgrade from your hand for 2 resources less?",
+        yesLabel: "Play upgrade",
+        noLabel: "Skip",
+        onYes: {
+          type: "play-from-hand",
+          cardId: "SHD_067",
+          player,
+          costReduction: 2,
+        },
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "SHD_139": { // Krrsantan — "When Played: If an enemy unit has a Bounty, you may ready
+                      // this unit." (His On Attack lives in on-attack.ts.)
+      const enemyHasBounty139 = GetUnitsForPlayer(GetOtherPlayer(player)).some(u => u.HasBounty());
+      if (!enemyHasBounty139) return null;
+      return {
+        type: "ability-option",
+        cardId: "SHD_139",
+        player,
+        sourcePlayId: playId,
+        helperText: `Ready ${CardTitle("SHD_139")}?`,
+        yesLabel: "Ready",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "SHD_091": { // Jabba's Rancor — "When Played/On Attack: Deal 3 damage to ANOTHER friendly
+                      // ground unit and 3 damage to an enemy ground unit." (On Attack in on-attack.ts.)
+      return jabbasRancorDamage(player, playId, null);
+    }
     case "SOR_033": //Death Trooper "Deal 2 damage to a friendly ground unit and 2 damage to an enemy ground unit."
+    case "SHD_030": // reprint of SOR_033
     case "SEC_030": {// reprint of SOR_033
       const friendlyGround = player === 1 ? game.currentGameState.player1.groundArena : game.currentGameState.player2.groundArena;
       const enemyGround = player === 1 ? game.currentGameState.player2.groundArena : game.currentGameState.player1.groundArena;
@@ -890,6 +971,7 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SHD_131": // Take Captive — TWI_128 is the reprint; identical text.
     case "TWI_128": { // Take Captive "A friendly unit captures an enemy non-leader unit in the same arena."
       const friendlyUnits = GetUnitsForPlayer(player, true);
       if (friendlyUnits.length === 0) return null;
@@ -1064,6 +1146,38 @@ export function resolveWhenPlayed(
       const eligible079 = AllUnits().filter(u => !(UnitImmuneToEnemyDefeat(u) && u.controller !== player));
       if (eligible079.length === 0) return null;
       return mandatoryTarget(cardId, player, eligible079.map(u => u.playId));
+    }
+    case "SHD_078": { // Fell the Dragon — "Defeat a non-leader unit with 5 or more power."
+                      // Either side; CURRENT power, so buffs and debuffs both count. Immunity to
+                      // enemy defeat only shields a unit from its opponent, not from its own side.
+      const eligible078 = AllUnits().filter(u =>
+        !CardIsLeader(u.cardId)
+        && Unit.FromInterface(u).CurrentPower() >= 5
+        && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player));
+      if (eligible078.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible078.map(u => u.playId));
+    }
+    case "SHD_039": { // Calculated Lethality — "Defeat a non-leader unit that costs 3 or less. For
+                      // each upgrade that was on that unit, give an Experience token to a friendly
+                      // unit." Printed cost, matching every other "costs N or less" filter.
+      const eligible039 = AllUnits().filter(u =>
+        !CardIsLeader(u.cardId)
+        && (CardCost(u.cardId) ?? 0) <= 3
+        && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player));
+      if (eligible039.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible039.map(u => u.playId));
+    }
+    case "SHD_130": { // Moment of Glory — "Give a unit +4/+4 for this phase." Either side.
+      const units130 = AllUnits();
+      if (units130.length === 0) return null;
+      return mandatoryTarget(cardId, player, units130.map(u => u.playId));
+    }
+    case "SHD_051": { // Mystic Reflection — "Give an enemy unit –2/–0 for this phase. If you
+                      // control a Force unit, give the enemy unit –2/–2 for this phase instead."
+                      // The Force condition is read when the effect applies, not here.
+      const enemy051 = GetUnitsForPlayer(GetOtherPlayer(player));
+      if (enemy051.length === 0) return null;
+      return mandatoryTarget(cardId, player, enemy051.map(u => u.playId));
     }
     case "JTL_079": { // Out the Airlock — "Give a unit –5/–5 for this phase." Either side.
       const units079 = AllUnits();
@@ -1322,6 +1436,22 @@ export function resolveWhenPlayed(
         } satisfies AbilityTargetPending,
         continuation: null,
       } satisfies AbilityOptionPending;
+    }
+    case "SHD_120": { // Discerning Veteran — "When Played: This unit captures an enemy non-leader
+                      // ground unit." The captor is fixed (itself), so only the victim is chosen.
+      const enemy120 = GetUnitsForPlayer(GetOtherPlayer(player))
+        .filter(u => (CardArena(u.cardId) ?? "Ground") === "Ground"
+          && !CardIsLeader(u.cardId)
+          && !UnitImmuneToEnemyCapture(u));
+      if (enemy120.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        sourcePlayId: playId, // the Veteran is the captor
+        fromPlayIds: enemy120.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
     }
     case "SEC_193": { // Grand Admiral Thrawn (Grand Schemer) — "When Played: An opponent may choose
                       // a non-leader unit they control. If they do, this unit captures that unit.

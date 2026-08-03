@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
-import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending } from "@/server/engine/pending-resolution";
-import { AllGroundUnits, AllSpaceUnits, AllUnits, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, ResourceTopCardOfDeck } from "@/server/engine/core-functions";
+import { OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
+import { AllGroundUnits, AllSpaceUnits, AllUnits, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, ResourceTopCardOfDeck } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType } from "@/server/engine/card-db/generated";
@@ -9,6 +9,7 @@ import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens } from "@/server/engine/token-helpers";
+import { jabbasRancorDamage } from "@/server/engine/actions/when-played";
 
 /**
  * On Attack abilities — called after the attack target is chosen.
@@ -409,6 +410,61 @@ function resolveInnateOnAttack(
         },
         continuation,
       };
+    }
+    case "SHD_153": { // Poe Dameron — "On Attack: Discard up to 3 cards from your hand. For each
+                      // card discarded this way, choose a different option." The discard step is
+                      // "up to", so it can end early; the mode chain then runs once per discard.
+      const hand153 = GetHand(attacker.controller);
+      if (hand153.length === 0) return continuation; // nothing to discard — the whole ability fizzles
+      return {
+        type: "discard-from-hand",
+        targetPlayer: attacker.controller,
+        count: Math.min(3, hand153.length),
+        upTo: true,
+        thenChooseModes: "SHD_153",
+        discardedSoFar: 0,
+        continuation,
+      } satisfies DiscardFromHandPending;
+    }
+    case "SHD_064": // Survivors' Gauntlet — "On Attack: You may attach an upgrade on a unit to
+                    // another eligible unit controlled by the same player." (Same as When Played.)
+      return buildMoveUpgradeSameController("SHD_064", attacker.controller, continuation) ?? continuation;
+    case "SHD_150": { // Koska Reeves — "On Attack: If this unit is upgraded, you may deal 2 damage
+                      // to a ground unit." Either side; the condition is checked now, not later.
+      if (attacker.upgrades.length === 0) return continuation;
+      const ground150 = AllGroundUnits();
+      if (ground150.length === 0) return continuation;
+      return optionalTarget("SHD_150", attacker.controller, ground150.map(u => u.playId),
+        "Deal 2 damage to a ground unit?", { yesLabel: "Deal 2", continuation });
+    }
+    case "SHD_139": { // Krrsantan — "On Attack: Choose a ground unit. You may deal 1 damage to it
+                      // for each damage on this unit." The amount is snapshotted onto the pending
+                      // so the combat damage he takes moments later can't inflate it.
+      const amount139 = attacker.damage;
+      if (amount139 <= 0) return continuation; // nothing to deal — no prompt
+      const ground139 = AllGroundUnits();
+      if (ground139.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "SHD_139",
+        player: attacker.controller,
+        helperText: `Deal ${amount139} damage to a ground unit?`,
+        yesLabel: `Deal ${amount139}`,
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "SHD_139",
+          player: attacker.controller,
+          fromPlayIds: ground139.map(u => u.playId),
+          amount: amount139,
+          continuation,
+        } satisfies AbilityTargetPending,
+        continuation,
+      } satisfies AbilityOptionPending;
+    }
+    case "SHD_091": { // Jabba's Rancor — "On Attack: Deal 3 damage to another friendly ground unit
+                      // and 3 damage to an enemy ground unit." (Same effect as its When Played.)
+      return jabbasRancorDamage(attacker.controller, attacker.playId, continuation) ?? continuation;
     }
     case "LAW_101": { // Lawbringer — "On Attack: Choose an aspect. Give each enemy unit with that
                       // aspect –2/–2 for this phase." (Same effect as its When Played.)

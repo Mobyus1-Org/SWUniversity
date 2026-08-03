@@ -119,6 +119,18 @@ export interface DiscardFromHandPending {
   thenDrawForPlayer?: PlayerId;
   /** ASH_172 Razor Crest: after the discard, give the named unit a ForAttack power buff ("if you do, this unit gets +X/+0 for this attack"). */
   thenAttackBuff?: { cardId: string; playId: string; amount: number };
+  /**
+   * SHD_153 Poe Dameron: "discard UP TO N" rather than exactly N. The player ends the step early
+   * by sending an empty target selection; without this an empty selection is rejected.
+   */
+  upTo?: boolean;
+  /**
+   * SHD_153 Poe Dameron: after the discard step ends, run that many mode choices for this card.
+   * Paired with `discardedSoFar`, which counts what was actually discarded.
+   */
+  thenChooseModes?: string;
+  /** SHD_153 Poe Dameron: how many cards this discard step has taken so far. */
+  discardedSoFar?: number;
 }
 
 /**

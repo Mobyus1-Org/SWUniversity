@@ -182,6 +182,8 @@ export class Unit implements UnitInterface {
       }
     }
 
+    power -= enemyAuraDebuff(this);
+
     // Gar Saxon (SHD_001) grants friendly upgraded units +1/+0 from the leader zone too. When he is
     // deployed he is caught by the loop above; when undeployed his aura still applies from the zone.
     if (this.upgrades.length > 0 && !LeaderAbilitiesIgnored()) {
@@ -385,6 +387,8 @@ export class Unit implements UnitInterface {
        }
     }
 
+    hp -= enemyAuraDebuff(this);
+
     for (const upgrade of this.upgrades) {
       hp += UpgradeHpOf(upgrade.cardId);
     }
@@ -451,6 +455,39 @@ export class Unit implements UnitInterface {
   CanUseLimitedAbility(): boolean {
     return this.numUses > 0;
   }
+}
+
+/**
+ * Auras an OPPONENT's units project onto `unit` — the mirror of the friendly-aura loops in
+ * CurrentPower/TotalHP, which only ever scan the unit's own controller. Returns the total amount
+ * to SUBTRACT from both power and HP.
+ *
+ * Kept as one helper called from both stat methods so a debuff can never apply to only one half.
+ * Reads nothing but cardIds and LostAbilities(), so it cannot recurse back into stat calculation.
+ *
+ * SHD_037 Supreme Leader Snoke — "Each enemy non-leader unit gets –2/–2." Not arena-limited: a
+ * ground Snoke still shrinks enemy space units.
+ */
+/**
+ * Cards whose mere presence shrinks the OPPONENT's units — the ones enemyAuraDebuff reads.
+ * Such a unit can defeat an enemy just by arriving (one already damaged past its newly reduced
+ * HP), and nothing else in the play-a-card path re-checks HP, so completePlayCard sweeps when
+ * this is true. Keep in sync with enemyAuraDebuff.
+ */
+export function ProjectsEnemyStatAura(cardId: string): boolean {
+  return cardId === "SHD_037"; // Supreme Leader Snoke — each enemy non-leader unit gets –2/–2
+}
+
+function enemyAuraDebuff(unit: Unit): number {
+  if (unit.IsLeader()) return 0; // "each enemy NON-LEADER unit"
+  const enemy: PlayerId = unit.controller === 1 ? 2 : 1;
+  let debuff = 0;
+  for (const foe of GetUnitsForPlayer(enemy)) {
+    if (foe.cardId !== "SHD_037") continue;
+    if (Unit.FromInterface(foe).LostAbilities()) continue;
+    debuff += 2;
+  }
+  return debuff;
 }
 
 /**

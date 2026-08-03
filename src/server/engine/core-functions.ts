@@ -6,6 +6,7 @@ import { Unit } from "@/server/engine/unit";
 import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { AbilityOptionPending, AbilityTargetPending, DeckSearchPending, PendingResolution } from "@/server/engine/pending-resolution";
+import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
 
 let activeGame: Game | null = null;
 
@@ -1070,6 +1071,11 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "JTL_147": //Black One — On Attack: if you control Poe Dameron, may deal 1 damage to a unit
     case "JTL_151": //Red Five — On Attack: may deal 2 damage to a damaged unit
     case "LOF_045": //Yaddle — On Attack: each other friendly Jedi gains Restore 1 this phase
+    case "SHD_153": //Poe Dameron — On Attack: discard up to 3, then one different option per discard
+    case "SHD_064": //Survivors' Gauntlet — When Played/On Attack: may move an upgrade between units of the same controller
+    case "SHD_150": //Koska Reeves — On Attack: if upgraded, may deal 2 damage to a ground unit
+    case "SHD_139": //Krrsantan — On Attack: may deal 1 damage to a ground unit per damage on this unit
+    case "SHD_091": //Jabba's Rancor — When Played/On Attack: 3 damage to another friendly ground unit and 3 to an enemy ground unit
     case "LOF_082": //Vaneé — When Played/On Attack
     case "LOF_003": //Ahsoka Tano (deployed) — On Attack: may give a friendly unit Sentinel
     case "SOR_179": //Boba Fett - Disintegrator
@@ -1618,6 +1624,60 @@ export function buildTakeControlOfUpgrade(
     },
     continuation,
   } satisfies AbilityOptionPending;
+}
+
+/**
+ * "You may attach an upgrade on a unit to another eligible unit controlled by the SAME player"
+ * (SHD_064 Survivors' Gauntlet, When Played and On Attack).
+ *
+ * The sibling of buildTakeControlOfUpgrade, but a pure relocation: the upgrade never changes
+ * controller, and its destination must be a unit its current holder's controller controls. Only
+ * upgrades that actually have somewhere legal to go are offered, so the prompt can't dead-end.
+ * Resolved by the "move-upgrade-source" / "move-upgrade-dest" dispatch cases.
+ */
+export function buildMoveUpgradeSameController(
+  cardId: string,
+  player: PlayerId,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const game = GetGame();
+  if (!game) throw new Error("Game not found in buildMoveUpgradeSameController");
+  const movable = AllUnits().flatMap(holder =>
+    holder.upgrades
+      .filter(upg => MoveUpgradeDestinations(upg.cardId, holder).length > 0)
+      .map(upg => upg.playId));
+  if (movable.length === 0) return continuation;
+  return {
+    type: "ability-option",
+    cardId,
+    player,
+    helperText: "Move an upgrade to another eligible unit controlled by the same player?",
+    yesLabel: "Move upgrade",
+    noLabel: "Skip",
+    onYes: {
+      type: "ability-target",
+      cardId: "move-upgrade-source",
+      player,
+      fromPlayIds: movable,
+      continuation,
+    } satisfies AbilityTargetPending,
+    continuation,
+  } satisfies AbilityOptionPending;
+}
+
+/**
+ * Where an upgrade currently on `holder` may be moved: units the HOLDER'S controller controls
+ * (never the holder itself) that the upgrade is allowed to attach to. Shared by the eligibility
+ * filter above and the two resolution steps, so what is offered and what is accepted agree.
+ */
+export function MoveUpgradeDestinations(upgradeCardId: string, holder: UnitInterface): string[] {
+  const game = GetGame();
+  if (!game) return [];
+  const owner = holder.controller;
+  const eligible = new Set(UpgradeEligibleTargets(upgradeCardId, game.currentGameState, owner));
+  return GetUnitsForPlayer(owner)
+    .filter(u => u.playId !== holder.playId && eligible.has(u.playId))
+    .map(u => u.playId);
 }
 
 export interface SearchDeckFilter {

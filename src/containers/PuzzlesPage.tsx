@@ -115,13 +115,23 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "IBH_053", "IBH_001",
 ]);
 
-// Non-leader units with an Action ability. Maps cardId → short label for the modal button.
+// Non-leader units with an Action ability. Maps cardId → the modal button(s).
 // Mirrors the playId block of ActionAbilities() in action-ability.ts.
-const UNITS_WITH_ACTION_ABILITY: Record<string, string> = {
+//
+// A unit with a SINGLE Action maps to one label and dispatches its bare cardId. A unit with more
+// than one maps to a list; each entry carries the suffixed ability id (`SHD_087-1`) that
+// ActionAbilities()/ActionAbilityCost() key off, so the engine knows which Action was chosen.
+type UnitAction = { abilityId: string; label: string };
+const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
   "SHD_028": "Draw a card",
   "LOF_206": "Attack with a Droid",
   "ASH_109": "+2/+2 to a unit",
   "ASH_142": "1 dmg to up to 3 ground units",
+  "SHD_080": "Return to hand, 1 dmg to a ground unit", // Salacious Crumb
+  "SHD_087": [ // Crosshair — two Actions
+    { abilityId: "SHD_087-1", label: "2 resources: +1/+0 this phase" },
+    { abilityId: "SHD_087-2", label: "Exhaust: deal his power to an enemy ground unit" },
+  ],
   "IBH_016": "3 dmg to a space unit", // Ion Cannon
   "IBH_027": "3 dmg to a space unit",
   "IBH_023": "Attack w/ another Heroism unit (+2/+0)", // General Rieekan
@@ -129,6 +139,13 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string> = {
   "IBH_062": "Heal 2 from a Villainy unit", // Imperial Deck Officer
   "IBH_100": "Heal 2 from a Villainy unit",
 };
+
+/** The Action buttons to render for a unit, normalising the single- and multi-Action shapes. */
+function unitActionsFor(cardId: string): UnitAction[] {
+  const entry = UNITS_WITH_ACTION_ABILITY[cardId];
+  if (!entry) return [];
+  return typeof entry === "string" ? [{ abilityId: cardId, label: entry }] : entry;
+}
 
 const BASES_WITH_EPIC_ACTION = new Set([
   "SOR_022", "SOR_025", "SOR_028",
@@ -682,11 +699,11 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
     void sendDispatch(createDispatch("initiate-attack", { playId }));
   }, [unitAbilityModal, sendDispatch]);
 
-  const handleUnitAbility = React.useCallback(() => {
+  const handleUnitAbility = React.useCallback((abilityId: string) => {
     if (!unitAbilityModal) return;
-    const { playId, cardId } = unitAbilityModal;
+    const { playId } = unitAbilityModal;
     setUnitAbilityModal(null);
-    void sendDispatch(createDispatch("use-ability", { cardId, playId }));
+    void sendDispatch(createDispatch("use-ability", { cardId: abilityId, playId }));
   }, [unitAbilityModal, sendDispatch]);
 
   const handleBaseClick = React.useCallback((player: PlayerId) => {
@@ -2530,10 +2547,12 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500/35">
             Attack
           </button>
-          <button type="button" onClick={handleUnitAbility}
-            className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/35">
-            Action: {UNITS_WITH_ACTION_ABILITY[unitAbilityModal.cardId]}
-          </button>
+          {unitActionsFor(unitAbilityModal.cardId).map((action) => (
+            <button key={action.abilityId} type="button" onClick={() => handleUnitAbility(action.abilityId)}
+              className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/35">
+              Action: {action.label}
+            </button>
+          ))}
           <button type="button" onClick={() => setUnitAbilityModal(null)}
             className="rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/70 transition hover:bg-white/20">
             Cancel
