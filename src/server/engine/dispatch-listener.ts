@@ -603,6 +603,60 @@ function addToArena(
  * under its OWNER's control — control never follows the captor — and is cleared off the guard so
  * it cannot be released twice.
  */
+/**
+ * JTL_094 Luke Skywalker as a pilot runs his own exit: the player may eject him to the ground
+ * arena instead, and that handler RE-CREATES him with addToArena. Routing him here as well would
+ * put a second copy in the discard, so every leave-play site skips him.
+ */
+function upgradeHasBespokeExit(cardId: string): boolean {
+  return cardId === "JTL_094";
+}
+
+/**
+ * Routes an upgrade that has just left play to the zone it legally belongs in.
+ *
+ * Units have had this chokepoint all along (removeFromArena + pushToDiscard, with an explicit
+ * leader-zone branch); upgrades had none, so every removal site invented its own destination and
+ * none of them handled the discard or the leader zone at all.
+ *
+ *  • A LEADER card may only be in the leader zone or in play — never hand, deck or discard. It
+ *    goes back to the zone EXHAUSTED, mirroring how a defeated leader UNIT is handled.
+ *  • A token upgrade is set aside rather than discarded (CR 7.6.1).
+ *  • Everything else goes to its OWNER's discard.
+ */
+function upgradeLeavesPlay(game: GameState, upgrade: CardInPlay, log: string[]): void {
+  if (upgradeHasBespokeExit(upgrade.cardId)) return;
+
+  const owner = (upgrade.owner ?? upgrade.controller) as PlayerId;
+
+  if (CardIsLeader(upgrade.cardId)) {
+    const leader = GetPlayer(game, owner).leader;
+    // Guard against a stale card: only reset the zone if this really is that player's leader.
+    if (leader.cardId === upgrade.cardId) {
+      leader.deployed = false;
+      leader.ready = false;
+      leader.deployedPlayId = undefined;
+    }
+    log.push(`${CardTitle(upgrade.cardId)} returned to Player ${owner}'s leader zone exhausted.`);
+    return;
+  }
+
+  if (IsTokenUpgrade(upgrade.cardId)) {
+    log.push(`${CardTitle(upgrade.cardId)} token set aside.`);
+    return;
+  }
+
+  GetPlayer(game, owner).discard.unshift({
+    cardId: upgrade.cardId,
+    playId: upgrade.playId,
+    owner,
+    controller: owner,
+    turnDiscarded: game.currentRound,
+    discardEffect: "",
+  });
+  log.push(`${CardTitle(upgrade.cardId)} was put into Player ${owner}'s discard.`);
+}
+
 /** Cards whose "When Played" only fires when the card was played using Smuggle (SHD_213 DJ). */
 function WhenPlayedRequiresSmuggle(cardId: string): boolean {
   return cardId === "SHD_213";
@@ -683,9 +737,14 @@ function removeFromArena(
       if (idx !== -1) {
         const [unit] = p[zone].splice(idx, 1);
         if (!opts.keepCaptives) {
+          // keepCaptives really means "this is not a departure" — transferControl moves a unit
+          // between arenas without it leaving play, so none of this cleanup applies there.
           const exitLog = opts.log ?? GetGame()?.gameLog ?? [];
           releaseCaptives(game, unit as Unit, exitLog);
           returnDjStolenResource(game, unit as Unit, exitLog);
+          // Upgrades leave play with their host — including a pilot leader, who returns to the
+          // leader zone rather than vanishing along with the ship.
+          for (const upg of unit.upgrades ?? []) upgradeLeavesPlay(game, upg, exitLog);
         }
         return { player, unit: unit as Unit, zone };
       }
@@ -861,6 +920,10 @@ function defeatUpgradeByPlayId(
         && TraitContains(u.cardId, "Night")) {
       GetPlayer(game, defeated.owner as PlayerId).hand.push({ cardId: defeated.cardId });
       log.push(`${CardTitle("ASH_055")} returned to Player ${defeated.owner}'s hand.`);
+    } else {
+      // Everything else goes to the zone it belongs in — the owner's discard, or, for a pilot
+      // leader, back to the leader zone. Without this the card simply left the game.
+      upgradeLeavesPlay(game, defeated, log);
     }
     // Traitorous unattach: owner reclaims control when the upgrade is removed.
     if (defeated.cardId === "SOR_122" && u.controller !== u.owner) {
@@ -12442,7 +12505,13 @@ function applyAbilityEffect(
         const upgrades199 = [...target199.upgrades];
         target199.upgrades = [];
         for (const upg of upgrades199) {
-          if (/_T\d+$/.test(upg.cardId)) {
+          if (CardIsLeader(upg.cardId)) {
+            // A leader can't go to hand. Bamboozle isn't a "defeat" effect, so a can't-be-defeated
+            // pilot leader (Luke JTL_012) isn't protected from it — but the card still cannot enter
+            // an illegal zone, so it is defeated instead and returns to the leader zone exhausted.
+            game.gameLog.push(`${CardTitle("SOR_199")}: ${CardTitle(upg.cardId)} cannot be returned to hand.`);
+            upgradeLeavesPlay(game.currentGameState, upg, game.gameLog);
+          } else if (IsTokenUpgrade(upg.cardId)) {
             game.gameLog.push(`${CardTitle("SOR_199")}: ${CardTitle(upg.cardId)} token set aside.`);
           } else {
             GetPlayer(game.currentGameState, upg.owner as PlayerId).hand.push({ cardId: upg.cardId });
