@@ -24,6 +24,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
         case "SHD_129"://Timely Intervention
         case "SHD_220"://Fennec Shand
         case "SHD_016"://Fennec Shand Leader / Leader unit
+        case "SEC_109"://Diplomatic Envoy — the next unit played after its disclose, this phase
         case "SEC_007"://Dryden Vos Leader — unit played by his Action gains Ambush this phase
         case "LOF_220"://Shien Flurry
         case "LOF_180"://Deceptive Shade

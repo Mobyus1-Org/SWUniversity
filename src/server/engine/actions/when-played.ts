@@ -1086,6 +1086,20 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SEC_109": { // Diplomatic Envoy — "When Played: You may disclose Command. If you do, the
+                      // next unit you play this phase gains Ambush for this phase."
+      if (!CanDisclose(player, ["Command"])) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        sourcePlayId: playId,
+        helperText: "Disclose Command to give your next unit this phase Ambush?",
+        yesLabel: "Disclose",
+        noLabel: "Skip",
+        onYes: { type: "play-from-hand", cardId, player },
+        continuation: null,
+      };
+    }
     case "SEC_181": { // Unauthorized Investigation — "Create a Spy token. You may disclose Aggression. If you do, create another Spy token."
       CreateSpy(game.currentGameState, player, game.gameLog, cardId);
       if (!CanDisclose(player, ["Aggression"])) return null;

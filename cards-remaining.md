@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 916 cards across 10 sets.**
+**Total: 915 cards across 10 sets.**
 
 ---
 
@@ -667,7 +667,7 @@ LAW_262: Bank Job Fugitives Unit
 LAW_264: From a Certain Point of View Event
 ```
 
-## SEC — Secrets of Power (162)
+## SEC — Secrets of Power (161)
 
 **Message 1 of 4**
 ```
@@ -732,7 +732,6 @@ SEC_105: Renewed Friendship Event
 SEC_106: Dismantle the Conspiracy Event
 SEC_107: Chancellor Valorum - Civil Servant Unit
 SEC_108: Senator's Aide Unit
-SEC_109: Diplomatic Envoy Unit
 SEC_112: Orn Free Taa - Political Power Broker Unit
 SEC_114: Kino Loy - You Answer to Me Unit
 SEC_115: Taylander Shuttle Unit

@@ -3584,6 +3584,14 @@ function queueUnitEntryTriggers(
       });
     }
   }
+  // SEC_109 Diplomatic Envoy: "the next unit you play this phase gains Ambush for this phase."
+  // The armed marker carries no targetPlayId; convert it into a unit-scoped grant now that the
+  // unit exists. This must land BEFORE the HasAmbush check below, which is what reads it.
+  if (consumeNextPlayMarker(game, player, "SEC_109_armed")) {
+    game.currentEffects.push({ cardId: "SEC_109", duration: "Phase", affectedPlayer: player, targetPlayId: unit.playId });
+    log.push(`${CardTitle("SEC_109")}: ${CardTitle(cardId)} gains Ambush for this phase.`);
+  }
+
   // SOR_143 Fighters for Freedom: when another Aggression card is played, may deal 1 damage to a base.
   if (cardId !== "SOR_143" && CardAspects(cardId).includes("Aggression")) {
     const fffUnit = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
@@ -3664,6 +3672,21 @@ function queueUnitEntryTriggers(
   return null;
 }
 
+/**
+ * "The next <something> you play this phase …" is armed as a currentEffect carrying only the
+ * source cardId and affectedPlayer — no targetPlayId, since the unit it will apply to does not
+ * exist yet. This consumes that marker, returning whether one was armed.
+ *
+ * Callers gate on the qualifying condition themselves (a unit at all, an Imperial unit, a unit
+ * with ≤1 power): a card played that does NOT qualify must leave the marker armed for a later one.
+ */
+function consumeNextPlayMarker(game: GameState, player: PlayerId, effectCardId: string): boolean {
+  const idx = game.currentEffects.findIndex(e => e.cardId === effectCardId && e.affectedPlayer === player);
+  if (idx === -1) return false;
+  game.currentEffects.splice(idx, 1);
+  return true;
+}
+
 function completePlayCard(
   game: GameState,
   log: string[],
@@ -3683,35 +3706,24 @@ function completePlayCard(
   }
 
   // SEC_110 GNK Power Droid: consume the discount only when a unit is played.
-  if (CardType(cardId) === "Unit") {
-    const gnkIdx = game.currentEffects.findIndex(e => e.cardId === "SEC_110" && e.affectedPlayer === player);
-    if (gnkIdx !== -1) game.currentEffects.splice(gnkIdx, 1);
-  }
+  if (CardType(cardId) === "Unit") consumeNextPlayMarker(game, player, "SEC_110");
 
   // LOF_005 Morgan Elsbeth: "the NEXT unit you play this phase" — consume on the next unit played,
   // whether or not it qualified for the keyword-sharing discount.
-  if (CardType(cardId) === "Unit") {
-    const morganIdx = game.currentEffects.findIndex(e => e.cardId === "LOF_005" && e.affectedPlayer === player);
-    if (morganIdx !== -1) game.currentEffects.splice(morganIdx, 1);
-  }
+  if (CardType(cardId) === "Unit") consumeNextPlayMarker(game, player, "LOF_005");
 
   // ASH_237 Mouse Droid: "the next IMPERIAL unit you play this phase" — consumed by an Imperial
   // unit only, so a non-Imperial unit played in between leaves the discount armed.
   if (CardType(cardId) === "Unit" && CardTraits(cardId).includes("Imperial")) {
-    const mouseIdx = game.currentEffects.findIndex(e => e.cardId === "ASH_237" && e.affectedPlayer === player);
-    if (mouseIdx !== -1) game.currentEffects.splice(mouseIdx, 1);
+    consumeNextPlayMarker(game, player, "ASH_237");
   }
 
   // ASH_248 Neel: "the next unit you play this phase with 1 or less power enters play ready."
   // Only a qualifying (≤1 power) unit consumes it; bigger units played first leave it armed.
   let neelReady = false;
   if (CardType(cardId) === "Unit" && (CardPower(cardId) ?? 0) <= 1) {
-    const neelIdx = game.currentEffects.findIndex(e => e.cardId === "ASH_248" && e.affectedPlayer === player);
-    if (neelIdx !== -1) {
-      game.currentEffects.splice(neelIdx, 1);
-      neelReady = true;
-      log.push(`${CardTitle("ASH_248")}: ${CardTitle(cardId)} enters play ready.`);
-    }
+    neelReady = consumeNextPlayMarker(game, player, "ASH_248");
+    if (neelReady) log.push(`${CardTitle("ASH_248")}: ${CardTitle(cardId)} enters play ready.`);
   }
 
   if (CardType(cardId) === "Unit") {
@@ -6034,6 +6046,18 @@ function handleChooseTarget(
         DrawCardForPlayer(game, log, pending.player);
         const bag062 = drainTriggerBag(game, log);
         if (bag062) return { response: resolutionResponse(pendingToResolution(bag062, game)), pending: bag062, stateChanged: true };
+        return { response: stateResponse(game), pending: null, stateChanged: true };
+      }
+      case "SEC_109": { // Diplomatic Envoy disclose: reveal must have Command
+        if (!CardsCanDisclose([cardId], ["Command"]))
+          return { response: invalidResponse("Disclose: revealed card does not have a Command aspect."), pending, stateChanged: false };
+        log.push(`${CardTitle(pending.cardId)}: disclosed ${CardTitle(cardId)} (Command).`);
+        // Arm the grant. It carries no targetPlayId — the unit it applies to has not been played
+        // yet — so it MUST use its own effect id; a bare "SEC_109" with no target would read as
+        // Ambush for every unit this player controls.
+        game.currentEffects.push({ cardId: "SEC_109_armed", duration: "Phase", affectedPlayer: pending.player });
+        const bag109 = drainTriggerBag(game, log);
+        if (bag109) return { response: resolutionResponse(pendingToResolution(bag109, game)), pending: bag109, stateChanged: true };
         return { response: stateResponse(game), pending: null, stateChanged: true };
       }
       case "SEC_181": { // Unauthorized Investigation disclose: reveal must have Aggression

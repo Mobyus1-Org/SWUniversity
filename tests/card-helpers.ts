@@ -481,6 +481,7 @@ export const Cards = {
     sec: {
       cadBane: "SEC_034",
       crucible: "SEC_119",
+      diplomaticEnvoy: "SEC_109",
       dedraMeeroUnit: "SEC_087",
       unrulyAstromech: "SEC_221",
       huntingAssassinDroid: "SEC_134",
@@ -606,6 +607,7 @@ export const Cards = {
     },
     ibh: {
       // Each card has multiple identical printings within IBH; suffix letters are alternate printings.
+      echoCoordinator: "IBH_007", // 1/5 Ground, no abilities — survives a hit and barely counters
       chewbacca: "IBH_003", chewbaccaB: "IBH_046",
       rogueSquadronSpeeder: "IBH_004", rogueSquadronSpeederB: "IBH_017", rogueSquadronSpeederC: "IBH_034",
       rebellionYWing: "IBH_006", rebellionYWingB: "IBH_024", rebellionYWingC: "IBH_032",
