@@ -5549,6 +5549,23 @@ function handleChooseTarget(
       owner: pending.player,
       controller: pending.player,
     };
+    // Duplicate-unique rule for UPGRADES. `completePlayCard` enforces uniqueness for units only,
+    // so a player could stack two copies of a unique upgrade. Unlike the unit case there is nothing
+    // to choose — at most one copy can already be in play — so the older one is defeated outright
+    // rather than prompting. Routed through upgradeLeavesPlay so a pilot leader returns to the
+    // leader zone instead of vanishing.
+    if (CardIsUnique(pending.upgradeCardId)) {
+      for (const host of GetUnitsForPlayer(pending.player)) {
+        const dupe = host.upgrades.find(
+          u => u.cardId === pending.upgradeCardId && (u.controller ?? u.owner) === pending.player,
+        );
+        if (!dupe) continue;
+        host.upgrades = host.upgrades.filter(u => u.playId !== dupe.playId);
+        log.push(`${CardTitle(pending.upgradeCardId)}: the copy already in play was defeated (unique).`);
+        upgradeLeavesPlay(game, dupe, log);
+        break; // only one copy can ever be in play
+      }
+    }
     targetUnit.upgrades.push(upgradeInPlay);
     // If a leader deployed as a pilot, record the upgrade's playId as deployedPlayId
     if (CardIsLeader(pending.upgradeCardId)) {

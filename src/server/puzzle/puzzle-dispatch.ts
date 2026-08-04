@@ -364,6 +364,29 @@ function resolveAutoOption(
       : NOTHING_TO_DO;
   }
 
+  // A bounty is collected by the opponent of the bountied unit's controller, so whenever the
+  // SOLVER defeats a unit carrying one, the decision is P2's. Nothing here was mapped, so every
+  // such bounty threw "Puzzle Auto Target not set" — which is what made attacking (or defeating) a
+  // unit wearing Guild Target look like the board locking up.
+  //
+  // P2 always collects: taking the bounty is never worse for them than declining.
+  if (pending.type === "bounty" && pending.collectingPlayer === 2) {
+    return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };
+  }
+  // SHD_173 Guild Target's bounty then asks for a base — always the solver's.
+  if (pending.type === "ability-target" && pending.player === 2
+      && (pending.cardId === "SHD_173_2" || pending.cardId === "SHD_173_3")) {
+    return { dispatchType: "choose-target", dispatchData: { targetPlayIds: ["player1.base"] } };
+  }
+  // SHD_068 Public Enemy's bounty gives a Shield to one of P2's own units. "soak" picks the one
+  // best placed to survive, which is the most annoying place for the solver to find a Shield.
+  if (pending.type === "ability-target" && pending.cardId === "SHD_068" && pending.player === 2) {
+    const targetPlayId = pickOpponentOwnUnit(pending.fromPlayIds, gameState, "soak");
+    return targetPlayId
+      ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
+      : NOTHING_TO_DO;
+  }
+
   // JTL_104 Raddus controlled by the opponent (P2): its When Defeated deals damage equal to its
   // power to one of the solver's units. Auto-pick the worst-case target — ready units first, then
   // highest current power (see pickOpponentTargetAmongMyUnits).
