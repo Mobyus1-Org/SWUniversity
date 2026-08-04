@@ -31,7 +31,7 @@ export default function handler(
     return methodNotAllowed(response, "GET");
   }
 
-  const regularCards: CardCatalogEntry[] = GetAllCardIds()
+  const named = GetAllCardIds()
     .filter((cardId) => {
       const setCode = cardId.split("_")[0];
       // exclude token cards (handled separately below)
@@ -44,7 +44,19 @@ export default function handler(
       const label = subtitle ? `${title} — ${subtitle}` : title;
       return { cardId, label, type: CardType(cardId) };
     })
-    .filter((entry) => entry.label.trim().length > 0)
+    .filter((entry) => entry.label.trim().length > 0);
+
+  // Distinct cards can share a label outright — "Surprise Strike" is a different card in SOR and
+  // SHD, neither has a subtitle, and the picker showed only the label, so they were impossible to
+  // tell apart when adding to a hand. Suffix the set code on collisions ONLY, so the vast majority
+  // of entries stay clean.
+  const labelCounts = new Map<string, number>();
+  for (const entry of named) labelCounts.set(entry.label, (labelCounts.get(entry.label) ?? 0) + 1);
+
+  const regularCards: CardCatalogEntry[] = named
+    .map((entry) => (labelCounts.get(entry.label)! > 1
+      ? { ...entry, label: `${entry.label} (${entry.cardId.split("_")[0]})` }
+      : entry))
     .sort((a, b) => a.label.localeCompare(b.label));
 
   const tokenCards: CardCatalogEntry[] = [

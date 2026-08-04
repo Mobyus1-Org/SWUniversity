@@ -624,6 +624,57 @@ export function UnitHasWhenDefeatedAbility(unit: Unit): boolean {
  * effect's `value`, so Unit.CurrentPower/TotalHP read it generically and no per-card
  * case is needed.
  */
+/**
+ * Gives `target` a keyword for the phase via a current effect keyed to `sourceCardId`. The keyword
+ * dictionaries read effects with `GetCurrentEffectsForPlayer(<the unit's controller>)`, so the
+ * effect must be filed under the TARGET's controller — which is the enemy player when a card hands
+ * a keyword to an opposing unit (SEC_048 Captain Rex).
+ */
+/**
+ * SEC_048 Captain Rex — "When Played/When this unit completes an attack: Give this unit and an
+ * enemy unit Sentinel for this phase." Shared by both triggers.
+ *
+ * Rex's own grant is applied immediately rather than in the target handler: the ability is
+ * mandatory and does as much as it can, so with no enemy on the board he still gains Sentinel and
+ * there is simply nothing to prompt for.
+ */
+export function buildCaptainRexSentinel(
+  player: PlayerId,
+  playId: string | undefined,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const gameLog = GetGame()?.gameLog ?? [];
+  const rex = playId ? GetUnitInPlay(playId, player) : null;
+  if (rex) GrantKeywordForPhase("SEC_048", rex, gameLog, "Sentinel");
+
+  const enemies = GetUnitsForPlayer(player === 1 ? 2 : 1);
+  if (enemies.length === 0) return continuation;
+  return {
+    type: "ability-target",
+    cardId: "SEC_048",
+    player,
+    sourcePlayId: playId,
+    fromPlayIds: enemies.map(u => u.playId),
+    continuation,
+  } as PendingResolution;
+}
+
+export function GrantKeywordForPhase(
+  sourceCardId: string,
+  target: Unit,
+  gameLog: string[],
+  keywordName: string,
+): void {
+  const gs = GetGameState();
+  gs.currentEffects.push({
+    cardId: sourceCardId,
+    duration: "Phase",
+    affectedPlayer: target.controller,
+    targetPlayId: target.playId,
+  });
+  gameLog.push(`${CardTitle(sourceCardId)}: gave ${keywordName} to ${CardTitle(target.cardId)} for this phase.`);
+}
+
 export function GiveStatModForPhase(
   sourceCardId: string,
   target: Unit,

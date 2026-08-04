@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 915 cards across 10 sets.**
+**Total: 910 cards across 10 sets.**
 
 ---
 
@@ -24,7 +24,7 @@ SOR_238: C-3PO - Protocol Droid Unit
 SOR_246: You're My Only Hope Event
 ```
 
-## SHD — Shadows of the Galaxy (65)
+## SHD — Shadows of the Galaxy (64)
 
 **Message 1 of 2**
 ```
@@ -83,7 +83,6 @@ SHD_209: Criminal Muscle Unit
 SHD_214: Frontier Trader Unit
 SHD_227: Look the Other Way Event
 SHD_228: Bounty Posting Event
-SHD_231: Surprise Strike Event
 SHD_232: Relentless Pursuit Event
 SHD_233: Evacuate Event
 SHD_234: Incinerator Trooper Unit
@@ -101,7 +100,7 @@ SHD_260: Street Gang Recruiter Unit
 SHD_262: Confiscate Event
 ```
 
-## TWI — Twilight of the Republic (106)
+## TWI — Twilight of the Republic (105)
 
 **Message 1 of 3**
 ```
@@ -152,7 +151,6 @@ TWI_103: Pyrrhic Assault Event
 TWI_107: Patrolling V-Wing Unit
 TWI_110: Huyang - Enduring Instructor Unit
 TWI_120: Strategic Acumen Upgrade
-TWI_122: Squad Support Upgrade
 TWI_123: Outflank Event
 ```
 
@@ -224,7 +222,7 @@ TWI_254: Volunteer Soldier Unit
 TWI_257: Private Manufacturing Event
 ```
 
-## JTL — Jump to Lightspeed (105)
+## JTL — Jump to Lightspeed (104)
 
 **Message 1 of 3**
 ```
@@ -252,7 +250,6 @@ JTL_083: Pantoran Starship Thief Unit
 JTL_088: Captain Phasma - On My Command Unit
 JTL_089: The Invisible Hand - Crawling With Vultures Unit
 JTL_091: Apology Accepted Event
-JTL_092: Scramble Fighters Event
 JTL_099: Veteran Fleet Officer Unit
 JTL_116: Dornean Gunship Unit
 JTL_117: General Draven - Doing What Must Be Done Unit
@@ -346,14 +343,13 @@ JTL_260: Death Star Plans Upgrade
 JTL_262: Evasive Maneuver Event
 ```
 
-## LOF — Legends of the Force (107)
+## LOF — Legends of the Force (106)
 
 **Message 1 of 3**
 ```
 LOF:
 LOF_019: Vergence Temple Base
 LOF_022: Mystic Monastery Base
-LOF_025: Temple of Destruction Base
 LOF_028: Tomb of Eilram Base
 LOF_035: Talzin's Assassin Unit
 LOF_036: Old Daka - Oldest and Wisest Unit
@@ -667,7 +663,7 @@ LAW_262: Bank Job Fugitives Unit
 LAW_264: From a Certain Point of View Event
 ```
 
-## SEC — Secrets of Power (161)
+## SEC — Secrets of Power (160)
 
 **Message 1 of 4**
 ```
@@ -694,7 +690,6 @@ SEC_042: Cassian Andor - Lay Low Unit
 SEC_045: Senator Chuchi - Voice for the Voiceless Unit
 SEC_046: Galen Erso - You'll Never Win Unit
 SEC_047: Coronet - Stately Vessel Unit
-SEC_048: Captain Rex - Into the Firefight Unit
 SEC_050: Vigil - Securing the Future Unit
 SEC_052: Diplomatic Immunity Upgrade
 SEC_053: One in a Million Event

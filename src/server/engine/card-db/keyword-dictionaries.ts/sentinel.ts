@@ -37,6 +37,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
       }
 
       switch(currentEffect.cardId) {
+        case "SEC_048": hasSentinel = true; break;//Captain Rex — this unit AND an enemy unit, for the phase
         case "SOR_086": hasSentinel = true; break;//Gladiator Star Destroyer
         case "SOR_003": hasSentinel = true; break;//Chewbacca (Walking Carpet)
         case "SHD_103": hasSentinel = true; break;//General Rieekan

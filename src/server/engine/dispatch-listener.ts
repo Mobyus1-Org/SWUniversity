@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -2087,6 +2087,109 @@ const FORCE_ON_ATTACK_BASES = new Set([
   "LOF_026", "LOF_027", "LOF_029", "LOF_030",
 ]);
 
+/**
+ * Everything that triggers when a unit deals COMBAT damage to a base — the automatic half.
+ *
+ * Per CR 8.7.d, Overwhelm excess IS combat damage to the base: "When an attacker with Overwhelm
+ * deals excess damage to a base, it is considered to have dealt combat damage to the base, but it
+ * is not considered to have ATTACKED that base." The distinction the CR draws is attacked vs not
+ * attacked — the damage is combat damage either way. These triggers previously lived inline in the
+ * base-attack branch alone, so every card below silently did nothing on an Overwhelm kill.
+ *
+ * Ability damage to a base is NOT combat damage (CR 6.3.1.c), so this is deliberately unreachable
+ * from DealDamageToBase.
+ *
+ * Call AFTER DefeatAdvantageTokensAfterCombat, so an Advantage token granted here survives.
+ * `stayOnTarget` must be read by the caller BEFORE it clears the attacker's ForAttack effects.
+ */
+function applyCombatDamageToBaseAutoEffects(
+  game: GameState,
+  log: string[],
+  attacker: Unit,
+  amount: number,
+  stayOnTarget: boolean,
+): void {
+  if (amount <= 0) return;
+
+  // LOF_025 Temple of Destruction — "When a friendly unit deals 3 or more combat damage to an
+  // enemy base: The Force is with you."
+  if (amount >= 3 && GetPlayer(game, attacker.controller).base.cardId === "LOF_025") {
+    CreateForceToken(attacker.controller, log, "LOF_025");
+  }
+
+  // ASH_144 Vane's Snub Fighter — reacts to ANY friendly unit's attack, not only its own.
+  const vane144 = GetUnitsForPlayer(attacker.controller)
+    .find(u => u.cardId === "ASH_144" && !Unit.FromInterface(u).LostAbilities());
+  if (vane144) GiveAdvantageTokens(game, vane144, 1, log, "ASH_144");
+
+  // JTL_177 Stay on Target — grants the attacker "When this unit deals damage to a base: Draw a card."
+  if (stayOnTarget) {
+    DrawCardForPlayer(game, log, attacker.controller);
+    log.push(`${CardTitle("JTL_177")}: ${CardTitle(attacker.cardId)} damaged the base — drew a card.`);
+  }
+}
+
+/**
+ * The interactive half of "dealt combat damage to a base": returns an optional ability chained
+ * ahead of `tail`, or `tail` unchanged. Callers must return whatever comes back.
+ */
+function combatDamageToBaseAbility(
+  game: GameState,
+  attacker: Unit,
+  victimPlayer: PlayerId,
+  amount: number,
+  tail: PendingResolution | null,
+): PendingResolution | null {
+  if (amount <= 0) return tail;
+  if (Unit.FromInterface(attacker).LostAbilities()) return tail;
+
+  // SHD_147 Ketsu Onyo — may defeat an upgrade that costs 2 or less.
+  if (attacker.cardId === "SHD_147") {
+    const eligible147 = GetAllUnits(game).flatMap(u => u.upgrades).filter(up => CardCost(up.cardId) <= 2);
+    if (eligible147.length === 0) return tail;
+    return {
+      type: "ability-option" as const,
+      cardId: "SHD_147",
+      player: attacker.controller,
+      helperText: "Defeat an upgrade that costs 2 or less?",
+      yesLabel: "Defeat",
+      noLabel: "Skip",
+      onYes: {
+        type: "ability-target" as const,
+        cardId: "SHD_147_defeat_upgrade",
+        player: attacker.controller,
+        fromPlayIds: eligible147.map(up => up.playId),
+        continuation: tail,
+      },
+      continuation: tail,
+    } satisfies AbilityOptionPending;
+  }
+
+  // SOR_133 Seventh Sister — may deal 3 damage to a ground unit that opponent controls.
+  if (attacker.cardId === "SOR_133") {
+    const enemyGround133 = GetPlayer(game, victimPlayer).groundArena as Unit[];
+    if (enemyGround133.length === 0) return tail;
+    return {
+      type: "ability-option" as const,
+      cardId: "SOR_133",
+      player: attacker.controller,
+      helperText: "Deal 3 damage to a ground unit that opponent controls?",
+      yesLabel: "Deal 3",
+      noLabel: "Skip",
+      onYes: {
+        type: "ability-target" as const,
+        cardId: "SOR_133",
+        player: attacker.controller,
+        fromPlayIds: enemyGround133.map(u => u.playId),
+        continuation: tail,
+      },
+      continuation: tail,
+    } satisfies AbilityOptionPending;
+  }
+
+  return tail;
+}
+
 function resolveAttack(
   game: GameState,
   log: string[],
@@ -2157,15 +2260,7 @@ function resolveAttack(
     // to a base, give an Advantage token to this unit." Reacts to ANY friendly attack, not just
     // its own — granted after the cleanup above so the token survives even when Vane's is the
     // attacker itself.
-    if (atkPower > 0) {
-      const vane144 = GetUnitsForPlayer(attacker.controller)
-        .find(u => u.cardId === "ASH_144" && !Unit.FromInterface(u).LostAbilities());
-      if (vane144) GiveAdvantageTokens(game, vane144, 1, log, "ASH_144");
-    }
-    if (stayOnTarget177) {
-      DrawCardForPlayer(game, log, attacker.controller);
-      log.push(`${CardTitle("JTL_177")}: ${attackerName} damaged the base — drew a card.`);
-    }
+    applyCombatDamageToBaseAutoEffects(game, log, attacker, atkPower, stayOnTarget177);
     const whenAttackEnds = resolveWhenAttackEnds(
       game, attacker, pending.continuation ?? null, false, 0,
       atkPower > 0 ? target.player : null, null, baseAttackSources,
@@ -2175,54 +2270,7 @@ function resolveAttack(
       const sacrificePend = defeatUnit(game, log, attacker);
       if (sacrificePend) return injectContinuation(sacrificePend, whenAttackEnds);
     }
-    // SHD_147 Ketsu Onyo: when deals combat damage to a base, may defeat an upgrade that costs 2 or less.
-    if (attacker.cardId === "SHD_147" && !Unit.FromInterface(attacker).LostAbilities() && atkPower > 0) {
-      const eligibleUpgrades147 = GetAllUnits(game)
-        .flatMap(u => u.upgrades)
-        .filter(up => CardCost(up.cardId) <= 2);
-      if (eligibleUpgrades147.length > 0) {
-        return {
-          type: "ability-option" as const,
-          cardId: "SHD_147",
-          player: attacker.controller,
-          helperText: "Defeat an upgrade that costs 2 or less?",
-          yesLabel: "Defeat",
-          noLabel: "Skip",
-          onYes: {
-            type: "ability-target" as const,
-            cardId: "SHD_147_defeat_upgrade",
-            player: attacker.controller,
-            fromPlayIds: eligibleUpgrades147.map(up => up.playId),
-            continuation: whenAttackEnds,
-          },
-          continuation: whenAttackEnds,
-        } satisfies AbilityOptionPending;
-      }
-    }
-    // SOR_133 Seventh Sister: when deals combat damage to opponent's base, may deal 3 to a ground unit.
-    if (attacker.cardId === "SOR_133" && !Unit.FromInterface(attacker).LostAbilities()) {
-      const defenderState = target.player === 1 ? game.player1 : game.player2;
-      const enemyGround133 = defenderState.groundArena as Unit[];
-      if (enemyGround133.length > 0) {
-        return {
-          type: "ability-option" as const,
-          cardId: "SOR_133",
-          player: attacker.controller,
-          helperText: "Deal 3 damage to a ground unit that opponent controls?",
-          yesLabel: "Deal 3",
-          noLabel: "Skip",
-          onYes: {
-            type: "ability-target" as const,
-            cardId: "SOR_133",
-            player: attacker.controller,
-            fromPlayIds: enemyGround133.map(u => u.playId),
-            continuation: whenAttackEnds,
-          },
-          continuation: whenAttackEnds,
-        } satisfies AbilityOptionPending;
-      }
-    }
-    return whenAttackEnds;
+    return combatDamageToBaseAbility(game, attacker, target.player, atkPower, whenAttackEnds);
   } else {
     const defender = GetUnitByPlayId(game, target.playId);
     if (!defender) {
@@ -2238,6 +2286,14 @@ function resolveAttack(
       if (overwhelm && atkPower > 0) {
         dealBaseDamage(game, GetOtherPlayer(attacker.controller), atkPower);
         log.push(`Overwhelm: ${atkPower} excess damage dealt to the base (defender already defeated).`);
+        // CR 8.7.f — all of it is excess, and excess dealt to a base is combat damage to that base.
+        const stayOnTargetF = game.currentEffects.some(
+          e => e.cardId === "JTL_177" && e.targetPlayId === attacker.playId,
+        );
+        applyCombatDamageToBaseAutoEffects(game, log, attacker, atkPower, stayOnTargetF);
+        return combatDamageToBaseAbility(
+          game, attacker, GetOtherPlayer(attacker.controller), atkPower, null,
+        );
       }
       return null;
     }
@@ -2375,7 +2431,9 @@ function resolveAttack(
     // so nothing lands). ASH_101 The Great Mothers defeats what it damaged, survivors included.
     const combatDamagedPlayId = shieldIdx === -1 && effectiveAtkPower > 0 ? defender.playId : null;
 
-    // Overwhelm: excess damage spills to base
+    // Overwhelm: excess damage spills to base. `excessDamage` is computed for every attacker, so
+    // it does NOT imply a spill (ASH_137 redirects it to a unit instead) — record the real spill.
+    let overwhelmSpill = 0;
     try {
       if (
         HasOverwhelm(
@@ -2389,11 +2447,16 @@ function resolveAttack(
         if (excessDamage > 0) {
           dealBaseDamage(game, GetOtherPlayer(attacker.controller), excessDamage);
           log.push(`Overwhelm: ${excessDamage} excess damage dealt to the base.`);
+          overwhelmSpill = excessDamage;
         }
       }
     } catch {
       // HasOverwhelm may throw if unit isn't in singleton; ignore safely
     }
+    // Read BEFORE this attacker's ForAttack effects are cleared further down.
+    const stayOnTarget177 = overwhelmSpill > 0 && game.currentEffects.some(
+      e => e.cardId === "JTL_177" && e.targetPlayId === attacker.playId,
+    );
 
     // SOR_085 Rukh: when deals combat damage to a non-leader unit, defeat that unit.
     const rukhDefeat =
@@ -2424,6 +2487,13 @@ function resolveAttack(
     // The attacker's attack and the defender's defense have both ended — their Advantage
     // tokens defeat. Advantage is +1/+0, so removing it can't change who was defeated above.
     DefeatAdvantageTokensAfterCombat([attacker, defender], log);
+
+    // Overwhelm spill is combat damage to the base (CR 8.7.d), so everything keyed off that fires
+    // here too — including the `baseDamagedPlayer` that ASH_183 Whistling Birds reads.
+    const spillVictim: PlayerId | null = overwhelmSpill > 0 ? GetOtherPlayer(attacker.controller) : null;
+    if (spillVictim) applyCombatDamageToBaseAutoEffects(game, log, attacker, overwhelmSpill, stayOnTarget177);
+    const withBaseAbility = (tail: PendingResolution | null): PendingResolution | null =>
+      spillVictim ? combatDamageToBaseAbility(game, attacker, spillVictim, overwhelmSpill, tail) : tail;
 
     // ASH_137 Wipe Them Out — "Attack with a unit. For this attack, you may deal its excess
     // damage to another unit in the same arena." Wraps the When-Attack-Ends chain with an
@@ -2461,7 +2531,7 @@ function resolveAttack(
     if (nextPending) {
       // Append resolveWhenAttackEnds at the tail of the pending chain.
       // defeatUnit returns BountyPending | WhenDefeatedChoicePending, both have continuation.
-      const whenAttackEnds = wrapASH137(resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, null, combatDamagedPlayId, attackerSources));
+      const whenAttackEnds = withBaseAbility(wrapASH137(resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, spillVictim, combatDamagedPlayId, attackerSources)));
       type WithContinuation = { continuation: PendingResolution | null | undefined };
       let tail: WithContinuation = nextPending as unknown as WithContinuation;
       while (tail.continuation != null) tail = tail.continuation as unknown as WithContinuation;
@@ -2469,7 +2539,7 @@ function resolveAttack(
       return nextPending;
     }
 
-    return wrapASH137(resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, null, combatDamagedPlayId, attackerSources));
+    return withBaseAbility(wrapASH137(resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, spillVictim, combatDamagedPlayId, attackerSources)));
   }
 }
 
@@ -2626,6 +2696,11 @@ function innateWhenAttackEnds(
 ): PendingResolution | null {
   const log = GetGame()?.gameLog ?? [];
   switch (sourceCardId) {
+    case "SEC_048": { // Captain Rex — "When Played/When this unit completes an attack: Give this
+                      // unit and an enemy unit Sentinel for this phase." attackerOwnWhenAttackEnds
+                      // already returned early if Rex left play, so "completes" is satisfied.
+      return buildCaptainRexSentinel(attacker.controller, attacker.playId, continuation);
+    }
     case "ASH_033": { // Grand Admiral Thrawn — "When Attack Ends: If the defending unit was
                       // defeated, ready this unit."
       if (defDefeated && ReadyUnit(game, attacker)) {
@@ -7825,6 +7900,20 @@ function handleChooseOption(
           }
           return { response: stateResponse(game), pending: null, stateChanged: true };
         }
+        case "SHD_173_2": // Guild Target on a non-unique unit — 2 damage.
+        case "SHD_173_3": { // Guild Target on a unique unit — 3 damage instead.
+          const amount173 = pending.cardId === "SHD_173_3" ? 3 : 2;
+          const target173: AbilityTargetPending = {
+            type: "ability-target",
+            cardId: pending.cardId,
+            player: pending.collectingPlayer,
+            fromPlayIds: [],
+            fromZones: ["Base"],
+            continuation: pending.continuation ?? null,
+          };
+          log.push(`${CardTitle("SHD_173")}: Player ${pending.collectingPlayer} may deal ${amount173} damage to a base.`);
+          return { response: resolutionResponse(pendingToResolution(target173, game)), pending: target173, stateChanged: false };
+        }
         case "SHD_221": { // Wanted — ready 2 of the collector's resources.
           let readied221 = 0;
           for (const r of GetPlayer(game, pending.collectingPlayer).resources) {
@@ -12369,6 +12458,12 @@ function applyAbilityEffect(
       if (target060) GiveStatModForPhase("JTL_060", target060, -1, game.gameLog);
       break;
     }
+    case "SEC_048": { // Captain Rex — the chosen ENEMY unit gains Sentinel for this phase.
+      if (!targetPlayId) break;
+      const enemy048 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (enemy048) GrantKeywordForPhase("SEC_048", enemy048, game.gameLog, "Sentinel");
+      break;
+    }
     case "LOF_031": { // Karis When Defeated: the Force is already spent — give –2/–2 for this phase.
       if (!targetPlayId) break;
       const target031 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -12924,13 +13019,15 @@ function applyAbilityEffect(
         continuation: null,
       };
     }
-    case "SOR_220": { // Surprise Strike: +3/+0 ForAttack then attack with chosen unit.
+    case "SOR_220": // Surprise Strike (SOR)
+    case "SHD_231": { // Surprise Strike (SHD) — +3/+0 ForAttack then attack with chosen unit.
       if (!targetPlayId) break;
-      game.currentGameState.currentEffects.push({ cardId: "SOR_220", duration: "ForAttack", affectedPlayer: pending.player!, targetPlayId });
+      // The effect is keyed to the printing that granted it; unit.ts reads both ids.
+      game.currentGameState.currentEffects.push({ cardId: pending.cardId, duration: "ForAttack", affectedPlayer: pending.player!, targetPlayId });
       return {
         type: "attack-target",
         attackerPlayId: targetPlayId,
-        source: "SOR_220",
+        source: pending.cardId,
         continuation: null,
       };
     }
@@ -13417,6 +13514,22 @@ function applyAbilityEffect(
       return pending.continuation;
     }
 
+    case "SHD_173_2": // Guild Target — 2 damage to the chosen base...
+    case "SHD_173_3": { // ...or 3, when the bountied unit was unique.
+      const amount173 = pending.cardId === "SHD_173_3" ? 3 : 2;
+      const owner173 = pending.player!;
+      // Same dual calling convention as SEC_264: the UI sends targetZones:["Base"] for the enemy
+      // base, while tests and back-ends may name the base playId outright.
+      let basePlayer173: PlayerId | null = null;
+      if (targetIsBase) basePlayer173 = owner173 === 1 ? 2 : 1;
+      else if (targetPlayId === "player1.base") basePlayer173 = 1;
+      else if (targetPlayId === "player2.base") basePlayer173 = 2;
+      if (basePlayer173 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer173, amount173, owner173);
+        game.gameLog.push(`${CardTitle("SHD_173")}: dealt ${amount173} damage to player ${basePlayer173}'s base.`);
+      }
+      break;
+    }
     case "SEC_264": { // Clandestine Connections — deal 2 damage to the chosen base
       const owner264 = pending.player!;
       // UI sends targetZones:["Base"] (targetIsBase) for the enemy base; tests/back-ends may

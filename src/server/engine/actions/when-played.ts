@@ -1,11 +1,11 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
+import { buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
 import { aspectPenalty, palpatinesReturnCost, spendableFor } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
-import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
+import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateTieFighter, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits, CardIsUnique, CardArena } from "@/server/engine/card-db/generated";
 
 /**
@@ -1086,6 +1086,9 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SEC_048": // Captain Rex — "When Played/When this unit completes an attack: Give this
+                    // unit and an enemy unit Sentinel for this phase."
+      return buildCaptainRexSentinel(player, playId, null);
     case "SEC_109": { // Diplomatic Envoy — "When Played: You may disclose Command. If you do, the
                       // next unit you play this phase gains Ambush for this phase."
       if (!CanDisclose(player, ["Command"])) return null;
@@ -1099,6 +1102,23 @@ export function resolveWhenPlayed(
         onYes: { type: "play-from-hand", cardId, player },
         continuation: null,
       };
+    }
+    case "JTL_092": { // Scramble Fighters — "Create 8 TIE Fighter tokens and ready them.
+                      // They can't attack bases for this phase."
+      const gs092 = game.currentGameState;
+      for (let i = 0; i < 8; i++) {
+        const tie = CreateTieFighter(gs092, player, game.gameLog, i === 0 ? cardId : undefined);
+        tie.ready = true; // tokens are created exhausted; this one says "and ready them"
+        // The no-base restriction is per token, by the shared `<cardId>_no_base` convention.
+        gs092.currentEffects.push({
+          cardId: "JTL_092_no_base",
+          duration: "Phase",
+          affectedPlayer: player,
+          targetPlayId: tie.playId,
+        });
+      }
+      game.gameLog.push(`${CardTitle(cardId)}: created 8 ready TIE Fighters (they can't attack bases this phase).`);
+      return null;
     }
     case "SEC_181": { // Unauthorized Investigation — "Create a Spy token. You may disclose Aggression. If you do, create another Spy token."
       CreateSpy(game.currentGameState, player, game.gameLog, cardId);
@@ -2241,7 +2261,8 @@ export function resolveWhenPlayed(
       if (vehicles177.length === 0) return null;
       return mandatoryTarget(cardId, player, vehicles177.map(u => u.playId));
     }
-    case "SOR_220": { // Surprise Strike — Attack with a unit. It gets +3/+0 for this attack.
+    case "SOR_220": // Surprise Strike (SOR)
+    case "SHD_231": { // Surprise Strike (SHD) — Attack with a unit. It gets +3/+0 for this attack.
       const readyFriendly220 = GetUnitsForPlayer(player, true);
       if (readyFriendly220.length === 0) return null;
       return {

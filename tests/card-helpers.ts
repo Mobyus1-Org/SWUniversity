@@ -480,6 +480,7 @@ export const Cards = {
     },
     sec: {
       cadBane: "SEC_034",
+      captainRex: "SEC_048",
       crucible: "SEC_119",
       diplomaticEnvoy: "SEC_109",
       dedraMeeroUnit: "SEC_087",
@@ -649,6 +650,7 @@ export const Cards = {
     shd: {
       legalAuthority: "SHD_124",
       publicEnemy: "SHD_068",
+      guildTarget: "SHD_173",
       imprisoned: "SHD_072",
       hotshotBlaster: "SHD_174",
       theDarksaber: "SHD_126",
@@ -687,6 +689,7 @@ export const Cards = {
     },
     twi: {
       unshakeableWill: "TWI_071",
+      squadSupport: "TWI_122",
     },
     sec: {
       clandestineConnections: "SEC_264",
@@ -709,6 +712,7 @@ export const Cards = {
       momentOfGlory: "SHD_130",
       takeCaptiveShd: "SHD_131",
       sparkOfHope: "SHD_105",
+      surpriseStrikeShd: "SHD_231", // identical reprint of SOR_220
     },
     sor: {
       searchYourFeelings: "SOR_042",
@@ -789,6 +793,7 @@ export const Cards = {
       punchIt: "JTL_231",
       attackRun: "JTL_261",
       outTheAirlock: "JTL_079",
+      scrambleFighters: "JTL_092",
     },
     ts26: {
       backedByThePykes: "TS26_058",

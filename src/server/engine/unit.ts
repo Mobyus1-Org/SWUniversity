@@ -240,7 +240,8 @@ export class Unit implements UnitInterface {
         case "SOR_028": power -= 4; break; // Jedha City base Epic Action –4/–0 Phase
         case "SOR_217": power += 1; break; // Shoot First +1/+0 ForAttack
         case "TWI_014": power += 1; break; // Asajj Ventress +1/+0 ForAttack (event played this phase)
-        case "SOR_220": power += 3; break; // Surprise Strike +3/+0 ForAttack
+        case "SOR_220": // Surprise Strike (SOR)
+        case "SHD_231": power += 3; break; // Surprise Strike (SHD) — same card, two printings
         case "JTL_177": power += 2; break; // Stay on Target +2/+0 ForAttack
         case "JTL_156": power += 4; break; // Trench Run +4/+0 ForAttack
         case "SOR_240": power += 2; break; // Fleet Lieutenant +2/+0 ForAttack
@@ -253,6 +254,10 @@ export class Unit implements UnitInterface {
 
     for (const upgrade of this.upgrades) {
       power += UpgradePowerOf(upgrade.cardId);
+      // TWI_122 Squad Support — attached unit gains "+1/+1 for each Trooper unit you control".
+      // "You" is the attached unit's CONTROLLER, and the count is live: it moves as Troopers
+      // enter and leave play. (HP half in TotalHP.)
+      if (upgrade.cardId === "TWI_122") power += squadSupportCount(this);
     }
 
     if (this.cardId === "SHD_056" && this.upgrades.length > 0 && !this.LostAbilities()) {
@@ -395,6 +400,8 @@ export class Unit implements UnitInterface {
 
     for (const upgrade of this.upgrades) {
       hp += UpgradeHpOf(upgrade.cardId);
+      // TWI_122 Squad Support — the +0/+1 half of "+1/+1 for each Trooper unit you control".
+      if (upgrade.cardId === "TWI_122") hp += squadSupportCount(this);
       // JTL_150 Biggs Darklighter — "If attached unit is a Transport, it gets +0/+1." His other
       // two conditional grants (Overwhelm on a Fighter, Grit on a Speeder) live in the keyword
       // dictionaries; this is the stat-only third.
@@ -547,6 +554,13 @@ function friendlyAuraBonus(unit: Unit): number {
  */
 export function ProjectsEnemyStatAura(cardId: string): boolean {
   return cardId === "SHD_037"; // Supreme Leader Snoke — each enemy non-leader unit gets –2/–2
+}
+
+/** Troopers controlled by this unit's controller — TWI_122 Squad Support counts every one. */
+function squadSupportCount(unit: Unit): number {
+  return GetUnitsForPlayer(unit.controller)
+    .filter(u => TraitContains(u.cardId, "Trooper", unit.controller, u.playId))
+    .length;
 }
 
 function enemyAuraDebuff(unit: Unit): number {
