@@ -19,7 +19,17 @@ import { CardType } from "@/server/engine/card-db/generated";
  * (Frozen in Carbonite, Traitorous) is owned and controlled by that unit's opponent.
  */
 export type UpgradeEntry = { cardId: string; enemy?: boolean };
-export type UnitEntry = { cardId: string; ready: boolean; damage: number; upgrades: UpgradeEntry[]; captives: string[] };
+
+/**
+ * A unit in an arena. The arena it sits in IS its controller; `owner` is tracked separately so a
+ * unit taken with a control effect (Traitorous, No Glory Only Results) can be authored — the engine
+ * sends a defeated unit to its OWNER's discard and a bounced one to its OWNER's hand.
+ *
+ * Absolute (1 | 2), not an `enemy` flag like UpgradeEntry: the stored JSON holds an absolute owner,
+ * and a relative flag is what made upgrade ownership fail to round-trip. Undefined — the common
+ * case — means owned by the player whose arena this is.
+ */
+export type UnitEntry = { cardId: string; ready: boolean; damage: number; upgrades: UpgradeEntry[]; captives: string[]; owner?: 1 | 2 };
 export type ResourceEntry = { cardId: string; ready: boolean };
 
 export type PlayerBuilderState = {
@@ -113,6 +123,20 @@ function parseUpgrades(raw: unknown, playerId: 1 | 2): UpgradeEntry[] {
   }));
 }
 
+/**
+ * Rebuilds one arena unit. A stored owner equal to the arena's player collapses back to undefined,
+ * so importing and re-exporting an ordinary puzzle leaves the JSON untouched.
+ */
+function parseUnit(u: Record<string, unknown>, playerId: 1 | 2): UnitEntry {
+  const owner = Number(u.owner ?? playerId) === 2 ? 2 : 1;
+  return {
+    cardId: String(u.cardId ?? ""), ready: u.ready !== false, damage: Number(u.damage ?? 0),
+    upgrades: parseUpgrades(u.upgrades, playerId),
+    captives: ((u.captives ?? []) as Record<string, unknown>[]).map((c) => String(c.cardId ?? "")),
+    ...(owner !== playerId && { owner }),
+  };
+}
+
 function parseRawPlayer(p: Record<string, unknown>, playerId: 1 | 2): PlayerBuilderState {
   const base = (p.base ?? {}) as Record<string, unknown>;
   const leader = (p.leader ?? {}) as Record<string, unknown>;
@@ -135,16 +159,8 @@ function parseRawPlayer(p: Record<string, unknown>, playerId: 1 | 2): PlayerBuil
     handCards: hand.map((h) => String((h as Record<string, unknown>).cardId ?? "")),
     deck: deck.map((d) => String(d.cardId ?? "")),
     discard: discard.map((d) => String(d.cardId ?? "")),
-    groundUnits: ground.map((u) => ({
-      cardId: String(u.cardId ?? ""), ready: u.ready !== false, damage: Number(u.damage ?? 0),
-      upgrades: parseUpgrades(u.upgrades, playerId),
-      captives: ((u.captives ?? []) as Record<string, unknown>[]).map((c) => String(c.cardId ?? "")),
-    })),
-    spaceUnits: space.map((u) => ({
-      cardId: String(u.cardId ?? ""), ready: u.ready !== false, damage: Number(u.damage ?? 0),
-      upgrades: parseUpgrades(u.upgrades, playerId),
-      captives: ((u.captives ?? []) as Record<string, unknown>[]).map((c) => String(c.cardId ?? "")),
-    })),
+    groundUnits: ground.map((u) => parseUnit(u, playerId)),
+    spaceUnits: space.map((u) => parseUnit(u, playerId)),
     creditTokens: Number(supplemental.creditTokens ?? 0),
     forceToken: Boolean(supplemental.forceToken),
   };
@@ -203,7 +219,8 @@ export function toRaw(s: BuilderState): RawPuzzleGameState {
         ...(hasLeaderUpgrade && { deployedPlayId: leaderUpgradePlayId }),
       },
       groundArena: p.groundUnits.map((u) => ({
-        cardId: u.cardId, playId: "@", owner: playerId, controller: playerId,
+        // The arena is the controller; the owner is overridable (control effects).
+        cardId: u.cardId, playId: "@", owner: u.owner ?? playerId, controller: playerId,
         ready: u.ready, damage: u.damage,
         upgrades: u.upgrades.map((ug) => ({
           cardId: ug.cardId,
@@ -214,7 +231,8 @@ export function toRaw(s: BuilderState): RawPuzzleGameState {
         captives: u.captives.map((cardId) => ({ cardId, playId: "@", owner: captiveOwner, controller: captiveOwner })),
       })),
       spaceArena: p.spaceUnits.map((u) => ({
-        cardId: u.cardId, playId: "@", owner: playerId, controller: playerId,
+        // The arena is the controller; the owner is overridable (control effects).
+        cardId: u.cardId, playId: "@", owner: u.owner ?? playerId, controller: playerId,
         ready: u.ready, damage: u.damage,
         upgrades: u.upgrades.map((ug) => ({
           cardId: ug.cardId,

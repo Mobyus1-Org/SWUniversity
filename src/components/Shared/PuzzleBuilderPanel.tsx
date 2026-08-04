@@ -665,6 +665,9 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
   const [cardId, setCardId] = React.useState("");
   const [ready, setReady] = React.useState(true);
   const [damage, setDamage] = React.useState(0);
+  // Owner is tracked separately from the arena: the arena is the CONTROLLER, so a unit taken with
+  // a control effect sits here while still belonging to the other player.
+  const [owner, setOwner] = React.useState<1 | 2>(playerId);
   const [editDialog, setEditDialog] = React.useState<{ index: number; type: "upgrades" | "captives" } | null>(null);
   // A unit can only capture an ENEMY non-leader unit (CR 8.33), so anything held by this side's
   // units belongs to the other player — and returns to them when rescued.
@@ -672,7 +675,7 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
 
   return (
     <>
-      <div className="grid grid-cols-[1fr_3.5rem_auto_auto] items-center gap-2">
+      <div className="grid grid-cols-[1fr_3.5rem_auto_auto_auto] items-center gap-2">
         <CardPicker cards={unitCards} value={cardId} onChange={setCardId} placeholder="Unit…" />
         <input
           type="number"
@@ -684,11 +687,25 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
           onChange={(e) => setDamage(Math.max(0, Number(e.target.value)))}
           className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none"
         />
+        <select
+          value={owner}
+          title="Which player OWNS this unit. Defaults to the arena's player; change it for a unit taken with a control effect — it returns to its owner's discard or hand."
+          onChange={(e) => setOwner(Number(e.target.value) === 2 ? 2 : 1)}
+          className={`rounded-lg border bg-black/30 px-1.5 py-1 text-2xs outline-none ${
+            owner === playerId ? "border-white/15 text-white/70" : "border-rose-400/40 text-rose-300"
+          }`}
+        >
+          <option value={1}>P1</option>
+          <option value={2}>P2</option>
+        </select>
         <Checkbox checked={ready} onChange={setReady} label="Ready" />
         <button
           type="button"
           disabled={!cardId}
-          onClick={() => { onAdd({ cardId, ready, damage, upgrades: [], captives: [] }); setCardId(""); setDamage(0); setReady(true); }}
+          onClick={() => {
+            onAdd({ cardId, ready, damage, upgrades: [], captives: [], ...(owner !== playerId && { owner }) });
+            setCardId(""); setDamage(0); setReady(true); setOwner(playerId);
+          }}
           className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-2xs font-semibold text-white hover:bg-white/20 disabled:opacity-40"
         >
           Add
@@ -704,6 +721,30 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
                   {u.damage > 0 ? <span className="ml-1.5 text-rose-300">({u.damage} dmg)</span> : null}
                   {!u.ready ? <span className="ml-1.5 text-white/40">[exhausted]</span> : null}
                 </span>
+                {(() => {
+                  // Only two players, so "owned by someone else" has exactly one value — the
+                  // button toggles both ways rather than only clearing an existing override.
+                  const unitOwner = u.owner ?? playerId;
+                  const overridden = unitOwner !== playerId;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => onUpdate(i, { ...u, owner: overridden ? undefined : captiveOwner })}
+                      title={
+                        overridden
+                          ? `Owned by Player ${unitOwner}, controlled by Player ${playerId} — it returns to Player ${unitOwner} when defeated or bounced. Click to give ownership back to Player ${playerId}.`
+                          : `Owned and controlled by Player ${playerId}. Click to mark it as Player ${captiveOwner}'s unit taken with a control effect.`
+                      }
+                      className={`rounded px-1.5 py-0.5 text-3xs font-semibold transition-colors ${
+                        overridden
+                          ? "text-rose-300 bg-rose-500/15 hover:bg-rose-500/30"
+                          : "text-white/50 bg-white/10 hover:bg-white/20"
+                      }`}
+                    >
+                      Owner: P{unitOwner}
+                    </button>
+                  );
+                })()}
                 <button
                   type="button"
                   onClick={() => setEditDialog({ index: i, type: "upgrades" })}
