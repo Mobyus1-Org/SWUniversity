@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { processDispatch } from "@/server/engine/dispatch-listener";
-import { CardCost, CardRarity, CardTitle, CardSubtitle } from "@/server/engine/card-db/generated";
-import { SetGame } from "@/server/engine/core-functions";
+import { CardCost, CardHp, CardRarity, CardTitle, CardSubtitle } from "@/server/engine/card-db/generated";
+import { SetGame, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import type { EngineContext, PendingResolution } from "@/server/engine/pending-resolution";
@@ -267,6 +267,134 @@ function describePendingCard(pending: PendingResolution): string {
   return subtitle ? `${title} - ${subtitle}` : title;
 }
 
+/**
+ * How P2 divides indirect damage aimed at them (CR 8.35.1). Ordered per the rules manager, from
+ * the cheapest place to soak damage to the most desperate:
+ *
+ *   1. Non-Sentinel units — expendable; losing one costs P2 the least.
+ *   2. The base, down to its LAST point of HP.
+ *   3. Sentinel units, but only as much as keeps them blocking (see sentinelSoak).
+ *   4. Whatever is left goes on the base, even if that loses the game — the assignment must total
+ *      exactly the damage dealt, and the base is the only sink with no per-target cap.
+ *
+ * Deterministic throughout, so a puzzle replays identically.
+ */
+function sentinelSoak(sentinel: Unit, gameState: GameState): number {
+  const hp = sentinel.CurrentHP();
+  if (hp <= 1) return 0;
+
+  // Total power the solver can throw at this arena. Sentinel only matters within its own arena, so
+  // units in the other one can never contribute.
+  const inSpace = gameState.player2.spaceArena.some(u => u.playId === sentinel.playId);
+  const attackers = inSpace ? gameState.player1.spaceArena : gameState.player1.groundArena;
+  const incoming = attackers.reduce((sum, u) => sum + Unit.FromInterface(u).CurrentPower(), 0);
+
+  // Doomed anyway: soak everything but the last point, so it still blocks one attack.
+  if (incoming >= hp) return hp - 1;
+  // Otherwise reserve enough that it is still standing on 1 HP once every attack has landed.
+  return Math.max(0, hp - incoming - 1);
+}
+
+/**
+ * How P2 spends indirect damage aimed at the SOLVER — the case where P2 holds the assign-override.
+ * Offensive rather than defensive:
+ *
+ *   1. If it is lethal on the solver's base, take the win outright.
+ *   2. Otherwise buy the best kills it can afford: READY units only (an exhausted one has already
+ *      done its damage this turn), highest power first, paying exactly each one's remaining HP.
+ *   3. Anything left over still lands on the base.
+ *
+ * `totalDamage` already includes the Hunting Aggressor bonus — buildIndirectDamage applies the
+ * amount modifiers before the pending is ever created, so the lethal check sees the real number.
+ */
+function offensiveAssignment(
+  pending: { totalDamage: number; eligibleUnitPlayIds: string[] },
+  gameState: GameState,
+): { playId: string; damage: number }[] {
+  let left = pending.totalDamage;
+  const baseMax = CardHp(gameState.player1.base.cardId) || 30;
+  const baseLeft = Math.max(0, baseMax - gameState.player1.base.damage);
+  if (left >= baseLeft) return [{ playId: "player1.base", damage: left }];
+
+  const candidates = [...gameState.player1.groundArena, ...gameState.player1.spaceArena]
+    .filter(u => u.ready && pending.eligibleUnitPlayIds.includes(u.playId))
+    .map(u => {
+      const unit = Unit.FromInterface(u);
+      return { playId: u.playId, hp: unit.CurrentHP(), power: unit.CurrentPower() };
+    })
+    // Highest power first; ties go to the cheaper kill so the damage buys as many as it can.
+    .sort((a, b) => b.power - a.power || a.hp - b.hp);
+
+  const out: { playId: string; damage: number }[] = [];
+  for (const c of candidates) {
+    if (c.hp > 0 && c.hp <= left) {
+      out.push({ playId: c.playId, damage: c.hp });
+      left -= c.hp;
+    }
+  }
+  if (left > 0) out.push({ playId: "player1.base", damage: left });
+  return out;
+}
+
+function pickIndirectAssignment(
+  pending: { totalDamage: number; eligibleUnitPlayIds: string[]; targetPlayer: PlayerId },
+  gameState: GameState,
+): { playId: string; damage: number }[] {
+  // The chain below is a DEFENSIVE heuristic — "where do I least mind taking this". It only makes
+  // sense when P2 is dividing damage aimed at themselves. When P2 holds the assign-override
+  // (Devastator / Targeting Computer) the damage is aimed at the SOLVER and the goal inverts.
+  if (pending.targetPlayer === 1) {
+    return offensiveAssignment(pending, gameState);
+  }
+
+  // Narrowed to P2 by the early return above: from here the victim is always the opponent.
+  const victim = gameState.player2;
+  const basePlayId = "player2.base";
+  const units = [...victim.groundArena, ...victim.spaceArena]
+    .filter(u => pending.eligibleUnitPlayIds.includes(u.playId));
+
+  const out: { playId: string; damage: number }[] = [];
+  let left = pending.totalDamage;
+  const put = (playId: string, amount: number) => {
+    if (amount <= 0) return;
+    out.push({ playId, damage: amount });
+    left -= amount;
+  };
+
+  const sentinels = units.filter(u => HasSentinel(u.cardId, u.playId, 2));
+  const plain = units.filter(u => !sentinels.includes(u));
+
+  // 1. non-Sentinel units, filled to their remaining HP
+  for (const u of plain) {
+    if (left <= 0) break;
+    put(u.playId, Math.min(left, Unit.FromInterface(u).CurrentHP()));
+  }
+
+  // 2. base, stopping one short of defeat
+  const baseMax = CardHp(victim.base.cardId) || 30;
+  const baseLeft = Math.max(0, baseMax - victim.base.damage);
+  let baseAssigned = 0;
+  if (left > 0 && baseLeft > 1) {
+    baseAssigned = Math.min(left, baseLeft - 1);
+    left -= baseAssigned;
+  }
+
+  // 3. Sentinels, only as deep as keeps them useful
+  for (const u of sentinels) {
+    if (left <= 0) break;
+    put(u.playId, Math.min(left, sentinelSoak(Unit.FromInterface(u), gameState)));
+  }
+
+  // 4. anything still unassigned lands on the base, defeat or not
+  if (left > 0) {
+    baseAssigned += left;
+    left = 0;
+  }
+  if (baseAssigned > 0) out.push({ playId: basePlayId, damage: baseAssigned });
+
+  return out;
+}
+
 /** "This pending IS accounted for, but there is legitimately nothing for P2 to do." */
 const NOTHING_TO_DO = "nothing-to-do" as const;
 
@@ -362,6 +490,27 @@ function resolveAutoOption(
     return targetPlayId
       ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
       : NOTHING_TO_DO;
+  }
+
+  // Indirect damage the OPPONENT must divide. Who assigns is not always the victim — Devastator
+  // (JTL_143) and Targeting Computer (JTL_171) hand it to the dealer — so mirror the same rule the
+  // engine uses rather than assuming targetPlayer.
+  if (pending.type === "indirect-damage") {
+    const assigning =
+      pending.targetPlayer !== pending.sourcePlayer
+      && (PlayerAssignsOwnIndirectDamage(pending.sourcePlayer)
+          || UnitAssignsOwnIndirectDamage(pending.sourcePlayId, pending.sourcePlayer))
+        ? pending.sourcePlayer
+        : pending.targetPlayer;
+    if (assigning !== 2) return null; // the solver's own call — hand it to them
+    return {
+      dispatchType: "choose-target",
+      dispatchData: { spreadDamageAssignments: pickIndirectAssignment(pending, gameState) },
+    };
+  }
+  // P2 choosing who to aim indirect damage at always picks the solver.
+  if (pending.type === "choose-indirect-target" && pending.sourcePlayer === 2) {
+    return { dispatchType: "choose-option", dispatchData: { option: "Opponent" } };
   }
 
   // A bounty is collected by the opponent of the bountied unit's controller, so whenever the
