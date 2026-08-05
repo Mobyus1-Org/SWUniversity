@@ -395,6 +395,9 @@ export const Cards = {
     },
     jtl: {
       tieAmbushSquadron: "JTL_087",
+      droidMissilePlatform: "JTL_162",
+      huntingAggressor: "JTL_165",
+      allegiantGeneralPryde: "JTL_133",
       redLeader: "JTL_101",
       victorLeader: "JTL_085",
       cloneCombatSquadron: "JTL_115",
@@ -665,6 +668,7 @@ export const Cards = {
     },
     jtl: {
       jarekYeager: "JTL_109",
+      targetingComputer: "JTL_171",
     },
     lof: {
       yodasLightsaber: "LOF_102",
@@ -784,6 +788,7 @@ export const Cards = {
       breakingIn: "TWI_224",
     },
     jtl: {
+      planetaryBombardment: "JTL_181",
       repair: "JTL_075",
       stayOnTarget: "JTL_177",
       trenchRun: "JTL_156",

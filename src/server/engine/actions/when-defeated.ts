@@ -248,6 +248,16 @@ function resolveOwnWhenDefeated(
     case "JTL_033": { // Onyx Squadron Brute — When Defeated: Heal 2 damage from a base.
       return mandatoryTarget("JTL_033", player, ["player1.base", "player2.base"]);
     }
+    case "JTL_162": // Droid Missile Platform — "When Defeated: Deal 3 indirect damage to a player."
+      // Fires mid-combat, so the continuation the caller appends to this chain is what carries the
+      // rest of the attack. That is why choose-indirect-target has a continuation at all.
+      return {
+        type: "choose-indirect-target",
+        cardId: "JTL_162",
+        sourcePlayer: player,
+        totalDamage: 3,
+        continuation: null,
+      };
     case "JTL_087": { // TIE Ambush Squadron — When Defeated: Create a TIE Fighter token.
       const game087 = GetGame();
       if (!game087) return null;

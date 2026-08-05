@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
 import { aspectPenalty, palpatinesReturnCost, spendableFor } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -1419,15 +1419,7 @@ export function resolveWhenPlayed(
     }
     case "JTL_143": { // Devastator — "When Played: Deal 4 indirect damage to each opponent."
       const opponent143: PlayerId = player === 1 ? 2 : 1;
-      return {
-        type: "indirect-damage",
-        cardId: "JTL_143",
-        sourcePlayer: player,
-        targetPlayer: opponent143,
-        totalDamage: 4,
-        eligibleUnitPlayIds: GetUnitsForPlayer(opponent143).map(u => u.playId),
-        continuation: null,
-      };
+      return buildIndirectDamage("JTL_143", player, opponent143, 4, null);
     }
     case "SHD_213": { // DJ (Blatant Thief) — "When played using Smuggle: Take control of an enemy
                       // resource." The smuggle-only condition is enforced upstream in
@@ -1843,12 +1835,26 @@ export function resolveWhenPlayed(
       game.gameLog.push(`${CardTitle(cardId)}: giving each friendly unit +${distinctCount106}/+${distinctCount106} for this phase.`);
       return null;
     }
+    case "JTL_181": { // Planetary Bombardment — "Deal 8 indirect damage to a player. If you
+                      // control a Capital Ship unit, deal 12 indirect damage instead."
+      const capital181 = GetUnitsForPlayer(player).some(
+        u => TraitContains(u.cardId, "Capital Ship", player, u.playId),
+      );
+      return {
+        type: "choose-indirect-target",
+        cardId,
+        sourcePlayer: player,
+        totalDamage: capital181 ? 12 : 8,
+        continuation: null,
+      } satisfies ChooseIndirectTargetPending;
+    }
     case "JTL_234": // Torpedo Barrage — Deal 5 indirect damage to a player.
       return {
         type: "choose-indirect-target",
         cardId,
         sourcePlayer: player,
         totalDamage: 5,
+        continuation: null,
       } satisfies ChooseIndirectTargetPending;
     case "SOR_087": // Darth Vader — Search top 10 of deck for Villainy units with combined cost ≤ 3, play each for free.
       return searchDeck(cardId, player, 10, "play", { filter: { type: "Unit", aspect: "Villainy", maxCost: 3 }, maxCombinedCost: 3, costModifier: "free" });

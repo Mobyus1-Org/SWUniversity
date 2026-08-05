@@ -454,6 +454,12 @@ export interface ChooseIndirectTargetPending {
   cardId: string;
   sourcePlayer: PlayerId;
   totalDamage: number;
+  /**
+   * Carried through to the IndirectDamagePending this becomes. Required for any indirect effect
+   * that fires mid-resolution — a When Defeated (JTL_162) leaves an attack and other triggers
+   * queued behind it, and dropping the tail there strands the attack.
+   */
+  continuation: PendingResolution | null;
 }
 
 /**
@@ -467,6 +473,12 @@ export interface IndirectDamagePending {
   targetPlayer: PlayerId;
   totalDamage: number;
   eligibleUnitPlayIds: string[];
+  /**
+   * The unit whose ability dealt this, when there is one. CR 8.35.4 keeps indirect damage
+   * attributed to that unit, and JTL_171 Targeting Computer grants the assign-override per unit
+   * rather than per player. Absent for events.
+   */
+  sourcePlayId?: string;
   continuation: PendingResolution | null;
 }
 

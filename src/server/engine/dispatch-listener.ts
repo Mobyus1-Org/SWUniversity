@@ -66,7 +66,6 @@ import type {
   DontGetCockyPending,
   DiscardFromHandPending,
   TrenchRevealPending,
-  IndirectDamagePending,
   EngineContext,
   ExploitOptionPending,
   ExploitTargetPending,
@@ -119,7 +118,7 @@ import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck } from "@/server/engine/core-functions";
+import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -3155,10 +3154,13 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         optional: false,
         eligiblePlayIds: pending.eligibleUnitPlayIds,
         includesBase: true,
-        // The victim assigns indirect damage — unless the dealer controls a Devastator
-        // (JTL_143: "You assign all indirect damage you deal to opponents").
+        // The victim assigns indirect damage — unless the dealer overrides that, either
+        // player-wide (JTL_143 Devastator) or for one unit (JTL_171 Targeting Computer). Neither
+        // applies to damage a player aims at themselves; there is nothing to take over.
         assigningPlayer:
-          pending.targetPlayer !== pending.sourcePlayer && PlayerAssignsOwnIndirectDamage(pending.sourcePlayer)
+          pending.targetPlayer !== pending.sourcePlayer
+          && (PlayerAssignsOwnIndirectDamage(pending.sourcePlayer)
+              || UnitAssignsOwnIndirectDamage(pending.sourcePlayId, pending.sourcePlayer))
             ? pending.sourcePlayer
             : pending.targetPlayer,
       } satisfies NeedsSpreadDamage;
@@ -3760,6 +3762,48 @@ function consumeNextPlayMarker(game: GameState, player: PlayerId, effectCardId: 
   if (idx === -1) return false;
   game.currentEffects.splice(idx, 1);
   return true;
+}
+
+/**
+ * JTL_133 Allegiant General Pryde — "When indirect damage is dealt to a unit: You may defeat a
+ * non-unique upgrade on it."
+ *
+ * Reacts to every unit an indirect instance damaged, on either side of the table, and each Pryde
+ * controller gets their own prompt. Only survivors are considered: a unit the damage defeated took
+ * its upgrades with it.
+ */
+function buildPrydeIndirectReactions(
+  game: GameState,
+  damagedPlayIds: string[],
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const controllers = ([1, 2] as PlayerId[]).filter(p =>
+    GetUnitsForPlayer(p).some(u => u.cardId === "JTL_133" && !Unit.FromInterface(u).LostAbilities()),
+  );
+  if (controllers.length === 0) return continuation;
+
+  let chain: PendingResolution | null = continuation;
+  // Built back-to-front so the first damaged unit is prompted first.
+  for (let i = damagedPlayIds.length - 1; i >= 0; i--) {
+    const unit = GetUnitByPlayId(game, damagedPlayIds[i]);
+    if (!unit || Unit.FromInterface(unit).CurrentHP() <= 0) continue;
+    const strippable = unit.upgrades.filter(u => !CardIsUnique(u.cardId));
+    if (strippable.length === 0) continue;
+    for (let c = controllers.length - 1; c >= 0; c--) {
+      chain = {
+        type: "ability-option",
+        cardId: "JTL_133",
+        player: controllers[c],
+        sourcePlayId: unit.playId,
+        helperText: `${CardTitle("JTL_133")}: defeat a non-unique upgrade on ${CardTitle(unit.cardId)}?`,
+        yesLabel: "Defeat upgrade",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: chain,
+      } satisfies AbilityOptionPending;
+    }
+  }
+  return chain;
 }
 
 function completePlayCard(
@@ -6457,12 +6501,17 @@ function handleChooseTarget(
         return { response: invalidResponse(`Cannot assign more than ${remaining} indirect damage to ${CardTitle(unit.cardId)}.`), pending, stateChanged: false };
     }
 
-    // Apply unit damage — shields are NOT removed (CR 8.36.2)
+    // Apply unit damage — shields are NOT removed (CR 8.35.2a). All of it lands at once
+    // (CR 8.35.5), which is why the sweep for dead units runs once, after the whole loop.
+    const indirectlyDamaged: string[] = [];
     for (const a of unitAssignments) {
       const unit = GetUnitByPlayId(game, a.playId);
       if (unit) {
         unit.damage += a.damage;
-        if (a.damage > 0) MarkUnitDamaged(game, unit.playId);
+        if (a.damage > 0) {
+          MarkUnitDamaged(game, unit.playId);
+          indirectlyDamaged.push(unit.playId);
+        }
       }
     }
 
@@ -6473,7 +6522,11 @@ function handleChooseTarget(
 
     log.push(`${CardTitle(pending.cardId)}: ${pending.totalDamage} indirect damage assigned by player ${pending.targetPlayer}.`);
     updateDefeatedPlayers(game);
-    const afterSweepI = sweepDeadUnits(game, log, pending.continuation ?? null);
+    // JTL_133 Allegiant General Pryde reacts to each unit that took indirect damage. Built here,
+    // after the damage lands, and filtered to survivors — a unit the damage defeated has no
+    // upgrades left to defeat.
+    const prydeTail = buildPrydeIndirectReactions(game, indirectlyDamaged, pending.continuation ?? null);
+    const afterSweepI = sweepDeadUnits(game, log, prydeTail);
     if (afterSweepI) {
       if (afterSweepI.type === "resolve-attack") return handleResolveAttack(game, log, afterSweepI);
       return { response: resolutionResponse(pendingToResolution(afterSweepI, game)), pending: afterSweepI, stateChanged: true };
@@ -6971,6 +7024,18 @@ function applyAbilityOptionEffect(
       DealDamageToUnit(game, "JTL_051", pending.sourcePlayId, 2, log, pending.player);
       DrawCardForPlayer(game, log, pending.player!);
       return sweepDeadUnits(game, log, pending.continuation ?? null);
+    }
+    case "JTL_133": { // Pryde Yes — choose which non-unique upgrade on that unit to defeat.
+      const victim133 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      const strippable133 = (victim133?.upgrades ?? []).filter(u => !CardIsUnique(u.cardId));
+      if (strippable133.length === 0) return pending.continuation ?? null;
+      return {
+        type: "ability-target",
+        cardId: "JTL_133_upgrade",
+        player: pending.player!,
+        fromPlayIds: strippable133.map(u => u.playId),
+        continuation: pending.continuation ?? null,
+      } satisfies AbilityTargetPending;
     }
     case "LOF_234": { // Darth Malak When Played Yes — ready him.
       ReadyUnitByPlayId(pending.sourcePlayId, pending.player!, "LOF_234");
@@ -7617,18 +7682,18 @@ function handleChooseOption(
 
   if (pending?.type === "choose-indirect-target") {
     const targetPlayer: PlayerId = option === "Yourself" ? pending.sourcePlayer : (pending.sourcePlayer === 1 ? 2 : 1);
-    const targetState = targetPlayer === 1 ? game.player1 : game.player2;
-    const eligibleUnits = [...targetState.groundArena, ...targetState.spaceArena].map(u => u.playId);
-    const indirectPending: IndirectDamagePending = {
-      type: "indirect-damage",
-      cardId: pending.cardId,
-      sourcePlayer: pending.sourcePlayer,
-      targetPlayer,
-      totalDamage: pending.totalDamage,
-      eligibleUnitPlayIds: eligibleUnits,
-      continuation: null,
-    };
-    return { response: resolutionResponse(pendingToResolution(indirectPending, game)), pending: indirectPending, stateChanged: false };
+    // buildIndirectDamage applies the amount modifiers and, when the target controls no units,
+    // deals the whole lot to their base and hands back the continuation instead of a prompt.
+    const next = buildIndirectDamage(
+      pending.cardId, pending.sourcePlayer, targetPlayer, pending.totalDamage, pending.continuation ?? null,
+    );
+    if (!next) {
+      const bagCIT = drainTriggerBag(game, log);
+      if (bagCIT) return { response: resolutionResponse(pendingToResolution(bagCIT, game)), pending: bagCIT, stateChanged: true };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+    if (next.type === "resolve-attack") return handleResolveAttack(game, log, next);
+    return { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: false };
   }
 
   if (pending?.type === "on-attack-order") {
@@ -12486,6 +12551,12 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target060 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target060) GiveStatModForPhase("JTL_060", target060, -1, game.gameLog);
+      break;
+    }
+    case "JTL_133_upgrade": { // Pryde — defeat the chosen non-unique upgrade.
+      if (!targetPlayId) break;
+      // Returns null on its ordinary path, so the continuation is handled by the caller as usual.
+      defeatUpgradeByPlayId(game.currentGameState, game.gameLog, targetPlayId, CardTitle("JTL_133"), null, pending.player!);
       break;
     }
     case "SEC_048": { // Captain Rex — the chosen ENEMY unit gains Sentinel for this phase.

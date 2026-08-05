@@ -1010,6 +1010,72 @@ export function PlayerAssignsOwnIndirectDamage(player: PlayerId): boolean {
   );
 }
 
+/**
+ * JTL_165 Hunting Aggressor: "Indirect damage you deal to opponents is increased by 1."
+ * Only applies to damage aimed at an opponent — self-assigned indirect damage is unmodified.
+ */
+export function IndirectDamageBonus(sourcePlayer: PlayerId, targetPlayer: PlayerId): number {
+  if (sourcePlayer === targetPlayer) return 0;
+  return GetUnitsForPlayer(sourcePlayer).filter(
+    u => u.cardId === "JTL_165" && !Unit.FromInterface(u).LostAbilities(),
+  ).length;
+}
+
+/**
+ * The single entry point for "deal N indirect damage to <targetPlayer>" (CR 8.35).
+ *
+ * Applies the amount modifiers once, here, so every card agrees on the number. When the target
+ * controls no units there is nothing to divide the damage among — CR 8.35.1 says it is assigned
+ * among "any number of their units or their base", so with no units it all lands on the base and
+ * no prompt is shown.
+ *
+ * Returns the pending the victim (or, with Devastator/Targeting Computer, the dealer) must answer,
+ * or `continuation` when the damage was applied outright.
+ */
+export function buildIndirectDamage(
+  sourceCardId: string,
+  sourcePlayer: PlayerId,
+  targetPlayer: PlayerId,
+  amount: number,
+  continuation: PendingResolution | null,
+  sourcePlayId?: string,
+): PendingResolution | null {
+  const gs = GetGameState();
+  const total = amount + IndirectDamageBonus(sourcePlayer, targetPlayer);
+  if (total <= 0) return continuation;
+
+  const units = GetUnitsForPlayer(targetPlayer);
+  if (units.length === 0) {
+    DealDamageToBase(gs, targetPlayer, total, sourcePlayer);
+    GetGame()?.gameLog.push(
+      `${CardTitle(sourceCardId)}: ${total} indirect damage — Player ${targetPlayer} has no units, so it all hits their base.`,
+    );
+    return continuation;
+  }
+
+  return {
+    type: "indirect-damage",
+    cardId: sourceCardId,
+    sourcePlayer,
+    targetPlayer,
+    totalDamage: total,
+    eligibleUnitPlayIds: units.map(u => u.playId),
+    sourcePlayId,
+    continuation,
+  } as PendingResolution;
+}
+
+/**
+ * JTL_171 Targeting Computer: attached unit gains "You assign all indirect damage dealt by this
+ * unit." Per-unit, unlike Devastator's player-wide version.
+ */
+export function UnitAssignsOwnIndirectDamage(playId: string | undefined, player: PlayerId): boolean {
+  if (!playId) return false;
+  const unit = GetUnitInPlay(playId, player);
+  if (!unit || unit.LostAbilities()) return false;
+  return unit.upgrades.some(u => u.cardId === "JTL_171");
+}
+
 export function LeaderCanDeployAsPilot(cardId: string): boolean {
   switch(cardId) {
     case "JTL_001"://Asajj Ventress
@@ -1130,6 +1196,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "JTL_151": //Red Five — On Attack: may deal 2 damage to a damaged unit
     case "LOF_045": //Yaddle — On Attack: each other friendly Jedi gains Restore 1 this phase
     case "SEC_087": //Dedra Meero — On Attack: create a Spy token
+    case "JTL_133": //Allegiant General Pryde — On Attack: if you have initiative, 2 indirect damage
     case "JTL_149": //Red Squadron Y-Wing — On Attack: 3 indirect damage to the defending player
     case "SHD_153": //Poe Dameron — On Attack: discard up to 3, then one different option per discard
     case "SHD_064": //Survivors' Gauntlet — When Played/On Attack: may move an upgrade between units of the same controller

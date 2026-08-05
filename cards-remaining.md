@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 909 cards across 10 sets.**
+**Total: 904 cards across 10 sets.**
 
 ---
 
@@ -222,7 +222,7 @@ TWI_254: Volunteer Soldier Unit
 TWI_257: Private Manufacturing Event
 ```
 
-## JTL — Jump to Lightspeed (104)
+## JTL — Jump to Lightspeed (99)
 
 **Message 1 of 3**
 ```
@@ -266,7 +266,6 @@ JTL_128: Prepare for Takeoff Event
 JTL_129: Focus Fire Event
 JTL_131: Turbolaser Salvo Event
 JTL_132: First Order Stormtrooper Unit
-JTL_133: Allegiant General Pryde - Ruthless and Loyal Unit
 JTL_135: Special Forces TIE Fighter Unit
 JTL_144: No Disintegrations Event
 JTL_146: Massassi Tactical Officer Unit
@@ -280,11 +279,8 @@ JTL_157: Relentless Firespray Unit
 JTL:
 JTL_158: Crackshot V-Wing Unit
 JTL_160: Supporting Eta-2 Unit
-JTL_162: Droid Missile Platform Unit
 JTL_164: Cham Syndulla - Rallying Ryloth Unit
-JTL_165: Hunting Aggressor Unit
 JTL_169: Shadow Caster - Just Business Unit
-JTL_171: Targeting Computer Upgrade
 JTL_172: Twin Laser Turret Upgrade
 JTL_173: Fight Fire With Fire Event
 JTL_174: Hotshot Maneuver Event
@@ -293,7 +289,6 @@ JTL_176: Shoot Down Event
 JTL_178: Face Off Event
 JTL_179: Koiogran Turn Event
 JTL_180: Piercing Shot Event
-JTL_181: Planetary Bombardment Event
 JTL_182: Rampart - Enjoy the Exit Unit
 JTL_183: Zygerrian Starhopper Unit
 JTL_185: Hound's Tooth - Reliable and Deadly Unit
