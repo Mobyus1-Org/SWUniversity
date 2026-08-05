@@ -2,7 +2,8 @@ import React from "react";
 import { globalBackgroundStyle } from "@/util/style-const";
 import { puzzleImageSrc, DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
-import type { PuzzleStatus } from "@/server/puzzle/puzzle-status";
+import { statusFilterOptionsFor } from "@/server/puzzle/puzzle-status";
+import type { PuzzleStatus, PuzzleAccessLevel, PuzzleStatusFilter } from "@/server/puzzle/puzzle-status";
 
 type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints: string[]; status: PuzzleStatus; assetPath?: string; initialGamestate: RawPuzzleGameState };
 
@@ -10,6 +11,9 @@ type Props = {
   onPuzzleLoaded: (id: string, meta: PuzzleEntry) => void;
   onEditPuzzle?: (entry: PuzzleEntry) => void;
   isAdmin?: boolean;
+  /** Drives which status-filter buttons appear. Admins get every status; preview users get a
+   *  two-way All/Testing toggle so they can find what is still under test. */
+  accessLevel?: PuzzleAccessLevel;
   solvedPuzzleIds?: string[];
   /** Bump to force a re-fetch of the puzzle list (e.g. after a save/edit). */
   refreshSignal?: number;
@@ -33,8 +37,7 @@ function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
 type SortKey = "title" | "difficulty";
 type SortDir = "asc" | "desc";
 type SolvedFilter = "all" | "solved" | "unsolved";
-// Admin-only: filter the list by visibility status.
-type StatusFilter = "all" | "hidden" | "test" | "deployed";
+// Filter the list by visibility status. Which options are offered depends on access level.
 
 const DIFFICULTIES = [1, 2, 3, 4, 5] as const;
 
@@ -76,14 +79,15 @@ function DifficultyFilter({ selected, onToggle }: { selected: Set<number>; onTog
 }
 
 export function LoadPuzzlePanel(props: Props) {
-  const { onPuzzleLoaded, onEditPuzzle, isAdmin = false, solvedPuzzleIds = [], refreshSignal } = props;
+  const { onPuzzleLoaded, onEditPuzzle, isAdmin = false, accessLevel = "public", solvedPuzzleIds = [], refreshSignal } = props;
+  const statusOptions = statusFilterOptionsFor(accessLevel);
   const [puzzles, setPuzzles] = React.useState<PuzzleEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [sortKey, setSortKey] = React.useState<SortKey>("difficulty");
   const [sortDir, setSortDir] = React.useState<SortDir>("asc");
   const [solvedFilter, setSolvedFilter] = React.useState<SolvedFilter>("all");
-  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = React.useState<PuzzleStatusFilter>("all");
   // Empty = no difficulty filtering (every tier shows). See DifficultyFilter.
   const [diffSelected, setDiffSelected] = React.useState<Set<number>>(() => new Set());
 
@@ -166,8 +170,8 @@ export function LoadPuzzlePanel(props: Props) {
     const isSolved = solvedPuzzleIds.includes(p.id);
     if (solvedFilter === "solved" && !isSolved) return false;
     if (solvedFilter === "unsolved" && isSolved) return false;
-    // Admin-only status filter; ignored entirely for non-admins.
-    if (isAdmin && statusFilter !== "all" && p.status !== statusFilter) return false;
+    // Status filter; a viewer with no status options can never move it off "all".
+    if (statusOptions.length > 0 && statusFilter !== "all" && p.status !== statusFilter) return false;
     if (diffSelected.size > 0 && !diffSelected.has(p.difficulty)) return false;
     return true;
   });
@@ -218,25 +222,27 @@ export function LoadPuzzlePanel(props: Props) {
           ))}
         </div>
         <DifficultyFilter selected={diffSelected} onToggle={toggleDifficulty} />
-        {isAdmin ? (
+        {statusOptions.length > 0 ? (
           <div
             className="flex items-center gap-1 rounded-lg border border-emerald-400/20 bg-emerald-500/5 p-0.5 text-xs"
-            title="Admin only — filter by status"
+            title={isAdmin ? "Admin only — filter by status" : "Filter by status"}
           >
-            {(["all", "hidden", "test", "deployed"] as StatusFilter[]).map((v) => (
+            {statusOptions.map((v) => (
               <button
                 key={v}
                 type="button"
                 onClick={() => setStatusFilter(v)}
                 className={`rounded px-2 py-0.5 font-medium capitalize transition-colors ${statusFilter === v ? "bg-emerald-600/80 text-white" : "text-white/50 hover:text-white/80"}`}
               >
-                {v}
+                {/* Preview users see "Testing", matching the badge on the cards themselves.
+                    Admins keep their existing shorter "Test" label. */}
+                {v === "test" && !isAdmin ? "Testing" : v}
               </button>
             ))}
           </div>
         ) : null}
-        {/* Last child of the filter row: lands after the admin status filter for admins and
-            after the difficulty buttons for everyone else, since the admin block is conditional. */}
+        {/* Last child of the filter row: lands after the status filter when one is shown and
+            after the difficulty buttons otherwise, since that block is conditional. */}
         <span className="text-xs font-medium text-white/40">
           {sortedPuzzles.length} {sortedPuzzles.length === 1 ? "Puzzle" : "Puzzles"}
         </span>

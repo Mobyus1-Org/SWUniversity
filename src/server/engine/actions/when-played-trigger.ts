@@ -18,7 +18,7 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
   "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149", "ASH_179", "ASH_251",
-  "ASH_237", "ASH_248", "SEC_119",
+  "ASH_237", "ASH_248", "SEC_119", "JTL_087",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -157,6 +157,10 @@ export function resolveWhenPlayedTrigger(
         }
         log.push(`${CardTitle(trigger.cardId)}: gained ${xpCount} Experience token(s).`);
       }
+      break;
+    }
+    case "JTL_087": { // TIE Ambush Squadron — When Played: Create a TIE Fighter token.
+      CreateTieFighter(gs, trigger.fromPlayer, log, trigger.cardId);
       break;
     }
     case "SEC_119": { // Crucible — Give an Experience token to each OTHER friendly unit.

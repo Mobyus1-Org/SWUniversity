@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
+import { CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
 import { aspectPenalty, palpatinesReturnCost, spendableFor } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -1081,6 +1081,23 @@ export function resolveWhenPlayed(
         sourcePlayId: playId,
         helperText: "Disclose Vigilance to draw a card?",
         yesLabel: "Disclose",
+        noLabel: "Skip",
+        onYes: { type: "play-from-hand", cardId, player },
+        continuation: null,
+      };
+    }
+    case "LOF_123": { // Directed by the Force — "The Force is with you (create your Force token).
+                      // You may play a unit from your hand (paying its cost)."
+      // The token is created FIRST and unconditionally, so it is available to help pay for
+      // whatever gets played next.
+      CreateForceToken(player, game.gameLog, cardId);
+      if (!PlayerHasUnitsInHand(player)) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        helperText: "Play a unit from your hand (paying its cost)?",
+        yesLabel: "Play a unit",
         noLabel: "Skip",
         onYes: { type: "play-from-hand", cardId, player },
         continuation: null,

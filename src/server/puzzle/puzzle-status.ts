@@ -23,6 +23,27 @@ export function visibleStatusesFor(level: PuzzleAccessLevel): PuzzleStatus[] {
   }
 }
 
+/** "all", plus whichever statuses the viewer may slice the puzzle list by. */
+export type PuzzleStatusFilter = "all" | PuzzleStatus;
+
+/**
+ * Status-filter choices a viewer gets in the puzzle list UI.
+ *
+ * Admins can slice by every status. Preview users get a two-way "is this still under test?"
+ * toggle — the only other status they can see is `deployed`, which is just the complement, so a
+ * third button would carry no information. Public viewers see a single status, so no filter.
+ */
+export function statusFilterOptionsFor(level: PuzzleAccessLevel): PuzzleStatusFilter[] {
+  switch (level) {
+    case "admin":
+      return ["all", "hidden", "test", "deployed"];
+    case "preview":
+      return ["all", "test"];
+    case "public":
+      return [];
+  }
+}
+
 export function isPuzzleVisibleTo(status: PuzzleStatus, level: PuzzleAccessLevel): boolean {
   return visibleStatusesFor(level).includes(status);
 }

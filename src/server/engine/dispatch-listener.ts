@@ -5971,6 +5971,19 @@ function handleChooseTarget(
         log.push(`Player ${pending.player} is playing ${CardTitle(cardId) ?? cardId} via ${CardTitle(pending.cardId)}${discount > 0 ? " (1 aspect penalty ignored)" : ""}.`);
         return playCardFromHand(game, log, pending.player, cardId, discount);
       }
+      case "LOF_123": { // Directed by the Force — "play a unit from your hand (paying its cost)".
+                        // Unrestricted: any Unit, full cost. ASH_002 Fennec, JTL_003 Lando and
+                        // LOF_225 Three Lessons print the same clause and can reuse this shape.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse(`${CardTitle("LOF_123")}: chosen card is not a Unit.`), pending, stateChanged: false };
+        const cost123 = playCost(game, pending.player, cardId);
+        if (spendableFor(game, pending.player) < cost123)
+          return { response: invalidResponse(`${CardTitle("LOF_123")}: not enough resources to play this unit.`), pending, stateChanged: false };
+        payResources(game, pending.player, cost123, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("LOF_123")}.`);
+        return completePlayCard(game, log, cardId, pending.player);
+      }
       case "SOR_003": // Chewbacca — unit costing 3 or less; gains Sentinel for this phase.
       case "SHD_016": // Fennec Shand — unit costing 4 or less; gains Ambush for this phase.
       case "SEC_007": { // Dryden Vos — unit costing 5 or less; gains Ambush for this phase.

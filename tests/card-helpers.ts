@@ -394,6 +394,7 @@ export const Cards = {
       collectionsStarhopper: "SHD_111", // 2/2 Space, Smuggle [3, Command] and no other ability
     },
     jtl: {
+      tieAmbushSquadron: "JTL_087",
       redLeader: "JTL_101",
       victorLeader: "JTL_085",
       cloneCombatSquadron: "JTL_115",
@@ -481,6 +482,7 @@ export const Cards = {
     sec: {
       cadBane: "SEC_034",
       captainRex: "SEC_048",
+      consularsCruiser: "SEC_117",
       crucible: "SEC_119",
       diplomaticEnvoy: "SEC_109",
       dedraMeeroUnit: "SEC_087",
@@ -840,6 +842,7 @@ export const Cards = {
     },
     lof: {
       cureWounds: "LOF_075",
+      directedByTheForce: "LOF_123",
       sorcerousBlast: "LOF_172",
       shatterpoint: "LOF_079",
       protectThePod: "LOF_128",

@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 910 cards across 10 sets.**
+**Total: 909 cards across 10 sets.**
 
 ---
 
@@ -343,7 +343,7 @@ JTL_260: Death Star Plans Upgrade
 JTL_262: Evasive Maneuver Event
 ```
 
-## LOF — Legends of the Force (106)
+## LOF — Legends of the Force (105)
 
 **Message 1 of 3**
 ```
@@ -385,7 +385,6 @@ LOF_108: Malakili - Loving Rancor Keeper Unit
 LOF_111: Maz Kanata - The Light Guides Unit
 LOF_115: Dagoyan Master Unit
 LOF_117: Sifo-Dyas - Commissioning An Army Unit
-LOF_123: Directed by the Force Event
 LOF_125: The Burden of Masters Event
 LOF_127: Rampage Event
 LOF_129: Acolyte of the Beyond Unit

@@ -248,6 +248,12 @@ function resolveOwnWhenDefeated(
     case "JTL_033": { // Onyx Squadron Brute — When Defeated: Heal 2 damage from a base.
       return mandatoryTarget("JTL_033", player, ["player1.base", "player2.base"]);
     }
+    case "JTL_087": { // TIE Ambush Squadron — When Defeated: Create a TIE Fighter token.
+      const game087 = GetGame();
+      if (!game087) return null;
+      CreateTieFighter(game087.currentGameState, player, game087.gameLog, "JTL_087");
+      return null;
+    }
     case "JTL_039": { // Chimaera — When Defeated: Create 2 TIE Fighter tokens.
       const game039 = GetGame();
       if (!game039) return null;

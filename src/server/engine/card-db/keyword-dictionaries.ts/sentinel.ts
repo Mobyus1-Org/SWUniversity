@@ -237,6 +237,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "ASH_252"://N5 Sentry Droid
     case "ASH_083"://Summa-verminoth
     case "ASH_109"://T-6 Shuttle 1974
+    case "SEC_117"://Consular's Cruiser
       return true;
   }
 

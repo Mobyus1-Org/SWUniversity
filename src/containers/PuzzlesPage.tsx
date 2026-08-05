@@ -5,6 +5,7 @@ import { getMasteredIds } from "@/util/profile-api";
 import { globalBackgroundStyle, lightsaberGlow } from "@/util/style-const";
 import { DiscordLink } from "@/util/const";
 import { LoadPuzzlePanel } from "@/components/Shared/LoadPuzzlePanel";
+import type { PuzzleAccessLevel } from "@/server/puzzle/puzzle-status";
 import { PuzzleBuilderPanel } from "@/components/Shared/PuzzleBuilderPanel";
 import { CardLinkText } from "@/components/Shared/CardLink";
 import type { GameState } from "@/lib/engine/game";
@@ -465,7 +466,7 @@ function pileCountValue(n: number) {
   </>;
 }
 
-function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleIds: initialSolvedPuzzleIds = [] }: { showBuilderTools?: boolean; isAdmin?: boolean; solvedPuzzleIds?: string[] }) {
+function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = "public", solvedPuzzleIds: initialSolvedPuzzleIds = [] }: { showBuilderTools?: boolean; isAdmin?: boolean; accessLevel?: PuzzleAccessLevel; solvedPuzzleIds?: string[] }) {
   // ---------------------------------------------------------------------------
   // Engine communication refs (not React state — no re-render on change)
   // ---------------------------------------------------------------------------
@@ -1085,6 +1086,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
               setShowBuilderPanelOpen(true);
             }}
             isAdmin={isAdmin}
+            accessLevel={accessLevel}
             solvedPuzzleIds={solvedPuzzleIds}
             refreshSignal={puzzleListRefresh}
           />
@@ -1256,6 +1258,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, solvedPuzzleId
             setShowBuilderPanelOpen(true);
           }}
           isAdmin={isAdmin}
+          accessLevel={accessLevel}
           solvedPuzzleIds={solvedPuzzleIds}
           refreshSignal={puzzleListRefresh}
         />
