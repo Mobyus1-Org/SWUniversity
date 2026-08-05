@@ -3,13 +3,13 @@ import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { GameTestAdapter } from "../game-test-adapter";
 import { Cards } from "../../card-helpers";
 
-// CR 8.7.d — "When an attacker with Overwhelm deals excess damage to a base, it is considered to
+// CR 7.5.7.d — "When an attacker with Overwhelm deals excess damage to a base, it is considered to
 // have dealt COMBAT DAMAGE to the base, but it is not considered to have ATTACKED that base."
 //
 // The engine had this backwards: every "dealt combat damage to a base" trigger lived inline in the
 // base-attack branch only, so an Overwhelm kill that spilled onto the base fired none of them.
 // These are the five cards that were silently dead on that path.
-describe("Overwhelm excess counts as combat damage to a base (CR 8.7.d)", () => {
+describe("Overwhelm excess counts as combat damage to a base (CR 7.5.7.d)", () => {
   function base() {
     return new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)

@@ -8,7 +8,7 @@ import { Cards } from "../../card-helpers";
 //    The Force is with you (create your Force token)."
 //
 // Unlike the eight common Force bases, this triggers on COMBAT DAMAGE LANDING, not on a Force unit
-// declaring an attack. Per CR 8.7.d that includes Overwhelm excess: "When an attacker with
+// declaring an attack. Per CR 7.5.7.d that includes Overwhelm excess: "When an attacker with
 // Overwhelm deals excess damage to a base, it is considered to have dealt combat damage to the
 // base, but it is not considered to have attacked that base." The attacked/not-attacked
 // distinction is about the attack, not about the damage type.
@@ -47,7 +47,7 @@ describe("LOF_025 Temple of Destruction", () => {
     expect(force(g)).toBeFalsy();
   });
 
-  it("CR 8.7.d: Overwhelm excess of 3 IS combat damage to the base — token created", async () => {
+  it("CR 7.5.7.d: Overwhelm excess of 3 IS combat damage to the base — token created", async () => {
     const g = new GameTestAdapter();
     g.loadNewState(
       base()
@@ -79,7 +79,7 @@ describe("LOF_025 Temple of Destruction", () => {
     expect(force(g)).toBeFalsy();
   });
 
-  it("does not fire on ABILITY damage to a base — that is not combat damage (CR 6.3.1.c)", async () => {
+  it("does not fire on ABILITY damage to a base — that is not combat damage (CR 6.3 General c)", async () => {
     // K-2SO (4/4, Overwhelm) swings into a Wampa (4/5): the Wampa survives, so there is no excess
     // and no combat damage reaches a base. The counter-damage then defeats K-2SO, whose When
     // Defeated deals 3 to the enemy base — ability damage, which must NOT wake the Temple.

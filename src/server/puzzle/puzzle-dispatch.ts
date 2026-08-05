@@ -211,7 +211,13 @@ export function processPuzzleDispatch(
       fromPlayer: 2,
     };
 
+    const before = result.context.pending;
     result = processDispatch(autoDispatch, result.context);
+
+    // Safety net: if the engine rejected the auto-answer, or the pending did not move, answering
+    // again would produce the identical dispatch forever. Stop instead of spinning — this is how a
+    // game that ended mid-resolution used to hang the request.
+    if (result.response.invalidAction || result.context.pending === before) break;
   }
 
   return result;

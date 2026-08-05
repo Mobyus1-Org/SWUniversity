@@ -437,6 +437,13 @@ function sweepDeadUnits(gs: GameState, log: string[], continuation: PendingResol
       if (defeatPend) pending = injectContinuation(defeatPend, pending);
     }
   }
+  // CR 5.6.1 — "A game ends immediately once a player's base reaches 0 remaining HP" — and
+  // CR 3.2.5 — "A player cannot resolve actions, abilities, or effects once their base's remaining
+  // HP reaches 0." When one instance defeats a base and a unit at the same time, that unit's When
+  // Defeated triggers but never RESOLVES: the game was already decided. Dropping the chain here is
+  // what stops a K-2SO dying alongside its own base from killing the winner on the way out.
+  updateDefeatedPlayers(gs);
+  if (gs.defeatedPlayers.length > 0) return null;
   return pending;
 }
 
@@ -1577,6 +1584,12 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
 }
 
 function drainTriggerBag(game: GameState, log: string[]): PendingResolution | null {
+  // Same rule as the sweep above: nothing resolves after a base is defeated. Queued triggers are
+  // abandoned rather than carried past the end of the game.
+  if (game.defeatedPlayers.length > 0) {
+    game.triggerBag.length = 0;
+    return null;
+  }
   // When-Defeated triggers from Exploit (CR 16d): drain in order, skip units with no WD effect.
   // Skip nested triggers here — they'll be prioritized by the nested-first block below.
   for (let i = 0; i < game.triggerBag.length; ) {
@@ -2089,13 +2102,13 @@ const FORCE_ON_ATTACK_BASES = new Set([
 /**
  * Everything that triggers when a unit deals COMBAT damage to a base — the automatic half.
  *
- * Per CR 8.7.d, Overwhelm excess IS combat damage to the base: "When an attacker with Overwhelm
+ * Per CR 7.5.7.d, Overwhelm excess IS combat damage to the base: "When an attacker with Overwhelm
  * deals excess damage to a base, it is considered to have dealt combat damage to the base, but it
  * is not considered to have ATTACKED that base." The distinction the CR draws is attacked vs not
  * attacked — the damage is combat damage either way. These triggers previously lived inline in the
  * base-attack branch alone, so every card below silently did nothing on an Overwhelm kill.
  *
- * Ability damage to a base is NOT combat damage (CR 6.3.1.c), so this is deliberately unreachable
+ * Ability damage to a base is NOT combat damage (CR 6.3 General c), so this is deliberately unreachable
  * from DealDamageToBase.
  *
  * Call AFTER DefeatAdvantageTokensAfterCombat, so an Advantage token granted here survives.
@@ -2487,7 +2500,7 @@ function resolveAttack(
     // tokens defeat. Advantage is +1/+0, so removing it can't change who was defeated above.
     DefeatAdvantageTokensAfterCombat([attacker, defender], log);
 
-    // Overwhelm spill is combat damage to the base (CR 8.7.d), so everything keyed off that fires
+    // Overwhelm spill is combat damage to the base (CR 7.5.7.d), so everything keyed off that fires
     // here too — including the `baseDamagedPlayer` that ASH_183 Whistling Birds reads.
     const spillVictim: PlayerId | null = overwhelmSpill > 0 ? GetOtherPlayer(attacker.controller) : null;
     if (spillVictim) applyCombatDamageToBaseAutoEffects(game, log, attacker, overwhelmSpill, stayOnTarget177);
