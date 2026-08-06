@@ -4,6 +4,7 @@ import { CardCost, CardHp, CardRarity, CardTitle, CardSubtitle } from "@/server/
 import { SetGame, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
+import { WhenDefeatedBaseDamage } from "@/server/engine/actions/when-defeated";
 import type { EngineContext, PendingResolution } from "@/server/engine/pending-resolution";
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
@@ -527,6 +528,13 @@ function resolveAutoOption(
   // P2 always collects: taking the bounty is never worse for them than declining.
   if (pending.type === "bounty" && pending.collectingPlayer === 2) {
     return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };
+  }
+  // "When Defeated: Deal N damage to a base" on one of the OPPONENT's units. Either base is a
+  // legal choice, so the decision is theirs the moment the solver kills it — and P2 always aims
+  // at the solver. Keyed off the shared table so every card in it is covered, not just the first.
+  if (pending.type === "ability-target" && pending.player === 2
+      && WhenDefeatedBaseDamage(pending.cardId) !== undefined) {
+    return { dispatchType: "choose-target", dispatchData: { targetPlayIds: ["player1.base"] } };
   }
   // SHD_173 Guild Target's bounty then asks for a base — always the solver's.
   if (pending.type === "ability-target" && pending.player === 2

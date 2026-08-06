@@ -96,7 +96,7 @@ import type {
 import type { TriggerEntry, CardPlayedContext } from "@/lib/engine/trigger-types";
 import { collectBounties } from "@/server/engine/actions/bounty";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
-import { resolveWhenDefeated } from "@/server/engine/actions/when-defeated";
+import { resolveWhenDefeated, WhenDefeatedBaseDamage } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB, anakinMortisAbility } from "@/server/engine/actions/when-played";
 import { executeRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
@@ -10069,6 +10069,23 @@ function applyAbilityEffect(
 ): PendingResolution | null {
   const game = GetGame();
   if(!game) throw new Error("Game not found in applyAbilityEffect.");
+
+  // "When Defeated: Deal N damage to a base." Matched off the shared table rather than a case per
+  // card, since the pending is keyed by the source card so everything else can name it.
+  if (WhenDefeatedBaseDamage(pending.cardId) !== undefined) {
+    const owner = pending.player!;
+    let basePlayer: PlayerId | null = null;
+    if (targetPlayId === "player1.base") basePlayer = 1;
+    else if (targetPlayId === "player2.base") basePlayer = 2;
+    else if (targetIsBase) basePlayer = targetBasePlayer ?? (owner === 1 ? 2 : 1);
+    if (basePlayer !== null) {
+      const amount = pending.amount ?? 0;
+      dealBaseDamage(game.currentGameState, basePlayer, amount, owner);
+      game.gameLog.push(`${CardTitle(pending.cardId)}: dealt ${amount} damage to player ${basePlayer}'s base.`);
+    }
+    return pending.continuation ?? null;
+  }
+
   switch (pending.cardId) {
     case "SOR_062": { // Regional Governor — store the named card title on the governor unit.
       if (!targetPlayId) break;
@@ -10781,18 +10798,6 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target254 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target254) GiveAdvantageTokens(game.currentGameState, target254, 2, game.gameLog, "ASH_254");
-      break;
-    }
-    case "when-defeated-base-damage": { // "When Defeated: Deal N damage to a base." — N rides on `amount`.
-      const owner = pending.player!;
-      let basePlayer: PlayerId | null = null;
-      if (targetPlayId === "player1.base") basePlayer = 1;
-      else if (targetPlayId === "player2.base") basePlayer = 2;
-      else if (targetIsBase) basePlayer = targetBasePlayer ?? (owner === 1 ? 2 : 1);
-      if (basePlayer === null) break;
-      const amount = pending.amount ?? 0;
-      dealBaseDamage(game.currentGameState, basePlayer, amount, owner);
-      game.gameLog.push(`When Defeated: dealt ${amount} damage to player ${basePlayer}'s base.`);
       break;
     }
     case "SHD_164": { // Rhokai Gunship — When Defeated: deal 1 damage to the chosen unit or base.

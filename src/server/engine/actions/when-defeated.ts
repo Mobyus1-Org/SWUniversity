@@ -109,6 +109,11 @@ const WHEN_DEFEATED_BASE_DAMAGE: Record<string, number> = {
   "LAW_189": 2, // Cavern Angels X-Wing
 };
 
+/** The damage a card's "When Defeated: Deal N damage to a base" deals, or undefined. */
+export function WhenDefeatedBaseDamage(cardId: string): number | undefined {
+  return WHEN_DEFEATED_BASE_DAMAGE[cardId];
+}
+
 function resolveOwnWhenDefeated(
   unit: Unit,
   player: PlayerId,
@@ -117,8 +122,11 @@ function resolveOwnWhenDefeated(
   const baseDamage = WHEN_DEFEATED_BASE_DAMAGE[unit.cardId];
   if (baseDamage !== undefined) {
     return {
+      // Keyed by the SOURCE card, not the shared mechanic: pending.cardId is what the game log,
+      // the puzzle auto-responder and the "Puzzle Auto Target not set" message all read to name
+      // the card. A generic id here makes every one of them say nothing useful.
       type: "ability-target",
-      cardId: "when-defeated-base-damage",
+      cardId: unit.cardId,
       player,
       fromPlayIds: [],
       fromZones: ["Base"],
