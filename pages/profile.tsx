@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import type { UserProfile } from "@/util/profile-api";
 import { deriveProfileStats, type DerivedAppStats, type DatabankCompletion } from "@/util/profile-data";
+import type { PuzzleSummary } from "./api/puzzles/summaries";
 
 type MeResponse = {
   user: {
@@ -24,6 +25,51 @@ function formatScore(value: number): string {
 
 function pct(correct: number, total: number): string {
   return total > 0 ? ((correct / total) * 100).toFixed(2) : "0";
+}
+
+/**
+ * Solved-puzzle progress, collapsed by default.
+ *
+ * Lists every puzzle the VIEWER may see, marking the ones this profile has solved, so the ratio
+ * and the list always agree. The solved count is the intersection rather than the raw length of
+ * `solvedPuzzleIds` — a puzzle that was deleted, or that the viewer can't see, would otherwise
+ * push the count above the total and read as a bug.
+ */
+function PuzzleProgress({ solvedIds, summaries }: { solvedIds: string[]; summaries: PuzzleSummary[] | null }) {
+  const solved = React.useMemo(() => new Set(solvedIds), [solvedIds]);
+  const sorted = React.useMemo(
+    () => (summaries ?? []).slice().sort((a, b) => a.name.localeCompare(b.name)),
+    [summaries],
+  );
+
+  if (summaries === null) {
+    return <p className="text-sm text-gray-300">Loading puzzle progress…</p>;
+  }
+  if (sorted.length === 0) {
+    return <p className="text-sm text-gray-300">No puzzles available.</p>;
+  }
+
+  const solvedCount = sorted.filter((p) => solved.has(p.id)).length;
+
+  return (
+    <details className="rounded border border-white/10 bg-black/20">
+      <summary className="cursor-pointer select-none px-3 py-2 text-sm font-semibold text-gray-200">
+        Puzzles Solved: {solvedCount} / {sorted.length} ({pct(solvedCount, sorted.length)}%)
+      </summary>
+      <ul className="max-h-80 overflow-y-auto border-t border-white/10 px-3 py-2 text-sm">
+        {sorted.map((puzzle) => {
+          const isSolved = solved.has(puzzle.id);
+          return (
+            <li key={puzzle.id} className={`flex items-center gap-2 py-0.5 ${isSolved ? "text-green-300" : "text-gray-400"}`}>
+              <span aria-hidden className="w-4 shrink-0 text-center">{isSolved ? "✓" : "○"}</span>
+              <span>{puzzle.name}</span>
+              <span className="sr-only">{isSolved ? "solved" : "not solved"}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </details>
+  );
 }
 
 function DatabankRow({ label, stats }: { label: string; stats: { mastered: number; total: number } }) {
@@ -113,6 +159,23 @@ export default function ProfilePage() {
   React.useEffect(() => {
     loadUser();
   }, [loadUser]);
+
+  // Puzzle names for the progress list. Independent of loadUser: the ids live on the profile,
+  // the names do not, and this list is the same whichever profile is being viewed.
+  const [puzzleSummaries, setPuzzleSummaries] = React.useState<PuzzleSummary[] | null>(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/puzzles/summaries", { method: "GET", credentials: "include" });
+        const data = res.ok ? ((await res.json()) as { puzzles: PuzzleSummary[] }) : { puzzles: [] };
+        if (!cancelled) setPuzzleSummaries(data.puzzles);
+      } catch {
+        if (!cancelled) setPuzzleSummaries([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const profileStats = React.useMemo(() => deriveProfileStats(user?.profile ?? null), [user?.profile]);
 
@@ -303,9 +366,18 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {!isViewingOther && (
         <div>
           <h2 className="text-xl font-semibold">Puzzles</h2>
+          <div className="mt-4 space-y-3">
+            {/* Progress is shown for whichever profile is being viewed; only the destructive
+                reset below is restricted to your own. */}
+            <PuzzleProgress solvedIds={user.profile?.solvedPuzzleIds ?? []} summaries={puzzleSummaries} />
+          </div>
+        </div>
+
+        {!isViewingOther && (
+        <div>
+          <h2 className="text-xl font-semibold">Reset Puzzles</h2>
           <div className="mt-4 space-y-3">
             {showResetPuzzleConfirm ? (
               <div className="rounded-lg border border-rose-400/30 bg-rose-500/10 p-4 space-y-3">

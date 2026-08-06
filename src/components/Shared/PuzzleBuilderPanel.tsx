@@ -10,6 +10,7 @@ import type { GamePhase } from "@/lib/engine/core-models";
 import {
   fromRaw,
   initialBuilderState,
+  moveItem,
   toRaw,
   type BuilderState,
   type PlayerBuilderState,
@@ -185,6 +186,43 @@ function Checkbox({ checked, onChange, label, disabled = false, title }: {
 }
 
 
+/**
+ * Move-earlier / move-later buttons for an item in an ordered list.
+ *
+ * `vertical` picks the glyphs only — the pill lists (hand, resources, discard) read left-to-right
+ * while unit rows stack — the semantics are identical either way. Each end disables itself so a
+ * no-op click can't look like a broken control.
+ */
+function ReorderButtons({ index, count, onMove, vertical = false }: {
+  index: number;
+  count: number;
+  onMove: (delta: number) => void;
+  vertical?: boolean;
+}) {
+  if (count < 2) return null;
+  const base = "px-0.5 leading-none text-white/40 transition-colors hover:text-white disabled:cursor-default disabled:opacity-20 disabled:hover:text-white/40";
+  return (
+    <>
+      <button
+        type="button"
+        disabled={index === 0}
+        onClick={() => onMove(-1)}
+        title="Move earlier"
+        aria-label="Move earlier"
+        className={base}
+      >{vertical ? "↑" : "‹"}</button>
+      <button
+        type="button"
+        disabled={index === count - 1}
+        onClick={() => onMove(1)}
+        title="Move later"
+        aria-label="Move later"
+        className={base}
+      >{vertical ? "↓" : "›"}</button>
+    </>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Per-player section
 // ---------------------------------------------------------------------------
@@ -326,6 +364,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
           <div className="flex flex-wrap gap-1.5 mt-1">
             {state.resources.map((r, i) => (
               <span key={i} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-3xs ${r.ready ? "bg-blue-500/20 text-blue-200" : "bg-white/10 text-white/50"}`}>
+                <ReorderButtons index={i} count={state.resources.length} onMove={(d) => patch({ resources: moveItem(state.resources, i, d) })} />
                 {cards.find((c) => c.cardId === r.cardId)?.label ?? r.cardId}
                 <button
                   type="button"
@@ -359,6 +398,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
           <div className="flex flex-wrap gap-1.5">
             {state.handCards.map((cardId, i) => (
               <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-3xs text-white/70">
+                <ReorderButtons index={i} count={state.handCards.length} onMove={(d) => patch({ handCards: moveItem(state.handCards, i, d) })} />
                 {cards.find((c) => c.cardId === cardId)?.label ?? cardId}
                 <button
                   type="button"
@@ -392,6 +432,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
           <div className="flex flex-wrap gap-1.5">
             {state.discard.map((cardId, i) => (
               <span key={i} className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-3xs text-white/70">
+                <ReorderButtons index={i} count={state.discard.length} onMove={(d) => patch({ discard: moveItem(state.discard, i, d) })} />
                 {cards.find((c) => c.cardId === cardId)?.label ?? cardId}
                 <button
                   type="button"
@@ -485,6 +526,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
           onAdd={(u) => patch({ groundUnits: [...state.groundUnits, u] })}
           onRemove={(i) => patch({ groundUnits: state.groundUnits.filter((_, j) => j !== i) })}
           onUpdate={(i, u) => patch({ groundUnits: state.groundUnits.map((x, j) => j === i ? u : x) })}
+          onMove={(i, d) => patch({ groundUnits: moveItem(state.groundUnits, i, d) })}
         />
       </div>
 
@@ -501,6 +543,7 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
           onAdd={(u) => patch({ spaceUnits: [...state.spaceUnits, u] })}
           onRemove={(i) => patch({ spaceUnits: state.spaceUnits.filter((_, j) => j !== i) })}
           onUpdate={(i, u) => patch({ spaceUnits: state.spaceUnits.map((x, j) => j === i ? u : x) })}
+          onMove={(i, d) => patch({ spaceUnits: moveItem(state.spaceUnits, i, d) })}
         />
       </div>
     </div>
@@ -648,7 +691,7 @@ function UnitEditDialog({ unit, type, captiveOwner, cards, unitCards, leaderCard
 
 // ---------------------------------------------------------------------------
 
-function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLeaderCardIds, onAdd, onRemove, onUpdate }: {
+function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLeaderCardIds, onAdd, onRemove, onUpdate, onMove }: {
   /** The side these units belong to — captives under them are owned by the opponent. */
   playerId: 1 | 2;
   unitCards: CardCatalogEntry[];
@@ -661,6 +704,8 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
   onAdd: (u: UnitEntry) => void;
   onRemove: (i: number) => void;
   onUpdate: (i: number, u: UnitEntry) => void;
+  /** Shift the unit at `i` by `delta` places — arena order is the order the solver sees. */
+  onMove: (i: number, delta: number) => void;
 }) {
   const [cardId, setCardId] = React.useState("");
   const [ready, setReady] = React.useState(true);
@@ -716,6 +761,7 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
           {units.map((u, i) => (
             <div key={i} className="space-y-0.5">
               <div className="flex items-center gap-1.5 rounded-md bg-black/20 px-2 py-1 text-2xs">
+                <ReorderButtons index={i} count={units.length} onMove={(d) => onMove(i, d)} vertical />
                 <span className="text-white/80 mr-0.5">
                   {cards.find((c) => c.cardId === u.cardId)?.label ?? u.cardId}
                   {!u.ready ? <span className="ml-1.5 text-white/40">[exhausted]</span> : null}

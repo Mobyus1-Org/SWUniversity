@@ -69,6 +69,26 @@ export type BuilderState = {
   player2: PlayerBuilderState;
 };
 
+/**
+ * Returns a copy of `list` with the item at `from` shifted by `delta` positions.
+ *
+ * Board order is meaningful — it is the arena order a solver sees, the hand order they click, and
+ * the `groundArena[0]` style indices that authored solutions and tests are written against — so
+ * the builder needs to reorder in place rather than forcing a delete-and-re-add (which also loses
+ * a unit's upgrades, captives and damage).
+ *
+ * A move that would run off either end returns the list unchanged, so the caller can wire up the
+ * buttons without also having to guard the edges.
+ */
+export function moveItem<T>(list: T[], from: number, delta: number): T[] {
+  const to = from + delta;
+  if (from < 0 || from >= list.length || to < 0 || to >= list.length) return list;
+  const next = list.slice();
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
+}
+
 export function emptyPlayer(): PlayerBuilderState {
   return {
     baseCardId: "", baseDamage: 0, baseEpicActionUsed: false,
