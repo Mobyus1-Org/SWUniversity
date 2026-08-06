@@ -75,6 +75,7 @@ export function HasHidden(cardId: string, playId?: string, player?: PlayerId, is
     case "SEC_201"://Anakin Skywalker
     case "SEC_148"://Karis Nemik
     case "SEC_221"://Unruly Astromech
+    case "SEC_238"://Sith Assassin
       return true;
 
     case "LAW_082"://Urrr'k

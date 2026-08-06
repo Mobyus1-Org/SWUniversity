@@ -129,6 +129,7 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
   "ASH_109": "+2/+2 to a unit",
   "ASH_142": "1 dmg to up to 3 ground units",
   "LOF_094": "Use the Force: play a unit for 2 less", // Jedi Consular
+  "LOF_246": "Heal up to 2, deal that much", // Grogu
   "SHD_080": "Return to hand, 1 dmg to a ground unit", // Salacious Crumb
   "SHD_087": [ // Crosshair — two Actions
     { abilityId: "SHD_087-1", label: "2 resources: +1/+0 this phase" },

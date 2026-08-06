@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
 import { aspectPenalty, palpatinesReturnCost, spendableFor } from "@/server/engine/card-playability";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -134,6 +134,8 @@ export function resolveWhenPlayed(
   switch (cardId) {
     case "LOF_082": // Vaneé — When Played/On Attack: may defeat an XP token on a friendly unit, then give one to a friendly unit.
       return buildVaneeAbility(player, null);
+    case "SEC_244": // Darth Nihilus — When Played/On Attack: 3 damage to the lowest-HP other unit.
+      return buildNihilusAbility(player, playId, null);
     case "ASH_132": { // Queen Soruna — When Played/On Attack: may reveal a unit from hand; if you
                       // do, deal 3 damage to a unit with the same cost as the revealed unit.
       const pStateQueen = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
@@ -1523,6 +1525,21 @@ export function resolveWhenPlayed(
           fromZones: ["Base"],
           continuation: null,
         },
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "LOF_035": { // Talzin's Assassin — "When Played: You may use the Force (lose your Force
+                      // token). If you do, give a unit –3/–3 for this phase."
+      if (!HasTheForce(player)) return null; // no token → nothing to spend, no prompt
+      if (AllUnits().length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId: "LOF_035",
+        player,
+        helperText: "Use the Force to give a unit –3/–3 for this phase?",
+        yesLabel: "Use the Force",
+        noLabel: "Skip",
+        onYes: null, // the Force is spent in the Yes handler, which then offers the targets
         continuation: null,
       } satisfies AbilityOptionPending;
     }

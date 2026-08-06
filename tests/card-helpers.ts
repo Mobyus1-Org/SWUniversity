@@ -434,6 +434,7 @@ export const Cards = {
       dilapidatedSkiSpeeder: "JTL_248",
       phoenixSquadronAWing: "JTL_095", // 2-cost Space Vehicle, no abilities — a cheap pilot host
       chewbacca: "JTL_103", // Faithful First Mate — grants "can't be defeated/returned by enemy abilities"
+      darthVaderScourgeOfSquadrons: "JTL_142", // Piloting 3 — grants the host an On Attack
     },
     lof: {
       kelleranBeq: "LOF_100",
@@ -464,6 +465,7 @@ export const Cards = {
       hyenaBomber: "LOF_158",
       lukeSkywalker: "LOF_249", // A Hero's Beginning — 3/5 Ground, unique
       eethKoth: "LOF_097",
+      talzinsAssassin: "LOF_035",
     },
     twi: {
       infiltratingDemolisher: "TWI_182",
@@ -500,6 +502,8 @@ export const Cards = {
       darthTraya: "SEC_188",
       karisNemik: "SEC_148",
       grandAdmiralThrawn: "SEC_193",
+      sithAssassin: "SEC_238",
+      darthNihilus: "SEC_244",
     },
     law: {
       admiralMottiLaw: "LAW_139",
@@ -520,6 +524,7 @@ export const Cards = {
       ohnakaGangBandits: "LAW_199",
       vigilantScouts: "LAW_120",
       guildAmbushTeam: "LAW_239",
+      cavernAngelsXWing: "LAW_189",
     },
     ash: {
       antDroid: "ASH_116",
@@ -854,6 +859,7 @@ export const Cards = {
       shienFlurry: "LOF_220",
       theWillOfTheForce: "LOF_227",
       nimanStrike: "LOF_124",
+      deathField: "LOF_141",
     },
     ibh: {
       // Suffix letters are alternate identical printings within IBH.

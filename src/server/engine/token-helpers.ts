@@ -119,6 +119,33 @@ export function GiveAdvantageTokens(
   gameLog.push(`${prefix}gave ${count} Advantage token${count > 1 ? "s" : ""} to ${CardTitle(target.cardId)}.`);
 }
 
+/** The Experience token upgrade (+1/+1). */
+const EXPERIENCE_TOKEN = "SOR_T01";
+
+/**
+ * Attaches `count` Experience tokens to `target`. The token is an upgrade owned and controlled by
+ * whoever holds the unit, so a unit that changes hands carries its tokens with it.
+ */
+export function GiveExperienceTokens(
+  game: GameState,
+  target: UnitInterface,
+  count: number,
+  gameLog: string[],
+  fromCardId?: string,
+): void {
+  if (count <= 0) return;
+  for (let i = 0; i < count; i++) {
+    target.upgrades.push({
+      cardId: EXPERIENCE_TOKEN,
+      playId: String(game.nextPlayId++),
+      owner: target.owner,
+      controller: target.controller,
+    });
+  }
+  const prefix = fromCardId ? `${CardTitle(fromCardId)}: ` : "";
+  gameLog.push(`${prefix}gave ${count} Experience token${count > 1 ? "s" : ""} to ${CardTitle(target.cardId)}.`);
+}
+
 /**
  * The Advantage token's own ability: it is defeated once the unit it is attached to
  * finishes attacking or defending. Called at the end of an attack for the attacker and

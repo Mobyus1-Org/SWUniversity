@@ -116,7 +116,7 @@ import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dict
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
-import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck } from "@/server/engine/core-functions";
 
@@ -3990,6 +3990,28 @@ function completePlayCard(
           if (afterSweep151.type === "resolve-attack") return handleResolveAttack(game, log, afterSweep151);
           return { response: resolutionResponse(pendingToResolution(afterSweep151, game)), pending: afterSweep151, stateChanged: false };
         }
+      } else if (cardId === "LOF_141") {
+        // Death Field — deal 2 damage to each non-Vehicle enemy unit, then draw if you control
+        // a Force unit. The draw condition is read after the damage; only enemy units are hit,
+        // so a friendly Force unit can never be removed by this card before the check.
+        const opp141 = GetOtherPlayer(player);
+        const targets141 = GetUnitsForPlayer(opp141)
+          .filter(u => !TraitContains(u.cardId, "Vehicle", opp141, u.playId));
+        for (const u of targets141) {
+          DealDamageToUnit(game, "LOF_141", u.playId, 2, log, player);
+        }
+        if (targets141.length > 0) {
+          log.push(`${CardTitle("LOF_141")}: dealt 2 damage to each non-Vehicle enemy unit.`);
+        }
+        if (GetUnitsForPlayer(player).some(u => TraitContains(u.cardId, "Force", player, u.playId))) {
+          DrawCardForPlayer(game, log, player);
+          log.push(`${CardTitle("LOF_141")}: drew a card (you control a Force unit).`);
+        }
+        const afterSweep141 = sweepDeadUnits(game, log, null);
+        if (afterSweep141) {
+          if (afterSweep141.type === "resolve-attack") return handleResolveAttack(game, log, afterSweep141);
+          return { response: resolutionResponse(pendingToResolution(afterSweep141, game)), pending: afterSweep141, stateChanged: false };
+        }
       } else if (cardId === "SOR_043" || cardId === "TWI_078" || cardId === "LAW_044") {
         const otherPlayer: PlayerId = player === 1 ? 2 : 1;
         // Snapshot trigger-holders before any unit is removed so wiped units still trigger.
@@ -7156,6 +7178,7 @@ function applyAbilityOptionEffect(
       };
     }
     case "LOF_031": // Karis When Defeated — Use the Force, then give a unit –2/–2 for this phase.
+    case "LOF_035": // Talzin's Assassin When Played — Use the Force, then give a unit –3/–3 for this phase.
     case "LOF_075": // Cure Wounds — Use the Force, then heal 6 from a unit.
     case "LOF_172": { // Sorcerous Blast — Use the Force, then deal 3 to a unit.
       const forcePlayer = pending.player!;
@@ -10753,6 +10776,18 @@ function applyAbilityEffect(
       if (target254) GiveAdvantageTokens(game.currentGameState, target254, 2, game.gameLog, "ASH_254");
       break;
     }
+    case "when-defeated-base-damage": { // "When Defeated: Deal N damage to a base." — N rides on `amount`.
+      const owner = pending.player!;
+      let basePlayer: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer = 1;
+      else if (targetPlayId === "player2.base") basePlayer = 2;
+      else if (targetIsBase) basePlayer = targetBasePlayer ?? (owner === 1 ? 2 : 1);
+      if (basePlayer === null) break;
+      const amount = pending.amount ?? 0;
+      dealBaseDamage(game.currentGameState, basePlayer, amount, owner);
+      game.gameLog.push(`When Defeated: dealt ${amount} damage to player ${basePlayer}'s base.`);
+      break;
+    }
     case "SHD_164": { // Rhokai Gunship — When Defeated: deal 1 damage to the chosen unit or base.
       const owner164 = pending.player!;
       let basePlayer164: PlayerId | null = null;
@@ -10832,10 +10867,73 @@ function applyAbilityEffect(
       if (advTarget146) GiveAdvantageTokens(game.currentGameState, advTarget146, 1, game.gameLog, "ASH_146");
       break;
     }
+    case "SEC_244": { // Darth Nihilus — 3 damage to the chosen lowest-HP unit; if it was a
+                      // non-Vehicle unit, Nihilus takes an Experience token. The Vehicle check
+                      // reads the unit that was damaged, so a target that dies still grants it.
+      if (!targetPlayId) break;
+      const target244 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target244) break;
+      const wasVehicle244 = TraitContains(target244.cardId, "Vehicle", target244.controller, target244.playId);
+      DealDamageToUnit(game.currentGameState, "SEC_244", targetPlayId, 3, game.gameLog, pending.player);
+      if (!wasVehicle244 && pending.sourcePlayId) {
+        const self244 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
+        if (self244) GiveExperienceTokens(game.currentGameState, self244, 1, game.gameLog, "SEC_244");
+      }
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
     case "ASH_196": { // Gorian Shard's Corsair — deal 2 damage to the chosen unit.
       if (!targetPlayId || !pending.player) break;
       DealDamageToUnit(game.currentGameState, "ASH_196", targetPlayId, 2, game.gameLog, pending.player);
       break;
+    }
+    case "JTL_142_pilot_followup": { // Darth Vader piloting — the bonus 1 damage to a unit or base.
+      const owner142f = pending.player!;
+      let basePlayer142: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer142 = 1;
+      else if (targetPlayId === "player2.base") basePlayer142 = 2;
+      else if (targetIsBase) basePlayer142 = targetBasePlayer ?? (owner142f === 1 ? 2 : 1);
+      if (basePlayer142 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer142, 1, owner142f);
+        game.gameLog.push(`${CardTitle("JTL_142")}: dealt 1 damage to player ${basePlayer142}'s base.`);
+        break;
+      }
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "JTL_142", targetPlayId, 1, game.gameLog, owner142f);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "JTL_142_pilot": { // Darth Vader piloting — deal 1 damage to the chosen unit; if a unit is
+                            // defeated this way, you may deal 1 more damage to a unit or base.
+      if (!targetPlayId) break;
+      const target142 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target142) break;
+      // A unit already sitting at 0 HP was not "defeated this way" — only a fresh kill counts.
+      const wasAlready0_142 = Unit.FromInterface(target142).CurrentHP() <= 0;
+      DealDamageToUnit(game.currentGameState, "JTL_142", targetPlayId, 1, game.gameLog, pending.player);
+      const nowDead142 = !wasAlready0_142 && Unit.FromInterface(target142).CurrentHP() <= 0;
+      if (!nowDead142) {
+        return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+      }
+      const afterSweep142 = sweepDeadUnits(game.currentGameState, game.gameLog, null);
+      const followUp142: AbilityOptionPending = {
+        type: "ability-option",
+        cardId: "JTL_142_pilot_followup",
+        player: pending.player,
+        sourcePlayId: pending.sourcePlayId,
+        helperText: "Deal 1 damage to a unit or base?",
+        yesLabel: "Deal 1",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "JTL_142_pilot_followup",
+          player: pending.player,
+          sourcePlayId: pending.sourcePlayId,
+          fromPlayIds: GetAllUnits(game.currentGameState).map(u => u.playId),
+          fromZones: ["Base"],
+          continuation: pending.continuation ?? null,
+        } satisfies AbilityTargetPending,
+        continuation: pending.continuation ?? null,
+      };
+      return afterSweep142 ? injectContinuation(afterSweep142, followUp142) : followUp142;
     }
     case "ASH_146": { // Justifier — deal 1 damage to the chosen unit; if defeated this way, give an Advantage token to a unit.
       if (!targetPlayId) break;
@@ -12583,6 +12681,13 @@ function applyAbilityEffect(
       const target031 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target031) GiveStatModForPhase("LOF_031", target031, -2, game.gameLog);
       break;
+    }
+    case "LOF_035": { // Talzin's Assassin: the Force is already spent — give –3/–3 for this phase.
+      if (!targetPlayId) break;
+      const target035 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target035) GiveStatModForPhase("LOF_035", target035, -3, game.gameLog);
+      // The reduced HP can put the unit at or below its damage — it is defeated on the spot.
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
     case "LAW_010": { // Leia Organa — +1/+1 for each different aspect the chosen unit has.
       if (!targetPlayId) break;

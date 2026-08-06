@@ -1203,6 +1203,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SHD_150": //Koska Reeves — On Attack: if upgraded, may deal 2 damage to a ground unit
     case "SHD_139": //Krrsantan — On Attack: may deal 1 damage to a ground unit per damage on this unit
     case "SHD_091": //Jabba's Rancor — When Played/On Attack: 3 damage to another friendly ground unit and 3 to an enemy ground unit
+    case "SEC_244": //Darth Nihilus — When Played/On Attack: 3 damage to the lowest-HP other unit
     case "LOF_082": //Vaneé — When Played/On Attack
     case "LOF_003": //Ahsoka Tano (deployed) — On Attack: may give a friendly unit Sentinel
     case "SOR_179": //Boba Fett - Disintegrator
@@ -1308,6 +1309,7 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
     case "SOR_137": //Fallen Lightsaber (conditional: only fires if attached unit is Force)
     case "SEC_264": //Clandestine Connections
     case "JTL_018": //Kazuda Xiono piloting — grants his On Attack to the attached Vehicle
+    case "JTL_142": //Darth Vader (Scourge of Squadrons) piloting — 1 damage, then 1 more on a kill
       return true;
     default: return false;
   }
@@ -1714,6 +1716,35 @@ export function mandatoryTarget(
     cardId,
     player,
     fromPlayIds,
+    continuation,
+  } satisfies AbilityTargetPending;
+}
+
+/**
+ * Darth Nihilus (SEC_244) "Deal 3 damage to the unit with the least remaining HP among other
+ * units. (If multiple units are tied, choose one.) If it's a non-Vehicle unit, give an Experience
+ * token to this unit." Shared by his When Played and his On Attack.
+ *
+ * "Other units" spans both players — a friendly unit can be the lowest and is a legal target.
+ * The tie clause is why this is a target prompt rather than an auto-resolve: only the units tied
+ * at the minimum remaining HP are offered, so the player picks among equals and nothing else.
+ * Returns `continuation` unchanged when Nihilus is the only unit in play.
+ */
+export function buildNihilusAbility(
+  player: PlayerId,
+  selfPlayId: string | undefined,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const others = AllUnits().filter(u => u.playId !== selfPlayId);
+  if (others.length === 0) return continuation;
+  const lowest = Math.min(...others.map(u => Unit.FromInterface(u).CurrentHP()));
+  const tied = others.filter(u => Unit.FromInterface(u).CurrentHP() === lowest);
+  return {
+    type: "ability-target",
+    cardId: "SEC_244",
+    player,
+    sourcePlayId: selfPlayId,
+    fromPlayIds: tied.map(u => u.playId),
     continuation,
   } satisfies AbilityTargetPending;
 }

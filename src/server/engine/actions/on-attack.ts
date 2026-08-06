@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending, IndirectDamagePending } from "@/server/engine/pending-resolution";
-import { buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, ResourceTopCardOfDeck } from "@/server/engine/core-functions";
+import { buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, ResourceTopCardOfDeck } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType } from "@/server/engine/card-db/generated";
@@ -128,6 +128,19 @@ export function resolveOnAttackTrigger(
       case "JTL_018": // Kazuda Xiono piloting — same On Attack as his deployed side.
         deferredPending ??= kazudaSilencePending(attacker, continuation);
         break;
+      case "JTL_142": { // Darth Vader piloting — "On Attack: You may deal 1 damage to a unit. If a
+                        // unit is defeated this way, you may deal 1 damage to a unit or base."
+                        // The follow-up is chained in the JTL_142_pilot dispatch case, which is
+                        // what knows whether the first damage actually defeated anything.
+        if (!deferredPending) {
+          const allUnits142 = AllUnits();
+          if (allUnits142.length > 0) {
+            deferredPending = optionalTarget("JTL_142_pilot", attacker.controller, allUnits142.map(u => u.playId),
+              "Deal 1 damage to a unit?", { yesLabel: "Deal 1", sourcePlayId: attacker.playId, continuation });
+          }
+        }
+        break;
+      }
       case "JTL_012": { // Luke Skywalker piloting a Fighter — "On Attack: You may deal 3 damage to a unit."
         if (!deferredPending) {
           const allUnits012 = AllUnits();
@@ -722,6 +735,8 @@ function resolveInnateOnAttack(
     }
     case "LOF_082": // Vaneé — When Played/On Attack: may defeat an XP token on a friendly unit, then give one to a friendly unit.
       return buildVaneeAbility(attacker.controller, continuation) ?? continuation;
+    case "SEC_244": // Darth Nihilus — same ability as his When Played.
+      return buildNihilusAbility(attacker.controller, attacker.playId, continuation) ?? continuation;
     case "LOF_003": { // Ahsoka Tano (deployed) — On Attack: you may give a friendly unit Sentinel for this phase.
       const friendly003 = GetUnitsForPlayer(attacker.controller);
       if (friendly003.length === 0) return continuation;

@@ -100,11 +100,33 @@ function LastKnownPower(unit: Unit): number {
   return Math.max(0, (CardPower(unit.cardId) || 0) + fromUpgrades);
 }
 
+/**
+ * "When Defeated: Deal N damage to a base." Mandatory, and "a base" means either one — the
+ * controller picks, so it can be aimed at their own base when that is somehow useful.
+ * A whole family of cards differ only in N, so they are data here rather than a case each.
+ */
+const WHEN_DEFEATED_BASE_DAMAGE: Record<string, number> = {
+  "LAW_189": 2, // Cavern Angels X-Wing
+};
+
 function resolveOwnWhenDefeated(
   unit: Unit,
   player: PlayerId,
   causedByCombatDamage: boolean = false,
 ): PendingResolution | null {
+  const baseDamage = WHEN_DEFEATED_BASE_DAMAGE[unit.cardId];
+  if (baseDamage !== undefined) {
+    return {
+      type: "ability-target",
+      cardId: "when-defeated-base-damage",
+      player,
+      fromPlayIds: [],
+      fromZones: ["Base"],
+      amount: baseDamage,
+      continuation: null,
+    };
+  }
+
   switch (unit.cardId) {
     case "ASH_191": { // Shin Hati's Fiend Fighter — "When Defeated: You may give 2 Advantage
                       // tokens to a unit. If this unit wasn't defeated by combat damage, you

@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 904 cards across 10 sets.**
+**Total: 899 cards across 10 sets.**
 
 ---
 
@@ -338,7 +338,7 @@ JTL_260: Death Star Plans Upgrade
 JTL_262: Evasive Maneuver Event
 ```
 
-## LOF — Legends of the Force (105)
+## LOF — Legends of the Force (102)
 
 **Message 1 of 3**
 ```
@@ -346,7 +346,6 @@ LOF:
 LOF_019: Vergence Temple Base
 LOF_022: Mystic Monastery Base
 LOF_028: Tomb of Eilram Base
-LOF_035: Talzin's Assassin Unit
 LOF_036: Old Daka - Oldest and Wisest Unit
 LOF_041: Drain Essence Event
 LOF_042: Always Two Event
@@ -365,7 +364,6 @@ LOF_072: Priestesses of the Force - Eternal Unit
 LOF_076: Soresu Stance Event
 LOF_077: Crushing Blow Event
 LOF_078: Whirlwind of Power Event
-LOF_081: Sith Legionnaire Unit
 LOF_083: Captain Enoch - Captain of the Guard Unit
 LOF_092: Point Rain Reclaimer Unit
 LOF_095: Lor San Tekka - Secret Keeper Unit
@@ -388,7 +386,6 @@ LOF_134: Heavy Missile Gunship Unit
 LOF_135: Scythe - Intimidating Silhouette Unit
 LOF_138: Sith Holocron Upgrade
 LOF_139: Battle Fury Upgrade
-LOF_141: Death Field Event
 ```
 
 **Message 2 of 3**
@@ -460,7 +457,7 @@ LOF_263: Last Words Event
 LOF_264: It's Worse Event
 ```
 
-## LAW — Legends of the Underworld (175)
+## LAW — Legends of the Underworld (174)
 
 **Message 1 of 4**
 ```
@@ -599,7 +596,6 @@ LAW_183: B-Wing Skirmisher Unit
 LAW_184: Aerie - Cloud-Rider Dropship Unit
 LAW_185: Ben Solo - Facing the Light Unit
 LAW_187: “Staccato Lightning” Repeater Upgrade
-LAW_189: Cavern Angels X-Wing Unit
 LAW_191: Arvel Skeen - Win and Walk Away Unit
 LAW_192: Bracca Shipbreaker Unit
 LAW_193: Mid Rim Sharpshooter Unit
@@ -657,7 +653,7 @@ LAW_262: Bank Job Fugitives Unit
 LAW_264: From a Certain Point of View Event
 ```
 
-## SEC — Secrets of Power (160)
+## SEC — Secrets of Power (159)
 
 **Message 1 of 4**
 ```
@@ -822,7 +818,6 @@ SEC_240: Hutt Cartel Starfighter Unit
 SEC_241: Political Bully Unit
 SEC_242: Elia Kane - False Convert Unit
 SEC_243: FN Trooper Corps Unit
-SEC_244: Darth Nihilus - Lord of Hunger Unit
 SEC_245: When Has Become Now Event
 SEC_246: Contempt for Culture Event
 SEC_247: Evil is Everywhere Event
