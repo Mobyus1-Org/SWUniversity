@@ -7,6 +7,12 @@ import type { PlayerId, Zones } from "@/lib/engine/core-models";
 
 export interface NeedsTarget {
   type: "Target";
+  /**
+   * What the player is choosing this target FOR. Shown in place of the generic "Choose a target."
+   * status line, so prompts whose consequence isn't obvious from the board (e.g. the uniqueness
+   * rule asking which duplicate to defeat) can say so.
+   */
+  helperText?: string;
   fromZones?: Zones[];
   /**
    * For a "Hand" zone target: whose hand the indices index into. Effects like K-2SO's When

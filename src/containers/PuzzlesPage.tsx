@@ -21,6 +21,86 @@ type PreviewState = {
   label?: string;
 };
 
+/**
+ * How a preview was requested. Hover previews fade in after a delay and vanish on mouse-out;
+ * a `sticky` one (long-press) opens immediately and stays until the player dismisses it, which
+ * is the only way to read a card on a touch device — there is no hover there, and the hover
+ * panel is desktop-only anyway.
+ */
+type PreviewOpts = { sticky?: boolean };
+type PreviewStart = (preview: PreviewState, opts?: PreviewOpts) => void;
+
+/** Movement (px) past which a touch counts as a scroll rather than a press-and-hold. */
+const LONG_PRESS_SLOP = 10;
+const LONG_PRESS_MS = 450;
+
+/**
+ * Touch handlers that fire `open` on a press-and-hold, and swallow the click that would
+ * otherwise follow — without this, holding a selectable card to read it would also target it.
+ *
+ * Spread onto the same element that carries the hover handlers. That element sits INSIDE the
+ * selectable <button>, so its capture-phase click handler runs before the button's onClick and
+ * can cancel it.
+ */
+function useLongPress(open: () => void) {
+  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const start = React.useRef<{ x: number; y: number } | null>(null);
+  // Survives the touchend→click gap so the click that follows a hold can be identified.
+  const fired = React.useRef(false);
+
+  const cancel = React.useCallback(() => {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+    start.current = null;
+  }, []);
+  React.useEffect(() => cancel, [cancel]);
+
+  const props = {
+    onTouchStart: (e: React.TouchEvent) => {
+      const t = e.touches[0];
+      if (!t) return;
+      fired.current = false;
+      start.current = { x: t.clientX, y: t.clientY };
+      timer.current = setTimeout(() => { fired.current = true; timer.current = null; open(); }, LONG_PRESS_MS);
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      const t = e.touches[0];
+      if (!t || !start.current) return;
+      if (Math.abs(t.clientX - start.current.x) > LONG_PRESS_SLOP
+        || Math.abs(t.clientY - start.current.y) > LONG_PRESS_SLOP) cancel();
+    },
+    onTouchEnd: cancel,
+    onTouchCancel: cancel,
+    // Stops the click reaching any ANCESTOR handler (the selectable <button> wrapper). Runs
+    // before any bubble-phase onClick, including `guard`'s — which is what clears the flag when
+    // the handler lives on this same element.
+    onClickCapture: (e: React.MouseEvent) => {
+      if (!fired.current) return;
+      e.preventDefault();
+      e.stopPropagation();
+      // Nothing downstream will clear it on the ancestor path, and a stale flag would eat the
+      // next ordinary click.
+      setTimeout(() => { fired.current = false; }, 0);
+    },
+    // Suppress the iOS press-and-hold callout ("Save Image…") over card art.
+    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+    style: { WebkitTouchCallout: "none" } as React.CSSProperties,
+  };
+
+  /**
+   * Wraps a click handler living on the SAME element as these props. stopPropagation only stops
+   * other nodes, so a same-element onClick would still run after a hold — this drops it.
+   */
+  const guard = <T,>(handler: ((arg: T) => void) | undefined) =>
+    handler
+      ? (arg: T) => {
+          if (fired.current) { fired.current = false; return; }
+          handler(arg);
+        }
+      : undefined;
+
+  return { props, guard };
+}
+
 function getPreviewImageId(cardId: string, showBack = false): string {
   return showBack ? `${cardId}_BACK` : cardId;
 }
@@ -71,6 +151,7 @@ function formatStatus(status: GameStatus, resolutionNeeded: ResolutionRequest | 
   }
   if (resolutionNeeded?.type === "Option") return resolutionNeeded.helperText;
   if (resolutionNeeded?.type === "Target") {
+    if (resolutionNeeded.helperText) return resolutionNeeded.helperText;
     if ((resolutionNeeded.needsMultiple ?? false) || (resolutionNeeded.maxTargets ?? 1) > 1)
       return `Choose up to ${resolutionNeeded.maxTargets ?? "?"} targets, then confirm.`;
     return "Choose a target.";
@@ -184,7 +265,7 @@ function CardVisual({
   imageId?: string;
   selectable: boolean;
   onClick?: () => void;
-  onPreviewStart: (preview: PreviewState) => void;
+  onPreviewStart: PreviewStart;
   onPreviewEnd: () => void;
   exhausted?: boolean;
   damage?: number;
@@ -208,6 +289,8 @@ function CardVisual({
   const [imageSrc, setImageSrc] = React.useState(primarySrc);
   const title = CardTitle(cardId);
   const subtitle = CardSubtitle(cardId);
+  const previewState: PreviewState = { imageId: imageId ?? cardId, cardId, label: subtitle ? `${title} — ${subtitle}` : title };
+  const hold = useLongPress(() => onPreviewStart(previewState, { sticky: true }));
 
   React.useEffect(() => {
     setImageSrc(primarySrc);
@@ -224,8 +307,9 @@ function CardVisual({
     <div className="relative">
       <div
         className={`relative overflow-hidden rounded-2xl border border-white/15 bg-black/40 ${selectable ? `cursor-pointer ${customGlowClass ?? lightsaberGlow}` : "opacity-90"}`}
-        style={cardScale90 ? { width: "90%", marginInline: "auto" } : undefined}
-        onMouseEnter={() => onPreviewStart({ imageId: imageId ?? cardId, cardId, label: subtitle ? `${title} — ${subtitle}` : title })}
+        {...hold.props}
+        style={cardScale90 ? { ...hold.props.style, width: "90%", marginInline: "auto" } : hold.props.style}
+        onMouseEnter={() => onPreviewStart(previewState)}
         onMouseLeave={onPreviewEnd}
       >
         <div className={`relative transition-transform duration-200 ${exhausted && rotateWhenExhausted ? "rotate-90" : ""}`}>
@@ -251,11 +335,17 @@ function CardVisual({
             {centerDamageBadge}
           </span>
         </div> : null}
+        {/* A net debuff reads red, a net buff blue — a "–3 / –3" in buff-blue would be misread at
+            a glance. Each half keeps its own sign, so a mixed +2/–1 still shows honestly. */}
         {buff ? <div className="pointer-events-none absolute top-4 inset-x-0 flex items-center justify-center">
-          <span className="inline-flex w-[95%] items-center justify-center gap-2.5 rounded border border-sky-300/30 bg-sky-500/60 py-0.5 text-[0.6rem] font-black leading-none text-white shadow-[0_0_8px_rgba(14,165,233,0.4)]">
-            <span>+{buff.power}</span>
+          <span className={`inline-flex w-[95%] items-center justify-center gap-2.5 rounded border py-0.5 text-[0.6rem] font-black leading-none text-white ${
+            buff.power + buff.hp < 0
+              ? "border-rose-300/30 bg-rose-600/70 shadow-[0_0_8px_rgba(244,63,94,0.45)]"
+              : "border-sky-300/30 bg-sky-500/60 shadow-[0_0_8px_rgba(14,165,233,0.4)]"
+          }`}>
+            <span>{buff.power >= 0 ? "+" : "–"}{Math.abs(buff.power)}</span>
             <span>/</span>
-            <span>+{buff.hp}</span>
+            <span>{buff.hp >= 0 ? "+" : "–"}{Math.abs(buff.hp)}</span>
           </span>
         </div> : null}
       </div>
@@ -290,15 +380,20 @@ function FaceDownResource({
   cardId: string;
   selectable?: boolean;
   exhausted?: boolean;
-  onPreviewStart?: (preview: PreviewState) => void;
+  onPreviewStart?: PreviewStart;
   onPreviewEnd?: () => void;
   onClick?: () => void;
 }) {
+  // Resources show only a card back, so press-and-hold is the ONLY way to find out what a
+  // resource actually is on a touch device.
+  const previewState: PreviewState = { imageId: cardId, cardId, label: CardTitle(cardId) };
+  const hold = useLongPress(() => onPreviewStart?.(previewState, { sticky: true }));
   return <div
     className={`overflow-hidden rounded-xl border border-white/10 bg-black/40 transition-transform duration-200 ${exhausted ? "rotate-90" : ""} ${selectable ? lightsaberGlow : ""} ${selectable ? "cursor-pointer" : ""}`}
-    onMouseEnter={onPreviewStart ? () => onPreviewStart({ imageId: cardId, cardId, label: CardTitle(cardId) }) : undefined}
+    {...hold.props}
+    onMouseEnter={onPreviewStart ? () => onPreviewStart(previewState) : undefined}
     onMouseLeave={onPreviewEnd}
-    onClick={onClick}
+    onClick={hold.guard(onClick)}
   >
     <img src="/assets/SWUniversity_Cardback.png" alt="Resource card back" className="h-12 w-12 object-cover object-center" />
   </div>;
@@ -316,7 +411,7 @@ function UpgradeStrip({
   playId?: string;
   selectable?: boolean;
   onClick?: () => void;
-  onPreviewStart: (preview: PreviewState) => void;
+  onPreviewStart: PreviewStart;
   onPreviewEnd: () => void;
 }) {
   const imageCardId = CardIsLeader(cardId) ? `${cardId}_BACK` : cardId;
@@ -324,14 +419,17 @@ function UpgradeStrip({
   const fallbackSrc = getSWUDBImageLink(imageCardId);
   const [imageSrc, setImageSrc] = React.useState(primarySrc);
   const title = CardTitle(cardId);
+  const previewState: PreviewState = { imageId: imageCardId, cardId, label: title };
+  const hold = useLongPress(() => onPreviewStart(previewState, { sticky: true }));
 
   React.useEffect(() => { setImageSrc(primarySrc); }, [primarySrc]);
 
   const inner = (
     <div
       className={`overflow-hidden rounded-b-xl border-x border-b border-white/15 bg-black/40${selectable && onClick ? " ring-2 ring-rose-400/90 shadow-[0_0_10px_rgba(251,113,133,0.5)]" : ""}`}
-      style={{ height: 18 }}
-      onMouseEnter={() => onPreviewStart({ imageId: imageCardId, cardId, label: title })}
+      {...hold.props}
+      style={{ ...hold.props.style, height: 18 }}
+      onMouseEnter={() => onPreviewStart(previewState)}
       onMouseLeave={onPreviewEnd}
     >
       <img
@@ -360,16 +458,19 @@ function CaptiveStrip({
   onPreviewEnd,
 }: {
   cardId: string;
-  onPreviewStart: (preview: PreviewState) => void;
+  onPreviewStart: PreviewStart;
   onPreviewEnd: () => void;
 }) {
   const title = CardTitle(cardId);
+  const previewState: PreviewState = { imageId: cardId, cardId, label: title };
+  const hold = useLongPress(() => onPreviewStart(previewState, { sticky: true }));
 
   return (
     <div
       className="overflow-hidden rounded-b-xl border-x border-b border-white/15 bg-gray-500/60"
-      style={{ height: 18 }}
-      onMouseEnter={() => onPreviewStart({ imageId: cardId, cardId, label: title })}
+      {...hold.props}
+      style={{ ...hold.props.style, height: 18 }}
+      onMouseEnter={() => onPreviewStart(previewState)}
       onMouseLeave={onPreviewEnd}
     >
       <span className="block w-full text-center text-4xs font-semibold uppercase leading-[1.125rem] tracking-wide text-white/70">
@@ -411,16 +512,18 @@ function CardRatioImage({
   primarySrc: string;
   fallbackSrc?: string;
   alt: string;
-  onPreviewStart?: () => void;
+  onPreviewStart?: (opts?: PreviewOpts) => void;
   onPreviewEnd?: () => void;
 }) {
   const [src, setSrc] = React.useState(primarySrc);
+  const hold = useLongPress(() => onPreviewStart?.({ sticky: true }));
   React.useEffect(() => { setSrc(primarySrc); }, [primarySrc]);
   return (
     <div
       className="overflow-hidden rounded-md border border-white/10 bg-black/40"
-      style={{ aspectRatio: "716 / 1000" }}
-      onMouseEnter={onPreviewStart}
+      {...hold.props}
+      style={{ ...hold.props.style, aspectRatio: "716 / 1000" }}
+      onMouseEnter={onPreviewStart ? () => onPreviewStart() : undefined}
       onMouseLeave={onPreviewEnd}
     >
       <img
@@ -539,6 +642,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   const previewDismissTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameLogRef = React.useRef<HTMLDivElement | null>(null);
   const [preview, setPreview] = React.useState<PreviewState | null>(null);
+  // A sticky preview came from a press-and-hold: it opens as a dismissible full-screen card
+  // instead of the desktop-only hover panel, which is how touch devices read a card at all.
+  const [previewSticky, setPreviewSticky] = React.useState(false);
   const previewPrimarySrc = preview ? getCardImageLink(preview.imageId) : "";
   const previewFallbackSrc = preview ? getSWUDBImageLink(preview.imageId) : "";
   const [previewImageSrc, setPreviewImageSrc] = React.useState(previewPrimarySrc);
@@ -558,11 +664,29 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     }
   }, [previewTimerRef]);
 
+  // Mirrors previewSticky for the callbacks below, which must read it without being re-created
+  // (they are passed to every card and would otherwise churn the whole board on each change).
+  const previewStickyRef = React.useRef(false);
+  React.useEffect(() => { previewStickyRef.current = previewSticky; }, [previewSticky]);
+
   // Preview handlers
-  const handlePreviewStart = React.useCallback((nextPreview: PreviewState) => {
+  const handlePreviewStart = React.useCallback<PreviewStart>((nextPreview, opts) => {
+    if (opts?.sticky) {
+      // The hold itself was the delay, and it must not time out from under the player.
+      clearPreviewTimer();
+      clearPreviewDismissTimer();
+      setPreview(nextPreview);
+      setPreviewSticky(true);
+      previewStickyRef.current = true;
+      return;
+    }
+    // iOS synthesises mouseenter on the held element right after touchend, which would otherwise
+    // immediately swap the just-opened detail card for a hover preview the player can't even see.
+    if (previewStickyRef.current) return;
     clearPreviewTimer();
     clearPreviewDismissTimer();
     setPreview(null);
+    setPreviewSticky(false);
     previewTimerRef.current = setTimeout(() => {
       setPreview(nextPreview);
       previewDismissTimerRef.current = setTimeout(() => {
@@ -571,10 +695,17 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     }, 700);
   }, [clearPreviewTimer, clearPreviewDismissTimer, setPreview]);
   const handlePreviewEnd = React.useCallback(() => {
+    // A sticky card stays put — mouseleave fires spuriously on touch once the hold opens it.
+    if (previewStickyRef.current) return;
     clearPreviewTimer();
     clearPreviewDismissTimer();
     setPreview(null);
   }, [clearPreviewTimer, clearPreviewDismissTimer, setPreview]);
+  const dismissStickyPreview = React.useCallback(() => {
+    previewStickyRef.current = false;
+    setPreviewSticky(false);
+    setPreview(null);
+  }, []);
   React.useEffect(() => () => { clearPreviewTimer(); clearPreviewDismissTimer(); }, [clearPreviewTimer, clearPreviewDismissTimer]);
   React.useEffect(() => { setSelectedTargetPlayIds([]); setSelectedTargetIndices([]); setSpreadDmgMap({}); }, [resolutionNeeded]);
 
@@ -1391,7 +1522,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                         primarySrc={getCardImageLink(latestEnemyDiscard.cardId)}
                         fallbackSrc={getSWUDBImageLink(latestEnemyDiscard.cardId)}
                         alt={CardTitle(latestEnemyDiscard.cardId)}
-                        onPreviewStart={() => handlePreviewStart({ imageId: latestEnemyDiscard.cardId, cardId: latestEnemyDiscard.cardId, label: CardTitle(latestEnemyDiscard.cardId) })}
+                        onPreviewStart={(opts) => handlePreviewStart({ imageId: latestEnemyDiscard.cardId, cardId: latestEnemyDiscard.cardId, label: CardTitle(latestEnemyDiscard.cardId) }, opts)}
                         onPreviewEnd={handlePreviewEnd}
                       />
                     : <div className="rounded-md border border-dashed border-white/10 bg-black/20" style={{ aspectRatio: "716 / 1000" }} />}
@@ -2020,7 +2151,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                         primarySrc={getCardImageLink(latestPlayerDiscard.cardId)}
                         fallbackSrc={getSWUDBImageLink(latestPlayerDiscard.cardId)}
                         alt={CardTitle(latestPlayerDiscard.cardId)}
-                        onPreviewStart={() => handlePreviewStart({ imageId: latestPlayerDiscard.cardId, cardId: latestPlayerDiscard.cardId, label: CardTitle(latestPlayerDiscard.cardId) })}
+                        onPreviewStart={(opts) => handlePreviewStart({ imageId: latestPlayerDiscard.cardId, cardId: latestPlayerDiscard.cardId, label: CardTitle(latestPlayerDiscard.cardId) }, opts)}
                         onPreviewEnd={handlePreviewEnd}
                       />
                     : <div className="rounded-md border border-dashed border-white/10 bg-black/20" style={{ aspectRatio: "716 / 1000" }} />}
@@ -2081,7 +2212,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       </div>
     </div>
 
-    {preview ? <div className="pointer-events-none fixed bottom-4 right-4 z-[60] hidden w-[27rem] rounded-lg border border-white/15 bg-black/85 p-2 shadow-2xl backdrop-blur-sm lg:block">
+    {preview && !previewSticky ? <div className="pointer-events-none fixed bottom-4 right-4 z-[60] hidden w-[27rem] rounded-lg border border-white/15 bg-black/85 p-2 shadow-2xl backdrop-blur-sm lg:block">
       <img
         src={previewImageSrc}
         alt={preview.label ?? preview.cardId}
@@ -2093,6 +2224,32 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
         }}
       />
       <div className="mt-2 px-1 text-xs text-white/80">{preview.label ?? CardTitle(preview.cardId)}</div>
+    </div> : null}
+
+    {/* Press-and-hold detail. Unlike the hover panel this renders at every width — it is the only
+        way to read a card on a touch device, and it must sit above every other modal. */}
+    {preview && previewSticky ? <div
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-3 bg-black/85 p-4 backdrop-blur-sm"
+      onClick={dismissStickyPreview}
+    >
+      <img
+        src={previewImageSrc}
+        alt={preview.label ?? preview.cardId}
+        className="max-h-[75vh] w-auto max-w-[min(24rem,90vw)] rounded-2xl border border-white/15 object-contain shadow-2xl"
+        onError={() => {
+          if (previewImageSrc !== previewFallbackSrc) {
+            setPreviewImageSrc(previewFallbackSrc);
+          }
+        }}
+      />
+      <div className="max-w-[90vw] text-center text-sm font-semibold text-white/90">{preview.label ?? CardTitle(preview.cardId)}</div>
+      <button
+        type="button"
+        onClick={dismissStickyPreview}
+        className="rounded-lg border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+      >
+        Close
+      </button>
     </div> : null}
 
     {isMultiSelectTarget && discardModalPlayer === null ? <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-xl border border-amber-400/30 bg-[rgba(8,12,26,0.97)] px-5 py-3 shadow-2xl">

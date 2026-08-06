@@ -718,9 +718,23 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
               <div className="flex items-center gap-1.5 rounded-md bg-black/20 px-2 py-1 text-2xs">
                 <span className="text-white/80 mr-0.5">
                   {cards.find((c) => c.cardId === u.cardId)?.label ?? u.cardId}
-                  {u.damage > 0 ? <span className="ml-1.5 text-rose-300">({u.damage} dmg)</span> : null}
                   {!u.ready ? <span className="ml-1.5 text-white/40">[exhausted]</span> : null}
                 </span>
+                {/* Damage is editable in place — re-adding a unit just to change its damage also
+                    loses its upgrades, captives and owner override. */}
+                <label className="flex shrink-0 items-center gap-1 text-3xs text-white/50" title="Damage on this unit">
+                  dmg
+                  <input
+                    type="number"
+                    min={0}
+                    max={99}
+                    value={u.damage}
+                    onChange={(e) => onUpdate(i, { ...u, damage: Math.max(0, Math.min(99, Number(e.target.value) || 0)) })}
+                    className={`w-11 rounded border bg-black/30 px-1 py-0.5 text-3xs outline-none ${
+                      u.damage > 0 ? "border-rose-400/40 text-rose-300" : "border-white/15 text-white/70"
+                    }`}
+                  />
+                </label>
                 {(() => {
                   // Only two players, so "owned by someone else" has exactly one value — the
                   // button toggles both ways rather than only clearing an existing override.

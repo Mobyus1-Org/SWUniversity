@@ -158,7 +158,9 @@ export function computeUnitBuffs(gs: GameState): Record<string, { power: number;
       const upgHp = u.upgrades.reduce((sum, upg) => sum + UpgradeHpOf(upg.cardId), 0);
       const powBuff = unit.CurrentPower() - basePower - upgPow;
       const hpBuff = unit.TotalHP() - baseHp - upgHp;
-      if (powBuff > 0 || hpBuff > 0) {
+      // Debuffs count too: a –X/–X (Karis, Talzin's Assassin, Snoke's aura…) is exactly as
+      // important to see on the board as a buff, and reporting only positives made them invisible.
+      if (powBuff !== 0 || hpBuff !== 0) {
         result[u.playId] = { power: powBuff, hp: hpBuff };
       }
     } catch { /* skip if unit state is inconsistent */ }
@@ -3016,6 +3018,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
     case "defeat-copy":
       return {
         type: "Target",
+        helperText: "Choose a unit to defeat (you control two copies of a unique card).",
         fromPlayIds: pending.eligiblePlayIds,
       } satisfies NeedsTarget;
     case "bounty":
@@ -3165,7 +3168,11 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         type: "SpreadDamage",
         totalDamage: pending.totalDamage,
         optional: false,
-        eligiblePlayIds: pending.eligibleUnitPlayIds,
+        // The target's base is a legal destination for indirect damage (CR 8.35.1) and the
+        // handler already accepts "playerN.base" assignments. It must be listed here too: the
+        // client gates its per-target controls on this list, so leaving it out makes the base
+        // unassignable — and with too little unit HP to soak the total, unconfirmable.
+        eligiblePlayIds: [...pending.eligibleUnitPlayIds, `player${pending.targetPlayer}.base`],
         includesBase: true,
         // The victim assigns indirect damage — unless the dealer overrides that, either
         // player-wide (JTL_143 Devastator) or for one unit (JTL_171 Targeting Computer). Neither

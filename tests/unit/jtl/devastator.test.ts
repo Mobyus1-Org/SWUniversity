@@ -42,6 +42,26 @@ describe("JTL_143 Devastator", () => {
     expect(g.state.player1.base.damage).toBe(0);
   });
 
+  it("offers the target player's base among the eligible playIds", async () => {
+    // The UI renders the +/- base controls only for playIds in eligiblePlayIds, so the base has to
+    // be listed there or the assigner can never put indirect damage on it — and with too little
+    // enemy unit HP to absorb the total, they get stuck unable to confirm at all.
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      baseSetup()
+        .WithCardInHandForPlayer(1, Cards.units.jtl.devastator)
+        .WithGroundUnitForPlayer(2, Cards.units.sor.gamorreanGuards)
+        .Build(),
+    );
+
+    await g.playCardFromHandAsync(1, 0);
+    const spread = g.lastDispatchResponse?.resolutionNeeded as NeedsSpreadDamage;
+
+    expect(spread.eligiblePlayIds).toContain("player2.base");
+    expect(spread.eligiblePlayIds).not.toContain("player1.base"); // never the dealer's own base
+    expect(spread.eligiblePlayIds).toContain(g.state.player2.groundArena[0].playId);
+  });
+
   it("the assigner can split the 4 between the enemy base and enemy units", async () => {
     const g = new GameTestAdapter();
     g.loadNewState(
