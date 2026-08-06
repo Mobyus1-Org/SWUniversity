@@ -21,6 +21,21 @@ const PUZZLE_AUTO_RESPONSES: Record<string, string> = {
   "SOR_145": "deal_base_damage=1,3", // K-2SO: deal 3 damage to opponent's base
 };
 
+/**
+ * P2 units whose defeat HELPS P2 — so when they are dividing incoming damage among their own
+ * board, finishing one of these off is better than soaking anywhere else.
+ *
+ * K-2SO's When Defeated hits the solver's base for 3 (see PUZZLE_AUTO_RESPONSES above, which
+ * already picks that branch), turning damage aimed at P2 into damage aimed at the solver.
+ *
+ * Only consulted when P2 assigns damage aimed at THEMSELVES. With the assign-override (Devastator
+ * / Targeting Computer) the damage is aimed at the solver, and killing the solver's copy would
+ * fire its trigger at P2's own base — the exact opposite of what this is for.
+ */
+const P2_WANTS_DEFEATED = new Set<string>([
+  "SOR_145", // K-2SO (Cassian's Counterpart)
+]);
+
 const RARITY_RANK: Record<string, number> = {
   Common: 0,
   Special: 1,
@@ -368,8 +383,22 @@ function pickIndirectAssignment(
     left -= amount;
   };
 
+  // 0. Units P2 WANTS defeated, killed outright. Only exact lethal is worth spending: the payoff
+  // is the When Defeated, so a unit left alive on 1 HP has soaked the damage for nothing. Done
+  // before everything else because arena order would otherwise let a bystander soak first and
+  // leave too little to finish the job.
+  const wantDead = units.filter(u => P2_WANTS_DEFEATED.has(u.cardId));
+  const killed = new Set<string>();
+  for (const u of wantDead) {
+    if (left <= 0) break;
+    const needed = Unit.FromInterface(u).CurrentHP();
+    if (needed <= 0 || needed > left) continue; // can't finish it — don't waste damage chipping
+    put(u.playId, needed);
+    killed.add(u.playId);
+  }
+
   const sentinels = units.filter(u => HasSentinel(u.cardId, u.playId, 2));
-  const plain = units.filter(u => !sentinels.includes(u));
+  const plain = units.filter(u => !sentinels.includes(u) && !killed.has(u.playId));
 
   // 1. non-Sentinel units, filled to their remaining HP
   for (const u of plain) {

@@ -200,7 +200,7 @@ function ReorderButtons({ index, count, onMove, vertical = false }: {
   vertical?: boolean;
 }) {
   if (count < 2) return null;
-  const base = "px-0.5 leading-none text-white/40 transition-colors hover:text-white disabled:cursor-default disabled:opacity-20 disabled:hover:text-white/40";
+  const base = "shrink-0 px-0.5 leading-none text-white/40 transition-colors hover:text-white disabled:cursor-default disabled:opacity-20 disabled:hover:text-white/40";
   return (
     <>
       <button
@@ -762,7 +762,13 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
             <div key={i} className="space-y-0.5">
               <div className="flex items-center gap-1.5 rounded-md bg-black/20 px-2 py-1 text-2xs">
                 <ReorderButtons index={i} count={units.length} onMove={(d) => onMove(i, d)} vertical />
-                <span className="text-white/80 mr-0.5">
+                {/* min-w-0 + truncate is what keeps a long card name from pushing the controls
+                    (and the × in particular) off the edge of the panel — flex items refuse to
+                    shrink below their content width without it. */}
+                <span
+                  className="min-w-0 flex-1 truncate text-white/80"
+                  title={cards.find((c) => c.cardId === u.cardId)?.label ?? u.cardId}
+                >
                   {cards.find((c) => c.cardId === u.cardId)?.label ?? u.cardId}
                   {!u.ready ? <span className="ml-1.5 text-white/40">[exhausted]</span> : null}
                 </span>
@@ -795,35 +801,37 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
                           ? `Owned by Player ${unitOwner}, controlled by Player ${playerId} — it returns to Player ${unitOwner} when defeated or bounced. Click to give ownership back to Player ${playerId}.`
                           : `Owned and controlled by Player ${playerId}. Click to mark it as Player ${captiveOwner}'s unit taken with a control effect.`
                       }
-                      className={`rounded px-1.5 py-0.5 text-3xs font-semibold transition-colors ${
+                      className={`shrink-0 rounded px-1.5 py-0.5 text-3xs font-semibold transition-colors ${
                         overridden
                           ? "text-rose-300 bg-rose-500/15 hover:bg-rose-500/30"
                           : "text-white/50 bg-white/10 hover:bg-white/20"
                       }`}
                     >
-                      Owner: P{unitOwner}
+                      OWN P{unitOwner}
                     </button>
                   );
                 })()}
                 <button
                   type="button"
                   onClick={() => setEditDialog({ index: i, type: "upgrades" })}
-                  className="rounded px-1.5 py-0.5 text-3xs font-semibold text-blue-300 bg-blue-500/15 hover:bg-blue-500/30 transition-colors"
+                  title="Upgrades attached to this unit"
+                  className="shrink-0 rounded px-1.5 py-0.5 text-3xs font-semibold text-blue-300 bg-blue-500/15 hover:bg-blue-500/30 transition-colors"
                 >
-                  {u.upgrades.length > 0 ? `Upgrades (${u.upgrades.length})` : "Upgrades"}
+                  {u.upgrades.length > 0 ? `UPG (${u.upgrades.length})` : "UPG"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setEditDialog({ index: i, type: "captives" })}
-                  title={`Units this one is guarding. They are owned by Player ${captiveOwner} and return to Player ${captiveOwner} when rescued.`}
-                  className="rounded px-1.5 py-0.5 text-3xs font-semibold text-white/50 bg-white/10 hover:bg-white/20 transition-colors"
+                  title={`Captives — units this one is guarding. They are owned by Player ${captiveOwner} and return to Player ${captiveOwner} when rescued.`}
+                  className="shrink-0 rounded px-1.5 py-0.5 text-3xs font-semibold text-white/50 bg-white/10 hover:bg-white/20 transition-colors"
                 >
-                  {u.captives.length > 0 ? `Captives (${u.captives.length})` : "Captives"}
+                  {u.captives.length > 0 ? `CAP (${u.captives.length})` : "CAP"}
                 </button>
                 <button
                   type="button"
                   onClick={() => onRemove(i)}
-                  className="ml-auto text-white/30 hover:text-rose-300"
+                  title="Remove this unit"
+                  className="shrink-0 pl-0.5 text-white/30 hover:text-rose-300"
                 >×</button>
               </div>
               {u.upgrades.length > 0 && (

@@ -9,6 +9,7 @@ import type { Game } from "@/lib/engine/game";
 // reach the solver. P2 assigns the way a good player would, which is also the hardest case to
 // solve against. Priority, per the rules manager:
 //
+//   0. a unit P2 WANTS defeated (K-2SO) — exactly lethal, so its When Defeated fires
 //   1. non-Sentinel units      (expendable)
 //   2. the base, down to 1 HP  (lots of capacity, no board cost)
 //   3. Sentinel units          (only as deep as keeps them blocking)
@@ -62,6 +63,7 @@ function barrage(ctx: EngineContext) {
 const SENTINEL = "SEC_117";   // Consular's Cruiser, 4/5 Space — plain unconditional Sentinel
 const WAYFARER = "LOF_119";   // 4/10 Space, no abilities
 const MARINE = "SOR_095";     // 3/3 Ground
+const K2SO = "SOR_145";       // 4/4 Ground — "When Defeated: deal 3 damage to that player's base"
 
 describe("puzzle mode — the opponent auto-assigns indirect damage", () => {
   it("never hands the assignment to the solver", () => {
@@ -138,6 +140,63 @@ describe("puzzle mode — the opponent auto-assigns indirect damage", () => {
       const gs = res.context.game.currentGameState;
 
       expect(gs.player2.spaceArena[0].damage).toBe(4);
+    });
+  });
+
+  // K-2SO's When Defeated hits the SOLVER's base for 3, and P2's auto-response already takes that
+  // branch. So a K-2SO on P2's board is a unit they actively want dead: routing incoming indirect
+  // damage into it converts damage aimed at them into damage aimed at the solver. Partial damage
+  // is worthless here — the trigger only fires on an actual defeat.
+  describe("routes damage into a unit P2 wants defeated", () => {
+    it("kills its own K-2SO with exactly lethal damage, firing the base hit on the solver", () => {
+      const res = barrage(newCtx({}, { ground: [{ cardId: K2SO }] })); // 4/4, 5 indirect incoming
+      const gs = res.context.game.currentGameState;
+
+      expect(gs.player2.groundArena).toHaveLength(0); // defeated
+      expect(gs.player1.base.damage).toBe(3);         // its When Defeated hit the solver
+      expect(gs.player2.base.damage).toBe(1);         // the spare 1 went to P2's own base
+    });
+
+    it("kills K-2SO ahead of an ordinary unit that would otherwise soak first", () => {
+      // Marine 3/3 sits earlier in the arena, so the plain chain would fill it first and leave
+      // only 2 for the 4-HP K-2SO — enough to damage it, not enough to trigger it.
+      const res = barrage(newCtx({}, { ground: [{ cardId: MARINE }, { cardId: K2SO }] }));
+      const gs = res.context.game.currentGameState;
+
+      expect(gs.player2.groundArena.map(u => u.cardId)).toEqual([MARINE]); // K-2SO died, Marine lived
+      expect(gs.player2.groundArena[0].damage).toBe(1); // the leftover 1 landed on the Marine
+      expect(gs.player1.base.damage).toBe(3);
+    });
+
+    it("uses an already-damaged K-2SO's REMAINING hp, not its printed hp", () => {
+      const res = barrage(newCtx({}, { ground: [{ cardId: K2SO, damage: 3 }, { cardId: MARINE }] }));
+      const gs = res.context.game.currentGameState;
+
+      // 1 to finish K-2SO, leaving 4 — the Marine takes its full 3 and dies, 1 to the base.
+      expect(gs.player2.groundArena).toHaveLength(0);
+      expect(gs.player1.base.damage).toBe(3);
+      expect(gs.player2.base.damage).toBe(1);
+    });
+
+    it("does NOT chip a K-2SO it cannot actually kill", () => {
+      // Base on 29 damage caps what the base may take, so the 5 must go somewhere. K-2SO needs 6,
+      // which is more than the whole payload — spending any on it would be wasted, so the plain
+      // chain handles it instead.
+      const res = barrage(newCtx({}, { ground: [{ cardId: "LOF_119", damage: 4 }] }, 0));
+      const gs = res.context.game.currentGameState;
+
+      expect(gs.player2.groundArena[0].damage).toBe(9); // 4 existing + all 5, ordinary soak
+      expect(gs.player1.base.damage).toBe(0);
+    });
+
+    it("control: P2 does not aim at the SOLVER's K-2SO when P2 holds the assign override", () => {
+      // With Devastator out, P2 assigns damage aimed at P1 — killing P1's K-2SO would fire its
+      // When Defeated at P2's OWN base, so the want-it-dead rule must not apply here.
+      const ctx = newCtx({ ground: [{ cardId: K2SO }] }, { space: [{ cardId: "JTL_143" }] });
+      const res = barrage(ctx);
+      const gs = res.context.game.currentGameState;
+
+      expect(gs.player2.base.damage).toBe(0); // K-2SO's trigger never fired at P2
     });
   });
 
