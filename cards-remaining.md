@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 899 cards across 10 sets.**
+**Total: 897 cards across 10 sets.**
 
 ---
 
@@ -338,7 +338,7 @@ JTL_260: Death Star Plans Upgrade
 JTL_262: Evasive Maneuver Event
 ```
 
-## LOF — Legends of the Force (102)
+## LOF — Legends of the Force (101)
 
 **Message 1 of 3**
 ```
@@ -347,7 +347,6 @@ LOF_019: Vergence Temple Base
 LOF_022: Mystic Monastery Base
 LOF_028: Tomb of Eilram Base
 LOF_036: Old Daka - Oldest and Wisest Unit
-LOF_041: Drain Essence Event
 LOF_042: Always Two Event
 LOF_043: The Tragedy of Plagueis Event
 LOF_046: Ezra Bridger - Attuned With Life Unit
@@ -653,7 +652,7 @@ LAW_262: Bank Job Fugitives Unit
 LAW_264: From a Certain Point of View Event
 ```
 
-## SEC — Secrets of Power (159)
+## SEC — Secrets of Power (158)
 
 **Message 1 of 4**
 ```
@@ -770,7 +769,6 @@ SEC_178: Pursue the Lead Event
 SEC_179: Aggressive Negotiations Event
 SEC_180: Let's Call It War Event
 SEC_185: Screeching TIE Fighter Unit
-SEC_186: Garindan - Information Broker Unit
 SEC_187: General Grievous - Scuttling to Safety Unit
 SEC_189: Lurking Snub Fighter Unit
 SEC_190: Soulless One - Swift and Agile Unit

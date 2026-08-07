@@ -2024,6 +2024,16 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies SpreadHealPending;
     }
+    case "LOF_041": { // Drain Essence — "Deal 2 damage to a unit. The Force is with you."
+      // Two independent sentences: the Force token is NOT conditional on the damage, so with no
+      // unit to hit the damage fizzles and the token is still created.
+      const allUnits041 = AllUnits();
+      if (allUnits041.length === 0) {
+        CreateForceToken(player, game.gameLog, cardId);
+        return null;
+      }
+      return mandatoryTarget(cardId, player, allUnits041.map(u => u.playId));
+    }
     case "LOF_075": // Cure Wounds — "Use the Force. If you do, heal 6 damage from a unit."
     case "LOF_172": { // Sorcerous Blast — "Use the Force. If you do, deal 3 damage to a unit."
       // "Use the Force" is a "may": only offer it when the player controls the Force.
@@ -2517,6 +2527,19 @@ export function resolveWhenPlayed(
       return optionalTarget(cardId, player, spectres050.map(u => u.playId),
         "Give a Shield token to another Spectre unit?",
         { yesLabel: "Give Shield", sourcePlayId: playId });
+    }
+    case "SEC_186": { // Garindan — Name a card, then look at an opponent's hand and discard a card
+                      // with that name. The look/discard is chained from the naming handler, which
+                      // is the first point that knows which name was picked.
+      return {
+        type: "ability-target",
+        cardId: "SEC_186",
+        sourcePlayId: playId,
+        player,
+        fromPlayIds: [],   // any card title is valid; the UI renders fromChoices
+        fromChoices: AllCardTitles(),
+        continuation: null,
+      };
     }
     case "SOR_062": { // Regional Governor — Name a card; opponents can't play it while this unit is in play.
       return {

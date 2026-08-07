@@ -75,6 +75,7 @@ import type {
   ThrawnReplayPending,
   OnAttackOrderPending,
   OnAttackTriggerEntry,
+  PeekHandPending,
   PendingResolution,
   PilotingOptionPending,
   PlayFromHandPending,
@@ -3235,6 +3236,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       const targetHand = GetPlayer(game, pending.targetPlayer).hand;
       const eligibleIndices = pending.mustDiscard
         ? targetHand.reduce<number[]>((acc, card, i) => {
+            if (pending.discardTitle && CardTitle(card.cardId) !== pending.discardTitle) return acc;
             if (!pending.discardFilter) return [...acc, i];
             if (pending.discardFilter === "non-unit" && CardType(card.cardId) !== "Unit") return [...acc, i];
             return acc;
@@ -5364,6 +5366,8 @@ function handleChooseTarget(
     // Validate filter
     if (pending.discardFilter === "non-unit" && CardType(targetHand[idx].cardId) === "Unit")
       return { response: invalidResponse("Only non-unit cards can be discarded here."), pending, stateChanged: false };
+    if (pending.discardTitle && CardTitle(targetHand[idx].cardId) !== pending.discardTitle)
+      return { response: invalidResponse(`Only a card named "${pending.discardTitle}" can be discarded here.`), pending, stateChanged: false };
 
     const [discarded] = targetHand.splice(idx, 1);
     pushEventToDiscard(game, pending.targetPlayer, discarded.cardId);
@@ -10087,6 +10091,26 @@ function applyAbilityEffect(
   }
 
   switch (pending.cardId) {
+    case "SEC_186": { // Garindan — the named card is chosen; now look at the opponent's hand and
+                      // discard a card with that name from it.
+      if (!targetPlayId) break;
+      // The name prompt sends the TITLE back, not a cardId (see the fromChoices client path).
+      const named186 = CardTitle(targetPlayId) || targetPlayId;
+      const opp186 = GetOtherPlayer(pending.player!);
+      const hand186 = GetPlayer(game.currentGameState, opp186).hand;
+      game.gameLog.push(`${CardTitle("SEC_186")}: named "${named186}".`);
+      if (hand186.length === 0) break; // nothing to look at, nothing to discard
+      const hasMatch186 = hand186.some(c => CardTitle(c.cardId) === named186);
+      return {
+        type: "peek-hand",
+        peekingPlayer: pending.player!,
+        targetPlayer: opp186,
+        // A miss still gets the look — that is the whole payoff when the name is wrong.
+        mustDiscard: hasMatch186,
+        ...(hasMatch186 && { discardTitle: named186 }),
+        continuation: pending.continuation ?? null,
+      } satisfies PeekHandPending;
+    }
     case "SOR_062": { // Regional Governor — store the named card title on the governor unit.
       if (!targetPlayId) break;
       const gs062 = game.currentGameState;
@@ -10573,6 +10597,12 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog);
       break;
+    }
+    case "LOF_041": { // Drain Essence — deal 2 to the chosen unit, then create your Force token.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog, pending.player);
+      CreateForceToken(pending.player!, game.gameLog, pending.cardId);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "SOR_176":
     case "SEC_184": { // ISB Agent — deal 1 damage to chosen unit

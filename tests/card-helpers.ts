@@ -504,6 +504,7 @@ export const Cards = {
       grandAdmiralThrawn: "SEC_193",
       sithAssassin: "SEC_238",
       darthNihilus: "SEC_244",
+      garindan: "SEC_186",
     },
     law: {
       admiralMottiLaw: "LAW_139",
@@ -860,6 +861,7 @@ export const Cards = {
       theWillOfTheForce: "LOF_227",
       nimanStrike: "LOF_124",
       deathField: "LOF_141",
+      drainEssence: "LOF_041",
     },
     ibh: {
       // Suffix letters are alternate identical printings within IBH.

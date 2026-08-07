@@ -10,6 +10,7 @@ import type {
   Unit,
 } from "@/lib/engine/core-models";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
+import { HP_MOD, POWER_MOD } from "@/lib/engine/core-models";
 
 // ---------------------------------------------------------------------------
 // Raw puzzle JSON format (stored in src/server/_test-puzzles/*.json)
@@ -32,6 +33,16 @@ const PHASE_MAP = [
 
 export function hydratePuzzleGame(raw: RawPuzzleGameState): GameState {
   let nextId = 1;
+
+  /**
+   * Stat modifiers authored onto a unit in the builder, expanded here.
+   *
+   * They are stored nested under the unit rather than as top-level currentEffects because a
+   * builder unit's playId is the placeholder "@" — resolvePlayId mints a FRESH id for every one,
+   * so a top-level effect could never name the unit it belongs to. Collecting them as each unit is
+   * hydrated is the only point where the authored buff and its final playId are both in hand.
+   */
+  const authoredEffects: GameState["currentEffects"] = [];
 
   function freshId(): string {
     return String(nextId++);
@@ -72,11 +83,28 @@ export function hydratePuzzleGame(raw: RawPuzzleGameState): GameState {
   }
 
   function hydrateUnit(u: Record<string, unknown>): Unit {
+    const playId = resolvePlayId(u.playId);
+    // Filed under the CONTROLLER: GetCurrentEffectsForPlayer filters on controller, so a unit
+    // taken with a control effect would otherwise read its buff from the wrong side.
+    const controller = u.controller as PlayerId;
+    const buff = u.buff as { power?: unknown; hp?: unknown } | undefined;
+    if (buff) {
+      const power = Number(buff.power ?? 0) || 0;
+      const hp = Number(buff.hp ?? 0) || 0;
+      // One-sided sentinels rather than the combined stat-mod, so an asymmetric +2/-1 works and a
+      // zero half contributes nothing.
+      if (power !== 0) {
+        authoredEffects.push({ cardId: POWER_MOD, duration: "Phase", affectedPlayer: controller, targetPlayId: playId, value: power });
+      }
+      if (hp !== 0) {
+        authoredEffects.push({ cardId: HP_MOD, duration: "Phase", affectedPlayer: controller, targetPlayId: playId, value: hp });
+      }
+    }
     return {
       cardId: u.cardId as string,
-      playId: resolvePlayId(u.playId),
+      playId,
       owner: u.owner as PlayerId,
-      controller: u.controller as PlayerId,
+      controller,
       ready: u.ready !== false,
       damage: Number(u.damage ?? 0),
       upgrades: ((u.upgrades ?? []) as Record<string, unknown>[]).map(hydrateUpgrade),
@@ -139,7 +167,7 @@ export function hydratePuzzleGame(raw: RawPuzzleGameState): GameState {
     nextPlayId: nextId,
     player1,
     player2,
-    currentEffects: (raw.currentEffects as GameState["currentEffects"]) ?? [],
+    currentEffects: [...((raw.currentEffects as GameState["currentEffects"]) ?? []), ...authoredEffects],
     currentRound: Number(raw.currentRound ?? 1),
     initiativePlayer: (raw.initiativePlayer as PlayerId) ?? 1,
     initiativeClaimed: Boolean(raw.initiativeClaimed),

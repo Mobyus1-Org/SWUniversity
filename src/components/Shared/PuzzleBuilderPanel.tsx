@@ -671,7 +671,7 @@ function UnitEditDialog({ unit, playerId, captiveOwner, cards, unitCards, leader
         </div>
 
         {/* Everything that used to be a chip on the unit's row. */}
-        <div className="grid gap-3 rounded-lg bg-black/25 p-3 sm:grid-cols-[8rem_auto_1fr] sm:items-center">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg bg-black/25 p-3">
           <label className="flex items-center gap-2">
             <span className="text-2xs text-white/55">Damage</span>
             <input
@@ -680,11 +680,38 @@ function UnitEditDialog({ unit, playerId, captiveOwner, cards, unitCards, leader
               max={99}
               value={unit.damage}
               onChange={(e) => onUpdate({ ...unit, damage: Math.max(0, Math.min(99, Number(e.target.value) || 0)) })}
-              className={`w-full rounded border bg-black/30 px-2 py-1 text-xs outline-none ${
+              className={`w-16 rounded border bg-black/30 px-2 py-1 text-xs outline-none ${
                 unit.damage > 0 ? "border-rose-400/40 text-rose-300" : "border-white/15 text-white/80"
               }`}
             />
           </label>
+          {/* A temporary modifier, as a card like Overwhelming Barrage or Luke would have left it.
+              Stored generically rather than attributed to a source card — see BuffEntry. */}
+          {(["power", "hp"] as const).map((half) => {
+            const value = unit.buff?.[half] ?? 0;
+            return (
+              <label key={half} className="flex items-center gap-2">
+                <span className="text-2xs text-white/55">{half === "power" ? "Buff Power" : "Buff HP"}</span>
+                <input
+                  type="number"
+                  min={-99}
+                  max={99}
+                  value={value}
+                  onChange={(e) => {
+                    const next = { power: unit.buff?.power ?? 0, hp: unit.buff?.hp ?? 0 };
+                    next[half] = Math.max(-99, Math.min(99, Number(e.target.value) || 0));
+                    // Collapse an all-zero buff away so it never reaches the saved JSON.
+                    onUpdate({ ...unit, buff: next.power === 0 && next.hp === 0 ? undefined : next });
+                  }}
+                  className={`w-16 rounded border bg-black/30 px-2 py-1 text-xs outline-none ${
+                    value > 0 ? "border-sky-400/40 text-sky-300"
+                      : value < 0 ? "border-rose-400/40 text-rose-300"
+                      : "border-white/15 text-white/80"
+                  }`}
+                />
+              </label>
+            );
+          })}
           <Checkbox checked={unit.ready} onChange={(v) => onUpdate({ ...unit, ready: v })} label="Ready" />
           <button
             type="button"
@@ -840,6 +867,14 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
                   return (
                     <span className="flex shrink-0 items-center gap-1.5 text-3xs">
                       {u.damage > 0 ? <span className="text-rose-300" title="Damage">{u.damage} dmg</span> : null}
+                      {u.buff && (u.buff.power !== 0 || u.buff.hp !== 0) ? (
+                        <span
+                          className={u.buff.power + u.buff.hp < 0 ? "text-rose-300" : "text-sky-300"}
+                          title="Temporary stat modifier"
+                        >
+                          {u.buff.power >= 0 ? "+" : "−"}{Math.abs(u.buff.power)}/{u.buff.hp >= 0 ? "+" : "−"}{Math.abs(u.buff.hp)}
+                        </span>
+                      ) : null}
                       {u.upgrades.length > 0 ? <span className="text-blue-300/80" title="Upgrades">{u.upgrades.length} upg</span> : null}
                       {u.captives.length > 0 ? <span className="text-amber-200/80" title="Captives">{u.captives.length} cap</span> : null}
                       {unitOwner !== playerId

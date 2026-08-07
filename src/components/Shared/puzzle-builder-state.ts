@@ -39,7 +39,21 @@ export type UpgradeEntry = { cardId: string; enemy?: boolean };
  */
 export type CaptiveEntry = { cardId: string; friendly?: boolean };
 
-export type UnitEntry = { cardId: string; ready: boolean; damage: number; upgrades: UpgradeEntry[]; captives: CaptiveEntry[]; owner?: 1 | 2 };
+/**
+ * A temporary stat modifier authored onto a unit — the board state a card like Overwhelming
+ * Barrage or Luke's –6/–6 would have left behind.
+ *
+ * Deliberately NOT attributed to a source card. The engine's own stat modifiers are already stored
+ * under generic sentinels (`power-mod` / `hp-mod`), and a real cardId in `currentEffects` is
+ * *interpreted* — CurrentPower has cases for SOR_103, SOR_168 and others, and SOR_138 means "loses
+ * all abilities" — so authoring one would silently do more than the numbers say.
+ *
+ * Power and HP are independent, so an asymmetric +2/–1 is expressible; 0 means no modifier on that
+ * half and emits nothing.
+ */
+export type BuffEntry = { power: number; hp: number };
+
+export type UnitEntry = { cardId: string; ready: boolean; damage: number; upgrades: UpgradeEntry[]; captives: CaptiveEntry[]; owner?: 1 | 2; buff?: BuffEntry };
 export type ResourceEntry = { cardId: string; ready: boolean };
 
 export type PlayerBuilderState = {
@@ -168,7 +182,17 @@ function parseUnit(u: Record<string, unknown>, playerId: 1 | 2): UnitEntry {
       ...(Number(c.owner ?? (playerId === 1 ? 2 : 1)) === playerId && { friendly: true as const }),
     })),
     ...(owner !== playerId && { owner }),
+    ...(parseBuff(u.buff) && { buff: parseBuff(u.buff)! }),
   };
+}
+
+/** Reads a stored buff, treating a missing or all-zero one as no buff at all. */
+function parseBuff(raw: unknown): BuffEntry | null {
+  if (!raw || typeof raw !== "object") return null;
+  const b = raw as Record<string, unknown>;
+  const power = Number(b.power ?? 0) || 0;
+  const hp = Number(b.hp ?? 0) || 0;
+  return power === 0 && hp === 0 ? null : { power, hp };
 }
 
 function parseRawPlayer(p: Record<string, unknown>, playerId: 1 | 2): PlayerBuilderState {
@@ -266,6 +290,8 @@ export function toRaw(s: BuilderState): RawPuzzleGameState {
           const owner = c.friendly ? playerId : captiveOwner;
           return { cardId: c.cardId, playId: "@", owner, controller: owner };
         }),
+        // Expanded into currentEffects at hydration, where the unit's real playId is known.
+        ...(u.buff && (u.buff.power !== 0 || u.buff.hp !== 0) && { buff: { ...u.buff } }),
       })),
       spaceArena: p.spaceUnits.map((u) => ({
         // The arena is the controller; the owner is overridable (control effects).
@@ -281,6 +307,8 @@ export function toRaw(s: BuilderState): RawPuzzleGameState {
           const owner = c.friendly ? playerId : captiveOwner;
           return { cardId: c.cardId, playId: "@", owner, controller: owner };
         }),
+        // Expanded into currentEffects at hydration, where the unit's real playId is known.
+        ...(u.buff && (u.buff.power !== 0 || u.buff.hp !== 0) && { buff: { ...u.buff } }),
       })),
       resources: p.resources.map((r) => ({
         cardId: r.cardId, playId: "@", owner: playerId, controller: playerId, ready: r.ready,

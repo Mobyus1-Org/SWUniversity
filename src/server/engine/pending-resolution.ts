@@ -679,6 +679,12 @@ export interface PeekHandPending {
   /** If set, only cards of this type are eligible to be discarded. */
   discardFilter?: "non-unit";
   /**
+   * If set, only cards with this exact TITLE are eligible to be discarded (SEC_186 Garindan
+   * "discard a card with that name"). Matched on title rather than cardId because separate
+   * printings of a card share a name, and the printed wording is about the name.
+   */
+  discardTitle?: string;
+  /**
    * "You may discard a card from it" (ASH_220, SHD_184) — the peeking player picks a card OR
    * declines with an empty selection. Only meaningful together with mustDiscard.
    */

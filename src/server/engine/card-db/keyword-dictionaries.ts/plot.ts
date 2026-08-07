@@ -22,6 +22,7 @@ export function HasPlot(cardId: string, playId?: string, player?: PlayerId)
     case "SEC_123"://Unveiled Might
     case "SEC_149"://Kaydel Connix
     case "SEC_183"://Topple the Summit
+    case "SEC_186"://Garindan (SEC)
     case "SEC_226"://Sneaking Suspicion
       return true;
     default: return false;
