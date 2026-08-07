@@ -2539,10 +2539,21 @@ function resolveAttack(
       };
     };
 
-    // Resolve defeats (defender first per SWU rules)
-    let nextPending: PendingResolution | null = null;
-    if (defDefeated) nextPending = defeatUnit(game, log, defender, false, defender.CurrentHP() <= 0) ?? nextPending;
-    if (atkDefeated) nextPending = defeatUnit(game, log, attacker, false, attacker.CurrentHP() <= 0) ?? nextPending;
+    // Resolve defeats (defender first per SWU rules — that is the order the units LEAVE play,
+    // and the order their discards/logs happen).
+    const defPending = defDefeated
+      ? defeatUnit(game, log, defender, false, defender.CurrentHP() <= 0)
+      : null;
+    const atkPending = atkDefeated
+      ? defeatUnit(game, log, attacker, false, attacker.CurrentHP() <= 0)
+      : null;
+    // A trade defeats BOTH, so both When Defeated abilities are owed a resolution. Assigning each
+    // result to one variable dropped the defender's whenever the attacker also had one — a K-2SO
+    // traded off never got to fire, and a lethal base hit went missing with it. Chained
+    // acting-player-first, the same rule defeatUnit uses for bounty vs when-defeated; the attacker
+    // is always the acting player here.
+    const nextPending: PendingResolution | null =
+      atkPending && defPending ? injectContinuation(atkPending, defPending) : (atkPending ?? defPending);
     if (nextPending) {
       // Append resolveWhenAttackEnds at the tail of the pending chain.
       // defeatUnit returns BountyPending | WhenDefeatedChoicePending, both have continuation.
@@ -10693,7 +10704,7 @@ function applyAbilityEffect(
     case "SOR_121": { // Hardpoint Heavy Blaster on-attack: deal 2 damage to chosen unit in defender's arena
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
-      return pending.continuation;
+      break;
     }
     case "SOR_226": { // Admiral Motti when-defeated: ready chosen Villainy unit
       if (!targetPlayId) break;
@@ -11837,7 +11848,7 @@ function applyAbilityEffect(
       if (!target139) break;
       DealDamageToUnit(game.currentGameState, "SOR_139", target139.playId, 5, game.gameLog);
       DrawCardForPlayer(game.currentGameState, game.gameLog, target139.controller);
-      return pending.continuation;
+      break;
     }
     case "SOR_077": { // Takedown — defeat a unit with ≤5 remaining HP
       if (!targetPlayId) break;
@@ -12409,7 +12420,7 @@ function applyAbilityEffect(
           DealDamageToUnit(game.currentGameState, "SOR_142", targetPlayId, 1, game.gameLog);
         }
       }
-      return pending.continuation;
+      break;
     }
     case "SOR_059": { // 2-1B Surgical Droid OA: Heal 2 from chosen unit, then proceed to combat.
       if (!targetPlayId) return pending.continuation;

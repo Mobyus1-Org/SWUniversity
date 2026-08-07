@@ -93,6 +93,46 @@ describe("SOR_145 K-2SO", () => {
     expect(g.state.player1.hand).toHaveLength(1);
     expect(g.state.player2.hand).toHaveLength(0);
   });
+  // QA ("Know Your Timings"): Karis trades with a K-2SO wearing Unshakeable Will. Both are
+  // defeated by the same combat damage, so BOTH When Defeated abilities must resolve — Karis's
+  // (the acting player's, first) and then K-2SO's, whose 3 base damage is lethal to the attacker's
+  // 1-HP base. Resolving Karis's –2/–2 left the game running: K-2SO's trigger was lost.
+  it("resolves K-2SO's When Defeated even when the attacker's own When Defeated resolves first", async () => {
+    const g = new GameTestAdapter();
+    const state = new GameStateBuilder()
+      .MyBase(Cards.bases.lof.strangledCliffs, 27) // 28 HP — 1 remaining
+      .MyLeader(Cards.leaders.sor.sabineWren)
+      .TheirBase(Cards.bases.common.green30HP)
+      .TheirLeader(Cards.leaders.sor.grandMoffTarkin)
+      .WithGroundUnitForPlayer(1, Cards.units.lof.karis, true, 1)    // 2/4, dies to the 6 back
+      .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine) // survivor for Karis's -2/-2
+      .WithGroundUnitForPlayer(2, Cards.units.sor.k2so, true, 5)     // 4/4 +2/+2 = 6/6, 1 remaining
+      .WithUpgradesOnGroundUnitForPlayer(2, 0, [
+        GameStateBuilder.Upgrade(Cards.upgrades.twi.unshakeableWill, 2),
+      ])
+      .Build();
+    state.player1.supplemental.forceToken = true;
+    g.loadNewState(state);
+    const k2soPlayId = state.player2.groundArena[0].playId;
+
+    await g.attackWithGroundUnitAsync(1, 0);
+    await g.dispatchAsync(1, "choose-target", { targetPlayIds: [k2soPlayId] });
+
+    // Both traded.
+    expect(g.state.player2.groundArena).toHaveLength(0);
+    expect(g.state.player1.groundArena.map(u => u.cardId)).toEqual([Cards.units.sor.battlefieldMarine]);
+
+    // Karis's When Defeated resolves first (acting player).
+    await g.chooseYesAsync(1);
+    await g.chooseGroundUnitAsync(1, 0);
+
+    // K-2SO's must still be waiting — it is the opponent's trigger, queued behind Karis's.
+    expect(g.lastDispatchResponse?.resolutionNeeded?.type).toBe("Option");
+    await g.dispatchAsync(2, "choose-option", { option: "deal_base_damage=1,3" });
+
+    expect(g.state.player1.base.damage).toBe(30); // 27 + 3, past its 28 HP
+    expect(g.state.defeatedPlayers).toContain(1);
+  });
 });
 
 // Puzzle mode is single-player: when the discard option targets the opponent, the human must
@@ -194,5 +234,60 @@ describe("SOR_145 K-2SO — puzzle mode", () => {
 
     expect(res.response.resolutionNeeded).toBeFalsy();
     expect(res.context.game.currentGameState.player1.hand).toHaveLength(1);
+  });
+
+
+  // End-to-end on the shape QA reported ("Know Your Timings"): the solver Force Chokes an enemy
+  // K-2SO wearing Unshakeable Will. It dies, and its When Defeated — auto-answered for P2 as
+  // "deal 3 to the solver's base" — is lethal to a base sitting on 1 remaining HP.
+  it("a Force Choke that kills an enemy K-2SO can lose the solver the game", () => {
+    const raw = {
+      activePlayer: 1, gamePhase: "ActionPhase", nextPlayId: 1, currentRound: 1,
+      initiativePlayer: 2, initiativeClaimed: true,
+      player1: {
+        base: { cardId: "LOF_027", damage: 27, epicActionUsed: false }, // 28 HP — 1 remaining
+        leader: { cardId: "SOR_010", ready: true, deployed: false, epicActionUsed: false },
+        groundArena: [
+          { cardId: "SOR_087", playId: "@", owner: 1, controller: 1, ready: true, damage: 0, upgrades: [], captives: [] },
+        ],
+        spaceArena: [],
+        resources: Array(6).fill(null).map(() => ({ cardId: "SOR_059", playId: "@", owner: 1, controller: 1, ready: true })),
+        discard: [], deck: [], hand: [{ cardId: "SOR_139" }],
+        supplemental: {},
+      },
+      player2: {
+        base: { cardId: "SOR_025", damage: 0, epicActionUsed: false },
+        leader: { cardId: "SOR_014", ready: false, deployed: false, epicActionUsed: true },
+        groundArena: [
+          {
+            cardId: "SOR_145", playId: "@", owner: 2, controller: 2, ready: false, damage: 5,
+            upgrades: [{ cardId: "TWI_071", playId: "@", owner: 2, controller: 2 }],
+            captives: [],
+          },
+        ],
+        spaceArena: [],
+        resources: [], discard: [], deck: [], hand: [],
+        supplemental: {},
+      },
+      currentEffects: [], triggerBag: [],
+    };
+    const gs = hydratePuzzleGame(raw as never);
+    const game: Game = { id: randomUUID(), currentGameState: gs, gameStateHistory: [], gameLog: [] };
+    const ctx: EngineContext = { game, pending: null };
+    const k2soPlayId = gs.player2.groundArena[0].playId;
+
+    const played = processPuzzleDispatch(
+      { dispatchId: randomUUID(), dispatchType: "play-card" as never, dispatchData: { cardId: "SOR_139", fromZone: "Hand" } as never, fromPlayer: 1 },
+      ctx,
+    );
+    const res = processPuzzleDispatch(
+      { dispatchId: randomUUID(), dispatchType: "choose-target" as never, dispatchData: { targetPlayIds: [k2soPlayId] } as never, fromPlayer: 1 },
+      played.context,
+    );
+
+    const out = res.context.game.currentGameState;
+    expect(out.player2.groundArena).toHaveLength(0);   // 5 + 5 on a 6 HP unit
+    expect(out.player1.base.damage).toBe(30);          // its When Defeated hit the solver
+    expect(out.defeatedPlayers).toContain(1);
   });
 });

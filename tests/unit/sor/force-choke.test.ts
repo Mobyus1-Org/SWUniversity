@@ -113,4 +113,51 @@ describe("SOR_139 — Force Choke", () => {
 
     expect(g.lastDispatchResponse?.invalidAction).toBe(true);
   });
+
+  // QA: Force Choke on a K-2SO wearing Unshakeable Will (6 HP, 5 damage) left it alive on 10
+  // damage. The handler dealt the damage and early-returned pending.continuation, skipping the
+  // sweepDeadUnits that the switch's normal fall-through path runs — so nothing ever noticed the
+  // unit was dead. The opponent's draw was a red herring.
+  it("defeats a unit the 5 damage is lethal to", async () => {
+    const g = new GameTestAdapter();
+    const gsb = new GameStateBuilder();
+    const state = CommonSetup(gsb, "rrk", "ggw", {
+      my: { resourceCount: 2 },
+      their: {},
+    })
+      .WithCardInHandForPlayer(1, Cards.events.sor.forceChoke)
+      .WithGroundUnitForPlayer(2, Cards.units.sor.k2so, true, 5) // 4/4 + upgrade below
+      .WithUpgradesOnGroundUnitForPlayer(2, 0, [
+        GameStateBuilder.Upgrade(Cards.upgrades.twi.unshakeableWill, 2), // +2/+2 -> 6 HP
+      ])
+      .Build();
+    g.loadNewState(state);
+    const targetPlayId = state.player2.groundArena[0].playId;
+
+    await g.playCardFromHandAsync(1, 0);
+    await g.dispatchAsync(1, "choose-target", { targetPlayIds: [targetPlayId] });
+
+    // 5 existing + 5 = 10 damage on a 6 HP unit.
+    expect(g.state.player2.groundArena).toHaveLength(0);
+  });
+
+  it("defeats a plain unit the 5 damage is lethal to", async () => {
+    const g = new GameTestAdapter();
+    const gsb = new GameStateBuilder();
+    const state = CommonSetup(gsb, "rrk", "ggw", {
+      my: { resourceCount: 2 },
+      their: {},
+    })
+      .WithCardInHandForPlayer(1, Cards.events.sor.forceChoke)
+      .WithGroundUnitForPlayer(2, Cards.units.sor.battlefieldMarine) // 3/3
+      .Build();
+    g.loadNewState(state);
+    const targetPlayId = state.player2.groundArena[0].playId;
+
+    await g.playCardFromHandAsync(1, 0);
+    await g.dispatchAsync(1, "choose-target", { targetPlayIds: [targetPlayId] });
+
+    expect(g.state.player2.groundArena).toHaveLength(0);
+    expect(g.state.player2.discard.map(c => c.cardId)).toContain(Cards.units.sor.battlefieldMarine);
+  });
 });

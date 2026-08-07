@@ -110,4 +110,34 @@ describe("SOR_121 Hardpoint Heavy Blaster", () => {
     expect(resolution?.type === "Target" && resolution.fromPlayIds?.includes(marinePlayId)).toBe(false);
     expect(resolution?.type === "Target" && resolution.fromPlayIds?.includes(patrolPlayId)).toBe(true);
   });
+
+  // Same class of bug as Force Choke: the handler dealt its damage and early-returned
+  // pending.continuation, skipping the sweepDeadUnits the switch's fall-through runs. A unit the
+  // 2 damage killed stayed on the board.
+  it("defeats a bystander the 2 damage is lethal to", async () => {
+    const g = new GameTestAdapter();
+    const state = new GameStateBuilder()
+      .MyBase(Cards.bases.common.green30HP)
+      .MyLeader(Cards.leaders.sor.grandAdmiralThrawn)
+      .TheirBase(Cards.bases.common.green30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .WithSpaceUnitForPlayer(1, Cards.units.sor.systemPatrolCraft)
+      .WithUpgradesOnSpaceUnitForPlayer(1, 0, [
+        GameStateBuilder.Upgrade(Cards.upgrades.sor.hardpointHeavyBlaster, 1),
+      ])
+      .WithSpaceUnitForPlayer(2, Cards.units.sor.systemPatrolCraft)
+      .WithSpaceUnitForPlayer(2, Cards.units.sor.tieLnFighter) // 2/1 — dies to the 2
+      .Build();
+    g.loadNewState(state);
+
+    const defender = state.player2.spaceArena[0].playId;
+    const fragile = state.player2.spaceArena[1].playId;
+
+    await g.attackWithSpaceUnitAsync(1, 0);
+    await g.dispatchAsync(1, "choose-target", { targetPlayIds: [defender] });
+    await g.chooseYesAsync(1);
+    await g.dispatchAsync(1, "choose-target", { targetPlayIds: [fragile] });
+
+    expect(g.state.player2.spaceArena.some(u => u.playId === fragile)).toBe(false);
+  });
 });
