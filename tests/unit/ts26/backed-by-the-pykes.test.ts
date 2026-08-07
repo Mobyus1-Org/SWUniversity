@@ -3,10 +3,10 @@ import { GameTestAdapter } from "../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { Cards } from "../../card-helpers";
 
-// TS26_058 Backed by the Pykes (Event, cost 3) —
+// TS26_58 Backed by the Pykes (Event, cost 3) —
 //   "Give an Experience token to a friendly unit.
 //    You may deal damage to a unit equal to the number of Experience tokens on friendly units."
-describe("TS26_058 Backed by the Pykes", () => {
+describe("TS26_58 Backed by the Pykes", () => {
   function base() {
     return new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)

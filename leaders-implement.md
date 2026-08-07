@@ -74,8 +74,8 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 | Batch 12 | ASH_001 ASH_002 ASH_003 ASH_005 ASH_006 | — | ☐ |
 | Batch 13 | ASH_007 ASH_008 ASH_010 ASH_011 ASH_012 | — | ☐ |
 | Batch 14 | ASH_013 ASH_015 ASH_016 ASH_017 ASH_018 | Closes ASH | ☐ |
-| Batch 15 | TS26_001 TS26_002 TS26_003 TS26_004 | — | ☐ |
-| Batch 16 | TS26_005 TS26_006 TS26_007 TS26_008 | Closes TS26 | ☐ |
+| Batch 15 | TS26_01 TS26_02 TS26_03 TS26_04 | — | ☐ |
+| Batch 16 | TS26_05 TS26_06 TS26_07 TS26_08 | Closes TS26 | ☐ |
 
 ---
 
@@ -645,7 +645,7 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 ### TS26 (8)
 
-#### TS26_001 — Count Dooku (Offering Aid)
+#### TS26_01 — Count Dooku (Offering Aid)
 
 **Missing:** front + deployed · **Batch:** Batch 15 · **Existing refs:** none
 
@@ -655,7 +655,7 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 > Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
-#### TS26_002 — Anakin Skywalker (Protect Her At All Costs)
+#### TS26_02 — Anakin Skywalker (Protect Her At All Costs)
 
 **Missing:** front + deployed · **Batch:** Batch 15 · **Existing refs:** none
 
@@ -665,7 +665,7 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 > Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
-#### TS26_003 — Maul (Collective Ambition)
+#### TS26_03 — Maul (Collective Ambition)
 
 **Missing:** front + deployed · **Batch:** Batch 15 · **Existing refs:** none
 
@@ -675,7 +675,7 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 > Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
-#### TS26_004 — Padmé Amidala (Follow My Lead)
+#### TS26_04 — Padmé Amidala (Follow My Lead)
 
 **Missing:** front + deployed · **Batch:** Batch 15 · **Existing refs:** none
 
@@ -685,7 +685,7 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 > Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
-#### TS26_005 — Savage Opress (You Must Have Your Revenge)
+#### TS26_05 — Savage Opress (You Must Have Your Revenge)
 
 **Missing:** deployed · **Batch:** Batch 16 · **Existing refs:** none
 
@@ -693,7 +693,7 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 **Deployed:** Raid 3 (This unit gets +3/+0 while attacking.)<br>Overwhelm<br>Each other friendly unit gains Overwhelm.
 
-#### TS26_006 — Rex (No Other Option)
+#### TS26_06 — Rex (No Other Option)
 
 **Missing:** front + deployed · **Batch:** Batch 16 · **Existing refs:** none
 
@@ -703,7 +703,7 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 > Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
-#### TS26_007 — Asajj Ventress (Ambitious Apprentice)
+#### TS26_07 — Asajj Ventress (Ambitious Apprentice)
 
 **Missing:** front + deployed · **Batch:** Batch 16 · **Existing refs:** none
 
@@ -713,7 +713,7 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 > Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
-#### TS26_008 — Ahsoka Tano (I Have an Idea)
+#### TS26_08 — Ahsoka Tano (I Have an Idea)
 
 **Missing:** front + deployed · **Batch:** Batch 16 · **Existing refs:** none
 

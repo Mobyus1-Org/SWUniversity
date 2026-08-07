@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 897 cards across 10 sets.**
+**Total: 895 cards across 10 sets.**
 
 ---
 
@@ -338,7 +338,7 @@ JTL_260: Death Star Plans Upgrade
 JTL_262: Evasive Maneuver Event
 ```
 
-## LOF — Legends of the Force (101)
+## LOF — Legends of the Force (100)
 
 **Message 1 of 3**
 ```
@@ -448,7 +448,6 @@ LOF_244: Jedi Vector Unit
 LOF_248: Jocasta Nu - The Gift of Knowledge Unit
 LOF_250: Medical Frigate Unit
 LOF_252: The Daughter - Embodiment of Light Unit
-LOF_255: Curious Flock Unit
 LOF_258: Peli Motto - I Should Charge You More Unit
 LOF_259: Ravening Gundark Unit
 LOF_262: Go Into Hiding Event
@@ -652,7 +651,7 @@ LAW_262: Bank Job Fugitives Unit
 LAW_264: From a Certain Point of View Event
 ```
 
-## SEC — Secrets of Power (158)
+## SEC — Secrets of Power (157)
 
 **Message 1 of 4**
 ```
@@ -673,7 +672,6 @@ SEC_035: Darth Sion - Lord of Pain Unit
 SEC_037: Cantwell Arrestor Cruiser Unit
 SEC_038: Condemn Upgrade
 SEC_039: Creditor's Claim Upgrade
-SEC_040: Emergency Powers Event
 SEC_041: Populist Advisor Unit
 SEC_042: Cassian Andor - Lay Low Unit
 SEC_045: Senator Chuchi - Voice for the Voiceless Unit
@@ -984,79 +982,79 @@ IBH_102: I Want Proof, Not Leads Event
 **Message 1 of 2**
 ```
 TS26:
-TS26_001: Count Dooku - Offering Aid Leader
-TS26_002: Anakin Skywalker - Protect Her At All Costs Leader
-TS26_003: Maul - Collective Ambition Leader
-TS26_004: Padmé Amidala - Follow My Lead Leader
-TS26_005: Savage Opress - You Must Have Your Revenge Leader
-TS26_006: Rex - No Other Option Leader
-TS26_007: Asajj Ventress - Ambitious Apprentice Leader
-TS26_008: Ahsoka Tano - I Have an Idea Leader
-TS26_009: First Battle Memorial Base
-TS26_010: Dooku's Palace Base
-TS26_011: Executioner's Arena Base
-TS26_012: Sundari Palace Base
-TS26_013: Darth Sidious - Under a Cloak of Darkness Unit
-TS26_014: Yoda - Begun, the Clone War Has Unit
-TS26_015: C-3P0 - Die, Jedi Dogs! Unit
-TS26_016: King Katuunko - Great King of Toydaria Unit
-TS26_018: Jendirian Valley - Refugee Freighter Unit
-TS26_019: Coleman Trebor - Jedi Rescuer Unit
-TS26_020: 501st Veteran Unit
-TS26_023: Assault Lander LAAT Unit
-TS26_024: Sundari Gauntlet Unit
-TS26_025: Fiery Alliance Upgrade
-TS26_026: Mother Talzin - Stealing the Spirit Unit
-TS26_027: Fortune and Glory - Hondo's Luxury Yacht Unit
-TS26_028: Prime Minister Almec - Scheming Populist Unit
-TS26_029: Ziton Moj - Sowing Chaos Unit
-TS26_030: Maul - One Last Lesson Unit
-TS26_031: Chaotic Diversion Event
-TS26_032: Reckless Landing Event
-TS26_033: Kouhun Assassination Event
-TS26_034: Fives - I Have Proof! Unit
-TS26_036: Tribunal - Grave of the 332nd Unit
-TS26_037: Abandoned the Order Upgrade
-TS26_038: Dooku's Solar Sailer - Beautiful and Expensive Unit
-TS26_039: Captain Vaughn - Search the Tunnels Unit
-TS26_040: Obi-Wan Kenobi - Steadfast Knight Unit
-TS26_041: Twilight - Escaping Malevolence Unit
-TS26_042: Relief Frigate Unit
-TS26_043: Wartime Refugee Unit
-TS26_046: Secret Marriage Event
-TS26_047: Take Cover Event
-TS26_048: Vanquish the Legion Event
+TS26_01: Count Dooku - Offering Aid Leader
+TS26_02: Anakin Skywalker - Protect Her At All Costs Leader
+TS26_03: Maul - Collective Ambition Leader
+TS26_04: Padmé Amidala - Follow My Lead Leader
+TS26_05: Savage Opress - You Must Have Your Revenge Leader
+TS26_06: Rex - No Other Option Leader
+TS26_07: Asajj Ventress - Ambitious Apprentice Leader
+TS26_08: Ahsoka Tano - I Have an Idea Leader
+TS26_09: First Battle Memorial Base
+TS26_10: Dooku's Palace Base
+TS26_11: Executioner's Arena Base
+TS26_12: Sundari Palace Base
+TS26_13: Darth Sidious - Under a Cloak of Darkness Unit
+TS26_14: Yoda - Begun, the Clone War Has Unit
+TS26_15: C-3P0 - Die, Jedi Dogs! Unit
+TS26_16: King Katuunko - Great King of Toydaria Unit
+TS26_18: Jendirian Valley - Refugee Freighter Unit
+TS26_19: Coleman Trebor - Jedi Rescuer Unit
+TS26_20: 501st Veteran Unit
+TS26_23: Assault Lander LAAT Unit
+TS26_24: Sundari Gauntlet Unit
+TS26_25: Fiery Alliance Upgrade
+TS26_26: Mother Talzin - Stealing the Spirit Unit
+TS26_27: Fortune and Glory - Hondo's Luxury Yacht Unit
+TS26_28: Prime Minister Almec - Scheming Populist Unit
+TS26_29: Ziton Moj - Sowing Chaos Unit
+TS26_30: Maul - One Last Lesson Unit
+TS26_31: Chaotic Diversion Event
+TS26_32: Reckless Landing Event
+TS26_33: Kouhun Assassination Event
+TS26_34: Fives - I Have Proof! Unit
+TS26_36: Tribunal - Grave of the 332nd Unit
+TS26_37: Abandoned the Order Upgrade
+TS26_38: Dooku's Solar Sailer - Beautiful and Expensive Unit
+TS26_39: Captain Vaughn - Search the Tunnels Unit
+TS26_40: Obi-Wan Kenobi - Steadfast Knight Unit
+TS26_41: Twilight - Escaping Malevolence Unit
+TS26_42: Relief Frigate Unit
+TS26_43: Wartime Refugee Unit
+TS26_46: Secret Marriage Event
+TS26_47: Take Cover Event
+TS26_48: Vanquish the Legion Event
 ```
 
 **Message 2 of 2**
 ```
 TS26:
-TS26_049: Separatist Council - Quarrelsome Holdouts Unit
-TS26_050: General Grievous - Crush Them! Unit
-TS26_051: Lom Pyke - Making a Withdrawal Unit
-TS26_053: Coruscanti Spy Unit
-TS26_054: Wartime Mercenaries Unit
-TS26_056: Galactic Escalation Event
-TS26_057: Mechanize Event
-TS26_059: Brothers Event
-TS26_061: Encircle Event
-TS26_062: R2-D2 - Getting His Chance Unit
-TS26_064: Urgent Mission Event
-TS26_066: Wartime Pirate Unit
-TS26_067: Ruping Rider Unit
-TS26_068: Arms Deal Event
-TS26_069: Remove the Chip Event
-TS26_070: Backed by Black Sun Event
-TS26_071: Take Action Event
-TS26_072: Fervor Event
-TS26_073: Moralo Eval - Infamous Murderer Unit
-TS26_075: Jango Fett - Guarding the Count Unit
-TS26_076: Wartime Profiteer Unit
-TS26_078: Barriss Offee - It's Only a Matter of Time Unit
-TS26_079: Underestimated Upgrade
-TS26_080: Reveal Intentions Event
-TS26_081: Mislead Event
-TS26_082: Evade Arrest Event
-TS26_083: Take Aim Event
-TS26_084: Fearless Attack Event
+TS26_49: Separatist Council - Quarrelsome Holdouts Unit
+TS26_50: General Grievous - Crush Them! Unit
+TS26_51: Lom Pyke - Making a Withdrawal Unit
+TS26_53: Coruscanti Spy Unit
+TS26_54: Wartime Mercenaries Unit
+TS26_56: Galactic Escalation Event
+TS26_57: Mechanize Event
+TS26_59: Brothers Event
+TS26_61: Encircle Event
+TS26_62: R2-D2 - Getting His Chance Unit
+TS26_64: Urgent Mission Event
+TS26_66: Wartime Pirate Unit
+TS26_67: Ruping Rider Unit
+TS26_68: Arms Deal Event
+TS26_69: Remove the Chip Event
+TS26_70: Backed by Black Sun Event
+TS26_71: Take Action Event
+TS26_72: Fervor Event
+TS26_73: Moralo Eval - Infamous Murderer Unit
+TS26_75: Jango Fett - Guarding the Count Unit
+TS26_76: Wartime Profiteer Unit
+TS26_78: Barriss Offee - It's Only a Matter of Time Unit
+TS26_79: Underestimated Upgrade
+TS26_80: Reveal Intentions Event
+TS26_81: Mislead Event
+TS26_82: Evade Arrest Event
+TS26_83: Take Aim Event
+TS26_84: Fearless Attack Event
 ```

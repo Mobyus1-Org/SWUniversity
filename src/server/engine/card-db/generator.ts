@@ -12,6 +12,9 @@ const GENERATED_OVERRIDES_MODULE_PATH = path.join(process.cwd(), "src/server/eng
 const GENERATED_CARD_IMAGE_FULL_DIR = path.join(process.cwd(), "public/assets/cards/full");
 const GENERATED_CARD_IMAGE_SQUARE_DIR = path.join(process.cwd(), "public/assets/cards/square");
 const SQUARE_IMAGE_SIZE = 512;
+// Most sets number their cards with 3 digits (SOR_001). TS26 is printed and indexed
+// by the card databases (SWUDB et al.) with 2 digits, so its ids follow suit.
+const TWO_DIGIT_CARD_NUMBER_SETS = new Set(["TS26"]);
 
 type SwuMediaFormats = {
   card?: {
@@ -203,6 +206,11 @@ function getRawTypeName(attributes: SwuCardAttributes): string {
   return getRelationValue(attributes.type, "name");
 }
 
+function formatCardNumber(setCode: string, cardNumber: number | null | undefined): string {
+  const padWidth = TWO_DIGIT_CARD_NUMBER_SETS.has(setCode) ? 2 : 3;
+  return String(cardNumber).padStart(padWidth, "0");
+}
+
 function parseCardNumStr(cardId: string): { setCode: string; numStr: string } {
   const underscore = cardId.indexOf("_");
   return {
@@ -222,9 +230,10 @@ function getSwudbPathParts(setCode: string, numStr: string): { swudbSetCode: str
   }
 
   if (setCode === "TS26") {
+    // SWUDB is inconsistent about zero-padding for this set, so try every width.
     const numeric = Number.parseInt(numStr, 10);
     const numericCandidates = Number.isFinite(numeric)
-      ? [String(numeric), String(numeric).padStart(2, "0"), numStr]
+      ? [String(numeric), String(numeric).padStart(2, "0"), String(numeric).padStart(3, "0")]
       : [numStr];
     const uniqueCandidates = [...new Set(numericCandidates)];
     return {
@@ -270,7 +279,7 @@ function buildCardId(attributes: SwuCardAttributes): string {
     return `${setCode}_T${String(normalizedCardNumber).padStart(2, "0")}`;
   }
 
-  return `${setCode}_${String(normalizedCardNumber).padStart(3, "0")}`;
+  return `${setCode}_${formatCardNumber(setCode, normalizedCardNumber)}`;
 }
 
 function assignStringValue(dictionary: StringDictionary, key: string, value: string): void {
@@ -396,7 +405,7 @@ function buildCardIdFromPartialAttributes(attributes?: SwuCardAttributes | null)
     return `${setCode}_T${String(normalizedCardNumber).padStart(2, "0")}`;
   }
 
-  return `${setCode}_${String(normalizedCardNumber).padStart(3, "0")}`;
+  return `${setCode}_${formatCardNumber(setCode, normalizedCardNumber)}`;
 }
 
 async function fetchCardsPage(page: number): Promise<SwuCardsResponse> {

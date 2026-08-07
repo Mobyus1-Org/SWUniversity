@@ -106,7 +106,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "TWI_214"://Hidden Sharpshooter
     case "TWI_242"://Phase II Clone Trooper
     case "LAW_079"://K-2SO
-    case "TS26_077"://Deployed Droideka
+    case "TS26_77"://Deployed Droideka
     case "TWI_112"://Subjugating Starfighter
     case "TWI_118"://Gor
     case "TWI_196"://Plo Koon

@@ -99,7 +99,7 @@ import { collectBounties } from "@/server/engine/actions/bounty";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { resolveWhenDefeated, WhenDefeatedBaseDamage } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB, anakinMortisAbility } from "@/server/engine/actions/when-played";
+import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB, anakinMortisAbility, buildPayForExperiencePrompt } from "@/server/engine/actions/when-played";
 import { executeRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
 import { resolveWhenPlayedTrigger, WhenPlayedHasAutoEffect } from "@/server/engine/actions/when-played-trigger";
 import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
@@ -187,6 +187,10 @@ function resolveChooseOne(
   switch (pending.cardId) {
     case "SHD_153": // Poe Dameron — resolve the chosen mode, then prompt for any remaining discards.
       return resolvePoeMode(game, log, pending, optionId);
+    case "LOF_255": // Curious Flock — pay up to 6.
+    case "SEC_040": // Emergency Powers — pay any number.
+      payForExperienceTokens(game, log, pending, optionId);
+      break;
     case "ASH_235": { // Sense Through the Force — remember the number, then search the top 5.
       // DeckSearchPending carries no payload of its own, so the chosen number rides on a
       // currentEffect that the deck-search draw step reads (and removes).
@@ -532,6 +536,18 @@ let creditDecisions: (number | null)[] = [];
 let creditPaymentIndex = 0;
 
 /**
+ * What a payment actually consumed. Cards that scale an effect off the amount paid
+ * ("For each resource paid this way…") must read `resourcesExhausted`, never `cost`:
+ * a Credit makes you pay 1 resource LESS, so it is not a resource paid.
+ */
+type ResourcePayment = {
+  /** Resources actually exhausted. */
+  resourcesExhausted: number;
+  /** Credit tokens defeated, each covering 1 resource of the cost. */
+  creditsSpent: number;
+};
+
+/**
  * The single entry point for paying a resource cost.
  *
  * CR 375: a Credit token reads "While paying resources, you may defeat this token.
@@ -545,7 +561,7 @@ function payResources(
   cost: number,
   log: string[],
   sourceCardId: string,
-): void {
+): ResourcePayment {
   const paymentIndex = creditPaymentIndex++;
   const p = GetPlayer(game, player);
   const credits = p.supplemental.creditTokens ?? 0;
@@ -571,7 +587,32 @@ function payResources(
     p.supplemental.creditTokens = credits - spend;
     log.push(`Player ${player} defeated ${spend} Credit token(s) to pay ${spend} less.`);
   }
-  exhaustResourcesRaw(game, player, Math.max(0, cost - spend));
+  const resourcesExhausted = Math.max(0, cost - spend);
+  exhaustResourcesRaw(game, player, resourcesExhausted);
+  return { resourcesExhausted, creditsSpent: spend };
+}
+
+/**
+ * Resolves the shared "pay N resources → that many Experience tokens" choice built by
+ * buildPayForExperiencePrompt (LOF_255 Curious Flock, SEC_040 Emergency Powers).
+ *
+ * The token count is the resources ACTUALLY exhausted, never the amount declared. A Credit
+ * defeated during this payment makes the player pay 1 resource less (CR 375), and a resource
+ * that went unpaid was not "paid this way" — so Credits buy no Experience. Paying through
+ * payResources also means the Credit prompt itself still appears here, exactly as it does
+ * for a card's own cost.
+ */
+function payForExperienceTokens(
+  game: GameState,
+  log: string[],
+  pending: ChooseOnePending,
+  optionId: string,
+): void {
+  const declared = Number(optionId);
+  if (!Number.isFinite(declared) || declared <= 0) return;
+  const { resourcesExhausted } = payResources(game, pending.player, declared, log, pending.cardId);
+  const target = GetUnitByPlayId(game, String(pending.data?.targetPlayId ?? ""));
+  if (target) GiveExperienceTokens(game, target, resourcesExhausted, log, pending.cardId);
 }
 
 // ---------------------------------------------------------------------------
@@ -7400,13 +7441,13 @@ function applyAbilityOptionEffect(
       log.push(`${CardTitle("LOF_249")}: used the Force — gained an Experience token and a Shield token.`);
       return pending.continuation ?? null;
     }
-    case "TS26_077": { // Deployed Droideka Yes: pay 2 resources, give this unit an XP + Shield token.
+    case "TS26_77": { // Deployed Droideka Yes: pay 2 resources, give this unit an XP + Shield token.
       const unit077 = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (unit077) {
-        payResources(game, unit077.controller, 2, log, "TS26_077");
+        payResources(game, unit077.controller, 2, log, "TS26_77");
         unit077.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: unit077.owner, controller: unit077.controller });
         unit077.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: unit077.owner, controller: unit077.controller });
-        log.push(`${CardTitle("TS26_077")}: paid 2 resources — gained an Experience token and a Shield token.`);
+        log.push(`${CardTitle("TS26_77")}: paid 2 resources — gained an Experience token and a Shield token.`);
       }
       return pending.continuation ?? null;
     }
@@ -10104,6 +10145,11 @@ function applyAbilityEffect(
   }
 
   switch (pending.cardId) {
+    case "SEC_040": { // Emergency Powers — the non-leader unit is chosen; now ask how many
+                      // resources to pay. "Any number" is bounded only by what is payable.
+      if (!targetPlayId) break;
+      return buildPayForExperiencePrompt("SEC_040", pending.player!, targetPlayId, Infinity);
+    }
     case "SEC_186": { // Garindan — the named card is chosen; now look at the opponent's hand and
                       // discard a card with that name from it.
       if (!targetPlayId) break;
@@ -10667,13 +10713,13 @@ function applyAbilityEffect(
       }
       break;
     }
-    case "TS26_058": { // Backed by the Pykes — step 1: give an Experience token to the chosen friendly unit,
+    case "TS26_58": { // Backed by the Pykes — step 1: give an Experience token to the chosen friendly unit,
                        // then offer the optional damage (equal to friendly Experience-token count).
       if (!targetPlayId || pending.player === undefined) break;
       const target058 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target058) {
         target058.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target058.owner, controller: target058.controller });
-        game.gameLog.push(`${CardTitle("TS26_058")}: gave an Experience token to ${CardTitle(target058.cardId)}.`);
+        game.gameLog.push(`${CardTitle("TS26_58")}: gave an Experience token to ${CardTitle(target058.cardId)}.`);
       }
       const xpCount058 = GetUnitsForPlayer(pending.player).reduce(
         (sum, u) => sum + u.upgrades.filter(up => up.cardId === "SOR_T01").length, 0);
@@ -10681,14 +10727,14 @@ function applyAbilityEffect(
       if (xpCount058 <= 0 || allUnits058.length === 0) break;
       return {
         type: "ability-option",
-        cardId: "TS26_058_damage",
+        cardId: "TS26_58_damage",
         player: pending.player,
         helperText: `Deal ${xpCount058} damage to a unit?`,
         yesLabel: `Deal ${xpCount058}`,
         noLabel: "Skip",
         onYes: {
           type: "ability-target",
-          cardId: "TS26_058_damage",
+          cardId: "TS26_58_damage",
           player: pending.player,
           fromPlayIds: allUnits058.map(u => u.playId),
           continuation: null,
@@ -10696,11 +10742,11 @@ function applyAbilityEffect(
         continuation: null,
       };
     }
-    case "TS26_058_damage": { // Backed by the Pykes — step 2: deal damage equal to friendly Experience-token count.
+    case "TS26_58_damage": { // Backed by the Pykes — step 2: deal damage equal to friendly Experience-token count.
       if (!targetPlayId || pending.player === undefined) break;
       const xpCount058b = GetUnitsForPlayer(pending.player).reduce(
         (sum, u) => sum + u.upgrades.filter(up => up.cardId === "SOR_T01").length, 0);
-      DealDamageToUnit(game.currentGameState, "TS26_058", targetPlayId, xpCount058b, game.gameLog);
+      DealDamageToUnit(game.currentGameState, "TS26_58", targetPlayId, xpCount058b, game.gameLog);
       break;
     }
     case "SOR_121": { // Hardpoint Heavy Blaster on-attack: deal 2 damage to chosen unit in defender's arena

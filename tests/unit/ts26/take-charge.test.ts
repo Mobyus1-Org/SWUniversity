@@ -7,10 +7,10 @@ const EXPERIENCE = Cards.upgrades.token.experience;
 const xp = (u: { upgrades: { cardId: string }[] }) => u.upgrades.filter(x => x.cardId === EXPERIENCE).length;
 const spent = (g: GameTestAdapter) => g.state.player1.resources.filter(r => !r.ready).length;
 
-// TS26_060 Take Charge (Event, cost 3) —
+// TS26_60 Take Charge (Event, cost 3) —
 //   "This event costs 1 resource less to play for each friendly leader unit.
 //    Give an Experience token to each of up to 3 units."
-describe("TS26_060 Take Charge", () => {
+describe("TS26_60 Take Charge", () => {
   function base() {
     return new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP) // Command — no aspect penalty

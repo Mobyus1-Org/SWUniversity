@@ -216,14 +216,14 @@ export const Cards = {
       grandAdmiralThrawn: "ASH_004",
     },
     ts26: {
-      countDooku: "TS26_001",
-      anakinSkywalker: "TS26_002",
-      maul: "TS26_003",
-      padmeAmidala: "TS26_004",
-      savageOpress: "TS26_005",
-      rex: "TS26_006",
-      asajjVentress: "TS26_007",
-      ahsokaTano: "TS26_008",
+      countDooku: "TS26_01",
+      anakinSkywalker: "TS26_02",
+      maul: "TS26_03",
+      padmeAmidala: "TS26_04",
+      savageOpress: "TS26_05",
+      rex: "TS26_06",
+      asajjVentress: "TS26_07",
+      ahsokaTano: "TS26_08",
     },
   },
   units: {
@@ -437,6 +437,7 @@ export const Cards = {
       darthVaderScourgeOfSquadrons: "JTL_142", // Piloting 3 — grants the host an On Attack
     },
     lof: {
+      curiousFlock: "LOF_255", // 1/1/1 Ground Creature — When Played: pay up to 6 for that many XP
       kelleranBeq: "LOF_100",
       darthMalak: "LOF_234",
       sithLegionnaire: "LOF_081", // Sith/Trooper Ground — non-unique Sith unit, not a leader
@@ -615,7 +616,7 @@ export const Cards = {
       theMandalorian: "ASH_014",
     },
     ts26: {
-      deployedDroideka: "TS26_077",
+      deployedDroideka: "TS26_77",
     },
     ibh: {
       // Each card has multiple identical printings within IBH; suffix letters are alternate printings.
@@ -809,12 +810,13 @@ export const Cards = {
       scrambleFighters: "JTL_092",
     },
     ts26: {
-      backedByThePykes: "TS26_058",
-      takeCharge: "TS26_060",
+      backedByThePykes: "TS26_58",
+      takeCharge: "TS26_60",
     },
     sec: {
       iAmTheSenate: "SEC_092",
       grassrootsResistance: "SEC_258",
+      emergencyPowers: "SEC_040",
     },
     ash: {
       // Identical reprint of SEC_258 Grassroots Resistance.

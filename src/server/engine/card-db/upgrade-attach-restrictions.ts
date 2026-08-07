@@ -65,11 +65,11 @@ export function UpgradeEligibleTargets(
     case "LAW_150": //Fulcrum
     case "LAW_186": //Enfys Nest's Helmet
     case "LAW_201": //Thermal Detonator
-    case "TS26_022": //The Darksaber
-    case "TS26_035": //Ahsoka's Lightsabers
-    case "TS26_052": //Sith Traditions
-    case "TS26_063": //Rex's DC-17s
-    case "TS26_055": //Blade of Talzin
+    case "TS26_22": //The Darksaber
+    case "TS26_35": //Ahsoka's Lightsabers
+    case "TS26_52": //Sith Traditions
+    case "TS26_63": //Rex's DC-17s
+    case "TS26_55": //Blade of Talzin
     case "ASH_066": //Luke's Jedi Lightsaber
     case "ASH_183": //Whistling Birds
     case "ASH_055": //Blade of Talzin

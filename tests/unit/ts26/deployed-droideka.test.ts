@@ -3,10 +3,10 @@ import { GameTestAdapter } from "../game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { Cards } from "../../card-helpers";
 
-// TS26_077 Deployed Droideka (4/3 Ground, cost 4) —
+// TS26_77 Deployed Droideka (4/3 Ground, cost 4) —
 //   "Ambush (When you play this unit, it may attack an enemy unit.)
 //    When Played: You may pay 2 resources. If you do, give an Experience token and a Shield token to this unit."
-describe("TS26_077 Deployed Droideka", () => {
+describe("TS26_77 Deployed Droideka", () => {
   function build() {
     return new GameStateBuilder()
       .MyBase(Cards.bases.common.green30HP)

@@ -190,10 +190,10 @@ function jabbasRancorDiscount(game: GameState, player: PlayerId, cardId: string)
   return hasJabbaUnit ? 1 : 0;
 }
 
-// TS26_060 Take Charge: costs 1 resource less to play for each friendly LEADER unit. IsLeader()
+// TS26_60 Take Charge: costs 1 resource less to play for each friendly LEADER unit. IsLeader()
 // also counts a Vehicle carrying a pilot leader, matching Admiral Motti's aura.
 function takeChargeDiscount(game: GameState, player: PlayerId, cardId: string): number {
-  if (cardId !== "TS26_060") return 0;
+  if (cardId !== "TS26_60") return 0;
   const p = player === 1 ? game.player1 : game.player2;
   return [...p.groundArena, ...p.spaceArena]
     .filter(u => Unit.FromInterface(u).IsLeader())

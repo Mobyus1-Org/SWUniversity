@@ -121,6 +121,45 @@ export function shatterpointModeB(
 }
 
 /**
+ * The "pay N resources → that many Experience tokens" prompt, shared by every card worded
+ * "pay <N> resources. For each resource paid this way, give an Experience token to …"
+ * (LOF_255 Curious Flock, SEC_040 Emergency Powers).
+ *
+ * The offered range is the card's own cap bounded by what the player can actually pay.
+ * spendableFor counts Credits, and rightly so: a Credit may be defeated while paying
+ * resources to pay 1 LESS (CR 375), so it raises the amount a player can declare. It does
+ * NOT buy an Experience token, because a resource that went unpaid was never "paid this
+ * way" — the tokens are granted per resource actually exhausted when the choice resolves.
+ *
+ * `maxAllowed` is the printed cap ("up to 6"); pass Infinity for "any number".
+ */
+export function buildPayForExperiencePrompt(
+  cardId: string,
+  player: PlayerId,
+  targetPlayId: string,
+  maxAllowed: number,
+): ChooseOnePending | null {
+  const game = GetGame();
+  if (!game) throw new Error("Game not found in buildPayForExperiencePrompt");
+  const cap = Math.min(maxAllowed, spendableFor(game.currentGameState, player));
+  // Nothing payable — the only legal amount is 0, so skip the prompt entirely.
+  if (cap <= 0) return null;
+  return {
+    type: "choose-one",
+    cardId,
+    player,
+    // The generic choose-one prompt renders labels, so spell the amounts out — a bare
+    // "0 1 2 3" gives the player no clue what the number means.
+    options: Array.from({ length: cap + 1 }, (_, n) => ({
+      id: String(n),
+      label: n === 0 ? "Pay nothing" : `Pay ${n}`,
+    })),
+    data: { targetPlayId },
+    continuation: null,
+  } satisfies ChooseOnePending;
+}
+
+/**
  * When Played abilities for unit cards.
  * Return a PendingResolution if further input is needed, or null to auto-resolve.
  */
@@ -132,6 +171,11 @@ export function resolveWhenPlayed(
   const game = GetGame();
   if (!game) throw new Error("Game not found in resolveWhenPlayedAbility");
   switch (cardId) {
+    case "LOF_255": { // Curious Flock — "When Played: Pay up to 6 resources. For each resource
+                      // paid this way, give an Experience token to this unit."
+      if (!playId) return null;
+      return buildPayForExperiencePrompt("LOF_255", player, playId, 6);
+    }
     case "LOF_082": // Vaneé — When Played/On Attack: may defeat an XP token on a friendly unit, then give one to a friendly unit.
       return buildVaneeAbility(player, null);
     case "SEC_244": // Darth Nihilus — When Played/On Attack: 3 damage to the lowest-HP other unit.
@@ -252,6 +296,13 @@ export function resolveWhenPlayed(
         : null;
       if (cheapUpgrades232.length === 0) return shieldStep232;
       return mandatoryTarget("ASH_232_upgrade", player, cheapUpgrades232, shieldStep232);
+    }
+    case "SEC_040": { // Emergency Powers (Event) — "Choose a non-leader unit and pay any number of
+                      // resources. For each resource paid this way, give an Experience token to the
+                      // chosen unit." The payment prompt follows once the target is picked.
+      const nonLeaders040 = AllUnits().filter(u => !CardIsLeader(u.cardId));
+      if (nonLeaders040.length === 0) return null;
+      return mandatoryTarget("SEC_040", player, nonLeaders040.map(u => u.playId));
     }
     case "ASH_200": { // Rehabilitation (Event) — "Choose a non-leader unit. Give that unit –3/–0 for
                       // this phase, then take control of it. At the start of the regroup phase, its
@@ -700,13 +751,13 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
-    case "TS26_058": { // Backed by the Pykes — "Give an Experience token to a friendly unit.
+    case "TS26_58": { // Backed by the Pykes — "Give an Experience token to a friendly unit.
                        // You may deal damage to a unit equal to the number of Experience tokens on friendly units."
       const friendly058 = GetUnitsForPlayer(player);
       if (friendly058.length === 0) return null; // no friendly unit to receive the token — nothing to do
       // Step 1 (mandatory): choose the friendly unit to give an Experience token to.
       // Step 2 (optional damage) is built after the token lands, in applyAbilityEffect.
-      return mandatoryTarget("TS26_058", player, friendly058.map(u => u.playId));
+      return mandatoryTarget("TS26_58", player, friendly058.map(u => u.playId));
     }
     case "JTL_153": //Rebellious Hammerhead "When Played: You may deal damage to a unit equal to the number of cards in your hand."
       if (!playId && !player) return null;
@@ -1237,14 +1288,14 @@ export function resolveWhenPlayed(
       if (eligible039.length === 0) return null;
       return mandatoryTarget(cardId, player, eligible039.map(u => u.playId));
     }
-    case "TS26_060": { // Take Charge — "Give an Experience token to each of up to 3 units."
+    case "TS26_60": { // Take Charge — "Give an Experience token to each of up to 3 units."
                        // "units", not "friendly units" — either side is a legal recipient.
                        // (The cost discount lives in card-playability's playCost chain.)
       const units060 = AllUnits();
       if (units060.length === 0) return null;
       return {
         type: "give-xp-multiple",
-        cardId: "TS26_060",
+        cardId: "TS26_60",
         player,
         maxCount: 3,
         eligiblePlayIds: units060.map(u => u.playId),
@@ -1911,7 +1962,7 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
-    case "TS26_077": { // Deployed Droideka — When Played: You may pay 2 resources. If you do, give an Experience token and a Shield token to this unit.
+    case "TS26_77": { // Deployed Droideka — When Played: You may pay 2 resources. If you do, give an Experience token and a Shield token to this unit.
       if (!playId) return null;
       if (spendableFor(game.currentGameState, player) < 2) return null; // can't afford → no offer
       return {

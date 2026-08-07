@@ -96,14 +96,14 @@ _All canonical leaders implemented._
 ### TS26 — (TS26 — verify: likely reprint/alt-art)
 **8 unimplemented** of 8 canonical leaders.
 
-- [ ] `TS26_001` Count Dooku — Offering Aid
-- [ ] `TS26_002` Anakin Skywalker — Protect Her At All Costs
-- [ ] `TS26_003` Maul — Collective Ambition
-- [ ] `TS26_004` Padmé Amidala — Follow My Lead
-- [ ] `TS26_005` Savage Opress — You Must Have Your Revenge
-- [ ] `TS26_006` Rex — No Other Option
-- [ ] `TS26_007` Asajj Ventress — Ambitious Apprentice
-- [ ] `TS26_008` Ahsoka Tano — I Have an Idea
+- [ ] `TS26_01` Count Dooku — Offering Aid
+- [ ] `TS26_02` Anakin Skywalker — Protect Her At All Costs
+- [ ] `TS26_03` Maul — Collective Ambition
+- [ ] `TS26_04` Padmé Amidala — Follow My Lead
+- [ ] `TS26_05` Savage Opress — You Must Have Your Revenge
+- [ ] `TS26_06` Rex — No Other Option
+- [ ] `TS26_07` Asajj Ventress — Ambitious Apprentice
+- [ ] `TS26_08` Ahsoka Tano — I Have an Idea
 
 ### MV26 — (MV26 — verify: likely reprint/alt-art)
 **1 unimplemented** of 1 canonical leaders.
