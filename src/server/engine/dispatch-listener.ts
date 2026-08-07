@@ -2986,6 +2986,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       return {
         type: "Target",
         fromPlayIds: pending.fromPlayIds.length > 0 ? pending.fromPlayIds : undefined,
+        ...(pending.helperText && { helperText: pending.helperText }),
         fromChoices: pending.fromChoices && pending.fromChoices.length > 0 ? pending.fromChoices : undefined,
         ...(pending.fromZones && pending.fromZones.length > 0 && { fromZones: pending.fromZones }),
         ...(pending.needsMultiple && { needsMultiple: true }),
@@ -3258,6 +3259,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         targetPlayer: pending.targetPlayer,
         mustDiscard: pending.mustDiscard,
         ...(pending.optionalDiscard && { optionalDiscard: true }),
+        ...(pending.thenDrawForTarget && { thenDrawForTarget: true }),
         eligibleIndices,
       } satisfies NeedsPeekHand;
     }

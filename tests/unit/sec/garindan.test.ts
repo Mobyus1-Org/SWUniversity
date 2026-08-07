@@ -40,6 +40,9 @@ describe("SEC_186 Garindan — When Played", () => {
     const namePrompt = g.lastDispatchResponse!.resolutionNeeded as NeedsTarget;
     expect(namePrompt.type).toBe("Target");
     expect(namePrompt.fromChoices).toContain(CardTitle(MARINE));
+    // The prompt must say what naming a card DOES — the client used to hardcode Regional
+    // Governor's explanation on every name-a-card prompt, which was wrong for every other card.
+    expect(namePrompt.helperText).toBe("You may discard a card from your opponent's hand with that name.");
 
     await g.dispatchAsync(1, "choose-target", { targetPlayIds: [CardTitle(MARINE)] });
 

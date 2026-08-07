@@ -2536,6 +2536,7 @@ export function resolveWhenPlayed(
         cardId: "SEC_186",
         sourcePlayId: playId,
         player,
+        helperText: "You may discard a card from your opponent's hand with that name.",
         fromPlayIds: [],   // any card title is valid; the UI renders fromChoices
         fromChoices: AllCardTitles(),
         continuation: null,
@@ -2547,6 +2548,7 @@ export function resolveWhenPlayed(
         cardId: "SOR_062",
         sourcePlayId: playId,
         player,
+        helperText: "Opponents can't play that card while Regional Governor is in play.",
         fromPlayIds: [],   // any card ID is valid; UI uses fromChoices for display
         fromChoices: AllCardTitles(),
         continuation: null,

@@ -2301,9 +2301,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
               : [];
             return (
               <>
-                <p className="-mt-2 mb-1 max-w-xs text-xs text-white/65">
-                  Opponents can&apos;t play that card while Regional Governor is in play.
-                </p>
+                {resolutionNeeded.helperText ? (
+                  <p className="-mt-2 mb-1 max-w-xs text-xs text-white/65">{resolutionNeeded.helperText}</p>
+                ) : null}
                 <input
                   autoFocus
                   type="text"
@@ -2445,7 +2445,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
             <>
               <p className="-mt-2 mb-3 text-xs text-white/60">
                 {resolutionNeeded.optionalDiscard
-                  ? "You may discard a card."
+                  ? resolutionNeeded.thenDrawForTarget
+                    ? "You may discard a card. If you do, the opponent draws a card."
+                    : "You may discard a card."
                   : resolutionNeeded.mustDiscard ? "Choose a card to discard." : "Opponent's hand — no action required."}
               </p>
               <div className="flex flex-wrap gap-3 justify-center mb-3">

@@ -23,8 +23,13 @@ describe("SOR_062 Regional Governor", () => {
     await g.dispatchAsync(1, "play-card", { cardId: Cards.units.sor.regionalGovernor, fromZone: "Hand" });
 
     // Should be awaiting a name-card selection (NeedsTarget resolution)
-    expect(g.lastDispatchResponse?.resolutionNeeded?.type).toBe("Target");
+    const prompt = g.lastDispatchResponse?.resolutionNeeded;
+    expect(prompt?.type).toBe("Target");
     expect(g.lastDispatchResponse?.invalidAction).toBeUndefined();
+    // The client used to hardcode this sentence on EVERY name-a-card prompt; it belongs to this
+    // card, and travels with it now.
+    expect(prompt?.type === "Target" ? prompt.helperText : undefined)
+      .toBe("Opponents can't play that card while Regional Governor is in play.");
   });
 
   it("When Played: choosing a card stores the named title on the governor", async () => {

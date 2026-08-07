@@ -103,6 +103,8 @@ export interface NeedsPeekHand {
   mustDiscard: boolean;
   /** When true the discard is a "you may" — an empty selection declines it. */
   optionalDiscard?: boolean;
+  /** "If you do, they draw a card" — surfaced so the prompt can state the cost of discarding. */
+  thenDrawForTarget?: boolean;
   /** Indices of cards in the target hand that are eligible to be discarded. */
   eligibleIndices: number[];
 }

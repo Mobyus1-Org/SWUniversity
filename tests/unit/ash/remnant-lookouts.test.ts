@@ -30,7 +30,13 @@ describe("ASH_220 Remnant Lookouts", () => {
     );
 
     await g.playCardFromHandAsync(1, 0);
-    expect(g.lastDispatchResponse?.resolutionNeeded?.type).toBe("PeekHand");
+    const peek = g.lastDispatchResponse?.resolutionNeeded;
+    expect(peek?.type).toBe("PeekHand");
+    // The discard is optional AND costs the opponent a draw — the prompt has to be able to say
+    // "You may discard a card. If you do, the opponent draws a card." rather than just the first
+    // half, so both flags have to reach the client.
+    expect(peek?.type === "PeekHand" ? peek.optionalDiscard : undefined).toBe(true);
+    expect(peek?.type === "PeekHand" ? peek.thenDrawForTarget : undefined).toBe(true);
     await g.dispatchAsync(1, "choose-target", { targetIndices: [0] });
 
     expect(g.state.player2.discard.map(c => c.cardId)).toContain(Cards.units.sor.battlefieldMarine);

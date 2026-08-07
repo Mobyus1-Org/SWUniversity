@@ -31,6 +31,12 @@ export interface AbilityOptionPending {
 export interface AbilityTargetPending {
   type: "ability-target";
   cardId: string;
+  /**
+   * What the player is choosing this target FOR, shown on the prompt. Needed wherever the choice
+   * alone doesn't say what it will do — "Name a card" is meaningless without saying what naming
+   * it costs the opponent.
+   */
+  helperText?: string;
   sourcePlayId?: string;
   /** The player who initiated this ability (needed for take-control effects). */
   player?: PlayerId;
