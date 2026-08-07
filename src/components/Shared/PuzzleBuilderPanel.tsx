@@ -556,7 +556,8 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
 
 type UnitEditDialogProps = {
   unit: UnitEntry;
-  type: "upgrades" | "captives";
+  /** The side this unit sits on — its controller, and the default owner. */
+  playerId: 1 | 2;
   /** Player who owns anything this unit is guarding — always the guard controller's opponent. */
   captiveOwner: 1 | 2;
   cards: CardCatalogEntry[];
@@ -569,121 +570,181 @@ type UnitEditDialogProps = {
   onClose: () => void;
 };
 
-function UnitEditDialog({ unit, type, captiveOwner, cards, unitCards, leaderCardId, attachedLeaderCardIds, onUpdate, onClose }: UnitEditDialogProps) {
+/**
+ * One attached-card list (upgrades, or captives) with its own picker.
+ *
+ * Both lists are the same widget with different defaults: an upgrade is normally the unit's own
+ * and flags the enemy case, a captive is normally the enemy's and flags the friendly one. Callers
+ * pass items already normalised to `mine`, so this renders one list instead of two near-copies.
+ */
+function AttachmentList({ title, note, pickerCards, placeholder, items, mineLabel, theirLabel, toggleTitle, onAdd, onRemove, onToggle }: {
+  title: string;
+  note?: React.ReactNode;
+  pickerCards: CardCatalogEntry[];
+  placeholder: string;
+  items: Array<{ cardId: string; label: string; mine: boolean }>;
+  mineLabel: string;
+  theirLabel: string;
+  toggleTitle: string;
+  onAdd: (cardId: string) => void;
+  onRemove: (index: number) => void;
+  onToggle: (index: number) => void;
+}) {
   const [newCardId, setNewCardId] = React.useState("");
-  const isUpgrades = type === "upgrades";
-  const items: Array<{ cardId: string; enemy?: boolean }> =
-    isUpgrades ? unit.upgrades : unit.captives.map((cardId) => ({ cardId }));
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg bg-black/25 p-3">
+      <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/60">
+        {title}{items.length > 0 ? ` (${items.length})` : ""}
+      </div>
+      {note}
+      <div className="grid grid-cols-[1fr_auto] gap-2">
+        <CardPicker cards={pickerCards} value={newCardId} onChange={setNewCardId} placeholder={placeholder} />
+        <button
+          type="button"
+          disabled={!newCardId}
+          onClick={() => { if (newCardId) { onAdd(newCardId); setNewCardId(""); } }}
+          className="rounded-md border border-white/20 bg-white/10 px-3 py-1 text-2xs font-semibold text-white hover:bg-white/20 disabled:opacity-40"
+        >
+          Add
+        </button>
+      </div>
+      {items.length > 0 ? (
+        <div className="space-y-1">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-center justify-between gap-2 rounded-md bg-black/25 px-2 py-1 text-2xs">
+              <span className="min-w-0 truncate text-white/80" title={item.label}>{item.label}</span>
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onToggle(i)}
+                  title={toggleTitle}
+                  className={`rounded-md border px-1.5 py-0.5 text-3xs font-semibold transition ${
+                    item.mine
+                      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+                      : "border-rose-400/40 bg-rose-500/20 text-rose-200"
+                  }`}
+                >
+                  {item.mine ? mineLabel : theirLabel}
+                </button>
+                <button type="button" onClick={() => onRemove(i)} className="px-0.5 text-white/30 hover:text-rose-300">×</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-2xs text-white/30">None added.</p>
+      )}
+    </div>
+  );
+}
+
+function UnitEditDialog({ unit, playerId, captiveOwner, cards, unitCards, leaderCardId, attachedLeaderCardIds, onUpdate, onClose }: UnitEditDialogProps) {
+  const unitOwner = unit.owner ?? playerId;
+  const ownerOverridden = unitOwner !== playerId;
+  const unitName = cards.find((c) => c.cardId === unit.cardId)?.label ?? unit.cardId;
+  const labelOf = (cardId: string) => cards.find((c) => c.cardId === cardId)?.label ?? cardId;
 
   // Upgrades a unit can carry: real Upgrade cards, plus any card playable as a Pilot.
   // PilotingCost is >= 0 for a Pilot — R2-D2 (JTL_245) costs 0, so `> 0` would wrongly exclude it.
   // A Pilot LEADER is offered separately: it must be this player's own leader, and only one
   // leader can be deployed, so free-form leader search would invite unrepresentable states.
   const pilotLeaderEligible =
-    isUpgrades
-    && leaderCardId !== ""
+    leaderCardId !== ""
     && CardTraits(leaderCardId).includes("Pilot")
     && !attachedLeaderCardIds.includes(leaderCardId);
 
-  const pickerCards = isUpgrades
-    ? [
-        ...cards.filter((c) => c.type === "Upgrade" || (c.type !== "Leader" && PilotingCost(c.cardId) >= 0)),
-        ...(pilotLeaderEligible ? cards.filter((c) => c.cardId === leaderCardId) : []),
-      ]
-    : unitCards;
-  const unitName = cards.find((c) => c.cardId === unit.cardId)?.label ?? unit.cardId;
-
-  function addItem() {
-    if (!newCardId) return;
-    if (isUpgrades) {
-      onUpdate({ ...unit, upgrades: [...unit.upgrades, { cardId: newCardId }] });
-    } else {
-      onUpdate({ ...unit, captives: [...unit.captives, newCardId] });
-    }
-    setNewCardId("");
-  }
-
-  function removeItem(i: number) {
-    if (isUpgrades) {
-      onUpdate({ ...unit, upgrades: unit.upgrades.filter((_, j) => j !== i) });
-    } else {
-      onUpdate({ ...unit, captives: unit.captives.filter((_, j) => j !== i) });
-    }
-  }
-
-  /** Flip a single upgrade between friendly and enemy ownership. */
-  function toggleEnemy(i: number) {
-    onUpdate({
-      ...unit,
-      upgrades: unit.upgrades.map((ug, j) => (j === i ? { ...ug, enemy: !ug.enemy } : ug)),
-    });
-  }
+  const upgradePickerCards = [
+    ...cards.filter((c) => c.type === "Upgrade" || (c.type !== "Leader" && PilotingCost(c.cardId) >= 0)),
+    ...(pilotLeaderEligible ? cards.filter((c) => c.cardId === leaderCardId) : []),
+  ];
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60">
-      <div className="w-80 rounded-2xl border border-white/10 bg-[rgba(5,8,20,0.97)] p-5 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <div className="text-xs font-bold uppercase tracking-[0.2em] text-white">
-              {isUpgrades ? "Upgrades" : "Captives"}
-            </div>
-            <div className="text-2xs text-white/40">{unitName}</div>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+      <div className="max-h-[90vh] w-[min(52rem,95vw)] overflow-y-auto rounded-2xl border border-white/10 bg-[rgba(5,8,20,0.97)] p-5 shadow-2xl space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 space-y-0.5">
+            <div className="text-xs font-bold uppercase tracking-[0.2em] text-white">Edit Unit</div>
+            <div className="truncate text-sm text-white/70" title={unitName}>{unitName}</div>
           </div>
-          <button type="button" onClick={onClose} className="text-lg leading-none text-white/30 hover:text-white">×</button>
+          <button type="button" onClick={onClose} className="shrink-0 text-lg leading-none text-white/30 hover:text-white">×</button>
         </div>
-        {!isUpgrades && (
-          <p className="rounded-md border border-amber-400/25 bg-amber-400/10 px-2 py-1.5 text-3xs leading-relaxed text-amber-200/80">
-            Captives are owned by <span className="font-semibold">Player {captiveOwner}</span> — a unit
-            can only capture an enemy unit. If this guard is defeated or leaves play, they return to
-            Player {captiveOwner}&apos;s arena exhausted.
-          </p>
-        )}
-        <div className="grid grid-cols-[1fr_auto] gap-2">
-          <CardPicker
-            cards={pickerCards}
-            value={newCardId}
-            onChange={setNewCardId}
-            placeholder={isUpgrades ? "Search upgrades…" : "Search units…"}
-          />
+
+        {/* Everything that used to be a chip on the unit's row. */}
+        <div className="grid gap-3 rounded-lg bg-black/25 p-3 sm:grid-cols-[8rem_auto_1fr] sm:items-center">
+          <label className="flex items-center gap-2">
+            <span className="text-2xs text-white/55">Damage</span>
+            <input
+              type="number"
+              min={0}
+              max={99}
+              value={unit.damage}
+              onChange={(e) => onUpdate({ ...unit, damage: Math.max(0, Math.min(99, Number(e.target.value) || 0)) })}
+              className={`w-full rounded border bg-black/30 px-2 py-1 text-xs outline-none ${
+                unit.damage > 0 ? "border-rose-400/40 text-rose-300" : "border-white/15 text-white/80"
+              }`}
+            />
+          </label>
+          <Checkbox checked={unit.ready} onChange={(v) => onUpdate({ ...unit, ready: v })} label="Ready" />
           <button
             type="button"
-            disabled={!newCardId}
-            onClick={addItem}
-            className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-2xs font-semibold text-white hover:bg-white/20 disabled:opacity-40"
+            onClick={() => onUpdate({ ...unit, owner: ownerOverridden ? undefined : captiveOwner })}
+            title={
+              ownerOverridden
+                ? `Owned by Player ${unitOwner}, controlled by Player ${playerId} — it returns to Player ${unitOwner} when defeated or bounced. Click to give ownership back to Player ${playerId}.`
+                : `Owned and controlled by Player ${playerId}. Click to mark it as Player ${captiveOwner}'s unit taken with a control effect.`
+            }
+            className={`rounded-md px-2 py-1 text-2xs font-semibold transition-colors ${
+              ownerOverridden
+                ? "bg-rose-500/15 text-rose-300 hover:bg-rose-500/30"
+                : "bg-white/10 text-white/60 hover:bg-white/20"
+            }`}
           >
-            Add
+            Owner: Player {unitOwner}{ownerOverridden ? " (taken with a control effect)" : ""}
           </button>
         </div>
-        {items.length > 0 ? (
-          <div className="space-y-1">
-            {items.map((item, i) => (
-              <div key={i} className="flex items-center justify-between gap-2 rounded-md bg-black/20 px-2 py-1 text-2xs">
-                <span className="min-w-0 truncate text-white/80">
-                  {cards.find((c) => c.cardId === item.cardId)?.label ?? item.cardId}
-                </span>
-                <div className="flex shrink-0 items-center gap-1">
-                  {isUpgrades && (
-                    <button
-                      type="button"
-                      onClick={() => toggleEnemy(i)}
-                      title="Who owns this upgrade — an enemy upgrade is owned and controlled by the opposing player"
-                      className={`rounded-md border px-1.5 py-0.5 text-3xs font-semibold transition ${
-                        item.enemy
-                          ? "border-rose-400/40 bg-rose-500/20 text-rose-200"
-                          : "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
-                      }`}
-                    >
-                      {item.enemy ? "Enemy" : "Friendly"}
-                    </button>
-                  )}
-                  <button type="button" onClick={() => removeItem(i)} className="text-white/30 hover:text-rose-300">×</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-2xs text-white/30">None added.</p>
-        )}
+
+        {/* Side by side rather than tabbed: a unit's whole attached state is readable at once, and
+            each list keeps its own picker so a card selected in one can never land in the other. */}
+        <div className="grid gap-3 md:grid-cols-2">
+          <AttachmentList
+            title="Upgrades"
+            pickerCards={upgradePickerCards}
+            placeholder="Search upgrades…"
+            items={unit.upgrades.map((ug) => ({ cardId: ug.cardId, label: labelOf(ug.cardId), mine: !ug.enemy }))}
+            mineLabel={`P${playerId}`}
+            theirLabel={`P${captiveOwner}`}
+            toggleTitle="Who owns this upgrade — an enemy upgrade is owned and controlled by the opposing player"
+            onAdd={(cardId) => onUpdate({ ...unit, upgrades: [...unit.upgrades, { cardId }] })}
+            onRemove={(i) => onUpdate({ ...unit, upgrades: unit.upgrades.filter((_, j) => j !== i) })}
+            onToggle={(i) => onUpdate({
+              ...unit,
+              upgrades: unit.upgrades.map((ug, j) => (j === i ? { ...ug, enemy: !ug.enemy } : ug)),
+            })}
+          />
+          <AttachmentList
+            title="Captives"
+            note={
+              <p className="rounded-md border border-amber-400/25 bg-amber-400/10 px-2 py-1.5 text-3xs leading-relaxed text-amber-200/80">
+                A captive returns to its <span className="font-semibold">owner&apos;s</span> arena exhausted
+                when released — so set the owner per captive. Capture is usually enemy-only, hence the
+                Player {captiveOwner} default, but Escape Pod and Bothan-5 capture friendly units.
+              </p>
+            }
+            pickerCards={unitCards}
+            placeholder="Search units…"
+            items={unit.captives.map((c) => ({ cardId: c.cardId, label: labelOf(c.cardId), mine: !!c.friendly }))}
+            mineLabel={`P${playerId}`}
+            theirLabel={`P${captiveOwner}`}
+            toggleTitle="Who owns this captive — it returns to its OWNER's arena when released. Most capture is enemy-only, but Escape Pod and Bothan-5 capture friendly units."
+            onAdd={(cardId) => onUpdate({ ...unit, captives: [...unit.captives, { cardId }] })}
+            onRemove={(i) => onUpdate({ ...unit, captives: unit.captives.filter((_, j) => j !== i) })}
+            onToggle={(i) => onUpdate({
+              ...unit,
+              captives: unit.captives.map((c, j) => (j === i ? { ...c, friendly: !c.friendly } : c)),
+            })}
+          />
+        </div>
       </div>
     </div>
   );
@@ -713,7 +774,7 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
   // Owner is tracked separately from the arena: the arena is the CONTROLLER, so a unit taken with
   // a control effect sits here while still belonging to the other player.
   const [owner, setOwner] = React.useState<1 | 2>(playerId);
-  const [editDialog, setEditDialog] = React.useState<{ index: number; type: "upgrades" | "captives" } | null>(null);
+  const [editDialog, setEditDialog] = React.useState<{ index: number } | null>(null);
   // A unit can only capture an ENEMY non-leader unit (CR 8.33), so anything held by this side's
   // units belongs to the other player — and returns to them when rescued.
   const captiveOwner: 1 | 2 = playerId === 1 ? 2 : 1;
@@ -772,60 +833,28 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
                   {cards.find((c) => c.cardId === u.cardId)?.label ?? u.cardId}
                   {!u.ready ? <span className="ml-1.5 text-white/40">[exhausted]</span> : null}
                 </span>
-                {/* Damage is editable in place — re-adding a unit just to change its damage also
-                    loses its upgrades, captives and owner override. */}
-                <label className="flex shrink-0 items-center gap-1 text-3xs text-white/50" title="Damage on this unit">
-                  dmg
-                  <input
-                    type="number"
-                    min={0}
-                    max={99}
-                    value={u.damage}
-                    onChange={(e) => onUpdate(i, { ...u, damage: Math.max(0, Math.min(99, Number(e.target.value) || 0)) })}
-                    className={`w-11 rounded border bg-black/30 px-1 py-0.5 text-3xs outline-none ${
-                      u.damage > 0 ? "border-rose-400/40 text-rose-300" : "border-white/15 text-white/70"
-                    }`}
-                  />
-                </label>
+                {/* Read-only at-a-glance state. Non-default values only, so an ordinary unit's
+                    row stays quiet — everything here is edited in the dialog behind Edit. */}
                 {(() => {
-                  // Only two players, so "owned by someone else" has exactly one value — the
-                  // button toggles both ways rather than only clearing an existing override.
                   const unitOwner = u.owner ?? playerId;
-                  const overridden = unitOwner !== playerId;
                   return (
-                    <button
-                      type="button"
-                      onClick={() => onUpdate(i, { ...u, owner: overridden ? undefined : captiveOwner })}
-                      title={
-                        overridden
-                          ? `Owned by Player ${unitOwner}, controlled by Player ${playerId} — it returns to Player ${unitOwner} when defeated or bounced. Click to give ownership back to Player ${playerId}.`
-                          : `Owned and controlled by Player ${playerId}. Click to mark it as Player ${captiveOwner}'s unit taken with a control effect.`
-                      }
-                      className={`shrink-0 rounded px-1.5 py-0.5 text-3xs font-semibold transition-colors ${
-                        overridden
-                          ? "text-rose-300 bg-rose-500/15 hover:bg-rose-500/30"
-                          : "text-white/50 bg-white/10 hover:bg-white/20"
-                      }`}
-                    >
-                      OWN P{unitOwner}
-                    </button>
+                    <span className="flex shrink-0 items-center gap-1.5 text-3xs">
+                      {u.damage > 0 ? <span className="text-rose-300" title="Damage">{u.damage} dmg</span> : null}
+                      {u.upgrades.length > 0 ? <span className="text-blue-300/80" title="Upgrades">{u.upgrades.length} upg</span> : null}
+                      {u.captives.length > 0 ? <span className="text-amber-200/80" title="Captives">{u.captives.length} cap</span> : null}
+                      {unitOwner !== playerId
+                        ? <span className="text-rose-300" title={`Owned by Player ${unitOwner}, controlled by Player ${playerId}`}>P{unitOwner}</span>
+                        : null}
+                    </span>
                   );
                 })()}
                 <button
                   type="button"
-                  onClick={() => setEditDialog({ index: i, type: "upgrades" })}
-                  title="Upgrades attached to this unit"
+                  onClick={() => setEditDialog({ index: i })}
+                  title="Edit damage, ready state, owner, upgrades and captives"
                   className="shrink-0 rounded px-1.5 py-0.5 text-3xs font-semibold text-blue-300 bg-blue-500/15 hover:bg-blue-500/30 transition-colors"
                 >
-                  {u.upgrades.length > 0 ? `UPG (${u.upgrades.length})` : "UPG"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditDialog({ index: i, type: "captives" })}
-                  title={`Captives — units this one is guarding. They are owned by Player ${captiveOwner} and return to Player ${captiveOwner} when rescued.`}
-                  className="shrink-0 rounded px-1.5 py-0.5 text-3xs font-semibold text-white/50 bg-white/10 hover:bg-white/20 transition-colors"
-                >
-                  {u.captives.length > 0 ? `CAP (${u.captives.length})` : "CAP"}
+                  Edit
                 </button>
                 <button
                   type="button"
@@ -848,11 +877,12 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
               {u.captives.length > 0 && (
                 <div className="ml-3 flex flex-wrap items-center gap-1">
                   <span className="text-3xs font-semibold uppercase tracking-wider text-amber-300/60">
-                    Guarding (Player {captiveOwner}&apos;s):
+                    Guarding:
                   </span>
-                  {u.captives.map((cardId, j) => (
+                  {u.captives.map((c, j) => (
                     <span key={j} className="text-3xs text-amber-200/70">
-                      {cards.find((c) => c.cardId === cardId)?.label ?? cardId}
+                      {cards.find((cc) => cc.cardId === c.cardId)?.label ?? c.cardId}
+                      <span className="text-amber-300/50"> (P{c.friendly ? playerId : captiveOwner})</span>
                       {j < u.captives.length - 1 ? "," : ""}
                     </span>
                   ))}
@@ -865,7 +895,7 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
       {editDialog && (
         <UnitEditDialog
           unit={units[editDialog.index]}
-          type={editDialog.type}
+          playerId={playerId}
           captiveOwner={captiveOwner}
           cards={cards}
           unitCards={unitCards}

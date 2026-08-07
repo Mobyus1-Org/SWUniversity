@@ -1,16 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { toRaw, type BuilderState, type PlayerBuilderState } from "@/components/Shared/puzzle-builder-state";
+import { fromRaw, toRaw, type BuilderState, type PlayerBuilderState } from "@/components/Shared/puzzle-builder-state";
 
 // QA bug reports, both traced to what the puzzle BUILDER saves:
 //  1. "Captured units that are rescued return to play under the control of the player who had
 //      taken the unit captive, not its owner."
 //  2. "Captured units disappear if the unit guarding them is defeated."
 //
-// A unit can only capture an ENEMY non-leader unit (CR 8.33), so a captive held by player X's
-// guard is owned by X's opponent — that is the side it returns to when released. The builder used
-// to stamp the GUARD's player onto the captive, so every release path in the engine
-// (releaseCaptives on guard defeat/bounce, rescueCaptiveByPlayId for on-demand rescue) faithfully
-// handed the captive to the wrong player.
+// Capture is USUALLY enemy-only (CR 8.33), so a captive held by player X's guard is normally owned
+// by X's opponent — that is the side it returns to when released. The builder used to stamp the
+// GUARD's player onto the captive, so every release path in the engine (releaseCaptives on guard
+// defeat/bounce, rescueCaptiveByPlayId for on-demand rescue) faithfully handed it to the wrong
+// player. Escape Pod (SEC_056) and Bothan-5 (ASH_128) capture FRIENDLY units, so the enemy default
+// is now overridable per captive — see the `friendly` cases at the bottom.
 
 function player(overrides: Partial<PlayerBuilderState> = {}): PlayerBuilderState {
   return {
@@ -23,7 +24,7 @@ function player(overrides: Partial<PlayerBuilderState> = {}): PlayerBuilderState
 }
 
 function guardWithCaptive(captiveCardId: string) {
-  return { cardId: "SOR_051", ready: true, damage: 0, upgrades: [], captives: [captiveCardId] };
+  return { cardId: "SOR_051", ready: true, damage: 0, upgrades: [], captives: [{ cardId: captiveCardId }] };
 }
 
 function builderState(p1: PlayerBuilderState, p2: PlayerBuilderState): BuilderState {
@@ -69,13 +70,62 @@ describe("puzzle builder — captive ownership", () => {
 
   it("applies the same rule to space-arena guards", () => {
     const raw = toRaw(builderState(
-      player({ spaceUnits: [{ cardId: "SOR_193", ready: true, damage: 0, upgrades: [], captives: ["SOR_100"] }] }),
+      player({ spaceUnits: [{ cardId: "SOR_193", ready: true, damage: 0, upgrades: [], captives: [{ cardId: "SOR_100" }] }] }),
       player(),
     )) as unknown as { player1: RawPlayer };
 
     const captive = raw.player1.spaceArena[0].captives[0];
     expect(captive.owner).toBe(2);
     expect(captive.controller).toBe(2);
+  });
+
+  it("saves a FRIENDLY captive as owned by the guard's own player (Escape Pod, Bothan-5)", () => {
+    const raw = toRaw(builderState(
+      player({ groundUnits: [{ cardId: "SOR_051", ready: true, damage: 0, upgrades: [], captives: [{ cardId: "SOR_100", friendly: true }] }] }),
+      player(),
+    )) as unknown as { player1: RawPlayer };
+
+    const captive = raw.player1.groundArena[0].captives[0];
+    expect(captive.owner).toBe(1); // returns to P1, not P2
+    expect(captive.controller).toBe(1);
+  });
+
+  it("keeps friendly and enemy captives apart on the same guard", () => {
+    const raw = toRaw(builderState(
+      player({ groundUnits: [{
+        cardId: "SOR_051", ready: true, damage: 0, upgrades: [],
+        captives: [{ cardId: "SOR_100", friendly: true }, { cardId: "SOR_095" }],
+      }] }),
+      player(),
+    )) as unknown as { player1: RawPlayer };
+
+    const [friendly, enemy] = raw.player1.groundArena[0].captives;
+    expect(friendly.owner).toBe(1);
+    expect(enemy.owner).toBe(2);
+  });
+
+  // Import is the other half: if fromRaw can't tell a friendly captive from an enemy one, opening a
+  // saved puzzle in the builder and saving it again silently hands the captive to the wrong player.
+  it("round-trips friendly and enemy captives through save → import → save", () => {
+    const original = builderState(
+      player({ groundUnits: [{
+        cardId: "SOR_051", ready: true, damage: 0, upgrades: [],
+        captives: [{ cardId: "SOR_100", friendly: true }, { cardId: "SOR_095" }],
+      }] }),
+      player(),
+    );
+
+    const reimported = fromRaw(
+      toRaw(original) as unknown as Record<string, unknown>,
+      { name: "t", description: "", difficulty: 1 },
+    );
+    expect(reimported.player1.groundUnits[0].captives).toEqual([
+      { cardId: "SOR_100", friendly: true },
+      { cardId: "SOR_095" },
+    ]);
+
+    const resaved = toRaw(reimported) as unknown as { player1: RawPlayer };
+    expect(resaved.player1.groundArena[0].captives.map((c) => c.owner)).toEqual([1, 2]);
   });
 
   it("leaves upgrades owned by the unit's controller", () => {

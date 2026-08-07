@@ -29,7 +29,17 @@ export type UpgradeEntry = { cardId: string; enemy?: boolean };
  * and a relative flag is what made upgrade ownership fail to round-trip. Undefined — the common
  * case — means owned by the player whose arena this is.
  */
-export type UnitEntry = { cardId: string; ready: boolean; damage: number; upgrades: UpgradeEntry[]; captives: string[]; owner?: 1 | 2 };
+/**
+ * A unit held captive by another. Capture used to be enemy-only (CR 8.33), so the owner could be
+ * inferred as "the guard's opponent" — but cards like Escape Pod (SEC_056) and Bothan-5 (ASH_128)
+ * capture FRIENDLY units, so it has to be stored.
+ *
+ * `friendly` is the exception rather than the default, which keeps the common case absent from the
+ * JSON and lets existing puzzles round-trip byte-identical.
+ */
+export type CaptiveEntry = { cardId: string; friendly?: boolean };
+
+export type UnitEntry = { cardId: string; ready: boolean; damage: number; upgrades: UpgradeEntry[]; captives: CaptiveEntry[]; owner?: 1 | 2 };
 export type ResourceEntry = { cardId: string; ready: boolean };
 
 export type PlayerBuilderState = {
@@ -152,7 +162,11 @@ function parseUnit(u: Record<string, unknown>, playerId: 1 | 2): UnitEntry {
   return {
     cardId: String(u.cardId ?? ""), ready: u.ready !== false, damage: Number(u.damage ?? 0),
     upgrades: parseUpgrades(u.upgrades, playerId),
-    captives: ((u.captives ?? []) as Record<string, unknown>[]).map((c) => String(c.cardId ?? "")),
+    captives: ((u.captives ?? []) as Record<string, unknown>[]).map((c) => ({
+      cardId: String(c.cardId ?? ""),
+      // Absent owner means the old enemy-only assumption, which is the default either way.
+      ...(Number(c.owner ?? (playerId === 1 ? 2 : 1)) === playerId && { friendly: true as const }),
+    })),
     ...(owner !== playerId && { owner }),
   };
 }
@@ -248,7 +262,10 @@ export function toRaw(s: BuilderState): RawPuzzleGameState {
           owner: ug.enemy ? enemyOwner : playerId,
           controller: ug.enemy ? enemyOwner : playerId,
         })),
-        captives: u.captives.map((cardId) => ({ cardId, playId: "@", owner: captiveOwner, controller: captiveOwner })),
+        captives: u.captives.map((c) => {
+          const owner = c.friendly ? playerId : captiveOwner;
+          return { cardId: c.cardId, playId: "@", owner, controller: owner };
+        }),
       })),
       spaceArena: p.spaceUnits.map((u) => ({
         // The arena is the controller; the owner is overridable (control effects).
@@ -260,7 +277,10 @@ export function toRaw(s: BuilderState): RawPuzzleGameState {
           owner: ug.enemy ? enemyOwner : playerId,
           controller: ug.enemy ? enemyOwner : playerId,
         })),
-        captives: u.captives.map((cardId) => ({ cardId, playId: "@", owner: captiveOwner, controller: captiveOwner })),
+        captives: u.captives.map((c) => {
+          const owner = c.friendly ? playerId : captiveOwner;
+          return { cardId: c.cardId, playId: "@", owner, controller: owner };
+        }),
       })),
       resources: p.resources.map((r) => ({
         cardId: r.cardId, playId: "@", owner: playerId, controller: playerId, ready: r.ready,

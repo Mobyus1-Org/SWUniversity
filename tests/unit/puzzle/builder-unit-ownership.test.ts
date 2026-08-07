@@ -92,7 +92,7 @@ describe("puzzle builder — unit ownership", () => {
   it("captives still belong to the controller's opponent, not the overridden owner", () => {
     const r = raw(builderState(
       player(),
-      player({ groundUnits: [unit({ owner: 1, captives: ["SOR_095"] })] }),
+      player({ groundUnits: [unit({ owner: 1, captives: [{ cardId: "SOR_095" }] })] }),
     ));
 
     expect(r.player2.groundArena[0].captives[0].owner).toBe(1); // P2 captured it from P1
