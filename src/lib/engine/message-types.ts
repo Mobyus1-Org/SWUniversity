@@ -232,5 +232,7 @@ export interface DispatchResponse {
   invalidAction?: boolean;
   invalidReason?: string;
   sentinelPlayIds?: string[];
+  /** Units whose abilities are blanked — the UI marks these with an "X". */
+  silencedPlayIds?: string[];
   unitBuffs?: Record<string, { power: number; hp: number }>;
 }

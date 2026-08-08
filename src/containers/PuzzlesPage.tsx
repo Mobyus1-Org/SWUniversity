@@ -259,6 +259,7 @@ function CardVisual({
   customGlowClass,
   epicUsed = false,
   forceToken = false,
+  abilitiesBlanked = false,
   buff,
 }: {
   cardId: string;
@@ -281,6 +282,8 @@ function CardVisual({
   customGlowClass?: string;
   epicUsed?: boolean;
   forceToken?: boolean;
+  /** Abilities blanked (Kazuda Xiono, Force Lightning, Mind Trick…) — shows the grey X. */
+  abilitiesBlanked?: boolean;
   buff?: { power: number; hp: number };
 }) {
   const pattern = imageId ?? cardId;
@@ -351,6 +354,30 @@ function CardVisual({
       </div>
       {sentinel ? <div className="pointer-events-none absolute top-0 right-0 z-10">
         <img src="/assets/tokens/sentinel.png" alt="Sentinel" className="h-[1.8125rem] w-[1.8125rem]" />
+      </div> : null}
+      {/* Abilities blanked. Drawn as an SVG rather than an image asset so it stays crisp at any
+          arena scale. Shares the top-right corner with Sentinel and the Force token, so a unit
+          carrying either of those will show them stacked. */}
+      {abilitiesBlanked ? <div
+        className="pointer-events-none absolute top-0 right-0 z-10 opacity-70"
+        title="Abilities blanked"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          aria-label="Abilities blanked"
+          role="img"
+          className="h-[1.8125rem] w-[1.8125rem] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+        >
+          {/* A dark disc behind the strokes keeps the X readable over pale card art. */}
+          <circle cx="12" cy="12" r="11" className="fill-black/60" />
+          <path
+            d="M7.5 7.5 L16.5 16.5 M16.5 7.5 L7.5 16.5"
+            className="stroke-neutral-300"
+            strokeWidth={2.75}
+            strokeLinecap="round"
+            fill="none"
+          />
+        </svg>
       </div> : null}
       {epicUsed ? <div className="pointer-events-none absolute -bottom-1 right-1.5 z-10">
         <img src="/assets/tokens/epic-used.png" alt="Epic action used" className="h-[2.5rem] w-[2.5rem] rotate-90" />
@@ -582,6 +609,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   // ---------------------------------------------------------------------------
   const [gameState, setGameState] = React.useState<GameState | null>(null);
   const [sentinelPlayIds, setSentinelPlayIds] = React.useState<string[]>([]);
+  const [silencedPlayIds, setSilencedPlayIds] = React.useState<string[]>([]);
   const [unitBuffs, setUnitBuffs] = React.useState<Record<string, { power: number; hp: number }>>({});
   const [gameLog, setGameLog] = React.useState<string[]>([]);
   const [resolutionNeeded, setResolutionNeeded] = React.useState<ResolutionRequest | null>(null);
@@ -771,6 +799,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       // Always update from currentGameState so UI reflects card placement during pending resolutions
       setGameState(payload.currentGameState ?? payload.response.newGameState ?? null);
       if (payload.response.sentinelPlayIds !== undefined) setSentinelPlayIds(payload.response.sentinelPlayIds);
+      if (payload.response.silencedPlayIds !== undefined) setSilencedPlayIds(payload.response.silencedPlayIds);
       if (payload.response.unitBuffs !== undefined) setUnitBuffs(payload.response.unitBuffs);
       setGameLog(payload.gameLog);
       setHistoryLength(payload.historyLength);
@@ -971,6 +1000,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
         gameLog: string[];
         historyLength: number;
         sentinelPlayIds: string[];
+        silencedPlayIds?: string[];
         unitBuffs?: Record<string, { power: number; hp: number }>;
         context?: EngineContext;
       };
@@ -978,6 +1008,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       if (payload.context) roundTripCtxRef.current = payload.context;
       setGameState(payload.gameState);
       setSentinelPlayIds(payload.sentinelPlayIds ?? []);
+      setSilencedPlayIds(payload.silencedPlayIds ?? []);
       setUnitBuffs(payload.unitBuffs ?? {});
       setGameLog(payload.gameLog);
       setHistoryLength(payload.historyLength);
@@ -999,7 +1030,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     try {
       const r = await fetch(`/api/puzzles?id=${encodeURIComponent(filename)}`);
       if (!r.ok) throw new Error(((await r.json()) as { error?: string }).error ?? "Load failed");
-      const { gameState: initialState, sentinelPlayIds: initialSentinelIds, unitBuffs: initialUnitBuffs } = await r.json() as { gameState: GameState; sentinelPlayIds: string[]; unitBuffs?: Record<string, { power: number; hp: number }> };
+      const { gameState: initialState, sentinelPlayIds: initialSentinelIds, silencedPlayIds: initialSilencedIds, unitBuffs: initialUnitBuffs } = await r.json() as { gameState: GameState; sentinelPlayIds: string[]; silencedPlayIds?: string[]; unitBuffs?: Record<string, { power: number; hp: number }> };
 
       if (USE_HTTP_TRANSPORT) {
         // Round-trip mode: seed the initial context locally; no server registration needed
@@ -1028,6 +1059,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
 
       setGameState(initialState);
       setSentinelPlayIds(initialSentinelIds ?? []);
+      setSilencedPlayIds(initialSilencedIds ?? []);
       setUnitBuffs(initialUnitBuffs ?? {});
       setGameLog([`Puzzle loaded.`]);
       setResolutionNeeded(null);
@@ -1122,6 +1154,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
             try {
               const initialState = payload.gameState as typeof gameState;
               const initialSentinelIds = payload.sentinelPlayIds ?? [];
+              const initialSilencedIds = payload.silencedPlayIds ?? [];
               const initialUnitBuffs = payload.unitBuffs ?? {};
 
               if (USE_HTTP_TRANSPORT) {
@@ -1149,6 +1182,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
 
               setGameState(initialState);
               setSentinelPlayIds(initialSentinelIds);
+              setSilencedPlayIds(initialSilencedIds);
               setUnitBuffs(initialUnitBuffs);
               setGameLog(["Puzzle test loaded."]);
               setResolutionNeeded(null);
@@ -1551,6 +1585,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                       compact
                       arenaScale60
                       sentinel={sentinelPlayIds.includes(unit.playId)}
+                      abilitiesBlanked={silencedPlayIds.includes(unit.playId)}
                       buff={unitBuffs[unit.playId]}
                       square
                     />
@@ -1597,6 +1632,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                       compact
                       arenaScale60
                       sentinel={sentinelPlayIds.includes(unit.playId)}
+                      abilitiesBlanked={silencedPlayIds.includes(unit.playId)}
                       buff={unitBuffs[unit.playId]}
                       square
                     />
@@ -1675,6 +1711,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                       compact
                       arenaScale60
                       sentinel={sentinelPlayIds.includes(unit.playId)}
+                      abilitiesBlanked={silencedPlayIds.includes(unit.playId)}
                       buff={unitBuffs[unit.playId]}
                       square
                     />
@@ -1781,6 +1818,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                       compact
                       arenaScale60
                       sentinel={sentinelPlayIds.includes(unit.playId)}
+                      abilitiesBlanked={silencedPlayIds.includes(unit.playId)}
                       buff={unitBuffs[unit.playId]}
                       square
                     />
@@ -1862,6 +1900,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                       compact
                       arenaScale60
                       sentinel={sentinelPlayIds.includes(unit.playId)}
+                      abilitiesBlanked={silencedPlayIds.includes(unit.playId)}
                       buff={unitBuffs[unit.playId]}
                       square
                     />
@@ -1910,6 +1949,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                         compact
                         arenaScale60
                         sentinel={sentinelPlayIds.includes(unit.playId)}
+                      abilitiesBlanked={silencedPlayIds.includes(unit.playId)}
                         buff={unitBuffs[unit.playId]}
                         square
                       />
@@ -1959,6 +1999,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                       compact
                       arenaScale60
                       sentinel={sentinelPlayIds.includes(unit.playId)}
+                      abilitiesBlanked={silencedPlayIds.includes(unit.playId)}
                       buff={unitBuffs[unit.playId]}
                       square
                     />
@@ -2069,6 +2110,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                         compact
                         arenaScale60
                         sentinel={sentinelPlayIds.includes(unit.playId)}
+                      abilitiesBlanked={silencedPlayIds.includes(unit.playId)}
                         buff={unitBuffs[unit.playId]}
                         square
                       />

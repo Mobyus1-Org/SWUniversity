@@ -3,11 +3,11 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { methodNotAllowed } from "@/server/auth/http";
 import { hydratePuzzleGame } from "@/server/puzzle/adapters/puzzle-runtime";
 import { SetGame } from "@/server/engine/core-functions";
-import { hydrateGame, computeSentinelPlayIds, computeUnitBuffs } from "@/server/engine/dispatch-listener";
+import { hydrateGame, computeSentinelPlayIds, computeSilencedPlayIds, computeUnitBuffs } from "@/server/engine/dispatch-listener";
 import type { GameState, Game } from "@/lib/engine/game";
 
 type TestRequest = { initialGamestate?: unknown };
-type TestResponse = { gameState: GameState; sentinelPlayIds: string[]; unitBuffs: Record<string, { power: number; hp: number }> } | { error: string };
+type TestResponse = { gameState: GameState; sentinelPlayIds: string[]; silencedPlayIds: string[]; unitBuffs: Record<string, { power: number; hp: number }> } | { error: string };
 
 export default async function handler(request: NextApiRequest, response: NextApiResponse<TestResponse>) {
   if (request.method !== "POST") return methodNotAllowed(response, "POST");
@@ -22,10 +22,11 @@ export default async function handler(request: NextApiRequest, response: NextApi
     hydrateGame(tempGame);
     SetGame(tempGame);
     const sentinelPlayIds = computeSentinelPlayIds(tempGame.currentGameState);
+    const silencedPlayIds = computeSilencedPlayIds(tempGame.currentGameState);
     const unitBuffs = computeUnitBuffs(tempGame.currentGameState);
     SetGame(null);
 
-    return response.status(200).json({ gameState, sentinelPlayIds, unitBuffs });
+    return response.status(200).json({ gameState, sentinelPlayIds, silencedPlayIds, unitBuffs });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed to test puzzle.";
     return response.status(500).json({ error: msg });

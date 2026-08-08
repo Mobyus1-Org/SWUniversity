@@ -8,14 +8,14 @@ import { hydratePuzzleGame } from "@/server/puzzle/adapters/puzzle-runtime";
 import { MongoDBPuzzleRepository } from "@/server/puzzle/adapters/mongodb-puzzle-repository";
 import { devFixturePuzzles } from "@/server/puzzle/dev-fixtures";
 import { SetGame } from "@/server/engine/core-functions";
-import { hydrateGame, computeSentinelPlayIds, computeUnitBuffs } from "@/server/engine/dispatch-listener";
+import { hydrateGame, computeSentinelPlayIds, computeSilencedPlayIds, computeUnitBuffs } from "@/server/engine/dispatch-listener";
 import type { PuzzleData } from "@/server/puzzle/puzzle-repository";
 import type { GameState, Game } from "@/lib/engine/game";
 
 const repo = new MongoDBPuzzleRepository();
 
 type ListResponse = { puzzles: PuzzleData[] };
-type LoadResponse = { gameState: GameState; sentinelPlayIds: string[]; unitBuffs: Record<string, { power: number; hp: number }> };
+type LoadResponse = { gameState: GameState; sentinelPlayIds: string[]; silencedPlayIds: string[]; unitBuffs: Record<string, { power: number; hp: number }> };
 type ErrorResponse = { error: string };
 type ResponseBody = ListResponse | LoadResponse | PuzzleData | ErrorResponse;
 
@@ -34,9 +34,10 @@ export default async function handler(
         hydrateGame(tempGame);
         SetGame(tempGame);
         const sentinelPlayIds = computeSentinelPlayIds(tempGame.currentGameState);
+        const silencedPlayIds = computeSilencedPlayIds(tempGame.currentGameState);
         const unitBuffs = computeUnitBuffs(tempGame.currentGameState);
         SetGame(null);
-        return response.status(200).json({ gameState, sentinelPlayIds, unitBuffs });
+        return response.status(200).json({ gameState, sentinelPlayIds, silencedPlayIds, unitBuffs });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Not found.";
         return response.status(404).json({ error: msg });

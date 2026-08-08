@@ -15,7 +15,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { methodNotAllowed } from "@/server/auth/http";
 import { getContext, setContext } from "@/server/engine/game-store";
 import { SetGame } from "@/server/engine/core-functions";
-import { hydrateGame, computeSentinelPlayIds, computeUnitBuffs } from "@/server/engine/dispatch-listener";
+import { hydrateGame, computeSentinelPlayIds, computeSilencedPlayIds, computeUnitBuffs } from "@/server/engine/dispatch-listener";
 import type { EngineContext } from "@/server/engine/pending-resolution";
 import type { GameState } from "@/lib/engine/game";
 import type { Game } from "@/lib/engine/game";
@@ -30,6 +30,7 @@ type ResponseBody = {
   gameLog: string[];
   historyLength: number;
   sentinelPlayIds: string[];
+  silencedPlayIds: string[];
   unitBuffs: Record<string, { power: number; hp: number }>;
   context?: EngineContext;
 };
@@ -84,6 +85,7 @@ export default function handler(
   hydrateGame(tempGame);
   SetGame(tempGame);
   const sentinelPlayIds = computeSentinelPlayIds(tempGame.currentGameState);
+  const silencedPlayIds = computeSilencedPlayIds(tempGame.currentGameState);
   const unitBuffs = computeUnitBuffs(tempGame.currentGameState);
   SetGame(null);
 
@@ -92,6 +94,7 @@ export default function handler(
     gameLog: newCtx.game.gameLog,
     historyLength: newCtx.game.gameStateHistory.length,
     sentinelPlayIds,
+    silencedPlayIds,
     unitBuffs,
   };
 

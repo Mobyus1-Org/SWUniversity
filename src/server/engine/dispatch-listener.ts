@@ -144,6 +144,25 @@ export function computeSentinelPlayIds(gs: GameState): string[] {
     .map(u => u.playId);
 }
 
+/**
+ * play ids of units whose abilities are currently blanked (Kazuda Xiono, Force Lightning, Mind
+ * Trick, There Is No Escape, The Tree Remembers).
+ *
+ * Losing abilities is DERIVED from currentEffects rather than stored on the unit, so the board
+ * state alone cannot tell the client which units are silenced — it ships alongside, exactly like
+ * computeSentinelPlayIds. Same defensive try/catch: LostAbilities reads the game singleton, and
+ * one unlucky unit must not blank the whole list.
+ */
+export function computeSilencedPlayIds(gs: GameState): string[] {
+  const units = [
+    ...gs.player1.groundArena, ...gs.player1.spaceArena,
+    ...gs.player2.groundArena, ...gs.player2.spaceArena,
+  ];
+  return units
+    .filter(u => { try { return Unit.FromInterface(u).LostAbilities(); } catch { return false; } })
+    .map(u => u.playId);
+}
+
 export function computeUnitBuffs(gs: GameState): Record<string, { power: number; hp: number }> {
   const units = [
     ...gs.player1.groundArena, ...gs.player1.spaceArena,
@@ -3033,7 +3052,7 @@ function invalidResponse(reason: string): DispatchResponse {
 }
 
 function stateResponse(game: GameState): DispatchResponse {
-  return { dispatchResponseId: randomUUID(), newGameState: game, sentinelPlayIds: computeSentinelPlayIds(game), unitBuffs: computeUnitBuffs(game) };
+  return { dispatchResponseId: randomUUID(), newGameState: game, sentinelPlayIds: computeSentinelPlayIds(game), silencedPlayIds: computeSilencedPlayIds(game), unitBuffs: computeUnitBuffs(game) };
 }
 
 function resolutionResponse(resolution: ResolutionRequest): DispatchResponse {
