@@ -20,6 +20,13 @@ export const Cards = {
       tarkintown: "SOR_025",
       jedhaCity: "SOR_028",
     },
+    // All four TS26 bases scale their Epic Action off the number of friendly leader units.
+    ts26: {
+      firstBattleMemorial: "TS26_09",
+      dookusPalace: "TS26_10",
+      executionersArena: "TS26_11",
+      sundariPalace: "TS26_12",
+    },
     twi: {
       pauCity: "TWI_019",
       droidManufactory: "TWI_022",
@@ -348,6 +355,7 @@ export const Cards = {
       seventhSister: "SOR_133",
     },
     shd: {
+      frontierTrader: "SHD_214", // 2/2 Ground Fringe/Jawa, cost 3
       superlaserTechnician: "SHD_085",
       echoRestored: "SHD_099",
       theMarauder: "SHD_102",
@@ -486,6 +494,7 @@ export const Cards = {
       the501stLiberator: "TWI_109",
     },
     sec: {
+      furtiveHandmaiden: "SEC_197", // 2/2 Ground Naboo, cost 1
       cadBane: "SEC_034",
       captainRex: "SEC_048",
       consularsCruiser: "SEC_117",
@@ -508,6 +517,8 @@ export const Cards = {
       garindan: "SEC_186",
     },
     law: {
+      highsinger: "LAW_059",   // 4/2 Ground Droid/Bounty Hunter, Command+Aggression
+      tobiasBeckett: "LAW_002", // deployed leader unit side
       admiralMottiLaw: "LAW_139",
       imperialDoorTechnician: "LAW_097",
       scavengingSandcrawler: "LAW_238",
@@ -617,6 +628,23 @@ export const Cards = {
     },
     ts26: {
       deployedDroideka: "TS26_77",
+      darthSidious: "TS26_13",       // 4/6 Ground, Hidden, Separatist lord
+      yoda: "TS26_14",               // 4/4 Ground, cost 5 (2 less with 7+ resources)
+      kingKatuunko: "TS26_16",       // 2/4 Ground, grants everyone Restore 1 for the phase
+      jendirianValley: "TS26_18",    // 1/5 Space Transport, Restore 1
+      colemanTrebor: "TS26_19",      // 2/2 Ground, Hidden
+      veteran501st: "TS26_20",       // 0/4 Ground — Grit, Raid 1, Sentinel while undamaged
+      assaultLanderLaat: "TS26_23",  // 3/5 Ground Transport
+      sundariGauntlet: "TS26_24",    // 6/5 Space, Sentinel + On Defense
+      // Leader units (the deployed side of the TS26 leaders)
+      countDooku: "TS26_01",
+      anakinSkywalker: "TS26_02",
+      maul: "TS26_03",
+      padmeAmidala: "TS26_04",
+      savageOpress: "TS26_05",
+      rex: "TS26_06",
+      asajjVentress: "TS26_07",
+      ahsokaTano: "TS26_08",
     },
     ibh: {
       // Each card has multiple identical printings within IBH; suffix letters are alternate printings.
@@ -665,6 +693,7 @@ export const Cards = {
       guildTarget: "SHD_173",
       imprisoned: "SHD_072",
       hotshotBlaster: "SHD_174",
+      armedToTheTeeth: "SHD_175", // +2/+0, Smuggle [4 Aggression]
       theDarksaber: "SHD_126",
       mandalorianArmor: "SHD_073",
       vambraceFlamethrower: "SHD_177",
@@ -795,6 +824,7 @@ export const Cards = {
       breakingIn: "TWI_224",
     },
     jtl: {
+      iHaveYouNow: "JTL_193",
       planetaryBombardment: "JTL_181",
       repair: "JTL_075",
       stayOnTarget: "JTL_177",
@@ -814,6 +844,7 @@ export const Cards = {
       takeCharge: "TS26_60",
     },
     sec: {
+      kreiasWhispers: "SEC_232",
       iAmTheSenate: "SEC_092",
       grassrootsResistance: "SEC_258",
       emergencyPowers: "SEC_040",

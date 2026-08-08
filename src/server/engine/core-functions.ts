@@ -329,6 +329,18 @@ export function CardIsLeader(cardId: string): boolean {
   return CardType(cardId) === "Leader";
 }
 
+/**
+ * How many leader units `player` controls — the scaling term shared by all four TS26 bases
+ * ("For each friendly leader unit, …").
+ *
+ * A leader UNIT is a Leader-typed card actually sitting in an arena, so an undeployed leader
+ * counts for nothing, and a leader unit whose control you have seized counts for you (the
+ * arenas are keyed by controller, not owner).
+ */
+export function FriendlyLeaderUnitCount(player: PlayerId): number {
+  return GetUnitsForPlayer(player).filter(u => CardIsLeader(u.cardId)).length;
+}
+
 export function GetLeaderForPlayer(player: PlayerId): Leader {
   const game = GetGame();
   if (!game) {
@@ -1163,6 +1175,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "SEC_197": //Furtive Handmaiden — On Attack: may discard a card from hand; if you do, draw
     case "LAW_101": //Lawbringer — On Attack: choose an aspect, give enemy units with it –2/–2
     case "SOR_017": //Han Solo (deployed) — On Attack: resource the top card of your deck (ready), then defeat a resource next action phase
     case "SHD_009": //Hunter (deployed) — On Attack: may reveal a resource; if it shares a name with a friendly unique unit, swap it for the top of your deck
@@ -1301,6 +1314,7 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
   }
 
   switch (cardId) {
+    case "SHD_175": //Armed to the Teeth — grants "On Attack: Give another friendly unit +2/+0 for this phase."
     case "SHD_126": //The Darksaber
     case "SHD_177": //Vambrace Flamethrower
     case "SOR_121": //Hardpoint Heavy Blaster
@@ -1366,6 +1380,18 @@ export function GetUnitByPlayId(game: GameState, playId: string): Unit | null {
  */
 export function ApplyDamagePrevention(gs: GameState, targetPlayId: string, amount: number, log?: string[]): number {
   if (amount <= 0) return amount;
+
+  // JTL_193 I Have You Now: "Prevent ALL damage that would be dealt to it during this attack."
+  // Unlike the one-shot below it is not consumed here — it covers every damage instance of the
+  // attack and is cleared by the ForAttack cleanup when the attack ends.
+  if (gs.currentEffects.some(e => e.cardId === "JTL_193_prevent" && e.targetPlayId === targetPlayId)) {
+    if (log) {
+      const shielded = GetUnitByPlayId(gs, targetPlayId);
+      log.push(`${CardTitle("JTL_193")}: prevented ${amount} damage to ${shielded ? CardTitle(shielded.cardId) : "a unit"}.`);
+    }
+    return 0;
+  }
+
   const idx = gs.currentEffects.findIndex(e => e.cardId === "LOF_220_prevent" && e.targetPlayId === targetPlayId);
   if (idx === -1) return amount;
   const prevent = gs.currentEffects[idx].value ?? 0;
@@ -1705,6 +1731,48 @@ export function optionalTarget(
 }
 
 /** Builds a simple ability-target pending for mandatory target-selection effects. */
+/**
+ * Chains `times` independent target prompts for one ability — "For each X, <do something>
+ * to a unit" (the TS26 bases).
+ *
+ * Deliberately a chain rather than a single multi-select: each iteration chooses "a unit"
+ * on its own, so the same unit may legally be picked every time. A multi-select would force
+ * distinct targets. Built inside-out, so the innermost prompt carries `continuation`.
+ */
+export function repeatTargetPrompt(
+  cardId: string,
+  player: PlayerId,
+  fromPlayIds: string[],
+  times: number,
+  continuation: PendingResolution | null = null,
+): PendingResolution | null {
+  if (times <= 0 || fromPlayIds.length === 0) return continuation;
+  let chain: PendingResolution | null = continuation;
+  for (let i = 0; i < times; i++) chain = mandatoryTarget(cardId, player, fromPlayIds, chain);
+  return chain;
+}
+
+/**
+ * repeatTargetPrompt's optional twin — "For each X, you MAY <do something> to a unit"
+ * (TS26_11 Executioner's Arena). Each repetition is declined or accepted on its own.
+ */
+export function repeatOptionalTargetPrompt(
+  cardId: string,
+  player: PlayerId,
+  fromPlayIds: string[],
+  times: number,
+  helperText: string,
+  opts: { yesLabel?: string; noLabel?: string } = {},
+  continuation: PendingResolution | null = null,
+): PendingResolution | null {
+  if (times <= 0 || fromPlayIds.length === 0) return continuation;
+  let chain: PendingResolution | null = continuation;
+  for (let i = 0; i < times; i++) {
+    chain = optionalTarget(cardId, player, fromPlayIds, helperText, { ...opts, continuation: chain });
+  }
+  return chain;
+}
+
 export function mandatoryTarget(
   cardId: string,
   player: PlayerId,

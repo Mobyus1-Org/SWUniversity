@@ -1,7 +1,7 @@
 import type { GameState, PlayerState } from "@/lib/engine/game";
 import type { DiscardedCard, PlayerId } from "@/lib/engine/core-models";
 import { CardTitle } from "@/server/engine/card-db/generated";
-import { DealDamageToBase, ReadyUnit } from "@/server/engine/core-functions";
+import { DealDamageToBase, DefeatResource, ReadyUnit } from "@/server/engine/core-functions";
 
 function ps(gs: GameState, player: PlayerId): PlayerState {
   return player === 1 ? gs.player1 : gs.player2;
@@ -29,6 +29,20 @@ export function executeRegroupDraw(gs: GameState, log: string[]): void {
   // Revert "UntilStartOfRegroup" effects before drawing (e.g. Change of Heart).
   const revertEffects = gs.currentEffects.filter(e => e.duration === "UntilStartOfRegroup");
   for (const eff of revertEffects) {
+    // TS26_12 Sundari Palace — "defeat that many friendly resources at the start of the regroup
+    // phase". Carries a count rather than a targetPlayId, so it is handled before the guard below.
+    if (eff.cardId === "TS26_12") {
+      const debtor = eff.affectedPlayer === 1 ? gs.player1 : gs.player2;
+      let owed = eff.value ?? 0;
+      // Defeat from the back so the resources readied by the Epic Action are the ones paid back.
+      while (owed > 0 && debtor.resources.length > 0) {
+        const last = debtor.resources[debtor.resources.length - 1];
+        DefeatResource(gs, eff.affectedPlayer as PlayerId, last.playId, log, "TS26_12");
+        owed -= 1;
+      }
+      continue;
+    }
+
     if (!eff.targetPlayId) continue;
 
     if (eff.cardId === "SOR_219" || eff.cardId === "TWI_189" || eff.cardId === "SHD_226") {

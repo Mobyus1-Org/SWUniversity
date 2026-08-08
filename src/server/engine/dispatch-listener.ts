@@ -99,7 +99,7 @@ import { collectBounties } from "@/server/engine/actions/bounty";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { resolveWhenDefeated, WhenDefeatedBaseDamage } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB, anakinMortisAbility, buildPayForExperiencePrompt } from "@/server/engine/actions/when-played";
+import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB, anakinMortisAbility, buildPayForExperiencePrompt, buildKreiaHandPick } from "@/server/engine/actions/when-played";
 import { executeRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
 import { resolveWhenPlayedTrigger, WhenPlayedHasAutoEffect } from "@/server/engine/actions/when-played-trigger";
 import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
@@ -119,7 +119,7 @@ import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck } from "@/server/engine/core-functions";
+import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, repeatTargetPrompt, repeatOptionalTargetPrompt } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -191,6 +191,46 @@ function resolveChooseOne(
     case "SEC_040": // Emergency Powers — pay any number.
       payForExperienceTokens(game, log, pending, optionId);
       break;
+    case "SEC_232": { // Kreia's Whispers — bank the picked card, then ask for the other end.
+                      // Top of deck is the END of the array (deck.pop() draws); bottom is index 0.
+      const hand232 = GetPlayer(game, pending.player).hand;
+      const idx232 = Number(optionId);
+      const destination232 = String(pending.data?.destination ?? "top");
+      if (Number.isInteger(idx232) && idx232 >= 0 && idx232 < hand232.length) {
+        const [card232] = hand232.splice(idx232, 1);
+        const deck232 = GetPlayer(game, pending.player).deck;
+        if (destination232 === "top") deck232.push({ cardId: card232.cardId });
+        else deck232.unshift({ cardId: card232.cardId });
+        log.push(`${CardTitle("SEC_232")}: put ${CardTitle(card232.cardId)} on the ${destination232} of the deck.`);
+      }
+      if (destination232 === "top") next = buildKreiaHandPick(pending.player, "bottom");
+      break;
+    }
+    case "TS26_12": { // Sundari Palace — resource a hand card ready, then re-prompt.
+      const remaining12 = Number(pending.data?.remaining ?? 0);
+      let resourced12 = Number(pending.data?.resourced ?? 0);
+      if (optionId !== "skip") {
+        const handIdx12 = Number(optionId);
+        const hand12 = GetPlayer(game, pending.player).hand;
+        if (Number.isInteger(handIdx12) && handIdx12 >= 0 && handIdx12 < hand12.length) {
+          const [card12] = hand12.splice(handIdx12, 1);
+          GetPlayer(game, pending.player).resources.push({
+            cardId: card12.cardId,
+            playId: nextPlayId(game),
+            owner: pending.player,
+            controller: pending.player,
+            ready: true,
+            stolen: false,
+          });
+          resourced12 += 1;
+          log.push(`${CardTitle("TS26_12")}: resourced ${CardTitle(card12.cardId)} ready.`);
+        }
+      }
+      const next12 = buildSundariPalacePrompt(game, pending.player, remaining12 - 1, resourced12);
+      if (next12) return next12;
+      recordSundariPalaceDebt(game, log, pending.player, resourced12);
+      break;
+    }
     case "ASH_235": { // Sense Through the Force — remember the number, then search the top 5.
       // DeckSearchPending carries no payload of its own, so the chosen number rides on a
       // currentEffect that the deck-search draw step reads (and removes).
@@ -3968,6 +4008,7 @@ function completePlayCard(
       upgradeCardId: cardId,
       player,
       fromPlayIds: eligiblePlayIds,
+      viaSmuggle: opts?.viaSmuggle,
     };
     game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: "", playedAs: "Upgrade" });
     // SHD_172 Krayt Dragon: opponent's Krayt reacts to this upgrade being played (resolves
@@ -4481,6 +4522,10 @@ function handleBaseEpicAction(game: GameState, log: string[], player: PlayerId):
     case "SOR_025": return resolveTarkintownEpicAction(game, log, player);
     case "SOR_028": return resolveJedhaCityEpicAction(game, log, player);
     case "LAW_019": return resolveAllianceOutpostEpicAction(game, log, player);
+    case "TS26_09": return resolveFirstBattleMemorialEpicAction(game, log, player);
+    case "TS26_10": return resolveDookusPalaceEpicAction(game, log, player);
+    case "TS26_11": return resolveExecutionersArenaEpicAction(game, log, player);
+    case "TS26_12": return resolveSundariPalaceEpicAction(game, log, player);
     default: return { response: invalidResponse("This base has no implemented epic action."), pending: null, stateChanged: false };
   }
 }
@@ -4541,6 +4586,129 @@ function friendlyTokenPlayIds(game: GameState, player: PlayerId): string[] {
     .filter(upg => IsTokenUpgrade(upg.cardId) && upg.controller === player)
     .map(upg => upg.playId);
   return [...tokenUnits, ...tokenUpgrades];
+}
+
+/**
+ * TS26_09 First Battle Memorial — "Epic Action: For each friendly leader unit, give an
+ * Experience token to a unit."
+ *
+ * With no leader unit in play the Epic Action still resolves (and is spent) for zero grants,
+ * matching resolveSplashEpicAction: nothing here is a cost, so nothing gates availability.
+ */
+function resolveFirstBattleMemorialEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
+  const base = GetPlayer(game, player).base;
+  base.epicActionUsed = true;
+
+  const grants = FriendlyLeaderUnitCount(player);
+  const targets = AllUnits().map(u => u.playId);
+  if (grants === 0 || targets.length === 0) {
+    log.push(`Player ${player} used ${CardTitle(base.cardId)} — no friendly leader unit, no Experience granted.`);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  log.push(`Player ${player} used ${CardTitle(base.cardId)} — ${grants} Experience token(s) to grant.`);
+  const pending = repeatTargetPrompt("TS26_09", player, targets, grants);
+  if (!pending) return { response: stateResponse(game), pending: null, stateChanged: true };
+  return { response: resolutionResponse(pendingToResolution(pending, game)), pending, stateChanged: false };
+}
+
+/**
+ * TS26_10 Dooku's Palace — "Epic Action: Play a unit from your hand. It costs 1 resource
+ * less for each friendly leader unit."
+ *
+ * The discount is read when the unit is actually played (in the play-from-hand handler), not
+ * here, so a leader unit that leaves play while the prompt is open is correctly no longer counted.
+ */
+function resolveDookusPalaceEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
+  const base = GetPlayer(game, player).base;
+  if (!GetPlayer(game, player).hand.some(c => CardType(c.cardId) === "Unit")) {
+    return { response: invalidResponse("Dooku's Palace: no unit in hand to play."), pending: null, stateChanged: false };
+  }
+  base.epicActionUsed = true;
+  log.push(`Player ${player} used ${CardTitle(base.cardId)}.`);
+  const pending: PlayFromHandPending = { type: "play-from-hand", cardId: "TS26_10", player };
+  return { response: resolutionResponse(pendingToResolution(pending, game)), pending, stateChanged: false };
+}
+
+/**
+ * TS26_11 Executioner's Arena — "Epic Action: For each friendly leader unit, you may deal
+ * 2 damage to a unit." Each repetition is an independent may, with its own target.
+ */
+function resolveExecutionersArenaEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
+  const base = GetPlayer(game, player).base;
+  base.epicActionUsed = true;
+
+  const shots = FriendlyLeaderUnitCount(player);
+  const targets = AllUnits().map(u => u.playId);
+  if (shots === 0 || targets.length === 0) {
+    log.push(`Player ${player} used ${CardTitle(base.cardId)} — no friendly leader unit, no damage dealt.`);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  log.push(`Player ${player} used ${CardTitle(base.cardId)} — up to ${shots} instance(s) of 2 damage.`);
+  const pending = repeatOptionalTargetPrompt(
+    "TS26_11", player, targets, shots, "Deal 2 damage to a unit?", { yesLabel: "Deal 2", noLabel: "Skip" },
+  );
+  if (!pending) return { response: stateResponse(game), pending: null, stateChanged: true };
+  return { response: resolutionResponse(pendingToResolution(pending, game)), pending, stateChanged: false };
+}
+
+/**
+ * TS26_12 Sundari Palace — one "you may resource a card from your hand and ready it" prompt
+ * per friendly leader unit.
+ *
+ * Rebuilt between iterations instead of pre-chained: the options are hand INDICES, and every
+ * accepted repetition removes a card, so a chain built up front would point at the wrong cards.
+ * `data` carries how many repetitions are left and how many were actually taken.
+ */
+function buildSundariPalacePrompt(
+  game: GameState,
+  player: PlayerId,
+  remaining: number,
+  resourced: number,
+): ChooseOnePending | null {
+  const hand = GetPlayer(game, player).hand;
+  if (remaining <= 0 || hand.length === 0) return null;
+  return {
+    type: "choose-one",
+    cardId: "TS26_12",
+    player,
+    options: [
+      { id: "skip", label: "Skip" },
+      ...hand.map((c, i) => ({ id: String(i), label: `Resource ${CardTitle(c.cardId) ?? c.cardId}` })),
+    ],
+    data: { remaining, resourced },
+    continuation: null,
+  } satisfies ChooseOnePending;
+}
+
+/**
+ * Records the regroup-phase debt: "defeat that many friendly resources at the start of the
+ * regroup phase". Skipped entirely at zero so no inert effect is left lying around.
+ */
+function recordSundariPalaceDebt(game: GameState, log: string[], player: PlayerId, resourced: number): void {
+  if (resourced <= 0) return;
+  game.currentEffects.push({
+    cardId: "TS26_12",
+    duration: "UntilStartOfRegroup",
+    affectedPlayer: player,
+    value: resourced,
+  });
+  log.push(`${CardTitle("TS26_12")}: Player ${player} will defeat ${resourced} resource(s) at the start of regroup.`);
+}
+
+function resolveSundariPalaceEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
+  const base = GetPlayer(game, player).base;
+  base.epicActionUsed = true;
+
+  const repetitions = FriendlyLeaderUnitCount(player);
+  const pending = buildSundariPalacePrompt(game, player, repetitions, 0);
+  if (!pending) {
+    log.push(`Player ${player} used ${CardTitle(base.cardId)} — nothing to resource.`);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+  log.push(`Player ${player} used ${CardTitle(base.cardId)} — up to ${repetitions} card(s) to resource.`);
+  return { response: resolutionResponse(pendingToResolution(pending, game)), pending, stateChanged: false };
 }
 
 function resolveAllianceOutpostEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
@@ -4910,6 +5078,27 @@ function handleChooseTarget(
       const cont018 = pending.continuation;
       if (cont018?.type === "resolve-attack") return handleResolveAttack(game, log, cont018);
       if (cont018) return { response: resolutionResponse(pendingToResolution(cont018, game)), pending: cont018, stateChanged: true };
+      updateDefeatedPlayers(game);
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    // LAW_002 Tobias Beckett (deployed): "Defeat ANY NUMBER of units you own but don't control."
+    // Zero is legal, so this runs before the empty-selection guard, same as JTL_018 above.
+    if (pending.cardId === "LAW_002_deployed") {
+      const chosen002 = data.targetPlayIds ?? [];
+      for (const id of chosen002) {
+        if (!pending.fromPlayIds.includes(id))
+          return { response: invalidResponse(`Unit ${id} is not a valid target for ${CardTitle("LAW_002")}.`), pending, stateChanged: false };
+      }
+      for (const id of chosen002) {
+        const victim002 = GetUnitByPlayId(game, id);
+        if (!victim002) continue;
+        defeatUnit(game, log, victim002);
+        CreateCreditToken(game, pending.player!, log, "LAW_002");
+        DrawCardForPlayer(game, log, pending.player!);
+      }
+      const bag002 = drainTriggerBag(game, log);
+      if (bag002) return { response: resolutionResponse(pendingToResolution(bag002, game)), pending: bag002, stateChanged: true };
       updateDefeatedPlayers(game);
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
@@ -5768,6 +5957,21 @@ function handleChooseTarget(
       CreateXWing(game, pending.player, log, "JTL_101");
     }
 
+    // SHD_174 Hotshot DL-44 Blaster: "When played USING SMUGGLE: Attack with attached unit."
+    // Gated on viaSmuggle — a normal hand play just attaches. Fired here so the +2/+0 is
+    // already on the unit when the attack resolves.
+    if (pending.upgradeCardId === "SHD_174" && pending.viaSmuggle) {
+      log.push(`${CardTitle("SHD_174")}: ${CardTitle(targetUnit.cardId)} attacks.`);
+      const attack174: PendingResolution = {
+        type: "attack-target",
+        attackerPlayId: targetUnit.playId,
+        source: "SHD_174",
+        continuation: null,
+      };
+      updateDefeatedPlayers(game);
+      return { response: resolutionResponse(pendingToResolution(attack174, game)), pending: attack174, stateChanged: true };
+    }
+
     // SHD_073 Mandalorian Armor: When Played — if attached unit is Mandalorian, give Shield.
     if (pending.upgradeCardId === "SHD_073") {
       if (TraitContains(targetUnit.cardId, "Mandalorian", pending.player, targetUnit.playId)) {
@@ -6503,6 +6707,18 @@ function handleChooseTarget(
           injectEffect: { cardId: "SOR_219", duration: "UntilStartOfRegroup", affectedPlayer: pending.player },
         });
       }
+      case "TS26_10": { // Dooku's Palace — 1 resource less per friendly leader unit.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Dooku's Palace: chosen card is not a Unit."), pending, stateChanged: false };
+        const discount10 = FriendlyLeaderUnitCount(pending.player);
+        const reducedCost10 = Math.max(0, playCost(game, pending.player, cardId) - discount10);
+        if (spendableFor(game, pending.player) < reducedCost10)
+          return { response: invalidResponse("Dooku's Palace: not enough resources to play this unit."), pending, stateChanged: false };
+        payResources(game, pending.player, reducedCost10, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("TS26_10")} (cost reduced by ${discount10}).`);
+        return completePlayCard(game, log, cardId, pending.player);
+      }
       default:
         return { response: invalidResponse(`Unknown play-from-hand source: ${pending.cardId}`), pending, stateChanged: false };
     }
@@ -7093,6 +7309,11 @@ function applyAbilityOptionEffect(
   log: string[],
 ): PendingResolution | null {
   switch (pending.cardId) {
+    case "SHD_214_replace": { // Frontier Trader — the nested "you may put the top card of your
+                              // deck into play as a resource" after the return resolved.
+      ResourceTopCardOfDeck(game, pending.player!, log, "SHD_214");
+      return pending.continuation ?? null;
+    }
     case "SHD_197": { // L3-37 Yes: rescue a captured card. One captive → rescue it; many → let the player pick.
       const captives197 = AllCaptives();
       if (captives197.length === 0) return pending.continuation ?? null; // nothing to rescue (shouldn't happen)
@@ -8564,6 +8785,7 @@ function getAffordablePlotPlayIds(game: GameState, player: PlayerId): string[] {
 
 function leaderHasWhenDeployed(cardId: string): boolean {
   switch (cardId) {
+    case "LAW_002": return true; // Tobias Beckett — defeat any number of units you own but don't control
     case "SHD_002": return true;
     case "LAW_008": return true;
     case "TWI_004": return true; // Yoda — may discard from deck, then defeat a unit by cost
@@ -9511,6 +9733,18 @@ function resolveActionAbility(
         continuation: null,
       };
     }
+    case "LAW_002": { // Tobias Beckett — Action [Exhaust]: "Choose a friendly unit. An opponent
+                      // takes control of it. If they do, create a Credit token."
+      const friendly002 = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena];
+      if (friendly002.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LAW_002_action",
+        player,
+        fromPlayIds: friendly002.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "LAW_008": { // Director Krennic — Action [Exhaust, defeat a friendly unit]: Create a Credit token.
       const friendly008 = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena];
       if (friendly008.length === 0) return null;
@@ -10145,6 +10379,39 @@ function applyAbilityEffect(
   }
 
   switch (pending.cardId) {
+    case "SHD_214": { // Frontier Trader — the chosen resource goes to its OWNER's hand (a stolen
+                      // resource returns to the opponent), then the nested "you may replace it
+                      // from the top of your deck" is offered.
+      if (!targetPlayId) break;
+      const owner214 = GetPlayer(game.currentGameState, pending.player!).resources
+        .find(r => r.playId === targetPlayId)?.owner ?? pending.player!;
+      const removed214 = RemoveResourcePreservingReady(game.currentGameState, pending.player!, targetPlayId);
+      if (!removed214) break;
+      GetPlayer(game.currentGameState, owner214 as PlayerId).hand.push({ cardId: removed214.cardId });
+      game.gameLog.push(`${CardTitle("SHD_214")}: returned ${CardTitle(removed214.cardId)} to Player ${owner214}'s hand.`);
+      return {
+        type: "ability-option",
+        cardId: "SHD_214_replace",
+        player: pending.player!,
+        helperText: "Put the top card of your deck into play as a resource?",
+        yesLabel: "Resource top card",
+        noLabel: "Skip",
+        continuation: pending.continuation ?? null,
+      } satisfies AbilityOptionPending;
+    }
+    case "LAW_059": { // Highsinger — 1 Experience token, shared by his When Played (Command)
+                      // and When Defeated (Aggression) halves; only the eligible list differs.
+      if (!targetPlayId) break;
+      const target059 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target059) GiveExperienceTokens(game.currentGameState, target059, 1, game.gameLog, "LAW_059");
+      return pending.continuation ?? null;
+    }
+    case "TS26_09": { // First Battle Memorial — one Experience token per prompt in the chain.
+      if (!targetPlayId) break;
+      const target09 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target09) GiveExperienceTokens(game.currentGameState, target09, 1, game.gameLog, "TS26_09");
+      return pending.continuation ?? null;
+    }
     case "SEC_040": { // Emergency Powers — the non-leader unit is chosen; now ask how many
                       // resources to pay. "Any number" is bounded only by what is payable.
       if (!targetPlayId) break;
@@ -10864,6 +11131,11 @@ function applyAbilityEffect(
         CardTitle("ASH_171"), pending.continuation ?? null, pending.player,
       );
     }
+    case "TS26_11": { // Executioner's Arena — 2 damage per accepted repetition.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "TS26_11", targetPlayId, 2, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
     case "ASH_170": { // Desert Sharpshooter — deal 2 damage to the chosen upgraded ground unit.
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, "ASH_170", targetPlayId, 2, game.gameLog);
@@ -11074,6 +11346,31 @@ function applyAbilityEffect(
       }
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
+    case "SHD_175": { // Armed to the Teeth — +2/+0 (power only, so GivePowerMod not the
+                      // +X/+X GiveStatModForPhase) to the chosen other friendly unit.
+      if (!targetPlayId) break;
+      const target175 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target175) GivePowerMod("SHD_175", target175, 2, "Phase", game.gameLog);
+      return pending.continuation ?? null;
+    }
+    case "JTL_193": { // I Have You Now — shield the chosen Vehicle for the whole attack, then
+                      // send it in. ForAttack duration means the combat cleanup drops the effect
+                      // when this attack ends, so a later attack is unprotected.
+      if (!targetPlayId) break;
+      game.currentGameState.currentEffects.push({
+        cardId: "JTL_193_prevent",
+        duration: "ForAttack",
+        affectedPlayer: pending.player!,
+        targetPlayId,
+      });
+      game.gameLog.push(`${CardTitle("JTL_193")}: all damage to the attacking Vehicle is prevented this attack.`);
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "JTL_193",
+        continuation: pending.continuation ?? null,
+      };
+    }
     case "ASH_184": { // Follow Me — the chosen unit attacks; afterwards, 3 Advantage tokens to a unit.
       if (!targetPlayId) break;
       // The token target is picked AFTER combat, so it can't be a fixed list built now — the
@@ -11162,6 +11459,16 @@ function applyAbilityEffect(
         });
         game.gameLog.push(`${CardTitle("ASH_232")}: Shield token given to ${CardTitle(target232s.cardId)}.`);
       }
+      break;
+    }
+    case "LAW_002_action": { // Tobias Beckett (leader) — the opponent takes control of the chosen
+                             // friendly unit, permanently (no revert effect), and you get a Credit.
+      if (!targetPlayId || !pending.player) break;
+      const unit002 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit002) break;
+      const opponent002 = GetOtherPlayer(pending.player);
+      transferControl(game.currentGameState, game.gameLog, unit002, opponent002);
+      CreateCreditToken(game.currentGameState, pending.player, game.gameLog, "LAW_002");
       break;
     }
     case "ASH_200": { // Rehabilitation — –3/–0 this phase, then take control until start of regroup.

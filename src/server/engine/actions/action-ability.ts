@@ -92,6 +92,10 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "TWI_005": // Count Dooku — needs Separatist card in hand
         if (GetHand(player).some(c => CardTraits(c.cardId).includes("Separatist"))) abilities.push(cardId);
         break;
+      case "LAW_002": // Tobias Beckett — Action [Exhaust]: give a friendly unit to an opponent for
+                      // a Credit. Needs a friendly unit to give away.
+        if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
+        break;
       case "LAW_008": // Director Krennic — Action [Exhaust, defeat a friendly unit]: Create a Credit token (needs a friendly unit to defeat).
         if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
         break;

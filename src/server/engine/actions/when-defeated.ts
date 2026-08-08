@@ -136,6 +136,13 @@ function resolveOwnWhenDefeated(
   }
 
   switch (unit.cardId) {
+    case "LAW_059": { // Highsinger — "When Defeated: Give an Experience token to a friendly
+                      // Aggression unit." Aggression here, unlike the Command half on his When
+                      // Played, and with no "another" — though he has already left the arena.
+      const aggression059 = UnitsWithAspect("Aggression").filter(u => u.controller === player);
+      if (aggression059.length === 0) return null;
+      return mandatoryTarget("LAW_059", player, aggression059.map(u => u.playId));
+    }
     case "ASH_191": { // Shin Hati's Fiend Fighter — "When Defeated: You may give 2 Advantage
                       // tokens to a unit. If this unit wasn't defeated by combat damage, you
                       // may give 3 Advantage tokens to that unit instead."

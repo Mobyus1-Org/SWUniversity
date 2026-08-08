@@ -1,6 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
 import { aspectPenalty, palpatinesReturnCost, spendableFor } from "@/server/engine/card-playability";
+import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
@@ -160,6 +161,29 @@ export function buildPayForExperiencePrompt(
 }
 
 /**
+ * SEC_232 Kreia's Whispers — one hand pick, destined for a fixed end of the deck.
+ *
+ * Rebuilt between the two steps rather than pre-chained: the options are hand INDICES and the
+ * first pick removes a card, so a pre-built second prompt would point at the wrong card. Returns
+ * null when the hand is empty, which is how a short deck (fewer than 3 drawn) resolves out.
+ */
+export function buildKreiaHandPick(player: PlayerId, destination: "top" | "bottom"): ChooseOnePending | null {
+  const hand = GetHand(player);
+  if (hand.length === 0) return null;
+  return {
+    type: "choose-one",
+    cardId: "SEC_232",
+    player,
+    options: hand.map((c, i) => ({
+      id: String(i),
+      label: `${CardTitle(c.cardId) ?? c.cardId} → ${destination} of deck`,
+    })),
+    data: { destination },
+    continuation: null,
+  } satisfies ChooseOnePending;
+}
+
+/**
  * When Played abilities for unit cards.
  * Return a PendingResolution if further input is needed, or null to auto-resolve.
  */
@@ -171,6 +195,38 @@ export function resolveWhenPlayed(
   const game = GetGame();
   if (!game) throw new Error("Game not found in resolveWhenPlayedAbility");
   switch (cardId) {
+    case "JTL_193": { // I Have You Now (Event) — "Attack with a Vehicle unit. Prevent all damage
+                      // that would be dealt to it during this attack." Vehicle-only, unlike the
+                      // otherwise identical ASH_184 Follow Me.
+      const vehicles193 = GetUnitsForPlayer(player, true)
+        .filter(u => CardTraits(u.cardId).includes("Vehicle") && CanUnitAttack(u));
+      if (vehicles193.length === 0) return null;
+      return mandatoryTarget("JTL_193", player, vehicles193.map(u => u.playId));
+    }
+    case "SEC_232": { // Kreia's Whispers (Event) — "Draw 3 cards, then put a card from your hand
+                      // on the top of your deck and another card from your hand on the bottom of
+                      // your deck." Both placements are mandatory with fixed destinations, so this
+                      // is two sequential hand picks rather than a top-or-bottom choice.
+      for (let i = 0; i < 3; i++) DrawCardForPlayer(game.currentGameState, game.gameLog, player);
+      return buildKreiaHandPick(player, "top");
+    }
+    case "SHD_214": { // Frontier Trader — "When Played: You may return a resource you control to
+                      // its owner's hand. If you do, you may put the top card of your deck into
+                      // play as a resource." The second may is nested inside the first, so it is
+                      // built only once the return has actually resolved (see applyAbilityEffect).
+      const resources214 = GetPlayer(game.currentGameState, player).resources;
+      if (resources214.length === 0) return null;
+      return optionalTarget("SHD_214", player, resources214.map(r => r.playId),
+        "Return a resource you control to its owner's hand?", { yesLabel: "Return", noLabel: "Skip" });
+    }
+    case "LAW_059": { // Highsinger — "When Played: Give an Experience token to another friendly
+                      // Command unit." Note the aspect here is Command; the When Defeated half
+                      // uses Aggression instead.
+      const command059 = GetUnitsForPlayer(player)
+        .filter(u => u.playId !== playId && CardAspects(u.cardId).includes("Command"));
+      if (command059.length === 0) return null;
+      return mandatoryTarget("LAW_059", player, command059.map(u => u.playId));
+    }
     case "LOF_255": { // Curious Flock — "When Played: Pay up to 6 resources. For each resource
                       // paid this way, give an Experience token to this unit."
       if (!playId) return null;

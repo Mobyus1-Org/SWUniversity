@@ -1,6 +1,6 @@
 import { PendingResolution } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, CardIsLeader, MarkUnitDamaged } from "@/server/engine/core-functions";
+import { GetGame, CardIsLeader, MarkUnitDamaged, AllUnits } from "@/server/engine/core-functions";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -26,6 +26,21 @@ export function resolveWhenDeployed(
         cardId: "LAW_010_deployed",
         player,
         fromPlayIds: units010.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "LAW_002": { // Tobias Beckett — "When Deployed: Defeat any number of units you own but
+                      // don't control. For each unit defeated this way, create a Credit token and
+                      // draw a card." The pair to his leader-side giveaway: reclaim the value.
+      const reclaimable002 = AllUnits().filter(u => u.owner === player && u.controller !== player);
+      if (reclaimable002.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LAW_002_deployed",
+        player,
+        fromPlayIds: reclaimable002.map(u => u.playId),
+        needsMultiple: true,
+        maxTargets: reclaimable002.length,
         continuation: null,
       };
     }

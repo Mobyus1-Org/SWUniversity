@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 895 cards across 10 sets.**
+**Total: 889 cards across 10 sets.**
 
 ---
 
@@ -24,7 +24,7 @@ SOR_238: C-3PO - Protocol Droid Unit
 SOR_246: You're My Only Hope Event
 ```
 
-## SHD — Shadows of the Galaxy (64)
+## SHD — Shadows of the Galaxy (63)
 
 **Message 1 of 2**
 ```
@@ -80,7 +80,6 @@ SHD_206: Spare the Target Event
 SHD_207: A New Adventure Event
 SHD_208: Final Showdown Event
 SHD_209: Criminal Muscle Unit
-SHD_214: Frontier Trader Unit
 SHD_227: Look the Other Way Event
 SHD_228: Bounty Posting Event
 SHD_232: Relentless Pursuit Event
@@ -222,7 +221,7 @@ TWI_254: Volunteer Soldier Unit
 TWI_257: Private Manufacturing Event
 ```
 
-## JTL — Jump to Lightspeed (99)
+## JTL — Jump to Lightspeed (98)
 
 **Message 1 of 3**
 ```
@@ -295,7 +294,6 @@ JTL_185: Hound's Tooth - Reliable and Deadly Unit
 JTL_188: Moff Gideon - I Know Everything Unit
 JTL_191: Invincible - Naval Adversary Unit
 JTL_192: In Debt to Crimson Dawn Upgrade
-JTL_193: I Have You Now Event
 JTL_194: Heartless Tactics Event
 JTL_195: Cat and Mouse Event
 JTL_199: Blade Squadron B-Wing Unit
@@ -455,13 +453,12 @@ LOF_263: Last Words Event
 LOF_264: It's Worse Event
 ```
 
-## LAW — Legends of the Underworld (174)
+## LAW — Legends of the Underworld (172)
 
 **Message 1 of 4**
 ```
 LAW:
 LAW_001: Saw Gerrera - Bring Down the Empire Leader
-LAW_002: Tobias Beckett - People are Predictable Leader
 LAW_004: Aurra Sing - Assassin Leader
 LAW_005: Jyn Erso - Time to Fight Leader
 LAW_006: Vel Sartha - Aldhani Insurgent Leader
@@ -498,7 +495,6 @@ LAW_055: Chopper - Spectre Three Unit
 LAW_056: Cassian Andor - Everything For the Rebellion Unit
 LAW_057: Benthic “Two Tubes” - The War Has Just Begun Unit
 LAW_058: Honor-Bound Partisan Unit
-LAW_059: Highsinger - Deadly Droid Unit
 ```
 
 **Message 2 of 4**
@@ -651,7 +647,7 @@ LAW_262: Bank Job Fugitives Unit
 LAW_264: From a Certain Point of View Event
 ```
 
-## SEC — Secrets of Power (157)
+## SEC — Secrets of Power (155)
 
 **Message 1 of 4**
 ```
@@ -775,7 +771,6 @@ SEC_192: Grand Moff Tarkin - Taking Krennic's Achievement Unit
 SEC_194: Fully Armed and Operational Event
 SEC_195: Arrest Event
 SEC_196: No One Ever Knew Event
-SEC_197: Furtive Handmaiden Unit
 SEC_198: Bail Organa - Responding to Catastrophe Unit
 SEC_200: Junior Senator Unit
 SEC_202: Rebel Propagandist Unit
@@ -805,7 +800,6 @@ SEC_228: Accelerate Our Plans Event
 SEC_229: Catch Unawares Event
 SEC_230: Charged with Espionage Event
 SEC_231: Implicate Event
-SEC_232: Kreia's Whispers Event
 SEC_233: Beguile Event
 SEC_234: Bog Down in Procedure Event
 SEC_235: The Wrong Ride Event

@@ -141,6 +141,18 @@ export function resolveOnAttackTrigger(
         }
         break;
       }
+      case "SHD_175": { // Armed to the Teeth — "On Attack: Give another friendly unit +2/+0 for
+                        // this phase." Mandatory, and "another" excludes the attacker wearing it.
+        if (!deferredPending) {
+          const others175 = GetUnitsForPlayer(attacker.controller)
+            .filter(u => u.playId !== attacker.playId);
+          if (others175.length > 0) {
+            deferredPending = mandatoryTarget("SHD_175", attacker.controller,
+              others175.map(u => u.playId), continuation);
+          }
+        }
+        break;
+      }
       case "JTL_012": { // Luke Skywalker piloting a Fighter — "On Attack: You may deal 3 damage to a unit."
         if (!deferredPending) {
           const allUnits012 = AllUnits();
@@ -968,6 +980,29 @@ function resolveInnateOnAttack(
       return searchDeck("SOR_236", attacker.controller, 1, "scry", { continuation }) ?? continuation;
     case "SOR_040": { // Avenger On Attack — opponent chooses a non-leader unit they control to defeat.
       return chooseAndDefeatUnit("SOR_040", attacker.controller, false, continuation);
+    }
+    case "SEC_197": { // Furtive Handmaiden — "On Attack: You may discard a card from your hand.
+                      // If you do, draw a card." The draw rides on the discard pending's
+                      // thenDrawForPlayer, so it cannot fire without the discard landing.
+      const player197 = attacker.controller;
+      if (GetHand(player197).length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "SEC_197",
+        player: player197,
+        sourcePlayId: attacker.playId,
+        helperText: "Discard a card from your hand to draw a card?",
+        yesLabel: "Discard",
+        noLabel: "Skip",
+        onYes: {
+          type: "discard-from-hand",
+          targetPlayer: player197,
+          count: 1,
+          thenDrawForPlayer: player197,
+          continuation,
+        } satisfies DiscardFromHandPending,
+        continuation,
+      } satisfies AbilityOptionPending;
     }
     case "SEC_188": { // Darth Traya "On Attack: You may ready a non-unit leader."
       const game188 = GetGame();

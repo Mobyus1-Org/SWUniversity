@@ -196,6 +196,11 @@ export interface UpgradeTargetPending {
   upgradeCardId: string;
   player: PlayerId;
   fromPlayIds: string[];
+  /**
+   * SHD_174 Hotshot DL-44 Blaster — "When played USING SMUGGLE: Attack with attached unit."
+   * The trigger fires after the attach, so how the upgrade was played has to survive the prompt.
+   */
+  viaSmuggle?: boolean;
 }
 
 /** Uniqueness rule: player must defeat one copy when a duplicate unique enters play. */
