@@ -366,55 +366,6 @@ export default function ProfilePage() {
           )}
         </div>
 
-        <div>
-          <h2 className="text-xl font-semibold">Puzzles</h2>
-          <div className="mt-4 space-y-3">
-            {/* Progress is shown for whichever profile is being viewed; only the destructive
-                reset below is restricted to your own. */}
-            <PuzzleProgress solvedIds={user.profile?.solvedPuzzleIds ?? []} summaries={puzzleSummaries} />
-          </div>
-        </div>
-
-        {!isViewingOther && (
-        <div>
-          <h2 className="text-xl font-semibold">Reset Puzzles</h2>
-          <div className="mt-4 space-y-3">
-            {showResetPuzzleConfirm ? (
-              <div className="rounded-lg border border-rose-400/30 bg-rose-500/10 p-4 space-y-3">
-                <p className="text-sm text-rose-200">This will clear all solved puzzle records. Are you sure?</p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void onResetPuzzleCompletion()}
-                    disabled={isResettingPuzzles}
-                    className="btn btn-sm rounded-lg border border-rose-400/40 bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-500/35 disabled:opacity-50"
-                  >
-                    {isResettingPuzzles ? "Resetting..." : "Confirm"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowResetPuzzleConfirm(false)}
-                    className="btn btn-sm rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => { setResetPuzzleMessage(""); setResetPuzzleError(""); setShowResetPuzzleConfirm(true); }}
-                className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
-              >
-                Reset Puzzle Completion
-              </button>
-            )}
-            {resetPuzzleError && <p className="text-red-300 text-sm">{resetPuzzleError}</p>}
-            {resetPuzzleMessage && <p className="text-green-300 text-sm">{resetPuzzleMessage}</p>}
-          </div>
-        </div>
-        )}
-
         {!isViewingOther && (
         <div>
           <h2 className="text-xl font-semibold">Change Password</h2>
@@ -456,18 +407,64 @@ export default function ProfilePage() {
 
       <div className="border rounded-lg bg-black/30 p-6 space-y-4 h-fit">
         <h2 className="text-2xl font-semibold">Stats</h2>
-        <details className="rounded border border-white/15 bg-black/20 p-4" open>
+        {/* All three modes start collapsed — expanded by default they pushed the page long
+            enough that Quiz and DYKSWU could not be compared without scrolling. */}
+        <details className="rounded border border-white/15 bg-black/20 p-4">
           <summary className="cursor-pointer text-lg font-semibold">Quiz Mode</summary>
           <div className="mt-4">
             <ModeStatsBoxes stats={profileStats.quiz} databank={user.profile?.databankCompletion?.quiz} />
             {!isViewingOther && renderResetStats("quiz", "Quiz")}
           </div>
         </details>
-        <details className="rounded border border-white/15 bg-black/20 p-4" open>
+        <details className="rounded border border-white/15 bg-black/20 p-4">
           <summary className="cursor-pointer text-lg font-semibold">Do You Know SWU Mode</summary>
           <div className="mt-4">
             <ModeStatsBoxes stats={profileStats.dykswu} databank={user.profile?.databankCompletion?.dykswu} />
             {!isViewingOther && renderResetStats("dykswu", "DYKSWU")}
+          </div>
+        </details>
+        <details className="rounded border border-white/15 bg-black/20 p-4">
+          <summary className="cursor-pointer text-lg font-semibold">Puzzle Mode</summary>
+          <div className="mt-4 space-y-4">
+            {/* Progress is shown for whichever profile is being viewed; only the destructive
+                reset below is restricted to your own. */}
+            <PuzzleProgress solvedIds={user.profile?.solvedPuzzleIds ?? []} summaries={puzzleSummaries} />
+            {!isViewingOther && (
+              <div className="space-y-3">
+                {showResetPuzzleConfirm ? (
+                  <div className="rounded-lg border border-rose-400/30 bg-rose-500/10 p-4 space-y-3">
+                    <p className="text-sm text-rose-200">This will clear all solved puzzle records. Are you sure?</p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void onResetPuzzleCompletion()}
+                        disabled={isResettingPuzzles}
+                        className="btn btn-sm rounded-lg border border-rose-400/40 bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-500/35 disabled:opacity-50"
+                      >
+                        {isResettingPuzzles ? "Resetting..." : "Confirm"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowResetPuzzleConfirm(false)}
+                        className="btn btn-sm rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setResetPuzzleMessage(""); setResetPuzzleError(""); setShowResetPuzzleConfirm(true); }}
+                    className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+                  >
+                    Reset Puzzle Completion
+                  </button>
+                )}
+                {resetPuzzleError && <p className="text-red-300 text-sm">{resetPuzzleError}</p>}
+                {resetPuzzleMessage && <p className="text-green-300 text-sm">{resetPuzzleMessage}</p>}
+              </div>
+            )}
           </div>
         </details>
       </div>
