@@ -119,7 +119,7 @@ import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, repeatTargetPrompt, repeatOptionalTargetPrompt } from "@/server/engine/core-functions";
+import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -1637,6 +1637,43 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
     if (trigger.cardId === "ASH_204" && trigger.playId) { // Blade Three — give itself an Advantage token.
       const blade204 = GetUnitByPlayId(game, trigger.playId);
       if (blade204) GiveAdvantageTokens(game, blade204, 1, log, "ASH_204");
+    }
+    return null;
+  }
+
+  if (trigger.triggerType === "when-card-drawn") {
+    if (trigger.cardId === "LOF_148") { // Rey — With Palpatine's Power
+      const pState148 = GetPlayer(game, trigger.fromPlayer);
+      // "If you control a Aggression leader OR base" — either alone is enough, and the leader
+      // counts whether or not it has been deployed.
+      // Three ways to satisfy it: the base, the leader CARD (deployed or not, including a leader
+      // riding a ship as a Pilot), or a leader UNIT — a Pilot leader turns its host into the
+      // leader unit, so a non-Aggression leader piloting an Aggression ship counts too.
+      const hasAggression148 =
+        CardAspects(pState148.base.cardId).includes("Aggression")
+        || CardAspects(pState148.leader.cardId).includes("Aggression")
+        || FriendlyLeaderUnits(trigger.fromPlayer)
+          .some(u => CardAspects(u.cardId).includes("Aggression"));
+      if (!hasAggression148) return null;
+      // It must still be in hand to be revealed from hand.
+      if (!pState148.hand.some(c => c.cardId === "LOF_148")) return null;
+      if (AllUnits().length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId: "LOF_148",
+        player: trigger.fromPlayer,
+        helperText: "Reveal Rey from your hand to deal 2 damage to a unit and 2 damage to a base?",
+        yesLabel: "Reveal",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "LOF_148",
+          player: trigger.fromPlayer,
+          fromPlayIds: AllUnits().map(u => u.playId),
+          continuation: null,
+        } satisfies AbilityTargetPending,
+        continuation: null,
+      } satisfies AbilityOptionPending;
     }
     return null;
   }
@@ -6995,6 +7032,8 @@ function handleChooseTarget(
       for (const tempId of chosen) {
         const choice = eligibleMap.get(tempId)!;
         pState.hand.push({ cardId: choice.cardId });
+        // A search that draws IS a draw — "when you draw this card" must fire here too.
+        QueueWhenDrawnTrigger(game, pending.player, choice.cardId);
         drawnTitles.push(CardTitle(choice.cardId) ?? choice.cardId);
       }
       log.push(`${CardTitle(pending.cardId)}: drew ${drawnTitles.join(", ")}.`);
@@ -10398,6 +10437,31 @@ function applyAbilityEffect(
   }
 
   switch (pending.cardId) {
+    case "LOF_148": { // Rey — revealed: 2 damage to the chosen unit, then 2 to a chosen base.
+      if (!targetPlayId) break;
+      game.gameLog.push(`${CardTitle("LOF_148")}: revealed from hand.`);
+      DealDamageToUnit(game.currentGameState, "LOF_148", targetPlayId, 2, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, {
+        type: "ability-target",
+        cardId: "LOF_148_base",
+        player: pending.player!,
+        fromPlayIds: [],
+        fromZones: ["Base"],
+        amount: 2,
+        continuation: pending.continuation ?? null,
+      } satisfies AbilityTargetPending);
+    }
+    case "LOF_148_base": { // Rey — the second half: 2 damage to a base.
+      const basePlayer148: PlayerId | null =
+        targetPlayId === "player1.base" ? 1
+        : targetPlayId === "player2.base" ? 2
+        : targetIsBase ? (targetBasePlayer ?? GetOtherPlayer(pending.player!))
+        : null;
+      if (basePlayer148 === null) break;
+      dealBaseDamage(game.currentGameState, basePlayer148, 2, pending.player!);
+      game.gameLog.push(`${CardTitle("LOF_148")}: dealt 2 damage to Player ${basePlayer148}'s base.`);
+      return pending.continuation ?? null;
+    }
     case "SHD_214": { // Frontier Trader — the chosen resource goes to its OWNER's hand (a stolen
                       // resource returns to the opponent), then the nested "you may replace it
                       // from the top of your deck" is offered.

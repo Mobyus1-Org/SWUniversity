@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 889 cards across 10 sets.**
+**Total: 888 cards across 10 sets.**
 
 ---
 
@@ -336,7 +336,7 @@ JTL_260: Death Star Plans Upgrade
 JTL_262: Evasive Maneuver Event
 ```
 
-## LOF — Legends of the Force (100)
+## LOF — Legends of the Force (99)
 
 **Message 1 of 3**
 ```
@@ -392,7 +392,6 @@ LOF_142: Adi Gallia - Stern and Focused Unit
 LOF_144: Jedi Starfighter Unit
 LOF_145: Jedi Knight Unit
 LOF_146: Ki-Adi-Mundi - We Must Push On Unit
-LOF_148: Rey - With Palpatine's Power Unit
 LOF_150: Cin Drallig - Esteemed Blademaster Unit
 LOF_153: Paz Vizsla - Unyielding Warrior Unit
 LOF_155: DRK-1 Probe Droid Unit

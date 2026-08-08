@@ -445,6 +445,7 @@ export const Cards = {
       darthVaderScourgeOfSquadrons: "JTL_142", // Piloting 3 — grants the host an On Attack
     },
     lof: {
+      rey: "LOF_148", // With Palpatine's Power — 5/5 Ground, "when you draw this card" reveal
       curiousFlock: "LOF_255", // 1/1/1 Ground Creature — When Played: pay up to 6 for that many XP
       kelleranBeq: "LOF_100",
       darthMalak: "LOF_234",
@@ -495,6 +496,7 @@ export const Cards = {
     },
     sec: {
       furtiveHandmaiden: "SEC_197", // 2/2 Ground Naboo, cost 1
+      contrabandStarhopper: "SEC_161", // 2/3 Space Aggression Vehicle, no abilities
       cadBane: "SEC_034",
       captainRex: "SEC_048",
       consularsCruiser: "SEC_117",

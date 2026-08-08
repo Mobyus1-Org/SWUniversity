@@ -10,6 +10,7 @@ export type TriggerType =
   | "when-unit-deals-damage"
   | "when-unit-takes-damage"
   | "when-base-damaged"
+  | "when-card-drawn"  // reaction to drawing a specific card (e.g. LOF_148 Rey)
   | "when-upgrade-detached"
   | "shielded"  // same timing window as when-played
   | "ambush"    // same timing window as when-played

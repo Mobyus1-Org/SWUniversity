@@ -337,8 +337,21 @@ export function CardIsLeader(cardId: string): boolean {
  * counts for nothing, and a leader unit whose control you have seized counts for you (the
  * arenas are keyed by controller, not owner).
  */
+/**
+ * The leader UNITS `player` controls.
+ *
+ * Two shapes count, and missing the second is an easy bug: a leader deployed normally IS the
+ * unit (its cardId is the Leader card), but a leader deployed as a PILOT is an upgrade — the
+ * unit it rides becomes the leader unit, and that host keeps its own card's aspects and traits.
+ */
+export function FriendlyLeaderUnits(player: PlayerId): Unit[] {
+  return GetUnitsForPlayer(player).filter(
+    u => CardIsLeader(u.cardId) || u.upgrades.some(up => CardIsLeader(up.cardId)),
+  );
+}
+
 export function FriendlyLeaderUnitCount(player: PlayerId): number {
-  return GetUnitsForPlayer(player).filter(u => CardIsLeader(u.cardId)).length;
+  return FriendlyLeaderUnits(player).length;
 }
 
 export function GetLeaderForPlayer(player: PlayerId): Leader {
@@ -1105,12 +1118,40 @@ export function LeaderCanDeployAsPilot(cardId: string): boolean {
   }
 }
 
+/**
+ * Cards with a "When you draw this card during the action phase" ability. Queued from the single
+ * draw chokepoint below rather than checked at each of the many call sites.
+ */
+const WHEN_DRAWN_CARDS = new Set(["LOF_148"]); // Rey — With Palpatine's Power
+
+/**
+ * Queues a "when you draw this card" trigger. Called from EVERY route a card can travel from
+ * deck to hand — DrawCardForPlayer is the obvious one, but a deck search that draws (Recruit
+ * SOR_123, Grand Moff Tarkin…) pushes to hand directly and would otherwise miss the trigger.
+ */
+export function QueueWhenDrawnTrigger(gs: GameState, player: PlayerId, cardId: string): void {
+  // "During the action phase" — the regroup draw must not trigger it.
+  if (gs.gamePhase !== "ActionPhase" || !WHEN_DRAWN_CARDS.has(cardId)) return;
+  gs.triggerBag.push({
+    triggerType: "when-card-drawn",
+    cardId,
+    fromPlayer: player,
+    nested: true,
+  });
+}
+
 export function DrawCardForPlayer(gs: GameState, log: string[], player: PlayerId): void {
   const p = player === 1 ? gs.player1 : gs.player2;
   if (p.deck.length > 0) {
-    p.hand.push(p.deck.pop()!);
+    const drawn = p.deck.pop()!;
+    p.hand.push(drawn);
     log.push(`Player ${player} drew a card.`);
-  } else {
+    // Queued rather than returned: DrawCardForPlayer has many callers, none of which can handle
+    // a pending, so the trigger bag carries it to the end of the current dispatch.
+    QueueWhenDrawnTrigger(gs, player, drawn.cardId);
+    return;
+  }
+  {
     p.base.damage += 3;
     QueueWhenBaseDamagedReaction(gs, player, 3);
     log.push(`Player ${player} drew from an empty deck — 3 damage to their base.`);
