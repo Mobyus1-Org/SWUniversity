@@ -90,6 +90,45 @@ describe("SEC_232 Kreia's Whispers", () => {
     expect(g.state.player1.hand).toHaveLength(handAfterDraw - 2);
   });
 
+  describe("empty deck", () => {
+    // A missed draw is not an instant loss in SWU — it deals 3 damage to your OWN base. Three
+    // missed draws is 9 self-damage, which can be lethal.
+    function emptyDeckSetup(baseDamage: number) {
+      return new GameStateBuilder()
+        .MyBase(Cards.bases.common.green30HP, baseDamage)
+        .MyLeader(Cards.leaders.sor.sabineWren)
+        .TheirBase(Cards.bases.common.green30HP)
+        .TheirLeader(Cards.leaders.sor.sabineWren)
+        .FillResourcesForPlayer(1, MARINE, 14)
+        .WithCardInHandForPlayer(1, Cards.events.sec.kreiasWhispers)
+        .WithCardInHandForPlayer(1, MARINE);
+    }
+
+    it("takes 3 damage per missed draw and still resolves when survivable", async () => {
+      const g = new GameTestAdapter();
+      g.loadNewState(emptyDeckSetup(0).Build());
+
+      await g.playCardFromHandAsync(1, 0);
+
+      expect(g.state.player1.base.damage).toBe(9);
+      expect(g.state.defeatedPlayers).toEqual([]);
+      expect(g.lastDispatchResponse?.resolutionNeeded).toBeDefined(); // still banks a card
+    });
+
+    it("ends the game immediately when the missed draws are lethal, without prompting", async () => {
+      const g = new GameTestAdapter();
+      g.loadNewState(emptyDeckSetup(21).Build()); // 21 + 9 = 30 = dead
+
+      await g.playCardFromHandAsync(1, 0);
+
+      expect(g.state.player1.base.damage).toBe(30);
+      expect(g.state.defeatedPlayers).toEqual([1]);
+      // The player is already dead — they must not be asked to bank cards on a deck they
+      // will never draw from again.
+      expect(g.lastDispatchResponse?.resolutionNeeded).toBeUndefined();
+    });
+  });
+
   it("draws as many as it can from a short deck and still banks two cards", async () => {
     const g = new GameTestAdapter();
     g.loadNewState(baseSetup([CSF]).Build()); // only 1 card to draw

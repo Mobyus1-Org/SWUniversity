@@ -14439,6 +14439,20 @@ function runDispatch(
       result = skipUnsatisfiableDiscards(gs, log, result);
     }
 
+    // The game can end in the MIDDLE of resolving something — an empty-deck draw damaging your
+    // own base (SEC_232 Kreia's Whispers misses 3 draws for 9), a When Played that kills its own
+    // controller. Every other updateDefeatedPlayers call sits on a branch that returns a final
+    // state, so a handler returning a PENDING left the defeat unrecorded and went on prompting a
+    // player who had already lost. Recomputing here — the one exit every dispatch passes through —
+    // covers all of them, and any outstanding prompt is dropped: once a base is destroyed the
+    // game is over and nothing further resolves.
+    if (!result.response.invalidAction) {
+      updateDefeatedPlayers(gs);
+      if (gs.defeatedPlayers.length > 0 && result.pending) {
+        result = { response: stateResponse(gs), pending: null, stateChanged: true };
+      }
+    }
+
     // Snapshot the pre-dispatch state before top-level actions (play-card, initiate-attack,
     // use-ability, pass-action, claim-initiative). Resolution steps (choose-target, choose-option,
     // etc.) are part of the same logical action and must NOT add extra snapshots — doing so would
