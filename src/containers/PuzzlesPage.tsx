@@ -1,6 +1,7 @@
 import React from "react";
 import { CardSubtitle, CardTitle } from "@/server/engine/card-db/generated";
-import { getCardImageLink, getSWUDBImageLink } from "@/util/func";
+import { getCardImageLink, getSWUDBImageLink, getSWUDBImageLinkFallback } from "@/util/func";
+import { DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 import { getMasteredIds } from "@/util/profile-api";
 import { globalBackgroundStyle, lightsaberGlow } from "@/util/style-const";
 import { DiscordLink } from "@/util/const";
@@ -287,17 +288,26 @@ function CardVisual({
   buff?: { power: number; hp: number };
 }) {
   const pattern = imageId ?? cardId;
-  const primarySrc = square ? `/assets/cards/square/${pattern}.webp` : getCardImageLink(pattern);
-  const fallbackSrc = square ? getCardImageLink(pattern) : getSWUDBImageLink(pattern);
-  const [imageSrc, setImageSrc] = React.useState(primarySrc);
+  // Same fallback chain StaticBoard uses: generated art -> swudb import -> swudb CDN -> card back.
+  // Stopping at the local sources left cards with no generated art (LAW_187, the LAW_T01 Credit
+  // token) rendering as bare alt text, which reads as a wall of words where a card should be.
+  const imageChain = React.useMemo(() => {
+    const chain = square
+      ? [`/assets/cards/square/${pattern}.webp`, getCardImageLink(pattern)]
+      : [getCardImageLink(pattern), getSWUDBImageLink(pattern)];
+    return [...chain, getSWUDBImageLinkFallback(pattern), `/assets/${DEFAULT_PUZZLE_IMAGE}`];
+  }, [pattern, square]);
+  const [imageStage, setImageStage] = React.useState(0);
+  const imageSrc = imageChain[Math.min(imageStage, imageChain.length - 1)];
   const title = CardTitle(cardId);
   const subtitle = CardSubtitle(cardId);
   const previewState: PreviewState = { imageId: imageId ?? cardId, cardId, label: subtitle ? `${title} — ${subtitle}` : title };
   const hold = useLongPress(() => onPreviewStart(previewState, { sticky: true }));
 
+  // Restart the chain whenever the card being shown changes.
   React.useEffect(() => {
-    setImageSrc(primarySrc);
-  }, [primarySrc]);
+    setImageStage(0);
+  }, [imageChain]);
   const imageClass = square
     ? "aspect-square"
     : handScaleHalf
@@ -320,11 +330,7 @@ function CardVisual({
             src={imageSrc}
             alt={title}
             className={`w-full object-cover ${imageClass}`}
-            onError={() => {
-              if (imageSrc !== fallbackSrc) {
-                setImageSrc(fallbackSrc);
-              }
-            }}
+            onError={() => setImageStage(s => Math.min(s + 1, imageChain.length - 1))}
           />
           {exhausted ? <div className="pointer-events-none absolute inset-0 bg-black/35" /> : null}
         </div>
@@ -442,14 +448,19 @@ function UpgradeStrip({
   onPreviewEnd: () => void;
 }) {
   const imageCardId = CardIsLeader(cardId) ? `${cardId}_BACK` : cardId;
-  const primarySrc = getCardImageLink(imageCardId);
-  const fallbackSrc = getSWUDBImageLink(imageCardId);
-  const [imageSrc, setImageSrc] = React.useState(primarySrc);
+  const imageChain = React.useMemo(() => [
+    getCardImageLink(imageCardId),
+    getSWUDBImageLink(imageCardId),
+    getSWUDBImageLinkFallback(imageCardId),
+    `/assets/${DEFAULT_PUZZLE_IMAGE}`,
+  ], [imageCardId]);
+  const [imageStage, setImageStage] = React.useState(0);
+  const imageSrc = imageChain[Math.min(imageStage, imageChain.length - 1)];
   const title = CardTitle(cardId);
   const previewState: PreviewState = { imageId: imageCardId, cardId, label: title };
   const hold = useLongPress(() => onPreviewStart(previewState, { sticky: true }));
 
-  React.useEffect(() => { setImageSrc(primarySrc); }, [primarySrc]);
+  React.useEffect(() => { setImageStage(0); }, [imageChain]);
 
   const inner = (
     <div
@@ -464,7 +475,7 @@ function UpgradeStrip({
         alt={title}
         className="h-full w-full object-cover"
         style={{ objectPosition: "center 95%" }}
-        onError={() => { if (imageSrc !== fallbackSrc) setImageSrc(fallbackSrc); }}
+        onError={() => setImageStage(s => Math.min(s + 1, imageChain.length - 1))}
       />
     </div>
   );
