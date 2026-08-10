@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 888 cards across 10 sets.**
+**Total: 887 cards across 10 sets.**
 
 ---
 
@@ -99,12 +99,11 @@ SHD_260: Street Gang Recruiter Unit
 SHD_262: Confiscate Event
 ```
 
-## TWI — Twilight of the Republic (105)
+## TWI — Twilight of the Republic (104)
 
 **Message 1 of 3**
 ```
 TWI:
-TWI_017: Chancellor Palpatine - Playing Both Sides Leader
 TWI_019: Pau City Base
 TWI_022: Droid Manufactory Base
 TWI_025: Shadow Collective Camp Base

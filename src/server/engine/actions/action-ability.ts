@@ -92,6 +92,11 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "TWI_005": // Count Dooku — needs Separatist card in hand
         if (GetHand(player).some(c => CardTraits(c.cardId).includes("Separatist"))) abilities.push(cardId);
         break;
+      case "TWI_017": // Chancellor Palpatine // Darth Sidious — both faces carry an Action [Exhaust].
+                      // Always offered: the "if" clause is checked on resolution, not availability
+                      // (the Exhaust is the only cost), so an unmet condition soft-passes.
+        abilities.push(cardId);
+        break;
       case "LAW_002": // Tobias Beckett — Action [Exhaust]: give a friendly unit to an opponent for
                       // a Credit. Needs a friendly unit to give away.
         if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);

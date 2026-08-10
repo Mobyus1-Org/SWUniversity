@@ -106,6 +106,14 @@ function getPreviewImageId(cardId: string, showBack = false): string {
   return showBack ? `${cardId}_BACK` : cardId;
 }
 
+/**
+ * The art for the face a leader is currently showing. A double-sided leader (TWI_017) flips to
+ * its BACK image — for Flipatine that really is a different character, Darth Sidious.
+ */
+function leaderFaceImageId(leader: { cardId: string; flipped?: boolean }): string {
+  return getPreviewImageId(leader.cardId, leader.flipped === true);
+}
+
 // ---------------------------------------------------------------------------
 // Config — flip to true to use round-trip context mode (HttpTransport pattern)
 // ---------------------------------------------------------------------------
@@ -183,6 +191,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "SHD_016", "SHD_017",
   //Twilight of the Republic
   "TWI_002", "TWI_004", "TWI_005", "TWI_006", "TWI_007", "TWI_011", "TWI_012", "TWI_014",
+  "TWI_017", // Chancellor Palpatine // Darth Sidious — an Action on BOTH faces
   //Jump to Lightspeed
   "JTL_004", "JTL_005", "JTL_006", "JTL_010", "JTL_012", "JTL_013", "JTL_014", "JTL_018",
   //Legends of the Underworld
@@ -1866,6 +1875,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                 <div className="grid grid-cols-2 gap-2">
                   {!player.leader.deployed ? <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={player.leader.cardId}
+                    imageId={leaderFaceImageId(player.leader)}
                     selectable={uiCanClickLeader}
                     onClick={uiCanClickLeader ? () => { if (LEADERS_WITH_ACTION_ABILITY.has(player.leader.cardId) && player.leader.ready) { setLeaderModalOpen(true); } else { handleLeaderDeploy(); } } : undefined}
                     onPreviewStart={handlePreviewStart}
@@ -2043,6 +2053,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                 <div className="grid grid-cols-2 gap-2 xl:hidden">
                   {!player.leader.deployed ? <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={player.leader.cardId}
+                    imageId={leaderFaceImageId(player.leader)}
                     selectable={uiCanClickLeader}
                     onClick={uiCanClickLeader ? () => { if (LEADERS_WITH_ACTION_ABILITY.has(player.leader.cardId) && player.leader.ready) { setLeaderModalOpen(true); } else { handleLeaderDeploy(); } } : undefined}
                     onPreviewStart={handlePreviewStart}
@@ -2086,6 +2097,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                   </div>
                   {!player.leader.deployed ? <CardVisual
                     cardId={player.leader.cardId}
+                    imageId={leaderFaceImageId(player.leader)}
                     selectable={uiCanClickLeader}
                     onClick={uiCanClickLeader ? () => { if (LEADERS_WITH_ACTION_ABILITY.has(player.leader.cardId) && player.leader.ready) { setLeaderModalOpen(true); } else { handleLeaderDeploy(); } } : undefined}
                     onPreviewStart={handlePreviewStart}

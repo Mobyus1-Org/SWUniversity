@@ -45,6 +45,12 @@ export interface Leader extends EpicActionCard {
   ready: boolean;
   deployed: boolean;
   deployedPlayId?: string;
+  /**
+   * Double-sided leaders (TWI_017 Chancellor Palpatine // Darth Sidious) show their BACK face.
+   * Distinct from `deployed`, which means "this leader is a unit in an arena" — a flipped leader
+   * is still in the leader zone, just showing its other side.
+   */
+  flipped?: boolean;
 }
 
 export interface CardInPlay extends Card {

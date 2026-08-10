@@ -95,3 +95,41 @@ memory system (see `MEMORY.md`), not just here.
   TDD cycles or asserting a false clean-lint. (3) Catching my own clamp arithmetic slip
   (0.521vw put 1920px 0.003px above the floor, breaking the no-op-at-1920 guarantee) during
   execution and rounding down to 0.5208vw, keeping spec/plan/code in sync.
+
+## 2026-08-09
+
+- **Third repeat of the fixture lesson** (logged 2026-07-17 and again 2026-07-20 — it keeps
+  happening in new disguises). This session it cost ~5 red cycles across five *different* fixture
+  mistakes, none of them the already-logged "wrong HP" form: (a) `CardCost` ≠ `playCost` — Battlefield
+  Marine is Command/Heroism and carried a +2 aspect penalty against the test's base/leader, so
+  Dooku's Palace expectations were all off; (b) reaching the regroup phase needs the passes in
+  turn order (P2 then P1) or the dispatch is silently rejected and the test reads as a no-op;
+  (c) `MyLeader(x, true, true)` means ALREADY deployed, so `deployLeaderAsync` is rejected —
+  When-Deployed tests must start undeployed; (d) `FillResourcesForPlayer` pushes into the OWNER's
+  array, so it cannot express "P1 controls a resource P2 owns"; (e) two identical units in a
+  fixture made an assertion ambiguous. The standing rule ("pull stats from generated.ts") is too
+  narrow — the real rule is **verify every fixture assumption against the builder/engine, not just
+  card stats**: cost via `playCost`, turn order, builder param semantics, and unit uniqueness.
+- **Anchored an edit onto the wrong function.** Inserted a `case "SEC_232"` by anchoring on
+  `case "SHD_197"`, which exists in BOTH `resolveChooseOne` and `applyAbilityOptionEffect`. It
+  landed in the latter; the prompt rendered but never resolved, costing a debug cycle. This file
+  has several switch statements over `pending.cardId` — **confirm the enclosing function of an
+  anchor before inserting**, especially in dispatch-listener.ts.
+- **The shell here is zsh with ugrep, not bash with GNU grep.** Unquoted `$files` does NOT
+  word-split (perl received one giant filename and silently did nothing — twice), and `grep -Z`
+  means *fuzzy match* in ugrep, not NUL-separated. Use `while IFS= read -r` loops for file lists.
+- **Confirmed working — [[feedback-skills-are-account-global]] (logged 2026-07-17) fired exactly as
+  intended.** `/swusim-session-close` was invoked here; checking the skill body first showed it
+  targets a *different* repo's 245KB memory file and a `GameLayout.php` this repo doesn't have.
+  Stopped before writing. The lesson-to-memory-to-averted-incident loop worked end to end.
+- **When the user enumerates scenarios, encode ALL of them as tests before judging which pass.**
+  Asked "do we have tests for these 5 cases?", I wrote all five plus the named draw source rather
+  than reasoning from the code — which surfaced two real gaps my own tests had missed (a piloting
+  leader making its HOST the leader unit, and deck-search draws bypassing `DrawCardForPlayer`
+  entirely). Reading the code would have confirmed my own assumptions.
+- **Mutation testing is the right recovery when tests pass on the first run.** Twice I wrote tests
+  then implemented without observing red (Curious Flock's Credit cases, all of Flipatine). Rather
+  than assert they were meaningful, I mutated the implementation — counting the declared amount
+  instead of resources exhausted; removing the flips; forcing both `if` conditions true — and
+  confirmed exactly the intended tests failed. Keep this as the standard fallback, but prefer
+  actually running red first.

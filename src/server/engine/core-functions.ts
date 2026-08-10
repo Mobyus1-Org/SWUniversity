@@ -1,4 +1,5 @@
-import { CardArena, CardAspects, CardCost, CardIsUnique, CardText, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
+import { CardArena, CardAspects, CardCost, CardIsUnique, CardText, CardTitle, CardTraits, CardType, CardType2 } from "@/server/engine/card-db/generated";
+import { LeaderBackSideOf } from "@/server/engine/card-db/double-sided-leaders";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { Card, CardInPlay, CardTypes, CurrentEffect, EffectDuration, HP_MOD, Leader, PHASE_STAT_MOD, POWER_MOD, PlayerId, Resource, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { Game, GameState, PlayerState } from "@/lib/engine/game";
@@ -330,6 +331,62 @@ export function CardIsLeader(cardId: string): boolean {
 }
 
 /**
+ * A double-sided leader flips between two LEADER faces instead of deploying into a unit
+ * (TWI_017 Chancellor Palpatine // Darth Sidious). Detected from the data — `cardType2` is
+ * "Leader" rather than "Unit" — so a future one needs no code change here.
+ */
+export function LeaderIsDoubleSided(cardId: string): boolean {
+  return CardIsLeader(cardId) && CardType2(cardId) === "Leader";
+}
+
+/** False for a leader that has no unit side and therefore can never be deployed. */
+export function LeaderHasUnitSide(cardId: string): boolean {
+  return !LeaderIsDoubleSided(cardId);
+}
+
+/**
+ * The title/traits of the face a leader is currently showing.
+ *
+ * A flipped double-sided leader is a different character with different traits — Darth Sidious is
+ * Force/Separatist/Sith where Chancellor Palpatine is Republic/Official — but the generated
+ * dictionaries only carry the front side, because the upstream card API has no second-side title
+ * or traits at all. The back face comes from the hand-maintained double-sided-leaders module.
+ */
+export function LeaderSideTitle(cardId: string, flipped: boolean): string {
+  const back = flipped ? LeaderBackSideOf(cardId) : null;
+  return back?.title ?? CardTitle(cardId);
+}
+
+export function LeaderSideTraits(cardId: string, flipped: boolean): string[] {
+  const back = flipped ? LeaderBackSideOf(cardId) : null;
+  return back?.traits ?? CardTraits(cardId);
+}
+
+/**
+ * "If a friendly <Aspect> unit was defeated this phase" (TWI_017 front). The sibling of
+ * UnitWasDefeatedThisPhase, which matches on TRAIT — these two conditions read alike on the
+ * cards but are different card properties, and using the wrong one silently never matches.
+ */
+export function UnitWithAspectWasDefeatedThisPhase(player: PlayerId, aspect: string): boolean {
+  const game = GetGame();
+  if (!game) return false;
+  return game.currentGameState.roundState.cardsLeftPlayThisPhase.some(
+    left => left.fromPlayer === player
+      && (left.reason === "defeated" || left.reason === "token-defeated")
+      && CardAspects(left.cardId).includes(aspect),
+  );
+}
+
+/** "If you played a <Aspect> card this phase" (TWI_017 back). Aspect, not trait — see above. */
+export function CardWithAspectWasPlayedThisPhase(player: PlayerId, aspect: string): boolean {
+  const game = GetGame();
+  if (!game) return false;
+  return game.currentGameState.roundState.cardsPlayedThisPhase.some(
+    played => played.fromPlayer === player && CardAspects(played.cardId).includes(aspect),
+  );
+}
+
+/**
  * How many leader units `player` controls — the scaling term shared by all four TS26 bases
  * ("For each friendly leader unit, …").
  *
@@ -367,6 +424,14 @@ export function GetLeaderForPlayer(player: PlayerId): Leader {
 export function TraitContains(cardId: string, trait: string, player?: PlayerId, playId?: string): boolean {
   const isBase = CardIsBase(cardId);
   const isLeaderSide = CardIsLeader(cardId) && player && !GetLeaderForPlayer(player).deployed;
+
+  // A flipped double-sided leader is a different character with different traits: Darth Sidious
+  // is Force/Separatist/Sith where Chancellor Palpatine is Republic/Official. The generated
+  // dictionary only holds the front side, so the back face is answered from its own data and
+  // must NOT fall through to the front-side lookup below.
+  if (player !== undefined && LeaderIsDoubleSided(cardId) && GetLeaderForPlayer(player).flipped) {
+    return LeaderSideTraits(cardId, true).includes(trait);
+  }
   if (playId && !isLeaderSide && !isBase) {
     const unit = GetUnitInPlay(playId, player);
     const upgrades = unit?.upgrades || [];

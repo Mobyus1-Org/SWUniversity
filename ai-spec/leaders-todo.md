@@ -24,7 +24,7 @@ _All canonical leaders implemented._
 ### TWI — Twilight of the Republic
 **1 unimplemented** of 18 canonical leaders.
 
-- [ ] `TWI_017` Chancellor Palpatine — Playing Both Sides
+- [x] `TWI_017` Chancellor Palpatine — Playing Both Sides
 
 ### JTL — Jump to Lightspeed
 **0 unimplemented** of 18 canonical leaders.

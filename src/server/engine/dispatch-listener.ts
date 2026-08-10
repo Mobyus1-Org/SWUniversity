@@ -119,7 +119,7 @@ import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt } from "@/server/engine/core-functions";
+import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -8933,6 +8933,12 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
   if (leader.epicActionUsed)
     return { response: invalidResponse("Leader epic action already used this round."), pending: null, stateChanged: false };
 
+  // A double-sided leader (TWI_017) has no unit side at all — no cost, power or HP — so it can
+  // never deploy. Without this it falls through to the generic path below, where a missing cost
+  // reads as 0 and it deploys for free as a phantom 0/0 unit.
+  if (!LeaderHasUnitSide(leader.cardId))
+    return { response: invalidResponse(`${CardTitle(leader.cardId)} has no unit side and cannot be deployed.`), pending: null, stateChanged: false };
+
   // Some LOF/ASH leaders deploy via a condition ("If you control N resources…") instead of
   // paying their deploy cost. For those, gate on the condition and pay nothing.
   const epicCondition = LeaderEpicDeployCondition(game, player, leader.cardId);
@@ -9790,6 +9796,40 @@ function resolveActionAbility(
         fromPlayIds: friendlyUnits006.map(u => u.playId),
         continuation: null,
       };
+    }
+    case "TWI_017": { // Chancellor Palpatine // Darth Sidious — "Playing Both Sides".
+                      // Which ability runs depends on the face currently showing. Both end in
+                      // "then flip this leader", and that flip is INSIDE the "if", so a failed
+                      // condition spends the Exhaust and changes nothing else.
+      const leader017 = GetPlayer(game, player).leader;
+      if (!leader017.flipped) {
+        // Chancellor: "If a friendly Heroism unit was defeated this phase, draw a card, heal 2
+        // damage from your base, then flip this leader."
+        if (!UnitWithAspectWasDefeatedThisPhase(player, "Heroism")) {
+          log.push(`${CardTitle("TWI_017")}: no friendly Heroism unit was defeated this phase — nothing happens.`);
+          return null;
+        }
+        DrawCardForPlayer(game, log, player);
+        HealBaseForPlayer(game, player, 2, log, "TWI_017");
+        leader017.flipped = true;
+        log.push(`${CardTitle("TWI_017")}: flipped to ${LeaderSideTitle("TWI_017", true)}.`);
+        return null;
+      }
+      // Sidious: "If you played a Villainy card this phase, create a Clone Trooper token, deal 2
+      // damage to each enemy base, then flip this leader."
+      if (!CardWithAspectWasPlayedThisPhase(player, "Villainy")) {
+        log.push(`${LeaderSideTitle("TWI_017", true)}: no Villainy card was played this phase — nothing happens.`);
+        return null;
+      }
+      CreateCloneTrooper(game, player, log, "TWI_017");
+      // "each enemy base" — a single opponent today, but written as a sweep so it stays correct.
+      for (const enemy of ([1, 2] as PlayerId[]).filter(p => p !== player)) {
+        dealBaseDamage(game, enemy, 2, player);
+        log.push(`${LeaderSideTitle("TWI_017", true)}: dealt 2 damage to Player ${enemy}'s base.`);
+      }
+      leader017.flipped = false;
+      log.push(`${LeaderSideTitle("TWI_017", true)}: flipped back to ${CardTitle("TWI_017")}.`);
+      return null;
     }
     case "LAW_002": { // Tobias Beckett — Action [Exhaust]: "Choose a friendly unit. An opponent
                       // takes control of it. If they do, create a Credit token."

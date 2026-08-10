@@ -99,6 +99,12 @@ export class GameStateBuilder {
     return this;
   }
 
+  /** Flips a double-sided leader (TWI_017) to its back face. Call after MyLeader. */
+  MyLeaderFlipped(): this {
+    this._raw.player1.leader.flipped = true;
+    return this;
+  }
+
   TheirLeader(cardId: string, ready = true, deployed = false, epicActionUsed = false): this {
     this._raw.player2.leader = { cardId, epicActionUsed, ready, deployed };
     return this;
