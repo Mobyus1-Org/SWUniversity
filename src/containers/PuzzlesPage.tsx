@@ -197,7 +197,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "SHD_009", "SHD_010", "SHD_011", "SHD_012", "SHD_013",
   "SHD_016", "SHD_017",
   //Twilight of the Republic
-  "TWI_002", "TWI_004", "TWI_005", "TWI_006", "TWI_007", "TWI_011", "TWI_012", "TWI_014",
+  "TWI_002", "TWI_004", "TWI_005", "TWI_006", "TWI_007", "TWI_011", "TWI_012", "TWI_013", "TWI_014",
   "TWI_017", // Chancellor Palpatine // Darth Sidious — an Action on BOTH faces
   //Jump to Lightspeed
   "JTL_004", "JTL_005", "JTL_006", "JTL_010", "JTL_012", "JTL_013", "JTL_014", "JTL_018",
@@ -207,7 +207,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "LOF_002", "LOF_003", "LOF_004", "LOF_005", "LOF_007", "LOF_009", "LOF_011", "LOF_012", "LOF_013",
   "LOF_014", "LOF_015", "LOF_016", "LOF_018",
   //Secrets of Power
-  "SEC_004", "SEC_006", "SEC_007", "SEC_015",
+  "SEC_004", "SEC_006", "SEC_007", "SEC_011", "SEC_015",
   //ASH
   "ASH_004", "ASH_009",
   //IBH

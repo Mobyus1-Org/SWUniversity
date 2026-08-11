@@ -115,6 +115,7 @@ export function UpgradeEligibleTargets(
     case "SHD_193": //Frozen in Carbonite
     case "SHD_226": //Unrefusable Offer
     case "TWI_122": //Squad Support
+    case "LAW_077": //Shadow of Stygeon Prime
       return everyone.filter(u => !CardIsLeader(u.cardId) && !u.upgrades.some(upg => CardIsLeader(upg.cardId)))
         .map(u => u.playId);
 

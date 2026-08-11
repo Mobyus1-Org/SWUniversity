@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
-import { aspectPenalty, palpatinesReturnCost, spendableFor } from "@/server/engine/card-playability";
+import { aspectPenalty, palpatinesReturnCost, spendableFor, playCost } from "@/server/engine/card-playability";
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -195,6 +195,38 @@ export function resolveWhenPlayed(
   const game = GetGame();
   if (!game) throw new Error("Game not found in resolveWhenPlayedAbility");
   switch (cardId) {
+    case "LAW_242": { // Improvise (Event) — "Look at the top card of your deck. You may play it.
+                      // It costs 1 resource less. If you don't, you may discard it."
+                      // Same three-outcome shape as SOR_192 Ezra Bridger, but with a discount:
+                      // the discard offer is nested as the PLAY offer's continuation, so it only
+                      // appears once the player declines ("if you don't").
+      const pState242 = GetPlayer(game.currentGameState, player);
+      if (pState242.deck.length === 0) return null;
+      const top242 = pState242.deck[pState242.deck.length - 1];
+      const cost242 = Math.max(0, playCost(game.currentGameState, player, top242.cardId) - 1);
+      const discardStep242 = {
+        type: "ability-option" as const,
+        cardId: "LAW_242_discard",
+        player,
+        helperText: `Discard ${CardTitle(top242.cardId)}? (No = leave on top)`,
+        yesLabel: "Discard",
+        noLabel: "Leave on Top",
+        onYes: null,
+        continuation: null,
+      };
+      // Unaffordable even with the discount — skip straight to the discard offer.
+      if (spendableFor(game.currentGameState, player) < cost242) return discardStep242;
+      return {
+        type: "ability-option",
+        cardId: "LAW_242",
+        player,
+        helperText: `Play ${CardTitle(top242.cardId)} for ${cost242} resource(s)?`,
+        yesLabel: "Play",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: discardStep242,
+      } satisfies AbilityOptionPending;
+    }
     case "JTL_193": { // I Have You Now (Event) — "Attack with a Vehicle unit. Prevent all damage
                       // that would be dealt to it during this attack." Vehicle-only, unlike the
                       // otherwise identical ASH_184 Follow Me.

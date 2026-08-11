@@ -5,7 +5,7 @@ import { AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDam
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { CreateBattleDroid, CreateTieFighter } from "@/server/engine/token-helpers";
+import { CreateBattleDroid, CreateTieFighter, CreateSpy } from "@/server/engine/token-helpers";
 
 /**
  * When Defeated abilities — called immediately after the unit is removed from
@@ -136,6 +136,12 @@ function resolveOwnWhenDefeated(
   }
 
   switch (unit.cardId) {
+    case "SEC_132": { // Imperial Occupier — "When Defeated: Create a Spy token."
+                      // Mandatory and targetless, so it resolves with no prompt.
+      const game132 = GetGame();
+      if (game132) CreateSpy(game132.currentGameState, player, game132.gameLog, "SEC_132");
+      return null;
+    }
     case "LAW_059": { // Highsinger — "When Defeated: Give an Experience token to a friendly
                       // Aggression unit." Aggression here, unlike the Command half on his When
                       // Played, and with no "another" — though he has already left the arena.

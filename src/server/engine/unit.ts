@@ -260,6 +260,14 @@ export class Unit implements UnitInterface {
       if (upgrade.cardId === "TWI_122") power += squadSupportCount(this);
     }
 
+    // SEC_011 Governor Pryce (deployed) — "This unit gets +1/+0 for each ready friendly token
+    // unit." Live and READY-sensitive: the bonus drops as tokens exhaust and returns when they
+    // ready, so it is computed here rather than stored as an effect.
+    if (this.cardId === "SEC_011" && !this.LostAbilities()) {
+      power += GetUnitsForPlayer(this.controller)
+        .filter(u => u.ready && Unit.FromInterface(u).IsTokenUnit()).length;
+    }
+
     if (this.cardId === "SHD_056" && this.upgrades.length > 0 && !this.LostAbilities()) {
       power += 1;
     }

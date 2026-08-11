@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 887 cards across 10 sets.**
+**Total: 881 cards across 10 sets.**
 
 ---
 
@@ -451,7 +451,7 @@ LOF_263: Last Words Event
 LOF_264: It's Worse Event
 ```
 
-## LAW — Legends of the Underworld (172)
+## LAW — Legends of the Underworld (170)
 
 **Message 1 of 4**
 ```
@@ -513,7 +513,6 @@ LAW_073: Patient Hunter Unit
 LAW_074: Maz Kanata - Where's My Boyfriend? Unit
 LAW_075: Interrogation Droid Unit
 LAW_076: Vult Skerris's Defender - Secret Project Unit
-LAW_077: Shadow of Stygeon Prime Upgrade
 LAW_080: Luke Skywalker - Profit or Be Destroyed Unit
 LAW_083: Broken Horn - Vizago's Pride Unit
 LAW_084: Krrsantan - Hit and Run Unit
@@ -631,7 +630,6 @@ LAW_236: Bix Caleen - Selling Scrap Unit
 LAW_237: Qui-Gon Jinn - Influencing Chance Unit
 LAW_240: Milodon Rider Unit
 LAW_241: The Blade Wing - The Secret of Shantipole Unit
-LAW_242: Improvise Event
 LAW_243: Transmission Jamming Event
 LAW_245: Salvaged Materials Event
 LAW_248: Windfall Event
@@ -645,7 +643,7 @@ LAW_262: Bank Job Fugitives Unit
 LAW_264: From a Certain Point of View Event
 ```
 
-## SEC — Secrets of Power (155)
+## SEC — Secrets of Power (151)
 
 **Message 1 of 4**
 ```
@@ -654,7 +652,6 @@ SEC_002: Jabba the Hutt - Wonderful Human Being Leader
 SEC_003: Lama Su - We Modified Their Genetics Leader
 SEC_008: Bail Organa - Doing Everything He Can Leader
 SEC_009: Mon Mothma - Forming a Coalition Leader
-SEC_011: Governor Pryce - Tyrant of Lothal Leader
 SEC_012: Cassian Andor - Climb! Leader
 SEC_013: Luthen Rael - Don't You Want to Fight For Real? Leader
 SEC_016: Padmé Amidala - What Do You Have to Hide? Leader
@@ -688,7 +685,6 @@ SEC_074: Relief Request Event
 SEC_075: Knowledge and Defense Event
 SEC_076: Charged with Murder Event
 SEC_077: Retaliation Event
-SEC_078: Hyperspace Disaster Event
 SEC_089: PreMor Personnel Carrier Unit
 SEC_090: Director Krennic - I Lose Nothing But Time Unit
 SEC_091: Corporate Warmongering Event
@@ -721,7 +717,6 @@ SEC_128: Convene the Senate Event
 SEC_129: With Thunderous Applause Event
 SEC_130: Ferrix Uprising Event
 SEC_131: Let's Talk Event
-SEC_132: Imperial Occupier Unit
 SEC_133: Syril Karn - Where Is He? Unit
 SEC_135: Muckraker Crab Droid Unit
 SEC_136: Arihnda Pryce - On the Road to Power Unit
@@ -773,7 +768,6 @@ SEC_198: Bail Organa - Responding to Catastrophe Unit
 SEC_200: Junior Senator Unit
 SEC_202: Rebel Propagandist Unit
 SEC_203: Tala Durith - I Can Get You Inside Unit
-SEC_204: Blue Ace - Colorful Racer Unit
 SEC_205: Obi-Wan Kenobi - Finding What Doesn't Exist Unit
 SEC_206: Emissaries from Ryloth Unit
 SEC_207: Lightmaker - I Have An Idea Unit

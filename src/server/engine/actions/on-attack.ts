@@ -1,14 +1,14 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending, IndirectDamagePending } from "@/server/engine/pending-resolution";
-import { buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, ResourceTopCardOfDeck } from "@/server/engine/core-functions";
+import { buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, ResourceTopCardOfDeck } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType } from "@/server/engine/card-db/generated";
 import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens, CreateSpy } from "@/server/engine/token-helpers";
+import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens, GiveExperienceTokens, CreateSpy } from "@/server/engine/token-helpers";
 import { jabbasRancorDamage } from "@/server/engine/actions/when-played";
 
 /**
@@ -138,6 +138,17 @@ export function resolveOnAttackTrigger(
             deferredPending = optionalTarget("JTL_142_pilot", attacker.controller, allUnits142.map(u => u.playId),
               "Deal 1 damage to a unit?", { yesLabel: "Deal 1", sourcePlayId: attacker.playId, continuation });
           }
+        }
+        break;
+      }
+      case "JTL_046": { // Paige Tico piloting — "On Attack: Give an Experience token to this unit,
+                        // then deal 1 damage to it." Mandatory and self-targeting, so it resolves
+                        // inline. Order matters: the Experience (+1/+1) lands BEFORE the damage,
+                        // so a host on its last point of HP survives its own trigger.
+        const game046 = GetGame();
+        if (game046) {
+          GiveExperienceTokens(game046.currentGameState, attacker, 1, game046.gameLog, "JTL_046");
+          DealDamageToUnit(game046.currentGameState, "JTL_046", attacker.playId, 1, game046.gameLog);
         }
         break;
       }
@@ -980,6 +991,28 @@ function resolveInnateOnAttack(
       return searchDeck("SOR_236", attacker.controller, 1, "scry", { continuation }) ?? continuation;
     case "SOR_040": { // Avenger On Attack — opponent chooses a non-leader unit they control to defeat.
       return chooseAndDefeatUnit("SOR_040", attacker.controller, false, continuation);
+    }
+    case "SEC_011": { // Governor Pryce (deployed) — "On Attack: Create a Spy token."
+      const game011 = GetGame();
+      if (game011) CreateSpy(game011.currentGameState, attacker.controller, game011.gameLog, "SEC_011");
+      return continuation;
+    }
+    case "TWI_165": { // Kit Fisto — "Coordinate — On Attack: You may deal 3 damage to a ground unit."
+                      // Optional, any ground unit (either side). HasOnAttack already gates this on
+                      // Coordinate being active, but re-check: units can leave play mid-attack.
+      if (!IsCoordinateActive(attacker.controller)) return continuation;
+      const ground165 = AllGroundUnits();
+      if (ground165.length === 0) return continuation;
+      return optionalTarget("TWI_165", attacker.controller, ground165.map(u => u.playId),
+        "Deal 3 damage to a ground unit?", { yesLabel: "Deal 3", continuation });
+    }
+    case "SEC_204": { // Blue Ace — "On Attack: Ready an exhausted enemy unit."
+                      // Mandatory, but only EXHAUSTED ENEMY units are legal, so with none in
+                      // play it simply does not fire (readying an enemy is a drawback).
+      const enemy204 = GetUnitsForPlayer(attacker.controller === 1 ? 2 : 1)
+        .filter(u => !u.ready);
+      if (enemy204.length === 0) return continuation;
+      return mandatoryTarget("SEC_204", attacker.controller, enemy204.map(u => u.playId), continuation);
     }
     case "SEC_197": { // Furtive Handmaiden — "On Attack: You may discard a card from your hand.
                       // If you do, draw a card." The draw rides on the discard pending's

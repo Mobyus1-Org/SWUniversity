@@ -4172,6 +4172,13 @@ function completePlayCard(
           if (afterSweep141.type === "resolve-attack") return handleResolveAttack(game, log, afterSweep141);
           return { response: resolutionResponse(pendingToResolution(afterSweep141, game)), pending: afterSweep141, stateChanged: false };
         }
+      } else if (cardId === "SEC_078") {
+        // Hyperspace Disaster — "Defeat all space units." Same shape as the board wipes below
+        // but scoped to the space arena; ground is untouched, and it hits both sides.
+        const holdersP1_078 = GetUnitsForPlayer(1);
+        const holdersP2_078 = GetUnitsForPlayer(2);
+        const spaceUnits078 = [...game.player1.spaceArena, ...game.player2.spaceArena] as Unit[];
+        boardWipeDefeat(game, log, spaceUnits078, holdersP1_078, holdersP2_078);
       } else if (cardId === "SOR_043" || cardId === "TWI_078" || cardId === "LAW_044") {
         const otherPlayer: PlayerId = player === 1 ? 2 : 1;
         // Snapshot trigger-holders before any unit is removed so wiped units still trigger.
@@ -6011,6 +6018,43 @@ function handleChooseTarget(
     // JTL_101 Red Leader: When a Pilot upgrade attaches to this unit — create an X-Wing token.
     if (IsPilotUpgrade(pending.upgradeCardId) && targetUnit.cardId === "JTL_101") {
       CreateXWing(game, pending.player, log, "JTL_101");
+    }
+
+    // JTL_145 BB-8: "When played as an upgrade: You may pay 2 resources. If you do, ready a
+    // Resistance unit." Fires only on the PILOT-upgrade path — this handler is that path, so
+    // playing BB-8 as a unit never reaches here. Gated on both an affordable 2 and a legal
+    // target, so the prompt never appears when it could not be taken.
+    if (pending.upgradeCardId === "JTL_145") {
+      const resistance145 = AllUnits().filter(u => TraitContains(u.cardId, "Resistance"));
+      if (resistance145.length > 0 && spendableFor(game, pending.player) >= 2) {
+        const pay145: AbilityOptionPending = {
+          type: "ability-option",
+          cardId: "JTL_145",
+          player: pending.player,
+          helperText: "Pay 2 resources to ready a Resistance unit?",
+          yesLabel: "Pay 2",
+          noLabel: "Skip",
+          onYes: {
+            type: "ability-target",
+            cardId: "JTL_145",
+            player: pending.player,
+            fromPlayIds: resistance145.map(u => u.playId),
+            continuation: null,
+          } satisfies AbilityTargetPending,
+          continuation: null,
+        };
+        updateDefeatedPlayers(game);
+        return { response: resolutionResponse(pendingToResolution(pay145, game)), pending: pay145, stateChanged: true };
+      }
+    }
+
+    // TWI_152 Mace Windu's Lightsaber: "When Played: If attached unit is Mace Windu, draw 2 cards."
+    // Matched on TITLE, not card id — several printings are named "Mace Windu" (SOR_149, LOF_149,
+    // and the TWI_013 leader unit), and the saber cares about the character, not the printing.
+    if (pending.upgradeCardId === "TWI_152" && CardTitle(targetUnit.cardId) === "Mace Windu") {
+      DrawCardForPlayer(game, log, pending.player);
+      DrawCardForPlayer(game, log, pending.player);
+      log.push(`${CardTitle("TWI_152")}: attached to Mace Windu — drew 2 cards.`);
     }
 
     // SHD_174 Hotshot DL-44 Blaster: "When played USING SMUGGLE: Attack with attached unit."
@@ -7856,6 +7900,26 @@ function applyAbilityOptionEffect(
       }
       return pending.continuation ?? null;
     }
+    case "LAW_242": { // Improvise Yes: play the top card for 1 resource less.
+      const player242 = pending.player!;
+      const pState242 = GetPlayer(game, player242);
+      const top242 = pState242.deck.pop();
+      if (!top242) return pending.continuation ?? null;
+      const cost242 = Math.max(0, playCost(game, player242, top242.cardId) - 1);
+      payResources(game, player242, cost242, log, "LAW_242");
+      log.push(`${CardTitle("LAW_242")}: playing ${CardTitle(top242.cardId)} from the top of the deck for ${cost242}.`);
+      const result242 = completePlayCard(game, log, top242.cardId, player242);
+      return result242.pending;
+    }
+    case "LAW_242_discard": { // Improvise: "If you don't [play it], you may discard it."
+      const player242d = pending.player!;
+      const pState242d = GetPlayer(game, player242d);
+      const top242d = pState242d.deck.pop();
+      if (!top242d) return pending.continuation ?? null;
+      pushEventToDiscard(game, player242d, top242d.cardId);
+      log.push(`${CardTitle("LAW_242")}: discarded ${CardTitle(top242d.cardId)}.`);
+      return pending.continuation ?? null;
+    }
     case "SOR_192": { // Ezra Bridger Yes: play the top card
       const player192 = pending.player!;
       const pState192 = GetPlayer(game, player192);
@@ -8843,6 +8907,7 @@ function getAffordablePlotPlayIds(game: GameState, player: PlayerId): string[] {
 
 function leaderHasWhenDeployed(cardId: string): boolean {
   switch (cardId) {
+    case "TWI_013": return true; // Mace Windu — 2 damage to each damaged enemy unit
     case "LAW_002": return true; // Tobias Beckett — defeat any number of units you own but don't control
     case "SHD_002": return true;
     case "LAW_008": return true;
@@ -9797,6 +9862,29 @@ function resolveActionAbility(
         continuation: null,
       };
     }
+    case "SEC_011": { // Governor Pryce — "Action [1 resource, Exhaust]: Ready a token unit."
+      const tokens011 = GetUnitsForPlayer(player).filter(u => Unit.FromInterface(u).IsTokenUnit() && !u.ready);
+      if (tokens011.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SEC_011_action",
+        player,
+        fromPlayIds: tokens011.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "TWI_013": { // Mace Windu — "Deal 1 damage to a damaged enemy unit. Then, if it has 5 or
+                      // more damage on it, deal 1 damage to it."
+      const damaged013 = GetUnitsForPlayer(player === 1 ? 2 : 1).filter(u => u.damage > 0);
+      if (damaged013.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "TWI_013_action",
+        player,
+        fromPlayIds: damaged013.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "TWI_017": { // Chancellor Palpatine // Darth Sidious — "Playing Both Sides".
                       // Which ability runs depends on the face currently showing. Both end in
                       // "then flip this leader", and that flip is INSIDE the "if", so a failed
@@ -10477,6 +10565,40 @@ function applyAbilityEffect(
   }
 
   switch (pending.cardId) {
+    case "SEC_011_action": { // Governor Pryce — ready the chosen token unit.
+      if (!targetPlayId) break;
+      ReadyUnitByPlayId(targetPlayId, pending.player!, "SEC_011");
+      break;
+    }
+    case "TWI_013_action": { // Mace Windu — 1 damage, then a second point if it now has 5+.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "TWI_013", targetPlayId, 1, game.gameLog);
+      // Re-read AFTER the first point: the threshold is on the resulting total, so a unit at 4
+      // damage takes a second point but one at 3 does not.
+      const after013 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (after013 && after013.damage >= 5) {
+        DealDamageToUnit(game.currentGameState, "TWI_013", targetPlayId, 1, game.gameLog);
+      }
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "TWI_165": { // Kit Fisto — 3 damage to the chosen ground unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "TWI_165", targetPlayId, 3, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "JTL_145": { // BB-8 — pay the 2 now that a target is locked in, then ready it.
+      if (!targetPlayId || !pending.player) break;
+      payResources(game.currentGameState, pending.player, 2, game.gameLog, "JTL_145");
+      const target145 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target145) ReadyUnitByPlayId(targetPlayId, target145.controller as PlayerId, "JTL_145");
+      break;
+    }
+    case "SEC_204": { // Blue Ace — ready the chosen exhausted enemy unit.
+      if (!targetPlayId) break;
+      // The target is an ENEMY unit, so it is looked up under the opposing player.
+      ReadyUnitByPlayId(targetPlayId, GetOtherPlayer(pending.player!), "SEC_204");
+      return pending.continuation ?? null;
+    }
     case "LOF_148": { // Rey — revealed: 2 damage to the chosen unit, then 2 to a chosen base.
       if (!targetPlayId) break;
       game.gameLog.push(`${CardTitle("LOF_148")}: revealed from hand.`);

@@ -1,6 +1,6 @@
 import { PendingResolution } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, CardIsLeader, MarkUnitDamaged, AllUnits } from "@/server/engine/core-functions";
+import { GetGame, CardIsLeader, MarkUnitDamaged, AllUnits, DealDamageToUnit } from "@/server/engine/core-functions";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -28,6 +28,14 @@ export function resolveWhenDeployed(
         fromPlayIds: units010.map(u => u.playId),
         continuation: null,
       };
+    }
+    case "TWI_013": { // Mace Windu — "When Deployed: Deal 2 damage to each damaged enemy unit."
+                      // Mandatory, targetless, and only DAMAGED enemies are hit.
+      const damaged013 = AllUnits().filter(u => u.controller !== player && u.damage > 0);
+      for (const victim of damaged013) {
+        DealDamageToUnit(game.currentGameState, "TWI_013", victim.playId, 2, log);
+      }
+      return null;
     }
     case "LAW_002": { // Tobias Beckett — "When Deployed: Defeat any number of units you own but
                       // don't control. For each unit defeated this way, create a Credit token and

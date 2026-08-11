@@ -402,6 +402,9 @@ export const Cards = {
       collectionsStarhopper: "SHD_111", // 2/2 Space, Smuggle [3, Command] and no other ability
     },
     jtl: {
+      fireball: "JTL_198",   // 3/3 Space Vehicle, Ambush
+      bb8: "JTL_145",        // 1/4 Ground Droid Pilot
+      paigeTico: "JTL_046",  // 3/2 Ground Resistance Pilot
       tieAmbushSquadron: "JTL_087",
       droidMissilePlatform: "JTL_162",
       huntingAggressor: "JTL_165",
@@ -478,6 +481,7 @@ export const Cards = {
       talzinsAssassin: "LOF_035",
     },
     twi: {
+      kitFisto: "TWI_165", // 7/6 Ground Force/Jedi, Saboteur + Coordinate
       infiltratingDemolisher: "TWI_182",
       echoArcTrooper: "TWI_090",
       shaakTi: "TWI_094",
@@ -496,6 +500,8 @@ export const Cards = {
     },
     sec: {
       furtiveHandmaiden: "SEC_197", // 2/2 Ground Naboo, cost 1
+      blueAce: "SEC_204",          // 4/5 Space Resistance Vehicle, Ambush
+      imperialOccupier: "SEC_132", // 2/2 Ground Imperial Trooper
       contrabandStarhopper: "SEC_161", // 2/3 Space Aggression Vehicle, no abilities
       cadBane: "SEC_034",
       captainRex: "SEC_048",
@@ -732,12 +738,16 @@ export const Cards = {
       theWayOfTheMandalor: "ASH_263",
     },
     twi: {
+      maceWindusLightsaber: "TWI_152",
       unshakeableWill: "TWI_071",
       squadSupport: "TWI_122",
     },
     sec: {
       clandestineConnections: "SEC_264",
       disciplesDevotion: "SEC_071",
+    },
+    law: {
+      shadowOfStygeonPrime: "LAW_077", // Condition — attached unit can't ready
     },
   },
   events: {
@@ -846,6 +856,7 @@ export const Cards = {
       takeCharge: "TS26_60",
     },
     sec: {
+      hyperspaceDisaster: "SEC_078", // 7-cost: defeat all space units
       kreiasWhispers: "SEC_232",
       iAmTheSenate: "SEC_092",
       grassrootsResistance: "SEC_258",
@@ -877,6 +888,7 @@ export const Cards = {
       chooseYourPath: "ASH_257",
     },
     law: {
+      improvise: "LAW_242",
       unmarkedCredits: "LAW_244",
       backedByTheHutts: "LAW_247",
       haymaker: "LAW_168",

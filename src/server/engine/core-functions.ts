@@ -1011,6 +1011,7 @@ export function UpgradeImmuneToEnemyAbilities(upgradeCardId: string): boolean {
  */
 const CANT_READY_UPGRADES = [
   "SHD_193", // Frozen in Carbonite
+  "LAW_077", // Shadow of Stygeon Prime
 ];
 
 /**
@@ -1279,8 +1280,14 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     }
   }
 
+  // TWI_165 Kit Fisto — "Coordinate — On Attack: ..." The On Attack exists only while Coordinate
+  // is active (3+ friendly units), so it is gated here rather than listed as innate below.
+  if (cardId === "TWI_165") return player !== undefined && IsCoordinateActive(player);
+
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "SEC_011": //Governor Pryce (deployed) — On Attack: create a Spy token
+    case "SEC_204": //Blue Ace — On Attack: ready an exhausted enemy unit
     case "SEC_197": //Furtive Handmaiden — On Attack: may discard a card from hand; if you do, draw
     case "LAW_101": //Lawbringer — On Attack: choose an aspect, give enemy units with it –2/–2
     case "SOR_017": //Han Solo (deployed) — On Attack: resource the top card of your deck (ready), then defeat a resource next action phase
@@ -1420,6 +1427,7 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
   }
 
   switch (cardId) {
+    case "JTL_046": //Paige Tico piloting — grants "On Attack: XP to this unit, then 1 damage to it."
     case "SHD_175": //Armed to the Teeth — grants "On Attack: Give another friendly unit +2/+0 for this phase."
     case "SHD_126": //The Darksaber
     case "SHD_177": //Vambrace Flamethrower

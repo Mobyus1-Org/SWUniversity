@@ -1,13 +1,85 @@
 import type { GameState, PlayerState } from "@/lib/engine/game";
 import type { DiscardedCard, PlayerId } from "@/lib/engine/core-models";
-import { CardTitle } from "@/server/engine/card-db/generated";
+import { CardTitle, CardHp, CardUpgradeHp } from "@/server/engine/card-db/generated";
 import { DealDamageToBase, DefeatResource, ReadyUnit } from "@/server/engine/core-functions";
 
 function ps(gs: GameState, player: PlayerId): PlayerState {
   return player === 1 ? gs.player1 : gs.player2;
 }
 
+/**
+ * Units with "When the regroup phase starts: Deal N damage to this unit."
+ *
+ * A data table rather than a case per card — the engine previously had only a LEADER-specific
+ * regroup-start hook (SHD_015 below), so this is the unit-level equivalent. An upgrade that
+ * grants the ability to its host is handled separately (see REGROUP_START_BASE_DAMAGE_UPGRADES).
+ */
+const REGROUP_START_SELF_DAMAGE: Record<string, number> = {
+  JTL_198: 1, // Fireball — An Explosion With Wings
+};
+
+/**
+ * Upgrades granting "When the regroup phase starts: Deal N damage to your base" to the unit
+ * they are attached to. The damage lands on the ATTACHED UNIT'S CONTROLLER's base, which is not
+ * necessarily the upgrade's owner — Shadow of Stygeon Prime is played onto an ENEMY unit.
+ */
+const REGROUP_START_BASE_DAMAGE_UPGRADES: Record<string, number> = {
+  LAW_077: 2, // Shadow of Stygeon Prime
+};
+
+/**
+ * Fires every unit-scoped "when the regroup phase starts" ability, before the draw.
+ * Damage is applied first and dead units swept once, so a unit that kills itself here does not
+ * linger at 0 HP into the new round.
+ */
+function resolveRegroupStartUnitAbilities(gs: GameState, log: string[]): void {
+  for (const player of [1, 2] as PlayerId[]) {
+    const p = ps(gs, player);
+    for (const unit of [...p.groundArena, ...p.spaceArena]) {
+      const selfDamage = REGROUP_START_SELF_DAMAGE[unit.cardId];
+      if (selfDamage) {
+        unit.damage += selfDamage;
+        log.push(`${CardTitle(unit.cardId)}: took ${selfDamage} damage as the regroup phase started.`);
+      }
+      for (const upg of unit.upgrades) {
+        const baseDamage = REGROUP_START_BASE_DAMAGE_UPGRADES[upg.cardId];
+        if (!baseDamage) continue;
+        // The attached unit's controller takes it — the upgrade is typically on an ENEMY unit.
+        DealDamageToBase(gs, unit.controller as PlayerId, baseDamage);
+        log.push(`${CardTitle(upg.cardId)}: dealt ${baseDamage} damage to Player ${unit.controller}'s base.`);
+      }
+    }
+  }
+
+  // Sweep anything the self-damage killed.
+  for (const player of [1, 2] as PlayerId[]) {
+    const p = ps(gs, player);
+    for (const zone of ["groundArena", "spaceArena"] as const) {
+      for (let i = p[zone].length - 1; i >= 0; i--) {
+        const u = p[zone][i];
+        const maxHp = CardHp(u.cardId) || 0;
+        const upgradeHp = u.upgrades.reduce((sum, up) => sum + (CardUpgradeHp(up.cardId) || 0), 0);
+        if (u.damage >= maxHp + upgradeHp) {
+          const [dead] = p[zone].splice(i, 1);
+          const ownerState = ps(gs, dead.owner as PlayerId);
+          ownerState.discard.unshift({
+            cardId: dead.cardId,
+            playId: dead.playId,
+            owner: dead.owner,
+            controller: dead.owner,
+            turnDiscarded: gs.currentRound,
+            discardEffect: "",
+          });
+          log.push(`${CardTitle(dead.cardId)} was defeated at the start of regroup.`);
+        }
+      }
+    }
+  }
+}
+
 export function executeRegroupDraw(gs: GameState, log: string[]): void {
+  resolveRegroupStartUnitAbilities(gs, log);
+
   // SHD_015 Doctor Aphra (leader): "When the regroup phase starts: Discard a card from your deck."
   // Only the undeployed leader side carries this; the deployed side has different abilities.
   for (const player of [1, 2] as PlayerId[]) {

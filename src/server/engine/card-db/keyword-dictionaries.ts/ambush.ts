@@ -114,6 +114,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "JTL_204"://Home One
     case "JTL_203"://Han Solo - Has His Moments
     case "JTL_087"://TIE Ambush Squadron
+    case "SEC_204"://Blue Ace
     case "JTL_198"://Fireball
     case "JTL_216"://Contracted Hunter
     case "JTL_214"://X-34 Landspeeder

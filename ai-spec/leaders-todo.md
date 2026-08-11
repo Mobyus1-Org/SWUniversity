@@ -43,7 +43,7 @@ _All canonical leaders implemented._
 - [ ] `SEC_003` Lama Su — We Modified Their Genetics
 - [ ] `SEC_008` Bail Organa — Doing Everything He Can
 - [ ] `SEC_009` Mon Mothma — Forming a Coalition
-- [ ] `SEC_011` Governor Pryce — Tyrant of Lothal
+- [x] `SEC_011` Governor Pryce — Tyrant of Lothal
 - [ ] `SEC_012` Cassian Andor — Climb!
 - [ ] `SEC_013` Luthen Rael — Don't You Want to Fight For Real?
 - [ ] `SEC_016` Padmé Amidala — What Do You Have to Hide?

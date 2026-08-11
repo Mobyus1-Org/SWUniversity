@@ -92,6 +92,18 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "TWI_005": // Count Dooku — needs Separatist card in hand
         if (GetHand(player).some(c => CardTraits(c.cardId).includes("Separatist"))) abilities.push(cardId);
         break;
+      case "SEC_011": { // Governor Pryce — Action [1 resource, Exhaust]: Ready a token unit.
+                        // Needs an exhausted TOKEN unit to be worth anything, plus the resource.
+        const tokens011 = GetUnitsForPlayer(player).filter(u => Unit.FromInterface(u).IsTokenUnit() && !u.ready);
+        if (tokens011.length > 0 && GetResources(player, true).length > 0) abilities.push(cardId);
+        break;
+      }
+      case "TWI_013": { // Mace Windu — Action [1 resource, Exhaust]: damage a DAMAGED enemy unit.
+                        // No damaged enemy = no legal target, so the Action is unavailable.
+        const enemy013 = GetUnitsForPlayer(player === 1 ? 2 : 1).filter(u => u.damage > 0);
+        if (enemy013.length > 0 && GetResources(player, true).length > 0) abilities.push(cardId);
+        break;
+      }
       case "TWI_017": // Chancellor Palpatine // Darth Sidious — both faces carry an Action [Exhaust].
                       // Always offered: the "if" clause is checked on resolution, not availability
                       // (the Exhaust is the only cost), so an unmet condition soft-passes.
@@ -413,6 +425,8 @@ export function ActionAbilityCost(cardId: string): number {
     case "SHD_009"://Hunter - Outcast Sergeant
       return 1;
     case "TWI_010"://Pre Viszla
+      return 1;
+    case "SEC_011"://Governor Pryce
       return 1;
     case "TWI_013"://Mace Windu
       return 1;
