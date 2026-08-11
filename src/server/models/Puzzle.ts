@@ -16,6 +16,11 @@ export type PuzzleDocument = {
   inspiredBy?: string;
   intendedSolution: string[];
   hints: string[];
+  /**
+   * Shown when the puzzle fails by reaching the regroup phase rather than by base destruction.
+   * Authored per-puzzle; there is deliberately no default — see the regroup-failure spec.
+   */
+  alternateFailExplanation?: string;
   /** Select-menu thumbnail, relative to public/assets/ (e.g. "puzzles/mandalore.png"). */
   assetPath: string;
 };
@@ -33,6 +38,7 @@ const puzzleSchema = new Schema<PuzzleDocument>(
     inspiredBy: { type: String },
     intendedSolution: { type: [String], default: [] },
     hints: { type: [String], default: [] },
+    alternateFailExplanation: { type: String, default: "" },
     assetPath: { type: String, default: DEFAULT_PUZZLE_IMAGE },
   },
   { timestamps: true },

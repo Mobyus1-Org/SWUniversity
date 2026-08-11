@@ -27,6 +27,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
         inspiredBy: doc.inspiredBy,
         intendedSolution: doc.intendedSolution ?? [],
         hints: doc.hints ?? [],
+        alternateFailExplanation: doc.alternateFailExplanation ?? "",
         assetPath: doc.assetPath || DEFAULT_PUZZLE_IMAGE,
       }))
       .filter((p) => isPuzzleVisibleTo(p.status, level));
@@ -55,6 +56,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
           inspiredBy: puzzle.inspiredBy,
           intendedSolution: puzzle.intendedSolution ?? [],
           hints: puzzle.hints ?? [],
+          alternateFailExplanation: puzzle.alternateFailExplanation ?? "",
           assetPath: puzzle.assetPath || DEFAULT_PUZZLE_IMAGE,
         },
         { new: true, lean: true },
@@ -73,6 +75,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
       inspiredBy: puzzle.inspiredBy,
       intendedSolution: puzzle.intendedSolution ?? [],
       hints: puzzle.hints ?? [],
+      alternateFailExplanation: puzzle.alternateFailExplanation ?? "",
       assetPath: puzzle.assetPath || DEFAULT_PUZZLE_IMAGE,
     });
     return { ...puzzle, id: doc._id.toString() };

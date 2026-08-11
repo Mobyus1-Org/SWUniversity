@@ -951,10 +951,10 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
 type Props = {
   onClose: () => void;
   onSaved: (id: string) => void;
-  onTest?: (data: { rawInitial?: unknown; gameState: unknown; sentinelPlayIds?: string[]; unitBuffs?: Record<string, { power: number; hp: number }> }) => void;
+  onTest?: (data: { rawInitial?: unknown; gameState: unknown; alternateFailExplanation?: string; sentinelPlayIds?: string[]; unitBuffs?: Record<string, { power: number; hp: number }> }) => void;
   initialRaw?: unknown;
   initialId?: string;
-  initialMeta?: { name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; assetPath?: string };
+  initialMeta?: { name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; assetPath?: string };
 };
 
 export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initialMeta, initialId }: Props) {
@@ -983,8 +983,8 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
   React.useEffect(() => {
     if (initialRaw) {
       try {
-        const meta = initialMeta ?? { name: "Tested Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [], hints: [], assetPath: "" };
-        setState(fromRaw(initialRaw as Record<string, unknown>, { name: String(meta.name ?? ""), description: String(meta.description ?? ""), infoText: String(meta.infoText ?? ""), difficulty: Number(meta.difficulty ?? 1), author: String(meta.author ?? ""), inspiredBy: String(meta.inspiredBy ?? ""), intendedSolution: meta.intendedSolution ?? [], hints: meta.hints ?? [], assetPath: String(meta.assetPath ?? "") }));
+        const meta = initialMeta ?? { name: "Tested Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [], hints: [], alternateFailExplanation: "", assetPath: "" };
+        setState(fromRaw(initialRaw as Record<string, unknown>, { name: String(meta.name ?? ""), description: String(meta.description ?? ""), infoText: String(meta.infoText ?? ""), difficulty: Number(meta.difficulty ?? 1), author: String(meta.author ?? ""), inspiredBy: String(meta.inspiredBy ?? ""), intendedSolution: meta.intendedSolution ?? [], hints: meta.hints ?? [], alternateFailExplanation: String(meta.alternateFailExplanation ?? ""), assetPath: String(meta.assetPath ?? "") }));
       } catch {
         // ignore invalid initial raw
       }
@@ -1016,6 +1016,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       inspiredBy: state.inspiredBy?.trim() ?? "",
       intendedSolution: state.intendedSolution ?? [],
       hints: state.hints ?? [],
+      alternateFailExplanation: state.alternateFailExplanation ?? "",
       difficulty: state.difficulty,
       assetPath: normalizePuzzleAssetPath(state.assetPath),
       initialGamestate: toRaw(state),
@@ -1048,7 +1049,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Test failed");
       const data = await res.json();
-      if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, infoText: state.infoText, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, hints: state.hints, assetPath: normalizePuzzleAssetPath(state.assetPath), ...data });
+      if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, infoText: state.infoText, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, hints: state.hints, alternateFailExplanation: state.alternateFailExplanation, assetPath: normalizePuzzleAssetPath(state.assetPath), ...data });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Test failed.");
     } finally {
@@ -1340,6 +1341,26 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Alternate fail explanation — shown when the puzzle is lost by reaching the
+                  regroup phase rather than by base destruction. A puzzle that CAN reach that
+                  state without this set will throw for the player, so fill it in whenever the
+                  player can survive their own regroup draw. */}
+              <div className="rounded-lg bg-black/20 p-3 sm:p-4 space-y-3">
+                <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">
+                  Alternate Fail Explanation
+                </div>
+                <p className="text-2xs leading-relaxed text-white/40">
+                  Why the player lost once they pass to regroup without winning. Required only for
+                  puzzles where they survive the regroup draw — those puzzles will error without it.
+                </p>
+                <CardRefField
+                  multiline
+                  rows={3}
+                  value={state.alternateFailExplanation ?? ""}
+                  onChange={(next) => patchGlobal({ alternateFailExplanation: next })}
+                />
               </div>
               </>)}
 

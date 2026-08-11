@@ -5,7 +5,7 @@ import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime
 import { statusFilterOptionsFor } from "@/server/puzzle/puzzle-status";
 import type { PuzzleStatus, PuzzleAccessLevel, PuzzleStatusFilter } from "@/server/puzzle/puzzle-status";
 
-type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints: string[]; status: PuzzleStatus; assetPath?: string; initialGamestate: RawPuzzleGameState };
+type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints: string[]; alternateFailExplanation?: string; status: PuzzleStatus; assetPath?: string; initialGamestate: RawPuzzleGameState };
 
 type Props = {
   onPuzzleLoaded: (id: string, meta: PuzzleEntry) => void;

@@ -13,6 +13,8 @@ export type PuzzleData = {
   inspiredBy?: string;
   intendedSolution: string[];
   hints: string[];
+  /** Why the puzzle is lost once it reaches the regroup phase (see regroup-failure spec). */
+  alternateFailExplanation?: string;
   /** Select-menu thumbnail, relative to public/assets/ (e.g. "puzzles/mandalore.png"). */
   assetPath?: string;
 };

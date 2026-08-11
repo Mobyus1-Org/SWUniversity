@@ -82,6 +82,9 @@ export type BuilderState = {
   author: string;
   inspiredBy?: string;
   intendedSolution: string[];
+  /** Why the puzzle is lost on reaching regroup (see the regroup-failure spec). Optional:
+   *  only puzzles whose player survives their own regroup draw need one. */
+  alternateFailExplanation?: string;
   hints: string[];
   assetPath: string;
   activePlayer: 1 | 2;
@@ -132,6 +135,7 @@ export function initialBuilderState(): BuilderState {
     author: "",
     inspiredBy: "",
     intendedSolution: [],
+    alternateFailExplanation: "",
     hints: [],
     assetPath: "",
     activePlayer: 1,
@@ -224,7 +228,7 @@ function parseRawPlayer(p: Record<string, unknown>, playerId: 1 | 2): PlayerBuil
   };
 }
 
-export function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; infoText?: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; assetPath?: string }): BuilderState {
+export function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; infoText?: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; assetPath?: string }): BuilderState {
   return {
     name: meta.name,
     description: meta.description,
@@ -233,6 +237,7 @@ export function fromRaw(raw: Record<string, unknown>, meta: { name: string; desc
     author: meta.author ?? "",
     inspiredBy: meta.inspiredBy ?? "",
     intendedSolution: meta.intendedSolution ?? [],
+    alternateFailExplanation: meta.alternateFailExplanation ?? "",
     hints: meta.hints ?? [],
     assetPath: meta.assetPath ?? "",
     activePlayer: Number(raw.activePlayer) === 2 ? 2 : 1,
