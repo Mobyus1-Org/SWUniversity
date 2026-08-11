@@ -672,8 +672,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   const [showFailModal, setShowFailModal] = React.useState(false);
   const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
   const [lastTestRaw, setLastTestRaw] = React.useState<any | null>(null);
-  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; assetPath?: string } | null>(null);
-  const [editState, setEditState] = React.useState<{ id: string; raw: unknown; meta: { name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints?: string[]; assetPath?: string } } | null>(null);
+  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; assetPath?: string } | null>(null);
+  const [editState, setEditState] = React.useState<{ id: string; raw: unknown; meta: { name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints?: string[]; alternateFailExplanation?: string; assetPath?: string } } | null>(null);
   const [puzzleListRefresh, setPuzzleListRefresh] = React.useState(0);
   // Read from localStorage only on the client to avoid SSR hydration mismatch.
   React.useEffect(() => {
@@ -1184,7 +1184,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
             // remember raw for editing
             const raw = payload.rawInitial ?? null;
             setLastTestRaw(raw);
-            setLastTestMeta({ name: payload.name ?? undefined, description: payload.description ?? undefined, infoText: payload.infoText ?? undefined, difficulty: payload.difficulty ?? undefined, author: payload.author ?? undefined, inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? undefined, hints: payload.hints ?? undefined, assetPath: payload.assetPath ?? undefined });
+            setLastTestMeta({ name: payload.name ?? undefined, description: payload.description ?? undefined, infoText: payload.infoText ?? undefined, difficulty: payload.difficulty ?? undefined, author: payload.author ?? undefined, inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? undefined, hints: payload.hints ?? undefined, alternateFailExplanation: payload.alternateFailExplanation ?? undefined, assetPath: payload.assetPath ?? undefined });
 
             setIsResolving(true);
             setActionError(null);
@@ -1283,6 +1283,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                   inspiredBy: entry.inspiredBy,
                   intendedSolution: entry.intendedSolution,
                   hints: entry.hints,
+                  alternateFailExplanation: entry.alternateFailExplanation,
                   assetPath: entry.assetPath,
                 },
               });
@@ -1456,6 +1457,11 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                 author: entry.author,
                 inspiredBy: entry.inspiredBy,
                 intendedSolution: entry.intendedSolution,
+                // hints/assetPath were missing here (but present on the other edit entry point),
+                // so editing via this panel silently blanked them on the next save.
+                hints: entry.hints,
+                alternateFailExplanation: entry.alternateFailExplanation,
+                assetPath: entry.assetPath,
               },
             });
             setShowBuilderPanelOpen(true);
