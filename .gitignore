@@ -2,6 +2,7 @@
 .petranaki-php-refs/
 test-puzzle.*.json
 docs/superpowers/
+tsconfig.tsbuildinfo
 # Logs
 logs
 *.log
