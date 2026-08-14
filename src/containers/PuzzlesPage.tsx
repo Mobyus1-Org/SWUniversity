@@ -1717,7 +1717,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     square
                     epicUsed={opponent.leader.epicActionUsed}
                   /></div> : <div className="mx-auto w-full max-w-[8.75rem] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
-                    Leader deployed to Ground Arena
+                    Leader is deployed
                   </div>}
                   <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={opponent.base.cardId}
@@ -1796,7 +1796,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     square
                     epicUsed={opponent.leader.epicActionUsed}
                   /></div> : <div className="mx-auto w-full max-w-[8.75rem] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
-                    Leader deployed to Ground Arena
+                    Leader is deployed
                   </div>}
                   <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={opponent.base.cardId}
@@ -1823,7 +1823,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     compact
                     epicUsed={opponent.leader.epicActionUsed}
                   /> : <div className="rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
-                    Leader deployed to Ground Arena
+                    Leader is deployed
                   </div>}
                   <div className="relative">
                     <CardVisual
@@ -1909,7 +1909,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     square
                     epicUsed={player.leader.epicActionUsed}
                   /></div> : <div className="mx-auto w-full max-w-[8.75rem] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
-                    Leader deployed to Ground Arena
+                    Leader is deployed
                   </div>}
                   <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={player.base.cardId}
@@ -2087,7 +2087,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     square
                     epicUsed={player.leader.epicActionUsed}
                   /></div> : <div className="mx-auto w-full max-w-[8.75rem] rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
-                    Leader deployed to Ground Arena
+                    Leader is deployed
                   </div>}
                   <div className="mx-auto w-full max-w-[8.75rem]"><CardVisual
                     cardId={player.base.cardId}
@@ -2131,7 +2131,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     cardScale90
                     epicUsed={player.leader.epicActionUsed}
                   /> : <div className="rounded-lg border border-dashed border-amber-300/30 bg-amber-500/10 px-3 py-4 text-xs text-amber-100">
-                    Leader deployed to Ground Arena
+                    Leader is deployed
                   </div>}
                 </div>
               </div>

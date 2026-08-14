@@ -116,5 +116,56 @@ describe("TWI_013 Mace Windu", () => {
 
       expect(g.state.player1.groundArena.find(u => u.cardId === Cards.units.sor.consularSecurityForce)!.damage).toBe(2);
     });
+
+    // The 2 damage must actually DEFEAT a unit it reduces to 0 HP — the deploy path needs a
+    // dead-unit sweep after When Deployed resolves, or the corpse sits in the arena.
+    it("defeats a damaged enemy unit the 2 damage finishes off", async () => {
+      const g = new GameTestAdapter();
+      g.loadNewState(
+        setup(20).MyLeader(MACE)
+          .WithGroundUnitForPlayer(2, MARINE, true, 1) // 3 HP, 1 damage → 2 more kills it
+          .WithSpaceUnitForPlayer(2, WAYFARER, true, 1) // survives, proves the sweep is selective
+          .Build(),
+      );
+
+      await g.deployLeaderAsync(1);
+
+      expect(g.state.player2.groundArena.some(u => u.cardId === MARINE)).toBe(false);
+      expect(g.state.player2.discard.some(c => c.cardId === MARINE)).toBe(true);
+      expect(g.state.player2.spaceArena[0].damage).toBe(3); // still alive
+    });
+  });
+
+  // The Plot deploy paths resolve When Deployed at different sites than the plain deploy —
+  // each needs the same dead-unit sweep.
+  describe("deployed side — When Deployed with a Plot window", () => {
+    function plotSetup() {
+      return setup(20).MyLeader(MACE)
+        .FillResourcesForPlayer(1, Cards.units.sec.cadBane, 1) // an affordable Plot resource
+        .WithGroundUnitForPlayer(2, MARINE, true, 1); // 3 HP, 1 damage → the 2 kills it
+    }
+
+    it("'When Deployed First' still defeats the finished-off unit", async () => {
+      const g = new GameTestAdapter();
+      g.loadNewState(plotSetup().Build());
+
+      await g.deployLeaderAsync(1);
+      await g.chooseOptionAsync(1, "When Deployed First");
+
+      expect(g.state.player2.groundArena.some(u => u.cardId === MARINE)).toBe(false);
+      expect(g.state.player2.discard.some(c => c.cardId === MARINE)).toBe(true);
+    });
+
+    it("'Plot First' then passing on the Plot still defeats the finished-off unit", async () => {
+      const g = new GameTestAdapter();
+      g.loadNewState(plotSetup().Build());
+
+      await g.deployLeaderAsync(1);
+      await g.chooseOptionAsync(1, "Plot First");
+      await g.passPlotAsync(1);
+
+      expect(g.state.player2.groundArena.some(u => u.cardId === MARINE)).toBe(false);
+      expect(g.state.player2.discard.some(c => c.cardId === MARINE)).toBe(true);
+    });
   });
 });

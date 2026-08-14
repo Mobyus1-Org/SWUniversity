@@ -5048,7 +5048,12 @@ function handleChooseTarget(
     const chosenPlayId = data.targetPlayIds?.[0];
     if (!chosenPlayId) {
       // Player passes on Plot
-      if (pending.fireWhenDeployedAfter) resolveWhenDeployed(pending.leaderCardId, pending.player, log);
+      if (pending.fireWhenDeployedAfter) {
+        // Sweep after When Deployed — auto-damage abilities (TWI_013) can leave 0-HP units.
+        const wdSweptPass = sweepDeadUnits(game, log, resolveWhenDeployed(pending.leaderCardId, pending.player, log));
+        if (wdSweptPass)
+          return { response: resolutionResponse(pendingToResolution(wdSweptPass, game)), pending: wdSweptPass, stateChanged: true };
+      }
       updateDefeatedPlayers(game);
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
@@ -5101,7 +5106,10 @@ function handleChooseTarget(
       return { response: resolutionResponse(pendingToResolution(nextCont, game)), pending: nextCont, stateChanged: true };
     }
     if (nextCont?.type === "when-deployed") {
-      resolveWhenDeployed(nextCont.leaderCardId, nextCont.player, log);
+      // Sweep after When Deployed — auto-damage abilities (TWI_013) can leave 0-HP units.
+      const wdSweptCont = sweepDeadUnits(game, log, resolveWhenDeployed(nextCont.leaderCardId, nextCont.player, log));
+      if (wdSweptCont)
+        return { response: resolutionResponse(pendingToResolution(wdSweptCont, game)), pending: wdSweptCont, stateChanged: true };
     }
     updateDefeatedPlayers(game);
     return { response: stateResponse(game), pending: null, stateChanged: true };
@@ -5312,8 +5320,11 @@ function handleChooseTarget(
       return handleResolveAttack(game, log, rawPending);
     }
     if (rawPending?.type === "when-deployed") {
-      resolveWhenDeployed(rawPending.leaderCardId, rawPending.player, log);
+      // Sweep after When Deployed — auto-damage abilities (TWI_013) can leave 0-HP units.
+      const wdSweptEff = sweepDeadUnits(game, log, resolveWhenDeployed(rawPending.leaderCardId, rawPending.player, log));
       updateDefeatedPlayers(game);
+      if (wdSweptEff)
+        return { response: resolutionResponse(pendingToResolution(wdSweptEff, game)), pending: wdSweptEff, stateChanged: true };
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
     if (rawPending?.type === "plot-window") {
@@ -8718,7 +8729,9 @@ function handleChooseOption(
       return { response: resolutionResponse(pendingToResolution(plotPending, game)), pending: plotPending, stateChanged: false };
     }
     if (option === "When Deployed First") {
-      resolveWhenDeployed(pending.leaderCardId, pending.player, log);
+      // Sweep after When Deployed — auto-damage abilities (TWI_013) can leave 0-HP units. Any
+      // defeat prompt (e.g. Bounty) resolves first, with the Plot window as its continuation.
+      const wdSweptOrder = sweepDeadUnits(game, log, resolveWhenDeployed(pending.leaderCardId, pending.player, log));
       updateDefeatedPlayers(game);
       const plotPending: PlotWindowPending = {
         type: "plot-window",
@@ -8727,6 +8740,10 @@ function handleChooseOption(
         plotResourcePlayIds: getAffordablePlotPlayIds(game, pending.player),
         fireWhenDeployedAfter: false,
       };
+      if (wdSweptOrder) {
+        const chainedOrder = injectContinuation(wdSweptOrder, plotPending);
+        return { response: resolutionResponse(pendingToResolution(chainedOrder, game)), pending: chainedOrder, stateChanged: true };
+      }
       return { response: resolutionResponse(pendingToResolution(plotPending, game)), pending: plotPending, stateChanged: true };
     }
   }
@@ -9168,7 +9185,9 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
     return { response: resolutionResponse(pendingToResolution(plotPending, game)), pending: plotPending, stateChanged: true };
   }
 
-  const whenDeployedPending = resolveWhenDeployed(leader.cardId, player, log);
+  // Sweep after When Deployed: an auto-damage ability (TWI_013 Mace Windu) can reduce units
+  // to 0 HP, and nothing else on the deploy path defeats them.
+  const whenDeployedPending = sweepDeadUnits(game, log, resolveWhenDeployed(leader.cardId, player, log));
   updateDefeatedPlayers(game);
   if (whenDeployedPending) {
     return { response: resolutionResponse(pendingToResolution(whenDeployedPending, game)), pending: whenDeployedPending, stateChanged: true };
