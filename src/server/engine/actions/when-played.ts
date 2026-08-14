@@ -420,6 +420,21 @@ export function resolveWhenPlayed(
       if (!hand163.some(c => CardType(c.cardId) === "Unit")) return null;
       return { type: "play-from-hand", cardId: "ASH_163", player };
     }
+    case "TWI_099": { // Synchronized Strike (Event) — "Deal damage to an enemy unit equal to the
+                      // number of units you control in its arena." Which arena is counted depends
+                      // on the chosen target, so the amount is worked out in the handler.
+      const enemy099 = GetUnitsForPlayer(GetOtherPlayer(player));
+      if (enemy099.length === 0) return null;
+      return mandatoryTarget("TWI_099", player, enemy099.map(u => u.playId));
+    }
+    case "LOF_176": { // Lightsaber Throw (Event) — "Discard a Lightsaber card from your hand. If you
+                      // do, deal 4 damage to a ground unit and draw a card." The discard is the
+                      // ability's condition, not a cost: with no Lightsaber in hand the event is
+                      // still playable and simply does nothing.
+      const hand176 = GetPlayer(game.currentGameState, player).hand;
+      if (!hand176.some(c => TraitContains(c.cardId, "Lightsaber"))) return null;
+      return { type: "play-from-hand", cardId: "LOF_176", player };
+    }
     case "ASH_187": { // Reckoning (Event) — "Deal damage to a unit equal to the total amount of
                       // damage on all units you control." The amount is read when the target
                       // resolves, so a unit dying in between cannot inflate it.

@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 880 cards across 10 sets.**
+**Total: 877 cards across 10 sets.**
 
 ---
 
@@ -99,7 +99,7 @@ SHD_260: Street Gang Recruiter Unit
 SHD_262: Confiscate Event
 ```
 
-## TWI — Twilight of the Republic (104)
+## TWI — Twilight of the Republic (103)
 
 **Message 1 of 3**
 ```
@@ -141,7 +141,6 @@ TWI_088: Reprocess Event
 TWI_089: Consolidation of Power Event
 TWI_091: Republic Tactical Officer Unit
 TWI_097: Captain Rex - Lead by Example Unit
-TWI_099: Synchronized Strike Event
 TWI_100: Petition the Senate Event
 TWI_101: Mas Amedda - Vice Chair Unit
 TWI_102: Manufactured Soldiers Event
@@ -335,7 +334,7 @@ JTL_260: Death Star Plans Upgrade
 JTL_262: Evasive Maneuver Event
 ```
 
-## LOF — Legends of the Force (99)
+## LOF — Legends of the Force (98)
 
 **Message 1 of 3**
 ```
@@ -404,7 +403,6 @@ LOF_170: Bendu - Do You Fear the Storm? Unit
 LOF_173: Unleash Rage Event
 LOF_174: Ataru Onslaught Event
 LOF_175: Do or Do Not Event
-LOF_176: Lightsaber Throw Event
 LOF_177: Time of Crisis Event
 LOF_178: Adept of Anger Unit
 LOF_184: Second Sister - Seeking the Holocron Unit
@@ -642,7 +640,7 @@ LAW_262: Bank Job Fugitives Unit
 LAW_264: From a Certain Point of View Event
 ```
 
-## SEC — Secrets of Power (151)
+## SEC — Secrets of Power (150)
 
 **Message 1 of 4**
 ```
@@ -808,7 +806,6 @@ SEC_252: Maarva Andor - We've Been Sleeping Unit
 SEC_253: Covert Operative Unit
 SEC_254: Heroic ARC-170 Unit
 SEC_255: Remote Escort Tank Unit
-SEC_256: Moral Authority Upgrade
 SEC_257: Restore Freedom Event
 SEC_260: Inspector's Shuttle Unit
 SEC_261: Inspiring Senator Unit

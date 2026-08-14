@@ -1,7 +1,7 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import { CardIsLeader, TraitContains } from "../core-functions";
-import { CardCost, CardType } from "@/server/engine/card-db/generated";
+import { CardCost, CardIsUnique, CardType } from "@/server/engine/card-db/generated";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { LeaderDeployPilotThreshold } from "./keyword-dictionaries.ts/leader-pilot-deploy";
 
@@ -99,6 +99,10 @@ export function UpgradeEligibleTargets(
     case "SHD_124": // Legal Authority
     case "LOF_091": // Craving Power
       return friendly.map(u => u.playId);
+
+    // "Attach to a friendly unique unit."
+    case "SEC_256": // Moral Authority
+      return friendly.filter(u => CardIsUnique(u.cardId)).map(u => u.playId);
 
     // "Attach to a non-leader unit that costs 3 or less (and has no leader pilot)."
     // When attached: take control. Not eligible on units that have a leader as upgrade

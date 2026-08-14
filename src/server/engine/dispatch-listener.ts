@@ -6286,6 +6286,30 @@ function handleChooseTarget(
       }
     }
 
+    // SEC_256 Moral Authority: When Played — "Attached unit captures an enemy non-leader unit with
+    // less remaining HP than it." The comparison is strict, and the text carries no same-arena
+    // clause (unlike Take Captive), so a ground host may capture a space unit.
+    if (pending.upgradeCardId === "SEC_256") {
+      const hostHp256 = Unit.FromInterface(targetUnit).CurrentHP();
+      const victims256 = GetUnitsForPlayer(GetOtherPlayer(pending.player))
+        .filter(u => !CardIsLeader(u.cardId)
+          && !UnitImmuneToEnemyCapture(u)
+          && Unit.FromInterface(u).CurrentHP() < hostHp256);
+      if (victims256.length > 0) {
+        const capturePending256: AbilityTargetPending = {
+          type: "ability-target",
+          cardId: "SEC_256",
+          player: pending.player,
+          sourcePlayId: targetUnit.playId, // the attached unit is the captor
+          fromPlayIds: victims256.map(u => u.playId),
+          continuation: null,
+        };
+        updateDefeatedPlayers(game);
+        return { response: resolutionResponse(pendingToResolution(capturePending256, game)), pending: capturePending256, stateChanged: true };
+      }
+      log.push(`${CardTitle("SEC_256")}: no enemy unit has less remaining HP than ${CardTitle(targetUnit.cardId)}.`);
+    }
+
     // Snapshot Reflexes: When Played — may attack with attached unit if it's ready.
     if (pending.upgradeCardId === "SOR_215" || pending.upgradeCardId === "SHD_223") {
       if (targetUnit.ready && CanUnitAttack(targetUnit)) {
@@ -6818,6 +6842,34 @@ function handleChooseTarget(
           continuation: pending.continuation ?? null,
         };
         return { response: resolutionResponse(pendingToResolution(damage163, game)), pending: damage163, stateChanged: true };
+      }
+      case "LOF_176": { // Lightsaber Throw — discard the chosen Lightsaber, then deal 4 damage to a
+                        // ground unit (either side — the text says "a ground unit") and draw.
+        if (!TraitContains(cardId, "Lightsaber"))
+          return { response: invalidResponse("Lightsaber Throw: chosen card is not a Lightsaber."), pending, stateChanged: false };
+        hand.splice(idx, 1);
+        pushEventToDiscard(game, pending.player, cardId);
+        QueueWhenDiscardedTrigger(game, pending.player, cardId);
+        log.push(`${CardTitle("LOF_176")}: discarded ${CardTitle(cardId)}.`);
+        // "and draw a card" — the draw is part of the same "if you do", and cannot influence the
+        // damage, so it is taken here rather than duplicated across both damage branches below.
+        DrawCardForPlayer(game, log, pending.player);
+        const ground176 = [...game.player1.groundArena, ...game.player2.groundArena];
+        if (ground176.length === 0) {
+          log.push(`${CardTitle("LOF_176")}: no ground unit to damage.`);
+          const next176 = pending.continuation ?? null;
+          return next176
+            ? { response: resolutionResponse(pendingToResolution(next176, game)), pending: next176, stateChanged: true }
+            : { response: stateResponse(game), pending: null, stateChanged: true };
+        }
+        const damage176: AbilityTargetPending = {
+          type: "ability-target",
+          cardId: "LOF_176",
+          player: pending.player,
+          fromPlayIds: ground176.map(u => u.playId),
+          continuation: pending.continuation ?? null,
+        };
+        return { response: resolutionResponse(pendingToResolution(damage176, game)), pending: damage176, stateChanged: true };
       }
       case "ASH_132": { // Queen Soruna — revealed a unit; deal 3 damage to a unit with the same cost.
         if (CardType(cardId) !== "Unit")
@@ -11377,6 +11429,11 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, "LAW_206", targetPlayId, 1, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
+    case "LOF_176": { // Lightsaber Throw — deal 4 damage to the chosen ground unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "LOF_176", targetPlayId, 4, game.gameLog, pending.player);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
     case "LOF_041": { // Drain Essence — deal 2 to the chosen unit, then create your Force token.
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog, pending.player);
@@ -13895,6 +13952,17 @@ function applyAbilityEffect(
       DealDamageToUnit(gs097, "SOR_097", targetPlayId, friendlyCount097, game.gameLog);
       break;
     }
+    case "TWI_099": { // Synchronized Strike — damage = units the caster controls in the target's arena.
+      if (!targetPlayId) break;
+      const gs099 = game.currentGameState;
+      const isGround099 = [...gs099.player1.groundArena, ...gs099.player2.groundArena].some(u => u.playId === targetPlayId);
+      const arena099 = isGround099
+        ? [...gs099.player1.groundArena, ...gs099.player2.groundArena]
+        : [...gs099.player1.spaceArena, ...gs099.player2.spaceArena];
+      const friendlyCount099 = arena099.filter(u => u.controller === pending.player).length;
+      DealDamageToUnit(gs099, "TWI_099", targetPlayId, friendlyCount099, game.gameLog, pending.player);
+      return sweepDeadUnits(gs099, game.gameLog, pending.continuation ?? null);
+    }
     case "SOR_116": { // Steadfast Battalion On Attack: give chosen friendly unit +2/+2 for this phase.
       if (!targetPlayId) break;
       const target116 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -14449,6 +14517,13 @@ function applyAbilityEffect(
       const veteran120 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
       if (!victim120 || !veteran120) break;
       return CaptureUnit(game.currentGameState, game.gameLog, veteran120, victim120, pending.continuation ?? null);
+    }
+    case "SEC_256": { // Moral Authority When Played: the attached unit captures the chosen enemy unit.
+      if (!targetPlayId || !pending.sourcePlayId) break;
+      const victim256 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      const host256 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
+      if (!victim256 || !host256) break;
+      return CaptureUnit(game.currentGameState, game.gameLog, host256, victim256, pending.continuation ?? null);
     }
     case "SEC_193": { // Thrawn When Played: the OPPONENT picked one of their units — Thrawn captures it.
       if (!targetPlayId || !pending.sourcePlayId) break;

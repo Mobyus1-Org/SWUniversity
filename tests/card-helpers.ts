@@ -755,6 +755,7 @@ export const Cards = {
     sec: {
       clandestineConnections: "SEC_264",
       disciplesDevotion: "SEC_071",
+      moralAuthority: "SEC_256", // +2/+0 on a friendly unique unit; When Played it captures
     },
     law: {
       shadowOfStygeonPrime: "LAW_077", // Condition — attached unit can't ready
@@ -844,6 +845,7 @@ export const Cards = {
       daringRaid: "TWI_170",
       unnaturalLife: "TWI_189",
       breakingIn: "TWI_224",
+      synchronizedStrike: "TWI_099",
     },
     jtl: {
       iHaveYouNow: "JTL_193",
@@ -923,6 +925,7 @@ export const Cards = {
       nimanStrike: "LOF_124",
       deathField: "LOF_141",
       drainEssence: "LOF_041",
+      lightsaberThrow: "LOF_176",
     },
     ibh: {
       // Suffix letters are alternate identical printings within IBH.
