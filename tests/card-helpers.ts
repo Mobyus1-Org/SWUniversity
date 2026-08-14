@@ -402,6 +402,8 @@ export const Cards = {
       collectionsStarhopper: "SHD_111", // 2/2 Space, Smuggle [3, Command] and no other ability
     },
     jtl: {
+      frisk: "JTL_148", // 3/2 Ground New Republic Pilot, Piloting 2
+      nienNunb: "JTL_093", // 1/2 Ground Rebel Pilot, Piloting 1
       fireball: "JTL_198",   // 3/3 Space Vehicle, Ambush
       bb8: "JTL_145",        // 1/4 Ground Droid Pilot
       paigeTico: "JTL_046",  // 3/2 Ground Resistance Pilot
@@ -448,6 +450,7 @@ export const Cards = {
       darthVaderScourgeOfSquadrons: "JTL_142", // Piloting 3 — grants the host an On Attack
     },
     lof: {
+      maceWinduLeaping: "LOF_149", // 6/6 Ground Force Jedi Republic, Overwhelm + When Played
       rey: "LOF_148", // With Palpatine's Power — 5/5 Ground, "when you draw this card" reveal
       curiousFlock: "LOF_255", // 1/1/1 Ground Creature — When Played: pay up to 6 for that many XP
       kelleranBeq: "LOF_100",
@@ -499,6 +502,8 @@ export const Cards = {
       the501stLiberator: "TWI_109",
     },
     sec: {
+      cruelCommandos: "SEC_086", // 5/5 Ground Republic Clone Trooper, Sentinel + Overwhelm
+      strikeForceXWing: "SEC_152", // 3/2 Space Rebel Vehicle Fighter, When Played + Plot
       furtiveHandmaiden: "SEC_197", // 2/2 Ground Naboo, cost 1
       blueAce: "SEC_204",          // 4/5 Space Resistance Vehicle, Ambush
       imperialOccupier: "SEC_132", // 2/2 Ground Imperial Trooper
@@ -525,6 +530,9 @@ export const Cards = {
       garindan: "SEC_186",
     },
     law: {
+      mercenaryFleet: "LAW_164", // 10/10 Space Vehicle, no abilities — a legal Pilot host
+      bWingSkirmisher: "LAW_183", // 4/4 Space Rebel Vehicle Fighter, When Played
+      beilertValance: "LAW_051", // 3/6 Ground Underworld Bounty Hunter, On Attack
       highsinger: "LAW_059",   // 4/2 Ground Droid/Bounty Hunter, Command+Aggression
       tobiasBeckett: "LAW_002", // deployed leader unit side
       admiralMottiLaw: "LAW_139",
@@ -548,6 +556,8 @@ export const Cards = {
       cavernAngelsXWing: "LAW_189",
     },
     ash: {
+      bWingRearguard: "ASH_078", // 3/5 Space Rebel Vehicle Fighter, conditional Sentinel
+      lothalEWing: "ASH_057", // 2/3 Space New Republic Vehicle Fighter, conditional Restore 2
       antDroid: "ASH_116",
       ravager: "ASH_102",
       poeDameron: "ASH_040",
@@ -856,6 +866,8 @@ export const Cards = {
       takeCharge: "TS26_60",
     },
     sec: {
+      letsCallItWar: "SEC_180", // Deal 3, then if initiative may deal 2 in same arena
+      aggressiveNegotiations: "SEC_179", // Attack with a unit, +1/+0 per card in hand
       hyperspaceDisaster: "SEC_078", // 7-cost: defeat all space units
       kreiasWhispers: "SEC_232",
       iAmTheSenate: "SEC_092",
@@ -888,6 +900,8 @@ export const Cards = {
       chooseYourPath: "ASH_257",
     },
     law: {
+      collateralDamage: "LAW_208", // Deal 2, then deal 2 to a base or another unit in same arena
+      thatsARock: "LAW_206", // Deal 1; when discarded from hand or deck, may deal 1
       improvise: "LAW_242",
       unmarkedCredits: "LAW_244",
       backedByTheHutts: "LAW_247",

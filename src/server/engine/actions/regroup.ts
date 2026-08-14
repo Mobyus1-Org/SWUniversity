@@ -214,6 +214,7 @@ function executeRegroupReady(gs: GameState, log: string[]): void {
     unitsAttackedThisPhase: [],
     baseDamagedThisPhase: [],
     unitsDamagedThisPhase: [],
+    cardsDrawnThisPhase: { 1: 0, 2: 0 },
     lastActionWasPass: false,
     regroupResourcedPlayers: [],
     forceUsedThisPhase: 0,

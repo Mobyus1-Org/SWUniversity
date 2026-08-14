@@ -119,7 +119,7 @@ import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase } from "@/server/engine/core-functions";
+import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -5221,11 +5221,13 @@ function handleChooseTarget(
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
-    if (pending.cardId === "JTL_170" || pending.cardId === "JTL_140" || pending.cardId === "ASH_142") {
+    if (pending.cardId === "JTL_170" || pending.cardId === "JTL_140" || pending.cardId === "ASH_142"
+        || pending.cardId === "LAW_183") {
       // War Juggernaut — deal 1 to each chosen unit (any number).
       // IG-2000 — deal 1 to each chosen unit (up to 3).
       // Mortar Trooper — deal 1 to each of up to 3 chosen ground units.
-      const cap = pending.cardId === "JTL_170" ? Infinity : 3;
+      // B-Wing Skirmisher — deal 1 to each of up to 2 chosen space units.
+      const cap = pending.cardId === "JTL_170" ? Infinity : (pending.cardId === "LAW_183" ? 2 : 3);
       const chosenDmg = (data.targetPlayIds ?? []).slice(0, cap);
       for (const id of chosenDmg) {
         if (!pending.fromPlayIds.includes(id))
@@ -6018,6 +6020,30 @@ function handleChooseTarget(
     // JTL_101 Red Leader: When a Pilot upgrade attaches to this unit — create an X-Wing token.
     if (IsPilotUpgrade(pending.upgradeCardId) && targetUnit.cardId === "JTL_101") {
       CreateXWing(game, pending.player, log, "JTL_101");
+    }
+
+    // JTL_148 Frisk: "When played as an upgrade: You may defeat an upgrade that costs 2 or less."
+    // Fires only on the PILOT-upgrade path — this handler is that path, so playing Frisk as an
+    // ordinary unit never reaches here. Gated on a legal target so the prompt never appears when
+    // it could not be taken.
+    if (pending.upgradeCardId === "JTL_148") {
+      const cheap148 = AllUnits().flatMap(u =>
+        u.upgrades
+          .filter(upg => CardCost(upg.cardId) <= 2)
+          .filter(upg => !(UpgradeImmuneToEnemyAbilities(upg.cardId) && u.controller !== pending.player))
+          .map(upg => upg.playId),
+      );
+      if (cheap148.length > 0) {
+        const defeat148 = optionalTarget(
+          "JTL_148",
+          pending.player,
+          cheap148,
+          "Defeat an upgrade that costs 2 or less?",
+          { yesLabel: "Defeat", noLabel: "Skip" },
+        );
+        updateDefeatedPlayers(game);
+        return { response: resolutionResponse(pendingToResolution(defeat148, game)), pending: defeat148, stateChanged: true };
+      }
     }
 
     // JTL_145 BB-8: "When played as an upgrade: You may pay 2 resources. If you do, ready a
@@ -7076,8 +7102,10 @@ function handleChooseTarget(
       for (const tempId of chosen) {
         const choice = eligibleMap.get(tempId)!;
         pState.hand.push({ cardId: choice.cardId });
-        // A search that draws IS a draw — "when you draw this card" must fire here too.
+        // A search that draws IS a draw — "when you draw this card" must fire here too, and it
+        // must count toward cardsDrawnThisPhase (this path bypasses DrawCardForPlayer entirely).
         QueueWhenDrawnTrigger(game, pending.player, choice.cardId);
+        MarkCardDrawn(game, pending.player);
         drawnTitles.push(CardTitle(choice.cardId) ?? choice.cardId);
       }
       log.push(`${CardTitle(pending.cardId)}: drew ${drawnTitles.join(", ")}.`);
@@ -7568,6 +7596,7 @@ function applyAbilityOptionEffect(
     case "LOF_031": // Karis When Defeated — Use the Force, then give a unit –2/–2 for this phase.
     case "LOF_035": // Talzin's Assassin When Played — Use the Force, then give a unit –3/–3 for this phase.
     case "LOF_075": // Cure Wounds — Use the Force, then heal 6 from a unit.
+    case "LOF_149": // Mace Windu (Leaping into Action) — Use the Force, then deal 4 to a unit.
     case "LOF_172": { // Sorcerous Blast — Use the Force, then deal 3 to a unit.
       const forcePlayer = pending.player!;
       if (!UseTheForce(forcePlayer, log, pending.cardId)) return pending.continuation ?? null;
@@ -11169,6 +11198,97 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog);
       break;
     }
+    case "LOF_149": { // Mace Windu (Leaping into Action) — deal 4 damage to chosen unit
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 4, game.gameLog);
+      break;
+    }
+    case "LAW_051_OA": { // Beilert Valance — damage equal to the cards drawn this phase.
+      if (!targetPlayId) break;
+      const amount051 = CardsDrawnThisPhase(pending.player!);
+      DealDamageToUnit(game.currentGameState, "LAW_051", targetPlayId, amount051, game.gameLog);
+      break;
+    }
+    case "JTL_148": { // Frisk (played as an upgrade) — defeat the chosen upgrade costing 2 or less
+      if (!targetPlayId) break;
+      return defeatUpgradeByPlayId(
+        game.currentGameState,
+        game.gameLog,
+        targetPlayId,
+        CardTitle("JTL_148"),
+        pending.continuation ?? null,
+        pending.player,
+      );
+    }
+    case "SEC_152": { // Strike Force X-Wing — deal 2 damage to the chosen ready unit
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
+      break;
+    }
+    case "SEC_180": { // Let's Call It War — deal 3, then (with initiative) may deal 2 to another
+                      // unit in the SAME arena.
+      if (!targetPlayId) break;
+      // Arena membership is read before the damage, while the target is certainly still on board.
+      const inGround180 = AllGroundUnits().some(u => u.playId === targetPlayId);
+      const others180 = (inGround180 ? AllGroundUnits() : AllSpaceUnits())
+        .filter(u => u.playId !== targetPlayId);
+
+      DealDamageToUnit(game.currentGameState, "SEC_180", targetPlayId, 3, game.gameLog);
+
+      const player180 = pending.player!;
+      const followUp180 = InitiativePlayer() === player180 && others180.length > 0
+        ? optionalTarget(
+            "SEC_180_second",
+            player180,
+            others180.map(u => u.playId),
+            "Deal 2 damage to another unit in the same arena?",
+            { yesLabel: "Deal 2", continuation: pending.continuation ?? null },
+          )
+        : null;
+      return sweepDeadUnits(game.currentGameState, game.gameLog, followUp180 ?? pending.continuation ?? null);
+    }
+    case "SEC_180_second": { // Let's Call It War — the follow-up 2 damage.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "SEC_180", targetPlayId, 2, game.gameLog);
+      break;
+    }
+    case "LAW_208": { // Collateral Damage — deal 2, then MANDATORILY deal 2 to a base or another
+                      // unit in the same arena.
+      if (!targetPlayId) break;
+      const inGround208 = AllGroundUnits().some(u => u.playId === targetPlayId);
+      const others208 = (inGround208 ? AllGroundUnits() : AllSpaceUnits())
+        .filter(u => u.playId !== targetPlayId);
+
+      DealDamageToUnit(game.currentGameState, "LAW_208", targetPlayId, 2, game.gameLog);
+
+      // A base is always eligible, so the follow-up prompt exists even with no other unit left.
+      const followUp208: PendingResolution = {
+        type: "ability-target",
+        cardId: "LAW_208_second",
+        player: pending.player!,
+        fromPlayIds: others208.map(u => u.playId),
+        fromZones: ["Base"],
+        helperText: "Deal 2 damage to a base or another unit in the same arena.",
+        continuation: pending.continuation ?? null,
+      };
+      return sweepDeadUnits(game.currentGameState, game.gameLog, followUp208);
+    }
+    case "LAW_208_second": { // Collateral Damage — the follow-up 2 damage, unit or base.
+      // A base target may arrive either as a "playerN.base" playId or (from the UI) as the
+      // targetIsBase flag + targetBasePlayer. Honour both, or bases become untargetable.
+      let basePlayer208: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer208 = 1;
+      else if (targetPlayId === "player2.base") basePlayer208 = 2;
+      else if (targetIsBase) basePlayer208 = targetBasePlayer ?? null;
+      if (basePlayer208 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer208, 2, pending.player);
+        game.gameLog.push(`${CardTitle("LAW_208")}: dealt 2 damage to player ${basePlayer208}'s base.`);
+      } else {
+        if (!targetPlayId) break;
+        DealDamageToUnit(game.currentGameState, "LAW_208", targetPlayId, 2, game.gameLog);
+      }
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
     case "LOF_041": { // Drain Essence — deal 2 to the chosen unit, then create your Force token.
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog, pending.player);
@@ -11613,6 +11733,24 @@ function applyAbilityEffect(
         type: "attack-target",
         attackerPlayId: targetPlayId,
         source: "JTL_193",
+        continuation: pending.continuation ?? null,
+      };
+    }
+    case "SEC_179": { // Aggressive Negotiations — buff the chosen attacker by the number of cards
+                      // left in hand, then send it in. The event is already out of hand by now, so
+                      // the count is exactly what the card means.
+      if (!targetPlayId) break;
+      const attacker179 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      const handSize179 = GetHand(pending.player!).length;
+      if (attacker179 && handSize179 > 0) {
+        // ForAttack duration, so combat cleanup drops it when this attack ends.
+        GivePowerMod("SEC_179", attacker179, handSize179, "ForAttack", game.gameLog);
+        game.gameLog.push(`${CardTitle("SEC_179")}: attacker gets +${handSize179}/+0 for this attack.`);
+      }
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "SEC_179",
         continuation: pending.continuation ?? null,
       };
     }

@@ -258,6 +258,9 @@ export class Unit implements UnitInterface {
       // "You" is the attached unit's CONTROLLER, and the count is live: it moves as Troopers
       // enter and leave play. (HP half in TotalHP.)
       if (upgrade.cardId === "TWI_122") power += squadSupportCount(this);
+      // JTL_093 Nien Nunb piloting — "Attached unit gets +1/+0 for each other friendly Pilot unit
+      // and upgrade." Power only, so there is no TotalHP half.
+      if (upgrade.cardId === "JTL_093") power += otherFriendlyPilotCount(this.controller, upgrade.playId);
     }
 
     // SEC_011 Governor Pryce (deployed) — "This unit gets +1/+0 for each ready friendly token
@@ -281,6 +284,12 @@ export class Unit implements UnitInterface {
     // discard pile, this unit gets +3/+0."
     if (this.cardId === "SHD_015" && !this.LostAbilities() && DistinctCostsInDiscard(this.controller) >= 5) {
       power += 3;
+    }
+
+    // JTL_093 Nien Nunb in play — "This unit gets +1/+0 for each other friendly Pilot unit and
+    // upgrade." He is a Pilot himself, so `this.playId` is what keeps him out of his own count.
+    if (this.cardId === "JTL_093" && !this.LostAbilities()) {
+      power += otherFriendlyPilotCount(this.controller, this.playId);
     }
 
     if (this.cardId === "JTL_249" && !this.LostAbilities()) {
@@ -496,6 +505,28 @@ function otherFriendlySpaceUnitCount(unit: Unit): number {
   return GetUnitsForPlayer(unit.controller)
     .filter(u => u.playId !== unit.playId && isSpaceUnit(u))
     .length;
+}
+
+/**
+ * "…for each other friendly Pilot unit and upgrade." Counts BOTH friendly units carrying the Pilot
+ * trait AND friendly Pilot upgrades attached to any friendly unit.
+ *
+ * `selfPlayId` is what "other" excludes: the unit's own playId when read for JTL_093 in play, or
+ * the UPGRADE's playId when read for the unit it is piloting — in that case Nien Nunb is the
+ * upgrade, so he must not count himself toward his host's bonus.
+ *
+ * Distinct from WHILE_ANOTHER_UNIT_POWER_BONUS above, which is a once-only while-condition; this
+ * one scales with the count.
+ */
+function otherFriendlyPilotCount(controller: PlayerId, selfPlayId: string): number {
+  let count = 0;
+  for (const u of GetUnitsForPlayer(controller)) {
+    if (u.playId !== selfPlayId && TraitContains(u.cardId, "Pilot", controller, u.playId)) count += 1;
+    for (const upgrade of u.upgrades ?? []) {
+      if (upgrade.playId !== selfPlayId && TraitContains(upgrade.cardId, "Pilot")) count += 1;
+    }
+  }
+  return count;
 }
 
 /**

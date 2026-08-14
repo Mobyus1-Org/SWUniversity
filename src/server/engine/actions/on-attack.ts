@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending, IndirectDamagePending } from "@/server/engine/pending-resolution";
-import { buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, ResourceTopCardOfDeck } from "@/server/engine/core-functions";
+import { CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, ResourceTopCardOfDeck } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType } from "@/server/engine/card-db/generated";
@@ -608,6 +608,22 @@ function resolveInnateOnAttack(
         } satisfies GiveXpMultiplePending,
         continuation,
       };
+    }
+    case "LAW_051": { // Beilert Valance (Target: Vader) — "On Attack: Draw a card. You may deal
+                      // damage to a ground unit equal to the number of cards you've drawn this
+                      // phase." The draw is MANDATORY and happens first, so it counts itself.
+      DrawCardForPlayer(GetGame()!.currentGameState, GetGame()!.gameLog, attacker.controller);
+      const ground051 = AllGroundUnits();
+      if (ground051.length === 0) return continuation;
+      const amount051 = CardsDrawnThisPhase(attacker.controller);
+      if (amount051 <= 0) return continuation;
+      return optionalTarget(
+        "LAW_051_OA",
+        attacker.controller,
+        ground051.map(u => u.playId),
+        `Deal ${amount051} damage to a ground unit?`,
+        { yesLabel: `Deal ${amount051}`, continuation },
+      );
     }
     case "LAW_048": { // Chio Fain — "On Attack: You may choose 2 players. If you do, they each draw
                       // a card." With only two players, that is simply: both players may each draw.

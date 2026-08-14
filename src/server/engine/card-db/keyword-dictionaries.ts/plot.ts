@@ -20,6 +20,7 @@ export function HasPlot(cardId: string, playId?: string, player?: PlayerId)
     case "SEC_099"://Naboo Royal Starship
     case "SEC_111"://Jar Jar Binks (SEC)
     case "SEC_123"://Unveiled Might
+    case "SEC_152"://Strike Force X-Wing
     case "SEC_149"://Kaydel Connix
     case "SEC_183"://Topple the Summit
     case "SEC_186"://Garindan (SEC)

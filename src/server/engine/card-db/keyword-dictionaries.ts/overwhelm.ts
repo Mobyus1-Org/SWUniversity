@@ -181,6 +181,7 @@ export function HasOverwhelm(cardId: string,
     case "ASH_129"://Defenders of the Forest
     case "ASH_143"://Tempest Lieutenant
     case "ASH_164"://Alamite Hunter
+    case "SEC_086"://Cruel Commandos
       return true;
     default: break;
   }

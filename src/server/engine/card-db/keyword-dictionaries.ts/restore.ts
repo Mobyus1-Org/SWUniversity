@@ -157,6 +157,13 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     default: break;
   }
 
+  //ASH_057 Lothal E-Wing — "While an enemy unit is upgraded, this unit gains Restore 2."
+  //Conditional on the OPPONENT's board, so it cannot live in the flat cardId switch above.
+  if (player && cardId === "ASH_057") {
+    const enemy = player === 1 ? 2 : 1;
+    if (GetUnitsForPlayer(enemy).some(u => (u.upgrades?.length ?? 0) > 0)) amount += 2;
+  }
+
   //JTL_053: The Ghost - Heart of the Family
   if (player) {
     const theGhostPlayId = GetPlayIdForUniqueUnitInPlay("JTL_053", player);

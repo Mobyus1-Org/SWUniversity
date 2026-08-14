@@ -1206,11 +1206,27 @@ export function QueueWhenDrawnTrigger(gs: GameState, player: PlayerId, cardId: s
   });
 }
 
+/**
+ * Records that `player` drew a card this phase. Called from EVERY route that puts a card into
+ * hand off the deck, not just DrawCardForPlayer — the deck-search "draw" path bypasses that
+ * function entirely, and a card counting draws would silently under-count without this.
+ */
+export function MarkCardDrawn(gs: GameState, player: PlayerId, count = 1): void {
+  gs.roundState.cardsDrawnThisPhase[player] += count;
+}
+
+/** How many cards `player` has drawn this phase. */
+export function CardsDrawnThisPhase(player: PlayerId): number {
+  const gs = GetGameState();
+  return gs.roundState.cardsDrawnThisPhase[player] ?? 0;
+}
+
 export function DrawCardForPlayer(gs: GameState, log: string[], player: PlayerId): void {
   const p = player === 1 ? gs.player1 : gs.player2;
   if (p.deck.length > 0) {
     const drawn = p.deck.pop()!;
     p.hand.push(drawn);
+    MarkCardDrawn(gs, player);
     log.push(`Player ${player} drew a card.`);
     // Queued rather than returned: DrawCardForPlayer has many callers, none of which can handle
     // a pending, so the trigger bag carries it to the end of the current dispatch.
@@ -1293,6 +1309,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_017": //Han Solo (deployed) — On Attack: resource the top card of your deck (ready), then defeat a resource next action phase
     case "SHD_009": //Hunter (deployed) — On Attack: may reveal a resource; if it shares a name with a friendly unique unit, swap it for the top of your deck
     case "SEC_015": //C-3PO (deployed) — On Attack: if you control another exhausted unit, may exhaust a unit
+    case "LAW_051": //Beilert Valance — On Attack: draw, then may deal damage equal to draws
     case "LAW_048": //Chio Fain — On Attack: may have both players each draw a card
     case "LOF_037": //Darth Vader — On Attack: defeat an enemy unit with a Shield token on it
     case "ASH_009": //Ahsoka Tano (deployed) — On Attack: may give a weaker unit +2/+0 this phase

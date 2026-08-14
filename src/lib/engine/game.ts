@@ -64,6 +64,12 @@ export interface GameState {
     baseDamagedThisPhase: { byPlayer: PlayerId; target: PlayerId; amount?: number }[];
     /** playIds of units that took damage this phase (e.g. ASH_188 Galvanized Leap). */
     unitsDamagedThisPhase: string[];
+    /**
+     * Cards each player has drawn this phase (e.g. LAW_051 Beilert Valance scales its damage off
+     * this). Incremented wherever a card actually reaches hand, which is more than one place —
+     * see DrawCardForPlayer and the deck-search draw route.
+     */
+    cardsDrawnThisPhase: { 1: number; 2: number };
     lastActionWasPass: boolean;
     regroupResourcedPlayers: PlayerId[];
     /** Number of times either player has Used the Force this phase (e.g. LOF_007 Avar Kriss). */

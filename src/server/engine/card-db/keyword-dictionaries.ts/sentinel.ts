@@ -117,6 +117,8 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
         return unit.ready;
       case "ASH_120"://Warrior of Clan Kryze — while you control another exhausted unit
         return units.some(u => u.playId !== playId && !u.ready);
+      case "ASH_078"://B-Wing Rearguard — while you control a ground unit
+        return NumberOfUnitsInArena(player, "Ground") > 0;
       case "SHD_034"://Supercommando Squad
         return upgrades.length > 0;
       case "SHD_052"://Sugi
@@ -238,6 +240,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "ASH_083"://Summa-verminoth
     case "ASH_109"://T-6 Shuttle 1974
     case "SEC_117"://Consular's Cruiser
+    case "SEC_086"://Cruel Commandos
       return true;
   }
 

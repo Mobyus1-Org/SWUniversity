@@ -1682,6 +1682,63 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies AbilityOptionPending;
     }
+    case "SEC_179": { // Aggressive Negotiations (Event) — "Attack with a unit. For this attack, it
+                      // gets +1/+0 for each card in your hand."
+      const attackers179 = GetUnitsForPlayer(player, true).filter(u => CanUnitAttack(u));
+      if (attackers179.length === 0) return null;
+      return mandatoryTarget("SEC_179", player, attackers179.map(u => u.playId));
+    }
+    case "LAW_208": { // Collateral Damage (Event) — "Deal 2 damage to a unit. Then, deal 2 damage
+                      // to a base or another unit in the same arena."
+      const allUnits208 = AllUnits();
+      if (allUnits208.length === 0) return null;
+      return mandatoryTarget("LAW_208", player, allUnits208.map(u => u.playId));
+    }
+    case "SEC_180": { // Let's Call It War (Event) — "Deal 3 damage to a unit. Then, if you have the
+                      // initiative, you may deal 2 damage to another unit in the same arena."
+      const allUnits180 = AllUnits();
+      if (allUnits180.length === 0) return null;
+      return mandatoryTarget("SEC_180", player, allUnits180.map(u => u.playId));
+    }
+    case "LAW_183": { // B-Wing Skirmisher — "When Played: Deal 1 damage to each of up to 2 space units."
+      const space183 = AllSpaceUnits();
+      if (space183.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LAW_183",
+        player,
+        fromPlayIds: space183.map(u => u.playId),
+        needsMultiple: true,
+        maxTargets: 2,
+        continuation: null,
+      };
+    }
+    case "SEC_152": { // Strike Force X-Wing — "When Played: You may deal 2 damage to a ready unit."
+      const ready152 = AllUnits().filter(u => u.ready);
+      if (ready152.length === 0) return null;
+      return optionalTarget(
+        "SEC_152",
+        player,
+        ready152.map(u => u.playId),
+        "Deal 2 damage to a ready unit?",
+        { yesLabel: "Deal 2", sourcePlayId: playId },
+      );
+    }
+    case "LOF_149": { // Mace Windu (Leaping into Action) — "When Played: You may use the Force
+                      // (lose your Force token). If you do, deal 4 damage to a unit."
+      if (!HasTheForce(player)) return null; // no token → nothing to spend, no prompt
+      if (AllUnits().length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId: "LOF_149",
+        player,
+        helperText: "Use the Force to deal 4 damage to a unit?",
+        yesLabel: "Use the Force",
+        noLabel: "Skip",
+        onYes: null, // the Force is spent in the Yes handler, which then offers the targets
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
     case "TWI_109": { // 501st Liberator — "When Played: If you control another Republic unit, you
                       // may heal 3 damage from a base." Either base is a legal choice.
       if (!PlayerHasUnitWithTraitInPlay(player, "Republic", true, playId)) return null;
