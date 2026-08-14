@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 881 cards across 10 sets.**
+**Total: 880 cards across 10 sets.**
 
 ---
 
@@ -604,7 +604,6 @@ LAW_202: Commence the Festivities Event
 LAW_203: Daring Delve Event
 LAW_204: Every Day, More Lies Event
 LAW_205: Flash the Vents Event
-LAW_206: That's a Rock Event
 LAW_207: Attack From All Sides Event
 LAW_208: Collateral Damage Event
 LAW_210: Salacious Crumb - Cackling Companion Unit

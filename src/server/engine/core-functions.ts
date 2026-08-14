@@ -1206,6 +1206,26 @@ export function QueueWhenDrawnTrigger(gs: GameState, player: PlayerId, cardId: s
   });
 }
 
+/** Cards with a "When this card is discarded from your hand or deck" reaction. */
+const WHEN_DISCARDED_CARDS = new Set(["LAW_206"]); // That's a Rock
+
+/**
+ * Queues a "when this card is discarded from your hand or deck" trigger. Call from EVERY site
+ * that moves a card from a player's HAND or DECK to the discard pile — hand-discard pendings,
+ * random discards, deck mills, reveal-then-discard flows. Do NOT call it for a played event
+ * finishing resolution or for defeated units/upgrades/resources: those are not discards from
+ * hand or deck.
+ */
+export function QueueWhenDiscardedTrigger(gs: GameState, owner: PlayerId, cardId: string): void {
+  if (!WHEN_DISCARDED_CARDS.has(cardId)) return;
+  gs.triggerBag.push({
+    triggerType: "when-discarded",
+    cardId,
+    fromPlayer: owner,
+    nested: true,
+  });
+}
+
 /**
  * Records that `player` drew a card this phase. Called from EVERY route that puts a card into
  * hand off the deck, not just DrawCardForPlayer — the deck-search "draw" path bypasses that
@@ -1365,6 +1385,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_006": //Emperor Palpatine - Galactic Ruler
     case "LAW_013": //Chewbacca - Hero of Kessel (deployed)
     case "JTL_018": //Kazuda Xiono - Best Pilot in the Galaxy (deployed)
+    case "JTL_008": //Wedge Antilles - Leader of Red Squadron (deployed)
     case "SOR_005": //Luke Skywalker - Faithful Friend (deployed)
     case "SOR_007": //Grand Moff Tarkin - Ruthless Strategist (deployed)
     case "SOR_011": //Grand Inquisitor - Hunting the Jedi (deployed)
@@ -1444,6 +1465,7 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
   }
 
   switch (cardId) {
+    case "JTL_008": //Wedge Antilles piloting — grants "On Attack: next Pilot card costs 1 less."
     case "JTL_046": //Paige Tico piloting — grants "On Attack: XP to this unit, then 1 damage to it."
     case "SHD_175": //Armed to the Teeth — grants "On Attack: Give another friendly unit +2/+0 for this phase."
     case "SHD_126": //The Darksaber
@@ -1680,6 +1702,7 @@ export function DiscardRandomCardFromHand(
     turnDiscarded: gs.currentRound,
     discardEffect: "",
   });
+  QueueWhenDiscardedTrigger(gs, player, discarded.cardId);
   gameLog.push(`${CardTitle(sourceCardId)}: Player ${player} discarded ${CardTitle(discarded.cardId)} at random.`);
 }
 

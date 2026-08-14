@@ -1700,6 +1700,12 @@ export function resolveWhenPlayed(
       if (allUnits180.length === 0) return null;
       return mandatoryTarget("SEC_180", player, allUnits180.map(u => u.playId));
     }
+    case "LAW_206": { // That's a Rock (Event) — "Deal 1 damage to a unit." The discard reaction
+                      // fires from the discard chokepoint, not from playing the event.
+      const allUnits206 = AllUnits();
+      if (allUnits206.length === 0) return null;
+      return mandatoryTarget("LAW_206", player, allUnits206.map(u => u.playId));
+    }
     case "LAW_183": { // B-Wing Skirmisher — "When Played: Deal 1 damage to each of up to 2 space units."
       const space183 = AllSpaceUnits();
       if (space183.length === 0) return null;

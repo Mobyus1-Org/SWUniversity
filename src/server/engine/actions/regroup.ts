@@ -1,7 +1,7 @@
 import type { GameState, PlayerState } from "@/lib/engine/game";
 import type { DiscardedCard, PlayerId } from "@/lib/engine/core-models";
 import { CardTitle, CardHp, CardUpgradeHp } from "@/server/engine/card-db/generated";
-import { DealDamageToBase, DefeatResource, ReadyUnit } from "@/server/engine/core-functions";
+import { DealDamageToBase, DefeatResource, QueueWhenDiscardedTrigger, ReadyUnit } from "@/server/engine/core-functions";
 
 function ps(gs: GameState, player: PlayerId): PlayerState {
   return player === 1 ? gs.player1 : gs.player2;
@@ -94,6 +94,7 @@ export function executeRegroupDraw(gs: GameState, log: string[]): void {
         turnDiscarded: gs.currentRound,
         discardEffect: "",
       });
+      QueueWhenDiscardedTrigger(gs, player, card.cardId);
       log.push(`${CardTitle("SHD_015")}: discarded ${CardTitle(card.cardId)} from the deck.`);
     }
   }

@@ -11,6 +11,7 @@ const leaderDeployPilotThresholdByCardId: Record<string, number> = {
   "JTL_012": 6, // Luke Skywalker (Hero of Yavin) — same choose-one epic action
   "JTL_018": 4, // Kazuda Xiono (Best Pilot in the Galaxy) — same choose-one epic action
   "JTL_006": 6, // Darth Vader (Victor Squadron Leader) — same choose-one epic action
+  "JTL_008": 5, // Wedge Antilles (Leader of Red Squadron) — same choose-one epic action
 };
 
 export function LeaderDeployPilotThreshold(cardId: string): number | null {

@@ -10,10 +10,10 @@ the front (undeployed) ability and the deployed leader-unit ability.
 
 | Status | Count |
 |--------|-------|
-| Complete (both sides) | 84 |
-| Needs work | 70 |
+| Complete (both sides) | 85 |
+| Needs work | 69 |
 | — of those, no engine code at all | 48 |
-| — of those, front `Action` not in ActionAbilities() | 52 |
+| — of those, front `Action` not in ActionAbilities() | 51 |
 | **Total** | **154** |
 
 ## How status was derived
@@ -63,7 +63,7 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 | Batch 1 | SOR_017 SHD_005 SHD_009 SHD_017 LOF_004 LOF_011 | Closes SOR + SHD | ☑ done |
 | Batch 2 | LOF_001 LOF_006 LOF_008 LOF_010 TWI_003 TWI_009 | — | ☐ |
 | Batch 3 | TWI_010 TWI_013 TWI_015 TWI_017 | Closes LOF + TWI | ☐ |
-| Batch 4 | JTL_001 JTL_003 JTL_006 JTL_007 JTL_008 | — | ☐ |
+| Batch 4 | JTL_001 JTL_003 JTL_006 JTL_007 ~~JTL_008~~ | — | ☐ |
 | Batch 5 | JTL_011 JTL_015 JTL_016 JTL_017 | Closes JTL | ☐ |
 | Batch 6 | SEC_001 SEC_002 SEC_003 SEC_005 SEC_008 | — | ☐ |
 | Batch 7 | SEC_009 SEC_010 SEC_011 SEC_012 SEC_013 | — | ☐ |
@@ -264,16 +264,6 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 **Front:** Action [1 resource, Exhaust]: Give a Resistance unit or a unit with a Resistance upgrade on it +2/+2 for this phase.<br>Epic Action: If you control 6 or more resources, deploy this leader.
 
 **Deployed:** On Attack: You may give another Resistance unit or a unit with a Resistance upgrade on it +2/+2 for this phase.
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
-
-#### JTL_008 — Wedge Antilles (Leader of Red Squadron)
-
-**Missing:** front · **Batch:** Batch 4 · **Existing refs:** `core-functions.ts`
-
-**Front:** Action [Exhaust]: Play a card from your hand using Piloting. It costs 1 resource less.<br>Epic Action: If you control 5 or more resources, choose one:<br>Deploy this leader.<br>Deploy this leader as an upgrade on a friendly Vehicle unit without a Pilot on it.
-
-**Deployed:** Attached unit is a leader unit. It gains: “On Attack: The next Pilot card you play this phase costs 1 resource less. (This includes Piloting costs.)”
 
 > Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 

@@ -200,7 +200,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "TWI_002", "TWI_004", "TWI_005", "TWI_006", "TWI_007", "TWI_011", "TWI_012", "TWI_013", "TWI_014",
   "TWI_017", // Chancellor Palpatine // Darth Sidious — an Action on BOTH faces
   //Jump to Lightspeed
-  "JTL_004", "JTL_005", "JTL_006", "JTL_010", "JTL_012", "JTL_013", "JTL_014", "JTL_018",
+  "JTL_004", "JTL_005", "JTL_006", "JTL_008", "JTL_010", "JTL_012", "JTL_013", "JTL_014", "JTL_018",
   //Legends of the Underworld
   "LAW_002", "LAW_003", "LAW_008", "LAW_010", "LAW_013",
   //Legacy of the Force

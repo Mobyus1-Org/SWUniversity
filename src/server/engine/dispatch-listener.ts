@@ -119,7 +119,7 @@ import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase } from "@/server/engine/core-functions";
+import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -1637,6 +1637,21 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
     if (trigger.cardId === "ASH_204" && trigger.playId) { // Blade Three — give itself an Advantage token.
       const blade204 = GetUnitByPlayId(game, trigger.playId);
       if (blade204) GiveAdvantageTokens(game, blade204, 1, log, "ASH_204");
+    }
+    return null;
+  }
+
+  if (trigger.triggerType === "when-discarded") {
+    if (trigger.cardId === "LAW_206") { // That's a Rock — "You may deal 1 damage to a unit."
+      const units206 = AllUnits();
+      if (units206.length === 0) return null;
+      return optionalTarget(
+        "LAW_206_discard",
+        trigger.fromPlayer,
+        units206.map(u => u.playId),
+        `${CardTitle("LAW_206")} was discarded — deal 1 damage to a unit?`,
+        { yesLabel: "Deal 1" },
+      );
     }
     return null;
   }
@@ -4009,6 +4024,12 @@ function completePlayCard(
     consumeNextPlayMarker(game, player, "ASH_237");
   }
 
+  // JTL_008 Wedge Antilles: "the next PILOT card you play this phase" — consumed by any
+  // Pilot-trait play. Pilot cards played as upgrades consume it at attach instead.
+  if (CardTraits(cardId).includes("Pilot")) {
+    consumeNextPlayMarker(game, player, "JTL_008_next_pilot");
+  }
+
   // ASH_248 Neel: "the next unit you play this phase with 1 or less power enters play ready."
   // Only a qualifying (≤1 power) unit consumes it; bigger units played first leave it armed.
   let neelReady = false;
@@ -5756,6 +5777,7 @@ function handleChooseTarget(
       owner: pending.targetPlayer, controller: pending.targetPlayer,
       turnDiscarded: game.currentRound, discardEffect: "",
     });
+    QueueWhenDiscardedTrigger(game, pending.targetPlayer, discardedCard.cardId);
     log.push(`Player ${pending.targetPlayer} discarded a card.`);
     // JTL_014 Admiral Trench: "If you do, draw a card."
     if (pending.thenDrawForPlayer !== undefined) DrawCardForPlayer(game, log, pending.thenDrawForPlayer);
@@ -5974,6 +5996,12 @@ function handleChooseTarget(
       log.push(`${CardTitle(pending.upgradeCardId)} is piloting ${CardTitle(targetUnit.cardId)}.`);
     } else {
       log.push(`${CardTitle(pending.upgradeCardId)} attached to ${CardTitle(targetUnit.cardId)}.`);
+    }
+
+    // JTL_008 Wedge Antilles: a Pilot card PLAYED as an upgrade consumes the next-Pilot
+    // discount. A leader attaching here was DEPLOYED, not played — it must not consume it.
+    if (!CardIsLeader(pending.upgradeCardId) && CardTraits(pending.upgradeCardId).includes("Pilot")) {
+      consumeNextPlayMarker(game, pending.player, "JTL_008_next_pilot");
     }
 
     // SOR_061 / LOF_058 Guardian of the Whills: mark first-upgrade-used for this round.
@@ -6408,6 +6436,28 @@ function handleChooseTarget(
         hand.splice(idx, 1);
         log.push(`Player ${pending.player} played ${CardTitle(cardId)} via Morgan Elsbeth (-1 cost).`);
         return completePlayCard(game, log, cardId, pending.player);
+      }
+      case "JTL_008": { // Wedge Antilles — play the chosen card USING PILOTING at -1 cost.
+                        // The Piloting mode is forced: no unit-or-pilot prompt is offered.
+        if (PilotingCost(cardId) < 0)
+          return { response: invalidResponse("Wedge Antilles: chosen card has no Piloting."), pending, stateChanged: false };
+        const vehicles008 = PilotingEligibleVehicles(game, pending.player, cardId);
+        if (vehicles008.length === 0)
+          return { response: invalidResponse("Wedge Antilles: no friendly Vehicle without a Pilot to attach to."), pending, stateChanged: false };
+        const pilotCost008 = Math.max(0, pilotPlayCost(game, pending.player, cardId) - 1);
+        if (spendableFor(game, pending.player) < pilotCost008)
+          return { response: invalidResponse("Not enough resources to play this card as a Pilot."), pending, stateChanged: false };
+        payResources(game, pending.player, pilotCost008, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} is playing ${CardTitle(cardId)} as a Pilot via ${CardTitle("JTL_008")} (-1 cost).`);
+        game.roundState.cardsPlayedThisRound.push({ fromPlayer: pending.player, cardId, playId: "", playedAs: "Pilot" });
+        const upgradePending008: UpgradeTargetPending = {
+          type: "upgrade-target",
+          upgradeCardId: cardId,
+          player: pending.player,
+          fromPlayIds: vehicles008,
+        };
+        return { response: resolutionResponse(pendingToResolution(upgradePending008, game)), pending: upgradePending008, stateChanged: false };
       }
       case "JTL_005": { // Admiral Piett — play a Capital Ship unit from hand at -1 cost.
         if (CardType(cardId) !== "Unit")
@@ -7178,6 +7228,7 @@ function handleChooseTarget(
 
     for (const c of discarded) {
       pState.discard.push({ cardId: c.cardId, playId: String(game.nextPlayId++), owner: pending.player, controller: pending.player, turnDiscarded: game.currentRound, discardEffect: "" });
+      QueueWhenDiscardedTrigger(game, pending.player, c.cardId);
     }
     pState.deck.push(...returned.map(c => ({ cardId: c.cardId })));
 
@@ -7205,8 +7256,10 @@ function handleChooseTarget(
         return { response: invalidResponse(`Trench: unknown selection "${id}".`), pending, stateChanged: false };
     const owner = GetPlayer(game, pending.player);
     const toDiscard = (cards: Array<{ tempId: string; cardId: string }>) => {
-      for (const c of cards)
+      for (const c of cards) {
         owner.discard.push({ cardId: c.cardId, playId: String(game.nextPlayId++), owner: pending.player, controller: pending.player, turnDiscarded: game.currentRound, discardEffect: "" });
+        QueueWhenDiscardedTrigger(game, pending.player, c.cardId);
+      }
     };
 
     if (pending.stage === "opponent-discard") {
@@ -7691,6 +7744,7 @@ function applyAbilityOptionEffect(
       const discarded147 = pState147.hand.splice(0);
       for (const c of discarded147) {
         pState147.discard.unshift({ cardId: c.cardId, playId: String(game.nextPlayId++), owner: pending.player!, controller: pending.player!, turnDiscarded: game.currentRound, discardEffect: "" });
+        QueueWhenDiscardedTrigger(game, pending.player!, c.cardId);
       }
       DrawCardForPlayer(game, log, pending.player!);
       DrawCardForPlayer(game, log, pending.player!);
@@ -7906,6 +7960,7 @@ function applyAbilityOptionEffect(
       const discarded012 = pState012.hand.length;
       for (const c of pState012.hand.splice(0)) {
         pState012.discard.push({ cardId: c.cardId, playId: String(game.nextPlayId++), owner: player012, controller: player012, turnDiscarded: game.currentRound, discardEffect: "" });
+        QueueWhenDiscardedTrigger(game, player012, c.cardId);
       }
       DrawCardForPlayer(game, log, player012);
       DrawCardForPlayer(game, log, player012);
@@ -9571,6 +9626,13 @@ function resolveActionAbility(
       }
       return { type: "play-from-hand", cardId: "JTL_005", player } satisfies PlayFromHandPending;
     }
+    case "JTL_008": { // Wedge Antilles — Action [Exhaust]: Play a card from hand using Piloting at -1.
+      if (!GetPlayer(game, player).hand.some(c => PilotingCost(c.cardId) >= 0)) {
+        log.push(`${CardTitle("JTL_008")}: no Piloting card in hand.`);
+        return null;
+      }
+      return { type: "play-from-hand", cardId: "JTL_008", player } satisfies PlayFromHandPending;
+    }
     case "IBH_016": // Ion Cannon — Action [Exhaust]: Deal 3 damage to a space unit.
     case "IBH_027": {
       const spaceUnits016 = AllSpaceUnits();
@@ -10434,6 +10496,7 @@ function processMill(game: GameState, log: string[], pending: MillPending): Pend
     const top = pState.deck.pop();
     if (!top) break;
     pushEventToDiscard(game, pending.millingPlayer, top.cardId);
+    QueueWhenDiscardedTrigger(game, pending.millingPlayer, top.cardId);
     log.push(`${CardTitle(pending.cardId)}: milled ${CardTitle(top.cardId)}.`);
     milledCardIds.push(top.cardId);
   }
@@ -11287,6 +11350,12 @@ function applyAbilityEffect(
         if (!targetPlayId) break;
         DealDamageToUnit(game.currentGameState, "LAW_208", targetPlayId, 2, game.gameLog);
       }
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "LAW_206":            // That's a Rock — deal 1 damage to the chosen unit (on play).
+    case "LAW_206_discard": {  // That's a Rock — the same 1 damage, from the discard reaction.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "LAW_206", targetPlayId, 1, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "LOF_041": { // Drain Essence — deal 2 to the chosen unit, then create your Force token.

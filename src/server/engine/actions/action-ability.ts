@@ -5,6 +5,7 @@ import { CardTraits, CardCost, CardType, CardAspects } from "@/server/engine/car
 import { AllSpaceUnits } from "@/server/engine/core-functions";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
 import { PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 
 /**
  * Every unit (either side) whose power is below that of at least one unit `player` controls —
@@ -179,6 +180,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         break;
       case "JTL_005": // Admiral Piett — Action [Exhaust]: Play a Capital Ship unit from hand at -1.
         if (PlayerHasUnitsInHand(player, { trait: "Capital Ship" })) abilities.push(cardId);
+        break;
+      case "JTL_008": // Wedge Antilles — Action [Exhaust]: Play a card from hand using Piloting at -1.
+        if (GetHand(player).some(c => PilotingCost(c.cardId) >= 0)) abilities.push(cardId);
         break;
       case "JTL_014": // Admiral Trench — Action [Exhaust]: Discard a card that costs 3+ from hand, then draw.
         if (GetHand(player).some(c => (CardCost(c.cardId) ?? 0) >= 3)) abilities.push(cardId);

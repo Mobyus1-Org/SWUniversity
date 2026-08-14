@@ -139,6 +139,14 @@ function gnkPowerDroidDiscount(game: GameState, player: PlayerId, cardId: string
   return game.currentEffects.some(e => e.cardId === "SEC_110" && e.affectedPlayer === player) ? 1 : 0;
 }
 
+// JTL_008 Wedge Antilles (deployed/piloting) On Attack: the NEXT Pilot card you play this phase
+// costs 1 less — including Piloting costs, so this is subtracted in pilotPlayCost too. Consumed
+// on the next Pilot-trait play (unit in completePlayCard, pilot upgrade at attach).
+function wedgeNextPilotDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (!CardTraits(cardId).includes("Pilot")) return 0;
+  return game.currentEffects.some(e => e.cardId === "JTL_008_next_pilot" && e.affectedPlayer === player) ? 1 : 0;
+}
+
 // LOF_005 Morgan Elsbeth (deployed) On Attack: the NEXT unit you play this phase costs 1 less if it
 // shares a keyword with a friendly unit. The effect is consumed in completePlayCard on the next unit.
 function morganNextUnitDiscount(game: GameState, player: PlayerId, cardId: string): number {
@@ -229,6 +237,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - jabbaTheTrickDiscount(game, player, cardId)
     - benduDiscount(game, player, cardId)
     - gnkPowerDroidDiscount(game, player, cardId)
+    - wedgeNextPilotDiscount(game, player, cardId)
     - piettCapitalShipDiscount(game, player, cardId)
     - morganNextUnitDiscount(game, player, cardId)
     - imperialNextUnitDiscount(game, player, cardId)
@@ -254,7 +263,8 @@ export function palpatinesReturnCost(game: GameState, player: PlayerId, cardId: 
  * aspect penalty. Card-cost discounts (Bendu, GNK, …) key off the printed cost and do not apply.
  */
 export function pilotPlayCost(game: GameState, player: PlayerId, cardId: string): number {
-  return PilotingCost(cardId) + aspectPenalty(game, player, cardId);
+  return PilotingCost(cardId) + aspectPenalty(game, player, cardId)
+    - wedgeNextPilotDiscount(game, player, cardId); // "This includes Piloting costs."
 }
 
 /** SOR_062 Regional Governor: while in play, opponents can't play the card named on entry. */

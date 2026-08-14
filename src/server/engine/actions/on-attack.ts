@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending, IndirectDamagePending } from "@/server/engine/pending-resolution";
-import { CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, ResourceTopCardOfDeck } from "@/server/engine/core-functions";
+import { CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType } from "@/server/engine/card-db/generated";
@@ -96,6 +96,7 @@ export function resolveOnAttackTrigger(
             turnDiscarded: gs156.currentRound,
             discardEffect: "",
           });
+          QueueWhenDiscardedTrigger(gs156, defender156, top.cardId);
         }
         if (discarded156.length > 0) {
           game156.gameLog.push(`${CardTitle("JTL_156")}: discarded ${discarded156.map(c => CardTitle(c)).join(", ")} from player ${defender156}'s deck.`);
@@ -138,6 +139,19 @@ export function resolveOnAttackTrigger(
             deferredPending = optionalTarget("JTL_142_pilot", attacker.controller, allUnits142.map(u => u.playId),
               "Deal 1 damage to a unit?", { yesLabel: "Deal 1", sourcePlayId: attacker.playId, continuation });
           }
+        }
+        break;
+      }
+      case "JTL_008": { // Wedge Antilles piloting — same On Attack as his deployed side: the next
+                        // Pilot card you play this phase costs 1 resource less. Auto, no prompt.
+        const game008u = GetGame();
+        if (game008u) {
+          game008u.currentGameState.currentEffects.push({
+            cardId: "JTL_008_next_pilot",
+            duration: "Phase",
+            affectedPlayer: attacker.controller,
+          });
+          game008u.gameLog.push(`${CardTitle("JTL_008")}: the next Pilot card you play this phase costs 1 resource less.`);
         }
         break;
       }
@@ -1288,6 +1302,19 @@ function resolveInnateOnAttack(
     }
     case "JTL_018": // Kazuda Xiono (deployed) — "On Attack: Choose any number of friendly units. They lose all abilities for this round."
       return kazudaSilencePending(attacker, continuation);
+    case "JTL_008": { // Wedge Antilles (deployed) — "On Attack: The next Pilot card you play this
+                      // phase costs 1 resource less. (This includes Piloting costs.)"
+      const game008 = GetGame();
+      if (game008) {
+        game008.currentGameState.currentEffects.push({
+          cardId: "JTL_008_next_pilot",
+          duration: "Phase",
+          affectedPlayer: attacker.controller,
+        });
+        game008.gameLog.push(`${CardTitle("JTL_008")}: the next Pilot card you play this phase costs 1 resource less.`);
+      }
+      return continuation;
+    }
     case "SOR_017": { // Han Solo (deployed) — "On Attack: Put the top card of your deck into play as
                       // a resource and ready it. At the start of the next action phase, defeat a
                       // resource you control." Both halves are mandatory — no prompt.
