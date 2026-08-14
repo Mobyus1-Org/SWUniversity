@@ -8,6 +8,7 @@ import { DiscordLink } from "@/util/const";
 import { LoadPuzzlePanel } from "@/components/Shared/LoadPuzzlePanel";
 import type { PuzzleAccessLevel } from "@/server/puzzle/puzzle-status";
 import { PuzzleBuilderPanel } from "@/components/Shared/PuzzleBuilderPanel";
+import { DEFAULT_ALTERNATE_FAIL_EXPLANATION } from "@/components/Shared/puzzle-builder-state";
 import { CardLinkText } from "@/components/Shared/CardLink";
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
@@ -1127,19 +1128,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   React.useEffect(() => {
     if (gameState) {
       const s = deriveStatus(gameState);
-      // Reaching regroup alive is a loss the engine cannot narrate — the opponent's winning turn
-      // is never simulated — so the explanation has to be authored per puzzle. A puzzle that can
-      // reach this state without one is a broken puzzle, and by explicit product decision it
-      // throws rather than degrading to generic copy, so it gets fixed instead of shipped.
-      if (s === "failed-regroup" && !puzzleMeta?.alternateFailExplanation?.trim()) {
-        throw new Error(
-          `Puzzle "${puzzleMeta?.name ?? puzzleName}" (${selectedPuzzleFilename ?? "unsaved"}) reached the `
-          + `regroup fail state with no alternateFailExplanation. Add one in the puzzle editor.`,
-        );
-      }
       if (s === "lost" || s === "draw" || s === "failed-regroup") setShowFailModal(true);
     }
-  }, [gameState, puzzleMeta, puzzleName, selectedPuzzleFilename]);
+  }, [gameState]);
 
   // Auto-scroll game log to bottom when entries change
   React.useEffect(() => {
@@ -2756,11 +2747,12 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       <div className="w-[min(90vw,35rem)] rounded-xl border border-rose-400/40 bg-[rgba(8,12,26,0.94)] p-10 shadow-2xl" onClick={e => e.stopPropagation()}>
         <h3 className="mb-2 text-base font-bold text-rose-300">Puzzle failed</h3>
         {/* Two ways to fail: your base was destroyed, or you passed to regroup without winning.
-            The second cannot be narrated generically — the opponent's winning turn is never
-            simulated — so it uses the puzzle's authored explanation. */}
+            The second cannot be narrated by the engine — the opponent's winning turn is never
+            simulated — so it uses the puzzle's authored explanation, falling back to the
+            report-it-on-Discord default for puzzles that never authored one. */}
         <p className="mb-6 whitespace-pre-line text-sm text-white/70">
           {gameState && deriveStatus(gameState) === "failed-regroup"
-            ? puzzleMeta?.alternateFailExplanation
+            ? (puzzleMeta?.alternateFailExplanation?.trim() || DEFAULT_ALTERNATE_FAIL_EXPLANATION)
             : "Your base was defeated. Reset to try again, or head back to the puzzles menu."}
         </p>
         <div className="flex gap-2">

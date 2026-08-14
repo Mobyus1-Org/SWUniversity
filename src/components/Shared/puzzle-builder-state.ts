@@ -82,8 +82,9 @@ export type BuilderState = {
   author: string;
   inspiredBy?: string;
   intendedSolution: string[];
-  /** Why the puzzle is lost on reaching regroup (see the regroup-failure spec). Optional:
-   *  only puzzles whose player survives their own regroup draw need one. */
+  /** Why the puzzle is lost on reaching regroup (see the regroup-failure spec). Defaults to
+   *  {@link DEFAULT_ALTERNATE_FAIL_EXPLANATION}; author a real one when surviving the regroup
+   *  draw is an intended way to lose the puzzle. */
   alternateFailExplanation?: string;
   hints: string[];
   assetPath: string;
@@ -116,6 +117,15 @@ export function moveItem<T>(list: T[], from: number, delta: number): T[] {
   return next;
 }
 
+/**
+ * Fallback copy for a puzzle that can be lost by surviving to regroup but has no authored
+ * explanation. Reaching regroup alive is nearly always an unintended solution rather than a
+ * designed failure, so the generic wording asks the player to report it instead of leaving them
+ * (or the app) stuck.
+ */
+export const DEFAULT_ALTERNATE_FAIL_EXPLANATION =
+  "You somehow survived the Regroup phase unintentionally. Please report this solution on our Discord.";
+
 export function emptyPlayer(): PlayerBuilderState {
   return {
     baseCardId: "", baseDamage: 0, baseEpicActionUsed: false,
@@ -135,7 +145,7 @@ export function initialBuilderState(): BuilderState {
     author: "",
     inspiredBy: "",
     intendedSolution: [],
-    alternateFailExplanation: "",
+    alternateFailExplanation: DEFAULT_ALTERNATE_FAIL_EXPLANATION,
     hints: [],
     assetPath: "",
     activePlayer: 1,
@@ -237,7 +247,11 @@ export function fromRaw(raw: Record<string, unknown>, meta: { name: string; desc
     author: meta.author ?? "",
     inspiredBy: meta.inspiredBy ?? "",
     intendedSolution: meta.intendedSolution ?? [],
-    alternateFailExplanation: meta.alternateFailExplanation ?? "",
+    // Puzzles authored before the field existed (or saved empty) open with the default rather than
+    // a blank box, so re-saving an old puzzle in the editor fills the gap.
+    alternateFailExplanation: meta.alternateFailExplanation?.trim()
+      ? meta.alternateFailExplanation
+      : DEFAULT_ALTERNATE_FAIL_EXPLANATION,
     hints: meta.hints ?? [],
     assetPath: meta.assetPath ?? "",
     activePlayer: Number(raw.activePlayer) === 2 ? 2 : 1,

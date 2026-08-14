@@ -1344,16 +1344,17 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
               </div>
 
               {/* Alternate fail explanation — shown when the puzzle is lost by reaching the
-                  regroup phase rather than by base destruction. A puzzle that CAN reach that
-                  state without this set will throw for the player, so fill it in whenever the
-                  player can survive their own regroup draw. */}
+                  regroup phase rather than by base destruction. Pre-filled with the generic
+                  report-it-on-Discord default; override it whenever surviving to regroup is a
+                  designed outcome the player deserves a real explanation for. */}
               <div className="rounded-lg bg-black/20 p-3 sm:p-4 space-y-3">
                 <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">
                   Alternate Fail Explanation
                 </div>
                 <p className="text-2xs leading-relaxed text-white/40">
-                  Why the player lost once they pass to regroup without winning. Required only for
-                  puzzles where they survive the regroup draw — those puzzles will error without it.
+                  Why the player lost once they pass to regroup without winning. Defaults to the
+                  generic &ldquo;report this on Discord&rdquo; message — replace it for puzzles
+                  where surviving the regroup draw is an intended way to lose.
                 </p>
                 <CardRefField
                   multiline
