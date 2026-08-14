@@ -1,5 +1,4 @@
 import path from "node:path";
-import { rm } from "node:fs/promises";
 import type { NextApiRequest, NextApiResponse } from "next";
 
 import { requireAdminApi } from "@/server/auth/guards";
@@ -25,6 +24,8 @@ const CARD_IMAGE_DIRS = [
 async function removeMockArtAsync(cardId: string): Promise<void> {
   for (const directory of CARD_IMAGE_DIRS) {
     for (const fileName of [mockArtFileName(cardId), mockArtFileName(cardId, "_BACK")]) {
+      // Lazy import: a static node:fs import in an API route flips its bundle to ESM (#91663).
+      const { rm } = await import("node:fs/promises");
       await rm(path.join(directory, fileName), { force: true });
     }
   }

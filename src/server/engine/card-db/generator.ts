@@ -1,5 +1,7 @@
 import path from "node:path";
-import { access, appendFile, mkdir, writeFile } from "node:fs/promises";
+// fs is loaded LAZILY at each call site, never as a static import. A static `node:fs` import in
+// a page's module graph makes Turbopack emit that page's bundle as ESM, which Vercel's CommonJS
+// launcher cannot require() (ERR_REQUIRE_ESM). See vercel/next.js discussion #91663.
 import sharp from "sharp";
 import { promosToIgnore } from "@/server/engine/card-db/promosToIgnore";
 import { cardMocks, type MockCard } from "@/server/engine/card-db/card-mocks";
@@ -162,6 +164,7 @@ function getSwudbPathParts(setCode: string, numStr: string): { swudbSetCode: str
 }
 
 async function appendMissingLeader(cardId: string, url: string): Promise<void> {
+  const { appendFile } = await import("node:fs/promises");
   await appendFile(MISSING_LEADERS_LOG, `${cardId}\t${url}\n`, "utf8");
 }
 
@@ -298,6 +301,7 @@ async function writeGeneratedOverridesModuleAsync(
     resolvedOverrides[promoCardId] = resolvedCardId || "FILL_LATER";
   }
 
+  const { writeFile } = await import("node:fs/promises");
   await writeFile(GENERATED_OVERRIDES_MODULE_PATH, renderGeneratedOverridesModule(resolvedOverrides), "utf8");
   return resolvedOverrides;
 }
@@ -523,6 +527,7 @@ async function fetchResolvedCardsAsync(): Promise<ResolvedCardsResult> {
 
 async function imageFileExistsAsync(filePath: string): Promise<boolean> {
   try {
+    const { access } = await import("node:fs/promises");
     await access(filePath);
     return true;
   } catch {
@@ -640,6 +645,7 @@ async function generateCardDbFromResolvedCardsAsync(
     dictionaryCount: Object.keys(dictionaries).length,
   };
 
+  const { writeFile } = await import("node:fs/promises");
   await writeFile(GENERATED_MODULE_PATH, renderGeneratedModule(dictionaries, summaryBase), "utf8");
 
   return {
@@ -657,6 +663,7 @@ async function generateCardImagesFromResolvedCardsAsync(
   resolvedCardAttributes: Map<string, SwuCardAttributes>,
   fetchedPages: number,
 ): Promise<CardImageGenerationSummary> {
+  const { mkdir } = await import("node:fs/promises");
   await mkdir(GENERATED_CARD_IMAGE_FULL_DIR, { recursive: true });
   await mkdir(GENERATED_CARD_IMAGE_SQUARE_DIR, { recursive: true });
 
