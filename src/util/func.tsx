@@ -1,4 +1,5 @@
 import { UserSettingsLocalStorageKey, type AppModes, type SWUniversityApp, type UserSettings } from "@/util/const";
+import { isMockCardId } from "@/server/engine/card-db/card-mocks";
 
 export type AppModeSetEntry = {
   id: number;
@@ -97,8 +98,21 @@ export function isHorizontalCard(cardName: string): boolean {
   return setNum <= setsMap[setCode as keyof typeof setsMap];
 }
 
+/**
+ * Card art path. Mocked (previewed, unreleased) cards live under a `mock_` filename prefix so that
+ * official art can land beside them on release day without the generator skipping it — see
+ * docs/superpowers/specs/2026-08-11-card-mock-framework-design.md §3.
+ */
 export function getCardImageLink(cardPattern: string): string {
-  return `/assets/cards/full/${cardPattern}.webp`;
+  return `/assets/cards/full/${artFileStem(cardPattern)}.webp`;
+}
+
+export function getCardSquareImageLink(cardPattern: string): string {
+  return `/assets/cards/square/${artFileStem(cardPattern)}.webp`;
+}
+
+function artFileStem(cardPattern: string): string {
+  return isMockCardId(cardPattern) ? `mock_${cardPattern}` : cardPattern;
 }
 
 export function getSWUDBImageLink(cardPattern: string): string {

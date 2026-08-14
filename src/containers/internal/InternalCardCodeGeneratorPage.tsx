@@ -1,6 +1,7 @@
 import React from "react";
 
 import { globalBackgroundStyle } from "@/util/style-const";
+import PreviewCardImportPanel from "@/components/Internal/PreviewCardImportPanel";
 
 type GenerationResult = {
   generatedAt: string;
@@ -8,6 +9,8 @@ type GenerationResult = {
   processedCards: number;
   fetchedPages: number;
   dictionaryCount: number;
+  appliedMockIds: string[];
+  supersededMockIds: string[];
 };
 
 type ImageGenerationResult = {
@@ -120,6 +123,8 @@ export default function InternalCardCodeGeneratorPage() {
           <p className="mt-2 text-sm">This route is intentionally limited to local development.</p>
         </div>
 
+        <PreviewCardImportPanel />
+
         {generatorResult ? (
           <div className="space-y-4 rounded border border-gray-500 bg-gray-200 p-5 text-gray-900">
             <h2 className="text-xl font-semibold">Combined Generator Run</h2>
@@ -196,6 +201,20 @@ export default function InternalCardCodeGeneratorPage() {
               ) : (
                 <p className="mt-2 text-sm text-gray-700">No failures.</p>
               )}
+            </div>
+
+            <div>
+              <p className="font-semibold">Mock Cards</p>
+              <p className="mt-2 text-sm">
+                {generatorResult.cardDb.appliedMockIds.length} applied
+                {generatorResult.cardDb.appliedMockIds.length > 0 ? `: ${generatorResult.cardDb.appliedMockIds.join(", ")}` : ""}
+              </p>
+              {generatorResult.cardDb.supersededMockIds.length > 0 ? (
+                <p className="mt-2 rounded border border-amber-400 bg-amber-50 px-3 py-2 text-sm">
+                  Superseded by official data — safe to remove from card-mocks.json:{" "}
+                  <span className="font-mono">{generatorResult.cardDb.supersededMockIds.join(", ")}</span>
+                </p>
+              ) : null}
             </div>
           </div>
         ) : null}

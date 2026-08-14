@@ -14,7 +14,8 @@
     "test:run": "vitest run",
     "lint": "eslint .",
     "download-images": "node scripts/download-images.js",
-    "convert-images": "node scripts/convert-to-webp.js"
+    "convert-images": "node scripts/convert-to-webp.js",
+    "backfill-base-traits": "node scripts/backfill-base-traits.js"
   },
   "dependencies": {
     "@vercel/analytics": "^1.5.0",

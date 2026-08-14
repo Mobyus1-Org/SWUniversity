@@ -1,6 +1,6 @@
 import React from "react";
 import { CardSubtitle, CardTitle } from "@/server/engine/card-db/generated";
-import { getCardImageLink, getSWUDBImageLink, getSWUDBImageLinkFallback } from "@/util/func";
+import { getCardImageLink, getCardSquareImageLink, getSWUDBImageLink, getSWUDBImageLinkFallback } from "@/util/func";
 import { DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 import { getMasteredIds } from "@/util/profile-api";
 import { globalBackgroundStyle, lightsaberGlow } from "@/util/style-const";
@@ -309,7 +309,7 @@ function CardVisual({
   // token) rendering as bare alt text, which reads as a wall of words where a card should be.
   const imageChain = React.useMemo(() => {
     const chain = square
-      ? [`/assets/cards/square/${pattern}.webp`, getCardImageLink(pattern)]
+      ? [getCardSquareImageLink(pattern), getCardImageLink(pattern)]
       : [getCardImageLink(pattern), getSWUDBImageLink(pattern)];
     return [...chain, getSWUDBImageLinkFallback(pattern), `/assets/${DEFAULT_PUZZLE_IMAGE}`];
   }, [pattern, square]);

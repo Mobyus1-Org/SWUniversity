@@ -1,0 +1,381 @@
+{
+  "HMW_014": {
+    "title": "Wicket",
+    "subtitle": "Few Greater Battles to Fight",
+    "type": "Leader",
+    "type2": "Unit",
+    "arena": "Ground",
+    "cost": 4,
+    "power": 2,
+    "hp": 5,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Aggression",
+      "Heroism"
+    ],
+    "traits": [
+      "Ewok"
+    ],
+    "text": "When a friendly unit attacks a unit that costs more than it: You may exhaust this leader. If you do, draw a card.",
+    "epicAction": "Epic Action: If you control 4 or more resources, deploy this leader.",
+    "leaderUnitText": "On Attack: If you control a unit that costs 3 or less, draw a card.",
+    "unique": true,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/014.png",
+    "imageUrlBack": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/014-back.png"
+  },
+  "HMW_081": {
+    "title": "Alliance Shield Generator",
+    "subtitle": "",
+    "type": "Upgrade",
+    "type2": "",
+    "arena": "",
+    "cost": 2,
+    "power": null,
+    "hp": null,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Vigilance",
+      "Heroism"
+    ],
+    "traits": [
+      "Fortification"
+    ],
+    "text": "Fortify (Attach this to your base, not a unit.)\nIf attached base would be dealt 5 or more damage, prevent that damage. If you do, defeat this upgrade and draw a card.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Uncommon",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/081.png",
+    "imageUrlBack": ""
+  },
+  "HMW_115": {
+    "title": "Leia Organa",
+    "subtitle": "These Are My Friends",
+    "type": "Unit",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 1,
+    "power": 2,
+    "hp": 3,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Command",
+      "Heroism"
+    ],
+    "traits": [
+      "Rebel",
+      "Official"
+    ],
+    "text": "When you play another unit that costs 3 or less: Heal 1 damage from your base.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": true,
+    "rarity": "Uncommon",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/115.png",
+    "imageUrlBack": ""
+  },
+  "HMW_116": {
+    "title": "Ewok Brigade",
+    "subtitle": "",
+    "type": "Unit",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 2,
+    "power": 2,
+    "hp": 4,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Command",
+      "Heroism"
+    ],
+    "traits": [
+      "Ewok"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/116.png",
+    "imageUrlBack": ""
+  },
+  "HMW_121": {
+    "title": "Hijacked AT-ST",
+    "subtitle": "",
+    "type": "Unit",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 5,
+    "power": 7,
+    "hp": 7,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Command",
+      "Heroism"
+    ],
+    "traits": [
+      "Rebel",
+      "Vehicle",
+      "Walker"
+    ],
+    "text": "Overwhelm (When attacking an enemy unit, deal excess damage to the opponent's base.)\nWhen Played: This unit doesn't ready during the next regroup phase.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Special",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/121.png",
+    "imageUrlBack": ""
+  },
+  "HMW_124": {
+    "title": "Luminara Unduli",
+    "subtitle": "Besieged General",
+    "type": "Unit",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 7,
+    "power": 7,
+    "hp": 7,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Command",
+      "Heroism"
+    ],
+    "traits": [
+      "Force",
+      "Jedi",
+      "Republic"
+    ],
+    "text": "When you play a unit (including this one): You may attack with a unit. It gets +2/+0 for this attack.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": true,
+    "rarity": "Legendary",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/124.png",
+    "imageUrlBack": ""
+  },
+  "HMW_136": {
+    "title": "Lifetree Caravan",
+    "subtitle": "",
+    "type": "Unit",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 3,
+    "power": 2,
+    "hp": 1,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Command"
+    ],
+    "traits": [
+      "Ewok"
+    ],
+    "text": "When Played: If you control 3 or more units (including this one), you may resource the top card of your deck.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/136.png",
+    "imageUrlBack": ""
+  },
+  "HMW_162": {
+    "title": "Teebo",
+    "subtitle": "Striped Hunter",
+    "type": "Unit",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 1,
+    "power": 3,
+    "hp": 1,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Aggression",
+      "Heroism"
+    ],
+    "traits": [
+      "Ewok"
+    ],
+    "text": "Hidden (This unit can't be attacked if it was played this phase.)\nOther friendly Ewok units gain Hidden.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": true,
+    "rarity": "Uncommon",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/162.png",
+    "imageUrlBack": ""
+  },
+  "HMW_164": {
+    "title": "Chief Chirpa",
+    "subtitle": "Defiant Elder",
+    "type": "Unit",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 2,
+    "power": 1,
+    "hp": 5,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Aggression",
+      "Heroism"
+    ],
+    "traits": [
+      "Ewok"
+    ],
+    "text": "This unit gets +1/+0 for each other friendly Ewok unit.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": true,
+    "rarity": "Rare",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/164.png",
+    "imageUrlBack": ""
+  },
+  "HMW_171": {
+    "title": "Trap Field",
+    "subtitle": "",
+    "type": "Upgrade",
+    "type2": "",
+    "arena": "",
+    "cost": 2,
+    "power": null,
+    "hp": null,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Aggression",
+      "Heroism"
+    ],
+    "traits": [
+      "Fortification"
+    ],
+    "text": "Fortify (Attach this to your base, not a unit.)\nWhen a non-leader ground unit enters play (including token units): You may defeat this upgrade. If you do, deal 3 damage to that unit.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Special",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/171.png",
+    "imageUrlBack": ""
+  },
+  "HMW_177": {
+    "title": "Adamant Ewoks",
+    "subtitle": "",
+    "type": "Unit",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 2,
+    "power": 3,
+    "hp": 2,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Aggression"
+    ],
+    "traits": [
+      "Ewok"
+    ],
+    "text": "When Played: If you control another Ewok unit or an Endor base, you may deal 1 damage to a base and 1 damage to an enemy unit.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/177.png",
+    "imageUrlBack": ""
+  },
+  "HMW_193": {
+    "title": "Nightfall",
+    "subtitle": "",
+    "type": "Event",
+    "type2": "",
+    "arena": "",
+    "cost": 2,
+    "power": null,
+    "hp": null,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Aggression"
+    ],
+    "traits": [
+      "Disaster"
+    ],
+    "text": "Deal 1 damage to an enemy unit.\nIf you control an Endor base , you may attack with a unit. It gets +2/+0 for this attack.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/193.png",
+    "imageUrlBack": ""
+  },
+  "HMW_255": {
+    "title": "C-3PO",
+    "subtitle": "Captivating Storyteller",
+    "type": "Unit",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 2,
+    "power": 2,
+    "hp": 3,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Heroism"
+    ],
+    "traits": [
+      "Rebel",
+      "Droid"
+    ],
+    "text": "When Played: You may give an Ewok unit +2/+2 for this phase. You may give a Rebel unit +2/+2 for this phase.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": true,
+    "rarity": "Special",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/255.png",
+    "imageUrlBack": ""
+  },
+  "HMW_257": {
+    "title": "Ewok Archers",
+    "subtitle": "",
+    "type": "Unit",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 3,
+    "power": 2,
+    "hp": 5,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Heroism"
+    ],
+    "traits": [
+      "Ewok"
+    ],
+    "text": "While you control another unit that costs 3 or less, this unit gains Ambush. (When you play this unit, it may attack an enemy unit.)",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/257.png",
+    "imageUrlBack": ""
+  }
+}

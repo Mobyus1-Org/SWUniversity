@@ -2,6 +2,18 @@ import path from "node:path";
 import { access, appendFile, mkdir, writeFile } from "node:fs/promises";
 import sharp from "sharp";
 import { promosToIgnore } from "@/server/engine/card-db/promosToIgnore";
+import { cardMocks, type MockCard } from "@/server/engine/card-db/card-mocks";
+import { mockToSwuAttributes } from "@/server/engine/card-db/mock-adapter";
+import { applyTraitSupplement, cardTraitSupplement } from "@/server/engine/card-db/card-trait-supplement";
+import type {
+  SwuCardAttributes,
+  SwuCardsResponse,
+  SwuRelation,
+  SwuRelationList,
+  StringDictionary,
+  NumberDictionary,
+  CardDictionaries,
+} from "@/server/engine/card-db/swu-api-types";
 
 const PAGE_SIZE = 100;
 const SWU_CARD_API_BASE = "https://admin.starwarsunlimited.com/api/cards";
@@ -16,115 +28,16 @@ const SQUARE_IMAGE_SIZE = 512;
 // by the card databases (SWUDB et al.) with 2 digits, so its ids follow suit.
 const TWO_DIGIT_CARD_NUMBER_SETS = new Set(["TS26"]);
 
-type SwuMediaFormats = {
-  card?: {
-    url?: string | null;
-  } | null;
-} | null;
-
-type SwuRelationAttributes = {
-  code?: string | null;
-  englishName?: string | null;
-  name?: string | null;
-  url?: string | null;
-  formats?: SwuMediaFormats;
-};
-
-type SwuRelationData = {
-  attributes?: SwuRelationAttributes | null;
-} | null;
-
-type SwuRelation = {
-  data?: SwuRelationData;
-};
-
-type SwuRelationList = {
-  data?: Array<{
-    attributes?: SwuRelationAttributes | null;
-  }>;
-};
-
-type SwuCardAttributes = {
-  cardId?: string | null;
-  title?: string | null;
-  subtitle?: string | null;
-  cardNumber?: number | string | null;
-  cost?: number | null;
-  hp?: number | null;
-  power?: number | null;
-  upgradeHp?: number | null;
-  upgradePower?: number | null;
-  text?: string | null;
-  epicAction?: string | null;
-  deployBox?: string | null;
-  unique?: boolean | null;
-  rarity?: SwuRelation;
-  type?: SwuRelation;
-  type2?: SwuRelation;
-  expansion?: SwuRelation;
-  aspects?: SwuRelationList;
-  aspectDuplicates?: SwuRelationList;
-  traits?: SwuRelationList;
-  arenas?: SwuRelationList;
-  artFront?: SwuRelation;
-  artBack?: SwuRelation;
-  artThumbnail?: SwuRelation;
-  reprintOf?: {
-    data?: {
-      attributes?: SwuCardAttributes | null;
-    } | null;
-  };
-};
-
-type SwuCardRecord = {
-  id: number;
-  attributes?: SwuCardAttributes | null;
-};
-
-type SwuCardsResponse = {
-  data?: SwuCardRecord[];
-  meta?: {
-    pagination?: {
-      page?: number;
-      pageCount?: number;
-      pageSize?: number;
-      total?: number;
-    };
-  };
-};
-
-type StringDictionary = Record<string, string>;
-type NumberDictionary = Record<string, number>;
-type BooleanDictionary = Record<string, true>;
-
-type CardDictionaries = {
-  cardTitle: StringDictionary;
-  cardSubtitle: StringDictionary;
-  cardText: StringDictionary;
-  cardCost: NumberDictionary;
-  cardHp: NumberDictionary;
-  cardPower: NumberDictionary;
-  cardUpgradeHp: NumberDictionary;
-  cardUpgradePower: NumberDictionary;
-  cardType: StringDictionary;
-  cardType2: StringDictionary;
-  cardSet: StringDictionary;
-  cardRarity: StringDictionary;
-  cardIsUnique: BooleanDictionary;
-  cardHasWhenPlayed: BooleanDictionary;
-  cardHasWhenDefeated: BooleanDictionary;
-  cardLeaderUnitText: StringDictionary;
-  cardAspects: StringDictionary;
-  cardTraits: StringDictionary;
-  cardArena: StringDictionary;
-};
-
 export type CardDbGenerationSummary = {
   generatedAt: string;
   generatedFilePaths: string[];
   processedCards: number;
   fetchedPages: number;
   dictionaryCount: number;
+  /** Mock cards that reached the dictionaries this run. */
+  appliedMockIds: string[];
+  /** Mock cards ignored because official data has landed — safe to delete from card-mocks.json. */
+  supersededMockIds: string[];
 };
 
 export type CardImageGenerationFailure = {
@@ -152,7 +65,7 @@ export type CardAssetsGenerationSummary = {
   images: CardImageGenerationSummary;
 };
 
-function createEmptyDictionaries(): CardDictionaries {
+export function createEmptyDictionaries(): CardDictionaries {
   return {
     cardTitle: {},
     cardSubtitle: {},
@@ -308,7 +221,10 @@ function serializeDictionary(name: string, dictionary: Record<string, string | n
   return `const ${name}: Record<string, ${valueType}> = {\n${serializedEntries}\n};\n`;
 }
 
-function renderGeneratedModule(dictionaries: CardDictionaries, summary: Omit<CardDbGenerationSummary, "generatedFilePaths">): string {
+function renderGeneratedModule(
+  dictionaries: CardDictionaries,
+  summary: Pick<CardDbGenerationSummary, "generatedAt" | "processedCards" | "fetchedPages" | "dictionaryCount">,
+): string {
   const orderedDictionaries: Array<{
     dictionaryName: keyof CardDictionaries;
     functionName: string;
@@ -433,7 +349,7 @@ async function fetchCardsPage(page: number): Promise<SwuCardsResponse> {
   return payload;
 }
 
-function populateDictionaries(cardId: string, attributes: SwuCardAttributes, dictionaries: CardDictionaries): void {
+export function populateDictionaries(cardId: string, attributes: SwuCardAttributes, dictionaries: CardDictionaries): void {
   assignStringValue(dictionaries.cardTitle, cardId, attributes.title ?? "");
   assignStringValue(dictionaries.cardSubtitle, cardId, attributes.subtitle ?? "");
   assignStringValue(dictionaries.cardText, cardId, (attributes.text ?? "") + "\n" + (attributes.epicAction ?? ""));
@@ -505,11 +421,50 @@ function resolveDuplicateAttributes(
   );
 }
 
+const MOCK_ART_PREFIX = "mock_";
+
+/**
+ * Mock art is stored under a `mock_` filename prefix so stale preview art cannot masquerade as
+ * official art after release. Only the FILENAME is prefixed — the card id stays SET_NNN
+ * everywhere in dictionaries, card logic, puzzles and tests.
+ */
+export function mockArtFileName(cardId: string, suffix = ""): string {
+  return `${MOCK_ART_PREFIX}${cardId}${suffix}.webp`;
+}
+
+/**
+ * Merges hand-curated mock cards into the resolved card map. Official data ALWAYS wins: a mock
+ * whose id is present in the API response is ignored and reported as superseded, so an ordinary
+ * regen on release day switches every card over and tells you what to delete.
+ */
+export function mergeMocksIntoResolvedCards(
+  resolved: Map<string, SwuCardAttributes>,
+  mocks: Record<string, MockCard>,
+): { appliedMockIds: string[]; supersededMockIds: string[] } {
+  const appliedMockIds: string[] = [];
+  const supersededMockIds: string[] = [];
+
+  for (const [cardId, mock] of Object.entries(mocks)) {
+    if (resolved.has(cardId)) {
+      supersededMockIds.push(cardId);
+      console.warn(`mock ${cardId} superseded by official data — safe to remove`);
+      continue;
+    }
+
+    resolved.set(cardId, mockToSwuAttributes(cardId, mock));
+    appliedMockIds.push(cardId);
+  }
+
+  return { appliedMockIds, supersededMockIds };
+}
+
 type ResolvedCardsResult = {
   resolvedCardAttributes: Map<string, SwuCardAttributes>;
   resolvedCardOverrides: Record<string, string>;
   processedCards: number;
   fetchedPages: number;
+  appliedMockIds: string[];
+  supersededMockIds: string[];
 };
 
 async function fetchResolvedCardsAsync(): Promise<ResolvedCardsResult> {
@@ -552,6 +507,8 @@ async function fetchResolvedCardsAsync(): Promise<ResolvedCardsResult> {
     currentPage += 1;
   }
 
+  const mockReport = mergeMocksIntoResolvedCards(resolvedCardAttributes, cardMocks);
+
   const resolvedCardOverrides = await writeGeneratedOverridesModuleAsync(promoOverridesByCardId);
 
   return {
@@ -559,6 +516,8 @@ async function fetchResolvedCardsAsync(): Promise<ResolvedCardsResult> {
     resolvedCardOverrides,
     processedCards,
     fetchedPages: currentPage - 1,
+    appliedMockIds: mockReport.appliedMockIds,
+    supersededMockIds: mockReport.supersededMockIds,
   };
 }
 
@@ -640,19 +599,39 @@ function applyCardOverridesToDictionaries(
 }
 
 
-async function generateCardDbFromResolvedCardsAsync(
+/**
+ * Every card row, from resolved attributes to finished dictionaries.
+ *
+ * Order matters: the trait supplement runs BEFORE promo overrides. The supplement is keyed by the
+ * ORIGINAL card id, so a promo reprint of a base only inherits its location trait if the original
+ * already has one by the time the override copies its rows across.
+ */
+export function buildDictionaries(
   resolvedCardAttributes: Map<string, SwuCardAttributes>,
   resolvedCardOverrides: Record<string, string>,
-  processedCards: number,
-  fetchedPages: number,
-): Promise<CardDbGenerationSummary> {
+  traitSupplement: Record<string, string> = cardTraitSupplement,
+): CardDictionaries {
   const dictionaries = createEmptyDictionaries();
 
   for (const [cardId, attributes] of resolvedCardAttributes.entries()) {
     populateDictionaries(cardId, attributes, dictionaries);
   }
 
+  applyTraitSupplement(dictionaries.cardTraits, traitSupplement);
   applyCardOverridesToDictionaries(dictionaries, resolvedCardOverrides);
+
+  return dictionaries;
+}
+
+async function generateCardDbFromResolvedCardsAsync(
+  resolvedCardAttributes: Map<string, SwuCardAttributes>,
+  resolvedCardOverrides: Record<string, string>,
+  processedCards: number,
+  fetchedPages: number,
+  appliedMockIds: string[],
+  supersededMockIds: string[],
+): Promise<CardDbGenerationSummary> {
+  const dictionaries = buildDictionaries(resolvedCardAttributes, resolvedCardOverrides);
 
   const summaryBase = {
     generatedAt: new Date().toISOString(),
@@ -665,6 +644,8 @@ async function generateCardDbFromResolvedCardsAsync(
 
   return {
     ...summaryBase,
+    appliedMockIds,
+    supersededMockIds,
     generatedFilePaths: [
       path.relative(process.cwd(), GENERATED_MODULE_PATH),
       path.relative(process.cwd(), GENERATED_OVERRIDES_MODULE_PATH),
@@ -705,8 +686,15 @@ async function generateCardImagesFromResolvedCardsAsync(
 
     summary.attempted += 1;
 
+    // Mock art is written under a mock_ prefix so that official art, when it lands, has no file to
+    // skip. The existing-file check must test the name that will actually be written, or a mocked
+    // card re-downloads on every run.
+    const mock = cardMocks[cardId];
+    const frontFileName = mock ? mockArtFileName(cardId) : `${cardId}.webp`;
+    const backFileName = mock ? mockArtFileName(cardId, "_BACK") : `${cardId}_BACK.webp`;
+
     const frontAlreadyExists = await imageFileExistsAsync(
-      path.join(GENERATED_CARD_IMAGE_FULL_DIR, `${cardId}.webp`),
+      path.join(GENERATED_CARD_IMAGE_FULL_DIR, frontFileName),
     );
     if (frontAlreadyExists) {
       summary.skipped += 1;
@@ -716,7 +704,11 @@ async function generateCardImagesFromResolvedCardsAsync(
     const isLeader = getRelationValue(attributes.type, "name") === "Leader";
     const { setCode: cardSetCode, numStr: cardNumStr } = parseCardNumStr(cardId);
     const { swudbSetCode, swudbCardNumCandidates } = getSwudbPathParts(cardSetCode, cardNumStr);
-    const frontUrls = swudbCardNumCandidates.map((candidate) => `${SWUDB_CDN_BASE}/${swudbSetCode}/${candidate}.png`);
+    // SwuCardAttributes carries no art URL — the official path derives it from the card id, and
+    // preview art is not addressable by that convention, so a mock supplies its own.
+    const frontUrls = mock
+      ? [mock.imageUrl]
+      : swudbCardNumCandidates.map((candidate) => `${SWUDB_CDN_BASE}/${swudbSetCode}/${candidate}.png`);
 
     let frontBuffer: Buffer | null = null;
     try {
@@ -728,7 +720,7 @@ async function generateCardImagesFromResolvedCardsAsync(
 
     if (frontBuffer) {
       try {
-        await writeFullImageAsync(frontBuffer, `${cardId}.webp`);
+        await writeFullImageAsync(frontBuffer, frontFileName);
         summary.generatedFull += 1;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -736,7 +728,7 @@ async function generateCardImagesFromResolvedCardsAsync(
       }
 
       try {
-        await writeSquareImageAsync(frontBuffer, `${cardId}.webp`);
+        await writeSquareImageAsync(frontBuffer, frontFileName);
         summary.generatedSquare += 1;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -749,7 +741,14 @@ async function generateCardImagesFromResolvedCardsAsync(
       continue;
     }
     let backBuffer: Buffer | null = null;
-    if (isLeader) {
+    if (mock) {
+      try {
+        ({ buffer: backBuffer } = await fetchFirstAvailableImageBuffer([mock.imageUrlBack]));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        trackImageFailure(summary, cardId, `Back image download failed: ${message}`);
+      }
+    } else if (isLeader) {
       const leaderBackUrls = swudbCardNumCandidates.map((candidate) => `${SWUDB_CDN_BASE}/${swudbSetCode}/${candidate}-back.png`);
       const leaderPortraitUrls = swudbCardNumCandidates.map((candidate) => `${SWUDB_CDN_BASE}/${swudbSetCode}/${candidate}-portrait.png`);
       const leaderCandidates = [...leaderBackUrls, ...leaderPortraitUrls];
@@ -776,7 +775,7 @@ async function generateCardImagesFromResolvedCardsAsync(
     }
 
     try {
-      await writeFullImageAsync(backBuffer, `${cardId}_BACK.webp`);
+      await writeFullImageAsync(backBuffer, backFileName);
       summary.generatedBackFull += 1;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -784,7 +783,7 @@ async function generateCardImagesFromResolvedCardsAsync(
     }
 
     try {
-      await writeSquareImageAsync(backBuffer, `${cardId}_BACK.webp`);
+      await writeSquareImageAsync(backBuffer, backFileName);
       summary.generatedBackSquare += 1;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -797,8 +796,22 @@ async function generateCardImagesFromResolvedCardsAsync(
 }
 
 export async function generateCardDbAsync(): Promise<CardDbGenerationSummary> {
-  const { resolvedCardAttributes, resolvedCardOverrides, processedCards, fetchedPages } = await fetchResolvedCardsAsync();
-  return generateCardDbFromResolvedCardsAsync(resolvedCardAttributes, resolvedCardOverrides, processedCards, fetchedPages);
+  const {
+    resolvedCardAttributes,
+    resolvedCardOverrides,
+    processedCards,
+    fetchedPages,
+    appliedMockIds,
+    supersededMockIds,
+  } = await fetchResolvedCardsAsync();
+  return generateCardDbFromResolvedCardsAsync(
+    resolvedCardAttributes,
+    resolvedCardOverrides,
+    processedCards,
+    fetchedPages,
+    appliedMockIds,
+    supersededMockIds,
+  );
 }
 
 export async function generateCardImagesAsync(): Promise<CardImageGenerationSummary> {
@@ -807,10 +820,24 @@ export async function generateCardImagesAsync(): Promise<CardImageGenerationSumm
 }
 
 export async function generateCardAssetsAsync(): Promise<CardAssetsGenerationSummary> {
-  const { resolvedCardAttributes, resolvedCardOverrides, processedCards, fetchedPages } = await fetchResolvedCardsAsync();
+  const {
+    resolvedCardAttributes,
+    resolvedCardOverrides,
+    processedCards,
+    fetchedPages,
+    appliedMockIds,
+    supersededMockIds,
+  } = await fetchResolvedCardsAsync();
 
   const [cardDb, images] = await Promise.all([
-    generateCardDbFromResolvedCardsAsync(resolvedCardAttributes, resolvedCardOverrides, processedCards, fetchedPages),
+    generateCardDbFromResolvedCardsAsync(
+      resolvedCardAttributes,
+      resolvedCardOverrides,
+      processedCards,
+      fetchedPages,
+      appliedMockIds,
+      supersededMockIds,
+    ),
     generateCardImagesFromResolvedCardsAsync(resolvedCardAttributes, fetchedPages),
   ]);
 

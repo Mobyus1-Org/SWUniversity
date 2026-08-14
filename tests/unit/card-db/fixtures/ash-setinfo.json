@@ -1,0 +1,244 @@
+{
+ "expansionAbbreviation": "ASH",
+ "expansionName": "Ashes of the Empire",
+ "logoPath": "/expansions/ash_logo.png",
+ "expansionType": 1,
+ "printingGroups": [
+  {
+   "header": "Normal",
+   "sortOrder": 1,
+   "printings": [
+    {
+     "cardName": "The Armorer",
+     "cardNumber": "001",
+     "frontImagePath": "/cards/ASH/001.png",
+     "backImagePath": "/cards/ASH/001-back.png",
+     "isFrontPortrait": false,
+     "isBackPortrait": true,
+     "isFoil": false,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    },
+    {
+     "cardName": "Fennec Shand",
+     "cardNumber": "002",
+     "frontImagePath": "/cards/ASH/002.png",
+     "backImagePath": "/cards/ASH/002-back.png",
+     "isFrontPortrait": false,
+     "isBackPortrait": true,
+     "isFoil": false,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    }
+   ]
+  },
+  {
+   "header": "Hyperspace",
+   "sortOrder": 2,
+   "printings": [
+    {
+     "cardName": "The Armorer",
+     "cardNumber": "265",
+     "frontImagePath": "/cards/ASH/265.png",
+     "backImagePath": "/cards/ASH/265-back.png",
+     "isFrontPortrait": false,
+     "isBackPortrait": true,
+     "isFoil": false,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    },
+    {
+     "cardName": "Fennec Shand",
+     "cardNumber": "266",
+     "frontImagePath": "/cards/ASH/266.png",
+     "backImagePath": "/cards/ASH/266-back.png",
+     "isFrontPortrait": false,
+     "isBackPortrait": true,
+     "isFoil": false,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    }
+   ]
+  },
+  {
+   "header": "Hyperfoil",
+   "sortOrder": 4,
+   "printings": [
+    {
+     "cardName": "Enoch",
+     "cardNumber": "529",
+     "frontImagePath": "/cards/ASH/529.png",
+     "backImagePath": "",
+     "isFrontPortrait": true,
+     "isBackPortrait": false,
+     "isFoil": true,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    },
+    {
+     "cardName": "Paz Vizsla",
+     "cardNumber": "530",
+     "frontImagePath": "/cards/ASH/530.png",
+     "backImagePath": "",
+     "isFrontPortrait": true,
+     "isBackPortrait": false,
+     "isFoil": true,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    }
+   ]
+  },
+  {
+   "header": "Showcase",
+   "sortOrder": 5,
+   "printings": [
+    {
+     "cardName": "The Armorer",
+     "cardNumber": "767",
+     "frontImagePath": "/cards/ASH/767.png",
+     "backImagePath": "/cards/ASH/767-back.png",
+     "isFrontPortrait": false,
+     "isBackPortrait": true,
+     "isFoil": true,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    },
+    {
+     "cardName": "Fennec Shand",
+     "cardNumber": "768",
+     "frontImagePath": "/cards/ASH/768.png",
+     "backImagePath": "/cards/ASH/768-back.png",
+     "isFrontPortrait": false,
+     "isBackPortrait": true,
+     "isFoil": true,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    }
+   ]
+  },
+  {
+   "header": "Prestige",
+   "sortOrder": 6,
+   "printings": [
+    {
+     "cardName": "Paz Vizsla",
+     "cardNumber": "785",
+     "frontImagePath": "/cards/ASH/785.png",
+     "backImagePath": "",
+     "isFrontPortrait": true,
+     "isBackPortrait": false,
+     "isFoil": false,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    },
+    {
+     "cardName": "Marrok",
+     "cardNumber": "786",
+     "frontImagePath": "/cards/ASH/786.png",
+     "backImagePath": "",
+     "isFrontPortrait": true,
+     "isBackPortrait": false,
+     "isFoil": false,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    }
+   ]
+  },
+  {
+   "header": "Prestige Foil",
+   "sortOrder": 6,
+   "printings": [
+    {
+     "cardName": "Paz Vizsla",
+     "cardNumber": "832",
+     "frontImagePath": "/cards/ASH/832.png",
+     "backImagePath": "",
+     "isFrontPortrait": true,
+     "isBackPortrait": false,
+     "isFoil": true,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    },
+    {
+     "cardName": "Marrok",
+     "cardNumber": "833",
+     "frontImagePath": "/cards/ASH/833.png",
+     "backImagePath": "",
+     "isFrontPortrait": true,
+     "isBackPortrait": false,
+     "isFoil": true,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    }
+   ]
+  }
+ ],
+ "children": [
+  {
+   "childExpansionName": "The Mandalorian and Grogu Movie Promo",
+   "childExpansionAbbreviation": "MV26",
+   "printings": [
+    {
+     "cardName": "Razor Crest",
+     "cardNumber": "2",
+     "frontImagePath": "/cards/MV26/2.png",
+     "backImagePath": "",
+     "isFrontPortrait": true,
+     "isBackPortrait": false,
+     "isFoil": false,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    }
+   ]
+  },
+  {
+   "childExpansionName": " Tokens",
+   "childExpansionAbbreviation": "TASH",
+   "printings": [
+    {
+     "cardName": "Advantage",
+     "cardNumber": "T02",
+     "frontImagePath": "/cards/TASH/T02.png",
+     "backImagePath": "",
+     "isFrontPortrait": true,
+     "isBackPortrait": false,
+     "isFoil": false,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    }
+   ]
+  },
+  {
+   "childExpansionName": " Organized Play",
+   "childExpansionAbbreviation": "ASHP",
+   "printings": [
+    {
+     "cardName": "Enoch",
+     "cardNumber": "1",
+     "frontImagePath": "/cards/ASHP/1.png",
+     "backImagePath": "",
+     "isFrontPortrait": true,
+     "isBackPortrait": false,
+     "isFoil": false,
+     "isNumberDoubleFoiled": false,
+     "isNumberDoubleStamped": false,
+     "stamp": null
+    }
+   ]
+  }
+ ]
+}
