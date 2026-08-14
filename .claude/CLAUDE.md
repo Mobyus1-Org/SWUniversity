@@ -1,7 +1,7 @@
 # Overview
 SWUniversity is a Next.js app that helps Star Wars: Unlimited players of all skill levels learn the game.
 
-**Stack:** Next.js 16 (pages router) · React 18 · TypeScript · MongoDB/Mongoose · Tailwind · Vitest. Node 22.
+**Stack:** Next.js 16 (pages router) · React 18 · TypeScript · MongoDB/Mongoose · Tailwind · Vitest. Node 24.
 
 ## Modes
 The webapp has many fun modes for players to engage with.
