@@ -1132,7 +1132,8 @@ export function resolveWhenPlayed(
       return mandatoryTarget(cardId, player, allUnits073.map(u => u.playId));
     }
     case "SOR_241": { // Wing Leader — "When Played: Give 2 Experience tokens to another friendly REBEL unit."
-      const friendlyRebels241 = GetUnitsForPlayer(player, true)
+      // No ready requirement — "another friendly Rebel unit" includes exhausted ones.
+      const friendlyRebels241 = GetUnitsForPlayer(player)
         .filter(u => u.playId !== playId && TraitContains(u.cardId, "Rebel", u.controller, u.playId));
       if (friendlyRebels241.length === 0) return null;
       return {
@@ -1146,7 +1147,8 @@ export function resolveWhenPlayed(
     }
     case "SHD_131": // Take Captive — TWI_128 is the reprint; identical text.
     case "TWI_128": { // Take Captive "A friendly unit captures an enemy non-leader unit in the same arena."
-      const friendlyUnits = GetUnitsForPlayer(player, true);
+      // Capturing is not an attack — an exhausted unit can be the captor.
+      const friendlyUnits = GetUnitsForPlayer(player);
       if (friendlyUnits.length === 0) return null;
       return {
         type: "ability-target",

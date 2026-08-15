@@ -1055,6 +1055,29 @@ function defeatUpgradeByPlayId(
 }
 
 /**
+ * `defeatUpgradeByPlayId` plus the state-based defeat check its host now needs: an upgrade carries
+ * stats (an Experience token is +1/+1), so taking it away can leave the unit with damage at or
+ * above its remaining HP, which defeats it (CR 8.5.1).
+ *
+ * Callers that `break` back into the ability-target handler already get that sweep from the handler
+ * exit. Callers that `return` early skip it, and must use this instead — it also restores the
+ * `continuation`, which the raw helper drops on its ordinary (null) path.
+ */
+function defeatUpgradeAndSweep(
+  game: GameState,
+  log: string[],
+  targetPlayId: string,
+  sourceLabel: string,
+  continuation: PendingResolution | null,
+  bySourcePlayer?: PlayerId,
+): PendingResolution | null {
+  const pend = defeatUpgradeByPlayId(game, log, targetPlayId, sourceLabel, continuation, bySourcePlayer);
+  // A returned pending (Luke's eject choice) already carries the continuation inside it, so it
+  // becomes the sweep's continuation rather than being chained after it a second time.
+  return sweepDeadUnits(game, log, pend ?? continuation);
+}
+
+/**
  * Moves an existing upgrade (by playId) off whatever unit it is currently on and attaches
  * it to the destination unit, transferring control of the upgrade to `abilityController`.
  * Handles Traitorous (SOR_122): the source unit reverts to its owner, and the destination
@@ -5282,20 +5305,14 @@ function handleChooseTarget(
     // Multi-target aspect effects handled before single-target dispatch
     if (pending.cardId === "SOR_155_defeat_upgrades" || pending.cardId === "SOR_203_exhaust_2") {
       const multiTargets = data.targetPlayIds ?? [];
+      let nextMulti = pending.continuation;
       if (pending.cardId === "SOR_155_defeat_upgrades") {
         for (const upgPlayId of multiTargets.slice(0, 2)) {
-          for (const u of GetAllUnits(game)) {
-            const upgradeIdx = u.upgrades.findIndex(upg => upg.playId === upgPlayId);
-            if (upgradeIdx !== -1) {
-              const [defeated155] = u.upgrades.splice(upgradeIdx, 1);
-              log.push(`${CardTitle("SOR_155")}: defeated ${CardTitle(defeated155.cardId)} on ${CardTitle(u.cardId)}.`);
-              if (defeated155.cardId === "SOR_122" && u.controller !== u.owner) {
-                transferControl(game, log, u, u.owner);
-              }
-              break;
-            }
-          }
+          const pend155 = defeatUpgradeByPlayId(game, log, upgPlayId, CardTitle("SOR_155"), null, pending.player);
+          if (pend155) nextMulti = injectContinuation(pend155, nextMulti);
         }
+        // Both upgrades are gone before the check, so a unit only kept alive by them dies once.
+        nextMulti = sweepDeadUnits(game, log, nextMulti);
       } else {
         for (const unitPlayId of multiTargets.slice(0, 2)) {
           const target203e = GetUnitByPlayId(game, unitPlayId);
@@ -5306,7 +5323,6 @@ function handleChooseTarget(
         }
       }
       updateDefeatedPlayers(game);
-      const nextMulti = pending.continuation;
       if (nextMulti) return { response: resolutionResponse(pendingToResolution(nextMulti, game)), pending: nextMulti, stateChanged: true };
       const bagMulti = drainTriggerBag(game, log);
       if (bagMulti) return { response: resolutionResponse(pendingToResolution(bagMulti, game)), pending: bagMulti, stateChanged: false };
@@ -10896,14 +10912,12 @@ function applyAbilityEffect(
     }
     case "SHD_153_upgrade": { // Poe Dameron mode: defeat the chosen upgrade.
       if (!targetPlayId) break;
-      // defeatUpgradeByPlayId returns null on its ordinary path (it only returns a pending for
-      // the JTL_094 eject choice), so the remaining mode prompts must be restored here or the
-      // rest of Poe's ability is silently dropped.
-      const defeated153 = defeatUpgradeByPlayId(
+      // The helper restores the remaining mode prompts (the raw one drops them on its ordinary
+      // path), so the rest of Poe's ability isn't silently lost.
+      return defeatUpgradeAndSweep(
         game.currentGameState, game.gameLog, targetPlayId,
         CardTitle("SHD_153"), pending.continuation ?? null, pending.player,
       );
-      return defeated153 ?? pending.continuation ?? null;
     }
     case "SHD_080": { // Salacious Crumb Action: 1 damage to the chosen ground unit.
       if (!targetPlayId) break;
@@ -11345,7 +11359,7 @@ function applyAbilityEffect(
     }
     case "JTL_148": { // Frisk (played as an upgrade) — defeat the chosen upgrade costing 2 or less
       if (!targetPlayId) break;
-      return defeatUpgradeByPlayId(
+      return defeatUpgradeAndSweep(
         game.currentGameState,
         game.gameLog,
         targetPlayId,
@@ -11636,7 +11650,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const self171 = pending.sourcePlayId ? GetUnitByPlayId(game.currentGameState, pending.sourcePlayId) : null;
       if (self171) ReadyUnit(game.currentGameState, self171);
-      return defeatUpgradeByPlayId(
+      return defeatUpgradeAndSweep(
         game.currentGameState, game.gameLog, targetPlayId,
         CardTitle("ASH_171"), pending.continuation ?? null, pending.player,
       );
@@ -11717,7 +11731,7 @@ function applyAbilityEffect(
     }
     case "ASH_165": { // Clan Vizsla Soldier — When Defeated: defeat the chosen upgrade.
       if (!targetPlayId) break;
-      return defeatUpgradeByPlayId(
+      return defeatUpgradeAndSweep(
         game.currentGameState, game.gameLog, targetPlayId,
         CardTitle("ASH_165"), pending.continuation ?? null, pending.player,
       );
@@ -12281,7 +12295,7 @@ function applyAbilityEffect(
     case "LAW_078": // Sabine Wren (Spectre Five) When Played: defeat the chosen upgrade.
     case "SEC_163": { // Outer Rim Constable When Played: defeat the chosen upgrade
       if (!targetPlayId) break;
-      return defeatUpgradeByPlayId(
+      return defeatUpgradeAndSweep(
         game.currentGameState, game.gameLog, targetPlayId,
         CardTitle(pending.cardId), pending.continuation ?? null, pending.player,
       );
@@ -13123,13 +13137,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const gs019 = game.currentGameState;
       const tokenUnit = GetUnitByPlayId(gs019, targetPlayId);
-      if (tokenUnit) {
-        defeatUnit(gs019, game.gameLog, tokenUnit);
-      } else {
-        defeatUpgradeByPlayId(gs019, game.gameLog, targetPlayId, CardTitle("LAW_019"), null, pending.player);
-      }
-      updateDefeatedPlayers(gs019);
-      return {
+      const reward019: ChooseOnePending = {
         type: "choose-one",
         cardId: "LAW_019",
         player: pending.player!,
@@ -13139,7 +13147,15 @@ function applyAbilityEffect(
           { id: "credit", label: "Create a Credit token" },
         ],
         continuation: null,
-      } satisfies ChooseOnePending;
+      };
+      if (tokenUnit) {
+        defeatUnit(gs019, game.gameLog, tokenUnit);
+        updateDefeatedPlayers(gs019);
+        return reward019;
+      }
+      // Paying with an upgrade token can leave its host at lethal damage, so the sweep runs before
+      // the reward prompt.
+      return defeatUpgradeAndSweep(gs019, game.gameLog, targetPlayId, CardTitle("LAW_019"), reward019, pending.player);
     }
     case "LAW_019_experience": // Alliance Outpost — give the chosen token to the chosen unit.
     case "LAW_019_shield": {

@@ -105,6 +105,29 @@ describe("SOR_155 — Aggression", () => {
     await g.chooseOptionAsync(1, "draw_card");
   });
 
+  it("defeat_upgrades sends the upgrade to its owner's discard and kills a host left at lethal damage", async () => {
+    const g = new GameTestAdapter();
+    const state = CommonSetup(new GameStateBuilder(), "rrk", "ggw", {
+      my: { resourceCount: 4, handCardIds: [Cards.events.sor.aggression] },
+      their: {},
+    })
+      // 3/3 Marine + Experience = 4/4 at 3 damage: the token is the only thing keeping it alive.
+      .WithGroundUnitForPlayer(2, Cards.units.sor.battlefieldMarine, true, 3)
+      .Build();
+    g.loadNewState(state);
+    const enemy = g.state.player2.groundArena[0];
+    enemy.upgrades.push({ cardId: Cards.upgrades.sor.jediLightsaber, playId: "upgA", owner: 2, controller: 2 });
+    enemy.upgrades.push({ cardId: Cards.upgrades.token.experience, playId: "upgB", owner: 2, controller: 2 });
+
+    await g.playCardFromHandAsync(1, 0);
+    await g.chooseOptionAsync(1, "defeat_upgrades");
+    await g.dispatchAsync(1, "choose-target", { targetPlayIds: ["upgA", "upgB"] });
+
+    expect(g.state.player2.groundArena).toHaveLength(0);
+    // A defeated upgrade is a defeated card: it belongs in its owner's discard, not out of the game.
+    expect(g.state.player2.discard.map(c => c.cardId)).toContain(Cards.upgrades.sor.jediLightsaber);
+  });
+
   it("ready_unit_3pow readies a unit with 3 or less power", async () => {
     const g = new GameTestAdapter();
     const state = CommonSetup(new GameStateBuilder(), "rrk", "ggw", {

@@ -35,6 +35,25 @@ describe("SHD_131 Take Captive", () => {
     expect(g.state.player1.groundArena[0].captives[0].cardId).toBe(Cards.units.sor.battlefieldMarine);
   });
 
+  it("an EXHAUSTED friendly unit can be the captor — capturing is not an attack", async () => {
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      base()
+        .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 14)
+        .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine, false) // exhausted captor
+        .WithGroundUnitForPlayer(2, Cards.units.sor.battlefieldMarine)
+        .WithCardInHandForPlayer(1, Cards.events.shd.takeCaptiveShd)
+        .Build(),
+    );
+
+    await g.playCardFromHandAsync(1, 0);
+    await g.chooseGroundUnitAsync(1, 0);
+    await g.chooseGroundUnitAsync(2, 0);
+
+    expect(g.state.player2.groundArena.length).toBe(0);
+    expect(g.state.player1.groundArena[0].captives.length).toBe(1);
+  });
+
   it("cannot capture across arenas — a ground captor is only offered ground victims", async () => {
     const g = new GameTestAdapter();
     g.loadNewState(
