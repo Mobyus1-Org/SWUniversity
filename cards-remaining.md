@@ -10,18 +10,17 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 870 cards across 10 sets.**
+**Total: 857 cards across 10 sets.**
 
 ---
 
-## SOR — Spark of Rebellion (3)
+## SOR — Spark of Rebellion (2)
 
 **Message 1 of 1**
 ```
 SOR:
 SOR_019: Security Complex Base
 SOR_238: C-3PO - Protocol Droid Unit
-SOR_246: You're My Only Hope Event
 ```
 
 ## SHD — Shadows of the Galaxy (63)
@@ -332,15 +331,13 @@ JTL_260: Death Star Plans Upgrade
 JTL_262: Evasive Maneuver Event
 ```
 
-## LOF — Legends of the Force (98)
+## LOF — Legends of the Force (90)
 
 **Message 1 of 3**
 ```
 LOF:
 LOF_019: Vergence Temple Base
-LOF_022: Mystic Monastery Base
 LOF_028: Tomb of Eilram Base
-LOF_036: Old Daka - Oldest and Wisest Unit
 LOF_042: Always Two Event
 LOF_043: The Tragedy of Plagueis Event
 LOF_046: Ezra Bridger - Attuned With Life Unit
@@ -373,12 +370,6 @@ LOF_115: Dagoyan Master Unit
 LOF_117: Sifo-Dyas - Commissioning An Army Unit
 LOF_125: The Burden of Masters Event
 LOF_127: Rampage Event
-LOF_129: Acolyte of the Beyond Unit
-LOF_133: Purge Trooper Unit
-LOF_134: Heavy Missile Gunship Unit
-LOF_135: Scythe - Intimidating Silhouette Unit
-LOF_138: Sith Holocron Upgrade
-LOF_139: Battle Fury Upgrade
 ```
 
 **Message 2 of 3**
@@ -447,7 +438,7 @@ LOF_263: Last Words Event
 LOF_264: It's Worse Event
 ```
 
-## LAW — Legends of the Underworld (165)
+## LAW — Legends of the Underworld (161)
 
 **Message 1 of 4**
 ```
@@ -483,9 +474,6 @@ LAW_052: The Mandalorian - Let's See the Puck Unit
 LAW_053: Dengar - Take Your Shot Unit
 LAW_054: Maul - Master of the Shadow Collective Unit
 LAW_055: Chopper - Spectre Three Unit
-LAW_056: Cassian Andor - Everything For the Rebellion Unit
-LAW_057: Benthic “Two Tubes” - The War Has Just Begun Unit
-LAW_058: Honor-Bound Partisan Unit
 ```
 
 **Message 2 of 4**
@@ -598,7 +586,6 @@ LAW_203: Daring Delve Event
 LAW_204: Every Day, More Lies Event
 LAW_205: Flash the Vents Event
 LAW_207: Attack From All Sides Event
-LAW_208: Collateral Damage Event
 LAW_212: Malakili - Keeper of the Menagerie Unit
 LAW_213: Cutthroat Podracer Unit
 LAW_215: Vermillion - Qi'ra's Auction House Unit

@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade } from "@/server/engine/core-functions";
+import { AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -517,6 +517,25 @@ function resolveOwnWhenDefeated(
       if (!game116) return null;
       DrawCardForPlayer(game116.currentGameState, game116.gameLog, player);
       game116.gameLog.push(`${CardTitle("ASH_116")}: drew a card.`);
+      return null;
+    }
+    case "LAW_057": // Benthic "Two Tubes" — "When Defeated: Deal 1 damage to a base."
+      return mandatoryTarget("LAW_057_defeated", player, ["player1.base", "player2.base"]);
+    case "LAW_058": { // Honor-Bound Partisan — "When Defeated: The next unit you play this phase
+                      // costs 1 resource less." Read by honorBoundPartisanDiscount, consumed in
+                      // completePlayCard by the next unit played.
+      const game058 = GetGame();
+      if (!game058) return null;
+      const gs058 = game058.currentGameState;
+      if (!gs058.currentEffects.some(e => e.cardId === "LAW_058" && e.affectedPlayer === player)) {
+        gs058.currentEffects.push({ cardId: "LAW_058", duration: "Phase", affectedPlayer: player });
+      }
+      game058.gameLog.push(`${CardTitle("LAW_058")}: the next unit you play this phase costs 1 resource less.`);
+      return null;
+    }
+    case "LOF_129": { // Acolyte of the Beyond — "On Attack/When Defeated: The Force is with you."
+      const game129 = GetGame();
+      if (game129) CreateForceToken(player, game129.gameLog, "LOF_129");
       return null;
     }
     case "LOF_059": { // Nightsister Warrior — When Defeated: Draw a card.

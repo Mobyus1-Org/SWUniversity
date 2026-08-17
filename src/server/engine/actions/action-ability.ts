@@ -369,6 +369,10 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "IBH_027":
         if (AllSpaceUnits().length > 0) abilities.push(cardId);
         break;
+      case "LOF_134": // Heavy Missile Gunship — Action [Exhaust]: Deal 2 damage to a ground unit.
+                      // A space unit reaching into the ground arena, so it needs a ground target.
+        if (AllGroundUnits().length > 0) abilities.push(cardId);
+        break;
       case "IBH_023": // General Rieekan — Action [Exhaust]: Attack with another Heroism unit (+2/+0).
       case "IBH_036":
         if (GetUnitsForPlayer(player, true).some(u => u.playId !== playId && (CardAspects(u.cardId)?.includes("Heroism") ?? false))) {

@@ -1345,6 +1345,9 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_179": //Boba Fett's Rancor — On Attack: may deal 1 damage to a base for every 5 damage on your base
     case "ASH_196": //Gorian Shard's Corsair — On Attack: may deal 2 damage to a unit
     case "ASH_189": //Emperor's Messenger — On Attack: Ready a resource.
+    case "LAW_057": //Benthic "Two Tubes" — On Attack: 1 damage to an enemy ground unit
+    case "LOF_135": //Scythe — On Attack: may give another friendly Inquisitor +2/+0 this phase
+    case "LOF_129": //Acolyte of the Beyond — On Attack: the Force is with you
     case "LAW_011": //Darth Vader (deployed) — On Attack: discard any number, deal that much damage
     case "TWI_246": //Tranquility — On Attack: next 3 Republic cards this phase cost 1 less
     case "LAW_214": //Boba Fett (For a Price) — On Attack: may pay 1 to deal 3 to a ground unit
@@ -1477,6 +1480,8 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
     case "SOR_214": //Smuggling Compartment
     case "SOR_054": //Jedi Lightsaber (conditional: only fires if attached unit is Force)
     case "SOR_137": //Fallen Lightsaber (conditional: only fires if attached unit is Force)
+    case "LOF_138": //Sith Holocron — grants "On Attack: may deal 2 to a friendly unit for +2/+0"
+    case "LOF_139": //Battle Fury — grants "On Attack: Discard a card from your hand."
     case "SEC_264": //Clandestine Connections
     case "JTL_018": //Kazuda Xiono piloting — grants his On Attack to the attached Vehicle
     case "JTL_142": //Darth Vader (Scourge of Squadrons) piloting — 1 damage, then 1 more on a kill
@@ -1880,6 +1885,9 @@ export function optionalTarget(
       type: "ability-target",
       cardId,
       player,
+      // Carried through to the target step: an ability whose effect acts on its own source
+      // ("…this unit gets +2/+0") has no other way to find it once the option is answered.
+      sourcePlayId: opts.sourcePlayId,
       fromPlayIds,
       continuation: opts.continuation ?? null,
     } satisfies AbilityTargetPending,

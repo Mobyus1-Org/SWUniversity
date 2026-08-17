@@ -234,6 +234,7 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
     { abilityId: "SHD_087-1", label: "2 resources: +1/+0 this phase" },
     { abilityId: "SHD_087-2", label: "Exhaust: deal his power to an enemy ground unit" },
   ],
+  "LOF_134": "2 dmg to a ground unit", // Heavy Missile Gunship
   "IBH_016": "3 dmg to a space unit", // Ion Cannon
   "IBH_027": "3 dmg to a space unit",
   "IBH_023": "Attack w/ another Heroism unit (+2/+0)", // General Rieekan
@@ -256,6 +257,16 @@ const BASES_WITH_EPIC_ACTION = new Set([
   // LAW "splash" bases — play a card from hand ignoring 1 non-side aspect penalty.
   "LAW_020", "LAW_021", "LAW_022", "LAW_024",
   "LAW_025", "LAW_027", "LAW_028", "LAW_030",
+]);
+
+/**
+ * Bases whose ability is a plain repeatable "Action:" with a per-game cap, not a once-only Epic
+ * Action. `epicActionUsed` says nothing about them, so the engine owns the remaining-use count and
+ * simply rejects the dispatch once it runs out — the button stays clickable until then.
+ * Mirrors BASE_LIMITED_ACTION_USES in dispatch-listener.ts.
+ */
+const BASES_WITH_LIMITED_ACTION = new Set([
+  "LOF_022", // Mystic Monastery — "The Force is with you", 3 times each game
 ]);
 
 function CardVisual({
@@ -908,7 +919,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       // "Unit or base" abilities (Repair/JTL_075, Daring Raid) encode the base as a literal
       // playId inside fromPlayIds rather than via fromZones — match that form directly.
       void sendDispatch(createDispatch("choose-target", { targetPlayIds: [`player${player}.base`] }));
-    } else if (!resolutionNeeded && gameState && BASES_WITH_EPIC_ACTION.has(gameState.player1.base.cardId)) {
+    } else if (!resolutionNeeded && gameState
+        && (BASES_WITH_EPIC_ACTION.has(gameState.player1.base.cardId)
+          || BASES_WITH_LIMITED_ACTION.has(gameState.player1.base.cardId))) {
       void sendDispatch(createDispatch("use-ability", { cardId: gameState.player1.base.cardId }));
     }
   }, [isResolving, resolutionNeeded, gameState, sendDispatch]);
@@ -1378,7 +1391,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   const uiCanClickLeader = !resolutionNeeded && !isGameOver && !player.leader.deployed &&
     (player.leader.ready || !player.leader.epicActionUsed);
   const uiCanClickBase = !resolutionNeeded && !isGameOver &&
-    BASES_WITH_EPIC_ACTION.has(player.base.cardId) && !player.base.epicActionUsed;
+    ((BASES_WITH_EPIC_ACTION.has(player.base.cardId) && !player.base.epicActionUsed)
+      || BASES_WITH_LIMITED_ACTION.has(player.base.cardId));
   const selectableHandIndices: number[] = resolutionNeeded?.type === "Target" && resolutionNeeded.fromZones?.includes("Hand")
     ? (isOwnHandTarget(resolutionNeeded) ? (resolutionNeeded.fromIndices ?? player.hand.map((_, i) => i)) : [])
     : !resolutionNeeded && !isGameOver

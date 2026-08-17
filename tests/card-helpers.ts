@@ -482,6 +482,12 @@ export const Cards = {
       lukeSkywalker: "LOF_249", // A Hero's Beginning — 3/5 Ground, unique
       eethKoth: "LOF_097",
       talzinsAssassin: "LOF_035",
+      oldDaka: "LOF_036", // 6/6 Ground Force/Night, When Played defeat-and-replay a Night unit
+      acolyteOfTheBeyond: "LOF_129", // 2/3 Ground Sith, On Attack/When Defeated create the Force
+      purgeTrooper: "LOF_133", // 4/2 Ground Imperial/Trooper, When Played 2 dmg to a Force unit
+      heavyMissileGunship: "LOF_134", // 4/3 Space Separatist/Droid, Action: 2 dmg to a ground unit
+      scythe: "LOF_135", // 3/5 Space Imperial/Inquisitor, On Attack +2/+0 to another Inquisitor
+      awakenedSpecters: "LOF_066", // 4/5 Ground Night — no card text, a plain Night body
     },
     twi: {
       kitFisto: "TWI_165", // 7/6 Ground Force/Jedi, Saboteur + Coordinate
@@ -557,6 +563,9 @@ export const Cards = {
       guildAmbushTeam: "LAW_239",
       cavernAngelsXWing: "LAW_189",
       salaciousCrumbLaw: "LAW_210", // 0/2 Ground Underworld/Creature, Raid 2 + Jabba enters-ready
+      cassianAndorLaw: "LAW_056", // 4/4 Ground Rebel — watches every friendly unit's attack
+      benthicTwoTubesLaw: "LAW_057", // 3/2 Ground Underworld/Trooper, On Attack + When Defeated
+      honorBoundPartisan: "LAW_058", // 2/2 Ground Rebel/Twi'lek, When Played + When Defeated
       bobaFettForAPrice: "LAW_214", // 6/5 Ground Underworld/Bounty Hunter, pay 1 → 3 damage
       chewbaccaMightyRescuer: "LAW_034", // 4/4 Ground Rebel/Wookiee, Overwhelm + When Attack Ends
     },
@@ -736,6 +745,8 @@ export const Cards = {
       constructedLightsaber: "LOF_261",
       sizeMattersNot: "LOF_056",
       cravingPower: "LOF_091",
+      sithHolocron: "LOF_138", // +1/+1, attaches to a Force unit, grants an On Attack
+      battleFury: "LOF_139", // +3/+3, grants "On Attack: Discard a card from your hand."
     },
     ash: {
       camtono: "ASH_229",
@@ -825,6 +836,7 @@ export const Cards = {
       powerFailure: "SOR_170",
       missionBriefing: "SOR_171",
       openFire: "SOR_172",
+      youreMyOnlyHope: "SOR_246", // look at the top card, may play it for 5 less (free at ≤5 HP)
       bombingRun: "SOR_173",
       disarm: "SOR_216",
       surpriseStrike: "SOR_220",

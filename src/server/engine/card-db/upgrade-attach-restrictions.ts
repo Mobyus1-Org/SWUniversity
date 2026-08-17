@@ -125,6 +125,7 @@ export function UpgradeEligibleTargets(
 
     // "Attach to a Force unit."
     case "LOF_074": //Bolstered Endurance
+    case "LOF_138": //Sith Holocron
     case "LOF_261": //Constructed Lightsaber
       return everyone.filter(u => TraitContains(u.cardId, "Force")).map(u => u.playId);
 

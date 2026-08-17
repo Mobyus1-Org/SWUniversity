@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource } from "@/server/engine/core-functions";
-import { aspectPenalty, palpatinesReturnCost, spendableFor, playCost } from "@/server/engine/card-playability";
+import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost } from "@/server/engine/card-playability";
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -1125,6 +1125,60 @@ export function resolveWhenPlayed(
     case "SEC_092": { // I Am the Senate — "Create 5 Spy tokens."
       for (let i = 0; i < 5; i++) CreateSpy(game.currentGameState, player, game.gameLog, cardId);
       return null;
+    }
+    case "LAW_058": { // Honor-Bound Partisan — "When Played: Deal 1 damage to a base." Mandatory,
+                      // and "a base" is either one.
+      return mandatoryTarget(cardId, player, ["player1.base", "player2.base"]);
+    }
+    case "SOR_246": { // You're My Only Hope — "Look at the top card of your deck. You may play it.
+                      // It costs 5 resources less. If your base has 5 or less remaining HP, you may
+                      // play it for free instead."
+                      //
+                      // "Look at" moves nothing, so declining leaves the card on top — which is why
+                      // this does NOT go through the deck-search path (that one bottoms what you
+                      // don't take). The card is only removed from the deck once it is played.
+      const game246 = GetGame();
+      if (!game246) return null;
+      const gs246 = game246.currentGameState;
+      const deck246 = GetPlayer(gs246, player).deck;
+      if (deck246.length === 0) return null;
+      const topCard246 = deck246[deck246.length - 1].cardId;
+      const cost246 = onlyHopeCost(gs246, player, topCard246);
+      // "You MAY play it" — but an unaffordable card is no choice at all, so it isn't offered.
+      if (spendableFor(gs246, player) < cost246) {
+        game246.gameLog.push(`${CardTitle(cardId)}: ${CardTitle(topCard246)} on top, but it cannot be afforded.`);
+        return null;
+      }
+      return {
+        type: "ability-option",
+        cardId: "SOR_246_play",
+        player,
+        helperText: `Top card: ${CardTitle(topCard246)}. Play it for ${cost246}?`,
+        yesLabel: cost246 === 0 ? "Play for free" : `Play for ${cost246}`,
+        noLabel: "Leave it",
+        onYes: null,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "LOF_036": { // Old Daka — "When Played: You may defeat a friendly Night unit not named Old
+                      // Daka. Then, you may play that unit from your discard pile for free."
+                      // Excluded by TITLE, so every Old Daka printing is off the list, not just
+                      // the copy being played.
+      const ownTitle036 = CardTitle("LOF_036");
+      const nightUnits036 = GetUnitsForPlayer(player).filter(u =>
+        TraitContains(u.cardId, "Night", u.controller, u.playId) && CardTitle(u.cardId) !== ownTitle036);
+      if (nightUnits036.length === 0) return null;
+      return optionalTarget(cardId, player, nightUnits036.map(u => u.playId),
+        "Defeat a friendly Night unit, then replay it from your discard pile for free?",
+        { yesLabel: "Defeat", sourcePlayId: playId });
+    }
+    case "LOF_133": { // Purge Trooper — "When Played: You may deal 2 damage to a Force unit."
+                      // The FORCE trait, not the aspect, and either side's units qualify.
+      const forceUnits133 = AllUnits()
+        .filter(u => TraitContains(u.cardId, "Force", u.controller, u.playId));
+      if (forceUnits133.length === 0) return null;
+      return optionalTarget(cardId, player, forceUnits133.map(u => u.playId),
+        "Deal 2 damage to a Force unit?", { yesLabel: "Deal 2", sourcePlayId: playId });
     }
     case "TWI_246": { // Tranquility — "When Played: You may return a Republic unit from your
                       // discard pile to your hand."

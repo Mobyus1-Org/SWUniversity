@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending, IndirectDamagePending } from "@/server/engine/pending-resolution";
-import { CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource } from "@/server/engine/core-functions";
+import { CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType } from "@/server/engine/card-db/generated";
@@ -163,6 +163,32 @@ export function resolveOnAttackTrigger(
         if (game046) {
           GiveExperienceTokens(game046.currentGameState, attacker, 1, game046.gameLog, "JTL_046");
           DealDamageToUnit(game046.currentGameState, "JTL_046", attacker.playId, 1, game046.gameLog);
+        }
+        break;
+      }
+      case "LOF_138": { // Sith Holocron — "On Attack: You may deal 2 damage to a friendly unit. If
+                        // you do, this unit gets +2/+0 for this attack." The host is itself a
+                        // friendly unit, so it can pay the 2 to power up its own swing.
+        if (!deferredPending) {
+          const friendly138 = GetUnitsForPlayer(attacker.controller);
+          if (friendly138.length > 0) {
+            deferredPending = optionalTarget("LOF_138", attacker.controller,
+              friendly138.map(u => u.playId),
+              "Deal 2 damage to a friendly unit for +2/+0 this attack?",
+              { yesLabel: "Deal 2", sourcePlayId: attacker.playId, continuation });
+          }
+        }
+        break;
+      }
+      case "LOF_139": { // Battle Fury — "On Attack: Discard a card from your hand." Mandatory, and
+                        // a drawback rather than a benefit; an empty hand simply fizzles.
+        if (!deferredPending && GetHand(attacker.controller).length > 0) {
+          deferredPending = {
+            type: "discard-from-hand",
+            targetPlayer: attacker.controller,
+            count: 1,
+            continuation,
+          } satisfies DiscardFromHandPending;
         }
         break;
       }
@@ -924,6 +950,28 @@ function resolveInnateOnAttack(
         });
         game056.gameLog.push(`${CardTitle("SOR_056")}: the next non-Heroism, non-Villainy card you play this phase costs 2 less.`);
       }
+      return continuation;
+    }
+    case "LAW_057": { // Benthic "Two Tubes" — "On Attack: Deal 1 damage to an enemy ground unit."
+                      // Mandatory, but it simply fizzles when the opponent has no ground unit.
+      const enemyGround057 = AllGroundUnits().filter(u => u.controller !== attacker.controller);
+      if (enemyGround057.length === 0) return continuation;
+      return mandatoryTarget("LAW_057", attacker.controller,
+        enemyGround057.map(u => u.playId), continuation);
+    }
+    case "LOF_135": { // Scythe — "On Attack: You may give another friendly Inquisitor unit +2/+0
+                      // for this phase." No arena restriction: a ground Inquisitor is fair game.
+      const inquisitors135 = GetUnitsForPlayer(attacker.controller)
+        .filter(u => u.playId !== attacker.playId
+                  && TraitContains(u.cardId, "Inquisitor", u.controller, u.playId));
+      if (inquisitors135.length === 0) return continuation;
+      return optionalTarget("LOF_135", attacker.controller, inquisitors135.map(u => u.playId),
+        "Give another friendly Inquisitor unit +2/+0 for this phase?",
+        { yesLabel: "Give +2/+0", sourcePlayId: attacker.playId, continuation });
+    }
+    case "LOF_129": { // Acolyte of the Beyond — "On Attack/When Defeated: The Force is with you."
+      const game129 = GetGame();
+      if (game129) CreateForceToken(attacker.controller, game129.gameLog, "LOF_129");
       return continuation;
     }
     case "SEC_110": { // GNK Power Droid — the next unit you play this phase costs 1 resource less

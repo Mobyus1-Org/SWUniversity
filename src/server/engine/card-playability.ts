@@ -1,6 +1,6 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId, Resource } from "@/lib/engine/core-models";
-import { CardAspects, CardCost, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
+import { CardAspects, CardCost, CardHp, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradeEligibleTargets, PilotingEligibleVehicles, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
@@ -167,6 +167,27 @@ function tranquilityRepublicDiscount(game: GameState, player: PlayerId, cardId: 
   return (effect?.value ?? 0) > 0 ? 1 : 0;
 }
 
+/**
+ * SOR_246 You're My Only Hope — what the revealed top card costs to play: 5 less, or nothing at all
+ * once your base is down to 5 or fewer remaining HP.
+ *
+ * The card says "you MAY play it for free instead", but free is never worse than paying, so the
+ * better branch is taken automatically rather than asking a question with one sensible answer.
+ */
+export function onlyHopeCost(game: GameState, player: PlayerId, cardId: string): number {
+  const base = player === 1 ? game.player1.base : game.player2.base;
+  const remainingHp = (CardHp(base.cardId) || 30) - base.damage;
+  if (remainingHp <= 5) return 0;
+  return Math.max(0, playCost(game, player, cardId) - 5);
+}
+
+// LAW_058 Honor-Bound Partisan: "When Defeated: The next unit you play this phase costs 1 resource
+// less." Consumed in completePlayCard by the next unit played.
+function honorBoundPartisanDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Unit") return 0;
+  return game.currentEffects.some(e => e.cardId === "LAW_058" && e.affectedPlayer === player) ? 1 : 0;
+}
+
 // ASH_237 Mouse Droid: the NEXT Imperial unit you play this phase costs 1 resource less. The
 // effect is consumed in completePlayCard once an Imperial unit is played.
 function imperialNextUnitDiscount(game: GameState, player: PlayerId, cardId: string): number {
@@ -251,6 +272,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - morganNextUnitDiscount(game, player, cardId)
     - imperialNextUnitDiscount(game, player, cardId)
     - tranquilityRepublicDiscount(game, player, cardId)
+    - honorBoundPartisanDiscount(game, player, cardId)
     - redLeaderPilotDiscount(game, player, cardId)
     - reputableHunterDiscount(game, player, cardId)
     - jabbasRancorDiscount(game, player, cardId)

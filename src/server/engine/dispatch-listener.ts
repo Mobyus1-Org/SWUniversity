@@ -54,7 +54,7 @@ import type {
   ResolutionRequest,
   UseAbilityDispatchData,
 } from "@/lib/engine/message-types";
-import { aspectPenalty, effectiveSmuggleCost, spendableFor, playCost, palpatinesReturnCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks } from "@/server/engine/card-playability";
+import { aspectPenalty, effectiveSmuggleCost, spendableFor, playCost, palpatinesReturnCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks, onlyHopeCost } from "@/server/engine/card-playability";
 import type { Game, GameState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { PHASE_STAT_MOD } from "@/lib/engine/core-models";
@@ -2788,6 +2788,20 @@ function resolveWhenAttackEnds(
    */
   abilitySources: string[] | null = null,
 ): PendingResolution | null {
+  // LAW_056 Cassian Andor — "When a friendly unit's attack ends: If the defending unit was
+  // defeated, deal 2 damage to a base." A watcher on EVERY friendly attack, his own included, so
+  // it is checked here rather than in the attacker's own When-Attack-Ends switch. Unlike Revan
+  // below, Cassian does not need the attacker to have survived — only the defender to have died.
+  if (defDefeated) {
+    const cassian056 = GetUnitsForPlayer(attacker.controller).find(
+      u => u.cardId === "LAW_056" && !Unit.FromInterface(u).LostAbilities(),
+    );
+    if (cassian056) {
+      const rest056 = attackerOwnWhenAttackEnds(game, attacker, continuation, defDefeated, excessDamage, baseDamagedPlayer, combatDamagedPlayId, abilitySources);
+      return mandatoryTarget("LAW_056", attacker.controller, ["player1.base", "player2.base"], rest056);
+    }
+  }
+
   // Darth Revan (LOF_017) — controller-level reaction to ANY friendly unit attacking and
   // defeating a unit. It resolves before the attacker's own When-Attack-Ends ability.
   // Front side: "you may exhaust this leader" is the cost (so only offer when ready);
@@ -4092,6 +4106,9 @@ function completePlayCard(
   // whether or not it qualified for the keyword-sharing discount.
   if (CardType(cardId) === "Unit") consumeNextPlayMarker(game, player, "LOF_005");
 
+  // LAW_058 Honor-Bound Partisan: "the next unit you play this phase costs 1 resource less."
+  if (CardType(cardId) === "Unit") consumeNextPlayMarker(game, player, "LAW_058");
+
   // ASH_237 Mouse Droid: "the next IMPERIAL unit you play this phase" — consumed by an Imperial
   // unit only, so a non-Imperial unit played in between leaves the discount armed.
   if (CardType(cardId) === "Unit" && CardTraits(cardId).includes("Imperial")) {
@@ -4678,8 +4695,53 @@ function handleUseAbility(
   return { response: invalidResponse("use-ability requires a leader cardId or a unit playId."), pending: null, stateChanged: false };
 }
 
+/**
+ * Bases whose printed ability is a plain "Action:" with a per-GAME use limit rather than a
+ * once-only "Epic Action:". These do not touch `epicActionUsed` — the count lives in a Permanent
+ * effect, which is what makes the limit survive the round rolling over.
+ */
+const BASE_LIMITED_ACTION_USES: Record<string, number> = {
+  LOF_022: 3, // Mystic Monastery — "Use this ability no more than 3 times each game."
+};
+
+function baseLimitedActionUses(game: GameState, player: PlayerId, baseCardId: string): number {
+  return game.currentEffects.find(
+    e => e.cardId === `${baseCardId}_uses` && e.affectedPlayer === player,
+  )?.value ?? 0;
+}
+
+function handleBaseLimitedAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
+  const base = GetPlayer(game, player).base;
+  const limit = BASE_LIMITED_ACTION_USES[base.cardId];
+  if (game.gamePhase !== "ActionPhase")
+    return { response: invalidResponse("Base ability can only be used during the action phase."), pending: null, stateChanged: false };
+  const used = baseLimitedActionUses(game, player, base.cardId);
+  if (used >= limit)
+    return { response: invalidResponse(`${CardTitle(base.cardId)}: this ability has already been used ${limit} times this game.`), pending: null, stateChanged: false };
+
+  switch (base.cardId) {
+    case "LOF_022": // Mystic Monastery — "Action: The Force is with you."
+      CreateForceToken(player, log, "LOF_022");
+      break;
+    default:
+      return { response: invalidResponse("This base has no implemented action."), pending: null, stateChanged: false };
+  }
+
+  const existing = game.currentEffects.find(
+    e => e.cardId === `${base.cardId}_uses` && e.affectedPlayer === player,
+  );
+  if (existing) existing.value = (existing.value ?? 0) + 1;
+  else game.currentEffects.push({ cardId: `${base.cardId}_uses`, duration: "Permanent", affectedPlayer: player, value: 1 });
+
+  updateDefeatedPlayers(game);
+  return { response: stateResponse(game), pending: null, stateChanged: true };
+}
+
 function handleBaseEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
   const base = GetPlayer(game, player).base;
+  if (BASE_LIMITED_ACTION_USES[base.cardId] !== undefined) {
+    return handleBaseLimitedAction(game, log, player);
+  }
   if (base.epicActionUsed)
     return { response: invalidResponse("Base epic action already used this round."), pending: null, stateChanged: false };
   if (game.gamePhase !== "ActionPhase")
@@ -8349,6 +8411,23 @@ function handleChooseOption(
 
   if (pending?.type === "ability-option") {
     if (option === "Yes") {
+      // SOR_246 You're My Only Hope — playing the revealed top card runs the full play pipeline
+      // (any card type, its own When Played, uniqueness…), which returns a HandlerResult rather
+      // than a pending, so it cannot go through applyAbilityOptionEffect below.
+      if (pending.cardId === "SOR_246_play") {
+        const player246 = pending.player!;
+        const deck246 = GetPlayer(game, player246).deck;
+        if (deck246.length === 0) return { response: stateResponse(game), pending: null, stateChanged: false };
+        const top246 = deck246[deck246.length - 1].cardId;
+        const cost246 = onlyHopeCost(game, player246, top246);
+        if (spendableFor(game, player246) < cost246)
+          return { response: invalidResponse(`Not enough resources to play ${CardTitle(top246)}.`), pending, stateChanged: false };
+        deck246.pop();
+        payResources(game, player246, cost246, log, top246);
+        log.push(`${CardTitle("SOR_246")}: played ${CardTitle(top246)} from the top of the deck for ${cost246}.`);
+        return completePlayCard(game, log, top246, player246);
+      }
+
       let nextPending = pending.onYes ?? null;
       if (nextPending?.type === "mill") {
         nextPending = processMill(game, log, nextPending);
@@ -9860,6 +9939,11 @@ function resolveActionAbility(
         return null;
       }
       return { type: "play-from-hand", cardId: "JTL_008", player } satisfies PlayFromHandPending;
+    }
+    case "LOF_134": { // Heavy Missile Gunship — Action [Exhaust]: Deal 2 damage to a ground unit.
+      const groundUnits134 = AllGroundUnits();
+      if (groundUnits134.length === 0) return null;
+      return mandatoryTarget(cardId, player, groundUnits134.map(u => u.playId));
     }
     case "IBH_016": // Ion Cannon — Action [Exhaust]: Deal 3 damage to a space unit.
     case "IBH_027": {
@@ -12143,6 +12227,30 @@ function applyAbilityEffect(
         continuation: pending.continuation ?? null,
       };
     }
+    case "LOF_036": { // Old Daka — defeat the chosen friendly Night unit, then offer to replay it
+                      // from the discard for free. Same two-step shape as ASH_247, and it reuses
+                      // that replay handler by borrowing its pending cardId.
+      if (!targetPlayId || !pending.player) break;
+      const victim036 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!victim036) break;
+      const isToken036 = Unit.FromInterface(victim036).IsTokenUnit();
+      const defeatPend036 = defeatUnit(game.currentGameState, game.gameLog, victim036);
+      game.gameLog.push(`${CardTitle("LOF_036")}: defeated ${CardTitle(victim036.cardId)}.`);
+      // A token unit leaves no card in the discard pile, so there is nothing to replay.
+      const inDiscard036 = !isToken036 && GetPlayer(game.currentGameState, pending.player)
+        .discard.some(d => d.playId === targetPlayId);
+      const replay036: PendingResolution | null = inDiscard036 ? {
+        type: "return-from-discard",
+        cardId: "ASH_247", // shared "play that unit from your discard pile for free" handler
+        player: pending.player,
+        maxCount: 1,
+        eligiblePlayIds: [targetPlayId],
+        continuation: pending.continuation ?? null,
+      } : null;
+      const after036 = replay036 ?? pending.continuation ?? null;
+      if (defeatPend036) return injectContinuation(defeatPend036, after036);
+      return after036;
+    }
     case "ASH_247": { // One Must Destroy to Create — defeat the chosen friendly non-leader unit,
                       // then offer to replay it from the discard pile for free. The defeat's own
                       // When Defeated triggers resolve first (the replay rides as their continuation).
@@ -13534,6 +13642,11 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
+    case "LOF_134": { // Heavy Missile Gunship — deal 2 damage to the chosen ground unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
     case "IBH_023": // General Rieekan — the chosen other Heroism unit attacks with +2/+0 for this attack.
     case "IBH_036": {
       if (!targetPlayId) break;
@@ -13956,6 +14069,57 @@ function applyAbilityEffect(
     }
     case "JTL_125": { // Air Superiority — deal 4 damage to the chosen enemy ground unit.
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 4, game.gameLog);
+      break;
+    }
+    case "LAW_056": { // Cassian Andor — a friendly attack defeated its defender: 2 damage to the
+                      // chosen base.
+      let basePlayer056: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer056 = 1;
+      else if (targetPlayId === "player2.base") basePlayer056 = 2;
+      else if (targetIsBase) basePlayer056 = targetBasePlayer ?? null;
+      if (basePlayer056 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer056, 2, pending.player);
+        game.gameLog.push(`${CardTitle("LAW_056")}: dealt 2 damage to player ${basePlayer056}'s base.`);
+      }
+      break;
+    }
+    case "LAW_057_defeated": // Benthic "Two Tubes" — When Defeated: 1 damage to the chosen base.
+    case "LAW_058": { // Honor-Bound Partisan — When Played: 1 damage to the chosen base.
+      let basePlayer058: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer058 = 1;
+      else if (targetPlayId === "player2.base") basePlayer058 = 2;
+      else if (targetIsBase) basePlayer058 = targetBasePlayer ?? null;
+      if (basePlayer058 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer058, 1, pending.player);
+        const source058 = pending.cardId === "LAW_057_defeated" ? "LAW_057" : pending.cardId;
+        game.gameLog.push(`${CardTitle(source058)}: dealt 1 damage to player ${basePlayer058}'s base.`);
+      }
+      break;
+    }
+    case "LAW_057": { // Benthic "Two Tubes" — On Attack: 1 damage to the chosen enemy ground unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "LAW_057", targetPlayId, 1, game.gameLog);
+      break;
+    }
+    case "LOF_138": { // Sith Holocron — "deal 2 damage to a friendly unit. If you do, THIS unit
+                      // gets +2/+0 for this attack." The buff belongs to the upgrade's host (the
+                      // attacker), which is the pending's source, not the damaged unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "LOF_138", targetPlayId, 2, game.gameLog);
+      const wearer138 = pending.sourcePlayId
+        ? GetUnitByPlayId(game.currentGameState, pending.sourcePlayId)
+        : null;
+      if (wearer138) GivePowerMod("LOF_138", wearer138, 2, "ForAttack", game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "LOF_133": { // Purge Trooper — deal 2 damage to the chosen Force unit.
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
+      break;
+    }
+    case "LOF_135": { // Scythe — the chosen other friendly Inquisitor gets +2/+0 for this phase.
+      if (!targetPlayId) break;
+      const target135 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target135) GivePowerMod("LOF_135", target135, 2, "Phase", game.gameLog);
       break;
     }
     case "SOR_186": { // No Good to Me Dead — Exhaust the chosen unit; prevent it from readying this round.
