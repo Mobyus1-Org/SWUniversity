@@ -888,7 +888,10 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     } else if (!resolutionNeeded && gameState) {
       const unit =
         [...gameState.player1.groundArena, ...gameState.player1.spaceArena].find(u => u.playId === playId);
-      if (unit && unit.ready && UNITS_WITH_ACTION_ABILITY[unit.cardId]) {
+      // Not gated on `ready`: an Action whose cost has no [Exhaust] (Jabba the Hutt's deployed
+      // side) is still usable by an exhausted unit, and the modal's Attack button is rejected by
+      // the engine anyway. Only units with no Action at all go straight to attacking.
+      if (unit && UNITS_WITH_ACTION_ABILITY[unit.cardId]) {
         setUnitAbilityModal({ playId, cardId: unit.cardId });
       } else {
         void sendDispatch(createDispatch("initiate-attack", { playId }));

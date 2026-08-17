@@ -168,6 +168,40 @@ describe("LAW_015 Jabba the Hutt — deployed side Action", () => {
     expect(g.state.player1.groundArena.filter(u => u.cardId === Cards.units.law.salaciousCrumbLaw)).toHaveLength(2);
   });
 
+  it("works when the client sends cardId ALONGSIDE playId, as the Puzzles UI does", async () => {
+    const g = await deployedJabba(
+      baseSetup().WithCardInHandForPlayer(1, Cards.units.law.salaciousCrumbLaw),
+    );
+
+    await g.dispatchAsync(2, "pass-action", {});
+    // The unit-action modal sends both, and a deployed leader's cardId equals its leader cardId —
+    // the dispatch must still route to the UNIT action, not the (already deployed) leader side.
+    const used = await g.dispatchAsync(1, "use-ability", {
+      cardId: Cards.leaders.law.jabbaTheHutt,
+      playId: jabbaPlayId(g),
+    });
+
+    expect(used.lastDispatchResponse?.invalidAction).toBeFalsy();
+    // play-from-hand surfaces as a Hand-zone Target prompt.
+    const res = used.lastDispatchResponse?.resolutionNeeded as { fromZones?: string[] };
+    expect(res.fromZones).toContain("Hand");
+  });
+
+  it("stays usable while he is EXHAUSTED — his Action has no exhaust cost", async () => {
+    const g = await deployedJabba(
+      baseSetup().WithCardInHandForPlayer(1, Cards.units.law.salaciousCrumbLaw),
+    );
+    // Exhaust him, as attacking would.
+    g.state.player1.groundArena.find(u => u.cardId === Cards.leaders.law.jabbaTheHutt)!.ready = false;
+
+    await g.dispatchAsync(2, "pass-action", {});
+    const used = await g.dispatchAsync(1, "use-ability", { playId: jabbaPlayId(g) });
+
+    expect(used.lastDispatchResponse?.invalidAction).toBeFalsy();
+    const resExhausted = used.lastDispatchResponse?.resolutionNeeded as { fromZones?: string[] };
+    expect(resExhausted.fromZones).toContain("Hand");
+  });
+
   it("control: paying with resources only grants no Ambush", async () => {
     const g = await deployedJabba(
       baseSetup().WithCardInHandForPlayer(1, Cards.units.law.salaciousCrumbLaw),

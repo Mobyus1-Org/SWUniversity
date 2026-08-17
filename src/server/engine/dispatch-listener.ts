@@ -4607,8 +4607,13 @@ function handleUseAbility(
   const player = dispatch.fromPlayer;
   const leader = GetPlayer(game, player).leader;
 
-  // Leader card: deploy or use ability
-  if (leader.cardId === data.cardId) {
+  // Leader card: deploy or use ability.
+  //
+  // A playId means the dispatch is about a UNIT in an arena, so it belongs to the unit branch even
+  // when the cardId matches the leader — which it always does for a DEPLOYED leader using its
+  // unit-side Action. Without this guard those dispatches were swallowed here and rejected as
+  // "already deployed", making the deployed Action unusable from any client that sends both.
+  if (leader.cardId === data.cardId && !data.playId) {
     if (leader.deployed)
       return { response: invalidResponse("Leader is already deployed as a unit."), pending: null, stateChanged: false };
 
