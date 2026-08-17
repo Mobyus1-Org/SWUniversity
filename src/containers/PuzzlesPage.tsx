@@ -14,7 +14,7 @@ import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import type { DispatchResponse, DispatchType, DispatchData, GameDispatch, ResolutionRequest } from "@/lib/engine/message-types";
 import type { EngineContext } from "@/server/engine/pending-resolution";
-import { CardIsLeader } from "@/server/engine/core-functions";
+import { CardIsLeader, LeaderHasUnitSide } from "@/server/engine/core-functions";
 import { CardIsPlayable, ResourceIsSmuggleable } from "@/server/engine/card-playability";
 
 type PreviewState = {
@@ -113,6 +113,53 @@ function getPreviewImageId(cardId: string, showBack = false): string {
  */
 function leaderFaceImageId(leader: { cardId: string; flipped?: boolean }): string {
   return getPreviewImageId(leader.cardId, leader.flipped === true);
+}
+
+/** One face to show in a preview, and whether its art is landscape. */
+type PreviewFace = { imageId: string; landscape: boolean };
+
+/**
+ * The faces a preview shows. A leader always previews as BOTH sides, whichever one the player
+ * happened to hover — the leader in its zone, the deployed leader unit in an arena, the leader
+ * attached as a Pilot upgrade, and `@[ID-L]` links in puzzle text all land here.
+ *
+ * Orientation cannot be read from the id: `isHorizontalCard` treats every `_BACK` as portrait,
+ * which is right for a deployed unit side but wrong for a double-sided leader, whose back is
+ * another landscape leader face (TWI_017 → Darth Sidious). `LeaderHasUnitSide` is the real signal.
+ */
+function previewFaces(cardId: string): PreviewFace[] {
+  if (!CardIsLeader(cardId)) return [{ imageId: cardId, landscape: false }];
+  return [
+    { imageId: cardId, landscape: true },
+    { imageId: `${cardId}_BACK`, landscape: !LeaderHasUnitSide(cardId) },
+  ];
+}
+
+/**
+ * A single preview face, owning its own art fallback chain (generated art → swudb import → swudb
+ * CDN → card back) exactly as the board tiles do.
+ *
+ * The chain lives per-image rather than in the parent because a leader shows two faces at once,
+ * and one shared "current src" in the parent could only ever track one of them.
+ */
+function PreviewImage({ imageId, alt, className }: { imageId: string; alt: string; className?: string }) {
+  const chain = React.useMemo(() => [
+    getCardImageLink(imageId),
+    getSWUDBImageLink(imageId),
+    getSWUDBImageLinkFallback(imageId),
+    `/assets/${DEFAULT_PUZZLE_IMAGE}`,
+  ], [imageId]);
+  const [stage, setStage] = React.useState(0);
+  React.useEffect(() => { setStage(0); }, [chain]);
+
+  return (
+    <img
+      src={chain[Math.min(stage, chain.length - 1)]}
+      alt={alt}
+      className={className}
+      onError={() => setStage(s => Math.min(s + 1, chain.length - 1))}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -714,9 +761,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   // A sticky preview came from a press-and-hold: it opens as a dismissible full-screen card
   // instead of the desktop-only hover panel, which is how touch devices read a card at all.
   const [previewSticky, setPreviewSticky] = React.useState(false);
-  const previewPrimarySrc = preview ? getCardImageLink(preview.imageId) : "";
-  const previewFallbackSrc = preview ? getSWUDBImageLink(preview.imageId) : "";
-  const [previewImageSrc, setPreviewImageSrc] = React.useState(previewPrimarySrc);
+  // A leader previews as both of its faces; everything else is a single card. Each face owns its
+  // own art fallback chain inside <PreviewImage>.
+  const previewFaceList = preview ? previewFaces(preview.cardId) : [];
 
   const clearPreviewDismissTimer = React.useCallback(() => {
     if (previewDismissTimerRef.current) {
@@ -1120,11 +1167,6 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       setIsResolving(false);
     }
   }, []);
-
-  // Always call hooks before any return
-  React.useEffect(() => {
-    setPreviewImageSrc(previewPrimarySrc);
-  }, [previewPrimarySrc, setPreviewImageSrc]);
 
   // Show solution modal and mark solved when puzzle is won
   React.useEffect(() => {
@@ -2310,17 +2352,28 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       </div>
     </div>
 
-    {preview && !previewSticky ? <div className="pointer-events-none fixed bottom-4 right-4 z-[60] hidden w-[27rem] rounded-lg border border-white/15 bg-black/85 p-2 shadow-2xl backdrop-blur-sm lg:block">
-      <img
-        src={previewImageSrc}
-        alt={preview.label ?? preview.cardId}
-        className="w-full rounded-xl object-cover"
-        onError={() => {
-          if (previewImageSrc !== previewFallbackSrc) {
-            setPreviewImageSrc(previewFallbackSrc);
-          }
-        }}
-      />
+    {preview && !previewSticky ? <div className={`pointer-events-none fixed bottom-4 right-4 z-[60] hidden rounded-lg border border-white/15 bg-black/85 p-2 shadow-2xl backdrop-blur-sm lg:block ${previewFaceList.length > 1 ? "w-auto" : "w-[27rem]"}`}>
+      {previewFaceList.length > 1 ? (
+        // Both leader faces at the SAME card scale, so they share their short edge: the landscape
+        // front's height equals the portrait back's width. A back that is another leader face
+        // (Flipatine) is landscape too, so it simply matches the front's height instead.
+        <div className="flex items-start gap-2">
+          {previewFaceList.map(face => (
+            <PreviewImage
+              key={face.imageId}
+              imageId={face.imageId}
+              alt={preview.label ?? preview.cardId}
+              className={`rounded-xl ${face.landscape ? "h-[10.5rem] w-auto" : "w-[10.5rem] h-auto"}`}
+            />
+          ))}
+        </div>
+      ) : (
+        <PreviewImage
+          imageId={previewFaceList[0]?.imageId ?? preview.imageId}
+          alt={preview.label ?? preview.cardId}
+          className="w-full rounded-xl object-cover"
+        />
+      )}
       <div className="mt-2 px-1 text-xs text-white/80">{preview.label ?? CardTitle(preview.cardId)}</div>
     </div> : null}
 
@@ -2330,16 +2383,26 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-3 bg-black/85 p-4 backdrop-blur-sm"
       onClick={dismissStickyPreview}
     >
-      <img
-        src={previewImageSrc}
-        alt={preview.label ?? preview.cardId}
-        className="max-h-[75vh] w-auto max-w-[min(24rem,90vw)] rounded-2xl border border-white/15 object-contain shadow-2xl"
-        onError={() => {
-          if (previewImageSrc !== previewFallbackSrc) {
-            setPreviewImageSrc(previewFallbackSrc);
-          }
-        }}
-      />
+      {previewFaceList.length > 1 ? (
+        // Same shared-short-edge rule as the hover panel, sized in vh. Side by side would be
+        // unreadable on a phone, so the pair stacks below the sm breakpoint.
+        <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
+          {previewFaceList.map(face => (
+            <PreviewImage
+              key={face.imageId}
+              imageId={face.imageId}
+              alt={preview.label ?? preview.cardId}
+              className={`rounded-2xl border border-white/15 shadow-2xl ${face.landscape ? "h-[22vh] w-auto sm:h-[38vh]" : "w-[22vh] h-auto sm:w-[38vh]"}`}
+            />
+          ))}
+        </div>
+      ) : (
+        <PreviewImage
+          imageId={previewFaceList[0]?.imageId ?? preview.imageId}
+          alt={preview.label ?? preview.cardId}
+          className="max-h-[75vh] w-auto max-w-[min(24rem,90vw)] rounded-2xl border border-white/15 object-contain shadow-2xl"
+        />
+      )}
       <div className="max-w-[90vw] text-center text-sm font-semibold text-white/90">{preview.label ?? CardTitle(preview.cardId)}</div>
       <button
         type="button"
