@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack } from "@/server/engine/core-functions";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource } from "@/server/engine/core-functions";
 import { aspectPenalty, palpatinesReturnCost, spendableFor, playCost } from "@/server/engine/card-playability";
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -1125,6 +1125,53 @@ export function resolveWhenPlayed(
     case "SEC_092": { // I Am the Senate — "Create 5 Spy tokens."
       for (let i = 0; i < 5; i++) CreateSpy(game.currentGameState, player, game.gameLog, cardId);
       return null;
+    }
+    case "TWI_246": { // Tranquility — "When Played: You may return a Republic unit from your
+                      // discard pile to your hand."
+      const game246 = GetGame();
+      if (!game246) return null;
+      const eligible246 = GetPlayer(game246.currentGameState, player).discard.filter(c =>
+        CardType(c.cardId) === "Unit" && CardTraits(c.cardId).includes("Republic"));
+      if (eligible246.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        sourcePlayId: playId,
+        helperText: "Return a Republic unit from your discard pile to your hand?",
+        yesLabel: "Return",
+        noLabel: "Skip",
+        onYes: {
+          type: "return-from-discard",
+          cardId,
+          player,
+          maxCount: 1,
+          eligiblePlayIds: eligible246.map(c => c.playId),
+          continuation: null,
+        },
+        continuation: null,
+      };
+    }
+    case "JTL_125": { // Air Superiority — "If you control more space units than an opponent, deal
+                      // 4 damage to a ground unit that opponent controls." The comparison is a
+                      // condition, not a cost: failing it plays the event for no effect.
+      const opponent125 = GetOtherPlayer(player);
+      if (GetUnitsForPlayer(player).filter(u => CardArena(u.cardId) === "Space").length
+          <= GetUnitsForPlayer(opponent125).filter(u => CardArena(u.cardId) === "Space").length) {
+        return null;
+      }
+      const enemyGround125 = GetUnitsForPlayer(opponent125)
+        .filter(u => CardArena(u.cardId) === "Ground")
+        .map(u => u.playId);
+      if (enemyGround125.length === 0) return null;
+      return mandatoryTarget(cardId, player, enemyGround125);
+    }
+    case "LAW_214": { // Boba Fett — "When Played/On Attack: You may pay 1 resource. If you do,
+                      // deal 3 damage to a ground unit." Boba himself is a legal target, so the
+                      // ground list is never empty when he enters the ground arena.
+      if (AllGroundUnits().length === 0) return null;
+      return optionalPayResource("LAW_214", player,
+        "Pay 1 resource to deal 3 damage to a ground unit?", { sourcePlayId: playId });
     }
     case "SOR_073": { // Moment of Peace — "Give a Shield token to a unit."
       const allUnits073 = AllUnits();

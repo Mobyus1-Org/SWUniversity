@@ -119,7 +119,7 @@ import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase } from "@/server/engine/core-functions";
+import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -424,14 +424,37 @@ function poeModeChoice(
   } satisfies ChooseOnePending;
 }
 
-/** Entry point from the discard step: one mode choice per card actually discarded. */
-function poeModeChain(
+/**
+ * The follow-up an "up to N" / "any number" discard step hands off to once the player stops
+ * discarding. What comes next is driven by how many cards were ACTUALLY discarded, so every such
+ * card registers its hand-off here rather than relying on the step's plain continuation.
+ */
+function afterUpToDiscard(
   game: GameState,
   pending: DiscardFromHandPending,
   discarded: number,
 ): PendingResolution | null {
-  if (pending.thenChooseModes !== "SHD_153") return pending.continuation ?? null;
-  return poeModeChoice(pending.targetPlayer, discarded, [], pending.continuation ?? null);
+  if (pending.thenChooseModes === "SHD_153") {
+    return poeModeChoice(pending.targetPlayer, discarded, [], pending.continuation ?? null);
+  }
+  // LAW_011 Darth Vader — "Deal damage to a unit or base equal to the number of cards discarded
+  // this way." Discarding nothing deals nothing, so no target is asked for.
+  if (pending.thenDamageEqualToDiscarded && discarded > 0) {
+    return {
+      type: "ability-target",
+      cardId: pending.thenDamageEqualToDiscarded,
+      player: pending.targetPlayer,
+      fromPlayIds: [
+        ...GetUnitsForPlayer(1).map(u => u.playId),
+        ...GetUnitsForPlayer(2).map(u => u.playId),
+        "player1.base",
+        "player2.base",
+      ],
+      amount: discarded,
+      continuation: pending.continuation ?? null,
+    } satisfies AbilityTargetPending;
+  }
+  return pending.continuation ?? null;
 }
 
 /** Resolves one chosen SHD_153 mode, then queues the next choice for any remaining discards. */
@@ -2939,6 +2962,15 @@ function innateWhenAttackEnds(
       }
       return continuation;
     }
+    case "LAW_034": { // Chewbacca — "When Attack Ends: If the defending unit was defeated, give an
+                      // Experience token to this unit and heal 3 damage from him."
+      if (defDefeated) {
+        GiveExperienceTokens(game, attacker, 1, log, "LAW_034");
+        attacker.damage = Math.max(0, attacker.damage - 3);
+        log.push(`${CardTitle("LAW_034")}: healed 3 damage from ${CardTitle(attacker.cardId)}.`);
+      }
+      return continuation;
+    }
     case "ASH_036": { // Rukh — "When Attack Ends: If the defending unit was defeated, you may give
                       // 3 Advantage tokens to a unit."
       if (!defDefeated) return continuation;
@@ -3967,6 +3999,25 @@ function queueUnitEntryTriggers(
  * Callers gate on the qualifying condition themselves (a unit at all, an Imperial unit, a unit
  * with ≤1 power): a card played that does NOT qualify must leave the marker armed for a later one.
  */
+/**
+ * Units enter play exhausted by default. A handful say so on their own card — either flatly
+ * ("This unit enters play ready") or under a condition read off the board as it is played.
+ * Effects that grant it from OUTSIDE the card (ASH_248 Neel, Sneak Attack) stay with their own
+ * source; this is only the card's own printed text.
+ */
+function entersPlayReady(cardId: string, player: PlayerId): boolean {
+  switch (cardId) {
+    case "SOR_193": // Millennium Falcon — "This unit enters play ready."
+      return true;
+    case "LAW_210": // Salacious Crumb — "If you control Jabba the Hutt (as a leader or unit)…"
+      // Matched by TITLE so every Jabba printing counts, and PlayerControlsCardWithTitle already
+      // looks at the leader zone as well as the arenas.
+      return PlayerControlsCardWithTitle(player, CardTitle("LAW_015"));
+    default:
+      return false;
+  }
+}
+
 function consumeNextPlayMarker(game: GameState, player: PlayerId, effectCardId: string): boolean {
   const idx = game.currentEffects.findIndex(e => e.cardId === effectCardId && e.affectedPlayer === player);
   if (idx === -1) return false;
@@ -4047,6 +4098,18 @@ function completePlayCard(
     consumeNextPlayMarker(game, player, "ASH_237");
   }
 
+  // TWI_246 Tranquility: "each of the next 3 REPUBLIC cards you play this phase" — a charge is
+  // spent per Republic card of any type, and the effect ends once the third is used.
+  if (CardTraits(cardId).includes("Republic")) {
+    const tranquility = game.currentEffects.find(e => e.cardId === "TWI_246" && e.affectedPlayer === player);
+    if (tranquility && (tranquility.value ?? 0) > 0) {
+      tranquility.value = (tranquility.value ?? 0) - 1;
+      if (tranquility.value <= 0) {
+        game.currentEffects = game.currentEffects.filter(e => e !== tranquility);
+      }
+    }
+  }
+
   // JTL_008 Wedge Antilles: "the next PILOT card you play this phase" — consumed by any
   // Pilot-trait play. Pilot cards played as upgrades consume it at attach instead.
   if (CardTraits(cardId).includes("Pilot")) {
@@ -4062,7 +4125,7 @@ function completePlayCard(
   }
 
   if (CardType(cardId) === "Unit") {
-    const unit = addToArena(game, player, cardId, opts?.enterReady ?? (neelReady || cardId === "SOR_193"));
+    const unit = addToArena(game, player, cardId, opts?.enterReady ?? (neelReady || entersPlayReady(cardId, player)));
     log.push(`${CardTitle(cardId) ?? cardId} entered the ${CardArena(cardId) ?? "ground"} arena.`);
     game.roundState.cardsPlayedThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId });
     game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: unit.playId, playedAs: "Unit" });
@@ -5780,7 +5843,7 @@ function handleChooseTarget(
     // "Discard UP TO N" (SHD_153 Poe Dameron): an empty selection ends the step early rather than
     // being an error. Whatever was discarded so far still drives the follow-up.
     if (idx == null && pending.upTo) {
-      const afterUpTo = poeModeChain(game, pending, pending.discardedSoFar ?? 0);
+      const afterUpTo = afterUpToDiscard(game, pending, pending.discardedSoFar ?? 0);
       // The follow-up may be the attack this ability interrupted — a resolve-attack must be RUN,
       // never rendered, or the attack silently never happens.
       if (afterUpTo?.type === "resolve-attack") return handleResolveAttack(game, log, afterUpTo);
@@ -5822,10 +5885,11 @@ function handleChooseTarget(
             count: remaining,
             upTo: true,
             thenChooseModes: pending.thenChooseModes,
+            thenDamageEqualToDiscarded: pending.thenDamageEqualToDiscarded,
             discardedSoFar,
             continuation: pending.continuation,
           } satisfies DiscardFromHandPending
-        : poeModeChain(game, pending, discardedSoFar);
+        : afterUpToDiscard(game, pending, discardedSoFar);
     } else {
       nextPending = remaining > 0
         ? { type: "discard-from-hand", targetPlayer: pending.targetPlayer, count: remaining, continuation: pending.continuation }
@@ -6582,6 +6646,28 @@ function handleChooseTarget(
           injectEffect: { cardId: spec.effect, duration: "Phase", affectedPlayer: pending.player },
         });
       }
+      case "LAW_015": { // Jabba the Hutt (deployed) — "Play an Underworld unit from your hand. If you
+                        // defeated a Credit while paying its cost, that unit gains Ambush for this
+                        // phase." Ambush only matters as the unit enters, so the grant is injected
+                        // with the play rather than applied afterwards.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Jabba the Hutt: chosen card is not a Unit."), pending, stateChanged: false };
+        if (!CardTraits(cardId).includes("Underworld"))
+          return { response: invalidResponse("Jabba the Hutt: chosen unit is not Underworld."), pending, stateChanged: false };
+        const cost015 = playCost(game, pending.player, cardId);
+        if (spendableFor(game, pending.player) < cost015)
+          return { response: invalidResponse("Jabba the Hutt: not enough resources to play this unit."), pending, stateChanged: false };
+        const payment015 = payResources(game, pending.player, cost015, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("LAW_015")}.`);
+        if (payment015.creditsSpent > 0) {
+          log.push(`${CardTitle("LAW_015")}: a Credit was defeated paying the cost — ${CardTitle(cardId)} gains Ambush this phase.`);
+          return completePlayCard(game, log, cardId, pending.player, {
+            injectEffect: { cardId: "LAW_015", duration: "Phase", affectedPlayer: pending.player },
+          });
+        }
+        return completePlayCard(game, log, cardId, pending.player);
+      }
       case "SHD_013": { // Han Solo — play a unit for 1 less, then deal 2 damage to it.
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("Han Solo: chosen card is not a Unit."), pending, stateChanged: false };
@@ -7139,6 +7225,9 @@ function handleChooseTarget(
       const effect = pending.afterHeal;
       if (effect.type === "deal-healed-to-self") {
         DealDamageToUnit(game, pending.cardId, effect.targetPlayId, total, log);
+      } else if (effect.type === "deal-healed-to-own-base") {
+        dealBaseDamage(game, pending.player, total, pending.player);
+        log.push(`${CardTitle(pending.cardId)}: dealt ${total} damage to Player ${pending.player}'s own base.`);
       } else { // "deal-healed-to-unit"
         nextPending = {
           type: "spread-damage",
@@ -7565,11 +7654,42 @@ function giveShieldToUnit(game: GameState, playId: string): Unit | null {
   return unit ?? null;
 }
 
+/**
+ * The "If you do, …" half of a "You may pay 1 resource" ability, run once the resource is paid.
+ * Add a case here when registering a new card with optionalPayResource().
+ */
+function paidResourceFollowUp(
+  cardId: string,
+  player: PlayerId,
+  pending: AbilityOptionPending,
+): PendingResolution | null {
+  switch (cardId) {
+    case "LAW_214": { // Boba Fett — "…deal 3 damage to a ground unit."
+      const grounds214 = AllGroundUnits().map(u => u.playId);
+      if (grounds214.length === 0) return pending.continuation ?? null;
+      return mandatoryTarget(cardId, player, grounds214, pending.continuation ?? null);
+    }
+    default:
+      return pending.continuation ?? null;
+  }
+}
+
 function applyAbilityOptionEffect(
   pending: AbilityOptionPending,
   game: GameState,
   log: string[],
 ): PendingResolution | null {
+  // "You may pay 1 resource. If you do, …" — the offer is built by optionalPayResource(), which
+  // suffixes the source card id. Paying and the effect that follows are handled together here so
+  // a card can never take the resource without delivering the effect.
+  if (pending.cardId.endsWith("_pay1")) {
+    const paidCardId = pending.cardId.slice(0, -"_pay1".length);
+    const payer = pending.player!;
+    payResources(game, payer, 1, log, paidCardId);
+    log.push(`${CardTitle(paidCardId)}: paid 1 resource.`);
+    return paidResourceFollowUp(paidCardId, payer, pending);
+  }
+
   switch (pending.cardId) {
     case "SHD_214_replace": { // Frontier Trader — the nested "you may put the top card of your
                               // deck into play as a resource" after the return resolved.
@@ -9364,6 +9484,27 @@ function resolveActionAbility(
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    case "LAW_011": { // Darth Vader (leader) — Action [Exhaust, discard a card from your hand]:
+                      // Deal 1 damage to a unit or base. The discard is a cost, so it resolves
+                      // before the target is chosen.
+      return {
+        type: "discard-from-hand",
+        targetPlayer: player,
+        count: 1,
+        continuation: {
+          type: "ability-target",
+          cardId: "LAW_011",
+          player,
+          fromPlayIds: [
+            ...GetUnitsForPlayer(1).map(u => u.playId),
+            ...GetUnitsForPlayer(2).map(u => u.playId),
+            "player1.base",
+            "player2.base",
+          ],
+          continuation: null,
+        } satisfies AbilityTargetPending,
+      } satisfies DiscardFromHandPending;
+    }
     case "SHD_011": { // Kylo Ren (leader) — Action [Exhaust, discard a card from your hand]: Give a
                       // unit +2/+0 for this phase. The discard is part of the cost, so it happens
                       // first; the buff target is chosen afterwards.
@@ -10109,6 +10250,24 @@ function resolveActionAbility(
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    case "LAW_015": { // Jabba the Hutt — the two sides share this card id, told apart by playId:
+                      // deployed (a unit in the arena) plays an Underworld unit from hand, while
+                      // the front side pays 1 and returns an Underworld unit to create a Credit.
+      if (playId) return { type: "play-from-hand", cardId: "LAW_015", player } satisfies PlayFromHandPending;
+      // The 1 resource is charged here rather than through ActionAbilityCost, which cannot tell
+      // the free deployed Action apart from this one. ActionAbilities already gated on affording it.
+      payResources(game, player, 1, log, "LAW_015");
+      const underworld015 = GetUnitsForPlayer(player)
+        .filter(u => TraitContains(u.cardId, "Underworld", player, u.playId));
+      if (underworld015.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "LAW_015_return",
+        player,
+        fromPlayIds: underworld015.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "LAW_008": { // Director Krennic — Action [Exhaust, defeat a friendly unit]: Create a Credit token.
       const friendly008 = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena];
       if (friendly008.length === 0) return null;
@@ -10352,6 +10511,21 @@ function resolveActionAbility(
         fromPlayIds: others094.map(u => u.playId),
         continuation: null,
       };
+    }
+    case "SEC_005": { // Satine Kryze (leader) — Action [Exhaust]: Heal up to 2 damage from a unit.
+                      // If you do, deal that much damage to your base. Healing 0 is legal ("up
+                      // to"), and then nothing is dealt.
+      const allUnits005 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].map(u => u.playId);
+      if (allUnits005.length === 0) return null;
+      return {
+        type: "spread-heal",
+        cardId: "SEC_005",
+        player,
+        maxHeal: 2,
+        eligiblePlayIds: allUnits005,
+        afterHeal: { type: "deal-healed-to-own-base" },
+        continuation: null,
+      } satisfies SpreadHealPending;
     }
     case "LOF_246": { // Grogu — Action [Exhaust]: Heal up to 2 from a unit. If you do, deal that much to a unit.
       const allUnits246 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].map(u => u.playId);
@@ -11001,6 +11175,23 @@ function applyAbilityEffect(
         DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
       }
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "LAW_011": { // Darth Vader (Unstoppable) — deal damage to the chosen unit or base. Both
+                      // sides land here: the leader Action always deals 1, while the deployed On
+                      // Attack carries the discarded-card count in `amount`.
+      const amount011 = pending.amount ?? 1;
+      let basePlayer011: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer011 = 1;
+      else if (targetPlayId === "player2.base") basePlayer011 = 2;
+      else if (targetIsBase) basePlayer011 = targetBasePlayer ?? null;
+      if (basePlayer011 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer011, amount011, pending.player);
+        game.gameLog.push(`${CardTitle("LAW_011")}: dealt ${amount011} damage to player ${basePlayer011}'s base.`);
+      } else {
+        if (!targetPlayId) break;
+        DealDamageToUnit(game.currentGameState, "LAW_011", targetPlayId, amount011, game.gameLog);
+      }
+      break;
     }
     case "SOR_016": { // Grand Admiral Thrawn — exhaust chosen unit
       if (!targetPlayId) break;
@@ -13759,6 +13950,14 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 4, game.gameLog);
       break;
     }
+    case "LAW_214": { // Boba Fett — the paid-for half: deal 3 damage to the chosen ground unit.
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog);
+      break;
+    }
+    case "JTL_125": { // Air Superiority — deal 4 damage to the chosen enemy ground unit.
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 4, game.gameLog);
+      break;
+    }
     case "SOR_186": { // No Good to Me Dead — Exhaust the chosen unit; prevent it from readying this round.
       if (!targetPlayId) break;
       const target186 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -14360,6 +14559,18 @@ function applyAbilityEffect(
         continuation: pending.continuation,
       };
       return spreadPending092;
+    }
+    case "LAW_015_return": { // Jabba the Hutt Action — return the chosen friendly Underworld unit to
+                             // its owner's hand (cost), then create a Credit token.
+      if (!targetPlayId) break;
+      const returned015 = removeFromArena(game.currentGameState, targetPlayId);
+      if (!returned015) break;
+      if (!returned015.unit.IsTokenUnit()) {
+        GetPlayer(game.currentGameState, returned015.unit.owner).hand.push({ cardId: returned015.unit.cardId });
+      }
+      game.gameLog.push(`${CardTitle(returned015.unit.cardId)} was returned to Player ${returned015.unit.owner}'s hand as part of ${CardTitle("LAW_015")}'s action cost.`);
+      CreateCreditToken(game.currentGameState, pending.player!, game.gameLog, "LAW_015");
+      break;
     }
     case "LAW_008_action": { // Director Krennic Action — defeat the chosen friendly unit (cost), then create a Credit token.
       if (!targetPlayId) break;

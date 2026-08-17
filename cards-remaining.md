@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 877 cards across 10 sets.**
+**Total: 870 cards across 10 sets.**
 
 ---
 
@@ -99,7 +99,7 @@ SHD_260: Street Gang Recruiter Unit
 SHD_262: Confiscate Event
 ```
 
-## TWI — Twilight of the Republic (103)
+## TWI — Twilight of the Republic (102)
 
 **Message 1 of 3**
 ```
@@ -213,13 +213,12 @@ TWI_227: Prisoner of War Event
 TWI_234: The Invisible Hand - Imposing Flagship Unit
 TWI_238: Merciless Contest Event
 TWI_239: Execute Order 66 Event
-TWI_246: Tranquility - Inspiring Flagship Unit
 TWI_252: Aggrieved Parliamentarian Unit
 TWI_254: Volunteer Soldier Unit
 TWI_257: Private Manufacturing Event
 ```
 
-## JTL — Jump to Lightspeed (98)
+## JTL — Jump to Lightspeed (97)
 
 **Message 1 of 3**
 ```
@@ -256,7 +255,6 @@ JTL_121: Salvage Event
 JTL_122: All Wings Report In Event
 JTL_123: Dogfight Event
 JTL_124: Tandem Assault Event
-JTL_125: Air Superiority Event
 JTL_126: Eject Event
 JTL_127: Lightspeed Assault Event
 JTL_128: Prepare for Takeoff Event
@@ -449,7 +447,7 @@ LOF_263: Last Words Event
 LOF_264: It's Worse Event
 ```
 
-## LAW — Legends of the Underworld (170)
+## LAW — Legends of the Underworld (165)
 
 **Message 1 of 4**
 ```
@@ -460,10 +458,8 @@ LAW_005: Jyn Erso - Time to Fight Leader
 LAW_006: Vel Sartha - Aldhani Insurgent Leader
 LAW_007: Boba Fett - Krayt's Claw Commander Leader
 LAW_009: Hera Syndulla - Not Fighting Alone Leader
-LAW_011: Darth Vader - Unstoppable Leader
 LAW_012: Sebulba - Especially Dangerous Dug Leader
 LAW_014: Enfys Nest - Until We Can Go No Higher Leader
-LAW_015: Jabba the Hutt - Crime Boss Leader
 LAW_016: The Client - Please Lower Your Blaster Leader
 LAW_017: Han Solo - I Got a Really Good Feeling Leader
 LAW_018: Lando Calrissian - Full Sabacc Leader
@@ -473,7 +469,6 @@ LAW_029: Citadel Research Center Base
 LAW_031: Bossk - Join Our Merry Band Unit
 LAW_032: Cad Bane - Now It's My Turn Unit
 LAW_033: Hound's Tooth - Hunters' Approach Unit
-LAW_034: Chewbacca - Mighty Rescuer Unit
 LAW_035: Ezra Bridger - Spectre Six Unit
 LAW_036: Obi-Wan Kenobi - Protector of Felucia Unit
 LAW_037: Han Solo - Hibernation Sick Unit
@@ -604,10 +599,8 @@ LAW_204: Every Day, More Lies Event
 LAW_205: Flash the Vents Event
 LAW_207: Attack From All Sides Event
 LAW_208: Collateral Damage Event
-LAW_210: Salacious Crumb - Cackling Companion Unit
 LAW_212: Malakili - Keeper of the Menagerie Unit
 LAW_213: Cutthroat Podracer Unit
-LAW_214: Boba Fett - For a Price Unit
 LAW_215: Vermillion - Qi'ra's Auction House Unit
 LAW_216: Jabba's Rancor - Snack Time! Unit
 LAW_217: Hold For Questioning Event

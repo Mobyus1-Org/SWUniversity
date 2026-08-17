@@ -10,10 +10,10 @@ the front (undeployed) ability and the deployed leader-unit ability.
 
 | Status | Count |
 |--------|-------|
-| Complete (both sides) | 85 |
-| Needs work | 69 |
-| — of those, no engine code at all | 48 |
-| — of those, front `Action` not in ActionAbilities() | 51 |
+| Complete (both sides) | 88 |
+| Needs work | 66 |
+| — of those, no engine code at all | 46 |
+| — of those, front `Action` not in ActionAbilities() | 48 |
 | **Total** | **154** |
 
 ## How status was derived
@@ -377,15 +377,6 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 **Deployed:** Restore 1 (When this unit attacks, heal 1 damage from your base.)<br>While you control 2 or more units, ignore the aspect penalties on Heroism units you play.
 
-#### LAW_011 — Darth Vader (Unstoppable)
-
-**Missing:** front + deployed · **Batch:** Batch 10 · **Existing refs:** none
-
-**Front:** Action [Exhaust, discard a card from your hand]: Deal 1 damage to a unit or base.<br>Epic Action: If you control 7 or more resources, deploy this leader.
-
-**Deployed:** On Attack: Discard any number of cards from your hand. Deal damage to a unit or base equal to the number of cards discarded this way.
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
 #### LAW_012 — Sebulba (Especially Dangerous Dug)
 
@@ -405,15 +396,6 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 **Deployed:** When you use an “On Attack” ability: You may use that ability again. Use this ability only once each round.
 
-#### LAW_015 — Jabba the Hutt (Crime Boss)
-
-**Missing:** front + deployed · **Batch:** Batch 11 · **Existing refs:** none
-
-**Front:** Action [1 resource, Exhaust, return a friendly Underworld unit to its owner's hand]: Create a Credit token.<br>Epic Action: If you control 6 or more resources, deploy this leader.
-
-**Deployed:** Action: Play an Underworld unit from your hand. If you defeated a Credit while paying its cost, that unit gains Ambush for this phase.
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
 #### LAW_016 — The Client (Please Lower Your Blaster)
 
@@ -523,15 +505,6 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 > Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
-#### SEC_005 — Satine Kryze (Standing on Principles)
-
-**Missing:** front · **Batch:** Batch 6 · **Existing refs:** `restore.ts`
-
-**Front:** Action [Exhaust]: Heal up to 2 damage from a unit. If you do, deal that much damage to your base.<br>Epic Action: If you control 5 or more resources, deploy this leader.
-
-**Deployed:** Restore 4
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
 #### SEC_008 — Bail Organa (Doing Everything He Can)
 
@@ -804,6 +777,8 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 | LAW_003 | Agent Kallus — Reconsider Your Allegiance | LAW |
 | LAW_008 | Director Krennic — Amidst My Achievement | LAW |
 | LAW_010 | Leia Organa — Someone Who Loves You | LAW |
+| LAW_011 | Darth Vader — Unstoppable | LAW |
+| LAW_015 | Jabba the Hutt — Crime Boss | LAW |
 | LAW_013 | Chewbacca — Hero of Kessel | LAW |
 | LOF_002 | Mother Talzin — Power Through Magick | LOF |
 | LOF_003 | Ahsoka Tano — Fighting For Peace | LOF |
@@ -819,6 +794,7 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 | LOF_018 | Anakin Skywalker — Tempted by the Dark Side | LOF |
 | SEC_004 | Leia Organa — Of A Secret Bloodline | SEC |
 | SEC_006 | Colonel Yularen — This Is Why We Plan | SEC |
+| SEC_005 | Satine Kryze — Standing on Principles | SEC |
 | SEC_007 | Dryden Vos — I Never Ask Twice | SEC |
 | SEC_015 | C-3PO — Human-Cyborg Relations | SEC |
 | SHD_001 | Gar Saxon — Viceroy of Mandalore | SHD |

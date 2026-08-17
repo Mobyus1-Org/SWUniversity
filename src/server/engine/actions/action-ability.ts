@@ -86,8 +86,10 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
           abilities.push(cardId);
         }
         break;
-      case "SHD_011": // Kylo Ren — Action [Exhaust, DISCARD a card from your hand]: the discard is
-                      // part of the cost, so the ability is unavailable with an empty hand.
+      // SHD_011 Kylo Ren and LAW_011 Darth Vader (Unstoppable) both cost "[Exhaust, discard a card
+      // from your hand]". The discard is part of the cost, so neither is available on an empty hand.
+      case "SHD_011":
+      case "LAW_011":
         if (GetHand(player).length > 0) abilities.push(cardId);
         break;
       case "TWI_005": // Count Dooku — needs Separatist card in hand
@@ -116,6 +118,15 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         break;
       case "LAW_008": // Director Krennic — Action [Exhaust, defeat a friendly unit]: Create a Credit token (needs a friendly unit to defeat).
         if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
+        break;
+      case "LAW_015": // Jabba the Hutt — Action [1 resource, Exhaust, return a friendly Underworld
+                      // unit to its owner's hand]: Create a Credit token. Both halves of the cost
+                      // gate availability. The resource is charged in the resolution rather than by
+                      // ActionAbilityCost, because his DEPLOYED Action shares this card id and is free.
+        if (GetResources(player, true).length > 0
+            && GetUnitsForPlayer(player).some(u => TraitContains(u.cardId, "Underworld", player, u.playId))) {
+          abilities.push(cardId);
+        }
         break;
       case "LAW_013": // Chewbacca — Action [1 resource, Exhaust, defeat a friendly resource]: 2 damage to a unit + Credit token.
         // Needs a resource to defeat on top of the 1 paid (the paid one may itself be defeated).
@@ -205,6 +216,10 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "LOF_016": // Qui-Gon Jinn — Action [Exhaust, use the Force]: return a friendly non-leader unit (needs the Force + a friendly non-leader unit).
         if (HasTheForce(player) && GetUnitsForPlayer(player).some(u => !CardIsLeader(u.cardId))) abilities.push(cardId);
         break;
+      case "SEC_005": // Satine Kryze — Action [Exhaust]: Heal up to 2 from a unit, then deal that
+                      // much to your own base. Needs a unit somewhere to heal.
+        if (AllUnits().length > 0) abilities.push(cardId);
+        break;
       case "SEC_004": // Leia Organa (SEC) — Action [1 resource, Exhaust]: disclose, then give an XP token.
         if (CanDiscloseAnyOf(player, SEC_004_ASPECTS)) abilities.push(cardId);
         break;
@@ -258,6 +273,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
     switch (cardId) {
       case "SHD_006": //Jabba the Hutt - His High Exaltedness
         abilities.push(cardId);
+        break;
+      case "LAW_015": //Jabba the Hutt (Crime Boss, deployed) — Action: Play an Underworld unit from hand.
+        if (PlayerHasUnitsInHand(player, { trait: "Underworld" })) abilities.push(cardId);
         break;
       case "SHD_013": //Han Solo - Worth the Risk
         if (PlayerHasUnitsInHand(player)) {
@@ -379,6 +397,9 @@ export function ActionAbilityExhausts(abilityId: string): boolean {
   switch (abilityId) {
     case "SHD_017":   // Lando Calrissian (deployed) — plain "Action:", limited once each round
     case "SHD_087-1": // Crosshair — "Action [2 resources]", no exhaust in the cost
+    case "LAW_015":   // Jabba the Hutt (deployed) — plain "Action:"; the undeployed side's
+                      // "[1 resource, Exhaust, …]" is charged on the leader path instead, which
+                      // exhausts the leader itself rather than consulting this.
       return false;
     default:
       return true;

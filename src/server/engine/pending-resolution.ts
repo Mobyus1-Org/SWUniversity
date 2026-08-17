@@ -138,6 +138,12 @@ export interface DiscardFromHandPending {
   /** SHD_153 Poe Dameron: how many cards this discard step has taken so far. */
   discardedSoFar?: number;
   /**
+   * LAW_011 Darth Vader (deployed): after an "any number" discard, deal damage equal to the number
+   * discarded to a unit or base. Holds the source card id; the count travels as the target's
+   * `amount`.
+   */
+  thenDamageEqualToDiscarded?: string;
+  /**
    * SHD_099 Echo (Restored): after the discard, give 2 Experience tokens to a unit in play whose
    * NAME matches the discarded card. The name is only known once the card is chosen, so the
    * follow-up prompt is built inside the discard handler. Value is the source cardId, for logging.
@@ -429,10 +435,12 @@ export interface SpreadTokensPending {
  * A side effect applied after the heal total is known.
  * "deal-healed-to-self" — deal the healed amount to a predetermined target (e.g. Redemption rebounding damage to itself).
  * "deal-healed-to-unit" — surface a SpreadDamage prompt so the player picks where to deal the healed amount.
+ * "deal-healed-to-own-base" — deal the healed amount to the ability controller's own base (Satine Kryze).
  */
 export type AfterHealEffect =
   | { type: "deal-healed-to-self"; targetPlayId: string }
-  | { type: "deal-healed-to-unit"; eligiblePlayIds: string[]; optional: boolean };
+  | { type: "deal-healed-to-unit"; eligiblePlayIds: string[]; optional: boolean }
+  | { type: "deal-healed-to-own-base" };
 
 /** Spread up to N heal across any eligible units and/or bases. Each target can receive at most its current damage. Total ≤ maxHeal. */
 export interface SpreadHealPending {

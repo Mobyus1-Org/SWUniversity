@@ -1345,6 +1345,9 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_179": //Boba Fett's Rancor — On Attack: may deal 1 damage to a base for every 5 damage on your base
     case "ASH_196": //Gorian Shard's Corsair — On Attack: may deal 2 damage to a unit
     case "ASH_189": //Emperor's Messenger — On Attack: Ready a resource.
+    case "LAW_011": //Darth Vader (deployed) — On Attack: discard any number, deal that much damage
+    case "TWI_246": //Tranquility — On Attack: next 3 Republic cards this phase cost 1 less
+    case "LAW_214": //Boba Fett (For a Price) — On Attack: may pay 1 to deal 3 to a ground unit
     case "ASH_248": //Neel — On Attack: next unit with 1 or less power enters play ready
     case "SEC_188": //Darth Traya — On Attack: may ready a non-unit leader
     case "SEC_004": //Leia Organa (SEC, deployed) — On Attack: may disclose, then give an XP token
@@ -1880,6 +1883,38 @@ export function optionalTarget(
       fromPlayIds,
       continuation: opts.continuation ?? null,
     } satisfies AbilityTargetPending,
+    continuation: opts.continuation ?? null,
+  } satisfies AbilityOptionPending;
+}
+
+/**
+ * "You may pay 1 resource. If you do, <effect>." — a whole family of LAW cards (Boba Fett LAW_214,
+ * Shield Drive Outfitter, Dogged Pursuers, Hidden Hand Supplier…) share this exact opening.
+ *
+ * Builds only the offer; the payment and the "if you do" half live together in the engine's
+ * `_pay1` option handler, so the resource can never be spent without the effect following. Returns
+ * null when the player cannot afford it — the ability then simply does not trigger, which is also
+ * why the affordability test counts Credit tokens alongside ready resources.
+ */
+export function optionalPayResource(
+  cardId: string,
+  player: PlayerId,
+  helperText: string,
+  opts: { sourcePlayId?: string; continuation?: PendingResolution | null } = {},
+): AbilityOptionPending | null {
+  const gs = GetGameState();
+  const p = player === 1 ? gs.player1 : gs.player2;
+  const spendable = p.resources.filter(r => r.ready).length + (p.supplemental.creditTokens ?? 0);
+  if (spendable < 1) return null;
+  return {
+    type: "ability-option",
+    cardId: `${cardId}_pay1`,
+    player,
+    sourcePlayId: opts.sourcePlayId,
+    helperText,
+    yesLabel: "Pay 1",
+    noLabel: "Skip",
+    onYes: null, // the engine pays and builds the follow-up, so it cannot be split apart
     continuation: opts.continuation ?? null,
   } satisfies AbilityOptionPending;
 }

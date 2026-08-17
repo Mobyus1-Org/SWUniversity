@@ -126,6 +126,7 @@ export function HasOverwhelm(cardId: string,
     case "TWI_009"://Maul Leader Unit
       return !LeaderAbilitiesIgnored();
     //non-leader units
+    case "LAW_034"://Chewbacca - Mighty Rescuer
     case "SOR_232"://AT-ST
     case "SOR_164"://Wampa
     case "SOR_117"://Mercenary Company

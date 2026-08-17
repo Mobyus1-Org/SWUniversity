@@ -487,6 +487,8 @@ export const Cards = {
       kitFisto: "TWI_165", // 7/6 Ground Force/Jedi, Saboteur + Coordinate
       infiltratingDemolisher: "TWI_182",
       echoArcTrooper: "TWI_090",
+      stalwart332nd: "TWI_240", // 1/2 Ground Republic/Clone/Trooper, Coordinate +1/+1
+      tranquility: "TWI_246", // 7/6 Space Republic/Vehicle/Capital Ship
       shaakTi: "TWI_094",
       anakinsInterceptor: "TWI_142",
       admiralTrench: "TWI_086",
@@ -554,6 +556,9 @@ export const Cards = {
       vigilantScouts: "LAW_120",
       guildAmbushTeam: "LAW_239",
       cavernAngelsXWing: "LAW_189",
+      salaciousCrumbLaw: "LAW_210", // 0/2 Ground Underworld/Creature, Raid 2 + Jabba enters-ready
+      bobaFettForAPrice: "LAW_214", // 6/5 Ground Underworld/Bounty Hunter, pay 1 → 3 damage
+      chewbaccaMightyRescuer: "LAW_034", // 4/4 Ground Rebel/Wookiee, Overwhelm + When Attack Ends
     },
     ash: {
       bWingRearguard: "ASH_078", // 3/5 Space Rebel Vehicle Fighter, conditional Sentinel
@@ -862,6 +867,7 @@ export const Cards = {
       attackRun: "JTL_261",
       outTheAirlock: "JTL_079",
       scrambleFighters: "JTL_092",
+      airSuperiority: "JTL_125", // cost 2 Command Tactic
     },
     ts26: {
       backedByThePykes: "TS26_58",

@@ -169,6 +169,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "LAW_172": amount += 1; break; //Storm Raider
     case "LAW_190": amount += 2; break; //Haxion Aggressor
     case "LAW_199": amount += 3; break; //Ohnaka Gang Bandits
+    case "LAW_210": amount += 2; break; //Salacious Crumb
     case "LAW_220": amount += 2; break; //Wookiee Guerilla
     case "LAW_234": amount += 2; break; //Kage Elite
     case "ASH_154": amount += 1; break; //Honorable Nite Owl

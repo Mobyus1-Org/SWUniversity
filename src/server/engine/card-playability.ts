@@ -158,6 +158,15 @@ function morganNextUnitDiscount(game: GameState, player: PlayerId, cardId: strin
   return shares ? 1 : 0;
 }
 
+// TWI_246 Tranquility: "each of the NEXT 3 Republic cards you play this phase costs 1 resource
+// less." Charged rather than one-shot — the effect's `value` is how many discounts are left, and
+// completePlayCard spends one per Republic card played.
+function tranquilityRepublicDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (!CardTraits(cardId).includes("Republic")) return 0;
+  const effect = game.currentEffects.find(e => e.cardId === "TWI_246" && e.affectedPlayer === player);
+  return (effect?.value ?? 0) > 0 ? 1 : 0;
+}
+
 // ASH_237 Mouse Droid: the NEXT Imperial unit you play this phase costs 1 resource less. The
 // effect is consumed in completePlayCard once an Imperial unit is played.
 function imperialNextUnitDiscount(game: GameState, player: PlayerId, cardId: string): number {
@@ -241,6 +250,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - piettCapitalShipDiscount(game, player, cardId)
     - morganNextUnitDiscount(game, player, cardId)
     - imperialNextUnitDiscount(game, player, cardId)
+    - tranquilityRepublicDiscount(game, player, cardId)
     - redLeaderPilotDiscount(game, player, cardId)
     - reputableHunterDiscount(game, player, cardId)
     - jabbasRancorDiscount(game, player, cardId)

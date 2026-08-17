@@ -203,12 +203,12 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   //Jump to Lightspeed
   "JTL_004", "JTL_005", "JTL_006", "JTL_008", "JTL_010", "JTL_012", "JTL_013", "JTL_014", "JTL_018",
   //Legends of the Underworld
-  "LAW_002", "LAW_003", "LAW_008", "LAW_010", "LAW_013",
+  "LAW_002", "LAW_003", "LAW_008", "LAW_010", "LAW_011", "LAW_013", "LAW_015",
   //Legacy of the Force
   "LOF_002", "LOF_003", "LOF_004", "LOF_005", "LOF_007", "LOF_009", "LOF_011", "LOF_012", "LOF_013",
   "LOF_014", "LOF_015", "LOF_016", "LOF_018",
   //Secrets of Power
-  "SEC_004", "SEC_006", "SEC_007", "SEC_011", "SEC_015",
+  "SEC_004", "SEC_005", "SEC_006", "SEC_007", "SEC_011", "SEC_015",
   //ASH
   "ASH_004", "ASH_009",
   //IBH
@@ -240,6 +240,8 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
   "IBH_036": "Attack w/ another Heroism unit (+2/+0)",
   "IBH_062": "Heal 2 from a Villainy unit", // Imperial Deck Officer
   "IBH_100": "Heal 2 from a Villainy unit",
+  // Deployed leaders are units in the arena, so their Action button comes from this list too.
+  "LAW_015": "Play an Underworld unit", // Jabba the Hutt (Crime Boss), deployed
 };
 
 /** The Action buttons to render for a unit, normalising the single- and multi-Action shapes. */

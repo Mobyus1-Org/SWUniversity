@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending, IndirectDamagePending } from "@/server/engine/pending-resolution";
-import { CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck } from "@/server/engine/core-functions";
+import { CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType } from "@/server/engine/card-db/generated";
@@ -1474,6 +1474,41 @@ function resolveInnateOnAttack(
         fromPlayIds: units009.map(u => u.playId),
         continuation,
       };
+    }
+    case "LAW_011": { // Darth Vader (deployed) — "On Attack: Discard any number of cards from your
+                      // hand. Deal damage to a unit or base equal to the number of cards discarded
+                      // this way." An empty hand means there is nothing to offer.
+      const hand011 = GetHand(attacker.controller);
+      if (hand011.length === 0) return continuation;
+      return {
+        type: "discard-from-hand",
+        targetPlayer: attacker.controller,
+        count: hand011.length,
+        upTo: true, // "any number" — the player ends the step with an empty selection
+        thenDamageEqualToDiscarded: "LAW_011",
+        continuation,
+      } satisfies DiscardFromHandPending;
+    }
+    case "TWI_246": { // Tranquility — "On Attack: Each of the next 3 Republic cards you play this
+                      // phase costs 1 resource less." Unlike the one-shot discounts, this one
+                      // carries a charge count; attacking again tops it back up by 3.
+      const game246 = GetGame();
+      if (game246) {
+        const gs246 = game246.currentGameState;
+        const existing246 = gs246.currentEffects.find(
+          e => e.cardId === "TWI_246" && e.affectedPlayer === attacker.controller);
+        if (existing246) existing246.value = (existing246.value ?? 0) + 3;
+        else gs246.currentEffects.push({ cardId: "TWI_246", duration: "Phase", affectedPlayer: attacker.controller, value: 3 });
+        game246.gameLog.push(`${CardTitle("TWI_246")}: each of the next 3 Republic cards you play this phase costs 1 resource less.`);
+      }
+      return continuation;
+    }
+    case "LAW_214": { // Boba Fett — "When Played/On Attack: You may pay 1 resource. If you do,
+                      // deal 3 damage to a ground unit." Same offer as his When Played.
+      if (AllGroundUnits().length === 0) return continuation;
+      return optionalPayResource("LAW_214", attacker.controller,
+        "Pay 1 resource to deal 3 damage to a ground unit?",
+        { sourcePlayId: attacker.playId, continuation }) ?? continuation;
     }
     case "ASH_248": { // Neel — On Attack: The next unit you play this phase with 1 or less power
                       // enters play ready. Same effect as his When Played; re-arming is idempotent.

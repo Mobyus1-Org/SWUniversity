@@ -22,6 +22,8 @@ export function HasWhenAttackEnds(cardId: string): boolean {
     case "ASH_101": //The Great Mothers — defeat the non-leader units this unit dealt combat damage to
     case "ASH_223": //Halo — if the defending unit was defeated, give a Shield token to this unit
       return true;
+    case "LAW_034": //Chewbacca — if the defending unit was defeated, give him an XP token and heal 3
+      return true;
     case "SEC_048": //Captain Rex — completes an attack: give this unit and an enemy unit Sentinel
       return true;
     case "LOF_016": //Qui-Gon Jinn — completes an attack (and survives): may return a unit and play a cheaper non-Villainy unit free

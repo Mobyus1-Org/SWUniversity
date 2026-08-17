@@ -540,6 +540,9 @@ function selfStatBonus(unit: Unit): number {
     // TWI_090 Echo — "Coordinate — This unit gets +2/+2." Coordinate turns on at 3+ friendly units.
     case "TWI_090":
       return IsCoordinateActive(unit.controller) ? 2 : 0;
+    // TWI_240 332nd Stalwart — "Coordinate — This unit gets +1/+1."
+    case "TWI_240":
+      return IsCoordinateActive(unit.controller) ? 1 : 0;
     // JTL_115 Clone Combat Squadron — "+1/+1 for each other friendly space unit."
     case "JTL_115":
       return otherFriendlySpaceUnitCount(unit);
