@@ -3282,7 +3282,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         yesLabel: onlyOneAmount ? `Use ${pending.maxUseful} Credit(s)` : "Use Credits",
         noLabel: pending.minForced > 0
           ? `Use only ${pending.minForced} Credit(s)`
-          : `Pay ${pending.fullCost}`,
+          : `Pay ${pending.fullCost} Resources`,
       } satisfies NeedsOption;
     }
     case "credit-payment-amount":
