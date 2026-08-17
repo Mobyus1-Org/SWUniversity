@@ -9,7 +9,7 @@ import { LoadPuzzlePanel } from "@/components/Shared/LoadPuzzlePanel";
 import type { PuzzleAccessLevel } from "@/server/puzzle/puzzle-status";
 import { PuzzleBuilderPanel } from "@/components/Shared/PuzzleBuilderPanel";
 import { DEFAULT_ALTERNATE_FAIL_EXPLANATION } from "@/components/Shared/puzzle-builder-state";
-import { CardLinkText } from "@/components/Shared/CardLink";
+import { CardLinkText, PuzzleText } from "@/components/Shared/CardLink";
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import type { DispatchResponse, DispatchType, DispatchData, GameDispatch, ResolutionRequest } from "@/lib/engine/message-types";
@@ -2659,7 +2659,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
           <h3 className="text-lg font-black uppercase tracking-[0.2em] text-white">{puzzleMeta.name || puzzleName}</h3>
           {puzzleMeta.author ? <p className="mt-1 text-xs text-white/50">By {puzzleMeta.author}{puzzleMeta.inspiredBy ? <span className="ml-2 text-white/35">· Inspired by {puzzleMeta.inspiredBy}</span> : null}</p> : null}
         </div>
-        <p className="whitespace-pre-wrap text-sm leading-6 text-white/85">{puzzleMeta.infoText}</p>
+        <p className="whitespace-pre-wrap text-sm leading-6 text-white/85">
+          <PuzzleText text={puzzleMeta.infoText ?? ""} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+        </p>
         <button type="button" onClick={() => setShowInfoModal(false)} className="mt-6 w-full rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/20">
           Got it
         </button>
@@ -2680,7 +2682,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
             {puzzleMeta.intendedSolution.map((step, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-white/90 min-w-0">
                 <img src="/assets/puzzle.svg" alt="" className="mt-1.25 h-2.5 w-2.5 shrink-0 brightness-0 invert" />
-                <span className="min-w-0 break-words"><CardLinkText text={step} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} /></span>
+                <span className="min-w-0 break-words"><PuzzleText text={step} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} /></span>
               </li>
             ))}
           </ul>
@@ -2727,7 +2729,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                 </button>
                 {isOpen ? (
                   <p className="whitespace-pre-wrap border-t border-white/10 px-4 py-3 text-sm leading-6 text-white/80">
-                    <CardLinkText text={hint} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+                    <PuzzleText text={hint} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
                   </p>
                 ) : null}
               </div>
@@ -2770,9 +2772,13 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
             simulated — so it uses the puzzle's authored explanation, falling back to the
             report-it-on-Discord default for puzzles that never authored one. */}
         <p className="mb-6 whitespace-pre-line text-sm text-white/70">
-          {gameState && deriveStatus(gameState) === "failed-regroup"
-            ? (puzzleMeta?.alternateFailExplanation?.trim() || DEFAULT_ALTERNATE_FAIL_EXPLANATION)
-            : "Your base was defeated. Reset to try again, or head back to the puzzles menu."}
+          <PuzzleText
+            text={gameState && deriveStatus(gameState) === "failed-regroup"
+              ? (puzzleMeta?.alternateFailExplanation?.trim() || DEFAULT_ALTERNATE_FAIL_EXPLANATION)
+              : "Your base was defeated. Reset to try again, or head back to the puzzles menu."}
+            onPreviewStart={handlePreviewStart}
+            onPreviewEnd={handlePreviewEnd}
+          />
         </p>
         <div className="flex gap-2">
           <button

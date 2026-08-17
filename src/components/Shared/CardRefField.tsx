@@ -40,9 +40,10 @@ type CardRefFieldProps = {
   multiline?: boolean;
   rows?: number;
   className?: string;
+  placeholder?: string;
 };
 
-export function CardRefField({ value, onChange, multiline = false, rows = 2, className = "" }: CardRefFieldProps) {
+export function CardRefField({ value, onChange, multiline = false, rows = 2, className = "", placeholder }: CardRefFieldProps) {
   const fieldRef = React.useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [caret, setCaret] = React.useState(0);
@@ -117,7 +118,8 @@ export function CardRefField({ value, onChange, multiline = false, rows = 2, cla
     onKeyDown: handleKeyDown,
     onKeyUp: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => syncCaret(e.currentTarget),
     onClick: (e: React.MouseEvent<HTMLInputElement | HTMLTextAreaElement>) => syncCaret(e.currentTarget),
-    className: fieldClass,
+    className: `${fieldClass} placeholder:text-white/30`,
+    placeholder,
   };
 
   return (

@@ -171,8 +171,15 @@ export function getModeTitle(app: SWUniversityApp, mode: AppModes): string {
   }
 }
 
-export function renderItalicsAndBold(text: string): React.JSX.Element {
-  const lines = text.split('\n');
+/**
+ * Formats ONE line of markup: `**bold**`, `_italic_`, nested `**_both_**`, plus the automatic
+ * treatments — keyword names in red, `+X/+Y` buffs split red/blue, and aspect names as icons.
+ *
+ * Deliberately knows nothing about newlines. `renderItalicsAndBold` handles those for Quiz/DYKSWU,
+ * while puzzle text leaves them to a `whitespace-pre-wrap` container — feeding one fragment at a
+ * time is what lets both callers share this without one of them getting stray <br/>s.
+ */
+export function renderInlineMarkup(line: string, keyPrefix: string | number = 0): React.JSX.Element {
   const highlightWords = [
     "Shielded",
     "Sentinel",
@@ -226,9 +233,8 @@ export function renderItalicsAndBold(text: string): React.JSX.Element {
     return <span key={"proc-text-" + key}>{text}</span>;
   };
 
-  return <>{lines.map((line, index) => {
-    const parts = line.split(/(\*\*.*?\*\*|_.*?_)/g); //split by **text** or _text_
-    return <span key={"line-" + index}>
+  const parts = line.split(/(\*\*.*?\*\*|_.*?_)/g); //split by **text** or _text_
+  return <span key={"line-" + keyPrefix}>
     {
       parts.map((part, partIndex) => {
         if (part.startsWith('**') && part.endsWith('**')) {
@@ -267,9 +273,22 @@ export function renderItalicsAndBold(text: string): React.JSX.Element {
         }
       })
     }
-    <br />
     </span>;
-  })}</>;
+}
+
+/**
+ * Quiz/DYKSWU text: every line formatted by {@link renderInlineMarkup}, each followed by a <br/>.
+ * The line handling lives here rather than in the formatter so puzzle text — which relies on
+ * `whitespace-pre-wrap` instead — can share the formatter without inheriting these breaks.
+ */
+export function renderItalicsAndBold(text: string): React.JSX.Element {
+  const lines = text.split('\n');
+  return <>{lines.map((line, index) => (
+    <span key={"line-wrap-" + index}>
+      {renderInlineMarkup(line, index)}
+      <br />
+    </span>
+  ))}</>;
 }
 
 export function preloadImagesAsync(urls: string[]): Promise<void> {

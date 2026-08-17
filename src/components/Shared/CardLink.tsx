@@ -1,7 +1,9 @@
 import React from "react";
 
 import { CardSubtitle, CardTitle } from "@/server/engine/card-db/generated";
-import { type CardRef, isKnownCardId, parseCardRefs } from "@/util/card-ref";
+import { type CardRef, isKnownCardId } from "@/util/card-ref";
+import { segmentByCardRefs } from "@/util/puzzle-text";
+import { renderInlineMarkup } from "@/util/func";
 
 type PreviewHandlers = {
   onPreviewStart: (p: { imageId: string; cardId: string; label?: string }) => void;
@@ -37,21 +39,39 @@ export function CardLink({ cardRef, ...handlers }: { cardRef: CardRef } & Previe
   );
 }
 
+/**
+ * Card references only, with the surrounding text left exactly as written. For engine-generated
+ * strings (the game log), which are not authored markup — running a `**`/`_` parser over them would
+ * be reinterpreting output nobody wrote as markup.
+ */
 export function CardLinkText({ text, ...handlers }: { text: string } & PreviewHandlers) {
-  const refs = parseCardRefs(text);
+  return (
+    <>
+      {segmentByCardRefs(text).map((segment, i) =>
+        segment.kind === "card"
+          ? <CardLink key={`c${i}`} cardRef={segment.ref} {...handlers} />
+          : <React.Fragment key={`t${i}`}>{segment.value}</React.Fragment>,
+      )}
+    </>
+  );
+}
 
-  const nodes: React.ReactNode[] = [];
-  let cursor = 0;
-  refs.forEach((ref, i) => {
-    if (ref.start > cursor) {
-      nodes.push(<React.Fragment key={`t${i}`}>{text.slice(cursor, ref.start)}</React.Fragment>);
-    }
-    nodes.push(<CardLink key={`c${i}`} cardRef={ref} {...handlers} />);
-    cursor = ref.end;
-  });
-  if (cursor < text.length) {
-    nodes.push(<React.Fragment key="t-last">{text.slice(cursor)}</React.Fragment>);
-  }
-
-  return <>{nodes}</>;
+/**
+ * Puzzle-authored text, with both of its markups rendered: `@[CARD_ID]` references become hoverable
+ * card links, and the text around them gets the same `**bold**` / `_italic_` / keyword-colouring
+ * treatment Quiz and DYKSWU use.
+ *
+ * Newlines are left alone — every caller renders this inside a `whitespace-pre-wrap` container, so
+ * the formatter is fed one segment at a time rather than the line-splitting variant.
+ */
+export function PuzzleText({ text, ...handlers }: { text: string } & PreviewHandlers) {
+  return (
+    <>
+      {segmentByCardRefs(text).map((segment, i) =>
+        segment.kind === "card"
+          ? <CardLink key={`c${i}`} cardRef={segment.ref} {...handlers} />
+          : <React.Fragment key={`t${i}`}>{renderInlineMarkup(segment.value, i)}</React.Fragment>,
+      )}
+    </>
+  );
 }

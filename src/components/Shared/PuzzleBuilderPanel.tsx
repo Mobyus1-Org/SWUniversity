@@ -1114,13 +1114,20 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                   />
                 </FieldRow>
                 <FieldRow label="Info Text">
-                  <textarea
-                    value={state.infoText}
-                    onChange={(e) => patchGlobal({ infoText: e.target.value })}
-                    placeholder="Setup instructions & flavor shown to the player on load…"
+                  <CardRefField
+                    multiline
                     rows={4}
-                    className="w-full resize-y rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
+                    value={state.infoText}
+                    onChange={(next) => patchGlobal({ infoText: next })}
+                    placeholder="Setup instructions & flavor shown to the player on load…"
                   />
+                  <p className="mt-1 text-2xs leading-relaxed text-white/40">
+                    <code className="text-white/60">**bold**</code>,{" "}
+                    <code className="text-white/60">_italic_</code>,{" "}
+                    <code className="text-white/60">@[</code> to link a card. Wrap a keyword to
+                    colour it — <code className="text-white/60">**Ambush**</code> turns red, a bare
+                    Ambush does not. <code className="text-white/60">+X/+Y</code> colours on its own.
+                  </p>
                 </FieldRow>
                 <FieldRow label="Author">
                   <input

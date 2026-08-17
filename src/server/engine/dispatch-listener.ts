@@ -92,7 +92,6 @@ import type {
   UpgradeTargetPending,
   BamboozleAltCostPending,
   BamboozleAltCostDiscardPending,
-  ChooseAspectEffectPending,
 } from "@/server/engine/pending-resolution";
 import type { TriggerEntry, CardPlayedContext } from "@/lib/engine/trigger-types";
 import { collectBounties } from "@/server/engine/actions/bounty";
