@@ -70,6 +70,8 @@ export function hydratePuzzleGame(raw: RawPuzzleGameState): GameState {
       ready: l.ready !== false,
       deployed: Boolean(l.deployed),
       deployedPlayId: l.deployedPlayId as string | undefined,
+      // A double-sided leader (TWI_017) can start a puzzle on its back face.
+      flipped: Boolean(l.flipped),
     };
   }
 

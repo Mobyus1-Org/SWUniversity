@@ -5,7 +5,7 @@ import { UpgradeEligibleTargets, PilotingEligibleVehicles, IsPilotUpgrade } from
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { Unit } from "@/server/engine/unit";
-import { TraitContains } from "@/server/engine/core-functions";
+import { LeaderSideAspects, TraitContains } from "@/server/engine/core-functions";
 import { SmuggleCost, SmuggleAspects } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
 
@@ -318,7 +318,8 @@ export function uncoveredAspects(game: GameState, player: PlayerId, aspects: str
   const p = player === 1 ? game.player1 : game.player2;
   const provided = [
     ...CardAspects(p.base.cardId),
-    ...CardAspects(p.leader.cardId),
+    // The face a double-sided leader is SHOWING, not the union of both faces (TWI_017).
+    ...LeaderSideAspects(p.leader.cardId, p.leader.flipped === true),
   ];
   const counts = new Map<string, number>();
   for (const a of provided) counts.set(a, (counts.get(a) ?? 0) + 1);

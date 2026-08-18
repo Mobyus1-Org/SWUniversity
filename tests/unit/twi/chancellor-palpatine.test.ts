@@ -156,6 +156,53 @@ describe("TWI_017 Chancellor Palpatine // Darth Sidious", () => {
     });
   });
 
+  // The upstream card data merges BOTH faces' aspect icons into a single list — TWI_017 reads
+  // back as Cunning/Villainy/Heroism — so a naive leader lookup covers Heroism AND Villainy at
+  // once and neither side ever pays a penalty. Each face provides only its own two icons:
+  // Chancellor = Cunning/Heroism, Sidious = Cunning/Villainy.
+  describe("aspect penalties follow the showing face", () => {
+    const HEROISM_UNIT = Cards.units.twi.stalwart332nd;     // cost 1, Heroism only
+    const VILLAINY_UNIT = Cards.units.twi.droidStarfighter; // cost 1, Villainy only
+    const CUNNING_UNIT = Cards.units.twi.hotshotVWing;      // cost 2, Cunning only
+
+    // setup()'s base is Command-only, so a single-aspect card's whole penalty comes from the leader.
+    async function resourcesSpentPlaying(cardId: string, flipped: boolean): Promise<number> {
+      const g = new GameTestAdapter();
+      const state = flipped ? setup().MyLeaderFlipped() : setup();
+      g.loadNewState(state.WithCardInHandForPlayer(1, cardId).Build());
+
+      await g.playCardFromHandAsync(1, 0);
+
+      return g.state.player1.resources.filter(r => !r.ready).length;
+    }
+
+    it("the Chancellor face covers Heroism but not Villainy", async () => {
+      expect(await resourcesSpentPlaying(HEROISM_UNIT, false)).toBe(1);  // no penalty
+      expect(await resourcesSpentPlaying(VILLAINY_UNIT, false)).toBe(3); // 1 + 2 penalty
+    });
+
+    it("the Sidious face covers Villainy but not Heroism", async () => {
+      expect(await resourcesSpentPlaying(VILLAINY_UNIT, true)).toBe(1);  // no penalty
+      expect(await resourcesSpentPlaying(HEROISM_UNIT, true)).toBe(3);   // 1 + 2 penalty
+    });
+
+    it("Cunning is printed on both faces, so it is always covered", async () => {
+      expect(await resourcesSpentPlaying(CUNNING_UNIT, false)).toBe(2);
+      expect(await resourcesSpentPlaying(CUNNING_UNIT, true)).toBe(2);
+    });
+
+    it("reports each face's own aspect icons", async () => {
+      const { LeaderSideAspects } = await import("@/server/engine/core-functions");
+      const PALPATINE = Cards.leaders.twi.chancellorPalpatine;
+
+      expect(LeaderSideAspects(PALPATINE, false).sort()).toEqual(["Cunning", "Heroism"]);
+      expect(LeaderSideAspects(PALPATINE, true).sort()).toEqual(["Cunning", "Villainy"]);
+      // An ordinary leader is single-faced: both calls return its printed aspects.
+      expect(LeaderSideAspects(Cards.leaders.sor.sabineWren, false))
+        .toEqual(LeaderSideAspects(Cards.leaders.sor.sabineWren, true));
+    });
+  });
+
   describe("the flipped side is Darth Sidious, not Chancellor Palpatine", () => {
     it("reports the back-side title and traits while flipped", async () => {
       const g = new GameTestAdapter();

@@ -118,7 +118,7 @@ import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget } from "@/server/engine/core-functions";
+import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -1711,7 +1711,7 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
       // leader unit, so a non-Aggression leader piloting an Aggression ship counts too.
       const hasAggression148 =
         CardAspects(pState148.base.cardId).includes("Aggression")
-        || CardAspects(pState148.leader.cardId).includes("Aggression")
+        || LeaderSideAspects(pState148.leader.cardId, pState148.leader.flipped === true).includes("Aggression")
         || FriendlyLeaderUnits(trigger.fromPlayer)
           .some(u => CardAspects(u.cardId).includes("Aggression"));
       if (!hasAggression148) return null;

@@ -501,6 +501,8 @@ export const Cards = {
       sanHill: "TWI_186",
       r2d2FullOfSolutions: "TWI_193",
       battleDroidEscort: "TWI_229",
+      droidStarfighter: "TWI_228", // 1/1 Space, Villainy only — a single-aspect cost test card
+      hotshotVWing: "TWI_209",     // 3/2 Space, Cunning only — a single-aspect cost test card
       cloneHeavyGunner: "TWI_158",
       separatistCommando: "TWI_180",
       confederateCourier: "TWI_079",

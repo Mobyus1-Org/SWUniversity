@@ -64,6 +64,8 @@ export type PlayerBuilderState = {
   leaderReady: boolean;
   leaderDeployed: boolean;
   leaderEpicActionUsed: boolean;
+  /** A double-sided leader (TWI_017) starting the puzzle on its BACK face. */
+  leaderFlipped: boolean;
   resources: ResourceEntry[];
   handCards: string[];
   deck: string[];
@@ -129,7 +131,7 @@ export const DEFAULT_ALTERNATE_FAIL_EXPLANATION =
 export function emptyPlayer(): PlayerBuilderState {
   return {
     baseCardId: "", baseDamage: 0, baseEpicActionUsed: false,
-    leaderCardId: "", leaderReady: true, leaderDeployed: false, leaderEpicActionUsed: false,
+    leaderCardId: "", leaderReady: true, leaderDeployed: false, leaderEpicActionUsed: false, leaderFlipped: false,
     resources: [], handCards: [], deck: [], discard: [], groundUnits: [], spaceUnits: [],
     creditTokens: 0, forceToken: false,
   };
@@ -227,6 +229,7 @@ function parseRawPlayer(p: Record<string, unknown>, playerId: 1 | 2): PlayerBuil
     leaderReady: leader.ready !== false,
     leaderDeployed: Boolean(leader.deployed),
     leaderEpicActionUsed: Boolean(leader.epicActionUsed),
+    leaderFlipped: Boolean(leader.flipped),
     resources: resources.map((r) => ({ cardId: String(r.cardId ?? ""), ready: r.ready !== false })),
     handCards: hand.map((h) => String((h as Record<string, unknown>).cardId ?? "")),
     deck: deck.map((d) => String(d.cardId ?? "")),
@@ -293,6 +296,7 @@ export function toRaw(s: BuilderState): RawPuzzleGameState {
         // A leader sitting on a unit as a Pilot IS deployed — the state has no other spelling.
         deployed: p.leaderDeployed || hasLeaderUpgrade,
         epicActionUsed: p.leaderEpicActionUsed,
+        ...(p.leaderFlipped && { flipped: true }),
         ...(hasLeaderUpgrade && { deployedPlayId: leaderUpgradePlayId }),
       },
       groundArena: p.groundUnits.map((u) => ({

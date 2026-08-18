@@ -17,6 +17,7 @@ import {
   type UnitEntry,
 } from "./puzzle-builder-state";
 import { CardTraits } from "@/server/engine/card-db/generated";
+import { LeaderBackSideOf } from "@/server/engine/card-db/double-sided-leaders";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 
 export type CardCatalogEntry = {
@@ -259,6 +260,10 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
     .map((ug) => ug.cardId);
   const leaderAttachedAsPilot = attachedLeaderCardIds.length > 0;
 
+  // TWI_017 flips between two LEADER faces instead of deploying, so a puzzle can legitimately
+  // start it on either one. Every other leader has no second leader face to offer.
+  const leaderBackSide = LeaderBackSideOf(state.leaderCardId);
+
   function patch(delta: Partial<PlayerBuilderState>) {
     onChange({ ...state, ...delta });
   }
@@ -302,7 +307,8 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
             cards={cards}
             filterType={["Leader"]}
             value={state.leaderCardId}
-            onChange={(v) => patch({ leaderCardId: v })}
+            // Swapping leaders drops the flipped face — it belongs to the old card, not the new one.
+            onChange={(v) => patch({ leaderCardId: v, leaderFlipped: false })}
             placeholder="Select leader…"
           />
         </FieldRow>
@@ -316,6 +322,15 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
             title={leaderAttachedAsPilot ? "Attached to a unit as a Pilot — deployed is implied." : undefined}
           />
           <Checkbox checked={state.leaderEpicActionUsed} onChange={(v) => patch({ leaderEpicActionUsed: v })} label="Epic Used" />
+          {leaderBackSide && (
+            // Only a double-sided leader has a second LEADER face to start on; every other
+            // leader's back is a unit side reached by deploying.
+            <Checkbox
+              checked={state.leaderFlipped}
+              onChange={(v) => patch({ leaderFlipped: v })}
+              label={`Start as ${leaderBackSide.title}`}
+            />
+          )}
         </div>
       </div>
 

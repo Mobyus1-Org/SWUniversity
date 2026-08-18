@@ -53,7 +53,13 @@ function PlayerRow({ p, label, compact }: { p: PlayerBuilderState; label: string
           ? <CardTile cardId={p.baseCardId} sub={p.baseDamage > 0 ? `${p.baseDamage} dmg` : undefined} widthClass={w} />
           : <span className="text-3xs text-white/30">—</span>)}
         {zone("Leader", p.leaderCardId
-          ? <CardTile cardId={p.leaderDeployed ? `${p.leaderCardId}_BACK` : p.leaderCardId} sub={p.leaderDeployed ? "deployed" : undefined} widthClass={w} />
+          ? <CardTile
+              // Two different states show the back image: a deployed leader unit, and a
+              // double-sided leader (TWI_017) starting on its flipped face.
+              cardId={p.leaderDeployed || p.leaderFlipped ? `${p.leaderCardId}_BACK` : p.leaderCardId}
+              sub={p.leaderDeployed ? "deployed" : p.leaderFlipped ? "flipped" : undefined}
+              widthClass={w}
+            />
           : <span className="text-3xs text-white/30">—</span>)}
       </div>
       {p.spaceUnits.length > 0 && zone("Space",

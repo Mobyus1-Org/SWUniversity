@@ -1,5 +1,5 @@
 import { CardArena, CardAspects, CardCost, CardIsUnique, CardText, CardTitle, CardTraits, CardType, CardType2 } from "@/server/engine/card-db/generated";
-import { LeaderBackSideOf } from "@/server/engine/card-db/double-sided-leaders";
+import { LeaderBackSideOf, LeaderFrontAspectsOf } from "@/server/engine/card-db/double-sided-leaders";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { Card, CardInPlay, CardTypes, CurrentEffect, EffectDuration, HP_MOD, Leader, PHASE_STAT_MOD, POWER_MOD, PlayerId, Resource, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { Game, GameState, PlayerState } from "@/lib/engine/game";
@@ -360,6 +360,19 @@ export function LeaderSideTitle(cardId: string, flipped: boolean): string {
 export function LeaderSideTraits(cardId: string, flipped: boolean): string[] {
   const back = flipped ? LeaderBackSideOf(cardId) : null;
   return back?.traits ?? CardTraits(cardId);
+}
+
+/**
+ * The aspect icons the face a leader is currently showing provides.
+ *
+ * For every ordinary leader this is just its printed aspects. A double-sided leader's generated
+ * entry is the UNION of both faces (TWI_017: Cunning/Villainy/Heroism), so reading it directly
+ * would have Chancellor Palpatine covering Villainy and Darth Sidious covering Heroism — no card
+ * would ever pay an aspect penalty. Each face contributes only its own two icons.
+ */
+export function LeaderSideAspects(cardId: string, flipped: boolean): string[] {
+  const side = flipped ? LeaderBackSideOf(cardId)?.aspects : LeaderFrontAspectsOf(cardId);
+  return side ?? CardAspects(cardId);
 }
 
 /**
