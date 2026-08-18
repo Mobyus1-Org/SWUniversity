@@ -172,32 +172,19 @@ export function getModeTitle(app: SWUniversityApp, mode: AppModes): string {
 }
 
 /**
- * Formats ONE line of markup: `**bold**`, `_italic_`, nested `**_both_**`, plus the automatic
- * treatments — keyword names in red, `+X/+Y` buffs split red/blue, and aspect names as icons.
+ * Formats ONE line of markup: `%{attention}` (bold + red), `**bold**`, `_italic_`, nested
+ * `**_both_**`, plus the pattern-driven treatments — `+X/+Y` buffs split red/blue, and aspect names
+ * as icons.
+ *
+ * Colour is explicit. There is deliberately no list of keyword names to auto-redden: such a list
+ * goes stale every set and cannot tell the keyword "Plot" from the English word. Authors write
+ * `%{Sentinel}` when they want the emphasis.
  *
  * Deliberately knows nothing about newlines. `renderItalicsAndBold` handles those for Quiz/DYKSWU,
  * while puzzle text leaves them to a `whitespace-pre-wrap` container — feeding one fragment at a
  * time is what lets both callers share this without one of them getting stray <br/>s.
  */
 export function renderInlineMarkup(line: string, keyPrefix: string | number = 0): React.JSX.Element {
-  const highlightWords = [
-    "Shielded",
-    "Sentinel",
-    "Saboteur",
-    "Raid", "Raid 1", "Raid 2", "Raid 3", "Raid 4", "Raid 5", "Raid 6", "Raid 7", "Raid 8", "Raid 9", "Raid 10",
-    "Restore", "Restore 1", "Restore 2", "Restore 3", "Restore 4", "Restore 5", "Restore 6", "Restore 7", "Restore 8", "Restore 9", "Restore 10",
-    "Ambush",
-    "Grit",
-    "Overwhelm",
-    "Smuggle",
-    "Bounty",
-    "Bounties",
-    "Coordinate",
-    "Exploit", "Exploit 1", "Exploit 2", "Exploit 3", "Exploit 4", "Exploit 5", "Exploit 6", "Exploit 7", "Exploit 8", "Exploit 9", "Exploit 10",
-    "Piloting",
-    "Hidden",
-    "Plot",
-  ];
 
   const buffPattern = new RegExp('[+-]\\d+\\/[+-]\\d+', 'g');
 
@@ -227,16 +214,22 @@ export function renderInlineMarkup(line: string, keyPrefix: string | number = 0)
     } else if (buffPattern.test(text)) {
       return processBuffText(text);
     }
-    if (highlightWords.includes(text)) {
-      return <span key={"highlight-word-" + key} className="text-red-400">{text}</span>;
-    }
     return <span key={"proc-text-" + key}>{text}</span>;
   };
 
-  const parts = line.split(/(\*\*.*?\*\*|_.*?_)/g); //split by **text** or _text_
+  // %{...} is listed first so it wins over the ** and _ alternatives. Its content is [^}]+ rather
+  // than a lazy .*? so it can never run past a closing brace, and the + means `%{}` is not a token
+  // at all — an empty attention run would be invisible anyway, so it stays literal.
+  const parts = line.split(/(%\{[^}]+\}|\*\*.*?\*\*|_.*?_)/g); //split by %{text}, **text** or _text_
   return <span key={"line-" + keyPrefix}>
     {
       parts.map((part, partIndex) => {
+        // Mirrors the split pattern exactly — a bare "%{}" satisfies startsWith/endsWith but was
+        // never captured as a token, so it has to stay literal text.
+        if (/^%\{[^}]+\}$/.test(part)) {
+          // The author's explicit "look at this" — bold and red, whatever the text is.
+          return <strong key={"part-" + partIndex} className="text-red-400">{part.slice(2, -1)}</strong>;
+        }
         if (part.startsWith('**') && part.endsWith('**')) {
           const innerText = part.slice(2, -2);
           //check if innerText has _text_ within it

@@ -48,14 +48,14 @@
         "followUp": {
           "question": "What does **_Red Three, Unstoppable_**, actually do?",
           "choices": {
-            "a": "Gives other friendly _Aggression_ units **Raid 2**.",
-            "b": "Gives other friendly _Heroism_ units **Raid 1**.",
-            "c": "Has **Raid 2** itself.",
+            "a": "Gives other friendly _Aggression_ units %{Raid 2}.",
+            "b": "Gives other friendly _Heroism_ units %{Raid 1}.",
+            "c": "Has %{Raid 2} itself.",
             "d": "Gives other friendly _Aggression_ units +1/+0."
           },
           "answer": "b"
         },
-        "explanation": "**_Red Three, Unstoppable_** gives friendly _Heroism_ units **Raid 1**, not _Aggression_ units."
+        "explanation": "**_Red Three, Unstoppable_** gives friendly _Heroism_ units %{Raid 1}, not _Aggression_ units."
       },
       {
         "img": "RedThree2",
@@ -98,14 +98,14 @@
         "followUp": {
           "question": "What does **_Precision Fire_** actually do?",
           "choices": {
-            "a": "The attacking unit has to be a _Trooper_ to gain **Saboteur** as well.",
-            "b": "If the attacking unit is a _Trooper_, it gives it **Raid 1** for the attack.",
+            "a": "The attacking unit has to be a _Trooper_ to gain %{Saboteur} as well.",
+            "b": "If the attacking unit is a _Trooper_, it gives it %{Raid 1} for the attack.",
             "c": "If the attacking unit is a _Trooper_, it gives it +2/+0 for the attack.",
             "d": "If the attacking unit is a _Trooper_, it gives it +1/+0 for the attack."
           },
           "answer": "c"
         },
-        "explanation": "If the chosen unit is a _Trooper_, **_Precision Fire_** gives +2/+0, not **Raid 2**."
+        "explanation": "If the chosen unit is a _Trooper_, **_Precision Fire_** gives +2/+0, not %{Raid 2}."
       }
     ]
   },
@@ -195,7 +195,7 @@
             "a": "The units must be _Villainy_ units.",
             "b": "Can only play a max of 3 units.",
             "c": "The units must be _Imperial_ units.",
-            "d": "Should also have **Overwhelm**."
+            "d": "Should also have %{Overwhelm}."
           },
           "answer": "a"
         },
@@ -408,8 +408,8 @@
         "followUp": {
           "question": "What does **_Home One, Alliance Flagship_**, actually do?",
           "choices": {
-            "a": "It gives other friendly units **Restore 2**.",
-            "b": "It should have **Restore 1**.",
+            "a": "It gives other friendly units %{Restore 2}.",
+            "b": "It should have %{Restore 1}.",
             "c": "The unit you play from your discard pile costs 3 less.",
             "d": "The unit you play from your discard pile does not have to be a _Heroism_ unit."
           },
@@ -501,8 +501,8 @@
           "question": "What does **_Yoda, Old Master_**, actually do?",
           "choices": {
             "a": "He gives you the choice to let any player draw a card.",
-            "b": "He should have **Restore 1**.",
-            "c": "He should have **Restore 3**",
+            "b": "He should have %{Restore 1}.",
+            "c": "He should have %{Restore 3}",
             "d": "He should let you draw 2 cards."
           },
           "answer": "a"
@@ -799,11 +799,11 @@
             "a": "While you control another _Underworld_ unit...",
             "b": "While you have the initiative...",
             "c": "While you control another _Command_ unit...",
-            "d": "...this unit gains **Shielded**."
+            "d": "...this unit gains %{Shielded}."
           },
           "answer": "c"
         },
-        "explanation": "You need to control another _Command_ unit in order for **_Escort Skiff_** to gain **Ambush**."
+        "explanation": "You need to control another _Command_ unit in order for **_Escort Skiff_** to gain %{Ambush}."
       },
       {
         "img": "EscortSkiff3",
@@ -1046,14 +1046,14 @@
         "followUp": {
           "question": "What is wrong with the ability text?",
           "choices": {
-            "a": "Has **Shielded** instead of **Hidden**.",
-            "b": "Has **Raid 1** instead of **Hidden**.",
-            "c": "Has **Ambush** instead of **Hidden**.",
-            "d": "Has **Restore 1** instead of **Hidden**."
+            "a": "Has %{Shielded} instead of %{Hidden}.",
+            "b": "Has %{Raid 1} instead of %{Hidden}.",
+            "c": "Has %{Ambush} instead of %{Hidden}.",
+            "d": "Has %{Restore 1} instead of %{Hidden}."
           },
           "answer": "a"
         },
-        "explanation": "**_Bib Fortuna_** has **Shielded**, not **Hidden**."
+        "explanation": "**_Bib Fortuna_** has %{Shielded}, not %{Hidden}."
       }
     ]
   },
@@ -1168,14 +1168,14 @@
         "followUp": {
           "question": "What is wrong with the ability text?",
           "choices": {
-            "a": "The **Smuggle** cost should be higher.",
-            "b": "The **Smuggle** cost should be lower.",
+            "a": "The %{Smuggle} cost should be higher.",
+            "b": "The %{Smuggle} cost should be lower.",
             "c": "This should heal 3 damage from a unit.",
             "d": "This should give a shield token instead of Experience."
           },
           "answer": "a"
         },
-        "explanation": "**_Covert Strength's_** **Smuggle** cost is 3."
+        "explanation": "**_Covert Strength's_** %{Smuggle} cost is 3."
       }
     ]
   },
@@ -1336,7 +1336,7 @@
         "followUp": {
           "question": "What's wrong with the ability text?",
           "choices": {
-            "a": "He has **Restore 2** instead of **Shielded**.",
+            "a": "He has %{Restore 2} instead of %{Shielded}.",
             "b": "Can only take control of an upgrade that costs 4 or less.",
             "c": "Can only take control of an upgrade that costs 3 or less.",
             "d": "Can only take control of a non-_Pilot_ upgrade."
@@ -1470,14 +1470,14 @@
         "followUp": {
           "question": "What's wrong with the ability text?",
           "choices": {
-            "a": "This unit gains **Raid 1** for each damage on him.",
+            "a": "This unit gains %{Raid 1} for each damage on him.",
             "b": "He damages himself and another friendly ground unit.",
             "c": "He damages himself and an enemy ground unit.",
             "d": "He gains +1/+0 for each damage on him."
           },
           "answer": "a"
         },
-        "explanation": "**_Fifth Brother_** gains **Raid 1** for each damage on him."
+        "explanation": "**_Fifth Brother_** gains %{Raid 1} for each damage on him."
       }
     ]
   },
@@ -1723,9 +1723,9 @@
           "question": "What is wrong with the ability text?",
           "choices": {
             "a": "**_Contracted Jumpmaster_** should have **\"When Played:** Give a shield token to this unit.\"",
-            "b": "**_Contracted Jumpmaster_** should have **Sentinel**.",
-            "c": "**_Contracted Jumpmaster_** should have **Ambush**.",
-            "d": "**_Contracted Jumpmaster_** should have **Hidden**."
+            "b": "**_Contracted Jumpmaster_** should have %{Sentinel}.",
+            "c": "**_Contracted Jumpmaster_** should have %{Ambush}.",
+            "d": "**_Contracted Jumpmaster_** should have %{Hidden}."
           },
           "answer": "b"
         },
@@ -2072,14 +2072,14 @@
         "followUp": {
           "question": "What's wrong with the ability text?",
           "choices": {
-            "a": "It should have **Hidden** instead.",
-            "b": "It should have **Ambush** instead.",
-            "c": "It should have **Raid 1** instead.",
-            "d": "It should have **Raid 3** instead."
+            "a": "It should have %{Hidden} instead.",
+            "b": "It should have %{Ambush} instead.",
+            "c": "It should have %{Raid 1} instead.",
+            "d": "It should have %{Raid 3} instead."
           },
           "answer": "d"
         },
-        "explanation": "**_Nihil Marauder_** actually has **Raid 3**."
+        "explanation": "**_Nihil Marauder_** actually has %{Raid 3}."
       }
     ]
   },
@@ -2145,7 +2145,7 @@
           },
           "answer": "d"
         },
-        "explanation": "When **_Darth Maul's Lightsaber_** is played on **_Darth Maul_**, he does attack with **Overwhelm**, but he cannot attack bases for that attack."
+        "explanation": "When **_Darth Maul's Lightsaber_** is played on **_Darth Maul_**, he does attack with %{Overwhelm}, but he cannot attack bases for that attack."
       }
     ]
   },
@@ -2160,7 +2160,7 @@
         "followUp": {
           "question": "What's wrong with the ability text?",
           "choices": {
-            "a": "Should have **Overwhelm** instead of **Ambush**.",
+            "a": "Should have %{Overwhelm} instead of %{Ambush}.",
             "b": "Other friendly _First Order_ units get +6/+6.",
             "c": "Other friendly space units get +5/+5.",
             "d": "Other friendly _Vehicle_ units get +6/+6."
@@ -2280,10 +2280,10 @@
         "followUp": {
           "question": "What's wrong with the ability text?",
           "choices": {
-            "a": "It should have **Restore 1** instead of **Hidden**.",
-            "b": "It should have **Ambush** instead of **Hidden**.",
+            "a": "It should have %{Restore 1} instead of %{Hidden}.",
+            "b": "It should have %{Ambush} instead of %{Hidden}.",
             "c": "The text box should be blank.",
-            "d": "It should have **Shielded** instead of **Hidden**."
+            "d": "It should have %{Shielded} instead of %{Hidden}."
           },
           "answer": "c"
         },

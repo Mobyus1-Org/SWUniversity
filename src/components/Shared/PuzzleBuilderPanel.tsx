@@ -1122,11 +1122,12 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                     placeholder="Setup instructions & flavor shown to the player on load…"
                   />
                   <p className="mt-1 text-2xs leading-relaxed text-white/40">
+                    <code className="text-white/60">%{"{text}"}</code> for bold red — use it to draw
+                    the eye to anything non-standard. Also{" "}
                     <code className="text-white/60">**bold**</code>,{" "}
-                    <code className="text-white/60">_italic_</code>,{" "}
-                    <code className="text-white/60">@[</code> to link a card. Wrap a keyword to
-                    colour it — <code className="text-white/60">**Ambush**</code> turns red, a bare
-                    Ambush does not. <code className="text-white/60">+X/+Y</code> colours on its own.
+                    <code className="text-white/60">_italic_</code>, and{" "}
+                    <code className="text-white/60">@[</code> to link a card.{" "}
+                    <code className="text-white/60">+X/+Y</code> colours on its own.
                   </p>
                 </FieldRow>
                 <FieldRow label="Author">
