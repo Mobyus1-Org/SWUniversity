@@ -602,6 +602,19 @@ function resolveInnateOnAttack(
         continuation,
       };
     }
+    case "TWI_015": { // General Grievous (deployed) — "On Attack: You may give a Droid unit +1/+0
+                      // and Sentinel for this phase." Any Droid unit, either side; Grievous is
+                      // Separatist/Official, so he is never among his own targets.
+      const droids015 = AllUnits().filter(u => TraitContains(u.cardId, "Droid", u.controller, u.playId));
+      if (droids015.length === 0) return continuation;
+      return optionalTarget(
+        "TWI_015_OA",
+        attacker.controller,
+        droids015.map(u => u.playId),
+        "Give a Droid unit +1/+0 and Sentinel for this phase?",
+        { yesLabel: "Give", continuation },
+      );
+    }
     case "TWI_002": { // Nute Gunray (deployed) — "On Attack: Create a Battle Droid token."
       const game002 = GetGame();
       if (game002) CreateBattleDroid(game002.currentGameState, attacker.controller, game002.gameLog, "TWI_002");

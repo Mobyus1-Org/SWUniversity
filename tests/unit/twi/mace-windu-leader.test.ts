@@ -86,6 +86,29 @@ describe("TWI_013 Mace Windu", () => {
     });
   });
 
+  describe("Epic Action — deploy at 7 or more resources", () => {
+    it("deploys while controlling 7 resources, spending none of them", async () => {
+      const g = new GameTestAdapter();
+      g.loadNewState(setup(7).MyLeader(MACE).Build());
+
+      await g.deployLeaderAsync(1);
+
+      expect(g.state.player1.leader.deployed).toBe(true);
+      // "If you control 7 or more resources" is a condition, not a cost — nothing is exhausted.
+      expect(g.state.player1.resources.filter(r => !r.ready).length).toBe(0);
+    });
+
+    it("cannot deploy on 6 resources", async () => {
+      const g = new GameTestAdapter();
+      g.loadNewState(setup(6).MyLeader(MACE).Build());
+
+      await g.deployLeaderAsync(1);
+
+      expect(g.lastDispatchResponse?.invalidAction).toBe(true);
+      expect(g.state.player1.leader.deployed).toBe(false);
+    });
+  });
+
   describe("deployed side — When Deployed", () => {
     it("deals 2 damage to EACH damaged enemy unit", async () => {
       const g = new GameTestAdapter();

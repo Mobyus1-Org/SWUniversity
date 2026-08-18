@@ -101,6 +101,21 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         if (tokens011.length > 0 && GetResources(player, true).length > 0) abilities.push(cardId);
         break;
       }
+      case "TWI_015": { // General Grievous — Action [Exhaust]: give a Droid unit Sentinel for the
+                        // phase. "A Droid unit" is unqualified, so an enemy Droid counts as a
+                        // legal target and keeps the Action available.
+        if (AllUnits().some(u => TraitContains(u.cardId, "Droid", u.controller, u.playId))) {
+          abilities.push(cardId);
+        }
+        break;
+      }
+      case "TWI_010": { // Pre Vizsla — Action [1 resource, Exhaust]: damage a unit equal to the
+                        // cards you've drawn this phase. "A unit" is unqualified, so any unit in
+                        // play is a legal target. The draw count is NOT a condition — with nothing
+                        // drawn the Action is still offered and simply deals 0.
+        if (AllUnits().length > 0 && GetResources(player, true).length > 0) abilities.push(cardId);
+        break;
+      }
       case "TWI_013": { // Mace Windu — Action [1 resource, Exhaust]: damage a DAMAGED enemy unit.
                         // No damaged enemy = no legal target, so the Action is unavailable.
         const enemy013 = GetUnitsForPlayer(player === 1 ? 2 : 1).filter(u => u.damage > 0);

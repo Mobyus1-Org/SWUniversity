@@ -10280,6 +10280,29 @@ function resolveActionAbility(
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    case "TWI_015": { // General Grievous — "Give a Droid unit Sentinel for this phase."
+      const droids015 = AllUnits().filter(u => TraitContains(u.cardId, "Droid", u.controller, u.playId));
+      if (droids015.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "TWI_015",
+        player,
+        fromPlayIds: droids015.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "TWI_010": { // Pre Vizsla — "Deal damage to a unit equal to the number of cards you've
+                      // drawn this phase." Any unit, either side; 0 draws deals 0.
+      const units010 = AllUnits();
+      if (units010.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "TWI_010_action",
+        player,
+        fromPlayIds: units010.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "TWI_013": { // Mace Windu — "Deal 1 damage to a damaged enemy unit. Then, if it has 5 or
                       // more damage on it, deal 1 damage to it."
       const damaged013 = GetUnitsForPlayer(player === 1 ? 2 : 1).filter(u => u.damage > 0);
@@ -11010,6 +11033,28 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       ReadyUnitByPlayId(targetPlayId, pending.player!, "SEC_011");
       break;
+    }
+    case "TWI_015":    // General Grievous, leader side — Sentinel only.
+    case "TWI_015_OA": { // General Grievous, deployed On Attack — Sentinel AND +1/+0.
+                      // The chosen Droid gains Sentinel for the
+                      // phase. The deployed side adds +1/+0 on top; the effect cardId is what
+                      // sentinel.ts already reads, so no dictionary change is needed.
+      if (!targetPlayId) break;
+      const target015 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target015) {
+        if (pending.cardId === "TWI_015_OA") {
+          GivePowerMod("TWI_015", target015, 1, "Phase", game.gameLog);
+        }
+        GrantKeywordForPhase("TWI_015", Unit.FromInterface(target015), game.gameLog, "Sentinel");
+      }
+      break;
+    }
+    case "TWI_010_action": { // Pre Vizsla — damage equal to the cards drawn this phase.
+      if (!targetPlayId) break;
+      // Read at resolution, not when the prompt was built: a draw between the two would count.
+      const amount010 = CardsDrawnThisPhase(pending.player!);
+      DealDamageToUnit(game.currentGameState, "TWI_010", targetPlayId, amount010, game.gameLog);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "TWI_013_action": { // Mace Windu — 1 damage, then a second point if it now has 5+.
       if (!targetPlayId) break;

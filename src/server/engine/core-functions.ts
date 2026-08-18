@@ -1350,6 +1350,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_059": //Leia Organa (ASH) — On Attack: may self-damage to heal your base
     case "ASH_072": //Doctor Pershing — On Attack: draw a card if it has 3+ remaining HP
     case "ASH_099": //Gozanti Assault Carrier — On Attack: gains Sentinel for this phase
+    case "TWI_015": //General Grievous (deployed) — On Attack: may give a Droid unit +1/+0 and Sentinel
     case "ASH_156": //R5-D4 — On Attack: defeat all upgrades on the defending unit
     case "ASH_168": //Migs Mayfeld — On Attack: deal 1 (2 if upgraded) damage to the defending unit
     case "ASH_203": //Mando's N-1 Starfighter — On Attack: may exhaust your leader for +2/+0

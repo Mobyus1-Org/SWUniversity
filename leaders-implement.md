@@ -10,10 +10,10 @@ the front (undeployed) ability and the deployed leader-unit ability.
 
 | Status | Count |
 |--------|-------|
-| Complete (both sides) | 88 |
-| Needs work | 66 |
-| — of those, no engine code at all | 46 |
-| — of those, front `Action` not in ActionAbilities() | 48 |
+| Complete (both sides) | 92 |
+| Needs work | 62 |
+| — of those, no engine code at all | 45 |
+| — of those, front `Action` not in ActionAbilities() | 44 |
 | **Total** | **154** |
 
 ## How status was derived
@@ -45,7 +45,7 @@ catches the offered-but-unimplemented case automatically — check its `KNOWN_GA
 2. **The cost-table ghost.** These ids sit in `ActionAbilityCost` but not in `ActionAbilities()` — a
    `grep` hits, so they look implemented while the ability cannot be used:
 
-   `JTL_003` `JTL_007` `JTL_015` `JTL_016` `LOF_006` `SEC_001` `SEC_010` `SEC_014` `TWI_008` `TWI_010` `TWI_013`
+   `JTL_003` `JTL_007` `JTL_015` `JTL_016` `LOF_006` `SEC_001` `SEC_010` `SEC_014` `TWI_008`
 
 3. **The UI registry.** A front `Action` also needs its id in `LEADERS_WITH_ACTION_ABILITY` in
    `src/containers/PuzzlesPage.tsx`, or no button renders and the engine tests still pass.
@@ -62,7 +62,7 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 |-------|---------|-----------|------|
 | Batch 1 | SOR_017 SHD_005 SHD_009 SHD_017 LOF_004 LOF_011 | Closes SOR + SHD | ☑ done |
 | Batch 2 | LOF_001 LOF_006 LOF_008 LOF_010 TWI_003 TWI_009 | — | ☐ |
-| Batch 3 | TWI_010 TWI_013 TWI_015 TWI_017 | Closes LOF + TWI | ☐ |
+| Batch 3 | TWI_010 TWI_013 TWI_015 TWI_017 | Closes LOF + TWI | ☑ done |
 | Batch 4 | JTL_001 JTL_003 JTL_006 JTL_007 ~~JTL_008~~ | — | ☐ |
 | Batch 5 | JTL_011 JTL_015 JTL_016 JTL_017 | Closes JTL | ☐ |
 | Batch 6 | SEC_001 SEC_002 SEC_003 SEC_005 SEC_008 | — | ☐ |
@@ -708,46 +708,6 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 > Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
-#### TWI_010 — Pre Vizsla (Pursuing the Throne)
-
-**Missing:** front + deployed · **Batch:** Batch 3 · **Existing refs:** `saboteur.ts`, `action-ability.ts`
-
-**Front:** Action [1 resource, Exhaust]: Deal damage to a unit equal to the number of cards you've drawn this phase. (This doesn't include cards drawn in the regroup phase.)<br>Epic Action: If you control 5 or more resources, deploy this leader.
-
-**Deployed:** While you have 3 or more cards in your hand, this unit gains Saboteur.<br>While you have 6 or more cards in your hand, this unit gets +2/+0.
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
-
-#### TWI_013 — Mace Windu (Vaapad Form Master)
-
-**Missing:** front + deployed · **Batch:** Batch 3 · **Existing refs:** `action-ability.ts`
-
-**Front:** Action [1 resource, Exhaust]: Deal 1 damage to a damaged enemy unit. Then, if it has 5 or more damage on it, deal 1 damage to it.<br>Epic Action: If you control 7 or more resources, deploy this leader.
-
-**Deployed:** When Deployed: Deal 2 damage to each damaged enemy unit.
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
-
-#### TWI_015 — General Grievous (General of the Droid Armies)
-
-**Missing:** front + deployed · **Batch:** Batch 3 · **Existing refs:** `sentinel.ts`
-
-**Front:** Action [Exhaust]: Give a Droid unit Sentinel for this phase. (Units in its arena can't attack your non-Sentinel units or your base.)<br>Epic Action: If you control 6 or more resources, deploy this leader. (Flip him, ready him, and move him to the ground arena.)
-
-**Deployed:** On Attack: You may give a Droid unit +1/+0 and Sentinel for this phase.
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
-
-#### TWI_017 — Chancellor Palpatine (Playing Both Sides)
-
-**Missing:** front + deployed · **Batch:** Batch 3 · **Existing refs:** none
-
-**Front:** This leader starts the game with this side faceup.<br>Action [Exhaust]: If a friendly Heroism unit was defeated this phase, draw a card, heal 2 damage from your base, then flip this leader.
-
-**Deployed:** Action [Exhaust]: If you played a Villainy card this phase, create a Clone Trooper token, deal 2 damage to each enemy base, then flip this leader.
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
-
 ---
 
 ## Complete (both sides)
@@ -836,8 +796,12 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 | TWI_006 | Wat Tambor — Techno Union Foreman | TWI |
 | TWI_007 | Captain Rex — Fighting For His Brothers | TWI |
 | TWI_008 | Padmé Amidala — Serving the Republic | TWI |
+| TWI_010 | Pre Vizsla — Pursuing the Throne | TWI |
 | TWI_011 | Ahsoka Tano — Snips | TWI |
 | TWI_012 | Anakin Skywalker — What it Takes to Win | TWI |
+| TWI_013 | Mace Windu — Vaapad Form Master | TWI |
 | TWI_014 | Asajj Ventress — Unparalleled Adversary | TWI |
+| TWI_015 | General Grievous — General of the Droid Armies | TWI |
 | TWI_016 | Jango Fett — Concealing the Conspiracy | TWI |
+| TWI_017 | Chancellor Palpatine — Playing Both Sides | TWI |
 | TWI_018 | Quinlan Vos — Sticking the Landing | TWI |

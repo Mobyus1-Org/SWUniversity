@@ -312,6 +312,7 @@ export class Unit implements UnitInterface {
       if (this.cardId === "SOR_161" && InitiativePlayer() === this.controller) power += 2; // Ardent Sympathizer
       if (this.cardId === "TWI_142" && GetBaseDamage(this.controller) >= 15) power += 2; // Anakin's Interceptor
       if (this.cardId === "TWI_012") power += Math.floor(GetBaseDamage(this.controller) / 5); // Anakin Skywalker (leader unit)
+      if (this.cardId === "TWI_010" && GetHand(this.controller).length >= 6) power += 2; // Pre Vizsla (leader unit)
     }
 
     power += kananSurvivalBonus(this);

@@ -133,3 +133,40 @@ memory system (see `MEMORY.md`), not just here.
   instead of resources exhausted; removing the flips; forcing both `if` conditions true — and
   confirmed exactly the intended tests failed. Keep this as the standard fallback, but prefer
   actually running red first.
+
+## 2026-08-18
+
+- **Confirmed working — the "prefer actually running red first" lesson (logged 2026-08-09, where
+  Flipatine's tests had to be validated by mutation instead).** Same card, opposite outcome: this
+  session's four aspect-penalty tests and four builder tests were written before any implementation
+  and produced genuine red (3 failures, then 3 more), so no mutation pass was needed to prove they
+  were meaningful. The prior entry named Flipatine explicitly, and re-reading it before starting is
+  what made the ordering deliberate rather than lucky.
+- **Repeat, new disguise — the zsh shell lesson (logged 2026-08-09 as "zsh with ugrep, not bash").**
+  Opened the session with two `grep -rn "..." --include=*.ts` calls that both died with
+  `zsh: no matches found: --include=*.ts` — zsh glob-expands unquoted flag values, unlike bash.
+  Cost a round trip. Concrete rule: **quote any flag value containing `*` or `?`**
+  (`--include="*.ts"`), the same way the earlier lesson requires quoting/looping for file lists.
+- **A "UI-only" feature request had an invisible engine half.** "Need a way to start him on his
+  Villainy side" reads as a builder checkbox, but `hydrateLeader` in puzzle-runtime.ts never copied
+  `Leader.flipped`, so even hand-editing the stored JSON would not have worked. Because the field is
+  OPTIONAL, the omission typechecks clean and every `GameStateBuilder`-based test still passes — the
+  gap is invisible to the entire unit suite. This is the second distinct instance in that same file
+  (the roundState fallback was the first, 2026-07-17). Generalised rule now memory'd as
+  [[engine-puzzle-runtime-hydrator-mirror]]: **when adding a field to a state interface, add it to
+  puzzle-runtime.ts's hydrator and the builder's toRaw/parseRawPlayer, and cover it with a
+  round-trip test** — three hand-written mirrors, none compiler-enforced.
+- **The user's stated hypothesis was the root cause, and checking it against the data file took two
+  minutes.** "I think the bug might come from the FFG api data returning one array with all the
+  aspects" — one grep of `generated.ts` confirmed `TWI_017: "Cunning,Villainy,Heroism"` before any
+  code was read. Sibling confirmation of the 2026-07-25 lesson ("for data-driven bugs, inspect the
+  data file EARLY"). Worth stating as a default: **when a bug report comes with a hypothesis about
+  data, verify it against the data file as step one** — it is cheap, and it either scopes the fix
+  immediately or rules out a whole branch.
+- **Stale tracker caught only at session close, not during work.** `leaders-implement.md` still
+  listed TWI_017 as "Missing: front + deployed · Existing refs: none" even though the leader had
+  shipped in a prior session and this one only fixed its bugs. Updated here (moved to Complete,
+  counts 88→89 / 66→65). The standing [[feedback-tracker-update]] rule fires on *implementation*
+  sessions; it does not cover *bug-fix* sessions on an already-shipped card, which is exactly when
+  the tracker's staleness goes unnoticed. Cheap addition to the mental checklist: when touching a
+  card, grep the trackers for its id regardless of whether the work is new implementation.
