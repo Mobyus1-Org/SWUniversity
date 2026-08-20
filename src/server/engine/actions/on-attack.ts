@@ -21,6 +21,34 @@ import { jabbasRancorDamage } from "@/server/engine/actions/when-played";
  * Pass `skipOrderingPrompt: true` when calling for the last remaining trigger
  * after the player already resolved earlier triggers from an on-attack-order choice.
  */
+/**
+ * Splice `insert` in front of combat inside an already-built pending chain.
+ *
+ * Every builder threads the SAME ResolveAttackPending object through each level it creates
+ * (`optionalTarget` puts it on both the option and its `onYes`), so the reliable way to find
+ * "the point where this chain hands off to combat" is object identity, not shape. Any
+ * continuation that is exactly `combat` becomes `insert` — and since `insert` already continues
+ * into `combat`, the chain still ends in the attack.
+ */
+function chainBeforeCombat(
+  pending: PendingResolution,
+  combat: ResolveAttackPending,
+  insert: PendingResolution,
+): PendingResolution {
+  const swap = (node: PendingResolution): PendingResolution => {
+    if (!("continuation" in node) || node.continuation === undefined) return node;
+    if (node.continuation === combat) return { ...node, continuation: insert } as PendingResolution;
+    if (node.continuation === null) return node;
+    return { ...node, continuation: swap(node.continuation) } as PendingResolution;
+  };
+  const swapped = swap(pending) as PendingResolution & { onYes?: PendingResolution | null };
+  // `optionalTarget` hangs the follow-up target off `onYes`, which the continuation walk misses.
+  if (swapped.onYes) {
+    return { ...swapped, onYes: swap(swapped.onYes) } as PendingResolution;
+  }
+  return swapped;
+}
+
 export function resolveOnAttackTrigger(
   attacker: Unit,
   continuation: ResolveAttackPending,
@@ -356,19 +384,25 @@ export function resolveOnAttackTrigger(
       }
     }
   }
-  // A captured interactive upgrade ability resolves now (its continuation runs combat); all auto
-  // upgrade abilities above have already applied.
-  if (deferredPending) return deferredPending;
   // Innate On Attack abilities — the attacker's own, plus any it gained from a Support unit for
   // this attack. The granted ability resolves with `attacker` as its subject, so "this unit" in
   // the borrowed text correctly means the unit that is attacking.
+  //
+  // These run even when an upgrade already produced `deferredPending`. Returning that pending
+  // here (as this used to) skipped the loop entirely, so an interactive upgrade silently swallowed
+  // its host's own On Attack — reported as TWI_203 losing his Clone Trooper while wearing SEC_210.
   let resolved = activeUpgrades.length > 0;
   for (const sourceCardId of AttackAbilityCardIds(attacker)) {
     const pending = resolveInnateOnAttack(sourceCardId, attacker, continuation);
     if (pending === null) continue;              // this source has no On Attack ability
     if (pending === continuation) { resolved = true; continue; } // it fizzled (no legal target)
-    return pending;                              // it needs player input
+    // Needs player input. With an upgrade ability also waiting, the upgrade resolves after this
+    // one and before combat, so it is spliced in wherever this pending pointed at combat.
+    return deferredPending ? chainBeforeCombat(pending, continuation, deferredPending) : pending;
   }
+  // A captured interactive upgrade ability resolves now (its continuation runs combat); all auto
+  // upgrade abilities above have already applied.
+  if (deferredPending) return deferredPending;
   // An upgrade-only or fizzled trigger still means combat proceeds; nothing at all means no trigger.
   return resolved ? continuation : null;
 }
