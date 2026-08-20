@@ -4191,6 +4191,9 @@ function completePlayCard(
       fromPlayIds: eligiblePlayIds,
       viaSmuggle: opts?.viaSmuggle,
     };
+    // Both ledgers, always together: cardsPlayedThisPhase is what "if you played a <X> card this
+    // phase" reads, and recording only units there made every such clause unit-only by accident.
+    game.roundState.cardsPlayedThisPhase.push({ fromPlayer: player, cardId, playId: "" });
     game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: "", playedAs: "Upgrade" });
     // SHD_172 Krayt Dragon: opponent's Krayt reacts to this upgrade being played (resolves
     // after the upgrade is attached, when the trigger bag drains).
@@ -4206,6 +4209,7 @@ function completePlayCard(
 
     pushEventToDiscard(game, player, cardId);
     const eventPlayId = GetPlayer(game, player).discard[0].playId;
+    game.roundState.cardsPlayedThisPhase.push({ fromPlayer: player, cardId, playId: eventPlayId });
     game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: eventPlayId, playedAs: "Event" });
 
     // SOR_143 Fighters for Freedom: when another Aggression card is played, may deal 1 damage to a base.
@@ -5826,6 +5830,9 @@ function handleChooseTarget(
       // Just a peek — no discard required, player dismisses with any dispatch
       log.push(`Player ${pending.peekingPlayer} looked at Player ${pending.targetPlayer}'s hand.`);
       const cont = pending.continuation ?? null;
+      // An on-attack ability can carry the attack itself as its continuation; that must be
+      // RUN, never rendered — a resolve-attack has no targets to choose (SEC_210).
+      if (cont?.type === "resolve-attack") return handleResolveAttack(game, log, cont);
       if (cont) return { response: resolutionResponse(pendingToResolution(cont, game)), pending: cont, stateChanged: false };
       const bag = drainTriggerBag(game, log);
       if (bag) return { response: resolutionResponse(pendingToResolution(bag, game)), pending: bag, stateChanged: false };
@@ -5841,6 +5848,9 @@ function handleChooseTarget(
         return { response: invalidResponse("Choose a card to discard from the opponent's hand."), pending, stateChanged: false };
       log.push(`Player ${pending.peekingPlayer} looked at Player ${pending.targetPlayer}'s hand and discarded nothing.`);
       const contSkip = pending.continuation ?? null;
+      // An on-attack ability can carry the attack itself as its continuation; that must be
+      // RUN, never rendered — a resolve-attack has no targets to choose (SEC_210).
+      if (contSkip?.type === "resolve-attack") return handleResolveAttack(game, log, contSkip);
       if (contSkip) return { response: resolutionResponse(pendingToResolution(contSkip, game)), pending: contSkip, stateChanged: false };
       const bagSkip = drainTriggerBag(game, log);
       if (bagSkip) return { response: resolutionResponse(pendingToResolution(bagSkip, game)), pending: bagSkip, stateChanged: false };
@@ -5865,6 +5875,9 @@ function handleChooseTarget(
     // "If you do, they draw a card" (ASH_220 Remnant Lookouts, SHD_184 Bazine Netal).
     if (pending.thenDrawForTarget) DrawCardForPlayer(game, log, pending.targetPlayer);
     const cont = pending.continuation ?? null;
+    // An on-attack ability can carry the attack itself as its continuation; that must be
+    // RUN, never rendered — a resolve-attack has no targets to choose (SEC_210).
+    if (cont?.type === "resolve-attack") return handleResolveAttack(game, log, cont);
     if (cont) return { response: resolutionResponse(pendingToResolution(cont, game)), pending: cont, stateChanged: false };
     const bag = drainTriggerBag(game, log);
     if (bag) return { response: resolutionResponse(pendingToResolution(bag, game)), pending: bag, stateChanged: false };

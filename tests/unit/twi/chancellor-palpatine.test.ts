@@ -143,6 +143,27 @@ describe("TWI_017 Chancellor Palpatine // Darth Sidious", () => {
       expect(g.state.player1.leader.flipped).toBe(false); // flipped back to Chancellor
     });
 
+    it("a Villainy EVENT counts as 'a Villainy card' — not just Villainy units", async () => {
+      // Reported: Sidious would not flip after playing a Villainy card. The ledger it reads
+      // (cardsPlayedThisPhase) only ever recorded UNITS, so an event never satisfied the clause.
+      const g = new GameTestAdapter();
+      g.loadNewState(
+        flippedSetup()
+          .WithCardInHandForPlayer(1, "LOF_041")   // Drain Essence — Vigilance/Villainy event
+          .WithGroundUnitForPlayer(2, MARINE)      // its damage target
+          .Build(),
+      );
+
+      await g.playCardFromHandAsync(1, 0);
+      await g.chooseGroundUnitAsync(2, 0);
+      await g.dispatchAsync(2, "pass-action", {});
+      await g.useLeaderAbilityAsync(1);
+
+      expect(g.state.player1.groundArena.some(u => u.cardId === CLONE_TROOPER)).toBe(true);
+      expect(g.state.player2.base.damage).toBe(2);
+      expect(g.state.player1.leader.flipped).toBe(false); // flipped back to Chancellor
+    });
+
     it("does nothing and does NOT flip without a Villainy card played", async () => {
       const g = new GameTestAdapter();
       g.loadNewState(flippedSetup().Build());

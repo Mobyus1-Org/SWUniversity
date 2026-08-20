@@ -22,6 +22,8 @@ Board-state challenges backed by a full SWU rules engine (`src/lib/engine`, `src
 - `src/server/` — server-only: `auth/`, `models/` (Mongoose), `db.ts`, `engine/`, stats loaders.
 - `public/*.json` — quiz/DYKSWU question data (read client-side via fetch, server-side via `fs`).
 - `tests/unit/` — Vitest suites.
+- `tests/tools/` — standalone `.mjs` tooling for AI agents (card-db queries, read-only puzzle
+  fetch). Excluded from every gate; see `tests/tools/README.md` before writing a throwaway script.
 - `docs/superpowers/` — specs & plans (gitignored).
 
 ## Stats & profiles

@@ -31,6 +31,40 @@ const PHASE_MAP = [
 // hydratePuzzleGame — converts raw JSON into a valid GameState
 // ---------------------------------------------------------------------------
 
+/**
+ * The per-round trackers, defaulted field by field.
+ *
+ * No stored puzzle carries a `roundState` — the builder does not write one — so this fallback is
+ * what EVERY puzzle runs on, and a field missing here is missing in every puzzle at once. That is
+ * how `cardsDrawnThisPhase` went missing: `MarkCardDrawn` then indexed `undefined` and every draw
+ * effect in every puzzle died with the API's generic "Unable to process dispatch."
+ *
+ * The explicit return type is the guard. The previous shape was
+ * `(raw.roundState as GameState["roundState"]) ?? { ...literal }`, and pre-casting the left
+ * operand stops TypeScript from ever checking the literal — so omitting a newly added field
+ * compiled cleanly. Written this way, a new field on the type is a compile error until it is
+ * defaulted here. Per-field defaulting also repairs a partially-stored roundState rather than
+ * taking it wholesale.
+ */
+function hydrateRoundState(raw: unknown): GameState["roundState"] {
+  const stored = (raw ?? {}) as Partial<GameState["roundState"]>;
+  return {
+    cardsPlayedThisPhase: stored.cardsPlayedThisPhase ?? [],
+    cardsPlayedThisRound: stored.cardsPlayedThisRound ?? [],
+    cardsEnteredPlayThisPhase: stored.cardsEnteredPlayThisPhase ?? [],
+    cardsLeftPlayThisPhase: stored.cardsLeftPlayThisPhase ?? [],
+    unitsAttackedThisPhase: stored.unitsAttackedThisPhase ?? [],
+    baseDamagedThisPhase: stored.baseDamagedThisPhase ?? [],
+    unitsDamagedThisPhase: stored.unitsDamagedThisPhase ?? [],
+    cardsDrawnThisPhase: stored.cardsDrawnThisPhase ?? { 1: 0, 2: 0 },
+    lastActionWasPass: stored.lastActionWasPass ?? false,
+    regroupResourcedPlayers: stored.regroupResourcedPlayers ?? [],
+    forceUsedThisPhase: stored.forceUsedThisPhase ?? 0,
+    ...(stored.extraActionPlayer !== undefined && { extraActionPlayer: stored.extraActionPlayer }),
+    ...(stored.actingPlayer !== undefined && { actingPlayer: stored.actingPlayer }),
+  };
+}
+
 export function hydratePuzzleGame(raw: RawPuzzleGameState): GameState {
   let nextId = 1;
 
@@ -175,17 +209,6 @@ export function hydratePuzzleGame(raw: RawPuzzleGameState): GameState {
     initiativeClaimed: Boolean(raw.initiativeClaimed),
     defeatedPlayers: (raw.defeatedPlayers as PlayerId[]) ?? [],
     triggerBag: (raw.triggerBag as TriggerEntry[]) ?? [],
-    roundState: (raw.roundState as GameState["roundState"]) ?? {
-      cardsPlayedThisPhase: [],
-      cardsPlayedThisRound: [],
-      cardsEnteredPlayThisPhase: [],
-      cardsLeftPlayThisPhase: [],
-      unitsAttackedThisPhase: [],
-      baseDamagedThisPhase: [],
-      unitsDamagedThisPhase: [],
-      lastActionWasPass: false,
-      regroupResourcedPlayers: [],
-      forceUsedThisPhase: 0,
-    },
+    roundState: hydrateRoundState(raw.roundState),
   };
 }

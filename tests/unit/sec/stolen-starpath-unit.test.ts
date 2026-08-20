@@ -75,6 +75,12 @@ describe("SEC_210 Stolen Starpath Unit", () => {
     expect(spyCount(g, 1)).toBe(2);
     expect(spyCount(g, 2)).toBe(0); // the Spies belong to the attacker
     expect(g.state.player2.hand).toHaveLength(3); // nothing left their hand
+
+    // Reported: closing the reveal left the UI stuck on an empty "Choose a target". The attack
+    // must actually resolve once the reveal is dismissed, not be re-rendered as a bare prompt.
+    expect(g.lastDispatchResponse?.resolutionNeeded).toBeUndefined();
+    expect(g.state.player2.base.damage).toBe(4); // Marine 3 + the upgrade's +1
+    expect(g.state.player1.groundArena.find(u => u.cardId === MARINE)!.ready).toBe(false);
   });
 
   it("naming a card they do not hold still reveals, but makes no Spy", async () => {
