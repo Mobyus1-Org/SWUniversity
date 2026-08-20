@@ -1497,6 +1497,7 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
     case "LOF_138": //Sith Holocron — grants "On Attack: may deal 2 to a friendly unit for +2/+0"
     case "LOF_139": //Battle Fury — grants "On Attack: Discard a card from your hand."
     case "SEC_264": //Clandestine Connections
+    case "SEC_210": //Stolen Starpath Unit — grants "On Attack: name a card, reveal, make Spies"
     case "JTL_018": //Kazuda Xiono piloting — grants his On Attack to the attached Vehicle
     case "JTL_142": //Darth Vader (Scourge of Squadrons) piloting — 1 damage, then 1 more on a kill
       return true;

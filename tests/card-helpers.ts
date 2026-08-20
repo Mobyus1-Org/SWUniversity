@@ -493,6 +493,8 @@ export const Cards = {
       kitFisto: "TWI_165", // 7/6 Ground Force/Jedi, Saboteur + Coordinate
       infiltratingDemolisher: "TWI_182",
       echoArcTrooper: "TWI_090",
+      republicTacticalOfficer: "TWI_091", // 1/4 Ground Republic/Clone, When Played attack-with
+      phaseIClonetrooper: "TWI_241", // 3/2 Ground Republic/Clone/Trooper, no card text
       stalwart332nd: "TWI_240", // 1/2 Ground Republic/Clone/Trooper, Coordinate +1/+1
       tranquility: "TWI_246", // 7/6 Space Republic/Vehicle/Capital Ship
       shaakTi: "TWI_094",
@@ -775,6 +777,7 @@ export const Cards = {
       clandestineConnections: "SEC_264",
       disciplesDevotion: "SEC_071",
       moralAuthority: "SEC_256", // +2/+0 on a friendly unique unit; When Played it captures
+      stolenStarpathUnit: "SEC_210", // +1/+1; grants On Attack "name a card" → Spy tokens
     },
     law: {
       shadowOfStygeonPrime: "LAW_077", // Condition — attached unit can't ready
@@ -934,6 +937,7 @@ export const Cards = {
       doubleCross: "LAW_170",
       theTreeRemembers: "LAW_132",
       theAxeForgets: "LAW_246",
+      holdForQuestioning: "LAW_217", // Exhaust an enemy unit, then peek + aspect-matched discard
     },
     lof: {
       cureWounds: "LOF_075",

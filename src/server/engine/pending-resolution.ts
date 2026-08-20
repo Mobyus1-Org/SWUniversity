@@ -704,6 +704,12 @@ export interface PeekHandPending {
    */
   discardTitle?: string;
   /**
+   * If set, only cards sharing at least one of these aspects are eligible (LAW_217 Hold For
+   * Questioning "discard a card ... that shares an aspect with that unit"). The aspects come
+   * from the exhausted UNIT, not from the card doing the discarding.
+   */
+  discardAspects?: string[];
+  /**
    * "You may discard a card from it" (ASH_220, SHD_184) — the peeking player picks a card OR
    * declines with an empty selection. Only meaningful together with mustDiscard.
    */

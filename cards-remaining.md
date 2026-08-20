@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 857 cards across 10 sets.**
+**Total: 854 cards across 10 sets.**
 
 ---
 
@@ -98,7 +98,7 @@ SHD_260: Street Gang Recruiter Unit
 SHD_262: Confiscate Event
 ```
 
-## TWI — Twilight of the Republic (102)
+## TWI — Twilight of the Republic (101)
 
 **Message 1 of 3**
 ```
@@ -138,7 +138,6 @@ TWI_084: Kraken - Confederate Tactician Unit
 TWI_085: Kalani - Analytical General Unit
 TWI_088: Reprocess Event
 TWI_089: Consolidation of Power Event
-TWI_091: Republic Tactical Officer Unit
 TWI_097: Captain Rex - Lead by Example Unit
 TWI_100: Petition the Senate Event
 TWI_101: Mas Amedda - Vice Chair Unit
@@ -438,7 +437,7 @@ LOF_263: Last Words Event
 LOF_264: It's Worse Event
 ```
 
-## LAW — Legends of the Underworld (161)
+## LAW — Legends of the Underworld (160)
 
 **Message 1 of 4**
 ```
@@ -590,7 +589,6 @@ LAW_212: Malakili - Keeper of the Menagerie Unit
 LAW_213: Cutthroat Podracer Unit
 LAW_215: Vermillion - Qi'ra's Auction House Unit
 LAW_216: Jabba's Rancor - Snack Time! Unit
-LAW_217: Hold For Questioning Event
 LAW_219: Anakin's Podracer - So Wizard! Unit
 LAW_221: Lieutenant Gorn - I Deserve Worse Unit
 LAW_223: Rose Tico - Now It's Worth It Unit
@@ -620,7 +618,7 @@ LAW_262: Bank Job Fugitives Unit
 LAW_264: From a Certain Point of View Event
 ```
 
-## SEC — Secrets of Power (150)
+## SEC — Secrets of Power (149)
 
 **Message 1 of 4**
 ```
@@ -749,7 +747,6 @@ SEC_205: Obi-Wan Kenobi - Finding What Doesn't Exist Unit
 SEC_206: Emissaries from Ryloth Unit
 SEC_207: Lightmaker - I Have An Idea Unit
 SEC_208: Hunter - Extraordinary Tracker Unit
-SEC_210: Stolen Starpath Unit Upgrade
 SEC_211: Faith in Your Friends Event
 SEC_212: Libertine - Under New Ownership Unit
 SEC_215: Emissary's Sheathipede Unit

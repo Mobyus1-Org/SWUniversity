@@ -952,6 +952,23 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "LAW_217": { // Hold For Questioning — "Exhaust an enemy unit. If you do, look at its
+                      // controller's hand and discard a card from it that shares an aspect with
+                      // that unit." An already-exhausted unit is a legal target; the "if you do"
+                      // is what stops it there, so no ready-only filter here.
+      const enemies217 = GetUnitsForPlayer(GetOtherPlayer(player));
+      if (enemies217.length === 0) return null;
+      return mandatoryTarget(cardId, player, enemies217.map(u => u.playId));
+    }
+    case "TWI_091": { // Republic Tactical Officer — "When Played: You may attack with a Republic
+                      // unit. It gets +2/+0 for this attack." Note "a Republic unit", not
+                      // "another": the Officer itself qualifies, since it enters play ready.
+      const republic091 = GetUnitsForPlayer(player, true)
+        .filter(u => TraitContains(u.cardId, "Republic", player, u.playId));
+      if (republic091.length === 0) return null;
+      return optionalTarget(cardId, player, republic091.map(u => u.playId),
+        "Attack with a Republic unit? It gets +2/+0 for this attack.", { yesLabel: "Attack" });
+    }
     case "IBH_064": // Hoth Lieutenant — "When Played: You may attack with another unit. It gets +2/+0
     case "IBH_092": { // for this attack." Optional; the +2/+0 and the attack are applied in applyAbilityEffect.
       const readyOthers064 = GetUnitsForPlayer(player).filter(u => u.ready && u.playId !== playId);

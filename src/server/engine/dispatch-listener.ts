@@ -3469,6 +3469,8 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
       const eligibleIndices = pending.mustDiscard
         ? targetHand.reduce<number[]>((acc, card, i) => {
             if (pending.discardTitle && CardTitle(card.cardId) !== pending.discardTitle) return acc;
+            if (pending.discardAspects
+              && !CardAspects(card.cardId).some(a => pending.discardAspects!.includes(a))) return acc;
             if (!pending.discardFilter) return [...acc, i];
             if (pending.discardFilter === "non-unit" && CardType(card.cardId) !== "Unit") return [...acc, i];
             return acc;
@@ -5853,6 +5855,9 @@ function handleChooseTarget(
       return { response: invalidResponse("Only non-unit cards can be discarded here."), pending, stateChanged: false };
     if (pending.discardTitle && CardTitle(targetHand[idx].cardId) !== pending.discardTitle)
       return { response: invalidResponse(`Only a card named "${pending.discardTitle}" can be discarded here.`), pending, stateChanged: false };
+    if (pending.discardAspects
+      && !CardAspects(targetHand[idx].cardId).some(a => pending.discardAspects!.includes(a)))
+      return { response: invalidResponse("Only a card sharing an aspect with that unit can be discarded here."), pending, stateChanged: false };
 
     const [discarded] = targetHand.splice(idx, 1);
     pushEventToDiscard(game, pending.targetPlayer, discarded.cardId);
@@ -12825,6 +12830,72 @@ function applyAbilityEffect(
         attackerPlayId: targetPlayId,
         source: "SOR_103",
         continuation: continuationSOR103,
+      };
+    }
+    case "SEC_210": { // Stolen Starpath Unit — the named card is chosen; count it in the defending
+                      // player's hand, create that many Spy tokens, then reveal the hand.
+      if (!targetPlayId) break;
+      // The name prompt sends the TITLE back, not a cardId (see the fromChoices client path).
+      const named210 = CardTitle(targetPlayId) || targetPlayId;
+      const cont210 = pending.continuation;
+      // "The defending player" follows the attack target, not simply "the opponent".
+      const defender210 = cont210 && cont210.type === "resolve-attack"
+        ? (cont210.target.type === "base"
+            ? cont210.target.player
+            : GetUnitByPlayId(game.currentGameState, cont210.target.playId)?.controller)
+        : undefined;
+      const victim210 = defender210 ?? GetOtherPlayer(pending.player!);
+      const hand210 = GetPlayer(game.currentGameState, victim210).hand;
+      game.gameLog.push(`${CardTitle("SEC_210")}: named "${named210}".`);
+      const matches210 = hand210.filter(c => CardTitle(c.cardId) === named210).length;
+      for (let i = 0; i < matches210; i++) {
+        CreateSpy(game.currentGameState, pending.player!, game.gameLog, "SEC_210");
+      }
+      if (hand210.length === 0) break;
+      return {
+        type: "peek-hand",
+        peekingPlayer: pending.player!,
+        targetPlayer: victim210,
+        mustDiscard: false, // a reveal only — nothing leaves their hand
+        continuation: pending.continuation ?? null,
+      } satisfies PeekHandPending;
+    }
+    case "LAW_217": { // Hold For Questioning — exhaust the enemy unit, then (only if that actually
+                      // exhausted it) look at its controller's hand for an aspect-sharing discard.
+      if (!targetPlayId) break;
+      const target217 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target217) break;
+      if (!target217.ready) { // already exhausted — "If you do" fails, nothing else happens
+        game.gameLog.push(`${CardTitle("LAW_217")}: ${CardTitle(target217.cardId)} was already exhausted — nothing happens.`);
+        break;
+      }
+      target217.ready = false;
+      game.gameLog.push(`${CardTitle("LAW_217")}: exhausted ${CardTitle(target217.cardId)}.`);
+      const owner217 = target217.controller;
+      const hand217 = GetPlayer(game.currentGameState, owner217).hand;
+      if (hand217.length === 0) break; // nothing to look at
+      const aspects217 = CardAspects(target217.cardId);
+      const hasMatch217 = hand217.some(c => CardAspects(c.cardId).some(a => aspects217.includes(a)));
+      return {
+        type: "peek-hand",
+        peekingPlayer: pending.player!,
+        targetPlayer: owner217,
+        // A miss still gets the look, matching SEC_186 Garindan's named-card miss.
+        mustDiscard: hasMatch217,
+        ...(hasMatch217 && { discardAspects: aspects217 }),
+        continuation: pending.continuation ?? null,
+      } satisfies PeekHandPending;
+    }
+    case "TWI_091": { // Republic Tactical Officer — the chosen Republic unit attacks with +2/+0.
+      if (!targetPlayId) break;
+      const unit091 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit091) break;
+      GivePowerMod("TWI_091", unit091, 2, "ForAttack", game.gameLog);
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "TWI_091",
+        continuation: pending.continuation ?? null,
       };
     }
     case "IBH_064": // Hoth Lieutenant When Played: the chosen other unit attacks with +2/+0 for this attack.
