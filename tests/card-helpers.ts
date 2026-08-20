@@ -505,6 +505,7 @@ export const Cards = {
       battleDroidEscort: "TWI_229",
       droidStarfighter: "TWI_228", // 1/1 Space, Villainy only — a single-aspect cost test card
       superBattleDroid: "TWI_230", // 4/3 Ground Separatist/Droid/Trooper, no card text
+      wartimeChancellor: "TWI_203", // Chancellor Palpatine (unit) — 2/6 Ground, token-ready static
       hotshotVWing: "TWI_209",     // 3/2 Space, Cunning only — a single-aspect cost test card
       cloneHeavyGunner: "TWI_158",
       separatistCommando: "TWI_180",

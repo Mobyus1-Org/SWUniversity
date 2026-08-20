@@ -638,6 +638,18 @@ function resolveInnateOnAttack(
         { yesLabel: "Give", continuation },
       );
     }
+    case "TWI_203": { // Chancellor Palpatine (Wartime Chancellor) — "On Attack: If a unit left play
+                      // this phase, create a Clone Trooper token." "A unit" is either side's, the
+                      // same reading TWI_004 Yoda uses for the identical wording.
+      const game203 = GetGame();
+      if (!game203) return continuation;
+      if (game203.currentGameState.roundState.cardsLeftPlayThisPhase.length === 0) {
+        game203.gameLog.push(`${CardTitle("TWI_203")}: no unit left play this phase — nothing happens.`);
+        return continuation;
+      }
+      CreateCloneTrooper(game203.currentGameState, attacker.controller, game203.gameLog, "TWI_203");
+      return continuation;
+    }
     case "TWI_002": { // Nute Gunray (deployed) — "On Attack: Create a Battle Droid token."
       const game002 = GetGame();
       if (game002) CreateBattleDroid(game002.currentGameState, attacker.controller, game002.gameLog, "TWI_002");

@@ -4,6 +4,18 @@ import { GetUnitsForPlayer } from "@/server/engine/core-functions";
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 
+/**
+ * TWI_203 Chancellor Palpatine (Wartime Chancellor) — "Each token unit you create enters play
+ * ready." A constant ability read at creation time, so it lives at the one chokepoint every
+ * Create* helper funnels through rather than being repeated per token type.
+ */
+function tokensEnterReadyFor(game: GameState, player: PlayerId): boolean {
+  const pState = player === 1 ? game.player1 : game.player2;
+  return [...pState.groundArena, ...pState.spaceArena].some(
+    u => u.cardId === "TWI_203" && !Unit.FromInterface(u).LostAbilities(),
+  );
+}
+
 function spawnToken(game: GameState, player: PlayerId, cardId: string): Unit {
   const playId = String(game.nextPlayId++);
   const unit = Unit.FromInterface({
@@ -11,7 +23,7 @@ function spawnToken(game: GameState, player: PlayerId, cardId: string): Unit {
     playId,
     owner: player,
     controller: player,
-    ready: false,
+    ready: tokensEnterReadyFor(game, player),
     damage: 0,
     upgrades: [],
     captives: [],

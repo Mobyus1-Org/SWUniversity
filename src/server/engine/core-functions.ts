@@ -1364,6 +1364,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "LOF_129": //Acolyte of the Beyond — On Attack: the Force is with you
     case "LAW_011": //Darth Vader (deployed) — On Attack: discard any number, deal that much damage
     case "TWI_246": //Tranquility — On Attack: next 3 Republic cards this phase cost 1 less
+    case "TWI_203": //Chancellor Palpatine (Wartime Chancellor) — On Attack: create a Clone Trooper if a unit left play
     case "LAW_214": //Boba Fett (For a Price) — On Attack: may pay 1 to deal 3 to a ground unit
     case "ASH_248": //Neel — On Attack: next unit with 1 or less power enters play ready
     case "SEC_188": //Darth Traya — On Attack: may ready a non-unit leader

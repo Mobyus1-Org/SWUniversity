@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 854 cards across 10 sets.**
+**Total: 853 cards across 10 sets.**
 
 ---
 
@@ -98,7 +98,7 @@ SHD_260: Street Gang Recruiter Unit
 SHD_262: Confiscate Event
 ```
 
-## TWI — Twilight of the Republic (101)
+## TWI — Twilight of the Republic (100)
 
 **Message 1 of 3**
 ```
@@ -190,7 +190,6 @@ TWI_199: Clear the Field Event
 TWI_200: Creative Thinking Event
 TWI_201: Aid from the Innocent Event
 TWI_202: Jar Jar Binks - Foolish Gungan Unit
-TWI_203: Chancellor Palpatine - Wartime Chancellor Unit
 TWI_204: Impropriety Among Thieves Event
 TWI_208: Favorable Delegate Unit
 TWI_210: Lux Bonteri - Renegade Separatist Unit
