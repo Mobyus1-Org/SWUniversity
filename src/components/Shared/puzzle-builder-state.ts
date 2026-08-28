@@ -60,6 +60,10 @@ export type PlayerBuilderState = {
   baseCardId: string;
   baseDamage: number;
   baseEpicActionUsed: boolean;
+  /** Fortify upgrades attached to the base (HMW_081, HMW_171). */
+  baseUpgrades: UpgradeEntry[];
+  /** Units the base is holding captive (SEC_195 Arrest). */
+  baseCaptives: CaptiveEntry[];
   leaderCardId: string;
   leaderReady: boolean;
   leaderDeployed: boolean;
@@ -130,7 +134,7 @@ export const DEFAULT_ALTERNATE_FAIL_EXPLANATION =
 
 export function emptyPlayer(): PlayerBuilderState {
   return {
-    baseCardId: "", baseDamage: 0, baseEpicActionUsed: false,
+    baseCardId: "", baseDamage: 0, baseEpicActionUsed: false, baseUpgrades: [], baseCaptives: [],
     leaderCardId: "", leaderReady: true, leaderDeployed: false, leaderEpicActionUsed: false, leaderFlipped: false,
     resources: [], handCards: [], deck: [], discard: [], groundUnits: [], spaceUnits: [],
     creditTokens: 0, forceToken: false,
@@ -225,6 +229,11 @@ function parseRawPlayer(p: Record<string, unknown>, playerId: 1 | 2): PlayerBuil
     baseCardId: String(base.cardId ?? ""),
     baseDamage: Number(base.damage ?? 0),
     baseEpicActionUsed: Boolean(base.epicActionUsed),
+    baseUpgrades: parseUpgrades(base.upgrades, playerId),
+    baseCaptives: ((base.captives ?? []) as Record<string, unknown>[]).map((c) => ({
+      cardId: String(c.cardId ?? ""),
+      ...(Number(c.owner ?? (playerId === 1 ? 2 : 1)) === playerId && { friendly: true as const }),
+    })),
     leaderCardId: String(leader.cardId ?? ""),
     leaderReady: leader.ready !== false,
     leaderDeployed: Boolean(leader.deployed),
@@ -289,7 +298,28 @@ export function toRaw(s: BuilderState): RawPuzzleGameState {
     const upgradePlayId = (ug: UpgradeEntry) =>
       CardType(ug.cardId) === "Leader" ? leaderUpgradePlayId : "@";
     return {
-      base: { cardId: p.baseCardId, damage: p.baseDamage, epicActionUsed: p.baseEpicActionUsed },
+      base: {
+        cardId: p.baseCardId,
+        damage: p.baseDamage,
+        epicActionUsed: p.baseEpicActionUsed,
+        // Emitted only when present, so an ordinary base serialises exactly as it always did.
+        ...((p.baseUpgrades ?? []).length > 0 && {
+          upgrades: (p.baseUpgrades ?? []).map((ug) => ({
+            cardId: ug.cardId, playId: "@",
+            owner: ug.enemy ? enemyOwner : playerId,
+            controller: ug.enemy ? enemyOwner : playerId,
+          })),
+        }),
+        ...((p.baseCaptives ?? []).length > 0 && {
+          captives: (p.baseCaptives ?? []).map((c) => ({
+            cardId: c.cardId, playId: "@",
+            // A captive is owned by whoever it was taken FROM — the enemy unless marked friendly.
+            owner: c.friendly ? playerId : captiveOwner,
+            controller: c.friendly ? playerId : captiveOwner,
+            ready: true, damage: 0, upgrades: [], captives: [],
+          })),
+        }),
+      },
       leader: {
         cardId: p.leaderCardId,
         ready: p.leaderReady,

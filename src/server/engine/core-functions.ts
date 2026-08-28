@@ -130,6 +130,10 @@ export function AllCaptives(): { playId: string; cardId: string; owner: PlayerId
   if (!game) return [];
   const out: { playId: string; cardId: string; owner: PlayerId }[] = [];
   for (const pState of [game.currentGameState.player1, game.currentGameState.player2]) {
+    // The base is a captor in its own right (SEC_195 Arrest), so its captives count too.
+    for (const captive of pState.base.captives ?? []) {
+      out.push({ playId: captive.playId, cardId: captive.cardId, owner: captive.owner });
+    }
     for (const u of [...pState.groundArena, ...pState.spaceArena]) {
       for (const captive of u.captives ?? []) {
         out.push({ playId: captive.playId, cardId: captive.cardId, owner: captive.owner });
@@ -678,7 +682,71 @@ export function CapBaseDamage(targetPlayer: PlayerId, amount: number): number {
  * reaction (ASH_204). The single choke point for base damage — call this instead of mutating
  * `base.damage` directly so every future "when your base is dealt damage" card keeps working.
  */
+/**
+ * HMW_081 Alliance Shield Generator — "If attached base would be dealt 5 or more damage, prevent
+ * that damage. If you do, defeat this upgrade and draw a card."
+ *
+ * Replaces the ENTIRE instance, not the excess, and it is per-instance: two separate 7-damage
+ * hits are two separate checks, and the second lands because the first spent the upgrade.
+ *
+ * Checked against the INCOMING amount, before CapBaseDamage. "Would be dealt 5 or more" reads on
+ * the damage as thrown, and both effects belong to the defender anyway, so taking the stronger of
+ * the two is the outcome that player would choose regardless.
+ *
+ * Returns true when the damage was prevented and the caller should stop.
+ */
+function preventBigBaseHit(gs: GameState, player: PlayerId, amount: number): boolean {
+  if (amount < 5) return false;
+  const base = GetPlayer(gs, player).base;
+  const shield = (base.upgrades ?? []).find(u => u.cardId === "HMW_081");
+  if (!shield) return false;
+
+  base.upgrades = (base.upgrades ?? []).filter(u => u.playId !== shield.playId);
+  const owner = (shield.owner ?? shield.controller ?? player) as PlayerId;
+  GetPlayer(gs, owner).discard.push({
+    ...shield,
+    controller: owner,
+    turnDiscarded: gs.currentRound,
+    discardEffect: "",
+  });
+
+  const log = GetGame()?.gameLog ?? [];
+  log.push(`${CardTitle("HMW_081")}: prevented ${amount} damage to Player ${player}'s base, then was defeated.`);
+  DrawCardForPlayer(gs, log, owner);
+  return true;
+}
+
+/**
+ * HMW_171 Trap Field — "When a non-leader ground unit enters play (including token units): You
+ * may defeat this upgrade. If you do, deal 3 damage to that unit."
+ *
+ * Queued from the two places a unit reaches an arena (`addToArena` for played/returned units and
+ * `spawnToken` for tokens) rather than from the cardsEnteredPlayThisPhase ledger, because tokens
+ * are deliberately absent from that ledger and this ability explicitly includes them.
+ *
+ * "A ground unit" is unqualified, so a player's own Trap Field can fire on their own unit; the
+ * trigger is queued for every player holding one.
+ */
+export function QueueUnitEnteredPlayReaction(gs: GameState, unit: UnitInterface): void {
+  if (CardIsLeader(unit.cardId)) return;
+  if ((CardArena(unit.cardId) ?? "Ground") !== "Ground") return;
+  const nested = gs.triggerBag.length > 0;
+  for (const player of [1, 2] as PlayerId[]) {
+    const hasTrap = (GetPlayer(gs, player).base.upgrades ?? []).some(u => u.cardId === "HMW_171");
+    if (!hasTrap) continue;
+    gs.triggerBag.push({
+      triggerType: "unit-entered-play",
+      cardId: "HMW_171",
+      fromPlayer: player,
+      playId: unit.playId,
+      nested,
+    });
+  }
+}
+
 export function DealDamageToBase(gs: GameState, player: PlayerId, amount: number, byPlayer?: PlayerId): void {
+  // HMW_081 Alliance Shield Generator replaces the whole instance before anything else reads it.
+  if (preventBigBaseHit(gs, player, amount)) return;
   amount = CapBaseDamage(player, amount);
   GetPlayer(gs, player).base.damage += amount;
   if (byPlayer !== undefined) {

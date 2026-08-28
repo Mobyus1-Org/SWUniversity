@@ -26,6 +26,422 @@
     "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/014.png",
     "imageUrlBack": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/014-back.png"
   },
+  "HMW_019": {
+    "title": "Dune Sea",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Vigilance"
+    ],
+    "traits": [
+      "Tatooine"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/019.png",
+    "imageUrlBack": ""
+  },
+  "HMW_020": {
+    "title": "Great Grass Plains",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Vigilance"
+    ],
+    "traits": [
+      "Naboo"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/020.png",
+    "imageUrlBack": ""
+  },
+  "HMW_021": {
+    "title": "Kachirho",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Vigilance"
+    ],
+    "traits": [
+      "Kashyyyk"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/021.png",
+    "imageUrlBack": ""
+  },
+  "HMW_022": {
+    "title": "Shield Generator Complex",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Vigilance"
+    ],
+    "traits": [
+      "Endor"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/022.png",
+    "imageUrlBack": ""
+  },
+  "HMW_023": {
+    "title": "Bright Tree Village",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Command"
+    ],
+    "traits": [
+      "Endor"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/023.png",
+    "imageUrlBack": ""
+  },
+  "HMW_024": {
+    "title": "Origin Tree",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Command"
+    ],
+    "traits": [
+      "Kashyyyk"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/024.png",
+    "imageUrlBack": ""
+  },
+  "HMW_025": {
+    "title": "Theed Palace",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Command"
+    ],
+    "traits": [
+      "Naboo"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/025.png",
+    "imageUrlBack": ""
+  },
+  "HMW_026": {
+    "title": "Tusken Camp",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Command"
+    ],
+    "traits": [
+      "Tatooine"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/026.png",
+    "imageUrlBack": ""
+  },
+  "HMW_027": {
+    "title": "Bioweapons Lab",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Aggression"
+    ],
+    "traits": [
+      "Naboo"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/027.png",
+    "imageUrlBack": ""
+  },
+  "HMW_028": {
+    "title": "Jundland Wastes",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Aggression"
+    ],
+    "traits": [
+      "Tatooine"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/028.png",
+    "imageUrlBack": ""
+  },
+  "HMW_029": {
+    "title": "Dendroid Wilds",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Aggression"
+    ],
+    "traits": [
+      "Endor"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/029.png",
+    "imageUrlBack": ""
+  },
+  "HMW_030": {
+    "title": "Shadowlands",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Aggression"
+    ],
+    "traits": [
+      "Kashyyyk"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/030.png",
+    "imageUrlBack": ""
+  },
+  "HMW_031": {
+    "title": "Kyyyalstaad Swamp",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Cunning"
+    ],
+    "traits": [
+      "Kashyyyk"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/031.png",
+    "imageUrlBack": ""
+  },
+  "HMW_032": {
+    "title": "Mos Eisley",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Cunning"
+    ],
+    "traits": [
+      "Tatooine"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/032.png",
+    "imageUrlBack": ""
+  },
+  "HMW_033": {
+    "title": "Otoh Gunga",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Cunning"
+    ],
+    "traits": [
+      "Naboo"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/033.png",
+    "imageUrlBack": ""
+  },
+  "HMW_034": {
+    "title": "Research Station 9",
+    "subtitle": "",
+    "type": "Base",
+    "type2": "",
+    "arena": "",
+    "cost": null,
+    "power": null,
+    "hp": 30,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Cunning"
+    ],
+    "traits": [
+      "Endor"
+    ],
+    "text": "",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/034.png",
+    "imageUrlBack": ""
+  },
   "HMW_081": {
     "title": "Alliance Shield Generator",
     "subtitle": "",
@@ -190,6 +606,32 @@
     "rarity": "Common",
     "set": "HMW",
     "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/136.png",
+    "imageUrlBack": ""
+  },
+  "HMW_145": {
+    "title": "Origin Tree Shyyyo",
+    "subtitle": "",
+    "type": "Unit",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 6,
+    "power": 4,
+    "hp": 8,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Command"
+    ],
+    "traits": [
+      "Creature"
+    ],
+    "text": "Restore 1\nWhile you control a Kashyyyk base, the first, second, and third units you play each round cost [1 resource] less, [2 resources] less, and [3 resources] less, respectively.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": false,
+    "rarity": "Legendary",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/145.png",
     "imageUrlBack": ""
   },
   "HMW_162": {

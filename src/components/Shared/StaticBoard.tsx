@@ -50,7 +50,21 @@ function PlayerRow({ p, label, compact }: { p: PlayerBuilderState; label: string
       <div className="text-3xs font-semibold uppercase tracking-[0.2em] text-white/60">{label}</div>
       <div className="flex flex-wrap gap-3">
         {zone("Base", p.baseCardId
-          ? <CardTile cardId={p.baseCardId} sub={p.baseDamage > 0 ? `${p.baseDamage} dmg` : undefined} widthClass={w} />
+          ? <div className="flex flex-col gap-0.5">
+              <CardTile cardId={p.baseCardId} sub={p.baseDamage > 0 ? `${p.baseDamage} dmg` : undefined} widthClass={w} />
+              {/* Fortify upgrades and Arrest captives ride on the base; surfaced as counts so an
+                  authored puzzle previews them without expanding the tile. */}
+              {(p.baseUpgrades.length > 0 || p.baseCaptives.length > 0) && (
+                <div className="flex flex-wrap gap-1 text-4xs">
+                  {p.baseUpgrades.length > 0 && (
+                    <span className="rounded bg-slate-300/20 px-1 text-slate-200">Fortified {p.baseUpgrades.length}</span>
+                  )}
+                  {p.baseCaptives.length > 0 && (
+                    <span className="rounded bg-amber-500/20 px-1 text-amber-200">Arrested {p.baseCaptives.length}</span>
+                  )}
+                </div>
+              )}
+            </div>
           : <span className="text-3xs text-white/30">—</span>)}
         {zone("Leader", p.leaderCardId
           ? <CardTile

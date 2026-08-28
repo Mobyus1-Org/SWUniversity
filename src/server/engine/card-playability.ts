@@ -252,6 +252,43 @@ function redLeaderPilotDiscount(game: GameState, player: PlayerId, cardId: strin
 }
 
 /**
+ * HMW_145 Origin Tree Shyyyo — "While you control a Kashyyyk base, the first, second, and third
+ * units you play each round cost 1 less, 2 less, and 3 less, respectively."
+ *
+ * The rung is read from `cardsPlayedThisRound`, which already separates `playedAs: "Unit"` from
+ * Event / Upgrade / Pilot. That distinction is the ability's wording ("the first … UNITS you
+ * play") and it comes for free: an event between two units does not advance the ladder, and a
+ * Piloting card played as an upgrade neither takes a rung nor advances one.
+ *
+ * Two consequences of reading "while you control" as a live board check, both confirmed rulings:
+ *   - Shyyyo never discounts HIMSELF. His cost is computed while he is still in hand, so there is
+ *     no Shyyyo in play to satisfy the condition.
+ *   - He still COUNTS as a unit played, so after he lands the next unit is the second rung, not
+ *     the first.
+ *
+ * Multiple Shyyyos stack: each is an independent static ability, so two out means -2/-4/-6.
+ */
+function originTreeShyyyoDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Unit") return 0;
+
+  const p = player === 1 ? game.player1 : game.player2;
+  if (!TraitContains(p.base.cardId, "Kashyyyk")) return 0;
+
+  const shyyyoCount = [...p.groundArena, ...p.spaceArena]
+    .filter(u => u.cardId === "HMW_145" && !Unit.FromInterface(u).LostAbilities())
+    .length;
+  if (shyyyoCount === 0) return 0;
+
+  // Units played BEFORE this one — this card is not in the ledger until the play completes.
+  const unitsPlayed = game.roundState.cardsPlayedThisRound
+    .filter(e => e.fromPlayer === player && e.playedAs === "Unit")
+    .length;
+  const rung = unitsPlayed + 1;          // 1st, 2nd, 3rd …
+  if (rung > 3) return 0;                // the ladder ends at three
+  return rung * shyyyoCount;
+}
+
+/**
  * The full cost to play `cardId` from hand: printed cost + aspect penalty + taxes − discounts.
  * The single definition used by BOTH the playability check (what the UI offers) and the payment
  * path in dispatch-listener (what actually gets charged) — they must never disagree.
@@ -277,6 +314,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - reputableHunterDiscount(game, player, cardId)
     - jabbasRancorDiscount(game, player, cardId)
     - takeChargeDiscount(game, player, cardId)
+    - originTreeShyyyoDiscount(game, player, cardId)
   ;
 }
 

@@ -109,6 +109,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "SHD_099": amount += 2; break;//Echo
     case "SHD_250": amount += 2; break;//Tarfful
     case "SHD_259": amount += 2; break;//Twin Pod Cloud Car
+    case "HMW_145": amount += 1; break;//Origin Tree Shyyyo
     case "TWI_004": amount += 2; break;//Yoda - Sensing Darkness
     case "TWI_008": amount += 1; break;//Padme Amidala - Seving The Republic
     case "TWI_035": amount += 1; break;//Morgan Elsbeth

@@ -214,6 +214,24 @@ export class GameStateBuilder {
     return this;
   }
 
+  /** Fortify upgrades attached to a player's base (HMW_081, HMW_171). */
+  WithUpgradesOnBaseForPlayer(player: PlayerId, upgrades: CardInPlay[]): this {
+    const p = player === 1 ? this._raw.player1 : this._raw.player2;
+    p.base.upgrades = upgrades;
+    return this;
+  }
+
+  /** Units the base is holding captive (SEC_195 Arrest). Owner defaults to the opponent. */
+  WithCaptivesOnBaseForPlayer(player: PlayerId, cardIds: string[]): this {
+    const p = player === 1 ? this._raw.player1 : this._raw.player2;
+    const owner: PlayerId = player === 1 ? 2 : 1;
+    p.base.captives = cardIds.map(cardId => ({
+      cardId, playId: "@", owner, controller: owner,
+      ready: true, damage: 0, upgrades: [], captives: [], numUses: 0, isClone: false,
+    }));
+    return this;
+  }
+
   WithUpgradesOnGroundUnitForPlayer(
     player: PlayerId,
     unitIndex: number,

@@ -596,6 +596,90 @@ function CaptiveStrip({
   );
 }
 
+/**
+ * The sub-cards a base is hosting: Fortify upgrades ("Attach this to your base, not a unit") and
+ * captives the base took itself (SEC_195 Arrest).
+ *
+ * One component rather than markup inlined into each base block — the base renders in three
+ * layout variants, and the per-unit arena blocks are already a cautionary tale about copies
+ * drifting apart. A tab is hidden entirely at zero so an ordinary base is unchanged.
+ *
+ * Tapping a tab opens the cards; the open panel sits above a full-screen catcher so a click
+ * anywhere dismisses it, matching how the sticky card preview already behaves.
+ */
+function BaseSubcards({
+  base,
+  onPreviewStart,
+  onPreviewEnd,
+}: {
+  base: { upgrades?: { cardId: string; playId: string }[]; captives?: { cardId: string; playId: string }[] };
+  onPreviewStart: PreviewStart;
+  onPreviewEnd: () => void;
+}) {
+  const [open, setOpen] = React.useState<"fortified" | "arrested" | null>(null);
+  const upgrades = base.upgrades ?? [];
+  const captives = base.captives ?? [];
+
+  if (upgrades.length === 0 && captives.length === 0) return null;
+
+  const shown = open === "fortified" ? upgrades : open === "arrested" ? captives : [];
+
+  const tab = (
+    key: "fortified" | "arrested",
+    label: string,
+    count: number,
+    className: string,
+  ) => count === 0 ? null : (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); setOpen(open === key ? null : key); }}
+      className={`rounded px-1.5 py-0.5 text-4xs font-semibold uppercase tracking-wide transition ${className}`}
+    >
+      {label} {count}
+    </button>
+  );
+
+  return (
+    <div className="relative mt-0.5">
+      <div className="flex flex-wrap justify-center gap-1">
+        {tab("fortified", "Fortified", upgrades.length,
+          "bg-slate-300/20 text-slate-200 hover:bg-slate-300/35 border border-slate-300/40")}
+        {tab("arrested", "Arrested", captives.length,
+          "bg-[#DAA520]/20 text-[#DAA520] hover:bg-[#DAA520]/35 border border-[#DAA520]/50")}
+      </div>
+
+      {open !== null && (
+        <>
+          {/* Click-anywhere-to-minimise catcher, behind the panel and above everything else. */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(null)} />
+          <div className="absolute left-1/2 z-50 mt-1 w-max -translate-x-1/2 rounded-lg border border-white/20 bg-black/90 p-1.5 shadow-xl">
+            <div className="flex gap-1">
+              {shown.map((card) => {
+                const title = CardTitle(card.cardId);
+                const previewState: PreviewState = { imageId: card.cardId, cardId: card.cardId, label: title };
+                return (
+                  <div key={card.playId} className="w-16">
+                    <CardVisual
+                      cardId={card.cardId}
+                      selectable={false}
+                      onPreviewStart={onPreviewStart}
+                      onPreviewEnd={onPreviewEnd}
+                      compact
+                      square
+                    />
+                    <div className="mt-0.5 truncate text-center text-4xs text-white/60" title={title}>{title}</div>
+                    <span className="sr-only">{previewState.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ZonePanel({ title, subtitle, children, hideHeader = false }: { title: string; subtitle?: string; children: React.ReactNode; hideHeader?: boolean }) {
   return <section className={`rounded-xl border border-white/10 p-4 ${globalBackgroundStyle}`}>
     {!hideHeader ? <div className="mb-3 flex items-end justify-between gap-4">
@@ -1783,7 +1867,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     centerDamageBadge={opponent.base.damage}
                     epicUsed={opponent.base.epicActionUsed}
                     forceToken={opponent.supplemental.forceToken}
-                  />{spreadBaseControls("player2.base")}</div>
+                  />{spreadBaseControls("player2.base")}
+                  <BaseSubcards base={opponent.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1862,7 +1948,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     centerDamageBadge={opponent.base.damage}
                     epicUsed={opponent.base.epicActionUsed}
                     forceToken={opponent.supplemental.forceToken}
-                  />{spreadBaseControls("player2.base")}</div>
+                  />{spreadBaseControls("player2.base")}
+                  <BaseSubcards base={opponent.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+                  </div>
                 </div>
                 <div className="hidden xl:space-y-2 xl:block">
                   {!opponent.leader.deployed ? <CardVisual
@@ -1892,6 +1980,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                       forceToken={opponent.supplemental.forceToken}
                     />
                     {spreadBaseControls("player2.base")}
+                    <BaseSubcards base={opponent.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
                   </div>
                 </div>
               </div>
@@ -1975,7 +2064,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     centerDamageBadge={player.base.damage}
                     epicUsed={player.base.epicActionUsed}
                     forceToken={player.supplemental.forceToken}
-                  />{spreadBaseControls("player1.base")}</div>
+                  />{spreadBaseControls("player1.base")}
+                  <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+                  </div>
                 </div>
               </div>
 
@@ -2153,7 +2244,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     centerDamageBadge={player.base.damage}
                     epicUsed={player.base.epicActionUsed}
                     forceToken={player.supplemental.forceToken}
-                  />{spreadBaseControls("player1.base")}</div>
+                  />{spreadBaseControls("player1.base")}
+                  <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+                  </div>
                 </div>
                 <div className="hidden xl:space-y-2 xl:block">
                   <div className="relative">
@@ -2170,6 +2263,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                       forceToken={player.supplemental.forceToken}
                     />
                     {spreadBaseControls("player1.base")}
+                    <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
                   </div>
                   {!player.leader.deployed ? <CardVisual
                     cardId={player.leader.cardId}

@@ -4,7 +4,8 @@ import path from "node:path";
 // launcher cannot require() (ERR_REQUIRE_ESM). See vercel/next.js discussion #91663.
 import sharp from "sharp";
 import { promosToIgnore } from "@/server/engine/card-db/promosToIgnore";
-import { cardMocks, type MockCard } from "@/server/engine/card-db/card-mocks";
+import { type MockCard } from "@/server/engine/card-db/card-mocks";
+import { readMockFileAsync } from "@/server/engine/card-db/card-mocks-writer";
 import { mockToSwuAttributes } from "@/server/engine/card-db/mock-adapter";
 import { applyTraitSupplement, cardTraitSupplement } from "@/server/engine/card-db/card-trait-supplement";
 import type {
@@ -511,7 +512,12 @@ async function fetchResolvedCardsAsync(): Promise<ResolvedCardsResult> {
     currentPage += 1;
   }
 
-  const mockReport = mergeMocksIntoResolvedCards(resolvedCardAttributes, cardMocks);
+  // From DISK, not the imported `cardMocks`. Inside a live dev server that import is whatever the
+  // module cache last compiled, so a mock added moments earlier through the mock editor would be
+  // missing — silently dropping the newest card from the generated database. The mock WRITER
+  // already reads from disk for the same reason; this is the read side of that rule.
+  const mocksOnDisk = await readMockFileAsync();
+  const mockReport = mergeMocksIntoResolvedCards(resolvedCardAttributes, mocksOnDisk);
 
   const resolvedCardOverrides = await writeGeneratedOverridesModuleAsync(promoOverridesByCardId);
 
@@ -666,6 +672,8 @@ async function generateCardImagesFromResolvedCardsAsync(
   const { mkdir } = await import("node:fs/promises");
   await mkdir(GENERATED_CARD_IMAGE_FULL_DIR, { recursive: true });
   await mkdir(GENERATED_CARD_IMAGE_SQUARE_DIR, { recursive: true });
+  // From disk for the same reason as the database run — see mergeMocksIntoResolvedCards' caller.
+  const mocksForArt = await readMockFileAsync();
 
   const summary: CardImageGenerationSummary = {
     generatedAt: new Date().toISOString(),
@@ -696,7 +704,7 @@ async function generateCardImagesFromResolvedCardsAsync(
     // Mock art is written under a mock_ prefix so that official art, when it lands, has no file to
     // skip. The existing-file check must test the name that will actually be written, or a mocked
     // card re-downloads on every run.
-    const mock = cardMocks[cardId];
+    const mock = mocksForArt[cardId];
     const frontFileName = mock ? mockArtFileName(cardId) : `${cardId}.webp`;
     const backFileName = mock ? mockArtFileName(cardId, "_BACK") : `${cardId}_BACK.webp`;
 

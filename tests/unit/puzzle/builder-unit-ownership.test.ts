@@ -14,7 +14,7 @@ import type { Game } from "@/lib/engine/game";
 
 function player(overrides: Partial<PlayerBuilderState> = {}): PlayerBuilderState {
   return {
-    baseCardId: "SOR_029", baseDamage: 0, baseEpicActionUsed: false,
+    baseCardId: "SOR_029", baseDamage: 0, baseEpicActionUsed: false, baseUpgrades: [], baseCaptives: [],
     leaderCardId: "SOR_017", leaderReady: true, leaderDeployed: false, leaderEpicActionUsed: false,
     resources: [], handCards: [], deck: [], discard: [], groundUnits: [], spaceUnits: [],
     creditTokens: 0, forceToken: false,

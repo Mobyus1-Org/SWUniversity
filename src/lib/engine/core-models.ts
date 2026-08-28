@@ -39,6 +39,20 @@ export interface EpicActionCard extends Card {
 export interface Base extends EpicActionCard {
   damage: number;
   numUses: number;
+  /**
+   * Sub-cards hosted by the base, mirroring the same fields on Unit.
+   *
+   * `upgrades` are Fortify upgrades — "Attach this to your base, not a unit" (HMW_081, HMW_171).
+   * `captives` are units the BASE captured — SEC_195 Arrest, "Your base captures an enemy
+   * non-leader unit."
+   *
+   * Both are optional so states authored before they existed stay valid, which means every
+   * hand-written mirror of this interface has to be updated alongside it — the puzzle hydrator,
+   * the puzzle builder's toRaw/parseRawPlayer, and StaticBoard. An omission there typechecks
+   * clean and silently drops the field.
+   */
+  upgrades?: CardInPlay[];
+  captives?: Unit[];
 }
 
 export interface Leader extends EpicActionCard {

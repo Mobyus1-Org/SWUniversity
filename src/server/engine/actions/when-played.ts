@@ -952,6 +952,14 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "SEC_195": { // Arrest (Event) — "Your base captures an enemy non-leader unit. At the start
+                      // of the regroup phase, its owner rescues it." The rescue is handled by the
+                      // regroup-start hook, which releases every base captive.
+      const victims195 = GetUnitsForPlayer(GetOtherPlayer(player))
+        .filter(u => !CardIsLeader(u.cardId) && !UnitImmuneToEnemyCapture(Unit.FromInterface(u)));
+      if (victims195.length === 0) return null;
+      return mandatoryTarget(cardId, player, victims195.map(u => u.playId));
+    }
     case "LAW_217": { // Hold For Questioning — "Exhaust an enemy unit. If you do, look at its
                       // controller's hand and discard a card from it that shares an aspect with
                       // that unit." An already-exhausted unit is a legal target; the "if you do"

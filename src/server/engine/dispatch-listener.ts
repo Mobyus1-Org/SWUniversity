@@ -116,6 +116,8 @@ import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dict
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
+import { BaseTargetPlayer } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
+import { QueueUnitEnteredPlayReaction } from "@/server/engine/core-functions";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget } from "@/server/engine/core-functions";
@@ -357,6 +359,39 @@ function CaptureUnit(
   target: Unit,
   continuation: PendingResolution | null,
 ): PendingResolution | null {
+  return captureInto(game, log, captor.captives, captor.cardId, target, continuation);
+}
+
+/**
+ * SEC_195 Arrest — "Your base captures an enemy non-leader unit." The base is the captor, so the
+ * captive lives on `base.captives` rather than under a unit. Everything else about a capture is
+ * identical, hence the shared body.
+ */
+function CaptureUnitToBase(
+  game: GameState,
+  log: string[],
+  basePlayer: PlayerId,
+  target: Unit,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const base = GetPlayer(game, basePlayer).base;
+  base.captives ??= [];
+  return captureInto(game, log, base.captives, base.cardId, target, continuation);
+}
+
+/**
+ * One card captures another (CR 8.33): the captive leaves play facedown under the captor, losing
+ * its damage and upgrades. Tokens are set aside instead of being held. `held` is whichever
+ * captives array the captor keeps — a unit's or a base's.
+ */
+function captureInto(
+  game: GameState,
+  log: string[],
+  held: UnitInterface[],
+  captorCardId: string,
+  target: Unit,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
   removeFromArena(game, target.playId);
 
   if (target.IsTokenUnit()) {
@@ -370,8 +405,8 @@ function CaptureUnit(
 
   target.damage = 0;
   target.upgrades = [];
-  captor.captives.push(target);
-  log.push(`${CardTitle(captor.cardId)} captured ${CardTitle(target.cardId)}.`);
+  held.push(target);
+  log.push(`${CardTitle(captorCardId)} captured ${CardTitle(target.cardId)}.`);
   game.roundState.cardsPlayedThisPhase = game.roundState.cardsPlayedThisPhase.filter(e => e.playId !== target.playId);
   game.roundState.cardsEnteredPlayThisPhase = game.roundState.cardsEnteredPlayThisPhase.filter(e => e.playId !== target.playId);
 
@@ -726,6 +761,7 @@ function addToArena(
   const arena = (CardArena(cardId) ?? "Ground") as "Ground" | "Space";
   if (arena === "Ground") GetPlayer(game, player).groundArena.push(unit);
   else GetPlayer(game, player).spaceArena.push(unit);
+  QueueUnitEnteredPlayReaction(game, unit);
   return unit;
 }
 
@@ -1433,6 +1469,26 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
       default:
         return null;
     }
+  }
+
+  if (trigger.triggerType === "unit-entered-play") {
+    // HMW_171 Trap Field — "You may defeat this upgrade. If you do, deal 3 damage to that unit."
+    const trapBase = GetPlayer(game, trigger.fromPlayer).base;
+    const trap171 = (trapBase.upgrades ?? []).find(u => u.cardId === "HMW_171");
+    if (!trap171) return null; // already spent by an earlier unit entering play
+    const entered171 = GetUnitByPlayId(game, trigger.playId!);
+    if (!entered171) return null; // it left play before the trap could resolve
+    return {
+      type: "ability-option",
+      cardId: "HMW_171",
+      player: trigger.fromPlayer,
+      sourcePlayId: trigger.playId,
+      helperText: `Defeat ${CardTitle("HMW_171")} to deal 3 damage to ${CardTitle(entered171.cardId)}?`,
+      yesLabel: "Spring the trap",
+      noLabel: "Skip",
+      onYes: null,
+      continuation: null,
+    } satisfies AbilityOptionPending;
   }
 
   if (trigger.triggerType === "card-played-reaction") {
@@ -6134,6 +6190,24 @@ function handleChooseTarget(
     if (!pending.fromPlayIds.includes(chosen))
       return { response: invalidResponse(`Unit ${chosen} is not a valid upgrade target.`), pending, stateChanged: false };
 
+    // Fortify attaches to a BASE, which is not a unit and so is not in any arena.
+    const basePlayer = BaseTargetPlayer(chosen);
+    if (basePlayer !== null) {
+      const hostBase = GetPlayer(game, basePlayer).base;
+      hostBase.upgrades ??= [];
+      hostBase.upgrades.push({
+        cardId: pending.upgradeCardId,
+        playId: nextPlayId(game),
+        owner: pending.player,
+        controller: pending.player,
+      });
+      log.push(`${CardTitle(pending.upgradeCardId)} was attached to Player ${basePlayer}'s base.`);
+      updateDefeatedPlayers(game);
+      const bagBase = drainTriggerBag(game, log);
+      if (bagBase) return { response: resolutionResponse(pendingToResolution(bagBase, game)), pending: bagBase, stateChanged: true };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
     const targetUnit = GetUnitByPlayId(game, chosen);
     if (!targetUnit)
       return { response: invalidResponse("Target unit not found."), pending, stateChanged: false };
@@ -7704,7 +7778,8 @@ function thrawnsReveal(game: GameState, log: string[], deckOwner: PlayerId, thra
  */
 function rescueCaptiveByPlayId(game: GameState, log: string[], captivePlayId: string, fromCardId: string): boolean {
   for (const pState of [game.player1, game.player2]) {
-    for (const u of [...pState.groundArena, ...pState.spaceArena]) {
+    // Bases hold captives too (SEC_195 Arrest), so they are searched alongside the arenas.
+    for (const u of [pState.base as unknown as Unit, ...pState.groundArena, ...pState.spaceArena]) {
       const idx = (u.captives ?? []).findIndex(c => c.playId === captivePlayId);
       if (idx === -1) continue;
       const [captive] = u.captives.splice(idx, 1);
@@ -7943,6 +8018,21 @@ function applyAbilityOptionEffect(
         fromPlayIds: GetAllUnits(game).map(u => u.playId),
         continuation: pending.continuation ?? null,
       };
+    }
+    case "HMW_171": { // Trap Field Yes — defeat the upgrade, then deal 3 to the unit that entered.
+      const trapBase171 = GetPlayer(game, pending.player!).base;
+      const trap171 = (trapBase171.upgrades ?? []).find(u => u.cardId === "HMW_171");
+      if (!trap171) return pending.continuation ?? null; // spent in the meantime
+      trapBase171.upgrades = (trapBase171.upgrades ?? []).filter(u => u.playId !== trap171.playId);
+      const owner171 = (trap171.owner ?? trap171.controller ?? pending.player!) as PlayerId;
+      GetPlayer(game, owner171).discard.push({
+        ...trap171, controller: owner171, turnDiscarded: game.currentRound, discardEffect: "",
+      });
+      log.push(`${CardTitle("HMW_171")}: was defeated to spring the trap.`);
+      if (pending.sourcePlayId) {
+        DealDamageToUnit(game, "HMW_171", pending.sourcePlayId, 3, log);
+      }
+      return sweepDeadUnits(game, log, pending.continuation ?? null);
     }
     case "SEC_264": { // Clandestine Connections Yes — pay 2, then deal 2 to a base
       const unit264 = GetUnitByPlayId(game, pending.sourcePlayId!);
@@ -12872,6 +12962,15 @@ function applyAbilityEffect(
         mustDiscard: false, // a reveal only — nothing leaves their hand
         continuation: pending.continuation ?? null,
       } satisfies PeekHandPending;
+    }
+    case "SEC_195": { // Arrest — the chosen enemy unit is captured by the playing player's BASE.
+      if (!targetPlayId) break;
+      const victim195 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!victim195) break;
+      return CaptureUnitToBase(
+        game.currentGameState, game.gameLog, pending.player!,
+        Unit.FromInterface(victim195), pending.continuation ?? null,
+      );
     }
     case "LAW_217": { // Hold For Questioning — exhaust the enemy unit, then (only if that actually
                       // exhausted it) look at its controller's hand for an aspect-sharing discard.

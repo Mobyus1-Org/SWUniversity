@@ -1,6 +1,6 @@
 import { CardArena, CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
-import { GetUnitsForPlayer } from "@/server/engine/core-functions";
+import { GetUnitsForPlayer, QueueUnitEnteredPlayReaction } from "@/server/engine/core-functions";
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 
@@ -34,6 +34,8 @@ function spawnToken(game: GameState, player: PlayerId, cardId: string): Unit {
   const pState = player === 1 ? game.player1 : game.player2;
   if (arena === "Ground") pState.groundArena.push(unit);
   else pState.spaceArena.push(unit);
+  // "including token units" — HMW_171 Trap Field fires on tokens, which never reach addToArena.
+  QueueUnitEnteredPlayReaction(game, unit);
   return unit;
 }
 

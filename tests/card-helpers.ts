@@ -576,6 +576,7 @@ export const Cards = {
       chewbaccaMightyRescuer: "LAW_034", // 4/4 Ground Rebel/Wookiee, Overwhelm + When Attack Ends
     },
     ash: {
+      dinosaurTurtle: "ASH_131", // 7/7 Ground Creature, cost 6, Command only — clean cost fixture
       bWingRearguard: "ASH_078", // 3/5 Space Rebel Vehicle Fighter, conditional Sentinel
       lothalEWing: "ASH_057", // 2/3 Space New Republic Vehicle Fighter, conditional Restore 2
       antDroid: "ASH_116",
@@ -783,6 +784,10 @@ export const Cards = {
     law: {
       shadowOfStygeonPrime: "LAW_077", // Condition — attached unit can't ready
     },
+    hmw: {
+      allianceShieldGenerator: "HMW_081", // Fortify — prevents a 5+ damage hit on your base
+      trapField: "HMW_171",              // Fortify — 3 damage to a ground unit entering play
+    },
   },
   events: {
     shd: {
@@ -897,6 +902,7 @@ export const Cards = {
       aggressiveNegotiations: "SEC_179", // Attack with a unit, +1/+0 per card in hand
       hyperspaceDisaster: "SEC_078", // 7-cost: defeat all space units
       kreiasWhispers: "SEC_232",
+      arrest: "SEC_195", // Your base captures an enemy non-leader unit; rescued at regroup
       iAmTheSenate: "SEC_092",
       grassrootsResistance: "SEC_258",
       emergencyPowers: "SEC_040",

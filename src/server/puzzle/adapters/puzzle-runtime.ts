@@ -89,11 +89,17 @@ export function hydratePuzzleGame(raw: RawPuzzleGameState): GameState {
   }
 
   function hydrateBase(b: Record<string, unknown>): Base {
+    const upgrades = (b.upgrades ?? []) as Record<string, unknown>[];
+    const captives = (b.captives ?? []) as Record<string, unknown>[];
     return {
       cardId: b.cardId as string,
       epicActionUsed: Boolean(b.epicActionUsed),
       damage: Number(b.damage ?? 0),
       numUses: Number(b.numUses ?? 0),
+      // Fortify upgrades and base-held captives (Arrest). Always arrays, never undefined, so
+      // every consumer can iterate without a null guard.
+      upgrades: upgrades.map(hydrateUpgrade),
+      captives: captives.map(hydrateUnit),
     };
   }
 

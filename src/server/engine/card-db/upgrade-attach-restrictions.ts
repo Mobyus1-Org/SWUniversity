@@ -4,6 +4,7 @@ import { CardIsLeader, TraitContains } from "../core-functions";
 import { CardCost, CardIsUnique, CardType } from "@/server/engine/card-db/generated";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { LeaderDeployPilotThreshold } from "./keyword-dictionaries.ts/leader-pilot-deploy";
+import { BaseTargetId, HasFortify } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
 
 function ownUnits(game: GameState, player: PlayerId) {
   const p = player === 1 ? game.player1 : game.player2;
@@ -27,6 +28,11 @@ export function UpgradeEligibleTargets(
   game: GameState,
   player: PlayerId,
 ): string[] {
+  // Fortify — "Attach this to your base, not a unit." The only upgrade class whose host is not a
+  // unit, so it short-circuits before any of the unit filters below and stays playable even with
+  // an empty board.
+  if (HasFortify(upgradeCardId)) return [BaseTargetId(player)];
+
   const friendly = ownUnits(game, player);
   const everyone = allUnits(game);
 

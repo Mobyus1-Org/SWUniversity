@@ -1,6 +1,6 @@
 import type { GameState, PlayerState } from "@/lib/engine/game";
 import type { DiscardedCard, PlayerId } from "@/lib/engine/core-models";
-import { CardTitle, CardHp, CardUpgradeHp } from "@/server/engine/card-db/generated";
+import { CardArena, CardTitle, CardHp, CardUpgradeHp } from "@/server/engine/card-db/generated";
 import { DealDamageToBase, DefeatResource, QueueWhenDiscardedTrigger, ReadyUnit } from "@/server/engine/core-functions";
 
 function ps(gs: GameState, player: PlayerId): PlayerState {
@@ -32,6 +32,39 @@ const REGROUP_START_BASE_DAMAGE_UPGRADES: Record<string, number> = {
  * Damage is applied first and dead units swept once, so a unit that kills itself here does not
  * linger at 0 HP into the new round.
  */
+/**
+ * SEC_195 Arrest — "At the start of the regroup phase, its owner rescues it."
+ *
+ * Releases every captive a BASE is holding. Arrest is the only way a base takes one, so
+ * "release them all" and "release the one Arrest took" are the same thing; a future base-capture
+ * card that holds indefinitely would need its own marker.
+ *
+ * A rescued unit returns to its OWNER's arena exhausted, the same terms as a captor unit leaving
+ * play, and its controller is reset so a stale take-control value cannot survive the rescue.
+ */
+function releaseBaseCaptives(gs: GameState, log: string[]): void {
+  for (const player of [1, 2] as PlayerId[]) {
+    const base = ps(gs, player).base;
+    const held = base.captives ?? [];
+    if (held.length === 0) continue;
+    for (const captive of held) {
+      const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
+      const rescued = { ...captive, controller: captive.owner, ready: false };
+      const ownerState = ps(gs, captive.owner);
+      if (arena === "Ground") ownerState.groundArena.push(rescued);
+      else ownerState.spaceArena.push(rescued);
+      gs.roundState.cardsEnteredPlayThisPhase.push({
+        fromPlayer: captive.owner,
+        cardId: captive.cardId,
+        playId: captive.playId,
+        reason: "returned-to-play",
+      });
+      log.push(`${CardTitle(captive.cardId)} was rescued from Player ${player}'s base and returned to Player ${captive.owner}'s arena exhausted.`);
+    }
+    base.captives = [];
+  }
+}
+
 function resolveRegroupStartUnitAbilities(gs: GameState, log: string[]): void {
   for (const player of [1, 2] as PlayerId[]) {
     const p = ps(gs, player);
@@ -78,6 +111,7 @@ function resolveRegroupStartUnitAbilities(gs: GameState, log: string[]): void {
 }
 
 export function executeRegroupDraw(gs: GameState, log: string[]): void {
+  releaseBaseCaptives(gs, log);
   resolveRegroupStartUnitAbilities(gs, log);
 
   // SHD_015 Doctor Aphra (leader): "When the regroup phase starts: Discard a card from your deck."
