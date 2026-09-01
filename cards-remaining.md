@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 853 cards across 10 sets.**
+**Total: 852 cards across 10 sets.**
 
 ---
 
@@ -98,7 +98,7 @@ SHD_260: Street Gang Recruiter Unit
 SHD_262: Confiscate Event
 ```
 
-## TWI — Twilight of the Republic (100)
+## TWI — Twilight of the Republic (99)
 
 **Message 1 of 3**
 ```
@@ -173,7 +173,6 @@ TWI_160: Vanguard Droid Bomber Unit
 TWI_163: Relentless Rocket Droid Unit
 TWI_168: Old Access Codes Upgrade
 TWI_171: Grenade Strike Event
-TWI_173: Blood Sport Event
 TWI_174: Open Fire Event
 TWI_175: Strategic Analysis Event
 TWI_176: Caught in the Crossfire Event

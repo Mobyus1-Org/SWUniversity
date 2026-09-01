@@ -1021,6 +1021,21 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies SpreadHealPending;
     }
+    case "TWI_173": { // Blood Sport (Event) — "Deal 2 damage to each ground unit."
+      // Both sides' ground arenas, the caster's own units included. playIds are collected before
+      // any damage lands so this resolves as one simultaneous hit rather than a moving target.
+      const ground173 = [
+        ...game.currentGameState.player1.groundArena,
+        ...game.currentGameState.player2.groundArena,
+      ].map(u => u.playId);
+      for (const playId of ground173) {
+        DealDamageToUnit(game.currentGameState, "TWI_173", playId, 2, game.gameLog);
+      }
+      if (ground173.length > 0) {
+        game.gameLog.push(`${CardTitle("TWI_173")}: dealt 2 damage to each ground unit.`);
+      }
+      return null;
+    }
     case "SHD_160": //Reckless Gunslinger "When Played: Deal 1 damage to each base."
       return null;
     case "TWI_237": { // Droid Deployment — "Create 2 Battle Droid tokens."

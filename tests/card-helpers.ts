@@ -865,6 +865,7 @@ export const Cards = {
       cunning: "SOR_203",
     },
     twi: {
+      bloodSport: "TWI_173", // Deal 2 damage to each ground unit
       christophsis: "TWI_078",
       vanquish: "TWI_077",
       waylay: "TWI_226", // reprint of SOR_222

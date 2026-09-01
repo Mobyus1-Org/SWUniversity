@@ -4138,6 +4138,14 @@ function buildPrydeIndirectReactions(
   return chain;
 }
 
+/**
+ * Events whose When Played damages units with no target prompt, so their resolution returns null
+ * and no later step would otherwise clear what they killed.
+ */
+const EVENT_DAMAGES_UNITS_UNTARGETED = new Set([
+  "TWI_173", // Blood Sport — 2 damage to each ground unit
+]);
+
 function completePlayCard(
   game: GameState,
   log: string[],
@@ -4385,6 +4393,16 @@ function completePlayCard(
         const nextPending = resolveWhenPlayed(cardId, player);
         if (nextPending) {
           return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
+        }
+        // Only a card that just dealt untargeted damage sweeps here. NOT unconditional: the
+        // engine deliberately tolerates a 0-HP unit sitting in play (a fixture can park one
+        // there), so sweeping after every event would defeat units this card never touched.
+        // A targeted event sweeps from applyAbilityEffect instead.
+        if (EVENT_DAMAGES_UNITS_UNTARGETED.has(cardId)) {
+          const sweptEvent = sweepDeadUnits(game, log, null);
+          if (sweptEvent) {
+            return { response: resolutionResponse(pendingToResolution(sweptEvent, game)), pending: sweptEvent, stateChanged: false };
+          }
         }
       }
     }
@@ -8300,13 +8318,15 @@ function applyAbilityOptionEffect(
       } satisfies DiscardFromHandPending;
     }
     case "SOR_173": { // Bombing Run Yes: deal 3 to each ground unit.
-      for (const u of [...game.player1.groundArena, ...game.player2.groundArena]) {
-        u.damage += 3;
-        MarkUnitDamaged(game, u.playId);
+      // Through DealDamageToUnit, not a raw `damage +=`: that skipped Shield absorption, damage
+      // prevention and the when-unit-takes-damage trigger, and left the units it killed sitting
+      // at 0 HP. playIds are taken first so this lands as one simultaneous hit.
+      const ground173 = [...game.player1.groundArena, ...game.player2.groundArena].map(u => u.playId);
+      for (const playId of ground173) {
+        DealDamageToUnit(game, "SOR_173", playId, 3, log);
       }
       log.push(`${CardTitle("SOR_173")}: dealt 3 damage to each ground unit.`);
-      updateDefeatedPlayers(game);
-      return pending.continuation ?? null;
+      return sweepDeadUnits(game, log, pending.continuation ?? null);
     }
     case "SOR_067": { // Rugged Survivors Yes: draw a card.
       DrawCardForPlayer(game, log, pending.player!);
@@ -8482,14 +8502,13 @@ function applyAbilityOptionDeclineEffect(
         continuation: pending.continuation ?? null,
       } satisfies DiscardFromHandPending;
     }
-    case "SOR_173": { // Bombing Run No: deal 3 to each space unit.
-      for (const u of [...game.player1.spaceArena, ...game.player2.spaceArena]) {
-        u.damage += 3;
-        MarkUnitDamaged(game, u.playId);
+    case "SOR_173": { // Bombing Run No: deal 3 to each space unit. See the Ground half above.
+      const space173 = [...game.player1.spaceArena, ...game.player2.spaceArena].map(u => u.playId);
+      for (const playId of space173) {
+        DealDamageToUnit(game, "SOR_173", playId, 3, log);
       }
       log.push(`${CardTitle("SOR_173")}: dealt 3 damage to each space unit.`);
-      updateDefeatedPlayers(game);
-      return pending.continuation ?? null;
+      return sweepDeadUnits(game, log, pending.continuation ?? null);
     }
     case "SOR_221": { // Outmaneuver No: exhaust each space unit.
       for (const u of [...game.player1.spaceArena, ...game.player2.spaceArena]) {
