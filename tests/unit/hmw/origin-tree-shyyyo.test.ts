@@ -266,6 +266,114 @@ describe("HMW_145 Origin Tree Shyyyo", () => {
     expect(readyResources(g)).toBe(0); // the cost-6 unit cost exactly the 1 remaining resource
   });
 
+  it("two copies stack — the rung doubles", async () => {
+    // Shyyyo is NON-unique and each copy is its own static ability, so the ladder is
+    // (rung x copies): two out means -2 / -4 / -6.
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      board(9)
+        .WithGroundUnitForPlayer(1, SHYYYO)
+        .WithGroundUnitForPlayer(1, SHYYYO)
+        .WithCardInHandForPlayer(1, MID)
+        .WithCardInHandForPlayer(1, MID)
+        .Build(),
+    );
+
+    await play(g);                       // cost 3 - 2 = 1
+    expect(readyResources(g)).toBe(8);
+    await g.playCardFromHandAsync(1, 0); // cost 3 - 4 → floored at 0
+    expect(readyResources(g)).toBe(8);
+  });
+
+  it("three copies give 3 / 6 / 9", async () => {
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      board(9)
+        .WithGroundUnitForPlayer(1, SHYYYO)
+        .WithGroundUnitForPlayer(1, SHYYYO)
+        .WithGroundUnitForPlayer(1, SHYYYO)
+        .WithCardInHandForPlayer(1, Cards.units.ash.dinosaurTurtle) // cost 6
+        .Build(),
+    );
+
+    await play(g); // 6 - 3 = 3
+
+    expect(readyResources(g)).toBe(6);
+  });
+
+  it("a copy that has lost its abilities stops contributing", async () => {
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      board(9)
+        .WithGroundUnitForPlayer(1, SHYYYO)
+        .WithGroundUnitForPlayer(1, SHYYYO)
+        .WithCardInHandForPlayer(1, MID)
+        .Build(),
+    );
+    g.state.currentEffects.push({
+      cardId: "SOR_138", // Force Lightning
+      duration: "Phase",
+      affectedPlayer: 1,
+      targetPlayId: g.state.player1.groundArena[0].playId,
+    });
+
+    await play(g); // one Shyyyo left: cost 3 - 1 = 2
+
+    expect(readyResources(g)).toBe(7);
+  });
+
+  it("a unit Kelleran Beq puts into play ADVANCES the ladder for the next one", async () => {
+    // QA: "it's not counting the unit played by Kelleran Beq as one of the played units."
+    //
+    // A unit that arrives through a deck-search "play" is still a unit you played, so it takes a
+    // rung AND advances the ladder. The previous test proves it takes one; this one proves it
+    // advances one, which is the half that was missing:
+    //   Beq (cost 7)          → 1st rung, -1 → 6
+    //   Dinosaur Turtle (6)   → 2nd rung, -2, plus Beq's -3 → 1
+    //   Crix Madine (cost 3)  → 3rd rung, -3 → 0     ← free only if the fetch advanced the ladder
+    // Priced at the 2nd rung instead, Crix would cost 1 and leave a resource behind.
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      board(8)
+        .WithGroundUnitForPlayer(1, SHYYYO)
+        .WithCardInHandForPlayer(1, Cards.units.lof.kelleranBeq)
+        .WithCardInHandForPlayer(1, MID)
+        .WithCardInDeckForPlayer(1, Cards.units.ash.dinosaurTurtle)
+        .Build(),
+    );
+
+    await g.playCardFromHandAsync(1, 0);          // Beq — rung 1
+    await g.chooseDeckSearchAsync(1, ["0"]);      // Dinosaur Turtle — rung 2
+    expect(readyResources(g)).toBe(1);            // 8 - 6 - 1
+
+    await g.dispatchAsync(2, "pass-action", {});
+    await g.playCardFromHandAsync(1, 0);          // Crix Madine — must be rung 3
+
+    expect(g.state.player1.groundArena.map(u => u.cardId)).toContain(MID);
+    expect(readyResources(g)).toBe(1);            // cost 3 - 3 = free
+  });
+
+  it("a searched-in unit is recorded as a unit played this round", async () => {
+    // The ledger entry itself, independent of pricing — `playedAs: "Unit"` is what the ladder and
+    // every other round-scoped reader keys off.
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      board(8)
+        .WithGroundUnitForPlayer(1, SHYYYO)
+        .WithCardInHandForPlayer(1, Cards.units.lof.kelleranBeq)
+        .WithCardInDeckForPlayer(1, Cards.units.ash.dinosaurTurtle)
+        .Build(),
+    );
+
+    await g.playCardFromHandAsync(1, 0);
+    await g.chooseDeckSearchAsync(1, ["0"]);
+
+    const played = g.state.roundState.cardsPlayedThisRound
+      .filter(e => e.fromPlayer === 1 && e.playedAs === "Unit")
+      .map(e => e.cardId);
+    expect(played).toEqual([Cards.units.lof.kelleranBeq, Cards.units.ash.dinosaurTurtle]);
+  });
+
   it("a Pilot played as an upgrade neither takes a rung nor advances one", async () => {
     // JTL_057's PILOTING cost is 2 (its unit cost is 1) and the attach path charges the piloting
     // cost, which never runs the play-cost discount stack. 4 ready → 2. The cost-3 unit after it

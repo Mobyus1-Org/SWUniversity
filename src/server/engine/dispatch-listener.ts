@@ -1257,6 +1257,10 @@ function addUnitFromSearch(game: GameState, log: string[], cardId: string, playe
   const unit = addToArena(game, player, cardId, false);
   log.push(`${CardTitle(cardId) ?? cardId} entered play ${costDesc}.`);
   game.roundState.cardsPlayedThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId });
+  // A searched-in unit is still a unit you PLAYED, so it joins the round ledger too — the two are
+  // always written together. Round-scoped readers key off `playedAs`, and omitting this made
+  // HMW_145 Origin Tree Shyyyo's ladder skip a rung for anything fetched by a deck search.
+  game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: unit.playId, playedAs: "Unit" });
   game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId, reason: "played" });
   const nested = game.triggerBag.length > 0;
   if (HasShielded(cardId, unit.playId, player)) {
