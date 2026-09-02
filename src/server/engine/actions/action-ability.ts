@@ -1,11 +1,12 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllUnits, AttackedThisPhasePlayIds, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllUnits, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { CardTraits, CardCost, CardType, CardAspects } from "@/server/engine/card-db/generated";
 import { AllSpaceUnits } from "@/server/engine/core-functions";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
 import { PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
+import { UnitsWithoutWeaknessToken } from "@/server/engine/token-helpers";
 
 /**
  * Every unit (either side) whose power is below that of at least one unit `player` controls —
@@ -107,6 +108,25 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         if (AllUnits().some(u => TraitContains(u.cardId, "Droid", u.controller, u.playId))) {
           abilities.push(cardId);
         }
+        break;
+      }
+      case "HMW_010": // Tarfful — Action [2 resources, Exhaust, discard a card from your hand]:
+                      // create a Beast token. The discard is part of the COST, so an empty hand
+                      // makes the Action unusable however many resources are held.
+        if (GetHand(player).length > 0 && GetResources(player, true).length >= 2) abilities.push(cardId);
+        break;
+      case "HMW_003": { // Doctor Hemlock — Action [1 resource, Exhaust]: give a Weakness token to a
+                        // unit WITHOUT one. A board where every unit already has one leaves no
+                        // legal target, so the Action is not offered.
+        const eligible003 = UnitsWithoutWeaknessToken(AllUnits());
+        if (eligible003.length > 0 && GetResources(player, true).length > 0) abilities.push(cardId);
+        break;
+      }
+      case "HMW_009": { // Chewbacca — Action [2 resources, Exhaust]: attack with a unit, even if
+                        // exhausted. Exhausted units are eligible, so this deliberately does NOT
+                        // use the readyOnly filter every other attack-with ability uses.
+        const attackers009 = GetUnitsForPlayer(player).filter(u => CanUnitAttack(u));
+        if (attackers009.length > 0 && GetResources(player, true).length >= 2) abilities.push(cardId);
         break;
       }
       case "TWI_010": { // Pre Vizsla — Action [1 resource, Exhaust]: damage a unit equal to the
@@ -302,6 +322,14 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
           abilities.push(cardId);
         }
         break;
+      case "HMW_009": { // Chewbacca (deployed) — plain "Action:", free, once each round.
+        const attackers009 = GetUnitsForPlayer(player).filter(u => CanUnitAttack(u));
+        const used009 = game.currentGameState.currentEffects.some(
+          e => e.cardId === "HMW_009_usedThisRound" && e.affectedPlayer === player,
+        );
+        if (attackers009.length > 0 && !used009) abilities.push(cardId);
+        break;
+      }
       case "SHD_017": //Lando Calrissian - With Impeccable Taste (deployed: once each round)
         if (PlayerHasCardsToSmuggle(player) && !LandoUsedThisRound(player)) {
           abilities.push(cardId);
@@ -414,6 +442,7 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
  */
 export function ActionAbilityExhausts(abilityId: string): boolean {
   switch (abilityId) {
+    case "HMW_009":   // Chewbacca (deployed) — plain "Action:", limited once each round
     case "SHD_017":   // Lando Calrissian (deployed) — plain "Action:", limited once each round
     case "SHD_087-1": // Crosshair — "Action [2 resources]", no exhaust in the cost
     case "LAW_015":   // Jabba the Hutt (deployed) — plain "Action:"; the undeployed side's
@@ -468,6 +497,9 @@ export function ActionAbilityCost(cardId: string): number {
       return 1;
     case "SHD_009"://Hunter - Outcast Sergeant
       return 1;
+    case "HMW_010"://Tarfful — Action [2 resources, …]. Safe here: his deployed side is an On
+                   //Attack, not an Action, so the two sides share no ability cost.
+      return 2;
     case "TWI_010"://Pre Viszla
       return 1;
     case "SEC_011"://Governor Pryce

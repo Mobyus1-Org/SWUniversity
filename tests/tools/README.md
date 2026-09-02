@@ -86,6 +86,31 @@ puzzle carries a `roundState`, so every puzzle runs on the fallback defaults in
 every puzzle at once — that is exactly how every draw effect in every puzzle came to throw
 "Unable to process dispatch."
 
+### `import-swusim-mocks.mjs` — convert SWUSim card mocks into this repo
+
+The sibling SWUSim project keeps its preview definitions in `AppCore/SWU/CardMocks.php` (a PHP
+`var_export` array). This converts entries into `card-mocks.json`'s schema.
+
+```bash
+S=~/Documents/GitHub/Karabast-SWU/OTMTCGE/AppCore/SWU/CardMocks.php
+node tests/tools/import-swusim-mocks.mjs $S --set HMW --list       # what is available
+node tests/tools/import-swusim-mocks.mjs $S HMW_T02 HMW_T03        # print the conversion
+node tests/tools/import-swusim-mocks.mjs $S --set HMW --only-new --write
+```
+
+**It prints by default and writes only with `--write`** — a mock is checked-in data that drives the
+generated card database, so it deserves a read first. That caught a real bug on the first run: an
+empty `aspect => array()` let a lazy regex swallow the NEXT key's items, filing every trait as an
+aspect.
+
+**Use `--only-new` for a bulk import.** Our entries have been corrected against the printed cards;
+the SWUSim copies of the same ids carry "Kashirho" for Kachirho, "Captivaling" for Captivating, a
+mangled Fortify reminder, and an IC27 image URL on an HMW card. A blanket overwrite imports those
+regressions on top of data the implementations and tests were built against.
+
+After writing, the user must run **Fetch SWU Cards + Images** in `/internal/zzCardCodeGenerator` —
+nothing reaches the engine until `generated.ts` is regenerated.
+
 ### `card-db.mjs`
 
 Shared parser for `generated.ts`. Not a CLI — import `loadCards()` / `findById()` / `formatCard()`

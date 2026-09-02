@@ -21,6 +21,7 @@ export type TriggerType =
   | "enemy-unit-defeated"
   | "use-the-force"  // reaction to its controller using the Force (e.g. LOF_260 The Father)
   | "unit-entered-play"  // reaction to any unit entering play, tokens included (e.g. HMW_171 Trap Field)
+  | "dealt-heavy-damage"  // reaction to dealing one instance of N+ damage (e.g. HMW_011 Darth Sidious)
 
 export interface TriggerEntry {
   triggerType: TriggerType;
@@ -37,7 +38,8 @@ export type TriggerContext =
   | WhenUnitTakesDamageContext
   | WhenBaseDamagedContext
   | WhenUpgradeDetachedContext
-  | CardPlayedContext;
+  | CardPlayedContext
+  | DealtHeavyDamageContext;
 
 export interface WhenDefeatedContext {
   defeatedUnit: Unit;
@@ -53,6 +55,15 @@ export interface WhenUnitTakesDamageContext {
   damageSource: Unit | PlayerId;
   target: Unit;
   damageTaken: number;
+}
+
+/** What a `dealt-heavy-damage` reaction just hit, so "a DIFFERENT unit or base" can exclude it. */
+export interface DealtHeavyDamageContext {
+  amount: number;
+  /** The damaged unit's playId, or undefined when a base was hit. */
+  damagedPlayId?: string;
+  /** The damaged base's owner, or undefined when a unit was hit. */
+  damagedBasePlayer?: PlayerId;
 }
 
 export interface WhenBaseDamagedContext {

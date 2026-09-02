@@ -133,6 +133,12 @@ export const Cards = {
       chancellorPalpatine: "TWI_017",
       quinlanVos: "TWI_018",
     },
+    hmw: {
+      chewbacca: "HMW_009",     // Relentless Rebel
+      tarfful: "HMW_010",       // Fighting from the Shadowlands
+      doctorHemlock: "HMW_003", // Emotion Has No Place Here
+      darthSidious: "HMW_011",  // There is No Mercy
+    },
     jtl: {
       asajjVentress: "JTL_001",
       grandAdmiralThrawn: "JTL_002",
@@ -241,6 +247,8 @@ export const Cards = {
       xWing: "JTL_T02",
       spy: "SEC_T01",
       mandalorian: "ASH_T01",
+      beast: "HMW_T03",       // 3/3 Ground Creature token
+      weakness: "HMW_T02",    // -1/-1 upgrade token (Condition)
     },
     sor: {
       consularSecurityForce: "SOR_046", // 3/7 Ground, no abilities — a durable test defender

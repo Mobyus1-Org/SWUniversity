@@ -96,6 +96,17 @@ export function CreateMandalorianToken(game: GameState, player: PlayerId, gameLo
   return unit;
 }
 
+/** HMW_T03 Beast — a 3/3 Ground Creature token (HMW_010 Tarfful, Beast Lair, and friends). */
+export function CreateBeast(game: GameState, player: PlayerId, gameLog: string[], fromCardId?: string): Unit {
+  if (fromCardId) {
+    gameLog.push(`${CardTitle(fromCardId)}: created a Beast token.`);
+  } else {
+    gameLog.push("Created a Beast token.");
+  }
+
+  return spawnToken(game, player, "HMW_T03");
+}
+
 export function CreateSpy(gamestate: GameState, player: PlayerId, gameLog: string[], fromCardId?: string): Unit {
   if (fromCardId) {
     gameLog.push(`${CardTitle(fromCardId)}: created a Spy token.`);
@@ -135,6 +146,37 @@ export function GiveAdvantageTokens(
 
 /** The Experience token upgrade (+1/+1). */
 const EXPERIENCE_TOKEN = "SOR_T01";
+const WEAKNESS_TOKEN = "HMW_T02";
+
+/**
+ * HMW_T02 Weakness — a −1/−1 UPGRADE token (HMW_003 Doctor Hemlock, and the rest of the HMW
+ * Weakness cards). Attaches like an Experience token; the stat change needs no code here because
+ * UpgradePowerOf / UpgradeHpOf already read the generated maps and −1 sums like any other upgrade.
+ *
+ * ⚠ Unlike every other token, this one can be LETHAL: it is the only upgrade in the engine that
+ * LOWERS its host's HP, so a 1-HP unit dies the moment it is attached. Callers must sweep after
+ * attaching — `sweepDeadUnits` — which is why this helper does not pretend to be fire-and-forget.
+ */
+export function GiveWeaknessToken(
+  game: GameState,
+  target: UnitInterface,
+  gameLog: string[],
+  fromCardId?: string,
+): void {
+  target.upgrades.push({
+    cardId: WEAKNESS_TOKEN,
+    playId: String(game.nextPlayId++),
+    owner: target.owner,
+    controller: target.controller,
+  });
+  const prefix = fromCardId ? `${CardTitle(fromCardId)}: ` : "";
+  gameLog.push(`${prefix}gave a Weakness token to ${CardTitle(target.cardId)}.`);
+}
+
+/** Units that do NOT already carry a Weakness token — Hemlock's leader-side target restriction. */
+export function UnitsWithoutWeaknessToken(units: UnitInterface[]): UnitInterface[] {
+  return units.filter(u => !(u.upgrades ?? []).some(x => x.cardId === WEAKNESS_TOKEN));
+}
 
 /**
  * Attaches `count` Experience tokens to `target`. The token is an upgrade owned and controlled by

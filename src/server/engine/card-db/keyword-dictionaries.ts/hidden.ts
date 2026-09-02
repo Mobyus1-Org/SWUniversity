@@ -86,6 +86,7 @@ export function HasHidden(cardId: string, playId?: string, player?: PlayerId, is
     case "LAW_260"://Seasoned Tracker
     case "ASH_166"://Ewok Warrior
     case "ASH_213"://Womp Rat
+    case "HMW_011"://Darth Sidious (deployed leader unit)
     case "ASH_225"://Tatooine Sand Beast
     case "ASH_244"://Remnant Trooper Corps
     case "ASH_249"://Covert Veteran

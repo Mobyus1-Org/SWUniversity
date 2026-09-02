@@ -754,6 +754,7 @@ export function DealDamageToBase(gs: GameState, player: PlayerId, amount: number
     gs.roundState.baseDamagedThisPhase.push({ byPlayer, target: player, amount });
   }
   QueueWhenBaseDamagedReaction(gs, player, amount);
+  QueueHeavyDamageReaction(gs, byPlayer, amount, { damagedBasePlayer: player });
 }
 
 /**
@@ -1433,6 +1434,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "LAW_011": //Darth Vader (deployed) — On Attack: discard any number, deal that much damage
     case "TWI_246": //Tranquility — On Attack: next 3 Republic cards this phase cost 1 less
     case "TWI_203": //Chancellor Palpatine (Wartime Chancellor) — On Attack: create a Clone Trooper if a unit left play
+    case "HMW_003": //Doctor Hemlock (deployed) — On Attack: may give a Weakness token to a unit
+    case "HMW_010": //Tarfful (deployed) — On Attack: may pay 1 to create a Beast token
     case "LAW_214": //Boba Fett (For a Price) — On Attack: may pay 1 to deal 3 to a ground unit
     case "ASH_248": //Neel — On Attack: next unit with 1 or less power enters play ready
     case "SEC_188": //Darth Traya — On Attack: may ready a non-unit leader
@@ -1856,6 +1859,10 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
 
   // Rancor Keeper (ASH_032): "When a friendly unit is dealt damage and survives" — ability damage path.
   QueueRancorKeeperReaction(gs, target);
+
+  // HMW_011 Darth Sidious — "when you deal 4 or more damage". `amount` here is post-prevention,
+  // so a hit a Shield swallowed never reaches the threshold.
+  QueueHeavyDamageReaction(gs, sourcePlayer, amount, { damagedPlayId: target.playId });
 }
 
 /**
@@ -1886,6 +1893,47 @@ export function QueueRancorKeeperReaction(gs: GameState, damaged: Unit): void {
  * instance of damage applied (not per point) — call this once per application site regardless of
  * `amount`, mirroring how QueueRancorKeeperReaction/QueueJangoDamageReaction fire once per hit.
  */
+/**
+ * HMW_011 Darth Sidious — "When you deal 4 or more damage to a unit or a base: …"
+ *
+ * The threshold is ONE INSTANCE of 4+ damage, not a running total, and the actor is the PLAYER,
+ * so this is queued from every site where damage lands and a source can be established:
+ * both combat applications in resolveAttack, DealDamageToUnit and DealDamageToBase.
+ *
+ * ⚠ `sourcePlayer` is optional on both damage helpers and undefined for most callers, so it falls
+ * back to `roundState.actingPlayer` — during your own action, damage your cards deal is damage you
+ * dealt. Combat passes the controller explicitly and never needs the fallback.
+ *
+ * Fires for the LEADER side (undeployed and ready, since exhausting it is the cost) or the
+ * DEPLOYED side (a unit in play, which pays nothing).
+ */
+export function QueueHeavyDamageReaction(
+  gs: GameState,
+  sourcePlayer: PlayerId | undefined,
+  amount: number,
+  hit: { damagedPlayId?: string; damagedBasePlayer?: PlayerId },
+): void {
+  if (amount < 4) return;
+  const actor = sourcePlayer ?? gs.roundState.actingPlayer;
+  if (actor === undefined) return;
+  const pState = actor === 1 ? gs.player1 : gs.player2;
+  const deployedUnit = [...pState.groundArena, ...pState.spaceArena].find(u => u.cardId === "HMW_011");
+  const leaderSide = pState.leader.cardId === "HMW_011" && !pState.leader.deployed && pState.leader.ready;
+  if (!leaderSide && !deployedUnit) return;
+  gs.triggerBag.push({
+    triggerType: "dealt-heavy-damage",
+    cardId: "HMW_011",
+    fromPlayer: actor,
+    // Which SIDE triggered, decided now. The deployed side pays nothing, so it still resolves if
+    // Sidious dies before the bag drains — an already-triggered ability does not un-trigger, and
+    // Operation Cinder (which can kill him with the very damage that triggered this) makes that
+    // an ordinary case rather than a corner one.
+    ...(deployedUnit && { playId: deployedUnit.playId }),
+    context: { amount, ...hit },
+    nested: true,
+  });
+}
+
 export function QueueWhenBaseDamagedReaction(gs: GameState, targetPlayer: PlayerId, amount: number): void {
   if (amount <= 0) return;
   const reactive = GetUnitsForPlayer(targetPlayer).filter(

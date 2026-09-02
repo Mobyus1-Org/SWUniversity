@@ -6,7 +6,28 @@ import type { CardCatalogEntry } from "@/components/Shared/PuzzleBuilderPanel";
 
 type Response = { cards: CardCatalogEntry[] } | { error: string };
 
-const ALLOWED_SETS = new Set(["SOR", "SHD", "TWI", "JTL", "LOF", "SEC", "IBH", "LAW", "TS26", "ASH"]);
+/**
+ * Sets the puzzle editor offers. Hand-maintained, and a set missing from BOTH this and
+ * EXCLUDED_SETS is silently absent from the editor — which is how the HMW preview cards went
+ * unplaceable despite generating and playing correctly. `card-catalog-sets.test.ts` fails when a
+ * new set belongs to neither list, so the next one has to be classified rather than forgotten.
+ */
+export const CATALOG_SETS = new Set([
+  "SOR", "SHD", "TWI", "JTL", "LOF", "SEC", "IBH", "LAW", "TS26", "ASH",
+  "HMW", // preview set — mocked cards, offered so puzzles can be authored ahead of release
+]);
+
+/**
+ * Sets deliberately kept OUT of the editor: promo and convention printings that duplicate a
+ * base-set card under a different id, which would just clutter the picker with near-identical
+ * entries.
+ */
+export const EXCLUDED_SETS = new Set([
+  // Promo reprints — a "<SET>P" id is the same card as its base-set printing.
+  "ASHP", "LAWP", "JTLP", "LOFP", "SECP",
+  // Convention, judge and other special printings.
+  "C24", "C25", "C26", "G25", "GG", "J24", "J25", "MV26", "P25", "P26",
+]);
 
 // Token units available in the puzzle builder (ground / space)
 const TOKEN_UNIT_IDS = [
@@ -36,7 +57,7 @@ export default function handler(
       const setCode = cardId.split("_")[0];
       // exclude token cards (handled separately below)
       if (cardId.includes("_T")) return false;
-      return ALLOWED_SETS.has(setCode);
+      return CATALOG_SETS.has(setCode);
     })
     .map((cardId) => {
       const title = CardTitle(cardId);

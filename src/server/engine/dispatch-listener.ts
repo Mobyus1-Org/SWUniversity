@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -57,6 +57,7 @@ import type {
 import { aspectPenalty, effectiveSmuggleCost, spendableFor, playCost, palpatinesReturnCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks, onlyHopeCost } from "@/server/engine/card-playability";
 import type { Game, GameState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import type { DealtHeavyDamageContext } from "@/lib/engine/trigger-types";
 import { PHASE_STAT_MOD } from "@/lib/engine/core-models";
 import type {
   AbilityOptionPending,
@@ -118,6 +119,7 @@ import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { BaseTargetPlayer } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
 import { QueueUnitEnteredPlayReaction } from "@/server/engine/core-functions";
+import { CreateBeast, GiveWeaknessToken, UnitsWithoutWeaknessToken } from "@/server/engine/token-helpers";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget } from "@/server/engine/core-functions";
@@ -1471,6 +1473,37 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
     }
   }
 
+  if (trigger.triggerType === "dealt-heavy-damage") {
+    // HMW_011 Darth Sidious — "You may exhaust this leader (deployed: no cost). If you do, deal 1
+    // damage to a DIFFERENT unit or base."
+    const ctx011 = trigger.context as DealtHeavyDamageContext | undefined;
+    if (!ctx011) return null;
+    // `playId` set at queue time means the DEPLOYED side triggered it: free, and it resolves even
+    // if Sidious has since died. The leader side pays by exhausting, so a leader that is no longer
+    // ready can no longer pay and the reaction lapses.
+    const deployed011 = trigger.playId !== undefined;
+    const pState011 = GetPlayer(game, trigger.fromPlayer);
+    if (!deployed011 && (!pState011.leader.ready || pState011.leader.deployed)) return null;
+
+    return {
+      type: "ability-option",
+      cardId: "HMW_011",
+      player: trigger.fromPlayer,
+      // The exclusion travels on the pending: sourcePlayId is the damaged unit, `amount` the
+      // damaged base's owner. onYes stays null so applyAbilityOptionEffect runs and can charge
+      // the exhaust — a non-null onYes is returned directly and skips it entirely.
+      ...(ctx011.damagedPlayId && { sourcePlayId: ctx011.damagedPlayId }),
+      ...(ctx011.damagedBasePlayer && { amount: ctx011.damagedBasePlayer }),
+      helperText: deployed011
+        ? "Deal 1 damage to a different unit or base?"
+        : `Exhaust ${CardTitle("HMW_011")} to deal 1 damage to a different unit or base?`,
+      yesLabel: "Deal 1",
+      noLabel: "Skip",
+      onYes: null,
+      continuation: null,
+    } satisfies AbilityOptionPending;
+  }
+
   if (trigger.triggerType === "unit-entered-play") {
     // HMW_171 Trap Field — "You may defeat this upgrade. If you do, deal 3 damage to that unit."
     const trapBase = GetPlayer(game, trigger.fromPlayer).base;
@@ -2652,6 +2685,7 @@ function resolveAttack(
       log.push(`${defenderName}'s Shield token was defeated, preventing ${atkPowerToDefender} damage.`);
     } else {
       defender.damage += atkPowerToDefender;
+      QueueHeavyDamageReaction(game, attacker.controller, atkPowerToDefender, { damagedPlayId: defender.playId });
       if (atkPowerToDefender > 0) MarkUnitDamaged(game, defender.playId);
     }
 
@@ -2678,6 +2712,7 @@ function resolveAttack(
       log.push(`${attackerName}'s Shield token was defeated, preventing ${defPowerToAttacker} counter-damage.`);
     } else {
       attacker.damage += defPowerToAttacker;
+      QueueHeavyDamageReaction(game, defender.controller, defPowerToAttacker, { damagedPlayId: attacker.playId });
       MarkUnitDamaged(game, attacker.playId);
     }
     log.push(`${attackerName} attacked ${defenderName}.`);
@@ -6029,6 +6064,7 @@ function handleChooseTarget(
     log.push(`Player ${pending.targetPlayer} discarded a card.`);
     // JTL_014 Admiral Trench: "If you do, draw a card."
     if (pending.thenDrawForPlayer !== undefined) DrawCardForPlayer(game, log, pending.thenDrawForPlayer);
+    if (pending.thenCreateBeastFor !== undefined) CreateBeast(game, pending.thenCreateBeastFor, log, "HMW_010");
     const remaining = pending.count - 1;
     const discardedSoFar = (pending.discardedSoFar ?? 0) + 1;
     // An "up to" step keeps looping while cards and allowance remain, and hands off to its
@@ -7841,6 +7877,12 @@ function paidResourceFollowUp(
   pending: AbilityOptionPending,
 ): PendingResolution | null {
   switch (cardId) {
+    case "HMW_010": // Tarfful — the resource is paid; create the Beast.
+      {
+        const game010 = GetGame();
+        if (game010) CreateBeast(game010.currentGameState, player, game010.gameLog, "HMW_010");
+      }
+      return pending.continuation ?? null;
     case "LAW_214": { // Boba Fett — "…deal 3 damage to a ground unit."
       const grounds214 = AllGroundUnits().map(u => u.playId);
       if (grounds214.length === 0) return pending.continuation ?? null;
@@ -8036,6 +8078,27 @@ function applyAbilityOptionEffect(
         fromPlayIds: GetAllUnits(game).map(u => u.playId),
         continuation: pending.continuation ?? null,
       };
+    }
+    case "HMW_011": { // Darth Sidious Yes — the leader side pays by exhausting; deployed is free.
+      const p011 = GetPlayer(game, pending.player!);
+      if (!p011.leader.deployed) {
+        p011.leader.ready = false;
+        log.push(`${CardTitle("HMW_011")}: exhausted to deal 1 more damage.`);
+      }
+      // "A DIFFERENT unit or base" — everything except the thing that was just hit.
+      const excludedBase011 = pending.amount as PlayerId | undefined;
+      const units011 = AllUnits().filter(u => u.playId !== pending.sourcePlayId).map(u => u.playId);
+      const bases011 = ([1, 2] as PlayerId[])
+        .filter(pl => pl !== excludedBase011)
+        .map(pl => `player${pl}.base`);
+      if (units011.length === 0 && bases011.length === 0) return pending.continuation ?? null;
+      return {
+        type: "ability-target",
+        cardId: "HMW_011",
+        player: pending.player,
+        fromPlayIds: [...units011, ...bases011],
+        continuation: pending.continuation ?? null,
+      } satisfies AbilityTargetPending;
     }
     case "HMW_171": { // Trap Field Yes — defeat the upgrade, then deal 3 to the unit that entered.
       const trapBase171 = GetPlayer(game, pending.player!).base;
@@ -10418,6 +10481,53 @@ function resolveActionAbility(
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    case "HMW_010": { // Tarfful — the 2 resources and the exhaust are already paid; the discard is
+                      // the remaining cost, so it resolves BEFORE the token appears (LAW_011 shape).
+      return {
+        type: "discard-from-hand",
+        targetPlayer: player,
+        count: 1,
+        thenCreateBeastFor: player,
+        continuation: null,
+      } satisfies DiscardFromHandPending;
+    }
+    case "HMW_003": { // Doctor Hemlock — "Give a Weakness token to a unit without a Weakness token
+                      // on it." The restriction is the LEADER side's only; the deployed On Attack
+                      // has none and may stack a second token.
+      const eligible003 = UnitsWithoutWeaknessToken(AllUnits());
+      if (eligible003.length === 0) return null;
+      payResources(game, player, 1, log, "HMW_003");
+      return {
+        type: "ability-target",
+        cardId: "HMW_003",
+        player,
+        fromPlayIds: eligible003.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "HMW_009": { // Chewbacca — "Attack with a unit, even if it's exhausted. It can't attack
+                      // bases for this attack." Offered on BOTH sides; the deployed side is free
+                      // and once-per-round, which the availability check above enforces.
+      const attackers009 = GetUnitsForPlayer(player).filter(u => CanUnitAttack(u));
+      if (attackers009.length === 0) return null;
+      if (GetPlayer(game, player).leader.deployed) {
+        // The deployed side is FREE and limited to once a round. The limiter is spent when the
+        // ability is used, not when the attack lands, so a cancelled target choice still uses it.
+        game.currentEffects.push({ cardId: "HMW_009_usedThisRound", duration: "Round", affectedPlayer: player });
+      } else {
+        // The leader side's 2 resources are charged here rather than through ActionAbilityCost,
+        // which is keyed by cardId alone and cannot tell the free deployed Action apart from this
+        // one (the LAW_015 Jabba precedent). ActionAbilities already gated on affording it.
+        payResources(game, player, 2, log, "HMW_009");
+      }
+      return {
+        type: "ability-target",
+        cardId: "HMW_009",
+        player,
+        fromPlayIds: attackers009.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "TWI_010": { // Pre Vizsla — "Deal damage to a unit equal to the number of cards you've
                       // drawn this phase." Any unit, either side; 0 draws deals 0.
       const units010 = AllUnits();
@@ -11175,6 +11285,44 @@ function applyAbilityEffect(
         GrantKeywordForPhase("TWI_015", Unit.FromInterface(target015), game.gameLog, "Sentinel");
       }
       break;
+    }
+    case "HMW_011": { // Darth Sidious — 1 damage to the chosen different unit or base.
+      if (!targetPlayId) break;
+      const basePlayer011 = BaseTargetPlayer(targetPlayId);
+      if (basePlayer011 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer011, 1, pending.player);
+        game.gameLog.push(`${CardTitle("HMW_011")}: dealt 1 damage to Player ${basePlayer011}'s base.`);
+        break;
+      }
+      DealDamageToUnit(game.currentGameState, "HMW_011", targetPlayId, 1, game.gameLog, pending.player);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "HMW_003":      // Doctor Hemlock, leader side — attach the Weakness token.
+    case "HMW_003_OA": { // …and the deployed On Attack, which has no "without a token" restriction.
+      if (!targetPlayId) break;
+      const target003 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target003) break;
+      GiveWeaknessToken(game.currentGameState, target003, game.gameLog, "HMW_003");
+      // −1 HP can be lethal, and no other upgrade in the engine lowers its host's HP on attach.
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "HMW_009": { // Chewbacca — the chosen unit attacks and cannot pick a base this attack.
+      if (!targetPlayId || !pending.player) break;
+      const attacker009 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!attacker009) break;
+      // With bases off the table the attack needs a unit to hit, or it simply does not happen.
+      const { unitPlayIds: targets009 } = computeAttackTargets(game.currentGameState, attacker009);
+      if (targets009.length === 0) {
+        game.gameLog.push(`${CardTitle("HMW_009")}: no unit to attack — the attack doesn't happen.`);
+        break;
+      }
+      game.currentGameState.currentEffects.push({
+        cardId: "HMW_009_no_base",
+        duration: "ForAttack",
+        affectedPlayer: pending.player,
+        targetPlayId,
+      });
+      return { type: "attack-target", attackerPlayId: targetPlayId, source: "HMW_009", continuation: pending.continuation ?? null };
     }
     case "TWI_010_action": { // Pre Vizsla — damage equal to the cards drawn this phase.
       if (!targetPlayId) break;

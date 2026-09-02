@@ -659,6 +659,24 @@ function resolveInnateOnAttack(
         continuation,
       };
     }
+    case "HMW_010": { // Tarfful (deployed) — "On Attack: You may pay [1 resource]. If you do,
+                      // create a Beast token." optionalPayResource returns null when the resource
+                      // cannot be paid, so an unaffordable offer is never shown.
+      return optionalPayResource("HMW_010", attacker.controller,
+        "Pay 1 resource to create a Beast token?", { continuation }) ?? continuation;
+    }
+    case "HMW_003": { // Doctor Hemlock (deployed) — "On Attack: You may give a Weakness token to a
+                      // unit." No "without a token" restriction here, unlike the leader side.
+      const units003 = AllUnits();
+      if (units003.length === 0) return continuation;
+      return optionalTarget(
+        "HMW_003_OA",
+        attacker.controller,
+        units003.map(u => u.playId),
+        "Give a Weakness token to a unit?",
+        { yesLabel: "Give", continuation },
+      );
+    }
     case "TWI_015": { // General Grievous (deployed) — "On Attack: You may give a Droid unit +1/+0
                       // and Sentinel for this phase." Any Droid unit, either side; Grievous is
                       // Separatist/Official, so he is never among his own targets.
