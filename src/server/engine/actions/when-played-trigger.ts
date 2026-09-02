@@ -18,7 +18,7 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
   "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149", "ASH_179", "ASH_251",
-  "ASH_237", "ASH_248", "SEC_119", "JTL_087",
+  "ASH_237", "ASH_248", "SEC_119", "JTL_087", "HMW_121",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -47,6 +47,17 @@ export function resolveWhenPlayedTrigger(
     case "SOR_111": // Patrolling V-Wing — When Played: Draw a card.
       DrawCardForPlayer(gs, log, trigger.fromPlayer);
       break;
+    case "HMW_121": { // Hijacked AT-ST — "This unit doesn't ready during the next regroup phase."
+      if (!trigger.playId) break;
+      gs.currentEffects.push({
+        cardId: "HMW_121_no_ready",
+        duration: "Round",
+        affectedPlayer: trigger.fromPlayer,
+        targetPlayId: trigger.playId,
+      });
+      log.push(`${CardTitle("HMW_121")}: won't ready during the next regroup phase.`);
+      break;
+    }
     case "SHD_160": { // Reckless Gunslinger — When Played: Deal 1 damage to each base.
       const otherPlayer160: 1 | 2 = trigger.fromPlayer === 1 ? 2 : 1;
       DealDamageToBase(gs, trigger.fromPlayer, 1);

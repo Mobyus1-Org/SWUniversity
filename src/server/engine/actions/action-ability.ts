@@ -412,6 +412,13 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "IBH_027":
         if (AllSpaceUnits().length > 0) abilities.push(cardId);
         break;
+      case "HMW_170": // Han Solo (My Team's Ready) — Action [Exhaust]: Ready another unit.
+                      // "Another unit" is unqualified, so either player's units count; only Han is
+                      // excluded. Offered whenever anyone else is in play.
+        if ([...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].some(u => u.playId !== playId)) {
+          abilities.push(cardId);
+        }
+        break;
       case "LOF_134": // Heavy Missile Gunship — Action [Exhaust]: Deal 2 damage to a ground unit.
                       // A space unit reaching into the ground arena, so it needs a ground target.
         if (AllGroundUnits().length > 0) abilities.push(cardId);

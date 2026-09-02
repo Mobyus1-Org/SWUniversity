@@ -1,4 +1,4 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
 import { PlayerId, Zones } from "@/lib/engine/core-models";
 import { CardCost, CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { EnemyUnitsLoseAmbushAndSupport } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
@@ -58,6 +58,8 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
         return PlayerHasUnitWithTraitInPlay(player, "Vehicle", true, playId);
       case "JTL_249"://Millennium Falcon
         return playedFrom === "Hand";
+      case "HMW_118"://Ryyk Blademaster — "while you control 6 or more resources"; control, not ready
+        return GetResources(player).length >= 6;
       case "TWI_106"://Coruscant Guard
         return IsCoordinateActive(player);
       case "TWI_081"://Droid Commando

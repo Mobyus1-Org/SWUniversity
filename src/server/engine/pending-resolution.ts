@@ -430,6 +430,16 @@ export interface SpreadTokensPending {
   totalTokens: number;
   optional: boolean;
   eligiblePlayIds: string[];
+  /**
+   * Which token is handed out. Defaults to "advantage" — every card using this prompt before
+   * HMW_071 Ravage spread Advantage tokens, so the field is optional to leave them untouched.
+   */
+  tokenKind?: "advantage" | "weakness";
+  /**
+   * "Distribute UP TO N" rather than "distribute N": any total from 0 to totalTokens is legal.
+   * Without this the prompt is all-or-nothing, which would reject a legal 1-of-3 distribution.
+   */
+  allowPartial?: boolean;
   continuation: PendingResolution | null;
 }
 

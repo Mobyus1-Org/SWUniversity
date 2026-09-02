@@ -18,6 +18,7 @@ import {
 } from "./puzzle-builder-state";
 import { CardTraits } from "@/server/engine/card-db/generated";
 import { LeaderBackSideOf } from "@/server/engine/card-db/double-sided-leaders";
+import { HasFortify } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 
 export type CardCatalogEntry = {
@@ -252,6 +253,16 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
     [cards],
   );
 
+  const labelOf = (cardId: string) => cards.find((c) => c.cardId === cardId)?.label ?? cardId;
+  /** Captives and enemy upgrades default to the OTHER player, which is who they are taken from. */
+  const captiveOwner: 1 | 2 = playerId === 1 ? 2 : 1;
+  // Only a Fortify upgrade can sit on a base, so offering anything else would author a state the
+  // engine can never produce.
+  const fortifyPickerCards = React.useMemo(
+    () => cards.filter((c) => c.type === "Upgrade" && HasFortify(c.cardId)),
+    [cards],
+  );
+
   // A leader sitting on a unit as a Pilot IS deployed — there is no other way to spell it — so
   // the Deployed toggle is forced on and locked while one is attached.
   const attachedLeaderCardIds = [...state.groundUnits, ...state.spaceUnits]
@@ -288,6 +299,52 @@ function PlayerSection({ label, playerId, state, cards, onChange }: PlayerSectio
           <NumberInput value={state.baseDamage} onChange={(v) => patch({ baseDamage: v })} />
         </FieldRow>
         <Checkbox checked={state.baseEpicActionUsed} onChange={(v) => patch({ baseEpicActionUsed: v })} label="Epic Action Used" />
+
+        {/* Sub-cards hosted by the BASE rather than a unit: Fortify upgrades and units the base
+            captured (SEC_195 Arrest). Same widget as the unit editor's two lists. */}
+        <div className="grid gap-3 md:grid-cols-2">
+          <AttachmentList
+            title="Fortify upgrades"
+            note={
+              <p className="rounded-md border border-slate-300/25 bg-slate-300/10 px-2 py-1.5 text-3xs leading-relaxed text-slate-200/80">
+                Only cards with <span className="font-semibold">Fortify</span> attach to a base — the
+                picker is filtered to them, since nothing else can legally be here.
+              </p>
+            }
+            pickerCards={fortifyPickerCards}
+            placeholder="Search Fortify upgrades…"
+            items={(state.baseUpgrades ?? []).map((ug) => ({ cardId: ug.cardId, label: labelOf(ug.cardId), mine: !ug.enemy }))}
+            mineLabel={`P${playerId}`}
+            theirLabel={`P${captiveOwner}`}
+            toggleTitle="Who owns this upgrade"
+            onAdd={(cardId) => patch({ baseUpgrades: [...(state.baseUpgrades ?? []), { cardId }] })}
+            onRemove={(i) => patch({ baseUpgrades: (state.baseUpgrades ?? []).filter((_, j) => j !== i) })}
+            onToggle={(i) => patch({
+              baseUpgrades: (state.baseUpgrades ?? []).map((ug, j) => (j === i ? { ...ug, enemy: !ug.enemy } : ug)),
+            })}
+          />
+          <AttachmentList
+            title="Arrested units"
+            note={
+              <p className="rounded-md border border-[#DAA520]/25 bg-[#DAA520]/10 px-2 py-1.5 text-3xs leading-relaxed text-[#DAA520]/90">
+                Units the base is holding captive (Arrest). They return to their
+                <span className="font-semibold"> owner&apos;s</span> arena exhausted at the start of
+                the regroup phase.
+              </p>
+            }
+            pickerCards={unitCards}
+            placeholder="Search units…"
+            items={(state.baseCaptives ?? []).map((c) => ({ cardId: c.cardId, label: labelOf(c.cardId), mine: !!c.friendly }))}
+            mineLabel={`P${playerId}`}
+            theirLabel={`P${captiveOwner}`}
+            toggleTitle="Who owns this captive — it returns to its OWNER's arena when released"
+            onAdd={(cardId) => patch({ baseCaptives: [...(state.baseCaptives ?? []), { cardId }] })}
+            onRemove={(i) => patch({ baseCaptives: (state.baseCaptives ?? []).filter((_, j) => j !== i) })}
+            onToggle={(i) => patch({
+              baseCaptives: (state.baseCaptives ?? []).map((c, j) => (j === i ? { ...c, friendly: !c.friendly } : c)),
+            })}
+          />
+        </div>
       </div>
 
       {/* Tokens */}

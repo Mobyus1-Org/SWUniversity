@@ -640,8 +640,34 @@ function QueueUseTheForceReactions(player: PlayerId, gs: GameState): void {
 }
 
 /**
- * TWI_132 Confederate Tri-Fighter: "Bases can't be healed." A static ability affecting ALL bases
- * (both players'), active while any Tri-Fighter is in play. Base-heal sites across the engine call
+ * HMW_234 Ritual Dragon: "While you control a Tatooine base, friendly units enter play ready
+ * (including this one)."
+ *
+ * Read at the moment a unit enters play, from BOTH arena-entry chokepoints — addToArena for played
+ * cards and spawnToken for tokens — since "friendly units" covers every way a unit arrives.
+ *
+ * `enteringCardId` is what makes "including this one" work: a unit's ready flag is decided while it
+ * is being constructed, before it is pushed into the arena, so an entering Dragon cannot yet see
+ * itself in play and would otherwise arrive exhausted.
+ */
+export function UnitsEnterPlayReady(gs: GameState, player: PlayerId, enteringCardId?: string): boolean {
+  const pState = GetPlayer(gs, player);
+  if (!TraitContains(pState.base.cardId, "Tatooine")) return false;
+  if (enteringCardId === "HMW_234") return true;
+  return [...pState.groundArena, ...pState.spaceArena].some(
+    u => u.cardId === "HMW_234" && !Unit.FromInterface(u).LostAbilities(),
+  );
+}
+
+/** Units whose static ability reads "Bases can't be healed." */
+const BASE_HEALING_PREVENTERS = new Set([
+  "TWI_132", // Confederate Tri-Fighter
+  "HMW_159", // General Grievous — Scourge of Dathomir
+]);
+
+/**
+ * "Bases can't be healed." A static ability affecting ALL bases (both players'), active while any
+ * printing of it is in play — regardless of who controls it. Base-heal sites across the engine call
  * this to skip the heal (unit healing is unaffected). Base healing is not centralized, so each site
  * guards itself — see the callers of this function.
  */
@@ -651,7 +677,9 @@ export function BaseHealingPrevented(): boolean {
   const gs = game.currentGameState;
   for (const pState of [gs.player1, gs.player2]) {
     for (const u of [...pState.groundArena, ...pState.spaceArena]) {
-      if (u.cardId === "TWI_132") return true;
+      if (!BASE_HEALING_PREVENTERS.has(u.cardId)) continue;
+      if (Unit.FromInterface(u).LostAbilities()) continue;
+      return true;
     }
   }
   return false;
@@ -1108,7 +1136,14 @@ export function CanUnitReady(
   gs: GameState,
   unit: { playId: string; upgrades: Array<{ cardId: string }> },
 ): boolean {
-  if (gs.currentEffects.some(e => e.cardId === "SOR_186_no_ready" && e.targetPlayId === unit.playId)) {
+  // Both are "this specific unit can't ready", keyed to its playId: SOR_186 exhausts a unit for
+  // the round, HMW_121 Hijacked AT-ST holds ITSELF down for the next regroup. Round-scoped, and
+  // executeRegroupReady readies before it clears Round effects, so the restriction still applies
+  // on the regroup it was played for and is gone by the next one.
+  if (gs.currentEffects.some(
+    e => (e.cardId === "SOR_186_no_ready" || e.cardId === "HMW_121_no_ready")
+      && e.targetPlayId === unit.playId,
+  )) {
     return false;
   }
   return !unit.upgrades.some(u => CANT_READY_UPGRADES.includes(u.cardId));
@@ -1419,6 +1454,9 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_059": //Leia Organa (ASH) — On Attack: may self-damage to heal your base
     case "ASH_072": //Doctor Pershing — On Attack: draw a card if it has 3+ remaining HP
     case "ASH_099": //Gozanti Assault Carrier — On Attack: gains Sentinel for this phase
+    case "HMW_061": //Director Krennic (The Work Has Stalled) — On Attack: draw if your base is upgraded
+    case "HMW_064": //Scorch — On Attack: may deal 1 damage to an upgraded unit
+    case "HMW_210": //Sol — On Attack: gains Sentinel for this phase
     case "TWI_015": //General Grievous (deployed) — On Attack: may give a Droid unit +1/+0 and Sentinel
     case "ASH_156": //R5-D4 — On Attack: defeat all upgrades on the defending unit
     case "ASH_168": //Migs Mayfeld — On Attack: deal 1 (2 if upgraded) damage to the defending unit

@@ -1,6 +1,6 @@
 import { CardInPlay, HP_MOD, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { GetCurrentEffectsForPlayer, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard } from "@/server/engine/core-functions";
-import { CardArena, CardAspects, CardHp, CardPower } from "@/server/engine/card-db/generated";
+import { CardArena, CardAspects, CardCost, CardHp, CardPower } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
@@ -636,11 +636,13 @@ function kananSurvivalBonus(unit: Unit): number {
  * "While you control another <X> unit, this unit gets +N/+0." A while-condition — worth the bonus
  * once, however many qualifying units are out — and power-only, so only CurrentPower reads it.
  *
- * `aspect` matches an aspect icon (Villainy, Aggression…), `trait` matches a printed trait. Add a
+ * `aspect` matches an aspect icon (Villainy, Aggression…), `trait` matches a printed trait, and
+ * `minCost` matches a printed cost at or above N. Add a
  * row here rather than a case in CurrentPower; the whole family of these cards is data, not logic.
  */
-const WHILE_ANOTHER_UNIT_POWER_BONUS: Record<string, { aspect?: string; trait?: string; amount: number }> = {
+const WHILE_ANOTHER_UNIT_POWER_BONUS: Record<string, { aspect?: string; trait?: string; minCost?: number; amount: number }> = {
   "LOF_081": { aspect: "Villainy", amount: 2 }, // Sith Legionnaire
+  "HMW_107": { minCost: 3, amount: 2 },         // Stormtrooper Patrol — "another unit that costs 3 or more"
 };
 
 function whileAnotherUnitPowerBonus(unit: Unit): number {
@@ -649,6 +651,7 @@ function whileAnotherUnitPowerBonus(unit: Unit): number {
   const hasOther = GetUnitsForPlayer(unit.controller).some(u =>
     u.playId !== unit.playId
     && (rule.aspect ? CardAspects(u.cardId).includes(rule.aspect) : true)
-    && (rule.trait ? TraitContains(u.cardId, rule.trait, unit.controller, u.playId) : true));
+    && (rule.trait ? TraitContains(u.cardId, rule.trait, unit.controller, u.playId) : true)
+    && (rule.minCost !== undefined ? (CardCost(u.cardId) ?? 0) >= rule.minCost : true));
   return hasOther ? rule.amount : 0;
 }

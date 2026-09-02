@@ -1,7 +1,7 @@
 import type { GameState, PlayerState } from "@/lib/engine/game";
 import type { DiscardedCard, PlayerId } from "@/lib/engine/core-models";
 import { CardArena, CardTitle, CardHp, CardUpgradeHp } from "@/server/engine/card-db/generated";
-import { DealDamageToBase, DefeatResource, QueueWhenDiscardedTrigger, ReadyUnit } from "@/server/engine/core-functions";
+import { DealDamageToBase, DefeatResource, DrawCardForPlayer, QueueWhenDiscardedTrigger, ReadyUnit } from "@/server/engine/core-functions";
 
 function ps(gs: GameState, player: PlayerId): PlayerState {
   return player === 1 ? gs.player1 : gs.player2;
@@ -26,6 +26,33 @@ const REGROUP_START_SELF_DAMAGE: Record<string, number> = {
 const REGROUP_START_BASE_DAMAGE_UPGRADES: Record<string, number> = {
   LAW_077: 2, // Shadow of Stygeon Prime
 };
+
+/**
+ * FORTIFY upgrades attached to a BASE that grant it a "When the regroup phase starts" ability.
+ *
+ * A third table rather than a reuse of the two above: those walk units and units' upgrades, and
+ * nothing previously walked base upgrades at all. "This base" is the base the upgrade is on, so
+ * both halves land on that base's controller.
+ */
+const REGROUP_START_BASE_UPGRADES: Record<string, { draw: number; selfDamage: number }> = {
+  HMW_070: { draw: 1, selfDamage: 2 }, // Dark Sanctum
+};
+
+/** Fires every "when the regroup phase starts" ability granted to a base by a Fortify upgrade. */
+function resolveRegroupStartBaseAbilities(gs: GameState, log: string[]): void {
+  for (const player of [1, 2] as PlayerId[]) {
+    const base = ps(gs, player).base;
+    for (const upg of base.upgrades ?? []) {
+      const rule = REGROUP_START_BASE_UPGRADES[upg.cardId];
+      if (!rule) continue;
+      for (let i = 0; i < rule.draw; i++) DrawCardForPlayer(gs, log, player);
+      if (rule.selfDamage > 0) {
+        DealDamageToBase(gs, player, rule.selfDamage);
+        log.push(`${CardTitle(upg.cardId)}: dealt ${rule.selfDamage} damage to Player ${player}'s base.`);
+      }
+    }
+  }
+}
 
 /**
  * Fires every unit-scoped "when the regroup phase starts" ability, before the draw.
@@ -113,6 +140,7 @@ function resolveRegroupStartUnitAbilities(gs: GameState, log: string[]): void {
 export function executeRegroupDraw(gs: GameState, log: string[]): void {
   releaseBaseCaptives(gs, log);
   resolveRegroupStartUnitAbilities(gs, log);
+  resolveRegroupStartBaseAbilities(gs, log);
 
   // SHD_015 Doctor Aphra (leader): "When the regroup phase starts: Discard a card from your deck."
   // Only the undeployed leader side carries this; the deployed side has different abilities.

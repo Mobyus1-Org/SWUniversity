@@ -484,6 +484,23 @@ function resolveInnateOnAttack(
       }
       return continuation;
     }
+    case "HMW_061": { // Director Krennic (The Work Has Stalled) — On Attack: If your base is
+                      // upgraded, draw a card. Mandatory; "upgraded" is any Fortify upgrade.
+      const game061 = GetGame();
+      if (game061 && (GetPlayer(game061.currentGameState, attacker.controller).base.upgrades ?? []).length > 0) {
+        DrawCardForPlayer(game061.currentGameState, game061.gameLog, attacker.controller);
+        game061.gameLog.push(`${CardTitle(sourceCardId)}: drew a card.`);
+      }
+      return continuation;
+    }
+    case "HMW_064": { // Scorch, Imperial Commando — On Attack: You may deal 1 damage to an upgraded
+                      // unit. Either side's units qualify, and tokens are upgrades, so the filter
+                      // is just "carries anything".
+      const upgraded064 = AllUnits().filter(u => (u.upgrades ?? []).length > 0);
+      if (upgraded064.length === 0) return continuation;
+      return optionalTarget("HMW_064", attacker.controller, upgraded064.map(u => u.playId),
+        "Deal 1 damage to an upgraded unit?", { yesLabel: "Deal 1 damage", continuation });
+    }
     case "ASH_157": { // Danger Squadron Wingmen — On Attack: may give an Advantage token to another unit.
       const others157 = AllUnits().filter(u => u.playId !== attacker.playId);
       if (others157.length === 0) return continuation;
@@ -833,6 +850,19 @@ function resolveInnateOnAttack(
         onYes: null,
         continuation,
       };
+    }
+    case "HMW_210": { // Sol — "On Attack: This unit gains Sentinel for this phase." Same shape as
+                      // ASH_099 below: a Phase-duration effect keyed to the attacker's own playId.
+      const game210 = GetGame();
+      if (!game210) return continuation;
+      game210.currentGameState.currentEffects.push({
+        cardId: "HMW_210",
+        duration: "Phase",
+        affectedPlayer: attacker.controller,
+        targetPlayId: attacker.playId,
+      });
+      game210.gameLog.push(`${CardTitle("HMW_210")}: gained Sentinel for this phase.`);
+      return continuation;
     }
     case "ASH_099": { // Gozanti Assault Carrier — "On Attack: This unit gains Sentinel for this phase."
       const game099 = GetGame();

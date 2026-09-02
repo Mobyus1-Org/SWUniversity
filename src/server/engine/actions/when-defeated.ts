@@ -164,6 +164,13 @@ function resolveOwnWhenDefeated(
       return optionalTarget("ASH_050", player, allUnits050.map(u => u.playId),
         "Give a unit –2/–2 for this phase?", { yesLabel: "Give –2/–2" });
     }
+    case "HMW_059": { // Clone X Assassin — "When Defeated: You may give a Weakness token to a unit."
+                      // "A unit" is unqualified, so either side's units qualify.
+      const allUnits059 = AllUnits();
+      if (allUnits059.length === 0) return null;
+      return optionalTarget("HMW_059", player, allUnits059.map(u => u.playId),
+        "Give a Weakness token to a unit?", { yesLabel: "Give Weakness" });
+    }
     case "ASH_167": { // Flarestar Attack Shuttle — same effect as its When Played.
       const allUnits167 = AllUnits();
       if (allUnits167.length === 0) return null;

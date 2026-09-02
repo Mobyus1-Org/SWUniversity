@@ -14,6 +14,7 @@ export function HasFortify(cardId: string): boolean {
   switch (cardId) {
     case "HMW_081": // Alliance Shield Generator
     case "HMW_171": // Trap Field
+    case "HMW_070": // Dark Sanctum
       return true;
     default:
       return false;

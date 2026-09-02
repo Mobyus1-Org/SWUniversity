@@ -1,6 +1,6 @@
 import { CardArena, CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
-import { GetUnitsForPlayer, QueueUnitEnteredPlayReaction } from "@/server/engine/core-functions";
+import { GetUnitsForPlayer, QueueUnitEnteredPlayReaction, UnitsEnterPlayReady } from "@/server/engine/core-functions";
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 
@@ -23,7 +23,8 @@ function spawnToken(game: GameState, player: PlayerId, cardId: string): Unit {
     playId,
     owner: player,
     controller: player,
-    ready: tokensEnterReadyFor(game, player),
+    // TWI_203 readies tokens specifically; HMW_234 readies every friendly unit that enters play.
+    ready: tokensEnterReadyFor(game, player) || UnitsEnterPlayReady(game, player, cardId),
     damage: 0,
     upgrades: [],
     captives: [],

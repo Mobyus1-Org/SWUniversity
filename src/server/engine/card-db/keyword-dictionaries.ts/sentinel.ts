@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, InitiativePlayer, IsCoordinateActive, GetResources, NumberOfUnitsInArena, PlayerControlsCardWithTrait, PlayerHasUnitInPlayWithMinimumPower, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetGame, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, InitiativePlayer, IsCoordinateActive, NumberOfUnitsInArena, PlayerControlsCardWithTrait, PlayerHasUnitInPlayWithMinimumPower, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
 import { CardAspects } from "@/server/engine/card-db/generated";
 
 /** True while any player controls an ASH_040 Poe Dameron whose abilities are active. */
@@ -59,6 +59,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
         //Secrets of Power
         case "SEC_082": hasSentinel = true; break;//Chancellor Palpatine unit (SEC)
         case "ASH_099": hasSentinel = true; break;//Gozanti Assault Carrier On Attack (this phase)
+        case "HMW_210": hasSentinel = true; break;//Sol On Attack (this phase)
         default: break;
       }
     }
@@ -97,6 +98,14 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
       //Spark of Rebellion
       case "SOR_211"://Gamorrean Guards
         return PlayerHasUnitWithAspectInPlay(player, "Cunning", true, playId);
+      case "HMW_142": {//Wookie Rangers — "another Wookiee unit OR a Kashyyyk base". Both halves
+                       //are independent; a board with a second Wookiee hides a missing base check.
+        const pState142 = player === 1
+          ? GetGame()!.currentGameState.player1
+          : GetGame()!.currentGameState.player2;
+        return PlayerHasUnitWithTraitInPlay(player, "Wookiee", true, playId)
+          || TraitContains(pState142.base.cardId, "Kashyyyk");
+      }
       case "SOR_113"://Homestead Militia (SOR)
       case "JTL_113"://Homestead Militia (JTL)
         return GetResources(player).length >= 6;
@@ -240,6 +249,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "ASH_083"://Summa-verminoth
     case "ASH_109"://T-6 Shuttle 1974
     case "SEC_117"://Consular's Cruiser
+    case "HMW_107"://Stormtrooper Patrol
     case "HMW_010"://Tarfful (deployed leader unit) — printed Sentinel
     case "SEC_086"://Cruel Commandos
       return true;

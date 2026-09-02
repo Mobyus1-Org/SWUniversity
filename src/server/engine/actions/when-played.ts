@@ -6,7 +6,7 @@ import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
-import { CreateBattleDroid, CreateCloneTrooper, CreateXWing, CreateTieFighter, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
+import { CreateBattleDroid, CreateBeast, CreateCloneTrooper, CreateXWing, CreateTieFighter, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens, GiveWeaknessToken } from "@/server/engine/token-helpers";
 import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits, CardIsUnique, CardArena } from "@/server/engine/card-db/generated";
 
 /**
@@ -187,6 +187,28 @@ export function buildKreiaHandPick(player: PlayerId, destination: "top" | "botto
  * When Played abilities for unit cards.
  * Return a PendingResolution if further input is needed, or null to auto-resolve.
  */
+/**
+ * HMW_035 Hunter — one of his two "choose two" prompts. Both modes are offered every time, because
+ * the card allows the same option twice; `remaining` counts the prompts still owed.
+ */
+export function buildHunterChoice(
+  player: PlayerId,
+  remaining: number,
+  continuation: PendingResolution | null,
+): ChooseOnePending {
+  return {
+    type: "choose-one",
+    cardId: "HMW_035",
+    player,
+    options: [
+      { id: "shield", label: "Give a Shield token to a unit" },
+      { id: "attack", label: "Attack with a unit (can't attack bases)" },
+    ],
+    data: { remaining },
+    continuation,
+  } satisfies ChooseOnePending;
+}
+
 export function resolveWhenPlayed(
   cardId: string,
   player: PlayerId,
@@ -1021,6 +1043,8 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies SpreadHealPending;
     }
+    case "HMW_121": //Hijacked AT-ST — auto effect, see resolveWhenPlayedTrigger.
+      return null;
     case "TWI_173": { // Blood Sport (Event) — "Deal 2 damage to each ground unit."
       // Both sides' ground arenas, the caster's own units included. playIds are collected before
       // any damage lands so this resolves as one simultaneous hit rather than a moving target.
@@ -1168,6 +1192,154 @@ export function resolveWhenPlayed(
     }
     case "LAW_058": { // Honor-Bound Partisan — "When Played: Deal 1 damage to a base." Mandatory,
                       // and "a base" is either one.
+      return mandatoryTarget(cardId, player, ["player1.base", "player2.base"]);
+    }
+    case "HMW_035": { // Hunter, Everyone Get to Cover! — "When Played: Choose two. You may choose
+                      // the same option more than once: • Give a Shield token to a unit. • Attack
+                      // with a unit, even if it's exhausted. It can't attack bases for this attack."
+                      //
+                      // NOT the choose-aspect-effect shape used by SOR_155 and friends: those
+                      // consume each mode as it is picked, and Hunter's explicitly survive being
+                      // chosen. The count rides in `data.remaining` and the prompt rebuilds itself.
+      return buildHunterChoice(player, 2, null);
+    }
+    case "HMW_036": { // Kelnacca, Solitary Master — "When Played: You may pay any number of
+                      // resources. For every 3 resources paid this way, deal damage equal to this
+                      // unit's power to an enemy unit."
+                      //
+                      // Nothing in the engine offers a free-form resource payment, and only
+                      // multiples of 3 change anything here, so the offer is framed as how many
+                      // hits to buy. Paying 4 rather than 3 is legal but strictly worse and gives
+                      // an identical board, so it is not offered.
+      const gs036 = game.currentGameState;
+      const enemies036 = GetUnitsForPlayer(GetOtherPlayer(player));
+      if (enemies036.length === 0) return null; // nothing to point the damage at
+      const maxHits036 = Math.floor(spendableFor(gs036, player) / 3);
+      if (maxHits036 < 1) return null;
+      const options036 = [{ id: "0", label: "Pay nothing" }];
+      for (let hits = 1; hits <= maxHits036; hits++) {
+        options036.push({ id: String(hits * 3), label: `Pay ${hits * 3} (${hits} hit${hits > 1 ? "s" : ""})` });
+      }
+      return {
+        type: "choose-one",
+        cardId: "HMW_036",
+        player,
+        options: options036,
+        data: { sourcePlayId: playId ?? "" },
+        continuation: null,
+      } satisfies ChooseOnePending;
+    }
+    case "HMW_071": { // Ravage (Event) — "Distribute up to 3 Weakness tokens among any number of
+                      // units." Either side's units are legal, and "up to" allows a partial spread.
+      const allUnits071 = AllUnits();
+      if (allUnits071.length === 0) return null;
+      return {
+        type: "spread-tokens",
+        cardId,
+        player,
+        totalTokens: 3,
+        optional: true,
+        allowPartial: true,
+        tokenKind: "weakness",
+        eligiblePlayIds: allUnits071.map(u => u.playId),
+        continuation: null,
+      } satisfies SpreadTokensPending;
+    }
+    case "HMW_237": { // Easy Prey (Event) — "Create a Beast token. An opponent creates a Beast
+                      // token. Give a Weakness token to it."
+                      //
+                      // No targets at all. "It" is the OPPONENT's new Beast, so you keep a clean
+                      // 3/3 and they get a 2/2.
+      const gs237 = game.currentGameState;
+      CreateBeast(gs237, player, game.gameLog, cardId);
+      const theirBeast237 = CreateBeast(gs237, GetOtherPlayer(player), game.gameLog, cardId);
+      GiveWeaknessToken(gs237, theirBeast237, game.gameLog, cardId);
+      return null;
+    }
+    case "HMW_151": { // Overgrowth (Event) — "If you control a Kashyyyk base, a friendly unit deals
+                      // damage equal to its power to an enemy unit. Resource this card."
+                      //
+                      // Only the damage is conditional. "Resource this card" is a separate sentence
+                      // and runs regardless, so it lives in completePlayCard rather than here —
+                      // this branch returning null must NOT mean the card stays in the discard.
+      const gs151 = game.currentGameState;
+      if (!TraitContains(GetPlayer(gs151, player).base.cardId, "Kashyyyk")) return null;
+      const friendly151 = GetUnitsForPlayer(player);
+      const enemies151 = GetUnitsForPlayer(GetOtherPlayer(player));
+      if (friendly151.length === 0 || enemies151.length === 0) return null;
+      return mandatoryTarget("HMW_151", player, friendly151.map(u => u.playId));
+    }
+    case "HMW_193": { // Nightfall (Event) — "Deal 1 damage to an enemy unit. If you control an Endor
+                      // base, you may attack with a unit. It gets +2/+0 for this attack."
+                      //
+                      // Two independent halves: the damage is unconditional and mandatory, the
+                      // attack is Endor-gated and optional. The attack offer rides as the damage
+                      // step's continuation so it survives whichever half has no legal target.
+      const gs193 = game.currentGameState;
+      const enemies193 = GetUnitsForPlayer(GetOtherPlayer(player));
+      const attackers193 = GetUnitsForPlayer(player, true).filter(u => CanUnitAttack(u));
+      const canAttack193 =
+        TraitContains(GetPlayer(gs193, player).base.cardId, "Endor") && attackers193.length > 0;
+
+      const attackStep193: PendingResolution | null = !canAttack193 ? null : {
+        type: "ability-option",
+        cardId: "HMW_193_atk",
+        player,
+        helperText: "Attack with a unit? It gets +2/+0 for this attack.",
+        yesLabel: "Attack",
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "HMW_193_atk",
+          player,
+          fromPlayIds: attackers193.map(u => u.playId),
+          continuation: null,
+        } satisfies AbilityTargetPending,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+
+      if (enemies193.length === 0) return attackStep193;
+      return mandatoryTarget("HMW_193", player, enemies193.map(u => u.playId), attackStep193);
+    }
+    case "HMW_177": { // Adamant Ewoks — "When Played: If you control another Ewok unit or an Endor
+                      // base, you may deal 1 damage to a base and 1 damage to an enemy unit."
+                      //
+                      // One combined "you may", then two targets in sequence. The enemy-unit step
+                      // hangs off the BASE step's continuation, not the option's: on the option's
+                      // own continuation a "No" would still run the unit half.
+      const gs177 = game.currentGameState;
+      const hasOtherEwok = PlayerHasUnitWithTraitInPlay(player, "Ewok", true, playId);
+      const hasEndorBase = TraitContains(GetPlayer(gs177, player).base.cardId, "Endor");
+      if (!hasOtherEwok && !hasEndorBase) return null;
+
+      const enemies177 = GetUnitsForPlayer(player === 1 ? 2 : 1);
+      const unitStep177: PendingResolution | null = enemies177.length === 0 ? null : {
+        type: "ability-target",
+        cardId: "HMW_177_unit",
+        player,
+        fromPlayIds: enemies177.map(u => u.playId),
+        continuation: null,
+      };
+      const baseStep177: PendingResolution = {
+        type: "ability-target",
+        cardId: "HMW_177",
+        player,
+        fromPlayIds: ["player1.base", "player2.base"],
+        continuation: unitStep177,
+      };
+      return {
+        type: "ability-option",
+        cardId: "HMW_177_opt",
+        player,
+        helperText: "Deal 1 damage to a base and 1 damage to an enemy unit?",
+        yesLabel: "Deal damage",
+        noLabel: "Skip",
+        onYes: baseStep177,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "HMW_159": { // General Grievous, Scourge of Dathomir — "When Played: Deal 4 damage to a
+                      // base." Same unqualified "a base" as LAW_058, so your own is a legal choice.
       return mandatoryTarget(cardId, player, ["player1.base", "player2.base"]);
     }
     case "SOR_246": { // You're My Only Hope — "Look at the top card of your deck. You may play it.

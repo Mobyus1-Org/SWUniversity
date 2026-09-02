@@ -1,4 +1,4 @@
-import { GetUnitInPlay, LeaderAbilitiesIgnored, GetUnitsForPlayer, IsCoordinateActive, TraitContains, GetCurrentEffectsForPlayer, PlayerHasUnitWithTraitInPlay, HasTheForce, GetPlayIdForUniqueUnitInPlay } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
 import { CardCost } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
@@ -97,6 +97,8 @@ export function HasOverwhelm(cardId: string,
       case "SHD_138"://Jango Fett - Renowned Bounty Hunter "While attacking a unit with a Bounty, this unit gets +3/+0 and gains Overwhelm."
         if (!defenderPlayId || !defenderPlayer) break;
         return GetUnitInPlay(defenderPlayId, defenderPlayer)?.HasBounty();
+      case "HMW_118"://Ryyk Blademaster — same condition as its Ambush half (see ambush.ts)
+        return GetResources(player).length >= 6;
       case "SHD_169"://Clan Challengers
         return upgrades.length > 0;
       case "TWI_130"://Bo-Katan Kryze
@@ -182,6 +184,7 @@ export function HasOverwhelm(cardId: string,
     case "ASH_129"://Defenders of the Forest
     case "ASH_143"://Tempest Lieutenant
     case "ASH_164"://Alamite Hunter
+    case "HMW_121"://Hijacked AT-ST
     case "SEC_086"://Cruel Commandos
       return true;
     default: break;

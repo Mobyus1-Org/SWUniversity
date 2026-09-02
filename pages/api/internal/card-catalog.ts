@@ -30,18 +30,24 @@ export const EXCLUDED_SETS = new Set([
 ]);
 
 // Token units available in the puzzle builder (ground / space)
-const TOKEN_UNIT_IDS = [
+// One id per DISTINCT token, not one per printing — Experience and Shield are reprinted in most
+// sets and the picker only needs the canonical copy of each.
+export const TOKEN_UNIT_IDS = [
   "TWI_T01", // Battle Droid (Ground)
   "TWI_T02", // Clone Trooper (Ground)
   "SEC_T01", // Spy (Ground)
+  "ASH_T01", // Mandalorian (Ground) — enters play Shielded
+  "HMW_T03", // Beast (Ground)
   "JTL_T01", // TIE Fighter (Space)
   "JTL_T02", // X-Wing (Space)
 ];
 
 // Token upgrades available in the puzzle builder
-const TOKEN_UPGRADE_IDS = [
-  "SOR_T01", // Experience
+export const TOKEN_UPGRADE_IDS = [
+  "SOR_T01", // Experience (+1/+1)
   "SOR_T02", // Shield
+  "ASH_T02", // Advantage (+1/+0, defeated when its unit's attack or defense ends)
+  "HMW_T02", // Weakness (−1/−1)
 ];
 
 export default function handler(

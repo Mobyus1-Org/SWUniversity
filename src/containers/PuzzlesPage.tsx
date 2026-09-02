@@ -287,6 +287,7 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
     { abilityId: "SHD_087-2", label: "Exhaust: deal his power to an enemy ground unit" },
   ],
   "LOF_134": "2 dmg to a ground unit", // Heavy Missile Gunship
+  "HMW_170": "Ready another unit", // Han Solo — My Team's Ready
   "IBH_016": "3 dmg to a space unit", // Ion Cannon
   "IBH_027": "3 dmg to a space unit",
   "IBH_023": "Attack w/ another Heroism unit (+2/+0)", // General Rieekan

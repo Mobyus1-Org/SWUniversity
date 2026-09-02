@@ -35,6 +35,7 @@ export function HasShielded(cardId: string, playId?: string, player?: PlayerId, 
     case "SOR_011"://Grand Inquisitor Leader Unit
         return !LeaderAbilitiesIgnored();
     //Spark of Rebellion
+    case "HMW_210"://Sol - Compassionate Guardian
     case "SOR_207"://Crafty Smuggler
     case "SOR_064"://Wilderness Fighter
     case "SOR_180"://Seventh Fleet Defender
