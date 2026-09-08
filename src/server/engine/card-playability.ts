@@ -30,9 +30,16 @@ export function spendableFor(game: GameState, player: PlayerId): number {
 // cardId regardless of deploy state.
 //   SOR_008 Hera Syndulla — "Ignore the aspect penalty on SPECTRE cards you play."
 //   TWI_001 Nala Se — "Ignore the aspect penalty on Clone units you play."
-const LEADER_ASPECT_WAIVERS: Record<string, { trait: string; unitOnly?: boolean }> = {
+const LEADER_ASPECT_WAIVERS: Record<
+  string,
+  { trait: string; unitOnly?: boolean; excludeAspect?: string }
+> = {
   SOR_008: { trait: "Spectre" },
   TWI_001: { trait: "Clone", unitOnly: true },
+  //   SEC_009 Mon Mothma — "Ignore the aspect penalties on non-Villainy Official units you play."
+  //   Printed on both her leader and her deployed side, which this table gives for free: it is
+  //   keyed on the leader's cardId regardless of deploy state.
+  SEC_009: { trait: "Official", unitOnly: true, excludeAspect: "Villainy" },
 };
 
 function leaderWaivesAspectPenalty(game: GameState, player: PlayerId, cardId: string): boolean {
@@ -40,6 +47,7 @@ function leaderWaivesAspectPenalty(game: GameState, player: PlayerId, cardId: st
   const waiver = LEADER_ASPECT_WAIVERS[p.leader.cardId];
   if (!waiver) return false;
   if (waiver.unitOnly && CardType(cardId) !== "Unit") return false;
+  if (waiver.excludeAspect && CardAspects(cardId)?.includes(waiver.excludeAspect)) return false;
   return TraitContains(cardId, waiver.trait, player);
 }
 

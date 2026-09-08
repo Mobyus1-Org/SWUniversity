@@ -1,7 +1,7 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitsForPlayer, LeaderAbilitiesIgnored, PlayerHasUnitWithAspectInPlay, TraitContains } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitsForPlayer, LeaderAbilitiesIgnored, PlayerHasUnitWithAspectInPlay, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
 
-export function HasShielded(cardId: string, playId?: string, player?: PlayerId, isRecursion = false)
+export function HasShielded(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): boolean
 {
   if (player && playId) {
     for(const currentEffect of GetCurrentEffectsForPlayer(player)) {
@@ -13,6 +13,9 @@ export function HasShielded(cardId: string, playId?: string, player?: PlayerId, 
     const theirUnits = GetUnitsForPlayer(otherPlayer);
     switch (cardId) {
       //conditional shielded
+      case "ASH_008"://Moff Gideon (deployed) — gains this keyword if an Imperial unit in
+                     //your discard pile has it. Printed keywords only.
+        return ImperialUnitInDiscardHasKeyword(player, c => HasShielded(c));
       case "SHD_212"://Privateer Scyk
         return PlayerHasUnitWithAspectInPlay(player, "Cunning", true, playId);
       case "SHD_186"://Hunter of the Haxion Brood

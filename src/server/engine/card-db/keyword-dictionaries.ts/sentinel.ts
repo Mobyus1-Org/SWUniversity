@@ -1,6 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetGame, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, InitiativePlayer, IsCoordinateActive, NumberOfUnitsInArena, PlayerControlsCardWithTrait, PlayerHasUnitInPlayWithMinimumPower, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetGame, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, InitiativePlayer, IsCoordinateActive, NumberOfUnitsInArena, PlayerControlsCardWithTrait, PlayerHasUnitInPlayWithMinimumPower, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 import { CardAspects } from "@/server/engine/card-db/generated";
+import { Unit } from "@/server/engine/unit";
 
 /** True while any player controls an ASH_040 Poe Dameron whose abilities are active. */
 function AllUnitsLoseSentinel(): boolean {
@@ -14,7 +15,7 @@ function AllUnitsLoseSentinel(): boolean {
   );
 }
 
-export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, isRecursion = false)
+export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): boolean
 {
   // ASH_040 Poe Dameron — "All units lose Sentinel." A constant ability that applies to EVERY
   // unit on both sides, so it is checked before any grant below (including self-Sentinel, which
@@ -128,6 +129,20 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
         return units.some(u => u.playId !== playId && !u.ready);
       case "ASH_078"://B-Wing Rearguard — while you control a ground unit
         return NumberOfUnitsInArena(player, "Ground") > 0;
+      case "ASH_008"://Moff Gideon (deployed) — gains this keyword if an Imperial unit in
+                     //your discard pile has it. Printed keywords only.
+        return ImperialUnitInDiscardHasKeyword(player, c => HasSentinel(c));
+      case "ASH_049": {//Shin Hati (Going Somewhere?) — while she is the only friendly NON-LEADER
+                       //ground unit. A friendly space unit, or a deployed leader standing beside
+                       //her on the ground, both leave the condition intact.
+        const gs049 = GetGame()?.currentGameState;
+        if (!gs049) return false;
+        const ground049 = (player === 1 ? gs049.player1 : gs049.player2).groundArena;
+        const nonLeaders049 = ground049.filter(u => !Unit.FromInterface(u).IsLeader());
+        return nonLeaders049.length === 1 && nonLeaders049[0].playId === playId;
+      }
+      case "ASH_079"://Koska Reeves — while you control a token unit (any token, not just hers)
+        return GetUnitsForPlayer(player).some(u => Unit.FromInterface(u).IsTokenUnit());
       case "SHD_034"://Supercommando Squad
         return upgrades.length > 0;
       case "SHD_052"://Sugi

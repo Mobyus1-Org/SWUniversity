@@ -1,4 +1,4 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasUnitWithTraitInPlay, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
 import { CardCost } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
@@ -15,7 +15,7 @@ export function HasOverwhelm(cardId: string,
   defenderPlayId?: string,
   defenderPlayer?: PlayerId,
   isRecursion = false
-)
+): boolean | undefined
 {
   // Overwhelm is only relevant when attacking a unit – infer from whether a
   // defender was supplied.  Callers that provide no defenderPlayId are doing
@@ -91,6 +91,9 @@ export function HasOverwhelm(cardId: string,
 
     //conditional overwhelm
     switch(cardId) {
+      case "ASH_008"://Moff Gideon (deployed) — gains this keyword if an Imperial unit in
+                     //your discard pile has it. Printed keywords only.
+        return ImperialUnitInDiscardHasKeyword(player, c => HasOverwhelm(c) === true);
       case "SOR_130"://First Legion Snowtrooper "While attacking a damaged unit, this unit gets +2/0 and gains Overwhelm."
         if (!defenderPlayId || !defenderPlayer) break;
         return GetUnitInPlay(defenderPlayId, defenderPlayer)?.IsDamaged();
@@ -183,6 +186,7 @@ export function HasOverwhelm(cardId: string,
     case "ASH_121"://Blurrg
     case "ASH_241"://Marrok's Fiend Fighter
     case "ASH_129"://Defenders of the Forest
+    case "ASH_148"://Ninth Sister - Hulking Inquisitor
     case "ASH_143"://Tempest Lieutenant
     case "ASH_164"://Alamite Hunter
     case "HMW_121"://Hijacked AT-ST

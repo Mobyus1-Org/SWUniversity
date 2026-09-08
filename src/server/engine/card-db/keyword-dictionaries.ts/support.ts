@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetUnitInPlay, GetUnitsForPlayer } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetUnitInPlay, GetUnitsForPlayer, ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 
 /**
  * Support — "When you play this unit (or deploy this leader), you may attack with another unit.
@@ -69,6 +69,9 @@ export function HasSupport(cardId: string, playId?: string, player?: PlayerId): 
 
   switch (cardId) {
     //ASH
+    case "ASH_008"://Moff Gideon (deployed) — gains Support if an Imperial unit in your discard
+                   //pile has it. Printed keywords only.
+      return player !== undefined && ImperialUnitInDiscardHasKeyword(player, c => HasSupport(c));
     case "ASH_009"://Ahsoka Tano (Trust in the Force) leader unit
     case "ASH_014"://The Mandalorian (We Can't Keep Running) leader unit
     case "ASH_033"://Grand Admiral Thrawn

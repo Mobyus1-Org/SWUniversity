@@ -1,7 +1,7 @@
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { BaseHealingPrevented, DealDamageToBase, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit } from "@/server/engine/core-functions";
+import { BaseHealingPrevented, DealDamageToBase, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase } from "@/server/engine/core-functions";
 import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 
 /**
@@ -19,7 +19,7 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
   "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149", "ASH_179", "ASH_251",
-  "ASH_237", "ASH_248", "SEC_119", "JTL_087", "HMW_121",
+  "ASH_237", "ASH_248", "SEC_119", "JTL_087", "HMW_121", "ASH_079", "ASH_111",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -90,6 +90,16 @@ export function resolveWhenPlayedTrigger(
       if (GetUnitsForPlayer(trigger.fromPlayer).some(u => CardIsUnique(u.cardId))) {
         CreateMandalorianToken(gs, trigger.fromPlayer, log, trigger.cardId);
       }
+      break;
+    case "ASH_079": // Koska Reeves — When Played: if a friendly unit was defeated this phase,
+                    // create a Mandalorian token. Any friendly unit counts, not just a Mandalorian.
+      if (UnitWasDefeatedThisPhase(trigger.fromPlayer)) {
+        CreateMandalorianToken(gs, trigger.fromPlayer, log, trigger.cardId);
+      }
+      break;
+    case "ASH_111": // Children of the Watch — When Played: create 2 Mandalorian tokens.
+      CreateMandalorianToken(gs, trigger.fromPlayer, log, trigger.cardId);
+      CreateMandalorianToken(gs, trigger.fromPlayer, log, trigger.cardId);
       break;
     case "ASH_149": // Eviscerator — When Played: give 2 Advantage tokens to each other friendly unit.
       for (const u of GetUnitsForPlayer(trigger.fromPlayer).filter(u => u.playId !== trigger.playId)) {

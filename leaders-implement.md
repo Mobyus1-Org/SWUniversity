@@ -10,10 +10,10 @@ the front (undeployed) ability and the deployed leader-unit ability.
 
 | Status | Count |
 |--------|-------|
-| Complete (both sides) | 92 |
-| Needs work | 62 |
-| — of those, no engine code at all | 45 |
-| — of those, front `Action` not in ActionAbilities() | 44 |
+| Complete (both sides) | 94 |
+| Needs work | 60 |
+| — of those, no engine code at all | 43 |
+| — of those, front `Action` not in ActionAbilities() | 43 |
 | **Total** | **154** |
 
 ## How status was derived
@@ -138,16 +138,6 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 **Front:** Action [Exhaust]: Choose one:<br>Give each ground unit Sentinel and Overwhelm for this phase.<br>Give each space unit Sentinel and Overwhelm for this phase.<br><br>Epic Action: If you control 5 or more resources, deploy this leader.
 
 **Deployed:** Overwhelm<br>Each other friendly unit gains Overwhelm and Sentinel.
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
-
-#### ASH_008 — Moff Gideon (Indomitable Warlord)
-
-**Missing:** front + deployed · **Batch:** Batch 13 · **Existing refs:** none
-
-**Front:** Action [Exhaust]: If a friendly Imperial unit was defeated this phase, play a unit from your hand. It costs 1 resource less.<br>Epic Action: If you control 7 or more resources, deploy this leader.
-
-**Deployed:** This unit gains each of the following keywords if it is on an Imperial unit in your discard pile: Ambush, Grit, Hidden, Overwhelm, Saboteur, Sentinel, Shielded, Support.
 
 > Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
@@ -516,14 +506,6 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 > Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
-#### SEC_009 — Mon Mothma (Forming a Coalition)
-
-**Missing:** deployed · **Batch:** Batch 7 · **Existing refs:** none
-
-**Front:** Ignore the aspect penalties on non-Villainy Official units you play.<br>Epic Action: If you control 5 or more resources, deploy this leader.
-
-**Deployed:** Ignore the aspect penalties on non‑Villainy Official units you play.<br>Each other friendly Official unit gets +0/+1.
-
 #### SEC_010 — Dedra Meero (Not Wasting Time)
 
 **Missing:** front + deployed · **Batch:** Batch 7 · **Existing refs:** `raid.ts`, `action-ability.ts`
@@ -721,6 +703,8 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 | SHD_017 | Lando Calrissian — With Impeccable Taste | SHD |
 | SOR_017 | Han Solo — Audacious Smuggler | SOR |
 | ASH_004 | Grand Admiral Thrawn — Victory is Mine | ASH |
+| ASH_008 | Moff Gideon — Indomitable Warlord | ASH |
+| SEC_009 | Mon Mothma — Forming a Coalition | SEC |
 | ASH_009 | Ahsoka Tano — Trust in the Force | ASH |
 | ASH_014 | The Mandalorian — We Can't Keep Running | ASH |
 | IBH_001 | Leia Organa — Get to Your Transports! | IBH |

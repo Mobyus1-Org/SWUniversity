@@ -122,7 +122,7 @@ import { QueueUnitEnteredPlayReaction } from "@/server/engine/core-functions";
 import { CreateBeast, GiveWeaknessToken, UnitsWithoutWeaknessToken } from "@/server/engine/token-helpers";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget, MandoProtector, SpendMandoShield } from "@/server/engine/core-functions";
+import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget, MandoProtector, SpendMandoShield, ArenasWhereYouControlTheMostUnits } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -207,6 +207,23 @@ function resolveChooseOne(
 ): PendingResolution | null {
   let next: PendingResolution | null = null;
   switch (pending.cardId) {
+    case "ASH_133": { // Trask Walker — "Either put that card on the bottom of your deck and heal 3
+                      // damage from your base or return it to your hand."
+      const player133 = GetPlayer(game, pending.player);
+      const idx133 = player133.discard.findIndex(c => c.playId === String(pending.data?.targetPlayId ?? ""));
+      if (idx133 === -1) break;
+      const [card133] = player133.discard.splice(idx133, 1);
+      if (optionId === "bottom") {
+        // The bottom of the deck is index 0 — deck.pop() draws from the top.
+        player133.deck.unshift({ cardId: card133.cardId });
+        HealBaseForPlayer(game, pending.player, 3, log, "ASH_133");
+        log.push(`${CardTitle("ASH_133")}: put ${CardTitle(card133.cardId)} on the bottom of the deck.`);
+      } else {
+        player133.hand.push({ cardId: card133.cardId });
+        log.push(`${CardTitle("ASH_133")}: returned ${CardTitle(card133.cardId)} to hand.`);
+      }
+      break;
+    }
     case "SHD_153": // Poe Dameron — resolve the chosen mode, then prompt for any remaining discards.
       return resolvePoeMode(game, log, pending, optionId);
     case "LOF_255": // Curious Flock — pay up to 6.
@@ -2593,11 +2610,31 @@ function boardWipeDefeat(
 }
 
 /**
- * True while an effect stops this unit from attacking bases. Such effects are registered by
- * convention as a `<cardId>_no_base` current effect on the attacker — JTL_206 Fly Casual (for the
- * phase), LOF_124 Niman Strike (for the attack).
+ * Units that PRINT "this unit can't attack bases". Kept separate from the granted effects below
+ * because a printed restriction has no moment at which to attach one: a unit placed straight onto
+ * the board by a puzzle never runs the play-a-card path, and would otherwise be free to attack
+ * bases with nothing to catch it.
  */
-function UnitCantAttackBases(game: GameState, attackerPlayId: string): boolean {
+function UnitPrintsCantAttackBases(cardId: string): boolean {
+  switch (cardId) {
+    case "ASH_034": // Wicket — Yub Nub!
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * True while this unit cannot attack bases, whether printed on it or granted. Granted effects are
+ * registered by convention as a `<cardId>_no_base` current effect on the attacker — JTL_206 Fly
+ * Casual (for the phase), LOF_124 Niman Strike (for the attack).
+ */
+function UnitCantAttackBases(game: GameState, attackerPlayId: string, attackerCardId?: string): boolean {
+  if (attackerCardId !== undefined && UnitPrintsCantAttackBases(attackerCardId)) {
+    // A printed restriction is an ability, so it goes away with the unit's abilities.
+    const unit = GetUnitByPlayId(game, attackerPlayId);
+    if (!unit || !Unit.FromInterface(unit).LostAbilities()) return true;
+  }
   return game.currentEffects.some(
     e => e.cardId.endsWith("_no_base") && e.targetPlayId === attackerPlayId,
   );
@@ -2674,7 +2711,7 @@ function computeAttackTargets(
     return { unitPlayIds: sentinels.map((u) => u.playId), includesBase: false };
   }
   const entrenchedUnit = attacker.upgrades.some(u => u.cardId === "SOR_072");
-  const cantAttackBase = UnitCantAttackBases(game, attacker.playId);
+  const cantAttackBase = UnitCantAttackBases(game, attacker.playId, attacker.cardId);
   return { unitPlayIds: finalVisible.map((u) => u.playId), includesBase: !entrenchedUnit && !cantAttackBase };
 }
 
@@ -3243,6 +3280,17 @@ function attackerOwnWhenAttackEnds(
         GiveAdvantageTokens(game, attacker, 1, GetGame()?.gameLog ?? [], "ASH_180");
         break;
       }
+      case "ASH_085": { // Grav Charge — "When attached unit's attack ends: Deal 4 damage to it and
+                        // defeat this upgrade." This loop only runs for the ATTACKER, so merely
+                        // being attacked never triggers it. The damage lands first, then the
+                        // upgrade goes — via the sweeping helper, since 4 is often lethal.
+        const log085 = GetGame()?.gameLog ?? [];
+        DealDamageToUnit(game, "ASH_085", attacker.playId, 4, log085, upgrade.controller);
+        log085.push(`${CardTitle("ASH_085")}: dealt 4 damage to ${CardTitle(attacker.cardId)}.`);
+        const pend085 = defeatUpgradeAndSweep(game, log085, upgrade.playId, CardTitle("ASH_085"), continuation);
+        if (pend085 && pend085 !== continuation) return pend085;
+        break;
+      }
       case "SHD_143": { // Ruthlessness — grants "When this unit attacks and defeats a unit: Deal 2
                         // damage to the defending player's base." A unit attack always targets a
                         // unit the opponent controls, so the defending player is that opponent.
@@ -3285,7 +3333,7 @@ function attackerOwnWhenAttackEnds(
         const pState229 = GetPlayer(game, attacker.controller);
         if (pState229.deck.length === 0) break;
         const top229 = pState229.deck[pState229.deck.length - 1];
-        if ((CardCost(top229.cardId) ?? 99) > 2) break;
+        if ((CardCost(top229.cardId) ?? 0) > 2) break; // no cost entry == costs 0
         return {
           type: "ability-option",
           cardId: "ASH_229",
@@ -5536,7 +5584,7 @@ function handleChooseTarget(
       // "Can't attack bases" effects (JTL_206 Fly Casual, LOF_124 Niman Strike) are enforced here
       // as well as in computeAttackTargets — offering no Base zone isn't enough on its own, since
       // a client can still dispatch one.
-      if (UnitCantAttackBases(game, attacker.playId))
+      if (UnitCantAttackBases(game, attacker.playId, attacker.cardId))
         return { response: invalidResponse(`${CardTitle(attacker.cardId)} can't attack a base.`), pending, stateChanged: false };
       target = { type: "base", player: GetOtherPlayer(attacker.controller) };
     } else if (data.targetPlayIds?.[0]) {
@@ -5981,6 +6029,24 @@ function handleChooseTarget(
     const invalid = chosen.find(id => !pending.eligiblePlayIds.includes(id));
     if (invalid)
       return { response: invalidResponse(`Card ${invalid} is not eligible for return from discard.`), pending, stateChanged: false };
+
+    if (pending.cardId === "ASH_133") {
+      // Trask Walker — the card is chosen; now pick which of the two things to do with it. The
+      // playId travels in `data` because the mode handler needs it after this pending is gone.
+      if (chosen.length === 0) return { response: stateResponse(game), pending: null, stateChanged: false };
+      const mode133: ChooseOnePending = {
+        type: "choose-one",
+        cardId: "ASH_133",
+        player: pending.player,
+        options: [
+          { id: "bottom", label: "Bottom of deck, heal 3 from your base" },
+          { id: "hand", label: "Return it to your hand" },
+        ],
+        data: { targetPlayId: chosen[0] },
+        continuation: pending.continuation ?? null,
+      };
+      return { response: resolutionResponse(pendingToResolution(mode133, game)), pending: mode133, stateChanged: false };
+    }
 
     if (pending.cardId === "SHD_015") {
       // Doctor Aphra When Deployed: the player chose 3 discard cards with different names; return 1
@@ -6523,6 +6589,24 @@ function handleChooseTarget(
           fromPlayIds: sameName.map(u => u.playId),
           continuation: pending.continuation ?? null,
         } satisfies AbilityTargetPending;
+      }
+    }
+
+    // ASH_148 Ninth Sister: "You may deal damage equal to its cost divided as you choose among any
+    // number of units." A 0-cost card carries no cost entry at all, so discardedCost is 0 and no
+    // step is offered — there is nothing to divide.
+    if (remaining === 0 && pending.thenSpreadDamageEqualToCostFor !== undefined && discardedCost > 0) {
+      const targets148 = GetAllUnits(game);
+      if (targets148.length > 0) {
+        nextPending = {
+          type: "spread-damage",
+          cardId: "ASH_148",
+          player: pending.thenSpreadDamageEqualToCostFor,
+          totalDamage: discardedCost,
+          optional: true, // "you may" — assign all of it or none
+          eligiblePlayIds: targets148.map(u => u.playId),
+          continuation: pending.continuation ?? null,
+        } satisfies SpreadDamagePending;
       }
     }
 
@@ -7723,6 +7807,32 @@ function handleChooseTarget(
           enterReady: true,
           injectEffect: { cardId: "SOR_219", duration: "UntilStartOfRegroup", affectedPlayer: pending.player },
         });
+      }
+      case "ASH_108": { // Crix Madine — a Heroism unit only, 2 less per arena majority. The count
+                        // is taken now, so Crix (already in play) is part of it.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse(`${CardTitle("ASH_108")}: chosen card is not a Unit.`), pending, stateChanged: false };
+        if (!(CardAspects(cardId) ?? []).includes("Heroism"))
+          return { response: invalidResponse(`${CardTitle("ASH_108")}: chosen card is not a Heroism unit.`), pending, stateChanged: false };
+        const discount108 = ArenasWhereYouControlTheMostUnits(pending.player) * 2;
+        const reducedCost108 = Math.max(0, playCost(game, pending.player, cardId) - discount108);
+        if (spendableFor(game, pending.player) < reducedCost108)
+          return { response: invalidResponse(`${CardTitle("ASH_108")}: not enough resources to play this unit.`), pending, stateChanged: false };
+        payResources(game, pending.player, reducedCost108, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("ASH_108")} (cost reduced by ${discount108}).`);
+        return completePlayCard(game, log, cardId, pending.player);
+      }
+      case "ASH_008": { // Moff Gideon — any unit from hand, for 1 resource less.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse(`${CardTitle("ASH_008")}: chosen card is not a Unit.`), pending, stateChanged: false };
+        const reducedCost008 = Math.max(0, playCost(game, pending.player, cardId) - 1);
+        if (spendableFor(game, pending.player) < reducedCost008)
+          return { response: invalidResponse(`${CardTitle("ASH_008")}: not enough resources to play this unit.`), pending, stateChanged: false };
+        payResources(game, pending.player, reducedCost008, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("ASH_008")} (cost reduced by 1).`);
+        return completePlayCard(game, log, cardId, pending.player);
       }
       case "TS26_10": { // Dooku's Palace — 1 resource less per friendly leader unit.
         if (CardType(cardId) !== "Unit")
@@ -9407,6 +9517,12 @@ function handleChooseOption(
       return { response: invalidResponse(`Unknown option: ${option}`), pending, stateChanged: false };
     }
     const chosen = resolveChooseOne(game, log, pending, option);
+    // A "Choose one" on an On Attack ability (ASH_133) carries the rest of the attack as its
+    // continuation. That has to be RUN, not rendered — handing a bare resolve-attack back to the
+    // client leaves the attack stuck half-resolved.
+    if (chosen?.type === "resolve-attack") {
+      return handleResolveAttack(game, log, chosen);
+    }
     if (chosen) {
       return { response: resolutionResponse(pendingToResolution(chosen, game)), pending: chosen, stateChanged: false };
     }
@@ -10093,6 +10209,9 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "ASH_004": // Grand Admiral Thrawn (ASH) — If you control 8 or more resources.
       return p.resources.length >= 8;
+    case "ASH_008": // Moff Gideon — If you control 7 or more resources.
+      return p.resources.length >= 7;
+    case "SEC_009": // Mon Mothma — If you control 5 or more resources.
     case "ASH_001": // The Armorer — If you control 5 or more resources.
     case "HMW_001": // Asajj Ventress — If you control 5 or more resources.
     case "LOF_017": // Darth Revan — If you control 5 or more resources.
@@ -11095,6 +11214,15 @@ function resolveActionAbility(
         fromPlayIds: eligible003.map(u => u.playId),
         continuation: null,
       } satisfies AbilityTargetPending;
+    }
+    case "ASH_008": { // Moff Gideon — the condition is checked now; unmet, the Action fizzles
+                      // (the exhaust cost has already been paid).
+      if (!UnitWasDefeatedThisPhase(player, "Imperial")) {
+        log.push(`${CardTitle("ASH_008")}: no friendly Imperial unit was defeated this phase.`);
+        return null;
+      }
+      if (!GetHand(player).some(c => CardType(c.cardId) === "Unit")) return null;
+      return { type: "play-from-hand", cardId: "ASH_008", player } satisfies PlayFromHandPending;
     }
     case "ASH_001": { // The Armorer — step 1: choose an upgrade in your RESOURCE row.
       const upgrades001 = ArmorerResourceUpgrades(player);
@@ -15364,6 +15492,23 @@ function applyAbilityEffect(
         target170.upgrades = [];
         game.gameLog.push(`${CardTitle("SOR_170")}: defeated ${count170} upgrade(s) on ${CardTitle(target170.cardId)}.`);
       }
+      break;
+    }
+    case "ASH_067": { // Get Lost — defeat the chosen upgraded non-leader unit.
+      if (!targetPlayId) break;
+      const victim067 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (victim067) {
+        game.gameLog.push(`${CardTitle("ASH_067")}: defeated ${CardTitle(victim067.cardId)}.`);
+        const pend067 = defeatUnit(game.currentGameState, game.gameLog, Unit.FromInterface(victim067));
+        if (pend067) return pend067;
+      }
+      break;
+    }
+    case "ASH_138": { // Turning the Tide — 1 damage to the chosen unit for each friendly unit,
+                      // counted across BOTH arenas at the moment it resolves.
+      if (!targetPlayId) break;
+      const friendly138 = GetUnitsForPlayer(pending.player!).length;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, friendly138, game.gameLog, pending.player);
       break;
     }
     case "SOR_172": { // Open Fire: Deal 4 damage to the chosen unit.

@@ -130,7 +130,15 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         if (attackers009.length > 0 && GetResources(player, true).length >= 2) abilities.push(cardId);
         break;
       }
-      case "ASH_001": { // The Armorer — Action [Exhaust]: play an upgrade from your RESOURCES onto a
+      case "ASH_008": { // Moff Gideon — Action [Exhaust]: "If a friendly Imperial unit was defeated
+                      // this phase, play a unit from your hand. It costs 1 resource less."
+                      // The "if" is a CONDITION, not a cost, so it does not gate availability —
+                      // the Action is offered and simply does nothing when it is unmet. Having a
+                      // unit in hand IS a targeting requirement, so that much is checked.
+      if (GetHand(player).some(c => CardType(c.cardId) === "Unit")) abilities.push(cardId);
+      break;
+    }
+    case "ASH_001": { // The Armorer — Action [Exhaust]: play an upgrade from your RESOURCES onto a
                         // unit that entered play this phase. Offered only when both halves exist:
                         // an upgrade in the row, and something legal to attach it to.
         if (ArmorerResourceUpgrades(player).length > 0

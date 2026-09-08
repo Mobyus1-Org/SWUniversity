@@ -1,9 +1,9 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 import { PlayerId, Zones } from "@/lib/engine/core-models";
 import { CardCost, CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { EnemyUnitsLoseAmbushAndSupport } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 
-export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, player?: PlayerId, isRecursion = false)
+export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, player?: PlayerId, isRecursion = false): boolean
 {
   if (cardId == "TWI_116") return false; //Clone - Prevent bugs related to ECL and Timely.
 
@@ -52,6 +52,9 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
 
     switch (cardId) {
       //conditional ambush
+      case "ASH_008"://Moff Gideon (deployed) — gains this keyword if an Imperial unit in
+                     //your discard pile has it. Printed keywords only.
+        return ImperialUnitInDiscardHasKeyword(player, c => HasAmbush(c));
       case "SOR_114"://Escort Skiff
         return PlayerHasUnitWithAspectInPlay(player, "Command", true, playId);
       case "SOR_249"://Frontier AT-RT

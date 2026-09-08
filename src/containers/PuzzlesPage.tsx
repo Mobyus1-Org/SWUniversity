@@ -109,6 +109,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "TWI_015",
   //Hunt for the Missing Wookiee
   "ASH_001", // The Armorer — Steel Shapes Us
+  "ASH_008", // Moff Gideon — Indomitable Warlord
   "HMW_001", // Asajj Ventress — No Time For Regret
   "HMW_009", // Chewbacca — Relentless Rebel
   "HMW_003", // Doctor Hemlock — Emotion Has No Place Here

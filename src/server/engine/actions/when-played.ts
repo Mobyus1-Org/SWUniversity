@@ -1,10 +1,10 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack } from "@/server/engine/core-functions";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits } from "@/server/engine/core-functions";
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost } from "@/server/engine/card-playability";
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending, BudgetSelectPending } from "@/server/engine/pending-resolution";
+import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending, BudgetSelectPending, PlayFromHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateBeast, CreateCloneTrooper, CreateXWing, CreateTieFighter, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens, GiveWeaknessToken } from "@/server/engine/token-helpers";
 import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits, CardIsUnique, CardArena } from "@/server/engine/card-db/generated";
@@ -2900,10 +2900,60 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "ASH_108": { // Crix Madine — "When Played: You may play a Heroism unit from your hand. It
+                      // costs 2 resources less for each arena in which you control the most units."
+      const heroism108 = GetHand(player).filter(
+        c => CardType(c.cardId) === "Unit" && (CardAspects(c.cardId) ?? []).includes("Heroism"),
+      );
+      if (heroism108.length === 0) return null;
+      const discount108 = ArenasWhereYouControlTheMostUnits(player) * 2;
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        helperText: discount108 === 0
+          ? "Play a Heroism unit from your hand?"
+          : `Play a Heroism unit from your hand for ${discount108} less?`,
+        yesLabel: "Play unit",
+        noLabel: "Skip",
+        onYes: { type: "play-from-hand", cardId, player } satisfies PlayFromHandPending,
+        continuation: null,
+      };
+    }
+    case "ASH_148": { // Ninth Sister — "When Played: An opponent discards a card from their hand.
+                      // You may deal damage equal to its cost divided as you choose among any
+                      // number of units." The OPPONENT picks which card to lose.
+      const opponent148 = GetOtherPlayer(player);
+      if (GetHand(opponent148).length === 0) return null;
+      return {
+        type: "discard-from-hand",
+        targetPlayer: opponent148,
+        count: 1,
+        thenSpreadDamageEqualToCostFor: player,
+        continuation: null,
+      } satisfies DiscardFromHandPending;
+    }
+    case "ASH_133": // Trask Walker — the same ability on both its triggers.
+      return buildTraskWalkerChoice(player);
     case "SOR_172": { // Open Fire — Deal 4 damage to a unit.
       const allUnits172 = AllUnits();
       if (allUnits172.length === 0) return null;
       return mandatoryTarget(cardId, player, allUnits172.map(u => u.playId));
+    }
+    case "ASH_067": { // Get Lost — Defeat an upgraded non-leader unit. A Shield token is an
+                      // upgrade, so a unit carrying only a Shield is a legal target. Either
+                      // player's units qualify; the text names no controller.
+      const upgraded067 = AllUnits().filter(
+        u => !Unit.FromInterface(u).IsLeader() && u.upgrades.length > 0,
+      );
+      if (upgraded067.length === 0) return null;
+      return mandatoryTarget(cardId, player, upgraded067.map(u => u.playId));
+    }
+    case "ASH_138": { // Turning the Tide — Choose a unit. Deal 1 damage to it for each friendly
+                      // unit. Any unit is a legal target; the count is taken at resolution.
+      const allUnits138 = AllUnits();
+      if (allUnits138.length === 0) return null;
+      return mandatoryTarget(cardId, player, allUnits138.map(u => u.playId));
     }
     case "SOR_173": { // Bombing Run — Choose an arena. Deal 3 damage to each unit in that arena.
       return {
@@ -3415,4 +3465,34 @@ export function resolveWhenPlayed(
     default:
       return null;
   }
+}
+
+/**
+ * ASH_133 Trask Walker — "When Played/On Attack: Choose a unit in your discard pile that costs 7
+ * or less. Either put that card on the bottom of your deck and heal 3 damage from your base or
+ * return it to your hand."
+ *
+ * One builder for both triggers. The mode choice comes AFTER the card is chosen, so it is built
+ * in the target handler rather than chained here.
+ */
+export function buildTraskWalkerChoice(
+  player: PlayerId,
+  continuation: PendingResolution | null = null,
+): ReturnFromDiscardPending | null {
+  const game = GetGame();
+  if (!game) return null;
+  const eligible = GetPlayer(game.currentGameState, player).discard.filter(
+    // A card with no cost entry in the generated data costs 0 (Porg, the tokens), so the
+    // fallback must be 0 — `?? 99` would silently make every 0-cost unit ineligible.
+    c => CardType(c.cardId) === "Unit" && (CardCost(c.cardId) ?? 0) <= 7,
+  );
+  if (eligible.length === 0) return null;
+  return {
+    type: "return-from-discard",
+    cardId: "ASH_133",
+    player,
+    maxCount: 1,
+    eligiblePlayIds: eligible.map(c => c.playId),
+    continuation,
+  };
 }

@@ -9,7 +9,7 @@ import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens, GiveExperienceTokens, CreateSpy } from "@/server/engine/token-helpers";
-import { jabbasRancorDamage } from "@/server/engine/actions/when-played";
+import { jabbasRancorDamage, buildTraskWalkerChoice } from "@/server/engine/actions/when-played";
 
 /**
  * On Attack abilities — called after the attack target is chosen.
@@ -1273,6 +1273,9 @@ function resolveInnateOnAttack(
       return searchDeck("SOR_236", attacker.controller, 1, "scry", { continuation }) ?? continuation;
     case "SOR_040": { // Avenger On Attack — opponent chooses a non-leader unit they control to defeat.
       return chooseAndDefeatUnit("SOR_040", attacker.controller, false, continuation);
+    }
+    case "ASH_133": { // Trask Walker — the same choice its When Played offers.
+      return buildTraskWalkerChoice(attacker.controller, continuation) ?? continuation;
     }
     case "SEC_011": { // Governor Pryce (deployed) — "On Attack: Create a Spy token."
       const game011 = GetGame();

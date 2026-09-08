@@ -1,6 +1,6 @@
 import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, InitiativePlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
-import { CardAspects } from "@/server/engine/card-db/generated";
+import { CardAspects, CardTitle } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 
 export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): number
@@ -65,6 +65,11 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
           break;
         case "LOF_053"://Heriloom Lightsaber
           amount += TraitContains(cardId, "Force", player) ? 1 : 0;
+          break;
+        case "ASH_114"://Sabine's Lightsaber - Not Alone. Two independent triggers: the host's
+                       //TITLE, or the Force trait. Matching on title (not card id) is deliberate —
+                       //every printing of Sabine Wren qualifies.
+          amount += (CardTitle(cardId) === "Sabine Wren" || TraitContains(cardId, "Force", player)) ? 2 : 0;
           break;
         case "LOF_261"://Constructed Lightsaber
           amount += CardAspects(cardId)?.includes("Heroism") ? 2 : 0;

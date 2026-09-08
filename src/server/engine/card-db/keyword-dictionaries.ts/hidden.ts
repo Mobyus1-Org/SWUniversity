@@ -1,7 +1,7 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, LeaderAbilitiesIgnored, TraitContains } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, LeaderAbilitiesIgnored, TraitContains, ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
 
-export function HasHidden(cardId: string, playId?: string, player?: PlayerId, isRecursion = false)
+export function HasHidden(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): boolean
 {
   if (player && playId) {
     const unit = GetUnitInPlay(playId, player);
@@ -37,6 +37,9 @@ export function HasHidden(cardId: string, playId?: string, player?: PlayerId, is
   }
   //conditional hidden
   switch (cardId) {
+    case "ASH_008"://Moff Gideon (deployed) — gains Hidden if an Imperial unit in your discard
+                   //pile has it. Printed keywords only.
+      return player !== undefined && ImperialUnitInDiscardHasKeyword(player, c => HasHidden(c));
     case "LOF_105"://Oppo Rancisis
       if(isRecursion) return false; //Prevent recursion
       for(const u of units) {

@@ -1,9 +1,9 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetHand, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, PlayerHasUnitWithTraitInPlay, TraitContains, UnitWasDefeatedThisPhase } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetHand, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, PlayerHasUnitWithTraitInPlay, TraitContains, UnitWasDefeatedThisPhase , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 
-export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, isRecursion = false)
+export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): boolean
 {
   if (player && playId) {
     const otherPlayer = player == 1 ? 2 : 1;
@@ -60,6 +60,9 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
 
     //conditional saboteur
     switch (cardId) {
+      case "ASH_008"://Moff Gideon (deployed) — gains this keyword if an Imperial unit in
+                     //your discard pile has it. Printed keywords only.
+        return ImperialUnitInDiscardHasKeyword(player, c => HasSaboteur(c));
       case "TWI_243"://Republic Commando
         return IsCoordinateActive(player);
       case "TWI_010"://Pre Viszla - Pursuing The Throne
@@ -124,6 +127,7 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
     case "LAW_230"://Ohnaka Gang Starhopper
     case "LAW_234"://Kage Elite
     case "LAW_250"://Callous Bounty Hunter
+    case "ASH_034"://Wicket - Yub Nub!
     case "ASH_141"://TIE Striker
     case "ASH_158"://Han Solo
     case "ASH_172"://Razor Crest

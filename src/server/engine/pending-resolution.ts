@@ -151,6 +151,11 @@ export interface DiscardFromHandPending {
    * follow-up prompt is built inside the discard handler. Value is the source cardId, for logging.
    */
   thenXpSameNameFor?: string;
+  /**
+   * ASH_148 Ninth Sister: after the opponent discards, this player MAY deal damage equal to the
+   * discarded card's printed cost, divided among any number of units. Holds that player's id.
+   */
+  thenSpreadDamageEqualToCostFor?: PlayerId;
 }
 
 /**

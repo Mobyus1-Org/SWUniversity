@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 850 cards across 10 sets.**
+**Total: 837 cards across 10 sets.**
 
 ---
 
@@ -616,7 +616,7 @@ LAW_262: Bank Job Fugitives Unit
 LAW_264: From a Certain Point of View Event
 ```
 
-## SEC — Secrets of Power (149)
+## SEC — Secrets of Power (148)
 
 **Message 1 of 4**
 ```
@@ -624,7 +624,6 @@ SEC:
 SEC_002: Jabba the Hutt - Wonderful Human Being Leader
 SEC_003: Lama Su - We Modified Their Genetics Leader
 SEC_008: Bail Organa - Doing Everything He Can Leader
-SEC_009: Mon Mothma - Forming a Coalition Leader
 SEC_012: Cassian Andor - Climb! Leader
 SEC_013: Luthen Rael - Don't You Want to Fight For Real? Leader
 SEC_016: Padmé Amidala - What Do You Have to Hide? Leader
@@ -787,7 +786,7 @@ SEC_261: Inspiring Senator Unit
 SEC_263: Assassin Probe Unit
 ```
 
-## ASH — Ashes of the Empire (102)
+## ASH — Ashes of the Empire (90)
 
 **Message 1 of 3**
 ```
@@ -797,7 +796,6 @@ ASH_003: Baylan Skoll - Power Beyond Dream Leader
 ASH_005: Luke Skywalker - I Can Save Him Leader
 ASH_006: Sabine Wren - Bargaining on Belief Leader
 ASH_007: Grand Admiral Sloane - Holding the Empire Together Leader
-ASH_008: Moff Gideon - Indomitable Warlord Leader
 ASH_010: Bo-Katan Kryze - Reclaiming Mandalore Leader
 ASH_011: Cad Bane - Still Faster than You Leader
 ASH_012: Vane - Quarrelsome Pirate Leader
@@ -809,7 +807,6 @@ ASH_018: Grogu - Charming Companion Leader
 ASH_027: Enoch - Solemn Servant Unit
 ASH_028: Paz Vizsla - For a Brighter Future Unit
 ASH_031: Hera Syndulla - Renegade General Unit
-ASH_034: Wicket - Yub Nub! Unit
 ASH_035: Tatooine Repulsor Train Unit
 ASH_038: Purrgil Ultra Unit
 ASH_039: Baylan Skoll - Fallen Jedi Unit
@@ -818,7 +815,6 @@ ASH_042: Jabba the Hutt - Eminence of Tatooine Unit
 ASH_044: Barriss Offee - Redeeming Herself Unit
 ASH_045: Reanimated Night Trooper Unit
 ASH_047: Gar Saxon - Coveting Power Unit
-ASH_049: Shin Hati - Going Somewhere? Unit
 ASH_051: Reinforcing Light Cruiser Unit
 ASH_053: Pre Vizsla - Strong-Willed Ruler Unit
 ASH_054: Pointless to Resist Upgrade
@@ -828,7 +824,6 @@ ASH_060: Cobb Vanth - Let Me Handle This Unit
 ASH_063: Bo-Katan's Gauntlet - Reinforce from Above Unit
 ASH_064: The Armorer - Secrecy is Our Survival Unit
 ASH_065: Home One - Heart of the Fleet Unit
-ASH_067: Get Lost Event
 ASH_071: Battered Haulcraft Unit
 ```
 
@@ -839,12 +834,10 @@ ASH_073: Palace Chef Droid Unit
 ASH_075: Pit Droid Team Unit
 ASH_077: Ryder Azadi - Restored Governor Unit
 ASH_078: B-Wing Rearguard Unit
-ASH_079: Koska Reeves - Warrior of Mandalore Unit
 ASH_080: Covert Believers Unit
 ASH_081: Nebulon-C Frigate Unit
 ASH_082: Trexler Armored Marauder Unit
 ASH_084: Arcana Star Map - Path to Peridea Upgrade
-ASH_085: Grav Charge Upgrade
 ASH_088: The Conflict Within Upgrade
 ASH_089: Perseverance Event
 ASH_090: Reforge Event
@@ -855,11 +848,8 @@ ASH_098: AT-ST Raider Unit
 ASH_100: Gallius Rax - Counselor to the Empire Unit
 ASH_104: Dathomiri Magicks Event
 ASH_107: Clan Wren Loyalist Unit
-ASH_108: Crix Madine - Strike Team Strategist Unit
 ASH_110: Admiral Ackbar - Assume Attack Coordinates Unit
-ASH_111: Children of the Watch Unit
 ASH_113: Mandalorian Flagship - Captured from the Empire Unit
-ASH_114: Sabine's Lightsaber - Not Alone Upgrade
 ASH_118: 8D8 - Daimyo's Majordomo Unit
 ASH_119: Greef Karga - Introductions are in Order Unit
 ASH_122: Consortium StarViper Unit
@@ -867,12 +857,9 @@ ASH_123: Lang - Arrogant Mercenary Unit
 ASH_125: Stolen Eta Shuttle Unit
 ASH_127: The Twins - We Don't Want War Unit
 ASH_128: Bothan-5 - New Republic Prison Ship Unit
-ASH_133: Trask Walker Unit
 ASH_134: Warrior's Legacy Upgrade
 ASH_135: The Darksaber - Icon of Leadership Upgrade
 ASH_136: Display of Strength Event
-ASH_138: Turning the Tide Event
-ASH_148: Ninth Sister - Hulking Inquisitor Unit
 ASH_155: Grogu - Yes. Yes. Yes. Unit
 ASH_159: Alphabet Squadron U-Wing - Quiet Devotion Unit
 ASH_160: Kachirho Militia Unit

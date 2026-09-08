@@ -225,6 +225,7 @@ export const Cards = {
       darthVader: "IBH_053",
     },
     ash: {
+      moffGideonIndomitableWarlord: "ASH_008",
       ahsokaTano: "ASH_009",
       theMandalorian: "ASH_014",
       grandAdmiralThrawn: "ASH_004",
@@ -585,7 +586,14 @@ export const Cards = {
       chewbaccaMightyRescuer: "LAW_034", // 4/4 Ground Rebel/Wookiee, Overwhelm + When Attack Ends
     },
     ash: {
-      theMandalorianDevotedRescuer: "ASH_062", // 5/4 Ground, Shielded + spend-a-Shield damage prevention
+      theMandalorianDevotedRescuer: "ASH_062",
+      wicket: "ASH_034",
+      shinHatiGoingSomewhere: "ASH_049",
+      koskaReeves: "ASH_079",
+      crixMadine: "ASH_108",
+      childrenOfTheWatch: "ASH_111",
+      traskWalker: "ASH_133",
+      ninthSister: "ASH_148", // 5/4 Ground, Shielded + spend-a-Shield damage prevention
       dinosaurTurtle: "ASH_131", // 7/7 Ground Creature, cost 6, Command only — clean cost fixture
       remnantOfficial: "ASH_076", // 3/3 Ground, Restore 2 and nothing else — clean Restore fixture
       bWingRearguard: "ASH_078", // 3/5 Space Rebel Vehicle Fighter, conditional Sentinel
@@ -767,6 +775,8 @@ export const Cards = {
       battleFury: "LOF_139", // +3/+3, grants "On Attack: Discard a card from your hand."
     },
     ash: {
+      gravCharge: "ASH_085",
+      sabinesLightsaber: "ASH_114",
       camtono: "ASH_229",
       nowhereToHide: "ASH_198",
       whistlingBirds: "ASH_183",
@@ -920,6 +930,8 @@ export const Cards = {
       emergencyPowers: "SEC_040",
     },
     ash: {
+      getLost: "ASH_067",
+      turningTheTide: "ASH_138",
       // Identical reprint of SEC_258 Grassroots Resistance.
       grassrootsResistance: "ASH_258",
       galvanizedLeap: "ASH_188",

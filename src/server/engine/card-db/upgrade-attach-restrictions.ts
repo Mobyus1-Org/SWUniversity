@@ -76,6 +76,7 @@ export function UpgradeEligibleTargets(
     case "TS26_52": //Sith Traditions
     case "TS26_63": //Rex's DC-17s
     case "TS26_55": //Blade of Talzin
+    case "ASH_114": //Sabine's Lightsaber - Not Alone
     case "ASH_066": //Luke's Jedi Lightsaber
     case "ASH_183": //Whistling Birds
     case "ASH_055": //Blade of Talzin

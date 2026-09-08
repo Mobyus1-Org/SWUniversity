@@ -400,6 +400,9 @@ export class Unit implements UnitInterface {
        case "TWI_114": //Clone Commander Cody - Commanding the 212th
           hp += IsCoordinateActive(this.controller) && isOtherUnit ? 1 : 0;
           break;
+        case "SEC_009": // Mon Mothma (deployed) — each other friendly Official unit gets +0/+1
+          hp += isOtherUnit && TraitContains(this.cardId, "Official", this.controller, this.playId) ? 1 : 0;
+          break;
         case "TWI_007": // Captain Rex (deployed) — each other friendly Trooper unit gets +0/+1
           hp += isOtherUnit && TraitContains(this.cardId, "Trooper", this.controller, this.playId) ? 1 : 0;
           break;

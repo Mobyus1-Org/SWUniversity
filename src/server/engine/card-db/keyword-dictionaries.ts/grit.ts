@@ -1,8 +1,8 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, TraitContains } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 
-export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRecursion = false)
+export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): boolean
 {
   if (player && playId) {
     const unit = GetUnitInPlay(playId, player);
@@ -52,6 +52,9 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
     const units = GetUnitsForPlayer(player);
     switch(cardId) {
       //conditional grit
+      case "ASH_008"://Moff Gideon (deployed) — gains this keyword if an Imperial unit in
+                     //your discard pile has it. Printed keywords only.
+        return ImperialUnitInDiscardHasKeyword(player, c => HasGrit(c));
       case "TWI_050"://Luminara Unduli
         return IsCoordinateActive(player);
       case "LOF_050"://Plo Koon

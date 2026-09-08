@@ -1594,6 +1594,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "ASH_133": //Trask Walker — On Attack: recur a unit from your discard
     case "SEC_011": //Governor Pryce (deployed) — On Attack: create a Spy token
     case "SEC_204": //Blue Ace — On Attack: ready an exhausted enemy unit
     case "SEC_197": //Furtive Handmaiden — On Attack: may discard a card from hand; if you do, draw
@@ -1867,6 +1868,44 @@ export function SpendMandoShield(gs: GameState, protectedPlayId: string, log?: s
     log.push(`${CardTitle("ASH_062")}: defeated a Shield token to prevent the damage to ${covered ? CardTitle(covered.cardId) : "a friendly unit"}.`);
   }
   return true;
+}
+
+/**
+ * "…for each arena in which you control the most units." (ASH_108 Crix Madine.)
+ *
+ * Counts an arena only on a STRICT majority — a tie, including the common 0-v-0 in an empty space
+ * arena, is not "the most". Returns the number of such arenas, 0 to 2.
+ */
+export function ArenasWhereYouControlTheMostUnits(player: PlayerId): number {
+  const opponent: PlayerId = player === 1 ? 2 : 1;
+  let arenas = 0;
+  for (const arena of ["Ground", "Space"] as const) {
+    if (NumberOfUnitsInArena(player, arena) > NumberOfUnitsInArena(opponent, arena)) arenas += 1;
+  }
+  return arenas;
+}
+
+/**
+ * ASH_008 Moff Gideon (deployed) — "This unit gains each of the following keywords if it is on an
+ * Imperial unit in your discard pile."
+ *
+ * Only PRINTED keywords count: `hasKeyword` is called with a bare cardId and no playId, so the
+ * dictionaries fall through to their static lists and an in-play conditional grant can never be
+ * read off a card sitting in the discard. Gideon himself is skipped so a dictionary that calls
+ * back into this cannot recurse.
+ */
+export function ImperialUnitInDiscardHasKeyword(
+  player: PlayerId,
+  hasKeyword: (cardId: string) => boolean,
+): boolean {
+  const game = GetGame();
+  if (!game) return false;
+  return GetPlayer(game.currentGameState, player).discard.some(
+    c => c.cardId !== "ASH_008"
+      && CardType(c.cardId) === "Unit"
+      && TraitContains(c.cardId, "Imperial")
+      && hasKeyword(c.cardId),
+  );
 }
 
 export function ApplyDamagePrevention(gs: GameState, targetPlayId: string, amount: number, log?: string[]): number {
