@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken } from "@/server/engine/core-functions";
+import { AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -585,8 +585,7 @@ function resolveOwnWhenDefeated(
       if (InitiativePlayer() !== player) return null;
       const game163 = GetGame();
       if (!game163) return null;
-      DrawCardForPlayer(game163.currentGameState, game163.gameLog, player);
-      DrawCardForPlayer(game163.currentGameState, game163.gameLog, player);
+      DrawCardsForPlayer(game163.currentGameState, game163.gameLog, player, 2);
       game163.gameLog.push(`${CardTitle("SOR_163")}: drew 2 cards.`);
       return null;
     }

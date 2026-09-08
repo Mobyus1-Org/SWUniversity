@@ -1386,11 +1386,35 @@ export function DrawCardForPlayer(gs: GameState, log: string[], player: PlayerId
     QueueWhenDrawnTrigger(gs, player, drawn.cardId);
     return;
   }
-  {
-    p.base.damage += 3;
-    QueueWhenBaseDamagedReaction(gs, player, 3);
-    log.push(`Player ${player} drew from an empty deck — 3 damage to their base.`);
-  }
+  DrawEmptyDeckPenalty(gs, log, player, 1);
+}
+
+/**
+ * Draws `count` cards as ONE event.
+ *
+ * The instancing matters: drawing 2 from an empty deck is a single instance of 6 damage, not two
+ * of 3. HMW_081 Alliance Shield Generator triggers on "5 or more damage" in one instance, so
+ * looping DrawCardForPlayer would slip a 6 past it as 3 + 3. The regroup draw already got this
+ * right by computing its penalty once; every card effect that draws more than one card must go
+ * through here for the same reason.
+ */
+export function DrawCardsForPlayer(gs: GameState, log: string[], player: PlayerId, count: number): void {
+  const p = player === 1 ? gs.player1 : gs.player2;
+  const drawn = Math.min(count, p.deck.length);
+  for (let i = 0; i < drawn; i++) DrawCardForPlayer(gs, log, player);
+  if (drawn < count) DrawEmptyDeckPenalty(gs, log, player, count - drawn);
+}
+
+/**
+ * The base damage for cards that could not be drawn — 3 each, dealt as a SINGLE instance.
+ *
+ * Routed through DealDamageToBase rather than incrementing base.damage: a direct write bypasses
+ * HMW_081's prevention, ASH_070's per-instance cap and the damage bookkeeping alike.
+ */
+function DrawEmptyDeckPenalty(gs: GameState, log: string[], player: PlayerId, missing: number): void {
+  const amount = missing * 3;
+  DealDamageToBase(gs, player, amount);
+  log.push(`Player ${player} drew from an empty deck — ${amount} damage to their base.`);
 }
 
 export function FisherYatesShuffle<T>(array: T[]): T[] {

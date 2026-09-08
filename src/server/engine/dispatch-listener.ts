@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, RaidRestoreSwapped } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, RaidRestoreSwapped, DrawCardsForPlayer } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -4513,8 +4513,7 @@ function completePlayCard(
 
       if (cardId === "SOR_175") {
         // Forced Surrender — Draw 2 cards. Each opponent whose base you've damaged this phase discards 2 cards.
-        DrawCardForPlayer(game, log, player);
-        DrawCardForPlayer(game, log, player);
+        DrawCardsForPlayer(game, log, player, 2);
         log.push(`${CardTitle("SOR_175")}: drew 2 cards.`);
         const opp175: PlayerId = player === 1 ? 2 : 1;
         const damagedOppBase = (game.roundState.baseDamagedThisPhase ?? []).some(
@@ -6600,8 +6599,7 @@ function handleChooseTarget(
     // Matched on TITLE, not card id — several printings are named "Mace Windu" (SOR_149, LOF_149,
     // and the TWI_013 leader unit), and the saber cares about the character, not the printing.
     if (pending.upgradeCardId === "TWI_152" && CardTitle(targetUnit.cardId) === "Mace Windu") {
-      DrawCardForPlayer(game, log, pending.player);
-      DrawCardForPlayer(game, log, pending.player);
+      DrawCardsForPlayer(game, log, pending.player, 2);
       log.push(`${CardTitle("TWI_152")}: attached to Mace Windu — drew 2 cards.`);
     }
 
@@ -8438,9 +8436,7 @@ function applyAbilityOptionEffect(
         pState147.discard.unshift({ cardId: c.cardId, playId: String(game.nextPlayId++), owner: pending.player!, controller: pending.player!, turnDiscarded: game.currentRound, discardEffect: "" });
         QueueWhenDiscardedTrigger(game, pending.player!, c.cardId);
       }
-      DrawCardForPlayer(game, log, pending.player!);
-      DrawCardForPlayer(game, log, pending.player!);
-      DrawCardForPlayer(game, log, pending.player!);
+      DrawCardsForPlayer(game, log, pending.player!, 3);
       log.push(`${CardTitle("SOR_147")}: discarded hand and drew 3 cards.`);
       return pending.continuation ?? null;
     }
@@ -8603,8 +8599,8 @@ function applyAbilityOptionEffect(
       return pending.continuation ?? null;
     }
     case "SOR_171": { // Mission Briefing Yes: playing player draws 2 cards.
-      DrawCardForPlayer(game, log, pending.player!);
-      DrawCardForPlayer(game, log, pending.player!);
+      // One call, not two: from an empty deck this is a single instance of 6 damage.
+      DrawCardsForPlayer(game, log, pending.player!, 2);
       return pending.continuation ?? null;
     }
     case "SHD_181": { // Pillage Yes: the playing player discards 2 cards from their hand.
@@ -8656,8 +8652,7 @@ function applyAbilityOptionEffect(
         pState012.discard.push({ cardId: c.cardId, playId: String(game.nextPlayId++), owner: player012, controller: player012, turnDiscarded: game.currentRound, discardEffect: "" });
         QueueWhenDiscardedTrigger(game, player012, c.cardId);
       }
-      DrawCardForPlayer(game, log, player012);
-      DrawCardForPlayer(game, log, player012);
+      DrawCardsForPlayer(game, log, player012, 2);
       log.push(`${CardTitle("LOF_012")}: discarded ${discarded012} card(s) and drew 2.`);
       return pending.continuation ?? null;
     }
@@ -8780,16 +8775,13 @@ function applyAbilityOptionDeclineEffect(
     }
     case "SOR_233": { // I Am Your Father No — casting player (the other player) draws 3 cards.
       const caster233 = GetOtherPlayer(pending.player!);
-      DrawCardForPlayer(game, log, caster233);
-      DrawCardForPlayer(game, log, caster233);
-      DrawCardForPlayer(game, log, caster233);
+      DrawCardsForPlayer(game, log, caster233, 3);
       log.push(`${CardTitle("SOR_233")}: opponent said no — Player ${caster233} draws 3 cards.`);
       return pending.continuation ?? null;
     }
     case "SOR_171": { // Mission Briefing No: opponent draws 2 cards.
       const opp171 = pending.player === 1 ? 2 : 1;
-      DrawCardForPlayer(game, log, opp171);
-      DrawCardForPlayer(game, log, opp171);
+      DrawCardsForPlayer(game, log, opp171, 2);
       return pending.continuation ?? null;
     }
     case "SHD_181": { // Pillage No: the opponent discards 2 cards from their hand.
