@@ -156,6 +156,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "ASH_256": amount += 1; break;//Rebel Infiltrators
     case "ASH_112": amount += 1; break;//Luke Skywalker
     case "HMW_036": amount += 2; break;//Kelnacca - Solitary Master
+    case "HMW_001": amount += 2; break;//Asajj Ventress - No Time For Regret (deployed side)
     default: break;
   }
 

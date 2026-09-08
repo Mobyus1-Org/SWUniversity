@@ -142,6 +142,25 @@ and both the UI and this tool follow.
 Mark a card **as you finish it**, not in a batch at the end — a run that dies halfway then leaves
 the board describing what actually happened.
 
+### `card-impl-board.mjs` — read the implementation board
+
+Read-only view of the `/admin/cards-impl` board, straight from MongoDB. Unlike `card-impl.mjs`
+this needs no dev server and no cookie, so it is the cheap way to see what is queued.
+
+```bash
+node tests/tools/card-impl-board.mjs                    # counts per lane
+node tests/tools/card-impl-board.mjs --lane priority    # in RANK order, not alphabetical
+node tests/tools/card-impl-board.mjs --lane needs-work  # shows the note on each card
+node tests/tools/card-impl-board.mjs --set HMW --ids    # bare ids, for piping
+```
+
+Only cards that have been MOVED have a row. To Do is the absence of one, so it never appears in
+the counts — a nearly-empty collection means almost nothing has been triaged, not that there is
+nothing to do.
+
+Seed it from the code with `node scripts/seed-card-impl.mjs` (dry run by default; `--out` for JSON,
+`--push` to write). That script derives "done" the same way `cards-remaining.md` documents.
+
 ### `card-db.mjs`
 
 Shared parser for `generated.ts`. Not a CLI — import `loadCards()` / `findById()` / `formatCard()`

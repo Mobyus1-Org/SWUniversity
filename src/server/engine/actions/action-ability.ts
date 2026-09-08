@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllUnits, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllUnits, GetPlayer, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { CardTraits, CardCost, CardType, CardAspects } from "@/server/engine/card-db/generated";
 import { AllSpaceUnits } from "@/server/engine/core-functions";
@@ -127,6 +127,14 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
                         // use the readyOnly filter every other attack-with ability uses.
         const attackers009 = GetUnitsForPlayer(player).filter(u => CanUnitAttack(u));
         if (attackers009.length > 0 && GetResources(player, true).length >= 2) abilities.push(cardId);
+        break;
+      }
+      case "HMW_001": { // Asajj Ventress — Action [Exhaust]: attack with a unit, swapping its
+                        // Raid and Restore for that attack. No "even if exhausted" clause, so
+                        // unlike Chewbacca this DOES use the ready-only filter.
+        if (GetUnitsForPlayer(player, true).filter(u => CanUnitAttack(u)).length > 0) {
+          abilities.push(cardId);
+        }
         break;
       }
       case "TWI_010": { // Pre Vizsla — Action [1 resource, Exhaust]: damage a unit equal to the
@@ -330,6 +338,12 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         if (attackers009.length > 0 && !used009) abilities.push(cardId);
         break;
       }
+      case "HMW_001": { // Asajj Ventress (deployed) — plain "Action:", no exhaust, no limit.
+        if (GetUnitsForPlayer(player, true).filter(u => CanUnitAttack(u)).length > 0) {
+          abilities.push(cardId);
+        }
+        break;
+      }
       case "SHD_017": //Lando Calrissian - With Impeccable Taste (deployed: once each round)
         if (PlayerHasCardsToSmuggle(player) && !LandoUsedThisRound(player)) {
           abilities.push(cardId);
@@ -439,6 +453,11 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
     }
   }
 
+  if (playId) {
+    // Actions the unit's own upgrades grant it ("Attached unit gains: …").
+    for (const granted of UpgradeGrantedUnitActions(player, playId)) abilities.push(granted);
+  }
+
   return abilities;
 }
 
@@ -447,8 +466,100 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
  * do not and are limited some other way — those must stay ready, or the unit silently loses its
  * turn. Keyed by ABILITY id (see the `<cardId>-<n>` suffix convention for multi-Action units).
  */
+/**
+ * Upgrades whose text reads "Attached unit gains: 'Action […]'" — the Action belongs to the HOST
+ * UNIT, so it is enumerated through the unit and dispatched with the host's playId and the
+ * upgrade's cardId as the ability id.
+ *
+ * Distinct from UpgradeHostsOwnAction (HMW_037 Bacta Tank), where the upgrade itself is the actor
+ * because its host is a base.
+ */
+export function UpgradeGrantsHostAction(cardId: string): boolean {
+  switch (cardId) {
+    case "SHD_155": // Heroic Resolve — Action [2 resources, defeat a Heroic Resolve on this unit]
+    case "TWI_120": // Strategic Acumen — Action [Exhaust]
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Ability ids a unit's UPGRADES grant it, filtered to those with something to do right now.
+ * Deduplicated: two copies of Heroic Resolve grant one Action, not two.
+ */
+export function UpgradeGrantedUnitActions(player: PlayerId, playId: string): string[] {
+  const game = GetGame();
+  if (!game) return [];
+  const unit = GetUnitInPlay(playId, player);
+  if (!unit || unit.LostAbilities()) return [];
+
+  const ids = new Set<string>();
+  for (const upg of unit.upgrades) {
+    if (!UpgradeGrantsHostAction(upg.cardId)) continue;
+    switch (upg.cardId) {
+      case "SHD_155": // needs the 2 resources; the upgrade defeated is the one granting it
+        if (GetResources(player, true).length >= 2) ids.add(upg.cardId);
+        break;
+      case "TWI_120": // needs a unit in hand to play, and a ready host to exhaust
+        if (unit.ready && GetHand(player).some(c => CardType(c.cardId) === "Unit")) ids.add(upg.cardId);
+        break;
+      default:
+        break;
+    }
+  }
+  return [...ids];
+}
+
+/**
+ * Actions hosted by an UPGRADE rather than a unit or leader.
+ *
+ * Fortify put upgrades on bases, and a base is not a unit — so ActionAbilities (which walks
+ * leaders and arenas) can never reach them, and use-ability's GetUnitByPlayId can never resolve
+ * one as the actor. These two helpers are that missing path.
+ *
+ * An upgrade whose text reads "Attached unit gains: 'Action …'" is NOT here: that Action belongs
+ * to the host unit and is enumerated through the unit.
+ */
+export function UpgradeHostsOwnAction(cardId: string): boolean {
+  switch (cardId) {
+    case "HMW_037": // Bacta Tank — Action [defeat this upgrade]
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Whether the upgrade's own Action currently has anything to do. Checked BEFORE its cost is paid —
+ * Bacta Tank's cost is defeating itself, and an ability with no legal target must not eat it.
+ */
+export function UpgradeActionAvailable(cardId: string, player: PlayerId): boolean {
+  const game = GetGame();
+  if (!game) return false;
+  switch (cardId) {
+    case "HMW_037": // Bacta Tank — needs a non-Vehicle UNIT card in your discard.
+      return BactaTankTargets(player).length > 0;
+    default:
+      return false;
+  }
+}
+
+/** Non-Vehicle unit cards in a player's discard pile — HMW_037's target list. */
+export function BactaTankTargets(player: PlayerId): { cardId: string; playId: string }[] {
+  const game = GetGame();
+  if (!game) return [];
+  return GetPlayer(game.currentGameState, player).discard
+    // No player/playId args: these cards are in the DISCARD, not in play, and passing a discard
+    // playId sends TraitContains looking for a unit that does not exist. Traits are static.
+    .filter(c => CardType(c.cardId) === "Unit" && !TraitContains(c.cardId, "Vehicle"))
+    .map(c => ({ cardId: c.cardId, playId: c.playId }));
+}
+
 export function ActionAbilityExhausts(abilityId: string): boolean {
   switch (abilityId) {
+    case "SHD_155":   // Heroic Resolve — "[2 resources, defeat a Heroic Resolve]", no Exhaust
+    case "HMW_001":   // Asajj Ventress (deployed) — plain "Action:"; leader side exhausts inline
     case "HMW_009":   // Chewbacca (deployed) — plain "Action:", limited once each round
     case "SHD_017":   // Lando Calrissian (deployed) — plain "Action:", limited once each round
     case "SHD_087-1": // Crosshair — "Action [2 resources]", no exhaust in the cost

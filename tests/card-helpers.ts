@@ -138,6 +138,7 @@ export const Cards = {
       tarfful: "HMW_010",       // Fighting from the Shadowlands
       doctorHemlock: "HMW_003", // Emotion Has No Place Here
       darthSidious: "HMW_011",  // There is No Mercy
+      asajjVentress: "HMW_001", // No Time For Regret
     },
     jtl: {
       asajjVentress: "JTL_001",
@@ -585,6 +586,7 @@ export const Cards = {
     },
     ash: {
       dinosaurTurtle: "ASH_131", // 7/7 Ground Creature, cost 6, Command only — clean cost fixture
+      remnantOfficial: "ASH_076", // 3/3 Ground, Restore 2 and nothing else — clean Restore fixture
       bWingRearguard: "ASH_078", // 3/5 Space Rebel Vehicle Fighter, conditional Sentinel
       lothalEWing: "ASH_057", // 2/3 Space New Republic Vehicle Fighter, conditional Restore 2
       antDroid: "ASH_116",

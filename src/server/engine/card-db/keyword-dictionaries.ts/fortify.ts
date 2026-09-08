@@ -15,6 +15,7 @@ export function HasFortify(cardId: string): boolean {
     case "HMW_081": // Alliance Shield Generator
     case "HMW_171": // Trap Field
     case "HMW_070": // Dark Sanctum
+    case "HMW_037": // Bacta Tank
       return true;
     default:
       return false;

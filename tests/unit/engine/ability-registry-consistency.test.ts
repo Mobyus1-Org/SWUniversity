@@ -46,10 +46,29 @@ const actionAb = read("src/server/engine/actions/action-ability.ts");
 const onAttackSrc = read("src/server/engine/actions/on-attack.ts");
 const puzzleUI = read("src/containers/PuzzlesPage.tsx");
 
-/** Cards the engine OFFERS as an activatable Action. */
-const offered = new Set(caseIds(funcBody(actionAb, /export function ActionAbilities\(/)));
-/** Cards with an execution case — the only path that runs when the Action is used. */
-const executes = new Set(caseIds(funcBody(dispatch, /function resolveActionAbility\(/)));
+/**
+ * Cards the engine OFFERS as an activatable Action.
+ *
+ * Two sources, because an Action need not be printed on the acting card: an UPGRADE can grant one
+ * to its host unit ("Attached unit gains: 'Action …'", SHD_155/TWI_120) or carry its own while
+ * attached to a base (HMW_037). Those are pushed from helpers rather than from a case inside
+ * ActionAbilities, so scraping that function alone reads them as unreachable dead code.
+ */
+const offered = new Set([
+  ...caseIds(funcBody(actionAb, /export function ActionAbilities\(/)),
+  ...caseIds(funcBody(actionAb, /export function UpgradeGrantsHostAction\(/)),
+  ...caseIds(funcBody(actionAb, /export function UpgradeHostsOwnAction\(/)),
+]);
+/**
+ * Cards with an execution case — the paths that run when the Action is used.
+ *
+ * An upgrade attached to a BASE is not a unit, so it cannot go through resolveActionAbility at
+ * all; it has its own resolver. Both count as "executed".
+ */
+const executes = new Set([
+  ...caseIds(funcBody(dispatch, /function resolveActionAbility\(/)),
+  ...caseIds(funcBody(dispatch, /function resolveBaseUpgradeAction\(/)),
+]);
 /** Leaders the Puzzles UI renders an action button for. */
 const uiButtons = new Set(
   quotedIds((puzzleUI.match(/LEADERS_WITH_ACTION_ABILITY = new Set\(\[[\s\S]*?\]\)/) ?? [""])[0]),

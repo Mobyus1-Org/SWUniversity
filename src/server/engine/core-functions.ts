@@ -659,6 +659,22 @@ export function UnitsEnterPlayReady(gs: GameState, player: PlayerId, enteringCar
   );
 }
 
+/**
+ * HMW_001 Asajj Ventress — "For this attack replace any Raid it has or gains with Restore, or
+ * vice versa."
+ *
+ * Raid and Restore each have exactly one consumption site (Unit.CurrentPower for Raid,
+ * resolveAttack's base heal for Restore). Rather than rewriting either keyword, this flag makes
+ * each site read the OTHER amount — which is why the swap is symmetric for free, and why "or
+ * GAINS" works: both sites read live at consumption time rather than snapshotting.
+ */
+export function RaidRestoreSwapped(playId: string | undefined, player: PlayerId): boolean {
+  if (!playId) return false;
+  return GetCurrentEffectsForPlayer(player).some(
+    e => e.cardId === "HMW_001_swap" && e.targetPlayId === playId,
+  );
+}
+
 /** Units whose static ability reads "Bases can't be healed." */
 const BASE_HEALING_PREVENTERS = new Set([
   "TWI_132", // Confederate Tri-Fighter

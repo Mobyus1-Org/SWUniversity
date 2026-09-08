@@ -1,8 +1,9 @@
 import { CardInPlay, HP_MOD, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, RaidRestoreSwapped, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard } from "@/server/engine/core-functions";
 import { CardArena, CardAspects, CardCost, CardHp, CardPower } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
+import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasGrit } from "./card-db/keyword-dictionaries.ts/grit";
@@ -368,7 +369,11 @@ export class Unit implements UnitInterface {
     }
 
     if (isAttacking) {
-      power += RaidAmount(this.cardId, this.playId, this.controller);
+      // HMW_001 Asajj Ventress swaps Raid and Restore for one attack, so this site reads the
+      // Restore amount instead. Read live, which is what makes "or gains" work.
+      power += RaidRestoreSwapped(this.playId, this.controller)
+        ? RestoreAmount(this.cardId, this.playId, this.controller)
+        : RaidAmount(this.cardId, this.playId, this.controller);
     }
 
     // Concord Dawn Interceptors — "This unit gets +2/+0 while defending."

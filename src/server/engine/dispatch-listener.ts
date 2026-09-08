@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, RaidRestoreSwapped } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -109,7 +109,7 @@ import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/r
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { HasAmbush } from "@/server/engine/card-db/keyword-dictionaries.ts/ambush";
 import { AttackAbilityCardIds, HasSupport, SupportGrantEffectCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
-import { ActionAbilities, ActionAbilityCost, ActionAbilityExhausts, ActionAbilityCardId, WeakerThanAFriendlyUnitPlayIds } from "@/server/engine/actions/action-ability";
+import { ActionAbilities, ActionAbilityCost, ActionAbilityExhausts, ActionAbilityCardId, WeakerThanAFriendlyUnitPlayIds, UpgradeHostsOwnAction, UpgradeActionAvailable, BactaTankTargets, UpgradeGrantsHostAction } from "@/server/engine/actions/action-ability";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { IsTokenUpgrade, PilotingEligibleVehicles, PilotlessVehiclePlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -120,6 +120,7 @@ import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { BaseTargetPlayer } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
 import { QueueUnitEnteredPlayReaction } from "@/server/engine/core-functions";
 import { CreateBeast, GiveWeaknessToken, UnitsWithoutWeaknessToken } from "@/server/engine/token-helpers";
+import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget } from "@/server/engine/core-functions";
@@ -317,6 +318,17 @@ function resolveChooseOne(
         fromPlayIds: attackers035.map(u => u.playId),
         continuation: after035,
       } satisfies AbilityTargetPending;
+      break;
+    }
+    case "HMW_037_recur": { // Bacta Tank — move the chosen discard card to the TOP of the deck.
+      const pState037 = GetPlayer(game, pending.player);
+      const idx037 = pState037.discard.findIndex(c => c.playId === optionId);
+      if (idx037 !== -1) {
+        const [card037] = pState037.discard.splice(idx037, 1);
+        // The END of the deck array is the top — DrawCardForPlayer pops.
+        pState037.deck.push({ cardId: card037.cardId });
+        log.push(`${CardTitle("HMW_037")}: put ${CardTitle(card037.cardId)} on top of the deck.`);
+      }
       break;
     }
     case "HMW_036": { // Kelnacca — pay the declared amount, then buy that many hits.
@@ -1085,6 +1097,76 @@ function pushToDiscard(game: GameState, player: PlayerId, unit: Unit): void {
 
 /** Events whose own text reads "Resource this card." — they replace their trip to the discard. */
 const EVENTS_THAT_RESOURCE_THEMSELVES = new Set(["HMW_151"]);
+
+/**
+ * Uses an Action printed on an upgrade attached to a BASE. Returns null when `playId` is not such
+ * an upgrade, so the caller can fall through to its normal "no unit" error.
+ *
+ * The availability check runs BEFORE the cost: Bacta Tank pays by defeating itself, and an
+ * ability with no legal target must not consume the upgrade for nothing.
+ */
+function activateBaseUpgradeAction(
+  game: GameState,
+  log: string[],
+  player: PlayerId,
+  playId: string,
+): HandlerResult | null {
+  for (const owner of [1, 2] as PlayerId[]) {
+    const base = GetPlayer(game, owner).base;
+    const upgrade = (base.upgrades ?? []).find(u => u.playId === playId);
+    if (!upgrade) continue;
+    if (!UpgradeHostsOwnAction(upgrade.cardId)) return null;
+    if (upgrade.controller !== player) {
+      return { response: invalidResponse("That upgrade is not yours."), pending: null, stateChanged: false };
+    }
+    if (!UpgradeActionAvailable(upgrade.cardId, player)) {
+      return { response: invalidResponse(`${CardTitle(upgrade.cardId)} has nothing to target.`), pending: null, stateChanged: false };
+    }
+
+    // Cost: defeat this upgrade.
+    base.upgrades = (base.upgrades ?? []).filter(u => u.playId !== playId);
+    GetPlayer(game, upgrade.owner as PlayerId).discard.unshift({
+      cardId: upgrade.cardId,
+      playId: upgrade.playId,
+      owner: upgrade.owner,
+      controller: upgrade.owner,
+      turnDiscarded: game.currentRound,
+      discardEffect: "",
+    });
+    log.push(`${CardTitle(upgrade.cardId)} was defeated to pay for its Action.`);
+
+    const pending = resolveBaseUpgradeAction(game, player, upgrade.cardId);
+    if (pending) {
+      return { response: resolutionResponse(pendingToResolution(pending, game)), pending, stateChanged: true };
+    }
+    updateDefeatedPlayers(game);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+  return null;
+}
+
+/** The prompt each upgrade-hosted Action raises once its cost is paid. */
+function resolveBaseUpgradeAction(
+  game: GameState,
+  player: PlayerId,
+  cardId: string,
+): PendingResolution | null {
+  switch (cardId) {
+    case "HMW_037": { // Bacta Tank — put a non-Vehicle unit from your discard on top of your deck.
+      const targets = BactaTankTargets(player);
+      if (targets.length === 0) return null;
+      return {
+        type: "choose-one",
+        cardId: "HMW_037_recur",
+        player,
+        options: targets.map(t => ({ id: t.playId, label: CardTitle(t.cardId) ?? t.cardId })),
+        continuation: null,
+      } satisfies ChooseOnePending;
+    }
+    default:
+      return null;
+  }
+}
 
 function pushEventToDiscard(game: GameState, player: PlayerId, cardId: string): void {
   const discarded: DiscardedCard = {
@@ -2579,7 +2661,10 @@ function resolveAttack(
   }
 
   // Restore fires as an On Attack trigger before combat damage
-  const restoreAmount = RestoreAmount(attacker.cardId, attacker.playId, attacker.controller);
+  // HMW_001 Asajj Ventress: with the swap active this site heals by the attacker's RAID instead.
+  const restoreAmount = RaidRestoreSwapped(attacker.playId, attacker.controller)
+    ? RaidAmount(attacker.cardId, attacker.playId, attacker.controller)
+    : RestoreAmount(attacker.cardId, attacker.playId, attacker.controller);
   if (restoreAmount > 0 && !BaseHealingPrevented()) { // TWI_132 Confederate Tri-Fighter
     const controllerBase = GetPlayer(game, attacker.controller).base;
     controllerBase.damage = Math.max(0, controllerBase.damage - restoreAmount);
@@ -4843,16 +4928,26 @@ function handleUseAbility(
   // Unit action ability
   if (data.playId) {
     const unit = GetUnitByPlayId(game, data.playId);
-    if (!unit)
+    if (!unit) {
+      // An Action hosted by an upgrade attached to a BASE (Fortify). No unit owns it, so the
+      // upgrade is the actor — GetUnitByPlayId can never find it.
+      const hosted = activateBaseUpgradeAction(game, log, player, data.playId);
+      if (hosted) return hosted;
       return { response: invalidResponse(`No unit with playId ${data.playId}.`), pending: null, stateChanged: false };
+    }
     if (unit.controller !== player)
       return { response: invalidResponse(`Unit ${data.playId} is not controlled by Player ${player}.`), pending: null, stateChanged: false };
     const unitAbilities = ActionAbilities(unit.cardId, player, data.playId);
     // A unit with more than one Action gets suffixed ability ids (`SHD_087-1`); the client names
     // the one it wants in data.cardId. Single-Action units keep sending the bare cardId.
-    const abilityId = data.cardId && ActionAbilityCardId(data.cardId) === unit.cardId
-      ? data.cardId
-      : unit.cardId;
+    // An upgrade can grant its host an Action ("Attached unit gains: …"), in which case the
+    // ability id is the UPGRADE's cardId and will never match the unit's.
+    const grantedByUpgrade = data.cardId
+      && unit.upgrades.some(u => u.cardId === data.cardId)
+      && UpgradeGrantsHostAction(data.cardId);
+    const abilityId = grantedByUpgrade
+      ? data.cardId!
+      : (data.cardId && ActionAbilityCardId(data.cardId) === unit.cardId ? data.cardId : unit.cardId);
     const abilityExhausts = ActionAbilityExhausts(abilityId);
     // Only an Action that costs "[Exhaust]" requires a ready unit; one without it (Crosshair's
     // resource-only Action) is usable regardless.
@@ -6337,6 +6432,21 @@ function handleChooseTarget(
         controller: pending.player,
       });
       log.push(`${CardTitle(pending.upgradeCardId)} was attached to Player ${basePlayer}'s base.`);
+
+      // HMW_037 Bacta Tank: "When Played: Heal up to 3 damage from a non-Vehicle unit."
+      // A Fortify upgrade's When Played fires HERE, not in the unit branch below — the host is a
+      // base, so nothing downstream ever sees it.
+      if (pending.upgradeCardId === "HMW_037") {
+        const healable037 = AllUnits().filter(
+          u => !TraitContains(u.cardId, "Vehicle", u.controller, u.playId),
+        );
+        if (healable037.length > 0) {
+          const heal037 = mandatoryTarget("HMW_037_heal", pending.player, healable037.map(u => u.playId));
+          updateDefeatedPlayers(game);
+          return { response: resolutionResponse(pendingToResolution(heal037, game)), pending: heal037, stateChanged: true };
+        }
+      }
+
       updateDefeatedPlayers(game);
       const bagBase = drainTriggerBag(game, log);
       if (bagBase) return { response: resolutionResponse(pendingToResolution(bagBase, game)), pending: bagBase, stateChanged: true };
@@ -6526,6 +6636,10 @@ function handleChooseTarget(
         return { response: resolutionResponse(pendingToResolution(search265, game)), pending: search265, stateChanged: true };
       }
     }
+
+    // HMW_037 Bacta Tank: "When Played: Heal up to 3 damage from a non-Vehicle unit." The host is
+    // a BASE (Fortify), so this fires from the base branch above rather than here — see the
+    // fortify attach path. Kept adjacent to its sibling upgrade triggers for discoverability.
 
     // SHD_073 Mandalorian Armor: When Played — if attached unit is Mandalorian, give Shield.
     if (pending.upgradeCardId === "SHD_073") {
@@ -7023,6 +7137,17 @@ function handleChooseTarget(
         payResources(game, pending.player, cost094, log, cardId);
         hand.splice(idx, 1);
         log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("LOF_094")} (2 resources less).`);
+        return completePlayCard(game, log, cardId, pending.player);
+      }
+      case "TWI_120": { // Strategic Acumen — play a UNIT for 1 resource less.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse("Strategic Acumen: chosen card is not a Unit."), pending, stateChanged: false };
+        const cost120 = Math.max(0, playCost(game, pending.player, cardId) - (pending.costReduction ?? 0));
+        if (spendableFor(game, pending.player) < cost120)
+          return { response: invalidResponse("Strategic Acumen: not enough resources to play this unit."), pending, stateChanged: false };
+        payResources(game, pending.player, cost120, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("TWI_120")} (1 resource less).`);
         return completePlayCard(game, log, cardId, pending.player);
       }
       case "SHD_067": { // Fenn Rau — play an UPGRADE for 2 resources less.
@@ -9622,6 +9747,7 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "ASH_004": // Grand Admiral Thrawn (ASH) — If you control 8 or more resources.
       return p.resources.length >= 8;
+    case "HMW_001": // Asajj Ventress — If you control 5 or more resources.
     case "LOF_017": // Darth Revan — If you control 5 or more resources.
     case "TWI_018": // Quinlan Vos — If you control 5 or more resources.
       return p.resources.length >= 5;
@@ -10623,6 +10749,19 @@ function resolveActionAbility(
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    case "HMW_001": { // Asajj Ventress — "Attack with a unit. For this attack replace any Raid it
+                      // has or gains with Restore, or vice versa." Offered on both sides; the
+                      // leader path has already exhausted the leader by the time we get here.
+      const attackers001 = GetUnitsForPlayer(player, true).filter(u => CanUnitAttack(u));
+      if (attackers001.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "HMW_001",
+        player,
+        fromPlayIds: attackers001.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "HMW_009": { // Chewbacca — "Attack with a unit, even if it's exhausted. It can't attack
                       // bases for this attack." Offered on BOTH sides; the deployed side is free
                       // and once-per-round, which the availability check above enforces.
@@ -10877,6 +11016,43 @@ function resolveActionAbility(
       }
       CreateTieFighter(game, player, log, "JTL_006");
       return null;
+    }
+    case "SHD_155": { // Heroic Resolve — "Attack with this unit. It gets +4/+0 and gains Overwhelm
+                      // for this attack." Cost is 2 resources plus defeating ONE Heroic Resolve on
+                      // the unit; the resources are charged by the generic path, the defeat here.
+      if (!playId) return null;
+      const host155 = GetUnitByPlayId(game, playId);
+      if (!host155) return null;
+      const idx155 = host155.upgrades.findIndex(u => u.cardId === "SHD_155");
+      if (idx155 === -1) return null;
+      const [spent155] = host155.upgrades.splice(idx155, 1);
+      GetPlayer(game, spent155.owner as PlayerId).discard.unshift({
+        cardId: spent155.cardId,
+        playId: spent155.playId,
+        owner: spent155.owner,
+        controller: spent155.owner,
+        turnDiscarded: game.currentRound,
+        discardEffect: "",
+      });
+      log.push(`${CardTitle("SHD_155")} was defeated to pay for its Action.`);
+      GivePowerMod("SHD_155", host155, 4, "ForAttack", log);
+      // overwhelm.ts already reads a SHD_155 effect targeting the attacker.
+      game.currentEffects.push({
+        cardId: "SHD_155",
+        duration: "ForAttack",
+        affectedPlayer: host155.controller,
+        targetPlayId: playId,
+      });
+      // Losing the upgrade drops the host's HP, which can be lethal on a damaged unit.
+      const swept155 = sweepDeadUnits(game, log, null);
+      if (swept155) return swept155;
+      if (!GetUnitByPlayId(game, playId)) return null; // it died paying its own cost
+      return { type: "attack-target", attackerPlayId: playId, source: "SHD_155", continuation: null };
+    }
+    case "TWI_120": { // Strategic Acumen — "Play a unit from your hand. It costs 1 resource less."
+                      // Cost is the host's [Exhaust], charged by the generic path; the upgrade
+                      // STAYS attached.
+      return { type: "play-from-hand", cardId: "TWI_120", player, costReduction: 1 } satisfies PlayFromHandPending;
     }
     case "LOF_094": { // Jedi Consular — Action [Exhaust, use the Force]: Play a unit from your
                       // hand at -2. Using the Force is part of the cost, so it is spent up front.
@@ -11514,6 +11690,17 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, "HMW_036", targetPlayId, power036, game.gameLog, pending.player);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
+    case "HMW_037_heal": { // Bacta Tank — heal up to 3 from the chosen non-Vehicle unit.
+      if (!targetPlayId) break;
+      const target037 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target037) {
+        // "Up to 3" — never past zero, so a unit on 1 damage heals 1.
+        const healed037 = Math.min(3, target037.damage);
+        target037.damage -= healed037;
+        game.gameLog.push(`${CardTitle("HMW_037")}: healed ${healed037} damage from ${CardTitle(target037.cardId)}.`);
+      }
+      return pending.continuation ?? null;
+    }
     case "HMW_064": { // Scorch — 1 damage to the chosen upgraded unit.
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, "HMW_064", targetPlayId, 1, game.gameLog, pending.player);
@@ -11529,6 +11716,21 @@ function applyAbilityEffect(
       GiveWeaknessToken(game.currentGameState, target003, game.gameLog, source003);
       // −1 HP can be lethal, and no other upgrade in the engine lowers its host's HP on attach.
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "HMW_001": { // Asajj Ventress — the chosen unit attacks with Raid and Restore swapped.
+      if (!targetPlayId || !pending.player) break;
+      const attacker001 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!attacker001) break;
+      // ForAttack, so it is cleared with the rest of the attack's effects. Both consumption
+      // sites read this flag live, which is what makes "any Raid it has OR GAINS" work.
+      game.currentGameState.currentEffects.push({
+        cardId: "HMW_001_swap",
+        duration: "ForAttack",
+        affectedPlayer: pending.player,
+        targetPlayId,
+      });
+      game.gameLog.push(`${CardTitle("HMW_001")}: ${CardTitle(attacker001.cardId)} has Raid and Restore swapped for this attack.`);
+      return { type: "attack-target", attackerPlayId: targetPlayId, source: "HMW_001", continuation: pending.continuation ?? null };
     }
     case "HMW_009": { // Chewbacca — the chosen unit attacks and cannot pick a base this attack.
       if (!targetPlayId || !pending.player) break;

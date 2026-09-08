@@ -108,6 +108,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "TWI_002", "TWI_004", "TWI_005", "TWI_006", "TWI_007", "TWI_010", "TWI_011", "TWI_012", "TWI_013", "TWI_014",
   "TWI_015",
   //Hunt for the Missing Wookiee
+  "HMW_001", // Asajj Ventress — No Time For Regret
   "HMW_009", // Chewbacca — Relentless Rebel
   "HMW_003", // Doctor Hemlock — Emotion Has No Place Here
   "HMW_010", // Tarfful — Fighting from the Shadowlands
@@ -134,6 +135,25 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
 // than one maps to a list; each entry carries the suffixed ability id (`SHD_087-1`) that
 // ActionAbilities()/ActionAbilityCost() key off, so the engine knows which Action was chosen.
 type UnitAction = { abilityId: string; label: string };
+/**
+ * Upgrades that print their OWN "Action […]" and are attached to a BASE (Fortify). A unit's
+ * upgrades are reached through the unit; a base's are not reachable at all without this.
+ * Mirrors UpgradeHostsOwnAction() in action-ability.ts.
+ */
+const UPGRADES_WITH_ACTION_ABILITY: Record<string, string> = {
+  "HMW_037": "Recur a non-Vehicle unit", // Bacta Tank — Action [defeat this upgrade]
+};
+
+/**
+ * Upgrades whose text reads "Attached unit gains: 'Action […]'". The button belongs to the HOST
+ * unit, so it cannot live in UNITS_WITH_ACTION_ABILITY — the host varies.
+ * Mirrors UpgradeGrantsHostAction() in action-ability.ts.
+ */
+const UPGRADE_GRANTED_UNIT_ACTIONS: Record<string, string> = {
+  "SHD_155": "Attack +4/+0 with Overwhelm", // Heroic Resolve
+  "TWI_120": "Play a unit for 1 less",      // Strategic Acumen
+};
+
 const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
   "SHD_028": "Draw a card",
   "LOF_206": "Attack with a Droid",
@@ -159,10 +179,20 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
 };
 
 /** The Action buttons to render for a unit, normalising the single- and multi-Action shapes. */
-function unitActionsFor(cardId: string): UnitAction[] {
+function unitActionsFor(cardId: string, upgradeCardIds: string[] = []): UnitAction[] {
   const entry = UNITS_WITH_ACTION_ABILITY[cardId];
-  if (!entry) return [];
-  return typeof entry === "string" ? [{ abilityId: cardId, label: entry }] : entry;
+  const own = !entry ? []
+    : typeof entry === "string" ? [{ abilityId: cardId, label: entry }] : entry;
+  // Two copies of the same upgrade grant one Action, not two.
+  const granted = [...new Set(upgradeCardIds)]
+    .filter(id => UPGRADE_GRANTED_UNIT_ACTIONS[id])
+    .map(id => ({ abilityId: id, label: UPGRADE_GRANTED_UNIT_ACTIONS[id] }));
+  return [...own, ...granted];
+}
+
+/** Whether a unit has any Action button at all, its own or granted by an upgrade. */
+function unitHasAnyAction(unit: { cardId: string; upgrades?: { cardId: string }[] }): boolean {
+  return unitActionsFor(unit.cardId, (unit.upgrades ?? []).map(u => u.cardId)).length > 0;
 }
 
 const BASES_WITH_EPIC_ACTION = new Set([
@@ -476,10 +506,13 @@ function BaseSubcards({
   base,
   onPreviewStart,
   onPreviewEnd,
+  onUseUpgradeAction,
 }: {
   base: { upgrades?: { cardId: string; playId: string }[]; captives?: { cardId: string; playId: string }[] };
   onPreviewStart: PreviewStart;
   onPreviewEnd: () => void;
+  /** Only passed for the local player's own base — the opponent's Fortify actions are not yours. */
+  onUseUpgradeAction?: (playId: string) => void;
 }) {
   const [open, setOpen] = React.useState<"fortified" | "arrested" | null>(null);
   const upgrades = base.upgrades ?? [];
@@ -533,6 +566,16 @@ function BaseSubcards({
                       square
                     />
                     <div className="mt-0.5 truncate text-center text-4xs text-white/60" title={title}>{title}</div>
+                    {onUseUpgradeAction && UPGRADES_WITH_ACTION_ABILITY[card.cardId] ? (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setOpen(null); onUseUpgradeAction(card.playId); }}
+                        className="mt-0.5 w-full rounded border border-amber-300/40 bg-amber-300/15 px-1 py-0.5 text-4xs font-semibold text-amber-100 transition hover:bg-amber-300/30"
+                        title={UPGRADES_WITH_ACTION_ABILITY[card.cardId]}
+                      >
+                        Action
+                      </button>
+                    ) : null}
                     <span className="sr-only">{previewState.label}</span>
                   </div>
                 );
@@ -702,7 +745,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   const [solvedPuzzleIds, setSolvedPuzzleIds] = React.useState<string[]>(initialSolvedPuzzleIds);
   const [showClosePuzzleConfirm, setShowClosePuzzleConfirm] = React.useState(false);
   const [leaderModalOpen, setLeaderModalOpen] = React.useState(false);
-  const [unitAbilityModal, setUnitAbilityModal] = React.useState<{ playId: string; cardId: string } | null>(null);
+  const [unitAbilityModal, setUnitAbilityModal] = React.useState<{ playId: string; cardId: string; upgrades: string[] } | null>(null);
   const [discardModalPlayer, setDiscardModalPlayer] = React.useState<1 | 2 | null>(null);
   const gameLogRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -826,8 +869,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       // Not gated on `ready`: an Action whose cost has no [Exhaust] (Jabba the Hutt's deployed
       // side) is still usable by an exhausted unit, and the modal's Attack button is rejected by
       // the engine anyway. Only units with no Action at all go straight to attacking.
-      if (unit && UNITS_WITH_ACTION_ABILITY[unit.cardId]) {
-        setUnitAbilityModal({ playId, cardId: unit.cardId });
+      if (unit && unitHasAnyAction(unit)) {
+        setUnitAbilityModal({ playId, cardId: unit.cardId, upgrades: (unit.upgrades ?? []).map(u => u.cardId) });
       } else {
         void sendDispatch(createDispatch("initiate-attack", { playId }));
       }
@@ -847,6 +890,11 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     setUnitAbilityModal(null);
     void sendDispatch(createDispatch("use-ability", { cardId: abilityId, playId }));
   }, [unitAbilityModal, sendDispatch]);
+
+  /** Fortify upgrades on your own base that print their own Action (HMW_037 Bacta Tank). */
+  const handleUpgradeAction = React.useCallback((playId: string) => {
+    void sendDispatch(createDispatch("use-ability", { playId }));
+  }, [sendDispatch]);
 
   const handleBaseClick = React.useCallback((player: PlayerId) => {
     if (isResolving) return;
@@ -1868,7 +1916,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     epicUsed={player.base.epicActionUsed}
                     forceToken={player.supplemental.forceToken}
                   />{spreadBaseControls("player1.base")}
-                  <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+                  <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} onUseUpgradeAction={handleUpgradeAction} />
                   </div>
                 </div>
               </div>
@@ -2048,7 +2096,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     epicUsed={player.base.epicActionUsed}
                     forceToken={player.supplemental.forceToken}
                   />{spreadBaseControls("player1.base")}
-                  <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+                  <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} onUseUpgradeAction={handleUpgradeAction} />
                   </div>
                 </div>
                 <div className="hidden xl:space-y-2 xl:block">
@@ -2066,7 +2114,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                       forceToken={player.supplemental.forceToken}
                     />
                     {spreadBaseControls("player1.base")}
-                    <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+                    <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} onUseUpgradeAction={handleUpgradeAction} />
                   </div>
                   {!player.leader.deployed ? <CardVisual
                     cardId={player.leader.cardId}
@@ -2734,7 +2782,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
             className="rounded-lg border border-rose-400/40 bg-rose-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500/35">
             Attack
           </button>
-          {unitActionsFor(unitAbilityModal.cardId).map((action) => (
+          {unitActionsFor(unitAbilityModal.cardId, unitAbilityModal.upgrades).map((action) => (
             <button key={action.abilityId} type="button" onClick={() => handleUnitAbility(action.abilityId)}
               className="rounded-lg border border-sky-400/40 bg-sky-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500/35">
               Action: {action.label}
