@@ -318,6 +318,7 @@ export const Cards = {
       chewbaccaLoyalCompanion: "SOR_196",
       greedo: "SOR_204",
       craftySmuggler: "SOR_207",
+      wildernessFighter: "SOR_064", // 3-cost Ground, Shielded and nothing else
       syndicateLackeys: "SOR_213",
       rebelPathfinder: "SOR_239",
       gamorreanGuards: "SOR_211",
@@ -587,6 +588,7 @@ export const Cards = {
     },
     ash: {
       theMandalorianDevotedRescuer: "ASH_062",
+      theArmorerSecrecyIsOurSurvival: "ASH_064",
       wicket: "ASH_034",
       shinHatiGoingSomewhere: "ASH_049",
       koskaReeves: "ASH_079",
