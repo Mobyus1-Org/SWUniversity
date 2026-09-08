@@ -4,7 +4,7 @@ import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { Cards } from "../../card-helpers";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 
-// HMW_142 Wookie Rangers (5/6 Ground, cost 5, Command, Wookiee) —
+// HMW_142 Wookiee Rangers (5/6 Ground, cost 5, Command, Wookiee) —
 //   "While you control another Wookiee unit or a Kashyyyk base, this unit gains Sentinel."
 //
 // An OR of two unrelated conditions, so BOTH halves need their own test — a card wired to only
@@ -13,7 +13,7 @@ import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sen
 // "Another" is load-bearing: the Rangers are themselves a Wookiee unit and would otherwise
 // satisfy their own condition on an empty board.
 //
-// (The card's printed name is "Wookiee Rangers"; the mock carries a transcription typo, "Wookie".)
+// (The card's printed name is "Wookiee Rangers"; the mock carries a transcription typo, "Wookiee".)
 
 const RANGERS = "HMW_142";
 const KASHYYYK_BASE = "HMW_021";                      // Kachirho
@@ -36,7 +36,7 @@ const hasSentinel = (g: GameTestAdapter) => {
   return HasSentinel(u.cardId, u.playId, 1) === true;
 };
 
-describe("HMW_142 Wookie Rangers", () => {
+describe("HMW_142 Wookiee Rangers", () => {
   it("gains Sentinel from another WOOKIEE unit", () => {
     const g = new GameTestAdapter();
     g.loadNewState(board(OTHER_BASE).WithGroundUnitForPlayer(1, WOOKIEE).Build());

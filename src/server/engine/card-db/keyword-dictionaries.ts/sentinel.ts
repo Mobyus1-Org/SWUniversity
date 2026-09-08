@@ -98,7 +98,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
       //Spark of Rebellion
       case "SOR_211"://Gamorrean Guards
         return PlayerHasUnitWithAspectInPlay(player, "Cunning", true, playId);
-      case "HMW_142": {//Wookie Rangers — "another Wookiee unit OR a Kashyyyk base". Both halves
+      case "HMW_142": {//Wookiee Rangers — "another Wookiee unit OR a Kashyyyk base". Both halves
                        //are independent; a board with a second Wookiee hides a missing base check.
         const pState142 = player === 1
           ? GetGame()!.currentGameState.player1

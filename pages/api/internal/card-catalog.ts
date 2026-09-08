@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
 import { methodNotAllowed } from "@/server/auth/http";
+import { IsInScopeBoardCard } from "@/server/engine/card-db/card-scope";
 import { GetAllCardIds, CardTitle, CardSubtitle, CardType } from "@/server/engine/card-db/generated";
 import type { CardCatalogEntry } from "@/components/Shared/PuzzleBuilderPanel";
 
@@ -12,22 +13,7 @@ type Response = { cards: CardCatalogEntry[] } | { error: string };
  * unplaceable despite generating and playing correctly. `card-catalog-sets.test.ts` fails when a
  * new set belongs to neither list, so the next one has to be classified rather than forgotten.
  */
-export const CATALOG_SETS = new Set([
-  "SOR", "SHD", "TWI", "JTL", "LOF", "SEC", "IBH", "LAW", "TS26", "ASH",
-  "HMW", // preview set — mocked cards, offered so puzzles can be authored ahead of release
-]);
-
-/**
- * Sets deliberately kept OUT of the editor: promo and convention printings that duplicate a
- * base-set card under a different id, which would just clutter the picker with near-identical
- * entries.
- */
-export const EXCLUDED_SETS = new Set([
-  // Promo reprints — a "<SET>P" id is the same card as its base-set printing.
-  "ASHP", "LAWP", "JTLP", "LOFP", "SECP",
-  // Convention, judge and other special printings.
-  "C24", "C25", "C26", "G25", "GG", "J24", "J25", "MV26", "P25", "P26",
-]);
+export { CATALOG_SETS, EXCLUDED_SETS } from "@/server/engine/card-db/card-scope";
 
 // Token units available in the puzzle builder (ground / space)
 // One id per DISTINCT token, not one per printing — Experience and Shield are reprinted in most
@@ -59,12 +45,7 @@ export default function handler(
   }
 
   const named = GetAllCardIds()
-    .filter((cardId) => {
-      const setCode = cardId.split("_")[0];
-      // exclude token cards (handled separately below)
-      if (cardId.includes("_T")) return false;
-      return CATALOG_SETS.has(setCode);
-    })
+    .filter(IsInScopeBoardCard)
     .map((cardId) => {
       const title = CardTitle(cardId);
       const subtitle = CardSubtitle(cardId);

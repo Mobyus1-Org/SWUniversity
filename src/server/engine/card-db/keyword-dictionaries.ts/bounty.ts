@@ -35,7 +35,7 @@ export function CountBounties(cardId: string, playId?: string, player?: PlayerId
     case "SHD_134"://Guavian Antagonizer
     case "SHD_167"://Wanted Insurgents
     case "SHD_116"://Outlaw Corona
-    case "SHD_211"://Fugitive Wookie
+    case "SHD_211"://Fugitive Wookiee
     case "SHD_161"://Stolen Landspeeder
     case "SHD_226"://Unrefusable Offer
     case "SHD_123"://Bounty Hunter's Quarry

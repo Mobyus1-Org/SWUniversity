@@ -10,157 +10,17 @@ import type { PuzzleAccessLevel } from "@/server/puzzle/puzzle-status";
 import { PuzzleBuilderPanel } from "@/components/Shared/PuzzleBuilderPanel";
 import { DEFAULT_ALTERNATE_FAIL_EXPLANATION } from "@/components/Shared/puzzle-builder-state";
 import { CardLinkText, PuzzleText } from "@/components/Shared/CardLink";
+import {
+  CardPreviewOverlay, getPreviewImageId, leaderFaceImageId, useCardPreview, useLongPress,
+  type PreviewOpts, type PreviewStart, type PreviewState,
+} from "@/components/Shared/CardPreview";
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import type { DispatchResponse, DispatchType, DispatchData, GameDispatch, ResolutionRequest } from "@/lib/engine/message-types";
 import type { EngineContext } from "@/server/engine/pending-resolution";
-import { CardIsLeader, LeaderHasUnitSide } from "@/server/engine/core-functions";
+import { CardIsLeader } from "@/server/engine/core-functions";
 import { CardIsPlayable, ResourceIsSmuggleable } from "@/server/engine/card-playability";
 
-type PreviewState = {
-  imageId: string;
-  cardId: string;
-  label?: string;
-};
-
-/**
- * How a preview was requested. Hover previews fade in after a delay and vanish on mouse-out;
- * a `sticky` one (long-press) opens immediately and stays until the player dismisses it, which
- * is the only way to read a card on a touch device — there is no hover there, and the hover
- * panel is desktop-only anyway.
- */
-type PreviewOpts = { sticky?: boolean };
-type PreviewStart = (preview: PreviewState, opts?: PreviewOpts) => void;
-
-/** Movement (px) past which a touch counts as a scroll rather than a press-and-hold. */
-const LONG_PRESS_SLOP = 10;
-const LONG_PRESS_MS = 450;
-
-/**
- * Touch handlers that fire `open` on a press-and-hold, and swallow the click that would
- * otherwise follow — without this, holding a selectable card to read it would also target it.
- *
- * Spread onto the same element that carries the hover handlers. That element sits INSIDE the
- * selectable <button>, so its capture-phase click handler runs before the button's onClick and
- * can cancel it.
- */
-function useLongPress(open: () => void) {
-  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const start = React.useRef<{ x: number; y: number } | null>(null);
-  // Survives the touchend→click gap so the click that follows a hold can be identified.
-  const fired = React.useRef(false);
-
-  const cancel = React.useCallback(() => {
-    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
-    start.current = null;
-  }, []);
-  React.useEffect(() => cancel, [cancel]);
-
-  const props = {
-    onTouchStart: (e: React.TouchEvent) => {
-      const t = e.touches[0];
-      if (!t) return;
-      fired.current = false;
-      start.current = { x: t.clientX, y: t.clientY };
-      timer.current = setTimeout(() => { fired.current = true; timer.current = null; open(); }, LONG_PRESS_MS);
-    },
-    onTouchMove: (e: React.TouchEvent) => {
-      const t = e.touches[0];
-      if (!t || !start.current) return;
-      if (Math.abs(t.clientX - start.current.x) > LONG_PRESS_SLOP
-        || Math.abs(t.clientY - start.current.y) > LONG_PRESS_SLOP) cancel();
-    },
-    onTouchEnd: cancel,
-    onTouchCancel: cancel,
-    // Stops the click reaching any ANCESTOR handler (the selectable <button> wrapper). Runs
-    // before any bubble-phase onClick, including `guard`'s — which is what clears the flag when
-    // the handler lives on this same element.
-    onClickCapture: (e: React.MouseEvent) => {
-      if (!fired.current) return;
-      e.preventDefault();
-      e.stopPropagation();
-      // Nothing downstream will clear it on the ancestor path, and a stale flag would eat the
-      // next ordinary click.
-      setTimeout(() => { fired.current = false; }, 0);
-    },
-    // Suppress the iOS press-and-hold callout ("Save Image…") over card art.
-    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
-    style: { WebkitTouchCallout: "none" } as React.CSSProperties,
-  };
-
-  /**
-   * Wraps a click handler living on the SAME element as these props. stopPropagation only stops
-   * other nodes, so a same-element onClick would still run after a hold — this drops it.
-   */
-  const guard = <T,>(handler: ((arg: T) => void) | undefined) =>
-    handler
-      ? (arg: T) => {
-          if (fired.current) { fired.current = false; return; }
-          handler(arg);
-        }
-      : undefined;
-
-  return { props, guard };
-}
-
-function getPreviewImageId(cardId: string, showBack = false): string {
-  return showBack ? `${cardId}_BACK` : cardId;
-}
-
-/**
- * The art for the face a leader is currently showing. A double-sided leader (TWI_017) flips to
- * its BACK image — for Flipatine that really is a different character, Darth Sidious.
- */
-function leaderFaceImageId(leader: { cardId: string; flipped?: boolean }): string {
-  return getPreviewImageId(leader.cardId, leader.flipped === true);
-}
-
-/** One face to show in a preview, and whether its art is landscape. */
-type PreviewFace = { imageId: string; landscape: boolean };
-
-/**
- * The faces a preview shows. A leader always previews as BOTH sides, whichever one the player
- * happened to hover — the leader in its zone, the deployed leader unit in an arena, the leader
- * attached as a Pilot upgrade, and `@[ID-L]` links in puzzle text all land here.
- *
- * Orientation cannot be read from the id: `isHorizontalCard` treats every `_BACK` as portrait,
- * which is right for a deployed unit side but wrong for a double-sided leader, whose back is
- * another landscape leader face (TWI_017 → Darth Sidious). `LeaderHasUnitSide` is the real signal.
- */
-function previewFaces(cardId: string): PreviewFace[] {
-  if (!CardIsLeader(cardId)) return [{ imageId: cardId, landscape: false }];
-  return [
-    { imageId: cardId, landscape: true },
-    { imageId: `${cardId}_BACK`, landscape: !LeaderHasUnitSide(cardId) },
-  ];
-}
-
-/**
- * A single preview face, owning its own art fallback chain (generated art → swudb import → swudb
- * CDN → card back) exactly as the board tiles do.
- *
- * The chain lives per-image rather than in the parent because a leader shows two faces at once,
- * and one shared "current src" in the parent could only ever track one of them.
- */
-function PreviewImage({ imageId, alt, className }: { imageId: string; alt: string; className?: string }) {
-  const chain = React.useMemo(() => [
-    getCardImageLink(imageId),
-    getSWUDBImageLink(imageId),
-    getSWUDBImageLinkFallback(imageId),
-    `/assets/${DEFAULT_PUZZLE_IMAGE}`,
-  ], [imageId]);
-  const [stage, setStage] = React.useState(0);
-  React.useEffect(() => { setStage(0); }, [chain]);
-
-  return (
-    <img
-      src={chain[Math.min(stage, chain.length - 1)]}
-      alt={alt}
-      className={className}
-      onError={() => setStage(s => Math.min(s + 1, chain.length - 1))}
-    />
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Config — flip to true to use round-trip context mode (HttpTransport pattern)
@@ -844,75 +704,13 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   const [leaderModalOpen, setLeaderModalOpen] = React.useState(false);
   const [unitAbilityModal, setUnitAbilityModal] = React.useState<{ playId: string; cardId: string } | null>(null);
   const [discardModalPlayer, setDiscardModalPlayer] = React.useState<1 | 2 | null>(null);
-  const previewTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const previewDismissTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameLogRef = React.useRef<HTMLDivElement | null>(null);
-  const [preview, setPreview] = React.useState<PreviewState | null>(null);
-  // A sticky preview came from a press-and-hold: it opens as a dismissible full-screen card
-  // instead of the desktop-only hover panel, which is how touch devices read a card at all.
-  const [previewSticky, setPreviewSticky] = React.useState(false);
-  // A leader previews as both of its faces; everything else is a single card. Each face owns its
-  // own art fallback chain inside <PreviewImage>.
-  const previewFaceList = preview ? previewFaces(preview.cardId) : [];
 
-  const clearPreviewDismissTimer = React.useCallback(() => {
-    if (previewDismissTimerRef.current) {
-      clearTimeout(previewDismissTimerRef.current);
-      previewDismissTimerRef.current = null;
-    }
-  }, []);
-
-  // Clear preview timer
-  const clearPreviewTimer = React.useCallback(() => {
-    if (previewTimerRef.current) {
-      clearTimeout(previewTimerRef.current);
-      previewTimerRef.current = null;
-    }
-  }, [previewTimerRef]);
-
-  // Mirrors previewSticky for the callbacks below, which must read it without being re-created
-  // (they are passed to every card and would otherwise churn the whole board on each change).
-  const previewStickyRef = React.useRef(false);
-  React.useEffect(() => { previewStickyRef.current = previewSticky; }, [previewSticky]);
-
-  // Preview handlers
-  const handlePreviewStart = React.useCallback<PreviewStart>((nextPreview, opts) => {
-    if (opts?.sticky) {
-      // The hold itself was the delay, and it must not time out from under the player.
-      clearPreviewTimer();
-      clearPreviewDismissTimer();
-      setPreview(nextPreview);
-      setPreviewSticky(true);
-      previewStickyRef.current = true;
-      return;
-    }
-    // iOS synthesises mouseenter on the held element right after touchend, which would otherwise
-    // immediately swap the just-opened detail card for a hover preview the player can't even see.
-    if (previewStickyRef.current) return;
-    clearPreviewTimer();
-    clearPreviewDismissTimer();
-    setPreview(null);
-    setPreviewSticky(false);
-    previewTimerRef.current = setTimeout(() => {
-      setPreview(nextPreview);
-      previewDismissTimerRef.current = setTimeout(() => {
-        setPreview(null);
-      }, 10000);
-    }, 700);
-  }, [clearPreviewTimer, clearPreviewDismissTimer, setPreview]);
-  const handlePreviewEnd = React.useCallback(() => {
-    // A sticky card stays put — mouseleave fires spuriously on touch once the hold opens it.
-    if (previewStickyRef.current) return;
-    clearPreviewTimer();
-    clearPreviewDismissTimer();
-    setPreview(null);
-  }, [clearPreviewTimer, clearPreviewDismissTimer, setPreview]);
-  const dismissStickyPreview = React.useCallback(() => {
-    previewStickyRef.current = false;
-    setPreviewSticky(false);
-    setPreview(null);
-  }, []);
-  React.useEffect(() => () => { clearPreviewTimer(); clearPreviewDismissTimer(); }, [clearPreviewTimer, clearPreviewDismissTimer]);
+  // Preview state, timers and handlers live in the shared hook so the admin card board gets the
+  // identical hover-delay / press-and-hold behaviour.
+  const cardPreview = useCardPreview();
+  const handlePreviewStart = cardPreview.onPreviewStart;
+  const handlePreviewEnd = cardPreview.onPreviewEnd;
   React.useEffect(() => { setSelectedTargetPlayIds([]); setSelectedTargetIndices([]); setSpreadDmgMap({}); }, [resolutionNeeded]);
 
   const [deckSearchSelected, setDeckSearchSelected] = React.useState<Set<string>>(new Set());
@@ -2452,66 +2250,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       </div>
     </div>
 
-    {preview && !previewSticky ? <div className={`pointer-events-none fixed bottom-4 right-4 z-[60] hidden rounded-lg border border-white/15 bg-black/85 p-2 shadow-2xl backdrop-blur-sm lg:block ${previewFaceList.length > 1 ? "w-auto" : "w-[27rem]"}`}>
-      {previewFaceList.length > 1 ? (
-        // Both leader faces at the SAME card scale, so they share their short edge: the landscape
-        // front's height equals the portrait back's width. A back that is another leader face
-        // (Flipatine) is landscape too, so it simply matches the front's height instead.
-        <div className="flex items-start gap-2">
-          {previewFaceList.map(face => (
-            <PreviewImage
-              key={face.imageId}
-              imageId={face.imageId}
-              alt={preview.label ?? preview.cardId}
-              className={`rounded-xl ${face.landscape ? "h-[10.5rem] w-auto" : "w-[10.5rem] h-auto"}`}
-            />
-          ))}
-        </div>
-      ) : (
-        <PreviewImage
-          imageId={previewFaceList[0]?.imageId ?? preview.imageId}
-          alt={preview.label ?? preview.cardId}
-          className="w-full rounded-xl object-cover"
-        />
-      )}
-      <div className="mt-2 px-1 text-xs text-white/80">{preview.label ?? CardTitle(preview.cardId)}</div>
-    </div> : null}
-
-    {/* Press-and-hold detail. Unlike the hover panel this renders at every width — it is the only
-        way to read a card on a touch device, and it must sit above every other modal. */}
-    {preview && previewSticky ? <div
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-3 bg-black/85 p-4 backdrop-blur-sm"
-      onClick={dismissStickyPreview}
-    >
-      {previewFaceList.length > 1 ? (
-        // Same shared-short-edge rule as the hover panel, sized in vh. Side by side would be
-        // unreadable on a phone, so the pair stacks below the sm breakpoint.
-        <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
-          {previewFaceList.map(face => (
-            <PreviewImage
-              key={face.imageId}
-              imageId={face.imageId}
-              alt={preview.label ?? preview.cardId}
-              className={`rounded-2xl border border-white/15 shadow-2xl ${face.landscape ? "h-[22vh] w-auto sm:h-[38vh]" : "w-[22vh] h-auto sm:w-[38vh]"}`}
-            />
-          ))}
-        </div>
-      ) : (
-        <PreviewImage
-          imageId={previewFaceList[0]?.imageId ?? preview.imageId}
-          alt={preview.label ?? preview.cardId}
-          className="max-h-[75vh] w-auto max-w-[min(24rem,90vw)] rounded-2xl border border-white/15 object-contain shadow-2xl"
-        />
-      )}
-      <div className="max-w-[90vw] text-center text-sm font-semibold text-white/90">{preview.label ?? CardTitle(preview.cardId)}</div>
-      <button
-        type="button"
-        onClick={dismissStickyPreview}
-        className="rounded-lg border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
-      >
-        Close
-      </button>
-    </div> : null}
+    <CardPreviewOverlay {...cardPreview} />
 
     {isMultiSelectTarget && discardModalPlayer === null ? <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-xl border border-amber-400/30 bg-[rgba(8,12,26,0.97)] px-5 py-3 shadow-2xl">
       <span className="text-sm text-white/70">

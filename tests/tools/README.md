@@ -29,9 +29,15 @@ node tests/tools/card-info.mjs SEC_232
 
 ## Rules
 
-1. **Read-only against anything live.** `puzzle-fetch.mjs` talks to the production database. It
-   issues only `find`/`findOne`. Do not add a write path to a tool — if a puzzle needs changing,
-   that is a job for the puzzle editor UI, with the user driving.
+1. **Read-only against the live database.** `puzzle-fetch.mjs` talks to the production database
+   and issues only `find`/`findOne`. Do not add a database write path to any tool — if a puzzle
+   needs changing, that is a job for the puzzle editor UI, with the user driving.
+
+   The one sanctioned exception is `card-impl.mjs`, and note *how* it is excepted: it does not
+   write to the database at all. It calls the same admin HTTP endpoint the board UI calls, so
+   every write goes through the app's auth and validation, and no tool ever holds database
+   credentials. If you need another write tool, follow that shape rather than reaching for
+   mongoose.
 2. **Never print secrets.** Tools may *read* `.env` to get a connection string; they must never
    echo it, log it, or write it into a file. If you add a tool that reads config, follow
    `connectionString()` in `puzzle-fetch.mjs`.
@@ -110,6 +116,31 @@ regressions on top of data the implementations and tests were built against.
 
 After writing, the user must run **Fetch SWU Cards + Images** in `/internal/zzCardCodeGenerator` —
 nothing reaches the engine until `generated.ts` is regenerated.
+
+### `card-impl.mjs` — move a card on the implementation board
+
+The board at `/admin/cards-impl` tracks which cards are implemented (To Do / Priority / Needs Work
+/ Done). This is how an agent updates it while working through a set, so the board stays honest
+without anyone remembering to drag cards afterwards.
+
+```bash
+export CARD_IMPL_COOKIE='session=...'          # an ADMIN session cookie, from devtools
+node tests/tools/card-impl.mjs --list
+node tests/tools/card-impl.mjs --list --status needs-work
+node tests/tools/card-impl.mjs --card HMW_035 --status done
+node tests/tools/card-impl.mjs --card SOR_042 --status needs-work --note "On Attack fires twice"
+```
+
+**This is the only write tool here** — see rule 1 for why it is allowed and what shape a future
+one must take. It needs a running server (`npm run dev`, or `--base https://…` for another host).
+
+Lane moves are validated server-side: Needs Work and Done can only swap with each other, so a
+card cannot be sent back to To Do from either. That is deliberate, and it is a recorded open
+question in the design doc — if it changes, it changes in `src/server/cards-impl/status-board.ts`
+and both the UI and this tool follow.
+
+Mark a card **as you finish it**, not in a batch at the end — a run that dies halfway then leaves
+the board describing what actually happened.
 
 ### `card-db.mjs`
 

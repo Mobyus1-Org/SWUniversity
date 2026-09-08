@@ -1,4 +1,32 @@
 {
+  "HMW_001": {
+    "title": "Asajj Ventress",
+    "subtitle": "No Time For Regret",
+    "type": "Leader",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 5,
+    "power": 3,
+    "hp": 6,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Vigilance",
+      "Aggression"
+    ],
+    "traits": [
+      "Force",
+      "Night"
+    ],
+    "text": "Action [Exhaust]: Attack with a unit. For this attack replace any Raid it has or gains with Restore, or vice versa.",
+    "epicAction": "Epic Action: If you control 5 or more resources, deploy this leader.",
+    "leaderUnitText": "Restore 2\nAction: Attack with a unit. For this attack, replace any Raid it has or gains with Restore, or vice versa.",
+    "unique": true,
+    "rarity": "Rare",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/001.png",
+    "imageUrlBack": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/001-back.png"
+  },
   "HMW_003": {
     "title": "Doctor Hemlock",
     "subtitle": "Emotion Has No Place Here",
@@ -110,6 +138,34 @@
     "set": "HMW",
     "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/007.png",
     "imageUrlBack": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/007-back.png"
+  },
+  "HMW_008": {
+    "title": "General Grievous",
+    "subtitle": "Separatist Warlord",
+    "type": "Leader",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 5,
+    "power": 3,
+    "hp": 6,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Command",
+      "Villainy"
+    ],
+    "traits": [
+      "Separatist",
+      "Official"
+    ],
+    "text": "Action [Exhaust]: Play 2 units from your hand (one at a time, paying their costs).",
+    "epicAction": "Epic Action: If you control 5 or more resources, deploy this leader.",
+    "leaderUnitText": "While you control more units than an opponent, this unit gets +3/+0.",
+    "unique": true,
+    "rarity": "Common",
+    "set": "HMW",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/008.png",
+    "imageUrlBack": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/HMW/008-back.png"
   },
   "HMW_009": {
     "title": "Chewbacca",

@@ -115,6 +115,13 @@ export default function AdminToolsPage() {
     <div className="max-w-5xl mx-auto mt-8 p-6 space-y-8">
       <h1 className="text-3xl font-semibold">Admin Tools</h1>
 
+      <section className="border rounded-lg bg-black/30 p-6 space-y-2">
+        <h2 className="text-2xl font-semibold">Tools</h2>
+        <Link href="/admin/cards-impl" className="block text-sky-300 underline underline-offset-2 hover:text-sky-200">
+          Card Implementation board
+        </Link>
+      </section>
+
       <section className="border rounded-lg bg-black/30 p-6 space-y-4">
         <h2 className="text-2xl font-semibold">Registered Users</h2>
         <input
