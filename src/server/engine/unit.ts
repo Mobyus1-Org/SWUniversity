@@ -1,9 +1,7 @@
 import { CardInPlay, HP_MOD, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, RaidRestoreSwapped, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, EffectiveRaid, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard } from "@/server/engine/core-functions";
 import { CardArena, CardAspects, CardCost, CardHp, CardPower } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
-import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasGrit } from "./card-db/keyword-dictionaries.ts/grit";
@@ -308,7 +306,8 @@ export class Unit implements UnitInterface {
     }
 
     if (!this.LostAbilities()) {
-      if (this.cardId === "SOR_081" && GetResources(this.controller).length >= 6) power += 2; // Seasoned Shoretrooper
+      // Seasoned Shoretrooper — SOR_081 and its SHD_083 reprint are the same card.
+      if ((this.cardId === "SOR_081" || this.cardId === "SHD_083") && GetResources(this.controller).length >= 6) power += 2;
       if (this.cardId === "SOR_118") power += GetResources(this.controller).length; // 97th Legion
       if (this.cardId === "SOR_161" && InitiativePlayer() === this.controller) power += 2; // Ardent Sympathizer
       if (this.cardId === "TWI_142" && GetBaseDamage(this.controller) >= 15) power += 2; // Anakin's Interceptor
@@ -369,11 +368,10 @@ export class Unit implements UnitInterface {
     }
 
     if (isAttacking) {
-      // HMW_001 Asajj Ventress swaps Raid and Restore for one attack, so this site reads the
-      // Restore amount instead. Read live, which is what makes "or gains" work.
-      power += RaidRestoreSwapped(this.playId, this.controller)
-        ? RestoreAmount(this.cardId, this.playId, this.controller)
-        : RaidAmount(this.cardId, this.playId, this.controller);
+      // EffectiveRaid folds in HMW_001 Asajj Ventress's replacement: with "replace Restore with
+      // Raid" active the unit's Restore is ADDED here, and with the other direction its Raid is
+      // zero. Read live, which is what makes "any Raid it has OR GAINS" work.
+      power += EffectiveRaid(this.cardId, this.playId, this.controller);
     }
 
     // Concord Dawn Interceptors — "This unit gets +2/+0 while defending."

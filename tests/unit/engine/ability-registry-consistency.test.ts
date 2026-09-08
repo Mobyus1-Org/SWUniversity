@@ -58,6 +58,7 @@ const offered = new Set([
   ...caseIds(funcBody(actionAb, /export function ActionAbilities\(/)),
   ...caseIds(funcBody(actionAb, /export function UpgradeGrantsHostAction\(/)),
   ...caseIds(funcBody(actionAb, /export function UpgradeHostsOwnAction\(/)),
+  ...caseIds(funcBody(actionAb, /export function DiscardHostsAction\(/)),
 ]);
 /**
  * Cards with an execution case — the paths that run when the Action is used.
@@ -68,6 +69,10 @@ const offered = new Set([
 const executes = new Set([
   ...caseIds(funcBody(dispatch, /function resolveActionAbility\(/)),
   ...caseIds(funcBody(dispatch, /function resolveBaseUpgradeAction\(/)),
+  // A discard-hosted Action has no per-card execution branch by design: activateDiscardAction
+  // checks the condition, charges the cost and hands off to completePlayCard, so being registered
+  // in DiscardHostsAction (with a condition in DiscardActionAvailable) IS the implementation.
+  ...caseIds(funcBody(actionAb, /export function DiscardHostsAction\(/)),
 ]);
 /** Leaders the Puzzles UI renders an action button for. */
 const uiButtons = new Set(

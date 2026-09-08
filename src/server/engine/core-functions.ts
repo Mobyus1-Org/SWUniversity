@@ -6,6 +6,8 @@ import { Game, GameState, PlayerState } from "@/lib/engine/game";
 import { Unit } from "@/server/engine/unit";
 import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
+import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
+import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { AbilityOptionPending, AbilityTargetPending, DeckSearchPending, PendingResolution } from "@/server/engine/pending-resolution";
 import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
 
@@ -663,16 +665,129 @@ export function UnitsEnterPlayReady(gs: GameState, player: PlayerId, enteringCar
  * HMW_001 Asajj Ventress — "For this attack replace any Raid it has or gains with Restore, or
  * vice versa."
  *
- * Raid and Restore each have exactly one consumption site (Unit.CurrentPower for Raid,
- * resolveAttack's base heal for Restore). Rather than rewriting either keyword, this flag makes
- * each site read the OTHER amount — which is why the swap is symmetric for free, and why "or
- * GAINS" works: both sites read live at consumption time rather than snapshotting.
+ * REPLACEMENT, not exchange: the replaced keyword's value is added to the survivor and the
+ * replaced one drops to zero. On LAW_050 Honnah (the only unit printing both, Raid 2 + Restore 2)
+ * that is the difference between Restore 4 and Raid 4 — where treating it as a symmetric swap of
+ * which amount each site reads leaves her at Raid 2 / Restore 2, a complete no-op.
+ *
+ * Because the two readings differ, the DIRECTION is a choice the player makes for the attack.
+ *
+ * Read live at each consumption site rather than snapshotted, which is what makes "any Raid it has
+ * OR GAINS" work.
  */
-export function RaidRestoreSwapped(playId: string | undefined, player: PlayerId): boolean {
-  if (!playId) return false;
-  return GetCurrentEffectsForPlayer(player).some(
-    e => e.cardId === "HMW_001_swap" && e.targetPlayId === playId,
-  );
+export type RaidRestoreSwap = "to-raid" | "to-restore" | null;
+
+export const SWAP_TO_RAID = "HMW_001_to_raid";
+export const SWAP_TO_RESTORE = "HMW_001_to_restore";
+
+export function RaidRestoreSwapDirection(playId: string | undefined, player: PlayerId): RaidRestoreSwap {
+  if (!playId) return null;
+  const effects = GetCurrentEffectsForPlayer(player);
+  if (effects.some(e => e.cardId === SWAP_TO_RAID && e.targetPlayId === playId)) return "to-raid";
+  if (effects.some(e => e.cardId === SWAP_TO_RESTORE && e.targetPlayId === playId)) return "to-restore";
+  return null;
+}
+
+/** The unit's Raid for this attack, after any replacement. */
+export function EffectiveRaid(cardId: string, playId: string | undefined, player: PlayerId): number {
+  const raid = RaidAmount(cardId, playId, player);
+  switch (RaidRestoreSwapDirection(playId, player)) {
+    case "to-restore": return 0;                                        // its Raid became Restore
+    case "to-raid":    return raid + RestoreAmount(cardId, playId, player);
+    default:           return raid;
+  }
+}
+
+/** The unit's Restore for this attack, after any replacement. */
+export function EffectiveRestore(cardId: string, playId: string | undefined, player: PlayerId): number {
+  const restore = RestoreAmount(cardId, playId, player);
+  switch (RaidRestoreSwapDirection(playId, player)) {
+    case "to-raid":    return 0;                                        // its Restore became Raid
+    case "to-restore": return restore + RaidAmount(cardId, playId, player);
+    default:           return restore;
+  }
+}
+
+/**
+ * Units that attacked `basePlayer`'s base this phase, in attack order.
+ *
+ * Entries are kept even if the unit has since left play — the ledger is a record of what happened.
+ * A card that then targets those units must filter to ones still in play itself.
+ */
+export function UnitsThatAttackedBase(basePlayer: PlayerId): { fromPlayer: PlayerId; cardId: string; playId: string }[] {
+  const game = GetGame();
+  if (!game) return [];
+  return game.currentGameState.roundState.unitsAttackedThisPhase
+    .filter(e => e.attackedBasePlayer === basePlayer)
+    .map(({ fromPlayer, cardId, playId }) => ({ fromPlayer, cardId, playId }));
+}
+
+export const LOST_THE_GAME = "__lost_the_game";
+
+/**
+ * Marks a player as having lost the game for a reason other than base damage (SHD_208 Final
+ * Showdown).
+ *
+ * Recorded as a Permanent currentEffect rather than a new GameState field: currentEffects already
+ * round-trips through the puzzle hydrator, the puzzle builder and StaticBoard, so this needs no
+ * change to those three hand-written mirrors and cannot silently vanish in a stored puzzle.
+ *
+ * updateDefeatedPlayers rebuilds defeatedPlayers from base HP on every dispatch, so it re-reads
+ * this each time rather than the loss being written once and erased by the next action.
+ */
+export function MarkPlayerLost(gs: GameState, player: PlayerId): void {
+  if (PlayerHasLost(gs, player)) return;
+  gs.currentEffects.push({ cardId: LOST_THE_GAME, duration: "Permanent", affectedPlayer: player });
+}
+
+/** Whether a player has been marked as having lost outright. */
+export function PlayerHasLost(gs: GameState, player: PlayerId): boolean {
+  return gs.currentEffects.some(e => e.cardId === LOST_THE_GAME && e.affectedPlayer === player);
+}
+
+/**
+ * "Attack with N units (one at a time)" — SHD_128 Outflank, SHD_145 Headhunting, TWI_123.
+ *
+ * Each pick is built fresh, only once the previous attack has fully resolved, because the eligible
+ * list genuinely changes in between: the last attacker is now exhausted, and either side may have
+ * lost units to the exchange. Building all N prompts up front would offer a unit that just died.
+ *
+ * The remaining count rides in the pending's cardId, matching the `_pay1` convention already used
+ * for prefix-dispatched pendings.
+ *
+ * Returns null when nothing can attack, which is also how the chain terminates.
+ */
+export const MULTI_ATTACK_PREFIX = "__multiattack:";
+
+export function buildMultiAttack(
+  sourceCardId: string,
+  player: PlayerId,
+  remaining: number,
+  /**
+   * The unit that is ABOUT to attack but has not exhausted yet. The next pick is built while the
+   * current attack is still pending, so without this the chain both offers that unit again and
+   * believes a pick exists when it is the only attacker.
+   */
+  excludePlayId?: string,
+): AbilityTargetPending | null {
+  if (remaining <= 0) return null;
+  const eligible = GetUnitsForPlayer(player, true)
+    .filter(u => CanUnitAttack(u) && u.playId !== excludePlayId);
+  if (eligible.length === 0) return null;
+  return {
+    type: "ability-target",
+    cardId: `${MULTI_ATTACK_PREFIX}${sourceCardId}:${remaining}`,
+    player,
+    fromPlayIds: eligible.map(u => u.playId),
+    continuation: null,
+  };
+}
+
+/** Parses a multi-attack pending id back into its source card and remaining count. */
+export function parseMultiAttack(cardId: string): { sourceCardId: string; remaining: number } | null {
+  if (!cardId.startsWith(MULTI_ATTACK_PREFIX)) return null;
+  const [sourceCardId, remaining] = cardId.slice(MULTI_ATTACK_PREFIX.length).split(":");
+  return { sourceCardId, remaining: Number(remaining) };
 }
 
 /** Units whose static ability reads "Bases can't be healed." */
@@ -1494,6 +1609,9 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_059": //Leia Organa (ASH) — On Attack: may self-damage to heal your base
     case "ASH_072": //Doctor Pershing — On Attack: draw a card if it has 3+ remaining HP
     case "ASH_099": //Gozanti Assault Carrier — On Attack: gains Sentinel for this phase
+    case "SHD_057": //Rickety Quadjumper — On Attack: may reveal top card, conditional Experience
+    case "SHD_183": //Kintan Intimidator — On Attack: exhaust the defender
+    case "SHD_199": //Coruscant Dissident — On Attack: may ready a resource
     case "HMW_061": //Director Krennic (The Work Has Stalled) — On Attack: draw if your base is upgraded
     case "HMW_064": //Scorch — On Attack: may deal 1 damage to an upgraded unit
     case "HMW_210": //Sol — On Attack: gains Sentinel for this phase

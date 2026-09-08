@@ -1,7 +1,7 @@
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { BaseHealingPrevented, DealDamageToBase, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit } from "@/server/engine/core-functions";
+import { BaseHealingPrevented, DealDamageToBase, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit } from "@/server/engine/core-functions";
 import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 
 /**
@@ -15,6 +15,7 @@ import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateMandalorianToken,
  * asked to order a trigger that does nothing.
  */
 const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
+  "SHD_066", // Cargo Juggernaut — conditional base heal
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
   "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149", "ASH_179", "ASH_251",
@@ -44,6 +45,15 @@ export function resolveWhenPlayedTrigger(
       for (const u of [...player.groundArena, ...otherPlayer.groundArena]) u.ready = false;
       log.push(`${CardTitle(trigger.cardId)}: all ground units exhausted.`);
       break;
+    case "SHD_066": { // Cargo Juggernaut — "If you control another Vigilance unit, heal 4 damage
+                      // from your base." Automatic, so it lives HERE: resolveWhenPlayed runs twice
+                      // for units and would heal 8.
+      const hasOther066 = PlayerHasUnitWithAspectInPlay(trigger.fromPlayer, "Vigilance", true, trigger.playId);
+      if (hasOther066) {
+        HealBaseForPlayer(gs, trigger.fromPlayer, 4, log, "SHD_066");
+      }
+      break;
+    }
     case "SOR_111": // Patrolling V-Wing — When Played: Draw a card.
       DrawCardForPlayer(gs, log, trigger.fromPlayer);
       break;

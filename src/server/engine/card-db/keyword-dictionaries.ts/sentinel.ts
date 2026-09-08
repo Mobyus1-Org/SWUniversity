@@ -191,6 +191,8 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "SHD_084"://Phase-III Dark Trooper
     case "SHD_089"://Pirate Battle Tank
     case "SHD_237"://Black Sun Starfighter
+    case "SHD_063"://System Patrol Craft
+    case "SHD_238"://Cell Block Guard
     case "TWI_003"://Obi-wan Kenobi
     case "TWI_037"://Droideka Security
     case "TWI_065"://Falchion Ion Tank

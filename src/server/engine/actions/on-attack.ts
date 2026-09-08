@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending, IndirectDamagePending } from "@/server/engine/pending-resolution";
-import { CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken } from "@/server/engine/core-functions";
+import { GetUnitByPlayId, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles } from "@/server/engine/card-db/generated";
@@ -492,6 +492,53 @@ function resolveInnateOnAttack(
         game061.gameLog.push(`${CardTitle(sourceCardId)}: drew a card.`);
       }
       return continuation;
+    }
+    case "SHD_057": { // Rickety Quadjumper — "You may reveal the top card of your deck. If it's not
+                      // a unit, give an Experience token to another unit."
+                      // Offered whenever there IS a top card: the reveal is the "may", and the
+                      // grant is a condition on what turns up, not a precondition of asking.
+      const game057 = GetGame();
+      if (!game057) return continuation;
+      if (GetPlayer(game057.currentGameState, attacker.controller).deck.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "SHD_057",
+        player: attacker.controller,
+        sourcePlayId: attacker.playId,
+        helperText: "Reveal the top card of your deck?",
+        yesLabel: "Reveal",
+        noLabel: "Skip",
+        onYes: null,
+        continuation,
+      } satisfies AbilityOptionPending;
+    }
+    case "SHD_183": { // Kintan Intimidator — "Exhaust the defender."
+                      // The defender is whatever this attack targeted; attacking a base has none.
+      if (continuation.target.type !== "unit") return continuation;
+      const defender183 = GetUnitByPlayId(GetGame()!.currentGameState, continuation.target.playId);
+      if (defender183) {
+        defender183.ready = false;
+        GetGame()!.gameLog.push(`${CardTitle("SHD_183")}: exhausted ${CardTitle(defender183.cardId)}.`);
+      }
+      return continuation;
+    }
+    case "SHD_199": { // Coruscant Dissident — "You may ready a resource."
+                      // Not offered with nothing exhausted: an offer that cannot do anything is
+                      // just a click.
+      const game199 = GetGame();
+      if (!game199) return continuation;
+      const exhausted199 = GetPlayer(game199.currentGameState, attacker.controller).resources.some(r => !r.ready);
+      if (!exhausted199) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "SHD_199",
+        player: attacker.controller,
+        helperText: "Ready a resource?",
+        yesLabel: "Ready",
+        noLabel: "Skip",
+        onYes: null,
+        continuation,
+      } satisfies AbilityOptionPending;
     }
     case "HMW_064": { // Scorch, Imperial Commando — On Attack: You may deal 1 damage to an upgraded
                       // unit. Either side's units qualify, and tokens are upgrades, so the filter

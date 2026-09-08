@@ -168,6 +168,7 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
   ],
   "LOF_134": "2 dmg to a ground unit", // Heavy Missile Gunship
   "HMW_170": "Ready another unit", // Han Solo — My Team's Ready
+  "SHD_196": "Exhaust an enemy unit", // Grogu — Irresistible
   "IBH_016": "3 dmg to a space unit", // Ion Cannon
   "IBH_027": "3 dmg to a space unit",
   "IBH_023": "Attack w/ another Heroism unit (+2/+0)", // General Rieekan

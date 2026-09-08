@@ -106,6 +106,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "SHD_188"://4-LOM
     case "SHD_119"://Weequay Pirate Gang
     case "SHD_122"://Arquitens Assault Cruiser
+    case "SHD_121"://Mercenary Company
     case "TWI_214"://Hidden Sharpshooter
     case "TWI_242"://Phase II Clone Trooper
     case "LAW_079"://K-2SO

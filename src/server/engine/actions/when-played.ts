@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource } from "@/server/engine/core-functions";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack } from "@/server/engine/core-functions";
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost } from "@/server/engine/card-playability";
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -1255,6 +1255,92 @@ export function resolveWhenPlayed(
       const theirBeast237 = CreateBeast(gs237, GetOtherPlayer(player), game.gameLog, cardId);
       GiveWeaknessToken(gs237, theirBeast237, game.gameLog, cardId);
       return null;
+    }
+    case "SHD_047": { // The Armorer — "Give a Shield token to each of up to 3 Mandalorian units."
+                      // EACH of up to 3, so at most one Shield per unit across three distinct
+                      // units — a multi-select, not a distribution. "Mandalorian units" is
+                      // unqualified, and she is one herself.
+      const mandos047 = AllUnits().filter(
+        u => TraitContains(u.cardId, "Mandalorian", u.controller, u.playId),
+      );
+      if (mandos047.length === 0) return null;
+      return {
+        type: "give-xp-multiple",
+        cardId: "SHD_047",
+        player,
+        maxCount: 3,
+        eligiblePlayIds: mandos047.map(u => u.playId),
+        continuation: null,
+      } satisfies GiveXpMultiplePending;
+    }
+    case "SHD_209": { // Criminal Muscle — "You may return a non-unique upgrade to its owner's hand."
+                      // Tokens are upgrades but have no card to return, so they are excluded with
+                      // the unique ones.
+      const eligible209 = DefeatableUpgradePlayIds(player).filter(pid => {
+        const upg = FindUpgradeByPlayId(pid);
+        return !!upg && !CardIsUnique(upg.cardId) && !upg.cardId.includes("_T");
+      });
+      if (eligible209.length === 0) return null;
+      return optionalTarget("SHD_209", player, eligible209,
+        "Return a non-unique upgrade to its owner's hand?", { yesLabel: "Return" });
+    }
+    case "SHD_245": // Greef Karga — Search top 5 of deck for an UPGRADE, reveal it, and draw it.
+      return searchDeck(cardId, player, 5, "draw", { filter: { type: "Upgrade" }, maxChoices: 1 });
+    case "SHD_244": { // No Bargain (Event) — "Each opponent discards a card from their hand. Draw
+                      // a card." The opponent chooses which card, so the prompt belongs to them;
+                      // thenDrawForPlayer hands the draw back to the caster afterwards.
+      const opponent244 = GetOtherPlayer(player);
+      if (GetHand(opponent244).length === 0) {
+        // Nothing to discard, but the draw is a separate sentence and still happens.
+        DrawCardForPlayer(game.currentGameState, game.gameLog, player);
+        return null;
+      }
+      return {
+        type: "discard-from-hand",
+        targetPlayer: opponent244,
+        count: 1,
+        thenDrawForPlayer: player,
+        continuation: null,
+      } satisfies DiscardFromHandPending;
+    }
+    case "SHD_262": { // Confiscate (Event) — "Defeat an upgrade." Unqualified: either side's, and a
+                      // token counts. DefeatableUpgradePlayIds already excludes upgrades protected
+                      // from enemy abilities.
+      const upgrades262 = DefeatableUpgradePlayIds(player);
+      if (upgrades262.length === 0) return null;
+      return mandatoryTarget("SHD_262", player, upgrades262);
+    }
+    case "SHD_108": { // Enforced Loyalty (Event) — "Defeat a friendly unit. If you do, draw 2
+                      // cards." The draw hangs off the defeat, so no friendly unit means no draw.
+      const friendly108 = GetUnitsForPlayer(player);
+      if (friendly108.length === 0) return null;
+      return mandatoryTarget("SHD_108", player, friendly108.map(u => u.playId));
+    }
+    case "SHD_040": { // Clan Wren Rescuer — "Give an Experience token to a unit."
+                      // Mandatory, unqualified, and NOT "another" — it may pick itself.
+      const units040 = AllUnits();
+      if (units040.length === 0) return null;
+      return mandatoryTarget("SHD_040", player, units040.map(u => u.playId));
+    }
+    case "SHD_082": { // Outland TIE Vanguard — "You may give an Experience token to another unit
+                      // that costs 3 or less."
+      const targets082 = AllUnits()
+        .filter(u => u.playId !== playId && (CardCost(u.cardId) ?? 0) <= 3);
+      if (targets082.length === 0) return null;
+      return optionalTarget("SHD_082", player, targets082.map(u => u.playId),
+        "Give an Experience token to another unit costing 3 or less?", { yesLabel: "Give token" });
+    }
+    case "SHD_258": { // Mandalorian Warrior — "You may give an Experience token to another
+                      // Mandalorian unit." Either side's Mandalorians qualify.
+      const targets258 = AllUnits().filter(
+        u => u.playId !== playId && TraitContains(u.cardId, "Mandalorian", u.controller, u.playId),
+      );
+      if (targets258.length === 0) return null;
+      return optionalTarget("SHD_258", player, targets258.map(u => u.playId),
+        "Give an Experience token to another Mandalorian unit?", { yesLabel: "Give token" });
+    }
+    case "SHD_128": { // Outflank (Event) — "Attack with 2 units (one at a time)."
+      return buildMultiAttack(cardId, player, 2);
     }
     case "HMW_151": { // Overgrowth (Event) — "If you control a Kashyyyk base, a friendly unit deals
                       // damage equal to its power to an enemy unit. Resource this card."

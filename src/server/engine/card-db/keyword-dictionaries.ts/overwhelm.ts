@@ -150,6 +150,7 @@ export function HasOverwhelm(cardId: string,
     case "JTL_154"://Profundity
     case "JTL_163"://AT-DP Occupier
     case "SHD_092"://Finalizer
+    case "SHD_121"://Mercenary Company
     case "JTL_090"://Executor
     case "TWI_093"://Advanced Recon Commando
     case "TWI_159"://Dendup's Loyalist

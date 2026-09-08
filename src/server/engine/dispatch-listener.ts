@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, RaidRestoreSwapped, DrawCardsForPlayer } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -105,11 +105,10 @@ import { resolveWhenPlayedTrigger, WhenPlayedHasAutoEffect } from "@/server/engi
 import { resolveOnAttackTrigger } from "@/server/engine/actions/on-attack";
 import { chooseEnemyForPowerDamage, dealPowerToEnemy, dealRemainingHpToEnemy } from "@/server/engine/actions/deal-power-damage";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
-import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { HasAmbush } from "@/server/engine/card-db/keyword-dictionaries.ts/ambush";
 import { AttackAbilityCardIds, HasSupport, SupportGrantEffectCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
-import { ActionAbilities, ActionAbilityCost, ActionAbilityExhausts, ActionAbilityCardId, WeakerThanAFriendlyUnitPlayIds, UpgradeHostsOwnAction, UpgradeActionAvailable, BactaTankTargets, UpgradeGrantsHostAction } from "@/server/engine/actions/action-ability";
+import { ActionAbilities, ActionAbilityCost, ActionAbilityExhausts, ActionAbilityCardId, WeakerThanAFriendlyUnitPlayIds, UpgradeHostsOwnAction, UpgradeActionAvailable, BactaTankTargets, UpgradeGrantsHostAction, DiscardHostsAction, DiscardActionAvailable } from "@/server/engine/actions/action-ability";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { IsTokenUpgrade, PilotingEligibleVehicles, PilotlessVehiclePlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -120,7 +119,6 @@ import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { BaseTargetPlayer } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
 import { QueueUnitEnteredPlayReaction } from "@/server/engine/core-functions";
 import { CreateBeast, GiveWeaknessToken, UnitsWithoutWeaknessToken } from "@/server/engine/token-helpers";
-import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget } from "@/server/engine/core-functions";
@@ -291,6 +289,26 @@ function resolveChooseOne(
     case "SHD_197": // L3-37 — rescue the captured card the player picked.
       rescueCaptiveByPlayId(game, log, optionId, "SHD_197");
       break;
+    case "HMW_001_dir": { // Asajj Ventress — apply the chosen replacement, then attack.
+      const attackerPlayId001 = String(pending.data?.attackerPlayId ?? "");
+      if (!attackerPlayId001) break;
+      // ForAttack, so it is cleared with the rest of the attack's effects; both consumption sites
+      // read it live.
+      game.currentEffects.push({
+        cardId: optionId,
+        duration: "ForAttack",
+        affectedPlayer: pending.player,
+        targetPlayId: attackerPlayId001,
+      });
+      log.push(`${CardTitle("HMW_001")}: ${optionId === SWAP_TO_RESTORE ? "Raid replaced with Restore" : "Restore replaced with Raid"} for this attack.`);
+      next = {
+        type: "attack-target",
+        attackerPlayId: attackerPlayId001,
+        source: "HMW_001",
+        continuation: pending.continuation ?? null,
+      };
+      break;
+    }
     case "HMW_035": { // Hunter — resolve the chosen mode, then re-ask if a choice is still owed.
       const remaining035 = Number(pending.data?.remaining ?? 1);
       // Both modes stay on the menu: "you may choose the same option more than once".
@@ -1093,6 +1111,41 @@ function pushToDiscard(game: GameState, player: PlayerId, unit: Unit): void {
     discardEffect: "",
   };
   GetPlayer(game, player).discard.unshift(discarded);
+}
+
+/**
+ * Uses an Action printed on a card sitting in the DISCARD PILE. Returns null when `playId` is not
+ * such a card, so the caller falls through to its normal "no unit" error.
+ *
+ * Condition first, then cost, then the play: a card whose condition fails or whose cost cannot be
+ * met must stay in the discard untouched.
+ */
+function activateDiscardAction(
+  game: GameState,
+  log: string[],
+  player: PlayerId,
+  playId: string,
+): HandlerResult | null {
+  const pState = GetPlayer(game, player);
+  const idx = pState.discard.findIndex(c => c.playId === playId);
+  if (idx === -1) return null;
+  const card = pState.discard[idx];
+  if (!DiscardHostsAction(card.cardId)) return null;
+
+  if (!DiscardActionAvailable(card.cardId, player)) {
+    return { response: invalidResponse(`${CardTitle(card.cardId)}: its condition is not met.`), pending: null, stateChanged: false };
+  }
+  const cost = playCost(game, player, card.cardId);
+  if (spendableFor(game, player) < cost) {
+    return { response: invalidResponse(`Not enough resources to play ${CardTitle(card.cardId)}.`), pending: null, stateChanged: false };
+  }
+
+  payResources(game, player, cost, log, card.cardId);
+  pState.discard.splice(idx, 1);
+  log.push(`${CardTitle(card.cardId)}: played from the discard pile for ${cost}.`);
+
+  // completePlayCard owns the ledgers, the play reactions and the upgrade attach prompt.
+  return completePlayCard(game, log, card.cardId, player);
 }
 
 /** Events whose own text reads "Resource this card." — they replace their trip to the discard. */
@@ -2152,6 +2205,11 @@ function updateDefeatedPlayers(game: GameState): void {
   game.defeatedPlayers = [];
   if (game.player1.base.damage >= p1Max) game.defeatedPlayers.push(1);
   if (game.player2.base.damage >= p2Max) game.defeatedPlayers.push(2);
+  // A loss from a card effect (SHD_208) is not derivable from base HP, so it is re-applied on
+  // every rebuild — this function runs at the exit of every dispatch.
+  for (const p of [1, 2] as PlayerId[]) {
+    if (PlayerHasLost(game, p) && !game.defeatedPlayers.includes(p)) game.defeatedPlayers.push(p);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -2661,10 +2719,8 @@ function resolveAttack(
   }
 
   // Restore fires as an On Attack trigger before combat damage
-  // HMW_001 Asajj Ventress: with the swap active this site heals by the attacker's RAID instead.
-  const restoreAmount = RaidRestoreSwapped(attacker.playId, attacker.controller)
-    ? RaidAmount(attacker.cardId, attacker.playId, attacker.controller)
-    : RestoreAmount(attacker.cardId, attacker.playId, attacker.controller);
+  // EffectiveRestore folds in HMW_001 Asajj Ventress's replacement — see EffectiveRaid.
+  const restoreAmount = EffectiveRestore(attacker.cardId, attacker.playId, attacker.controller);
   if (restoreAmount > 0 && !BaseHealingPrevented()) { // TWI_132 Confederate Tri-Fighter
     const controllerBase = GetPlayer(game, attacker.controller).base;
     controllerBase.damage = Math.max(0, controllerBase.damage - restoreAmount);
@@ -2676,6 +2732,7 @@ function resolveAttack(
     fromPlayer: attacker.controller,
     cardId: attacker.cardId,
     playId: attacker.playId,
+    ...(target.type === "base" ? { attackedBasePlayer: target.player } : {}),
   });
   // Babu Frik (LOF_206): for this attack the unit deals damage equal to its remaining HP instead
   // of its power. The ForAttack effect is set when Babu Frik sends it in.
@@ -2821,9 +2878,11 @@ function resolveAttack(
     }
 
     // First strike: attacker deals damage first; if defender is defeated, no counter-damage.
-    // Granted by SOR_217, or printed on ASH_202 Carson Teva ("While attacking, this unit deals
-    // combat damage before the defender") — which Support can hand to another attacker.
-    const hasFirstStrike = attackerSources.includes("ASH_202") || game.currentEffects.some(
+    // Granted by SOR_217, or printed on ASH_202 Carson Teva and SHD_234 Incinerator Trooper
+    // ("While attacking, this unit deals combat damage before the defender") — which Support can
+    // hand to another attacker.
+    const hasFirstStrike = attackerSources.includes("ASH_202") || attackerSources.includes("SHD_234")
+      || game.currentEffects.some(
       e => e.cardId === "SOR_217_first_strike" && e.targetPlayId === attacker.playId && e.duration === "ForAttack",
     );
 
@@ -3424,6 +3483,15 @@ function resolutionResponse(resolution: ResolutionRequest): DispatchResponse {
 // ---------------------------------------------------------------------------
 
 function pendingToResolution(pending: PendingResolution, game: GameState): ResolutionRequest {
+  // A queued multi-attack pick is stale by the time it surfaces: it was built while the PREVIOUS
+  // attack was still pending, so its list still contains the unit that has since attacked (and may
+  // list units that have since died). Rebuild it against the live board here — the one place every
+  // pending passes through on its way to the client.
+  if (pending.type === "ability-target" && parseMultiAttack(pending.cardId) && pending.player) {
+    const live = GetUnitsForPlayer(pending.player, true).filter(u => CanUnitAttack(u));
+    pending.fromPlayIds = live.map(u => u.playId);
+  }
+
   switch (pending.type) {
     case "attack-target": {
       const attacker = GetUnitByPlayId(game, pending.attackerPlayId);
@@ -4932,6 +5000,8 @@ function handleUseAbility(
       // upgrade is the actor — GetUnitByPlayId can never find it.
       const hosted = activateBaseUpgradeAction(game, log, player, data.playId);
       if (hosted) return hosted;
+      const fromDiscard = activateDiscardAction(game, log, player, data.playId);
+      if (fromDiscard) return fromDiscard;
       return { response: invalidResponse(`No unit with playId ${data.playId}.`), pending: null, stateChanged: false };
     }
     if (unit.controller !== player)
@@ -6063,6 +6133,25 @@ function handleChooseTarget(
     const invalid = chosen.find(id => !pending.eligiblePlayIds.includes(id));
     if (invalid)
       return { response: invalidResponse(`Unit ${invalid} is not eligible for Experience token.`), pending, stateChanged: false };
+
+    // SHD_047 The Armorer: the same multi-select, granting SHIELD tokens rather than Experience.
+    if (pending.cardId === "SHD_047") {
+      for (const playId of chosen) {
+        const target047 = GetUnitByPlayId(game, playId);
+        if (!target047) continue;
+        target047.upgrades.push({
+          cardId: "SOR_T02",
+          playId: nextPlayId(game),
+          owner: target047.owner,
+          controller: target047.controller,
+        });
+      }
+      log.push(`${CardTitle("SHD_047")}: gave a Shield token to ${chosen.length} Mandalorian unit(s).`);
+      updateDefeatedPlayers(game);
+      const bag047 = drainTriggerBag(game, log);
+      if (bag047) return { response: resolutionResponse(pendingToResolution(bag047, game)), pending: bag047, stateChanged: true };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
 
     // SOR_197 Lando Calrissian: return chosen resources to hand (reuses give-xp-multiple multi-select UI)
     if (pending.cardId === "SOR_197") {
@@ -8228,6 +8317,26 @@ function applyAbilityOptionEffect(
       if (enemy016) {
         enemy016.ready = false;
         log.push(`${CardTitle("TWI_016")}: exhausted ${CardTitle(enemy016.cardId)}.`);
+      }
+      return pending.continuation ?? null;
+    }
+    case "SHD_057": { // Rickety Quadjumper — reveal the top card; if it is NOT a unit, grant an
+                      // Experience token to another unit. The card is REVEALED, never drawn: the
+                      // deck is only read here, never mutated.
+      const pState057 = GetPlayer(game, pending.player!);
+      const top057 = pState057.deck[pState057.deck.length - 1];
+      if (!top057) return pending.continuation ?? null;
+      log.push(`${CardTitle("SHD_057")}: revealed ${CardTitle(top057.cardId)}.`);
+      if (CardType(top057.cardId) === "Unit") return pending.continuation ?? null;
+      const others057 = AllUnits().filter(u => u.playId !== pending.sourcePlayId);
+      if (others057.length === 0) return pending.continuation ?? null;
+      return mandatoryTarget("SHD_057", pending.player!, others057.map(u => u.playId), pending.continuation ?? null);
+    }
+    case "SHD_199": { // Coruscant Dissident — ready one exhausted resource. Exactly one.
+      const res199 = GetPlayer(game, pending.player!).resources.find(r => !r.ready);
+      if (res199) {
+        res199.ready = true;
+        log.push(`${CardTitle("SHD_199")}: readied a resource.`);
       }
       return pending.continuation ?? null;
     }
@@ -10741,6 +10850,12 @@ function resolveActionAbility(
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    case "SHD_196": { // Grogu (Irresistible) — Action [exhaust]: Exhaust an enemy unit.
+                      // "An enemy unit" names no arena, so space units are legal too.
+      const enemies196 = GetUnitsForPlayer(GetOtherPlayer(player));
+      if (enemies196.length === 0) return null;
+      return mandatoryTarget("SHD_196", player, enemies196.map(u => u.playId));
+    }
     case "HMW_001": { // Asajj Ventress — "Attack with a unit. For this attack replace any Raid it
                       // has or gains with Restore, or vice versa." Offered on both sides; the
                       // leader path has already exhausted the leader by the time we get here.
@@ -11551,6 +11666,21 @@ function applyAbilityEffect(
     return pending.continuation ?? null;
   }
 
+  // "Attack with N units (one at a time)": run this attack, then rebuild the next pick as its
+  // continuation. Prefix-dispatched like the `_pay1` pendings, because the remaining count is
+  // encoded in the id. Chaining through the continuation is what keeps the count alive when the
+  // attacker dies to the counter-attack.
+  const multiAttack = parseMultiAttack(pending.cardId);
+  if (multiAttack && targetPlayId && pending.player) {
+    const nextPick = buildMultiAttack(multiAttack.sourceCardId, pending.player, multiAttack.remaining - 1, targetPlayId);
+    return {
+      type: "attack-target",
+      attackerPlayId: targetPlayId,
+      source: multiAttack.sourceCardId,
+      continuation: nextPick ?? pending.continuation ?? null,
+    };
+  }
+
   switch (pending.cardId) {
     case "SEC_011_action": { // Governor Pryce — ready the chosen token unit.
       if (!targetPlayId) break;
@@ -11682,6 +11812,41 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, "HMW_036", targetPlayId, power036, game.gameLog, pending.player);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
+    case "SHD_262": { // Confiscate — defeat the chosen upgrade.
+      if (!targetPlayId) break;
+      // Removing an upgrade lowers its host's HP, so the sweep is required, not optional.
+      return defeatUpgradeAndSweep(game.currentGameState, game.gameLog, targetPlayId, "SHD_262", pending.continuation ?? null, pending.player);
+    }
+    case "SHD_108": { // Enforced Loyalty — defeat the chosen friendly unit, then draw 2.
+      if (!targetPlayId) break;
+      const victim108 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!victim108) break;
+      const defeatPend108 = defeatUnit(game.currentGameState, game.gameLog, victim108);
+      game.gameLog.push(`${CardTitle("SHD_108")}: defeated ${CardTitle(victim108.cardId)}.`);
+      // "If you do" — the draw is part of this resolution, so it happens now rather than being
+      // left to a continuation that a When Defeated could preempt.
+      DrawCardsForPlayer(game.currentGameState, game.gameLog, pending.player!, 2);
+      if (defeatPend108) return injectContinuation(defeatPend108, pending.continuation ?? null);
+      return pending.continuation ?? null;
+    }
+    case "SHD_196": { // Grogu — exhaust the chosen enemy unit.
+      if (!targetPlayId) break;
+      const victim196 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (victim196) {
+        victim196.ready = false;
+        game.gameLog.push(`${CardTitle("SHD_196")}: exhausted ${CardTitle(victim196.cardId)}.`);
+      }
+      return pending.continuation ?? null;
+    }
+    case "SHD_057": // Rickety Quadjumper
+    case "SHD_040": // Clan Wren Rescuer
+    case "SHD_082": // Outland TIE Vanguard
+    case "SHD_258": { // Mandalorian Warrior — all three grant one Experience token.
+      if (!targetPlayId) break;
+      const xpTarget = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (xpTarget) GiveExperienceTokens(game.currentGameState, xpTarget, 1, game.gameLog, pending.cardId);
+      return pending.continuation ?? null;
+    }
     case "HMW_037_heal": { // Bacta Tank — heal up to 3 from the chosen non-Vehicle unit.
       if (!targetPlayId) break;
       const target037 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -11709,20 +11874,23 @@ function applyAbilityEffect(
       // −1 HP can be lethal, and no other upgrade in the engine lowers its host's HP on attach.
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
-    case "HMW_001": { // Asajj Ventress — the chosen unit attacks with Raid and Restore swapped.
+    case "HMW_001": { // Asajj Ventress — pick WHICH replacement before the attack.
+                      // The two directions differ whenever the unit has both keywords (LAW_050
+                      // Honnah), so this is a real choice rather than a single symmetric swap.
       if (!targetPlayId || !pending.player) break;
       const attacker001 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!attacker001) break;
-      // ForAttack, so it is cleared with the rest of the attack's effects. Both consumption
-      // sites read this flag live, which is what makes "any Raid it has OR GAINS" work.
-      game.currentGameState.currentEffects.push({
-        cardId: "HMW_001_swap",
-        duration: "ForAttack",
-        affectedPlayer: pending.player,
-        targetPlayId,
-      });
-      game.gameLog.push(`${CardTitle("HMW_001")}: ${CardTitle(attacker001.cardId)} has Raid and Restore swapped for this attack.`);
-      return { type: "attack-target", attackerPlayId: targetPlayId, source: "HMW_001", continuation: pending.continuation ?? null };
+      return {
+        type: "choose-one",
+        cardId: "HMW_001_dir",
+        player: pending.player,
+        options: [
+          { id: SWAP_TO_RESTORE, label: "Replace Raid With Restore" },
+          { id: SWAP_TO_RAID, label: "Replace Restore With Raid" },
+        ],
+        data: { attackerPlayId: targetPlayId },
+        continuation: pending.continuation ?? null,
+      } satisfies ChooseOnePending;
     }
     case "HMW_009": { // Chewbacca — the chosen unit attacks and cannot pick a base this attack.
       if (!targetPlayId || !pending.player) break;
@@ -13016,6 +13184,20 @@ function applyAbilityEffect(
       const after247 = replay247 ?? pending.continuation ?? null;
       if (defeatPend247) return injectContinuation(defeatPend247, after247);
       return after247;
+    }
+    case "SHD_209": { // Criminal Muscle — return the chosen upgrade to its OWNER's hand.
+      if (!targetPlayId) break;
+      const gs209 = game.currentGameState;
+      const host209 = GetAllUnits(gs209).find(u => u.upgrades.some(upg => upg.playId === targetPlayId));
+      const upg209 = host209?.upgrades.find(u => u.playId === targetPlayId);
+      if (host209 && upg209) {
+        host209.upgrades = host209.upgrades.filter(u => u.playId !== targetPlayId);
+        // The OWNER gets it back — bouncing an enemy upgrade returns it to them, not to the caster.
+        GetPlayer(gs209, upg209.owner).hand.push({ cardId: upg209.cardId });
+        game.gameLog.push(`${CardTitle("SHD_209")}: returned ${CardTitle(upg209.cardId)} to its owner's hand.`);
+      }
+      // Losing an upgrade can drop a unit's HP below its damage.
+      return sweepDeadUnits(gs209, game.gameLog, pending.continuation ?? null);
     }
     case "ASH_232_upgrade": { // Full of Surprises — return the chosen cheap upgrade to its owner's hand.
       if (!targetPlayId) break;

@@ -59,7 +59,12 @@ export interface GameState {
     cardsPlayedThisRound: { fromPlayer: PlayerId; cardId: string; playId: string; playedAs: "Unit" | "Upgrade" | "Event" | "Pilot" }[];
     cardsEnteredPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: EntryReason }[];
     cardsLeftPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: ExitReason }[];
-    unitsAttackedThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; }[];
+    /**
+     * `attackedBasePlayer` is the base that was attacked, when the attack targeted a base at all —
+     * absent for an attack on a unit. Needed by "each enemy unit that attacked your base this
+     * phase" (SHD_106, SHD_088), which the attacker-only record could not answer.
+     */
+    unitsAttackedThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; attackedBasePlayer?: PlayerId; }[];
     /** `amount` is the damage actually applied (after caps) — Cassian Andor (SOR_013) sums it. */
     baseDamagedThisPhase: { byPlayer: PlayerId; target: PlayerId; amount?: number }[];
     /** playIds of units that took damage this phase (e.g. ASH_188 Galvanized Leap). */

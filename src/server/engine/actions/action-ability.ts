@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllUnits, GetPlayer, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllUnits, GetPlayer, UnitWasDefeatedThisPhase, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { CardTraits, CardCost, CardType, CardAspects } from "@/server/engine/card-db/generated";
 import { AllSpaceUnits } from "@/server/engine/core-functions";
@@ -426,6 +426,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "IBH_027":
         if (AllSpaceUnits().length > 0) abilities.push(cardId);
         break;
+      case "SHD_196": // Grogu (Irresistible) — Action [exhaust]: Exhaust an enemy unit.
+        if (GetUnitsForPlayer(player === 1 ? 2 : 1).length > 0) abilities.push(cardId);
+        break;
       case "HMW_170": // Han Solo (My Team's Ready) — Action [Exhaust]: Ready another unit.
                       // "Another unit" is unqualified, so either player's units count; only Han is
                       // excluded. Offered whenever anyone else is in play.
@@ -509,6 +512,31 @@ export function UpgradeGrantedUnitActions(player: PlayerId, playId: string): str
     }
   }
   return [...ids];
+}
+
+/**
+ * Cards whose Action is used while they sit in the DISCARD PILE — a third actor location, after
+ * unit/leader and the base-upgrade path (HMW_037).
+ *
+ * A discard card is in no arena, so neither ActionAbilities' walk nor GetUnitByPlayId can reach it.
+ */
+export function DiscardHostsAction(cardId: string): boolean {
+  switch (cardId) {
+    case "SHD_038": // Brutal Traditions — Action: play this upgrade from your discard
+      return true;
+    default:
+      return false;
+  }
+}
+
+/** Whether the discard-hosted Action's condition holds. Checked BEFORE any cost is paid. */
+export function DiscardActionAvailable(cardId: string, player: PlayerId): boolean {
+  switch (cardId) {
+    case "SHD_038": // "If an enemy unit was defeated this phase"
+      return UnitWasDefeatedThisPhase(player === 1 ? 2 : 1);
+    default:
+      return false;
+  }
 }
 
 /**

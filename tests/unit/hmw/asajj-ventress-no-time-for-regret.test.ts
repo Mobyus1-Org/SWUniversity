@@ -12,18 +12,23 @@ import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/r
 //             "Action: Attack with a unit. For this attack, replace any Raid it has or gains with
 //              Restore, or vice versa."
 //
-// The swap is the whole card. Raid and Restore each have exactly ONE consumption site —
-//   Raid    → Unit.CurrentPower(), `power += RaidAmount(...)` while attacking
-//   Restore → resolveAttack, heals the controller's base by RestoreAmount(...)
-// — so the substitution is a ForAttack effect that makes each site read the OTHER amount. That
-// symmetry is what makes "or vice versa" free rather than a second code path, and because both
-// sites read live rather than snapshotting, "or GAINS" needs no extra work.
+// The replacement is the whole card, and it is DIRECTIONAL: you choose which keyword is replaced,
+// and the replaced value is ADDED to the survivor rather than traded for it. On a unit with both
+// (LAW_050 Honnah, Raid 2 + Restore 2) that is Restore 4 or Raid 4 — see honnah.test.ts, which is
+// the case that proves it. Treating it as a symmetric swap makes such a unit a no-op.
+//
+// Raid and Restore each have exactly ONE consumption site — Unit.CurrentPower() while attacking,
+// and resolveAttack's base heal — and both now read EffectiveRaid/EffectiveRestore live, which is
+// what makes "any Raid it has OR GAINS" work.
 //
 // The two sides differ in cost: the leader side exhausts, the deployed side is a plain "Action:".
 // ActionAbilityExhausts is keyed by cardId and cannot tell them apart (the LAW_015 Jabba
 // collision), so it returns false and the leader path exhausts the leader itself.
 
 const ASAJJ = Cards.leaders.hmw.asajjVentress;
+/** Prompt ids; the human wording lives in optionLabels. */
+const TO_RESTORE = "HMW_001_to_restore";
+const TO_RAID = "HMW_001_to_raid";
 const RAIDER = "IBH_004";                          // Rogue Squadron Speeder — 3/5, Raid 1, nothing else
 const RESTORER = Cards.units.ash.remnantOfficial;  // 3/3, Restore 2, nothing else
 const MARINE = Cards.units.sor.battlefieldMarine;  // 3/3, no keywords
@@ -43,25 +48,27 @@ const useLeaderAction = (g: GameTestAdapter) =>
   g.dispatchAsync(1, "use-ability", { cardId: ASAJJ });
 
 describe("HMW_001 Asajj Ventress — No Time For Regret", () => {
-  describe("Raid <-> Restore substitution", () => {
-    it("turns a unit's Raid into Restore: no power bonus, base healed instead", async () => {
+  describe("Raid / Restore replacement", () => {
+    it("replacing Raid with Restore: no power bonus, base healed instead", async () => {
       const g = new GameTestAdapter();
       g.loadNewState(setup().WithGroundUnitForPlayer(1, RAIDER).Build());
 
       await useLeaderAction(g);
       await g.chooseGroundUnitAsync(1, 0);  // attack with the Raid 1 unit
+      await g.chooseOptionAsync(1, TO_RESTORE);
       await g.chooseBaseAsync(1, 2);
 
       expect(g.state.player2.base.damage).toBe(3); // 3 power, NOT 4 — Raid did not apply
       expect(g.state.player1.base.damage).toBe(9); // 10 - 1, healed as though Restore 1
     });
 
-    it("turns a unit's Restore into Raid: power bonus, no healing", async () => {
+    it("replacing Restore with Raid: power bonus, no healing", async () => {
       const g = new GameTestAdapter();
       g.loadNewState(setup().WithGroundUnitForPlayer(1, RESTORER).Build());
 
       await useLeaderAction(g);
       await g.chooseGroundUnitAsync(1, 0);
+      await g.chooseOptionAsync(1, TO_RAID);
       await g.chooseBaseAsync(1, 2);
 
       expect(g.state.player2.base.damage).toBe(5); // 3 power + 2, as though Raid 2
@@ -74,6 +81,7 @@ describe("HMW_001 Asajj Ventress — No Time For Regret", () => {
 
       await useLeaderAction(g);
       await g.chooseGroundUnitAsync(1, 0);
+      await g.chooseOptionAsync(1, TO_RESTORE);
       await g.chooseBaseAsync(1, 2);
 
       expect(g.state.player2.base.damage).toBe(3);
@@ -103,7 +111,7 @@ describe("HMW_001 Asajj Ventress — No Time For Regret", () => {
       expect(g.state.player1.base.damage).toBe(8); // 10 - Restore 2
     });
 
-    it("the swap expires with the attack — a later attack behaves normally", async () => {
+    it("the replacement expires with the attack — a later attack behaves normally", async () => {
       const g = new GameTestAdapter();
       g.loadNewState(
         setup()
@@ -114,8 +122,9 @@ describe("HMW_001 Asajj Ventress — No Time For Regret", () => {
 
       await useLeaderAction(g);
       await g.chooseGroundUnitAsync(1, 0);
+      await g.chooseOptionAsync(1, TO_RESTORE);
       await g.chooseBaseAsync(1, 2);
-      expect(g.state.player2.base.damage).toBe(3); // swapped
+      expect(g.state.player2.base.damage).toBe(3); // replaced
 
       await g.dispatchAsync(2, "pass-action", {});
       await g.attackWithGroundUnitAsync(1, 1);     // the OTHER raider, ordinary attack
@@ -124,7 +133,7 @@ describe("HMW_001 Asajj Ventress — No Time For Regret", () => {
       expect(g.state.player2.base.damage).toBe(7); // 3 + (3 + Raid 1)
     });
 
-    it("only the chosen attacker is swapped", async () => {
+    it("only the chosen attacker is affected", async () => {
       const g = new GameTestAdapter();
       g.loadNewState(
         setup()
@@ -135,7 +144,8 @@ describe("HMW_001 Asajj Ventress — No Time For Regret", () => {
 
       const marineIdx = g.state.player1.groundArena.findIndex(u => u.cardId === MARINE);
       await useLeaderAction(g);
-      await g.chooseGroundUnitAsync(1, marineIdx);  // swap the Marine, not the raider
+      await g.chooseGroundUnitAsync(1, marineIdx);  // replace on the Marine, not the raider
+      await g.chooseOptionAsync(1, TO_RESTORE);
       await g.chooseBaseAsync(1, 2);
 
       await g.dispatchAsync(2, "pass-action", {});
@@ -256,7 +266,7 @@ describe("HMW_001 Asajj Ventress — No Time For Regret", () => {
       expect(asajj.ready).toBe(true);
     });
 
-    it("its Action swaps Raid to Restore too", async () => {
+    it("its Action applies the replacement too", async () => {
       const g = await deployed(setup().WithGroundUnitForPlayer(1, RAIDER));
       const asajjPlayId = g.state.player1.groundArena.find(u => u.cardId === ASAJJ)!.playId;
       const raiderIdx = g.state.player1.groundArena.findIndex(u => u.cardId === RAIDER);
@@ -264,6 +274,7 @@ describe("HMW_001 Asajj Ventress — No Time For Regret", () => {
 
       await g.dispatchAsync(1, "use-ability", { playId: asajjPlayId });
       await g.chooseGroundUnitAsync(1, raiderIdx);
+      await g.chooseOptionAsync(1, TO_RESTORE);
       await g.chooseBaseAsync(1, 2);
 
       expect(g.state.player2.base.damage).toBe(3);        // Raid suppressed
