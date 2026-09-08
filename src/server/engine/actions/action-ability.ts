@@ -2,6 +2,7 @@ import { PlayerId } from "@/lib/engine/core-models";
 import { AllGroundUnits, AllUnits, GetPlayer, UnitWasDefeatedThisPhase, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { CardTraits, CardCost, CardType, CardAspects } from "@/server/engine/card-db/generated";
+import { HasFortify } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
 import { AllSpaceUnits } from "@/server/engine/core-functions";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
 import { PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -127,6 +128,15 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
                         // use the readyOnly filter every other attack-with ability uses.
         const attackers009 = GetUnitsForPlayer(player).filter(u => CanUnitAttack(u));
         if (attackers009.length > 0 && GetResources(player, true).length >= 2) abilities.push(cardId);
+        break;
+      }
+      case "ASH_001": { // The Armorer — Action [Exhaust]: play an upgrade from your RESOURCES onto a
+                        // unit that entered play this phase. Offered only when both halves exist:
+                        // an upgrade in the row, and something legal to attach it to.
+        if (ArmorerResourceUpgrades(player).length > 0
+            && ArmorerAttachTargets(player).length > 0) {
+          abilities.push(cardId);
+        }
         break;
       }
       case "HMW_001": { // Asajj Ventress — Action [Exhaust]: attack with a unit, swapping its
@@ -512,6 +522,42 @@ export function UpgradeGrantedUnitActions(player: PlayerId, playId: string): str
     }
   }
   return [...ids];
+}
+
+/**
+ * ASH_001 The Armorer plays an upgrade out of the RESOURCE row — a source no other card uses.
+ *
+ * A Fortify upgrade is excluded: it attaches to a base, and this ability attaches to a unit.
+ */
+export function ArmorerResourceUpgrades(player: PlayerId): string[] {
+  const game = GetGame();
+  if (!game) return [];
+  return GetPlayer(game.currentGameState, player).resources
+    .filter(r => CardType(r.cardId) === "Upgrade" && !HasFortify(r.cardId))
+    .map(r => r.playId);
+}
+
+/**
+ * Units the leader side may attach to: any unit that ENTERED PLAY THIS PHASE, either player's —
+ * the text says "a unit", not "a friendly unit".
+ */
+export function ArmorerAttachTargets(player: PlayerId): string[] {
+  const game = GetGame();
+  if (!game) return [];
+  const entered = new Set(
+    game.currentGameState.roundState.cardsEnteredPlayThisPhase.map(e => e.playId),
+  );
+  void player;
+  return AllUnits().filter(u => entered.has(u.playId)).map(u => u.playId);
+}
+
+/**
+ * Units the DEPLOYED side may attach to. Its text says "a friendly unit", with no
+ * entered-play-this-phase restriction, so the whole of the controller's board is legal —
+ * The Armorer herself included, since she is a friendly unit once deployed.
+ */
+export function ArmorerFriendlyAttachTargets(player: PlayerId): string[] {
+  return GetUnitsForPlayer(player).map(u => u.playId);
 }
 
 /**

@@ -86,6 +86,7 @@ export function HasShielded(cardId: string, playId?: string, player?: PlayerId, 
     case "LAW_211"://Black Sun Patroller
     case "ASH_029"://Scorpenek Annihilator Droid
     case "ASH_048"://Imperial Armored Commando
+    case "ASH_062"://The Mandalorian - Devoted Rescuer
     case "ASH_069"://Noti Nomad
     case "ASH_193"://Emperor's Champion
     case "ASH_208"://Sabine Wren (I Learned the Hard Way)

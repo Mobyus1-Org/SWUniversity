@@ -1609,6 +1609,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_059": //Leia Organa (ASH) — On Attack: may self-damage to heal your base
     case "ASH_072": //Doctor Pershing — On Attack: draw a card if it has 3+ remaining HP
     case "ASH_099": //Gozanti Assault Carrier — On Attack: gains Sentinel for this phase
+    case "TWI_187": //Cad Bane (Hostage Taker) — On Attack: the DEFENDER may rescue
     case "SHD_057": //Rickety Quadjumper — On Attack: may reveal top card, conditional Experience
     case "SHD_183": //Kintan Intimidator — On Attack: exhaust the defender
     case "SHD_199": //Coruscant Dissident — On Attack: may ready a resource
@@ -1822,8 +1823,69 @@ export function GetUnitByPlayId(game: GameState, playId: string): Unit | null {
  * Returns the reduced amount, and consumes the effect the first time a real (>0) instance occurs.
  * Applied BEFORE any Shield absorption, so a fully-prevented instance leaves a Shield token intact.
  */
+/**
+ * ASH_062 The Mandalorian (Devoted Rescuer) — "If damage would be dealt to ANOTHER friendly unit,
+ * you may defeat a Shield token on this unit. If you do, prevent that damage."
+ *
+ * Returns the protecting Mandalorian when `protectedPlayId` could be covered by one: a live
+ * ASH_062 its controller owns, abilities intact, carrying at least one Shield token, and not the
+ * protected unit itself ("another"). Bases are never units, so a base playId finds nothing.
+ */
+export function MandoProtector(gs: GameState, protectedPlayId: string) {
+  const protectedUnit = GetUnitByPlayId(gs, protectedPlayId);
+  if (!protectedUnit) return null;
+  const mando = GetUnitsForPlayer(protectedUnit.controller).find(
+    u => u.cardId === "ASH_062"
+      && u.playId !== protectedPlayId
+      && u.upgrades.some(up => up.cardId === "SOR_T02")
+      && !Unit.FromInterface(u).LostAbilities(),
+  );
+  return mando ?? null;
+}
+
+/** Marks one instance of damage to `playId` as prevented by ASH_062. Consumed on the next hit. */
+export const MANDO_PREVENT = "ASH_062_prevent";
+
+/**
+ * Spends one of the protector's Shield tokens and arms the one-shot prevention on the unit it is
+ * covering. Returns false when the Shield vanished between the offer and the answer.
+ */
+export function SpendMandoShield(gs: GameState, protectedPlayId: string, log?: string[]): boolean {
+  const mando = MandoProtector(gs, protectedPlayId);
+  if (!mando) return false;
+  const shieldIdx = mando.upgrades.findIndex(u => u.cardId === "SOR_T02");
+  if (shieldIdx === -1) return false;
+  mando.upgrades.splice(shieldIdx, 1);
+  gs.currentEffects.push({
+    cardId: MANDO_PREVENT,
+    duration: "ForAttack",
+    affectedPlayer: mando.controller,
+    targetPlayId: protectedPlayId,
+  });
+  if (log) {
+    const covered = GetUnitByPlayId(gs, protectedPlayId);
+    log.push(`${CardTitle("ASH_062")}: defeated a Shield token to prevent the damage to ${covered ? CardTitle(covered.cardId) : "a friendly unit"}.`);
+  }
+  return true;
+}
+
 export function ApplyDamagePrevention(gs: GameState, targetPlayId: string, amount: number, log?: string[]): number {
   if (amount <= 0) return amount;
+
+  // ASH_062 The Mandalorian — a Shield was spent to prevent THIS instance. One-shot: unlike
+  // JTL_193 below it covers a single hit, so it is consumed the moment it fires rather than
+  // waiting for the ForAttack cleanup (an ability could damage the same unit later in the attack).
+  const mandoIdx = gs.currentEffects.findIndex(
+    e => e.cardId === MANDO_PREVENT && e.targetPlayId === targetPlayId,
+  );
+  if (mandoIdx !== -1) {
+    gs.currentEffects.splice(mandoIdx, 1);
+    if (log) {
+      const covered = GetUnitByPlayId(gs, targetPlayId);
+      log.push(`${CardTitle("ASH_062")}: prevented ${amount} damage to ${covered ? CardTitle(covered.cardId) : "a unit"}.`);
+    }
+    return 0;
+  }
 
   // JTL_193 I Have You Now: "Prevent ALL damage that would be dealt to it during this attack."
   // Unlike the one-shot below it is not consumed here — it covers every damage instance of the
@@ -2005,7 +2067,7 @@ export function MarkUnitDamaged(gs: GameState, playId: string): void {
   }
 }
 
-export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: string|undefined, amount: number, withLog?: string[], sourcePlayer?: PlayerId): void {
+export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: string|undefined, amount: number, withLog?: string[], sourcePlayer?: PlayerId, bypassMandoPrevention = false): void {
   if (!targetPlayId) return;
   const target = GetUnitByPlayId(gs, targetPlayId);
   if (!target) return;
@@ -2023,6 +2085,22 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
   }
   // ASH_196: damage from a friendly Underworld card bypasses all prevention, including Shields.
   const unpreventable = sourcePlayer !== undefined && DamageIsUnpreventable(cardId, sourcePlayer);
+  // ASH_062 The Mandalorian — the replacement must be offered BEFORE the damage lands, but this
+  // function is synchronous and called from ~150 sites. So the instance is held back verbatim in a
+  // trigger and re-issued (with bypassMandoPrevention) once its controller has answered. Nothing
+  // is applied on this pass: a caller that reads the target's HP straight afterwards sees it
+  // undamaged, which only ever happens on a board that actually contains an armed Mandalorian.
+  if (!bypassMandoPrevention && !unpreventable && MandoProtector(gs, targetPlayId)) {
+    gs.triggerBag.push({
+      triggerType: "damage-prevention",
+      cardId: "ASH_062",
+      fromPlayer: target.controller,
+      playId: targetPlayId,
+      nested: gs.triggerBag.length > 0,
+      context: { sourceCardId: cardId, targetPlayId, amount, sourcePlayer },
+    });
+    return;
+  }
   // Shien Flurry prevention applies before the Shield, so a fully-prevented hit spares the Shield.
   if (!unpreventable) amount = ApplyDamagePrevention(gs, targetPlayId, amount, withLog);
   if (amount <= 0) return;

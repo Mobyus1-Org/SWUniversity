@@ -91,6 +91,26 @@ Then per card:
 
 Follow the conventions in memory: card test files go in `tests/unit/<set>/`, named `<card-title>.test.ts`. Use `Cards.*` helpers — never raw card ID strings.
 
+## Cross-reference other SWU engines first (if any are recorded)
+
+Other open-source SWU engines may be checked out locally. **Look for a memory named
+`reference-sibling-swu-engines`** — if it exists it names them and where each keeps its per-card
+implementations and per-card test files. No memory, or a path in it that no longer exists, means
+skip this step; it is never a blocker.
+
+Read the card there BEFORE designing, mainly for **test scenarios**. Those projects have already
+found the edge cases this repo tends to miss on a first pass: trigger ordering, the decline branch
+of a "may", self vs "another" exclusions, budgets computed from live state rather than printed
+values, and what happens with an empty deck or zone.
+
+They index by card NAME rather than `SET_NNN`, so search on the title.
+
+**Never name them, or any local path, in committed code, comments, commit messages or Discord
+summaries** — that includes this file. They are a private thinking aid, not a citation. Write the
+comment in this repo's own terms: explain the rule and the mechanism, never where the idea came
+from. Their design is also not authoritative — this engine's conventions and the printed card text
+win every disagreement.
+
 ## Writing card tests (fixture pitfalls)
 
 Most wasted debug cycles come from wrong test *fixtures*, not wrong engine code. Before blaming the engine when a card test fails, suspect the fixture — several times a "bug" was the test setup being wrong while the engine was right.

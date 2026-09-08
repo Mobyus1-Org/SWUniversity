@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending, IndirectDamagePending } from "@/server/engine/pending-resolution";
-import { GetUnitByPlayId, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken } from "@/server/engine/core-functions";
+import { GetUnitByPlayId, GetOtherPlayer, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles } from "@/server/engine/card-db/generated";
@@ -492,6 +492,33 @@ function resolveInnateOnAttack(
         game061.gameLog.push(`${CardTitle(sourceCardId)}: drew a card.`);
       }
       return continuation;
+    }
+    case "TWI_187": { // Cad Bane — "The defending player may rescue a card they own guarded by this
+                      // unit. If they do, draw 2 cards."
+                      //
+                      // The prompt belongs to the DEFENDER (they choose), but the two cards go to
+                      // Cad Bane's controller — "draw 2 cards" is the ability's controller drawing,
+                      // not the rescuer.
+      const game187 = GetGame();
+      if (!game187) return continuation;
+      const held187 = attacker.captives ?? [];
+      const defender187 = continuation.target.type === "base"
+        ? continuation.target.player
+        : GetUnitByPlayId(game187.currentGameState, continuation.target.playId)?.controller
+          ?? GetOtherPlayer(attacker.controller);
+      // "a card THEY OWN" — a captive owned by someone else is not theirs to rescue.
+      if (!held187.some(c => c.owner === defender187)) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "TWI_187",
+        player: defender187,
+        sourcePlayId: attacker.playId,
+        helperText: "Rescue your captured card? (the opponent draws 2 cards)",
+        yesLabel: "Rescue",
+        noLabel: "Decline",
+        onYes: null,
+        continuation,
+      } satisfies AbilityOptionPending;
     }
     case "SHD_057": { // Rickety Quadjumper — "You may reveal the top card of your deck. If it's not
                       // a unit, give an Experience token to another unit."

@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 852 cards across 10 sets.**
+**Total: 850 cards across 10 sets.**
 
 ---
 
@@ -787,12 +787,11 @@ SEC_261: Inspiring Senator Unit
 SEC_263: Assassin Probe Unit
 ```
 
-## ASH — Ashes of the Empire (104)
+## ASH — Ashes of the Empire (102)
 
 **Message 1 of 3**
 ```
 ASH:
-ASH_001: The Armorer - Steel Shapes Us Leader
 ASH_002: Fennec Shand - Ready for War Leader
 ASH_003: Baylan Skoll - Power Beyond Dream Leader
 ASH_005: Luke Skywalker - I Can Save Him Leader
@@ -826,7 +825,6 @@ ASH_054: Pointless to Resist Upgrade
 ASH_057: Lothal E-Wing Unit
 ASH_058: Duchess's Protector Unit
 ASH_060: Cobb Vanth - Let Me Handle This Unit
-ASH_062: The Mandalorian - Devoted Rescuer Unit
 ASH_063: Bo-Katan's Gauntlet - Reinforce from Above Unit
 ASH_064: The Armorer - Secrecy is Our Survival Unit
 ASH_065: Home One - Heart of the Fleet Unit

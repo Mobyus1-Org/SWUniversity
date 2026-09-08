@@ -21,6 +21,7 @@ export type TriggerType =
   | "enemy-unit-defeated"
   | "use-the-force"  // reaction to its controller using the Force (e.g. LOF_260 The Father)
   | "unit-entered-play"  // reaction to any unit entering play, tokens included (e.g. HMW_171 Trap Field)
+  | "damage-prevention"  // a replacement effect asking whether to prevent a damage instance (ASH_062)
   | "dealt-heavy-damage"  // reaction to dealing one instance of N+ damage (e.g. HMW_011 Darth Sidious)
 
 export interface TriggerEntry {
@@ -39,7 +40,20 @@ export type TriggerContext =
   | WhenBaseDamagedContext
   | WhenUpgradeDetachedContext
   | CardPlayedContext
-  | DealtHeavyDamageContext;
+  | DealtHeavyDamageContext
+  | DamagePreventionContext;
+
+/**
+ * A damage instance held back so its target's controller can be asked whether to replace it
+ * (ASH_062). Everything DealDamageToUnit needs to re-issue the instance verbatim travels here —
+ * the damage has NOT been applied when this trigger is queued.
+ */
+export interface DamagePreventionContext {
+  sourceCardId: string;
+  targetPlayId: string;
+  amount: number;
+  sourcePlayer?: PlayerId;
+}
 
 export interface WhenDefeatedContext {
   defeatedUnit: Unit;

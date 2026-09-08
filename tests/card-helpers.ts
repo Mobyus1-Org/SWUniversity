@@ -585,6 +585,7 @@ export const Cards = {
       chewbaccaMightyRescuer: "LAW_034", // 4/4 Ground Rebel/Wookiee, Overwhelm + When Attack Ends
     },
     ash: {
+      theMandalorianDevotedRescuer: "ASH_062", // 5/4 Ground, Shielded + spend-a-Shield damage prevention
       dinosaurTurtle: "ASH_131", // 7/7 Ground Creature, cost 6, Command only — clean cost fixture
       remnantOfficial: "ASH_076", // 3/3 Ground, Restore 2 and nothing else — clean Restore fixture
       bWingRearguard: "ASH_078", // 3/5 Space Rebel Vehicle Fighter, conditional Sentinel

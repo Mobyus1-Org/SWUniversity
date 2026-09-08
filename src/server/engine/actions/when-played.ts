@@ -4,7 +4,7 @@ import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCo
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending } from "@/server/engine/pending-resolution";
+import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending, BudgetSelectPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateBeast, CreateCloneTrooper, CreateXWing, CreateTieFighter, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens, GiveWeaknessToken } from "@/server/engine/token-helpers";
 import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits, CardIsUnique, CardArena } from "@/server/engine/card-db/generated";
@@ -1255,6 +1255,39 @@ export function resolveWhenPlayed(
       const theirBeast237 = CreateBeast(gs237, GetOtherPlayer(player), game.gameLog, cardId);
       GiveWeaknessToken(gs237, theirBeast237, game.gameLog, cardId);
       return null;
+    }
+    case "TWI_187": { // Cad Bane (Hostage Taker) — "captures up to 3 enemy non-leader units with a
+                      // total of 8 or less remaining HP." Same budget-select as ASH_053, with a
+                      // count cap as well. "Enemy" is by CONTROLLER, not owner.
+      const enemies187 = GetUnitsForPlayer(GetOtherPlayer(player)).filter(
+        u => !CardIsLeader(u.cardId) && !UnitImmuneToEnemyCapture(u),
+      );
+      if (enemies187.length === 0) return null;
+      return {
+        type: "budget-select",
+        cardId: "TWI_187",
+        player,
+        eligiblePlayIds: enemies187.map(u => u.playId),
+        maxCount: 3,
+        maxTotalRemainingHp: 8,
+        continuation: null,
+      } satisfies BudgetSelectPending;
+    }
+    case "ASH_053": { // Pre Vizsla — "Defeat any number of non-leader units with a total of 6 or
+                      // less remaining HP. Create a Mandalorian token for each unit defeated."
+                      // Unqualified: friendly units and Pre Vizsla himself are legal choices.
+      const eligible053 = AllUnits().filter(
+        u => !CardIsLeader(u.cardId) && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player),
+      );
+      if (eligible053.length === 0) return null;
+      return {
+        type: "budget-select",
+        cardId: "ASH_053",
+        player,
+        eligiblePlayIds: eligible053.map(u => u.playId),
+        maxTotalRemainingHp: 6,
+        continuation: null,
+      } satisfies BudgetSelectPending;
     }
     case "SHD_047": { // The Armorer — "Give a Shield token to each of up to 3 Mandalorian units."
                       // EACH of up to 3, so at most one Shield per unit across three distinct

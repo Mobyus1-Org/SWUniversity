@@ -182,6 +182,12 @@ export interface ResolveAttackPending {
   continuation: PendingResolution | null;
   /** Set when Saboteur was already resolved before combat (prevents double-stripping). */
   saboteurApplied?: boolean;
+  /**
+   * playIds already offered ASH_062's Shield-spend prevention for this attack. Both combatants can
+   * be covered (each by their own controller's Mandalorian), and every answer resumes the same
+   * attack, so without this the same player would be asked again on each resume.
+   */
+  mandoOffered?: string[];
 }
 
 export interface OnAttackTriggerEntry {
@@ -514,6 +520,25 @@ export interface IndirectDamagePending {
 }
 
 /** Give an Experience token to each of up to N chosen units (e.g. General Tagge SOR_080). */
+/**
+ * Multi-select constrained by a running BUDGET over live remaining HP, rather than by count or
+ * printed cost — ASH_053 Pre Vizsla (any number, total 6 or less) and TWI_187 Cad Bane (up to 3,
+ * total 8 or less).
+ *
+ * The budget is spent against CurrentHP (TotalHP minus damage), so a big damaged unit can fit
+ * where its printed HP never would. Selecting nothing is always legal.
+ */
+export interface BudgetSelectPending {
+  type: "budget-select";
+  cardId: string;
+  player: PlayerId;
+  eligiblePlayIds: string[];
+  /** Omitted means "any number" — only the HP budget limits the selection. */
+  maxCount?: number;
+  maxTotalRemainingHp: number;
+  continuation: PendingResolution | null;
+}
+
 export interface GiveXpMultiplePending {
   type: "give-xp-multiple";
   cardId: string;
@@ -654,6 +679,7 @@ export type PendingResolution =
   | SpreadTokensPending
   | OnAttackOrderPending
   | ReturnFromDiscardPending
+  | BudgetSelectPending
   | GiveXpMultiplePending
   | ChooseIndirectTargetPending
   | IndirectDamagePending

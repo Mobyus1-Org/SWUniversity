@@ -93,8 +93,9 @@ import type {
   UpgradeTargetPending,
   BamboozleAltCostPending,
   BamboozleAltCostDiscardPending,
+  BudgetSelectPending,
 } from "@/server/engine/pending-resolution";
-import type { TriggerEntry, CardPlayedContext } from "@/lib/engine/trigger-types";
+import type { TriggerEntry, CardPlayedContext, DamagePreventionContext } from "@/lib/engine/trigger-types";
 import { collectBounties } from "@/server/engine/actions/bounty";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { resolveWhenDefeated, WhenDefeatedBaseDamage } from "@/server/engine/actions/when-defeated";
@@ -108,7 +109,7 @@ import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/sab
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { HasAmbush } from "@/server/engine/card-db/keyword-dictionaries.ts/ambush";
 import { AttackAbilityCardIds, HasSupport, SupportGrantEffectCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
-import { ActionAbilities, ActionAbilityCost, ActionAbilityExhausts, ActionAbilityCardId, WeakerThanAFriendlyUnitPlayIds, UpgradeHostsOwnAction, UpgradeActionAvailable, BactaTankTargets, UpgradeGrantsHostAction, DiscardHostsAction, DiscardActionAvailable } from "@/server/engine/actions/action-ability";
+import { ActionAbilities, ActionAbilityCost, ActionAbilityExhausts, ActionAbilityCardId, WeakerThanAFriendlyUnitPlayIds, UpgradeHostsOwnAction, UpgradeActionAvailable, BactaTankTargets, UpgradeGrantsHostAction, DiscardHostsAction, DiscardActionAvailable, ArmorerResourceUpgrades, ArmorerAttachTargets, ArmorerFriendlyAttachTargets } from "@/server/engine/actions/action-ability";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { IsTokenUpgrade, PilotingEligibleVehicles, PilotlessVehiclePlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -121,7 +122,7 @@ import { QueueUnitEnteredPlayReaction } from "@/server/engine/core-functions";
 import { CreateBeast, GiveWeaknessToken, UnitsWithoutWeaknessToken } from "@/server/engine/token-helpers";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget } from "@/server/engine/core-functions";
+import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget, MandoProtector, SpendMandoShield } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -1148,6 +1149,46 @@ function activateDiscardAction(
   return completePlayCard(game, log, card.cardId, player);
 }
 
+/** What each budget-select card does with the units the player chose. */
+function resolveBudgetSelect(
+  game: GameState,
+  log: string[],
+  pending: BudgetSelectPending,
+  chosen: string[],
+): PendingResolution | null {
+  switch (pending.cardId) {
+    case "ASH_053": { // Pre Vizsla — defeat them, then one Mandalorian token PER UNIT defeated.
+      let defeated = 0;
+      for (const playId of chosen) {
+        const victim = GetUnitByPlayId(game, playId);
+        if (!victim) continue;
+        defeatUnit(game, log, victim);
+        defeated += 1;
+      }
+      for (let i = 0; i < defeated; i++) CreateMandalorianToken(game, pending.player, log, "ASH_053");
+      log.push(`${CardTitle("ASH_053")}: defeated ${defeated} unit(s) and created ${defeated} Mandalorian token(s).`);
+      return sweepDeadUnits(game, log, pending.continuation ?? null);
+    }
+    case "TWI_187": { // Cad Bane — capture each chosen unit under him.
+      // He is the only Cad Bane his controller can have (unique), and he has just entered play.
+      const captor187 = GetUnitsForPlayer(pending.player).find(u => u.cardId === "TWI_187");
+      if (!captor187) return pending.continuation ?? null;
+      // The LIVE objects, never Unit.FromInterface copies: FromInterface rebuilds `captives` as a
+      // new array, so capturing into a copy silently loses the captive.
+      let chain187: PendingResolution | null = pending.continuation ?? null;
+      for (const playId of chosen) {
+        const victim = GetUnitByPlayId(game, playId);
+        if (!victim) continue;
+        chain187 = CaptureUnit(game, log, captor187, victim, chain187) ?? chain187;
+      }
+      log.push(`${CardTitle("TWI_187")}: captured ${chosen.length} unit(s).`);
+      return chain187;
+    }
+    default:
+      return pending.continuation ?? null;
+  }
+}
+
 /** Events whose own text reads "Resource this card." — they replace their trip to the discard. */
 const EVENTS_THAT_RESOURCE_THEMSELVES = new Set(["HMW_151"]);
 
@@ -1490,6 +1531,7 @@ function triggerLabel(t: TriggerEntry): string {
     case "leader-reaction":       return `${name} — Leader Ability`;
     case "enemy-unit-defeated":   return `${name} — When Enemy Defeated`;
     case "card-played-reaction":  return `${name} — Reaction`;
+    case "damage-prevention":     return `${name} — Prevent Damage`;
     default:                    return `${name} — ${t.triggerType}`;
   }
 }
@@ -1544,7 +1586,62 @@ function thrawnReplayPending(game: GameState, unit: Unit, player: PlayerId): Thr
   return { type: "thrawn-replay", player, defeatedUnit: unit, deployed: true, continuation: null };
 }
 
+/**
+ * ASH_062's ability-damage offer has to survive the round trip to the client as an
+ * AbilityOptionPending, which carries no free-form payload. The held-back instance is therefore
+ * packed into the option's cardId; `sourcePlayId` and `amount` carry the rest.
+ */
+const MANDO_ABILITY_OFFER = "ASH_062_ability|";
+
+function encodeMandoAbilityOffer(ctx: DamagePreventionContext): string {
+  return `${MANDO_ABILITY_OFFER}${ctx.sourceCardId}|${ctx.sourcePlayer ?? ""}`;
+}
+
+function decodeMandoAbilityOffer(pending: AbilityOptionPending): DamagePreventionContext {
+  const [, sourceCardId, sourcePlayer] = pending.cardId.split("|");
+  return {
+    sourceCardId,
+    targetPlayId: pending.sourcePlayId!,
+    amount: pending.amount ?? 0,
+    sourcePlayer: sourcePlayer === "" ? undefined : (Number(sourcePlayer) as PlayerId),
+  };
+}
+
+/**
+ * Re-issues a held-back damage instance, this time bypassing the interception. Whether it lands
+ * depends on what happened in between: an armed ASH_062 prevention swallows it, otherwise it goes
+ * through the target's own Shield and damage as any other hit would.
+ */
+function reissueDeferredDamage(game: GameState, log: string[], ctx: DamagePreventionContext): void {
+  DealDamageToUnit(game, ctx.sourceCardId, ctx.targetPlayId, ctx.amount, log, ctx.sourcePlayer, true);
+}
+
 function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: string[]): PendingResolution | null {
+  if (trigger.triggerType === "damage-prevention") {
+    // ASH_062 The Mandalorian — an instance of ability damage held back by DealDamageToUnit.
+    const ctx = trigger.context as DamagePreventionContext | undefined;
+    if (!ctx) return null;
+    const covered = GetUnitByPlayId(game, ctx.targetPlayId);
+    // The target or the protector may have left play between the deferral and this point. Either
+    // way the offer is void; the damage is re-issued so it is never silently lost.
+    if (!covered || !MandoProtector(game, ctx.targetPlayId)) {
+      reissueDeferredDamage(game, log, ctx);
+      return sweepDeadUnits(game, log, null);
+    }
+    return {
+      type: "ability-option",
+      cardId: encodeMandoAbilityOffer(ctx),
+      player: covered.controller,
+      sourcePlayId: ctx.targetPlayId,
+      amount: ctx.amount,
+      helperText: `Defeat a Shield token on ${CardTitle("ASH_062")} to prevent ${ctx.amount} damage to ${CardTitle(covered.cardId)}?`,
+      yesLabel: "Defeat Shield",
+      noLabel: "Skip",
+      onYes: null,
+      continuation: null,
+    } satisfies AbilityOptionPending;
+  }
+
   if (trigger.triggerType === "when-defeated") {
     const wdCtx = trigger.context as { defeatedUnit?: UnitInterface } | undefined;
     if (!wdCtx?.defeatedUnit) return null;
@@ -3237,6 +3334,26 @@ function innateWhenAttackEnds(
                       // already returned early if Rex left play, so "completes" is satisfied.
       return buildCaptainRexSentinel(attacker.controller, attacker.playId, continuation);
     }
+    case "ASH_001": { // The Armorer (deployed) — "When Attack Ends: You may play an upgrade from
+                      // your resources on a friendly unit. If you do, resource the top card of
+                      // your deck." Wider than her leader-side Action, which is limited to units
+                      // that entered play this phase.
+      const upgrades001 = ArmorerResourceUpgrades(attacker.controller);
+      const targets001 = ArmorerFriendlyAttachTargets(attacker.controller);
+      if (upgrades001.length === 0 || targets001.length === 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "ASH_001",
+        player: attacker.controller,
+        helperText: "Play an upgrade from your resources on a friendly unit?",
+        yesLabel: "Play Upgrade",
+        noLabel: "Skip",
+        onYes: mandatoryTarget(
+          "ASH_001_deployed_from_resources", attacker.controller, upgrades001, continuation,
+        ),
+        continuation,
+      } satisfies AbilityOptionPending;
+    }
     case "ASH_033": { // Grand Admiral Thrawn — "When Attack Ends: If the defending unit was
                       // defeated, ready this unit."
       if (defDefeated && ReadyUnit(game, attacker)) {
@@ -3666,6 +3783,13 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         fromZones: ["Discard"],
         maxTargets: pending.maxCount,
         needsMultiple: pending.maxCount > 1,
+      } satisfies NeedsTarget;
+    case "budget-select":
+      return {
+        type: "Target",
+        fromPlayIds: pending.eligiblePlayIds,
+        maxTargets: pending.maxCount,
+        needsMultiple: true,
       } satisfies NeedsTarget;
     case "give-xp-multiple":
       return {
@@ -5543,6 +5667,11 @@ function handleChooseTarget(
       return { response: resolutionResponse(pendingToResolution(onAttackTriggerPending, game)), pending: onAttackTriggerPending, stateChanged: false };
     }
 
+    const mandoDirect = mandoCombatOffer(game, resolveAttackPending);
+    if (mandoDirect) {
+      return { response: resolutionResponse(pendingToResolution(mandoDirect, game)), pending: mandoDirect, stateChanged: true };
+    }
+
     const nextPending = resolveAttack(game, log, pending, target);
     updateDefeatedPlayers(game);
     refreshPostAttackTargets(game, nextPending);
@@ -6125,6 +6254,31 @@ function handleChooseTarget(
     const bagAfterReturn = drainTriggerBag(game, log);
     if (bagAfterReturn)
       return { response: resolutionResponse(pendingToResolution(bagAfterReturn, game)), pending: bagAfterReturn, stateChanged: false };
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  if (pending.type === "budget-select") {
+    const chosen = data.targetPlayIds ?? [];
+    const invalid = chosen.find(id => !pending.eligiblePlayIds.includes(id));
+    if (invalid)
+      return { response: invalidResponse(`Unit ${invalid} is not an eligible choice.`), pending, stateChanged: false };
+    if (pending.maxCount !== undefined && chosen.length > pending.maxCount)
+      return { response: invalidResponse(`Choose at most ${pending.maxCount} units.`), pending, stateChanged: false };
+
+    // The budget is spent against LIVE remaining HP, so a damaged big unit costs only what is
+    // left of it.
+    const totalHp = chosen.reduce((sum, id) => {
+      const u = GetUnitByPlayId(game, id);
+      return sum + (u ? Unit.FromInterface(u).CurrentHP() : 0);
+    }, 0);
+    if (totalHp > pending.maxTotalRemainingHp)
+      return { response: invalidResponse(`Total remaining HP ${totalHp} exceeds ${pending.maxTotalRemainingHp}.`), pending, stateChanged: false };
+
+    const nextBudget = resolveBudgetSelect(game, log, pending, chosen);
+    if (nextBudget) return { response: resolutionResponse(pendingToResolution(nextBudget, game)), pending: nextBudget, stateChanged: true };
+    updateDefeatedPlayers(game);
+    const bagBudget = drainTriggerBag(game, log);
+    if (bagBudget) return { response: resolutionResponse(pendingToResolution(bagBudget, game)), pending: bagBudget, stateChanged: true };
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
@@ -8226,6 +8380,15 @@ function applyAbilityOptionEffect(
   // "You may pay 1 resource. If you do, …" — the offer is built by optionalPayResource(), which
   // suffixes the source card id. Paying and the effect that follows are handled together here so
   // a card can never take the resource without delivering the effect.
+  // ASH_062 The Mandalorian — Yes: spend a Shield, arming the one-shot prevention, then re-issue
+  // the held-back instance so it is consumed by that prevention.
+  if (pending.cardId.startsWith(MANDO_ABILITY_OFFER)) {
+    const ctx = decodeMandoAbilityOffer(pending);
+    SpendMandoShield(game, ctx.targetPlayId, log);
+    reissueDeferredDamage(game, log, ctx);
+    return sweepDeadUnits(game, log, pending.continuation ?? null);
+  }
+
   if (pending.cardId.endsWith("_pay1")) {
     const paidCardId = pending.cardId.slice(0, -"_pay1".length);
     const payer = pending.player!;
@@ -8235,6 +8398,10 @@ function applyAbilityOptionEffect(
   }
 
   switch (pending.cardId) {
+    case "ASH_062": { // The Mandalorian (Devoted Rescuer) — spend a Shield to prevent the damage.
+      SpendMandoShield(game, pending.sourcePlayId!, log);
+      return pending.continuation ?? null;
+    }
     case "SHD_214_replace": { // Frontier Trader — the nested "you may put the top card of your
                               // deck into play as a resource" after the return resolved.
       ResourceTopCardOfDeck(game, pending.player!, log, "SHD_214");
@@ -8318,6 +8485,17 @@ function applyAbilityOptionEffect(
         enemy016.ready = false;
         log.push(`${CardTitle("TWI_016")}: exhausted ${CardTitle(enemy016.cardId)}.`);
       }
+      return pending.continuation ?? null;
+    }
+    case "TWI_187": { // Cad Bane — the defender rescues one of their own captives; the CAD BANE
+                      // player draws 2.
+      const captor187y = GetUnitByPlayId(game, pending.sourcePlayId ?? "");
+      if (!captor187y) return pending.continuation ?? null;
+      const mine187 = (captor187y.captives ?? []).find(c => c.owner === pending.player);
+      if (!mine187) return pending.continuation ?? null;
+      rescueCaptiveByPlayId(game, log, mine187.playId, "TWI_187");
+      DrawCardsForPlayer(game, log, captor187y.controller as PlayerId, 2);
+      log.push(`${CardTitle("TWI_187")}: captive rescued; Player ${captor187y.controller} drew 2 cards.`);
       return pending.continuation ?? null;
     }
     case "SHD_057": { // Rickety Quadjumper — reveal the top card; if it is NOT a unit, grant an
@@ -8832,6 +9010,13 @@ function applyAbilityOptionDeclineEffect(
   game: GameState,
   log: string[],
 ): PendingResolution | null {
+  // ASH_062 The Mandalorian — No: the instance resumes untouched in the target's own frame, where
+  // its own Shield (if any) absorbs it exactly as it would have without the offer.
+  if (pending.cardId.startsWith(MANDO_ABILITY_OFFER)) {
+    reissueDeferredDamage(game, log, decodeMandoAbilityOffer(pending));
+    return sweepDeadUnits(game, log, pending.continuation ?? null);
+  }
+
   switch (pending.cardId) {
     case "SHD_197": { // L3-37 No: "If you don't [rescue], give a Shield token to this unit."
       const l337 = giveShieldToUnit(game, pending.sourcePlayId!);
@@ -9658,11 +9843,71 @@ function refreshPostAttackTargets(game: GameState, next: PendingResolution | nul
   }
 }
 
+/**
+ * ASH_062 The Mandalorian (Devoted Rescuer) — the combat half of "If damage would be dealt to
+ * another friendly unit, you may defeat a Shield token on this unit. If you do, prevent that
+ * damage."
+ *
+ * Both decisions are taken BEFORE the attack runs rather than at each damage application, because
+ * resolveAttack is not re-entrant: Restore, the Force-base token and the attacked-this-phase
+ * ledger all fire at its head, so suspending mid-combat and resuming would apply them twice.
+ * Combat damage is simultaneous anyway, so deciding up front is the same window.
+ *
+ * Both combatants can be covered — each by their own controller's Mandalorian — so the answer
+ * resumes the same attack with the asked-for playId recorded and this is consulted again.
+ */
+function mandoCombatOffer(game: GameState, next: ResolveAttackPending): AbilityOptionPending | null {
+  if (next.target.type !== "unit") return null; // a base is not a unit
+  const attacker = GetUnitByPlayId(game, next.attackerPlayId);
+  const defender = GetUnitByPlayId(game, next.target.playId);
+  if (!attacker || !defender) return null;
+
+  const asked = next.mandoOffered ?? [];
+  const attackerPower = attacker.CurrentPower(true);
+  // Shoot First: a defender defeated before it can strike back deals no counter-damage, so no
+  // damage "would be dealt" to the attacker and no offer is made for it.
+  const firstStrike = AttackAbilityCardIds(attacker).includes("ASH_202")
+    || AttackAbilityCardIds(attacker).includes("SHD_234")
+    || game.currentEffects.some(
+      e => e.cardId === "SOR_217_first_strike" && e.targetPlayId === attacker.playId && e.duration === "ForAttack",
+    );
+  const counters = defender.CurrentPower(false, true) > 0
+    && !(firstStrike && defender.CurrentHP() <= attackerPower);
+
+  const covered: string[] = [];
+  if (attackerPower > 0) covered.push(defender.playId);
+  if (counters) covered.push(attacker.playId);
+
+  for (const coveredPlayId of covered) {
+    if (asked.includes(coveredPlayId)) continue;
+    const protector = MandoProtector(game, coveredPlayId);
+    if (!protector) continue;
+    const unit = GetUnitByPlayId(game, coveredPlayId);
+    if (!unit) continue;
+    return {
+      type: "ability-option",
+      cardId: "ASH_062",
+      player: protector.controller,
+      sourcePlayId: coveredPlayId,
+      helperText: `Defeat a Shield token on ${CardTitle("ASH_062")} to prevent the damage to ${CardTitle(unit.cardId)}?`,
+      yesLabel: "Defeat Shield",
+      noLabel: "Skip",
+      onYes: null,
+      continuation: { ...next, mandoOffered: [...asked, coveredPlayId] },
+    } satisfies AbilityOptionPending;
+  }
+  return null;
+}
+
 function handleResolveAttack(
   game: GameState,
   log: string[],
   pending: ResolveAttackPending,
 ): HandlerResult {
+  const mandoOffer = mandoCombatOffer(game, pending);
+  if (mandoOffer) {
+    return { response: resolutionResponse(pendingToResolution(mandoOffer, game)), pending: mandoOffer, stateChanged: true };
+  }
   const attackPending: AttackTargetPending = {
     type: "attack-target",
     attackerPlayId: pending.attackerPlayId,
@@ -9848,6 +10093,7 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "ASH_004": // Grand Admiral Thrawn (ASH) — If you control 8 or more resources.
       return p.resources.length >= 8;
+    case "ASH_001": // The Armorer — If you control 5 or more resources.
     case "HMW_001": // Asajj Ventress — If you control 5 or more resources.
     case "LOF_017": // Darth Revan — If you control 5 or more resources.
     case "TWI_018": // Quinlan Vos — If you control 5 or more resources.
@@ -10850,6 +11096,11 @@ function resolveActionAbility(
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    case "ASH_001": { // The Armorer — step 1: choose an upgrade in your RESOURCE row.
+      const upgrades001 = ArmorerResourceUpgrades(player);
+      if (upgrades001.length === 0) return null;
+      return mandatoryTarget("ASH_001_from_resources", player, upgrades001);
+    }
     case "SHD_196": { // Grogu (Irresistible) — Action [exhaust]: Exhaust an enemy unit.
                       // "An enemy unit" names no arena, so space units are legal too.
       const enemies196 = GetUnitsForPlayer(GetOtherPlayer(player));
@@ -11828,6 +12079,51 @@ function applyAbilityEffect(
       DrawCardsForPlayer(game.currentGameState, game.gameLog, pending.player!, 2);
       if (defeatPend108) return injectContinuation(defeatPend108, pending.continuation ?? null);
       return pending.continuation ?? null;
+    }
+    case "ASH_001_from_resources": // The Armorer's Action — units that entered play this phase.
+    case "ASH_001_deployed_from_resources": { // Her deployed side — any friendly unit.
+      if (!targetPlayId || !pending.player) break;
+      const targets001 = pending.cardId === "ASH_001_from_resources"
+        ? ArmorerAttachTargets(pending.player)
+        : ArmorerFriendlyAttachTargets(pending.player);
+      if (targets001.length === 0) return pending.continuation ?? null;
+      return {
+        type: "ability-target",
+        cardId: "ASH_001_attach",
+        player: pending.player,
+        sourcePlayId: targetPlayId,   // carries WHICH resource is being played
+        fromPlayIds: targets001,
+        continuation: pending.continuation ?? null,
+      } satisfies AbilityTargetPending;
+    }
+    case "ASH_001_attach": { // The Armorer — play it from resources, then resource the top of deck.
+      if (!targetPlayId || !pending.player || !pending.sourcePlayId) break;
+      const gs001 = game.currentGameState;
+      const host001 = GetUnitByPlayId(gs001, targetPlayId);
+      const resource001 = GetPlayer(gs001, pending.player).resources
+        .find(r => r.playId === pending.sourcePlayId);
+      if (!host001 || !resource001) break;
+      const upgradeCardId = resource001.cardId;
+
+      const cost001 = playCost(gs001, pending.player, upgradeCardId);
+      // The resource leaves the row BEFORE the cost is charged — a card cannot pay for itself.
+      // RemoveResourcePreservingReady keeps readiness fungible, so removing a ready resource does
+      // not cost an available one when an exhausted resource could be traded instead.
+      if (spendableFor(gs001, pending.player) - 1 < cost001) break;
+      RemoveResourcePreservingReady(gs001, pending.player, pending.sourcePlayId);
+      payResources(gs001, pending.player, cost001, game.gameLog, upgradeCardId);
+
+      host001.upgrades.push({
+        cardId: upgradeCardId,
+        playId: nextPlayId(gs001),
+        owner: pending.player,
+        controller: pending.player,
+      });
+      game.gameLog.push(`${CardTitle("ASH_001")}: played ${CardTitle(upgradeCardId)} from resources onto ${CardTitle(host001.cardId)}.`);
+
+      // "If you do, resource the top card of your deck."
+      ResourceTopCardOfDeck(gs001, pending.player, game.gameLog, "ASH_001");
+      return sweepDeadUnits(gs001, game.gameLog, pending.continuation ?? null);
     }
     case "SHD_196": { // Grogu — exhaust the chosen enemy unit.
       if (!targetPlayId) break;

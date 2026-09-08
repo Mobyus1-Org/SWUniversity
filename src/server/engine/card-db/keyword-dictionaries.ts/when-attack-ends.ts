@@ -17,6 +17,7 @@ export function HasWhenAttackEnds(cardId: string): boolean {
       return true;
     case "SOR_015": //Boba Fett "When this unit completes an attack: If an enemy unit left play this phase, ready up to 2 resources."
       return true;
+    case "ASH_001": //The Armorer (deployed) — may play an upgrade from resources on a friendly unit
     case "ASH_033": //Grand Admiral Thrawn — if the defending unit was defeated, ready this unit
     case "ASH_036": //Rukh — if the defending unit was defeated, may give 3 Advantage tokens to a unit
     case "ASH_101": //The Great Mothers — defeat the non-leader units this unit dealt combat damage to
