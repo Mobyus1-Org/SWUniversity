@@ -501,6 +501,18 @@ export const Cards = {
       awakenedSpecters: "LOF_066", // 4/5 Ground Night — no card text, a plain Night body
     },
     twi: {
+      runeHaako: "TWI_031",
+      wartimeTradeOfficial: "TWI_032",
+      padawanStarfighter: "TWI_058",
+      vultureInterceptorWing: "TWI_063",
+      kraken: "TWI_084",
+      captainRexLeadByExample: "TWI_097",
+      oomSeriesOfficer: "TWI_131",
+      savageOpressMonster: "TWI_137",
+      batchBrothers: "TWI_144",
+      anakinSkywalkerMaverickMentor: "TWI_147",
+      vanguardDroidBomber: "TWI_160",
+      relentlessRocketDroid: "TWI_163",
       kitFisto: "TWI_165", // 7/6 Ground Force/Jedi, Saboteur + Coordinate
       infiltratingDemolisher: "TWI_182",
       echoArcTrooper: "TWI_090",
@@ -794,6 +806,8 @@ export const Cards = {
       theWayOfTheMandalor: "ASH_263",
     },
     twi: {
+      perilousPosition: "TWI_070",   // -2/-2, no attach restriction
+      twiceThePride: "TWI_155",      // +4/+0
       maceWindusLightsaber: "TWI_152",
       unshakeableWill: "TWI_071",
       squadSupport: "TWI_122",
@@ -888,6 +902,12 @@ export const Cards = {
       cunning: "SOR_203",
     },
     twi: {
+      grievousReassembly: "TWI_073",
+      disruptiveBurst: "TWI_075",
+      encouragingLeadership: "TWI_126",
+      selfDestruct: "TWI_140",
+      grenadeStrike: "TWI_171",
+      openFireTwi: "TWI_174",     // verbatim second printing of SOR_172
       bloodSport: "TWI_173", // Deal 2 damage to each ground unit
       christophsis: "TWI_078",
       vanquish: "TWI_077",

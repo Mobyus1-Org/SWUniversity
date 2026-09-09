@@ -1594,6 +1594,9 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "TWI_147": //Anakin Skywalker (Maverick Mentor) — Coordinate-gated On Attack draw
+    case "TWI_063": //Vulture Interceptor Wing — On Attack: give an enemy unit -1/-1
+    case "TWI_084": //Kraken — On Attack: buff each friendly token unit
     case "ASH_133": //Trask Walker — On Attack: recur a unit from your discard
     case "SEC_011": //Governor Pryce (deployed) — On Attack: create a Spy token
     case "SEC_204": //Blue Ace — On Attack: ready an exhausted enemy unit

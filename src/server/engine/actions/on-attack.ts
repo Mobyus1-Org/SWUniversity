@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending, IndirectDamagePending } from "@/server/engine/pending-resolution";
-import { GetUnitByPlayId, GetOtherPlayer, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken } from "@/server/engine/core-functions";
+import { GetUnitByPlayId, GetOtherPlayer, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles } from "@/server/engine/card-db/generated";
@@ -1273,6 +1273,30 @@ function resolveInnateOnAttack(
       return searchDeck("SOR_236", attacker.controller, 1, "scry", { continuation }) ?? continuation;
     case "SOR_040": { // Avenger On Attack — opponent chooses a non-leader unit they control to defeat.
       return chooseAndDefeatUnit("SOR_040", attacker.controller, false, continuation);
+    }
+    case "TWI_147": { // Anakin Skywalker (Maverick Mentor) — "Coordinate — On Attack: Draw a
+                      // card." Coordinate turns on at 3+ friendly units; re-checked here because
+                      // units can leave play between the trigger being queued and resolving.
+      if (!IsCoordinateActive(attacker.controller)) return continuation;
+      const game147 = GetGame();
+      if (game147) DrawCardForPlayer(game147.currentGameState, game147.gameLog, attacker.controller);
+      return continuation;
+    }
+    case "TWI_063": { // Vulture Interceptor Wing — "On Attack: Give an enemy unit -1/-1 for this
+                      // phase." Any enemy unit, not just the defender or this arena.
+      const enemies063 = GetUnitsForPlayer(attacker.controller === 1 ? 2 : 1);
+      if (enemies063.length === 0) return continuation;
+      return mandatoryTarget("TWI_063", attacker.controller, enemies063.map(u => u.playId), continuation);
+    }
+    case "TWI_084": { // Kraken — "On Attack: Give each friendly token unit +1/+1 for this phase."
+      const game084 = GetGame();
+      if (!game084) return continuation;
+      for (const u of GetUnitsForPlayer(attacker.controller)) {
+        const unit084 = Unit.FromInterface(u);
+        if (!unit084.IsTokenUnit()) continue;
+        GiveStatModForPhase("TWI_084", unit084, 1, game084.gameLog);
+      }
+      return continuation;
     }
     case "ASH_133": { // Trask Walker — the same choice its When Played offers.
       return buildTraskWalkerChoice(attacker.controller, continuation) ?? continuation;

@@ -553,6 +553,14 @@ function selfStatBonus(unit: Unit): number {
     // JTL_115 Clone Combat Squadron — "+1/+1 for each other friendly space unit."
     case "JTL_115":
       return otherFriendlySpaceUnitCount(unit);
+    // TWI_058 Padawan Starfighter — "While you control a Force unit OR a Force UPGRADE, +1/+1."
+    // The upgrade half counts a Force upgrade attached anywhere on your board, including to a
+    // unit that is not itself a Force unit.
+    case "TWI_058":
+      return GetUnitsForPlayer(unit.controller).some(
+        u => TraitContains(u.cardId, "Force", unit.controller, u.playId)
+          || (u.upgrades ?? []).some(up => TraitContains(up.cardId, "Force")),
+      ) ? 1 : 0;
     default:
       return 0;
   }
@@ -649,6 +657,8 @@ function kananSurvivalBonus(unit: Unit): number {
 const WHILE_ANOTHER_UNIT_POWER_BONUS: Record<string, { aspect?: string; trait?: string; minCost?: number; amount: number }> = {
   "LOF_081": { aspect: "Villainy", amount: 2 }, // Sith Legionnaire
   "HMW_107": { minCost: 3, amount: 2 },         // Stormtrooper Patrol — "another unit that costs 3 or more"
+  // TWI_163 Relentless Rocket Droid — "While you control ANOTHER Trooper unit, +2/+0."
+  TWI_163: { trait: "Trooper", amount: 2 },
 };
 
 function whileAnotherUnitPowerBonus(unit: Unit): number {

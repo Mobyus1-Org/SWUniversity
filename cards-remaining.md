@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 836 cards across 10 sets.**
+**Total: 816 cards across 10 sets.**
 
 ---
 
@@ -98,7 +98,7 @@ SHD_260: Street Gang Recruiter Unit
 SHD_262: Confiscate Event
 ```
 
-## TWI — Twilight of the Republic (99)
+## TWI — Twilight of the Republic (79)
 
 **Message 1 of 3**
 ```
@@ -107,8 +107,6 @@ TWI_019: Pau City Base
 TWI_022: Droid Manufactory Base
 TWI_025: Shadow Collective Camp Base
 TWI_028: Petranaki Arena Base
-TWI_031: Rune Haako - Scheming Second Unit
-TWI_032: Wartime Trade Official Unit
 TWI_034: General Grievous - Trophy Collector Unit
 TWI_040: A Fine Addition Event
 TWI_041: Lethal Crackdown Event
@@ -119,26 +117,19 @@ TWI_049: Knight of the Republic Unit
 TWI_052: Hello There Event
 TWI_053: Finn - On the Run Unit
 TWI_055: Equalize Event
-TWI_058: Padawan Starfighter Unit
 TWI_059: Royal Guard Attaché Unit
 TWI_060: Trade Federation Shuttle Unit
-TWI_063: Vulture Interceptor Wing Unit
 TWI_067: The Zillo Beast - Awoken From The Depths Unit
 TWI_068: Foresight Upgrade
 TWI_069: Roger Roger Upgrade
-TWI_070: Perilous Position Upgrade
 TWI_072: I Have the High Ground Event
-TWI_073: Grievous Reassembly Event
-TWI_075: Disruptive Burst Event
 TWI_076: Death by Droids Event
 TWI_080: Poggle the Lesser - Archduke of the Stalgasin Hive Unit
 TWI_082: MagnaGuard Wing Leader Unit
 TWI_083: General's Guardian Unit
-TWI_084: Kraken - Confederate Tactician Unit
 TWI_085: Kalani - Analytical General Unit
 TWI_088: Reprocess Event
 TWI_089: Consolidation of Power Event
-TWI_097: Captain Rex - Lead by Example Unit
 TWI_100: Petition the Senate Event
 TWI_101: Mas Amedda - Vice Chair Unit
 TWI_102: Manufactured Soldiers Event
@@ -154,26 +145,15 @@ TWI_123: Outflank Event
 TWI:
 TWI_124: Tactical Advantage Event
 TWI_125: The Clone Wars Event
-TWI_126: Encouraging Leadership Event
 TWI_127: Resupply Event
-TWI_131: OOM-Series Officer Unit
 TWI_135: Darth Maul - Revenge At Last Unit
-TWI_137: Savage Opress - Monster Unit
 TWI_139: Corner the Prey Event
-TWI_140: Self-Destruct Event
-TWI_144: Batch Brothers Unit
 TWI_146: Steela Gerrera - Beloved Tactician Unit
-TWI_147: Anakin Skywalker - Maverick Mentor Unit
 TWI_151: Resolute - Under Anakin's Command Unit
 TWI_153: Bold Resistance Event
 TWI_154: Mister Bones - I Performed Violence Unit
-TWI_155: Twice the Pride Upgrade
 TWI_156: Unlimited Power Event
-TWI_160: Vanguard Droid Bomber Unit
-TWI_163: Relentless Rocket Droid Unit
 TWI_168: Old Access Codes Upgrade
-TWI_171: Grenade Strike Event
-TWI_174: Open Fire Event
 TWI_175: Strategic Analysis Event
 TWI_176: Caught in the Crossfire Event
 TWI_177: Guerilla Insurgency Event

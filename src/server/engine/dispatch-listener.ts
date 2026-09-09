@@ -6874,6 +6874,24 @@ function handleChooseTarget(
     // Fires only on the PILOT-upgrade path — this handler is that path, so playing Frisk as an
     // ordinary unit never reaches here. Gated on a legal target so the prompt never appears when
     // it could not be taken.
+    // TWI_070 Perilous Position — "When Played: Exhaust attached unit." A pure drawback, and the
+    // reason the card has no attach restriction: the enemy half of the pool is the point.
+    if (pending.upgradeCardId === "TWI_070" && targetUnit) {
+      targetUnit.ready = false;
+      log.push(`${CardTitle("TWI_070")}: exhausted ${CardTitle(targetUnit.cardId)}.`);
+    }
+
+    // TWI_155 Twice the Pride — "When Played: Deal 2 damage to attached unit." Its own +4/+0 is
+    // already attached by this point, so the 2 is measured against the boosted host.
+    if (pending.upgradeCardId === "TWI_155" && targetUnit) {
+      DealDamageToUnit(game, "TWI_155", targetUnit.playId, 2, log, pending.player);
+      const swept155 = sweepDeadUnits(game, log, null);
+      updateDefeatedPlayers(game);
+      if (swept155) {
+        return { response: resolutionResponse(pendingToResolution(swept155, game)), pending: swept155, stateChanged: true };
+      }
+    }
+
     if (pending.upgradeCardId === "JTL_148") {
       const cheap148 = AllUnits().flatMap(u =>
         u.upgrades
@@ -15511,6 +15529,7 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, friendly138, game.gameLog, pending.player);
       break;
     }
+    case "TWI_174": // Open Fire (TWI printing) — identical text to SOR_172.
     case "SOR_172": { // Open Fire: Deal 4 damage to the chosen unit.
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 4, game.gameLog);
       break;
@@ -15545,6 +15564,87 @@ function applyAbilityEffect(
         dealBaseDamage(game.currentGameState, basePlayer058, 1, pending.player);
         const source058 = pending.cardId === "LAW_057_defeated" ? "LAW_057" : pending.cardId;
         game.gameLog.push(`${CardTitle(source058)}: dealt 1 damage to player ${basePlayer058}'s base.`);
+      }
+      break;
+    }
+    case "TWI_140": { // Self-Destruct — defeat the chosen friendly unit, then offer the 4 damage.
+                      // The damage pool is computed AFTER the defeat, so the sacrificed unit is
+                      // never a legal target for it.
+      if (!targetPlayId) break;
+      const victim140 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!victim140) break;
+      game.gameLog.push(`${CardTitle("TWI_140")}: defeated ${CardTitle(victim140.cardId)}.`);
+      const defeat140 = defeatUnit(game.currentGameState, game.gameLog, Unit.FromInterface(victim140));
+      const remaining140 = AllUnits();
+      const damage140 = remaining140.length > 0
+        ? mandatoryTarget("TWI_140_damage", pending.player!, remaining140.map(u => u.playId))
+        : null;
+      if (defeat140) return injectContinuation(defeat140, damage140);
+      return damage140;
+    }
+    case "TWI_140_damage": { // Self-Destruct — "If you do, deal 4 damage to a unit."
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "TWI_140", targetPlayId, 4, game.gameLog, pending.player);
+      break;
+    }
+    case "TWI_073": { // Grievous Reassembly — heal 3 from the chosen unit. The Battle Droid is
+                      // unconditional and is created when the event resolves, not here.
+      if (!targetPlayId) break;
+      const healed073 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (healed073) {
+        const before073 = healed073.damage;
+        healed073.damage = Math.max(0, healed073.damage - 3);
+        game.gameLog.push(`${CardTitle("TWI_073")}: healed ${before073 - healed073.damage} damage from ${CardTitle(healed073.cardId)}.`);
+      }
+      break;
+    }
+    case "TWI_171": { // Grenade Strike — the first hit; then offer 1 more to ANOTHER unit in the
+                      // SAME arena. With nothing else in that arena there is no offer at all.
+      if (!targetPlayId) break;
+      const first171 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      DealDamageToUnit(game.currentGameState, "TWI_171", targetPlayId, 2, game.gameLog, pending.player);
+      if (!first171) break;
+      const arena171 = (CardArena(first171.cardId) ?? "Ground") as "Ground" | "Space";
+      const others171 = AllUnits().filter(
+        u => u.playId !== targetPlayId && (CardArena(u.cardId) ?? "Ground") === arena171,
+      );
+      const swept171 = sweepDeadUnits(game.currentGameState, game.gameLog, null);
+      if (others171.length === 0) return swept171;
+      return injectContinuation(
+        optionalTarget("TWI_171_second", pending.player!, others171.map(u => u.playId),
+          "Deal 1 damage to another unit in the same arena?", { yesLabel: "Deal 1" }),
+        swept171,
+      );
+    }
+    case "TWI_171_second": { // Grenade Strike — the optional second hit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "TWI_171", targetPlayId, 1, game.gameLog, pending.player);
+      break;
+    }
+    case "TWI_031": { // Rune Haako — give the chosen unit -1/-1 for this phase.
+      if (!targetPlayId) break;
+      const victim031 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (victim031) {
+        GiveStatModForPhase("TWI_031", Unit.FromInterface(victim031), -1, game.gameLog);
+      }
+      break;
+    }
+    case "TWI_063": { // Vulture Interceptor Wing — give the chosen enemy unit -1/-1 for the phase.
+      if (!targetPlayId) break;
+      const victim063 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (victim063) {
+        GiveStatModForPhase("TWI_063", Unit.FromInterface(victim063), -1, game.gameLog);
+      }
+      break;
+    }
+    case "TWI_131": { // OOM-Series Officer — When Defeated: 2 damage to the chosen base.
+      let basePlayer131: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer131 = 1;
+      else if (targetPlayId === "player2.base") basePlayer131 = 2;
+      else if (targetIsBase) basePlayer131 = targetBasePlayer ?? null;
+      if (basePlayer131 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer131, 2, pending.player);
+        game.gameLog.push(`${CardTitle("TWI_131")}: dealt 2 damage to player ${basePlayer131}'s base.`);
       }
       break;
     }

@@ -1,9 +1,9 @@
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { BaseHealingPrevented, DealDamageToBase, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId } from "@/server/engine/core-functions";
+import { BaseHealingPrevented, DealDamageToBase, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains } from "@/server/engine/core-functions";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
-import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateCloneTrooper, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 
 /**
  * Cards whose When Played does something without asking the player anything — i.e. the
@@ -20,7 +20,7 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
   "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149", "ASH_179", "ASH_251",
-  "ASH_237", "ASH_248", "SEC_119", "JTL_087", "HMW_121", "ASH_079", "ASH_111", "ASH_064",
+  "ASH_237", "ASH_248", "SEC_119", "JTL_087", "HMW_121", "ASH_079", "ASH_111", "ASH_064", "TWI_144", "TWI_097", "TWI_084", "TWI_137", "TWI_160",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -114,6 +114,42 @@ export function resolveWhenPlayedTrigger(
       }
       break;
     }
+    case "TWI_137": { // Savage Opress (Monster) — "If you control FEWER units (including this one)
+                      // than an opponent, ready this unit." He is already in play here, so a tie
+                      // is not "fewer" and leaves him exhausted.
+      const mine137 = GetUnitsForPlayer(trigger.fromPlayer).length;
+      const theirs137 = GetUnitsForPlayer(trigger.fromPlayer === 1 ? 2 : 1).length;
+      if (mine137 < theirs137) {
+        const savage = GetUnitsForPlayer(trigger.fromPlayer).find(u => u.playId === trigger.playId);
+        if (savage && ReadyUnit(gs, savage)) {
+          log.push(`${CardTitle(trigger.cardId)}: readied himself.`);
+        }
+      }
+      break;
+    }
+    case "TWI_160": { // Vanguard Droid Bomber — "If you control ANOTHER Separatist unit, deal 2
+                      // damage to an enemy base." One opponent, so no choice of base is needed.
+      const hasOther160 = GetUnitsForPlayer(trigger.fromPlayer).some(
+        u => u.playId !== trigger.playId && TraitContains(u.cardId, "Separatist", trigger.fromPlayer, u.playId),
+      );
+      if (hasOther160) {
+        const victim160 = trigger.fromPlayer === 1 ? 2 : 1;
+        DealDamageToBase(gs, victim160, 2, trigger.fromPlayer);
+        log.push(`${CardTitle(trigger.cardId)}: dealt 2 damage to player ${victim160}'s base.`);
+      }
+      break;
+    }
+    case "TWI_084": // Kraken (Confederate Tactician) — When Played: create 2 Battle Droids.
+      CreateBattleDroid(gs, trigger.fromPlayer, log, trigger.cardId);
+      CreateBattleDroid(gs, trigger.fromPlayer, log, trigger.cardId);
+      break;
+    case "TWI_144": // Batch Brothers — When Played: create a Clone Trooper token.
+      CreateCloneTrooper(gs, trigger.fromPlayer, log, trigger.cardId);
+      break;
+    case "TWI_097": // Captain Rex (Lead by Example) — When Played: create 2 Clone Troopers.
+      CreateCloneTrooper(gs, trigger.fromPlayer, log, trigger.cardId);
+      CreateCloneTrooper(gs, trigger.fromPlayer, log, trigger.cardId);
+      break;
     case "ASH_111": // Children of the Watch — When Played: create 2 Mandalorian tokens.
       CreateMandalorianToken(gs, trigger.fromPlayer, log, trigger.cardId);
       CreateMandalorianToken(gs, trigger.fromPlayer, log, trigger.cardId);

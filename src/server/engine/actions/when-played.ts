@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits } from "@/server/engine/core-functions";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase } from "@/server/engine/core-functions";
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost } from "@/server/engine/card-playability";
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -1045,6 +1045,54 @@ export function resolveWhenPlayed(
     }
     case "HMW_121": //Hijacked AT-ST — auto effect, see resolveWhenPlayedTrigger.
       return null;
+    case "TWI_031": { // Rune Haako — "When Played: If a friendly unit was defeated this phase, you
+                      // may give a unit -1/-1 for this phase." Any unit is a legal target.
+      if (!UnitWasDefeatedThisPhase(player)) return null;
+      const targets031 = AllUnits();
+      if (targets031.length === 0) return null;
+      return optionalTarget("TWI_031", player, targets031.map(u => u.playId),
+        "Give a unit –1/–1 for this phase?", { yesLabel: "Give –1/–1" });
+    }
+    case "TWI_140": { // Self-Destruct — "Defeat a friendly unit. If you do, deal 4 damage to a
+                      // unit." The defeat is a prerequisite: with no friendly unit the whole card
+                      // does nothing, so it is not offered at all.
+      const friendly140 = GetUnitsForPlayer(player);
+      if (friendly140.length === 0) return null;
+      return mandatoryTarget("TWI_140", player, friendly140.map(u => u.playId));
+    }
+    case "TWI_073": { // Grievous Reassembly — "Heal 3 damage from a unit. Create a Battle Droid
+                      // token." The token is unconditional, so it is created here and the heal is
+                      // only offered when there is something to heal.
+      CreateBattleDroid(game.currentGameState, player, game.gameLog, "TWI_073");
+      const damaged073 = AllUnits().filter(u => u.damage > 0);
+      if (damaged073.length === 0) return null;
+      return mandatoryTarget("TWI_073", player, damaged073.map(u => u.playId));
+    }
+    case "TWI_171": { // Grenade Strike — "Deal 2 damage to a unit." The optional second hit is
+                      // built once the first target is known (it must share that unit's arena).
+      const targets171 = AllUnits();
+      if (targets171.length === 0) return null;
+      return mandatoryTarget(cardId, player, targets171.map(u => u.playId));
+    }
+    case "TWI_174": { // Open Fire (TWI printing) — Deal 4 damage to a unit.
+      const all174 = AllUnits();
+      if (all174.length === 0) return null;
+      return mandatoryTarget(cardId, player, all174.map(u => u.playId));
+    }
+    case "TWI_075": { // Disruptive Burst (Event) — "Give each enemy unit -1/-1 for this phase."
+      const enemies075 = GetUnitsForPlayer(GetOtherPlayer(player));
+      for (const u of enemies075) {
+        GiveStatModForPhase("TWI_075", Unit.FromInterface(u), -1, game.gameLog);
+      }
+      return null;
+    }
+    case "TWI_126": { // Encouraging Leadership (Event) — "Give each friendly unit +1/+1 for this
+                      // phase." Both arenas; the event itself is not a unit, so nothing to exclude.
+      for (const u of GetUnitsForPlayer(player)) {
+        GiveStatModForPhase("TWI_126", Unit.FromInterface(u), 1, game.gameLog);
+      }
+      return null;
+    }
     case "TWI_173": { // Blood Sport (Event) — "Deal 2 damage to each ground unit."
       // Both sides' ground arenas, the caster's own units included. playIds are collected before
       // any damage lands so this resolves as one simultaneous hit rather than a moving target.

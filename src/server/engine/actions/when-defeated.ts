@@ -472,6 +472,16 @@ function resolveOwnWhenDefeated(
       return optionalTarget("ASH_043_wd", player, zeroPower043.map(u => u.playId),
         "Defeat a non-leader unit with 0 power?", { yesLabel: "Defeat" });
     }
+    case "TWI_032": { // Wartime Trade Official — "When Defeated: Create a Battle Droid token."
+      const game032 = GetGame();
+      if (!game032) return null;
+      CreateBattleDroid(game032.currentGameState, player, game032.gameLog, "TWI_032");
+      return null;
+    }
+    case "TWI_131": { // OOM-Series Officer — "When Defeated: Deal 2 damage to a base." No
+                      // controller is named, so either base is a legal target.
+      return mandatoryTarget("TWI_131", player, ["player1.base", "player2.base"]);
+    }
     case "TWI_079": { // Confederate Courier — "When Defeated: Create a Battle Droid token."
       const game079 = GetGame();
       if (!game079) return null;
