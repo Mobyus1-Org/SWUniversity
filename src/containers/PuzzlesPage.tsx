@@ -109,6 +109,11 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "TWI_015",
   //Hunt for the Missing Wookiee
   "ASH_001", // The Armorer — Steel Shapes Us
+  "ASH_006", // Sabine Wren — Bargaining on Belief
+  "ASH_007", // Grand Admiral Sloane — Holding the Empire Together
+  "ASH_010", // Bo-Katan Kryze — Reclaiming Mandalore
+  "ASH_011", // Cad Bane — Still Faster than You
+  "ASH_015", // Emperor Palpatine — According to My Design
   "ASH_008", // Moff Gideon — Indomitable Warlord
   "HMW_001", // Asajj Ventress — No Time For Regret
   "HMW_009", // Chewbacca — Relentless Rebel

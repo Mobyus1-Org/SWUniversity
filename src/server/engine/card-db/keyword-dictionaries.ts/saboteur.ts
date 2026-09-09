@@ -127,6 +127,7 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
     case "LAW_230"://Ohnaka Gang Starhopper
     case "LAW_234"://Kage Elite
     case "LAW_250"://Callous Bounty Hunter
+    case "ASH_013"://Ezra Bridger (It's Now or Never) — deployed leader unit
     case "ASH_034"://Wicket - Yub Nub!
     case "ASH_141"://TIE Striker
     case "ASH_158"://Han Solo

@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
-import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending, IndirectDamagePending } from "@/server/engine/pending-resolution";
-import { GetUnitByPlayId, GetOtherPlayer, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase } from "@/server/engine/core-functions";
+import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
+import { GetUnitByPlayId, GetOtherPlayer, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles } from "@/server/engine/card-db/generated";
@@ -9,6 +9,7 @@ import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens, GiveExperienceTokens, CreateSpy } from "@/server/engine/token-helpers";
+import { CreateMandalorianToken } from "@/server/engine/token-helpers";
 import { jabbasRancorDamage, buildTraskWalkerChoice, buildAethersprite, buildTwinsSentinel } from "@/server/engine/actions/when-played";
 
 /**
@@ -1273,6 +1274,48 @@ function resolveInnateOnAttack(
       return searchDeck("SOR_236", attacker.controller, 1, "scry", { continuation }) ?? continuation;
     case "SOR_040": { // Avenger On Attack — opponent chooses a non-leader unit they control to defeat.
       return chooseAndDefeatUnit("SOR_040", attacker.controller, false, continuation);
+    }
+    case "ASH_006": { // Sabine Wren (deployed) — "The next unit you play this phase gains Shielded
+                      // for this phase." Mandatory and targetless, unlike her front side, which
+                      // has to buy it from the opponent first.
+      const game006 = GetGame();
+      if (game006) {
+        game006.currentGameState.currentEffects.push({
+          cardId: "ASH_006_next_shielded",
+          duration: "Phase",
+          affectedPlayer: attacker.controller,
+        });
+        game006.gameLog.push(`${CardTitle("ASH_006")}: the next unit played this phase gains Shielded.`);
+      }
+      return continuation;
+    }
+    case "ASH_011": { // Cad Bane (deployed) — "You MAY deal 1 damage to a unit with 2 or more
+                      // remaining HP." Optional, unlike his front side.
+      const targets011 = AllUnits().filter(u => UnitRemainingHp(u) >= 2);
+      if (targets011.length === 0) return continuation;
+      return optionalTarget("ASH_011", attacker.controller, targets011.map(u => u.playId),
+        "Deal 1 damage to a unit with 2 or more remaining HP?", { yesLabel: "Deal 1", continuation });
+    }
+    case "ASH_015": { // Emperor Palpatine (deployed) — "You may choose ANOTHER exhausted friendly
+                      // unit." Palpatine himself is excluded, and he is exhausted from attacking.
+      const exhausted015 = GetUnitsForPlayer(attacker.controller)
+        .filter(u => !u.ready && u.playId !== attacker.playId);
+      if (exhausted015.length === 0) return continuation;
+      return optionalTarget("ASH_015", attacker.controller, exhausted015.map(u => u.playId),
+        "Give an Advantage token to another exhausted friendly unit for each other friendly unit?",
+        { yesLabel: "Give tokens", continuation });
+    }
+    case "ASH_010": { // Bo-Katan Kryze (deployed) — "On Attack: If you control a unit in each
+                      // arena, create a Mandalorian token." Same condition as her leader Action,
+                      // but free.
+      const game010 = GetGame();
+      if (!game010) return continuation;
+      const both010 = NumberOfUnitsInArena(attacker.controller, "Ground") > 0
+        && NumberOfUnitsInArena(attacker.controller, "Space") > 0;
+      if (both010) {
+        CreateMandalorianToken(game010.currentGameState, attacker.controller, game010.gameLog, "ASH_010");
+      }
+      return continuation;
     }
     case "ASH_127": { // The Twins — the On Attack half of its shared Sentinel grant.
       return buildTwinsSentinel(attacker.controller, attacker.playId, continuation) ?? continuation;

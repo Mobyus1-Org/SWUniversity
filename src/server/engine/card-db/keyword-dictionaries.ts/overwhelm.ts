@@ -2,6 +2,7 @@ import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetResources,
 import { PlayerId } from "@/lib/engine/core-models";
 import { CardCost } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
+import { Unit } from "@/server/engine/unit";
 
 /**
  * @param defenderPlayId - playId of the defending unit. When provided,
@@ -69,10 +70,17 @@ export function HasOverwhelm(cardId: string,
         case "LOF_140"://Darth Maul's Lightsaber
         case "LOF_114"://Kaadu
         case "LOF_126"://Overpower
+        case "ASH_007_overwhelm"://Grand Admiral Sloane leader Action — for this phase
           return true;
         default: break;
       }
     }
+    // ASH_007 Grand Admiral Sloane (deployed) — "Each OTHER friendly unit gains Overwhelm and
+    // Sentinel." Board-wide from a unit, so it is checked for everyone rather than listed per card.
+    if (GetUnitsForPlayer(player).some(
+      u => u.cardId === "ASH_007" && u.playId !== playId && !Unit.FromInterface(u).LostAbilities(),
+    )) return true;
+
     // Check upgrades
     const upgrades = unit.upgrades;
     for (const u of upgrades) {
@@ -186,6 +194,8 @@ export function HasOverwhelm(cardId: string,
     case "ASH_121"://Blurrg
     case "ASH_241"://Marrok's Fiend Fighter
     case "ASH_129"://Defenders of the Forest
+    case "ASH_007"://Grand Admiral Sloane (deployed) — printed on his own unit side
+    case "ASH_011"://Cad Bane (Still Faster than You) — deployed leader unit
     case "ASH_148"://Ninth Sister - Hulking Inquisitor
     case "ASH_143"://Tempest Lieutenant
     case "ASH_164"://Alamite Hunter

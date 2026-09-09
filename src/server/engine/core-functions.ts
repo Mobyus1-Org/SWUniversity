@@ -887,6 +887,7 @@ function preventBigBaseHit(gs: GameState, player: PlayerId, amount: number): boo
  * trigger is queued for every player holding one.
  */
 export function QueueUnitEnteredPlayReaction(gs: GameState, unit: UnitInterface): void {
+  QueueGreefKargaReaction(gs, unit);
   if (CardIsLeader(unit.cardId)) return;
   if ((CardArena(unit.cardId) ?? "Ground") !== "Ground") return;
   const nested = gs.triggerBag.length > 0;
@@ -901,6 +902,33 @@ export function QueueUnitEnteredPlayReaction(gs: GameState, unit: UnitInterface)
       nested,
     });
   }
+}
+
+/**
+ * ASH_017 Greef Karga — "When you PLAY OR CREATE a unit: [You may exhaust this leader. If you do,]
+ * give an Advantage token to that unit."
+ *
+ * Both halves of "play or create" funnel through QueueUnitEnteredPlayReaction, which addToArena
+ * calls for a played unit and spawnToken calls for a token — so hooking that one function covers
+ * both, and adding a second call at the play site double-fires. Only the unit's OWN controller reacts, and Greef never
+ * fires off his own arrival — a deployed Greef entering play is not "a unit you played" for
+ * himself, and the front side is in the leader zone anyway.
+ *
+ * One trigger per unit. The front side pays an exhaust, so when several tokens arrive at once only
+ * the first prompt can be taken; the rest find him exhausted and do nothing.
+ */
+export function QueueGreefKargaReaction(gs: GameState, unit: UnitInterface): void {
+  const leader = GetPlayer(gs, unit.controller).leader;
+  if (leader.cardId !== "ASH_017" || LeaderAbilitiesIgnored()) return;
+  if (leader.deployed && leader.deployedPlayId === unit.playId) return; // not his own entry
+  if (!leader.deployed && !leader.ready) return; // the exhaust is the cost
+  gs.triggerBag.push({
+    triggerType: "card-played-reaction",
+    cardId: "ASH_017",
+    fromPlayer: unit.controller,
+    playId: unit.playId,
+    nested: gs.triggerBag.length > 0,
+  });
 }
 
 export function DealDamageToBase(gs: GameState, player: PlayerId, amount: number, byPlayer?: PlayerId): void {
@@ -1594,6 +1622,10 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "ASH_006": //Sabine Wren (deployed) — On Attack: next unit you play gains Shielded
+    case "ASH_011": //Cad Bane (deployed) — On Attack: may deal 1 to a unit with 2+ remaining HP
+    case "ASH_015": //Emperor Palpatine (deployed) — On Attack: may buff another exhausted unit
+    case "ASH_010": //Bo-Katan Kryze (deployed) — On Attack: create a Mandalorian token
     case "ASH_127": //The Twins — On Attack: may give another friendly unit Sentinel
     case "TWI_034": //General Grievous (Trophy Collector) — On Attack: 4+ Lightsabers, defeat 4 enemy units
     case "TWI_048": //Obi-Wan's Aethersprite — On Attack: 1 to self, 2 to another space unit
@@ -1953,6 +1985,11 @@ export function QueueMigsMayfeldReaction(gs: GameState, discardingPlayer: Player
       nested: gs.triggerBag.length > 0,
     });
   }
+}
+
+/** A unit's REMAINING hit points: its current HP less the damage on it. Never negative. */
+export function UnitRemainingHp(unit: UnitInterface): number {
+  return Math.max(0, Unit.FromInterface(unit).CurrentHP());
 }
 
 export function ApplyDamagePrevention(gs: GameState, targetPlayId: string, amount: number, log?: string[]): number {

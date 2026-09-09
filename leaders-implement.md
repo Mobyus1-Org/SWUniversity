@@ -10,9 +10,9 @@ the front (undeployed) ability and the deployed leader-unit ability.
 
 | Status | Count |
 |--------|-------|
-| Complete (both sides) | 94 |
-| Needs work | 60 |
-| — of those, no engine code at all | 43 |
+| Complete (both sides) | 102 |
+| Needs work | 52 |
+| — of those, no engine code at all | 35 |
 | — of those, front `Action` not in ActionAbilities() | 43 |
 | **Total** | **154** |
 
@@ -113,54 +113,6 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 > Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
-#### ASH_005 — Luke Skywalker (I Can Save Him)
-
-**Missing:** front + deployed · **Batch:** Batch 12 · **Existing refs:** none
-
-**Front:** When a friendly unit's attack ends: You may exhaust this leader. If you do, heal 1 damage from that unit.<br>Epic Action: If you control 7 or more resources, deploy this leader.
-
-**Deployed:** When a friendly unit's attack ends: Heal 2 damage from that unit or from your base.
-
-#### ASH_006 — Sabine Wren (Bargaining on Belief)
-
-**Missing:** front + deployed · **Batch:** Batch 12 · **Existing refs:** none
-
-**Front:** Action [Exhaust]: An opponent gives 2 Advantage tokens to a unit they control. If they do, the next unit you play this phase gains Shielded for this phase. (When you play that unit, give a Shield token to it.)<br>Epic Action: If you control 5 or more resources, deploy this leader.
-
-**Deployed:** On Attack: The next unit you play this phase gains Shielded for this phase.
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
-
-#### ASH_007 — Grand Admiral Sloane (Holding the Empire Together)
-
-**Missing:** front + deployed · **Batch:** Batch 13 · **Existing refs:** none
-
-**Front:** Action [Exhaust]: Choose one:<br>Give each ground unit Sentinel and Overwhelm for this phase.<br>Give each space unit Sentinel and Overwhelm for this phase.<br><br>Epic Action: If you control 5 or more resources, deploy this leader.
-
-**Deployed:** Overwhelm<br>Each other friendly unit gains Overwhelm and Sentinel.
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
-
-#### ASH_010 — Bo-Katan Kryze (Reclaiming Mandalore)
-
-**Missing:** front + deployed · **Batch:** Batch 13 · **Existing refs:** none
-
-**Front:** Action [2 resources, Exhaust]: If you control a unit in each arena, create a Mandalorian token.<br>Epic Action: If the number of resources you control plus the number of friendly Mandalorian units is 10 or more, deploy this leader.
-
-**Deployed:** Other friendly Mandalorian units get +1/+0.<br>On Attack: If you control a unit in each arena, create a Mandalorian token.
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
-
-#### ASH_011 — Cad Bane (Still Faster than You)
-
-**Missing:** front + deployed · **Batch:** Batch 13 · **Existing refs:** none
-
-**Front:** Action [Exhaust]: Deal 1 damage to a unit with 2 or more remaining HP.<br>Epic Action: If you control 6 or more resources, deploy this leader.
-
-**Deployed:** Overwhelm (When attacking an enemy unit, deal excess damage to the opponent's base.)<br>On Attack: You may deal 1 damage to a unit with 2 or more remaining HP.
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
-
 #### ASH_012 — Vane (Quarrelsome Pirate)
 
 **Missing:** front + deployed · **Batch:** Batch 13 · **Existing refs:** none
@@ -171,24 +123,6 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 
 > Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
 
-#### ASH_013 — Ezra Bridger (It's Now or Never)
-
-**Missing:** front + deployed · **Batch:** Batch 14 · **Existing refs:** none
-
-**Front:** When a friendly unit's attack ends: If it dealt 3 or more combat damage to a base, you may exhaust this leader. If you do, give an Advantage token to a different unit.<br>Epic Action: If you control 5 or more resources, deploy this leader.
-
-**Deployed:** Saboteur (When this unit attacks, ignore Sentinel and defeat the defender's Shields.)<br>When a friendly unit's attack ends: If it dealt 3 or more combat damage to a base, you may give an Advantage token to a different unit.
-
-#### ASH_015 — Emperor Palpatine (According to My Design)
-
-**Missing:** front + deployed · **Batch:** Batch 14 · **Existing refs:** none
-
-**Front:** Action [Exhaust]: Choose an exhausted friendly unit. Give an Advantage token to it for each other friendly unit.<br>Epic Action: If you control 7 or more resources, deploy this leader.
-
-**Deployed:** On Attack: You may choose another exhausted friendly unit. If you do, give an Advantage token to it for each other friendly unit.
-
-> Needs a `LEADERS_WITH_ACTION_ABILITY` entry in `PuzzlesPage.tsx` when implemented.
-
 #### ASH_016 — Shin Hati (Eager Adversary)
 
 **Missing:** front + deployed · **Batch:** Batch 14 · **Existing refs:** none
@@ -196,14 +130,6 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 **Front:** When a friendly unit's attack ends: You may exhaust this leader. If you do, exhaust a unit that costs less than the amount of combat damage dealt to a base this attack.<br>Epic Action: If you control 6 or more resources, deploy this leader.
 
 **Deployed:** When a friendly unit's attack ends: You may exhaust a unit that costs less than the amount of combat damage dealt to a base this attack. Use this ability only once each round.
-
-#### ASH_017 — Greef Karga (Gracious Magistrate)
-
-**Missing:** front + deployed · **Batch:** Batch 14 · **Existing refs:** none
-
-**Front:** When you play or create a unit: You may exhaust this leader. If you do, give an Advantage token to that unit.<br>Epic Action: If you control 6 or more resources, deploy this leader.
-
-**Deployed:** When you play or create a unit: Give an Advantage token to that unit.
 
 #### ASH_018 — Grogu (Charming Companion)
 
@@ -704,6 +630,14 @@ Tests go in `tests/unit/<set>/<leader-name>-leader.test.ts`.
 | SOR_017 | Han Solo — Audacious Smuggler | SOR |
 | ASH_004 | Grand Admiral Thrawn — Victory is Mine | ASH |
 | ASH_008 | Moff Gideon — Indomitable Warlord | ASH |
+| ASH_005 | Luke Skywalker — I Can Save Him | ASH |
+| ASH_006 | Sabine Wren — Bargaining on Belief | ASH |
+| ASH_007 | Grand Admiral Sloane — Holding the Empire Together | ASH |
+| ASH_010 | Bo-Katan Kryze — Reclaiming Mandalore | ASH |
+| ASH_011 | Cad Bane — Still Faster than You | ASH |
+| ASH_013 | Ezra Bridger — It's Now or Never | ASH |
+| ASH_015 | Emperor Palpatine — According to My Design | ASH |
+| ASH_017 | Greef Karga — Gracious Magistrate | ASH |
 | SEC_009 | Mon Mothma — Forming a Coalition | SEC |
 | ASH_009 | Ahsoka Tano — Trust in the Force | ASH |
 | ASH_014 | The Mandalorian — We Can't Keep Running | ASH |

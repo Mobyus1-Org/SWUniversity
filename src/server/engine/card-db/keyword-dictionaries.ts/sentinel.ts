@@ -39,6 +39,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
 
       switch(currentEffect.cardId) {
         case "ASH_127": hasSentinel = true; break;//The Twins — granted for the phase
+        case "ASH_007_sentinel": hasSentinel = true; break;//Grand Admiral Sloane leader Action
         case "SEC_048": hasSentinel = true; break;//Captain Rex — this unit AND an enemy unit, for the phase
         case "SOR_086": hasSentinel = true; break;//Gladiator Star Destroyer
         case "SOR_003": hasSentinel = true; break;//Chewbacca (Walking Carpet)
@@ -142,6 +143,15 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
         const nonLeaders049 = ground049.filter(u => !Unit.FromInterface(u).IsLeader());
         return nonLeaders049.length === 1 && nonLeaders049[0].playId === playId;
       }
+      default: break;
+    }
+    // ASH_007 Grand Admiral Sloane (deployed) — "Each OTHER friendly unit gains Overwhelm and
+    // Sentinel." A board-wide grant from a unit rather than from an effect, so it is checked for
+    // every unit rather than being listed per card.
+    if (GetUnitsForPlayer(player).some(
+      u => u.cardId === "ASH_007" && u.playId !== playId && !Unit.FromInterface(u).LostAbilities(),
+    )) return true;
+    switch (cardId) {
       case "ASH_079"://Koska Reeves — while you control a token unit (any token, not just hers)
         return GetUnitsForPlayer(player).some(u => Unit.FromInterface(u).IsTokenUnit());
       case "SHD_034"://Supercommando Squad

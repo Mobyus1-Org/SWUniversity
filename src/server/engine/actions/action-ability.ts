@@ -138,6 +138,25 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       if (GetHand(player).some(c => CardType(c.cardId) === "Unit")) abilities.push(cardId);
       break;
     }
+    // ASH_006 Sabine Wren — an opponent gives 2 Advantage tokens to a unit THEY control. With no
+    // enemy unit the Action does nothing, but "if they do" is a condition, not a cost, so it stays
+    // offered. ASH_007 Grand Admiral Sloane just picks an arena and grants keywords.
+    case "ASH_006":
+    case "ASH_007":
+      abilities.push(cardId);
+      break;
+    case "ASH_010": // Bo-Katan Kryze — Action [2 resources, Exhaust]. The RESOURCES are a cost, so
+                    // they gate availability; controlling a unit in each arena is a condition and
+                    // does not.
+      if (GetResources(player, true).length >= 2) abilities.push(cardId);
+      break;
+    // ASH_011 Cad Bane deals 1 to a unit with 2+ remaining HP; ASH_015 Emperor Palpatine buffs an
+    // exhausted friendly unit. For both, the target requirement is a CONDITION rather than a cost,
+    // so the Action stays available — and still exhausts — on a board with no legal target.
+    case "ASH_011":
+    case "ASH_015":
+      abilities.push(cardId);
+      break;
     case "ASH_123": { // Lang — Action [Exhaust]: "This unit deals damage equal to his power to a
                       // ground unit." Needs a ground unit to aim at; his power may be 0, which is
                       // still a legal (if pointless) use, so power is not a condition.
@@ -673,6 +692,8 @@ export function ActionAbilityCardId(abilityId: string): string {
 export function ActionAbilityCost(cardId: string): number {
   switch (cardId) {
     //Leader abilities
+    case "ASH_010"://Bo-Katan Kryze - Action [2 resources, Exhaust]
+      return 2;
     case "LAW_010"://Leia Organa - Someone Who Loves You
       return 2;
     case "SEC_004"://Leia Organa - Of A Secret Bloodline

@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -207,6 +207,19 @@ function resolveChooseOne(
 ): PendingResolution | null {
   let next: PendingResolution | null = null;
   switch (pending.cardId) {
+    case "ASH_007": { // Grand Admiral Sloane — every unit in the chosen arena, BOTH players',
+                      // gains Sentinel and Overwhelm for the phase. The text says "each ground
+                      // unit", not "each friendly ground unit".
+      const arena007 = optionId === "space" ? "spaceArena" : "groundArena";
+      const targets007 = [...game.player1[arena007], ...game.player2[arena007]];
+      for (const u of targets007) {
+        const unit007 = Unit.FromInterface(u);
+        GrantKeywordForPhase("ASH_007_sentinel", unit007, log, "Sentinel");
+        GrantKeywordForPhase("ASH_007_overwhelm", unit007, log, "Overwhelm");
+      }
+      log.push(`${CardTitle("ASH_007")}: each ${optionId === "space" ? "space" : "ground"} unit gained Sentinel and Overwhelm for this phase.`);
+      break;
+    }
     case "ASH_133": { // Trask Walker — "Either put that card on the bottom of your deck and heal 3
                       // damage from your base or return it to your hand."
       const player133 = GetPlayer(game, pending.player);
@@ -2009,6 +2022,28 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
           continuation: null,
         } satisfies AbilityOptionPending;
       }
+      case "ASH_017": { // Greef Karga — front: exhaust to give an Advantage token to the unit that
+                        // just arrived. Deployed: no cost, so it resolves immediately.
+        const greefUnit = GetUnitByPlayId(game, trigger.playId ?? "");
+        if (!greefUnit) return null;
+        const greefLeader = GetPlayer(game, trigger.fromPlayer).leader;
+        if (greefLeader.deployed) {
+          GiveAdvantageTokens(game, Unit.FromInterface(greefUnit), 1, log, "ASH_017");
+          return null;
+        }
+        if (!greefLeader.ready) return null; // already spent this arrival window
+        return {
+          type: "ability-option",
+          cardId: "ASH_017",
+          player: trigger.fromPlayer,
+          sourcePlayId: trigger.playId,
+          helperText: `Exhaust ${CardTitle("ASH_017")} to give an Advantage token to ${CardTitle(greefUnit.cardId)}?`,
+          yesLabel: "Exhaust",
+          noLabel: "Skip",
+          onYes: null,
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
       case "SHD_255": { // Lady Proxima — "You may deal 1 damage to a base." Either base is legal.
         return {
           type: "ability-option",
@@ -3023,7 +3058,7 @@ function resolveAttack(
     applyCombatDamageToBaseAutoEffects(game, log, attacker, atkPower, stayOnTarget177);
     const whenAttackEnds = resolveWhenAttackEnds(
       game, attacker, pending.continuation ?? null, false, 0,
-      atkPower > 0 ? target.player : null, null, baseAttackSources,
+      atkPower > 0 ? target.player : null, null, baseAttackSources, atkPower,
     );
     if (willSacrifice) {
       log.push(`Heroic Sacrifice: ${attackerName} is defeated after dealing combat damage.`);
@@ -3315,7 +3350,7 @@ function resolveAttack(
     if (nextPending) {
       // Append resolveWhenAttackEnds at the tail of the pending chain.
       // defeatUnit returns BountyPending | WhenDefeatedChoicePending, both have continuation.
-      const whenAttackEnds = withBaseAbility(wrapASH137(resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, spillVictim, combatDamagedPlayId, attackerSources)));
+      const whenAttackEnds = withBaseAbility(wrapASH137(resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, spillVictim, combatDamagedPlayId, attackerSources, overwhelmSpill)));
       type WithContinuation = { continuation: PendingResolution | null | undefined };
       let tail: WithContinuation = nextPending as unknown as WithContinuation;
       while (tail.continuation != null) tail = tail.continuation as unknown as WithContinuation;
@@ -3323,7 +3358,7 @@ function resolveAttack(
       return nextPending;
     }
 
-    return withBaseAbility(wrapASH137(resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, spillVictim, combatDamagedPlayId, attackerSources)));
+    return withBaseAbility(wrapASH137(resolveWhenAttackEnds(game, attacker, pending.continuation ?? null, defDefeated, excessDamage, spillVictim, combatDamagedPlayId, attackerSources, overwhelmSpill)));
   }
 }
 
@@ -3347,7 +3382,75 @@ function resolveWhenAttackEnds(
    * a Support grant is one of those effects, and the abilities it lent must still fire here.
    */
   abilitySources: string[] | null = null,
+  /**
+   * Combat damage this attack put on a BASE, Overwhelm excess included (CR 8.7.f: excess dealt to
+   * a base is combat damage to that base). Distinct from `baseDamagedPlayer`, which ASH_183 reads
+   * with a narrower meaning that must not change. Read by ASH_013 Ezra Bridger.
+   */
+  combatBaseDamage: number = 0,
 ): PendingResolution | null {
+  // ASH_005 Luke Skywalker — "When a friendly unit's attack ends: You may exhaust this leader. If
+  // you do, heal 1 damage from that unit." (Deployed: heal 2 from that unit OR your base, free.)
+  // A watcher on every friendly attack, so it lives here rather than in the attacker's own switch.
+  {
+    const luke = GetLeaderForPlayer(attacker.controller);
+    if (luke.cardId === "ASH_005" && !LeaderAbilitiesIgnored()) {
+      const rest005 = attackerOwnWhenAttackEnds(game, attacker, continuation, defDefeated, excessDamage, baseDamagedPlayer, combatDamagedPlayId, abilitySources);
+      const stillHere = GetUnitByPlayId(game, attacker.playId);
+      const baseDamaged = GetPlayer(game, attacker.controller).base.damage > 0;
+      if (luke.deployed) {
+        // Deployed: no cost, and it still does something when the attacker died — the base half
+        // survives it.
+        const canHealUnit = !!stillHere && stillHere.damage > 0;
+        if (canHealUnit || baseDamaged) {
+          const options = [
+            ...(canHealUnit ? [attacker.playId] : []),
+            ...(baseDamaged ? [`player${attacker.controller}.base`] : []),
+          ];
+          return mandatoryTarget("ASH_005_deployed", attacker.controller, options, rest005);
+        }
+      } else if (luke.ready && stillHere && stillHere.damage > 0) {
+        // Front: exhausting is the cost, and the only thing it can heal is the attacker — a dead
+        // or undamaged attacker means no offer at all, so the leader is never spent for nothing.
+        return {
+          type: "ability-option",
+          cardId: "ASH_005",
+          player: attacker.controller,
+          sourcePlayId: attacker.playId,
+          helperText: `Exhaust ${CardTitle("ASH_005")} to heal 1 damage from ${CardTitle(attacker.cardId)}?`,
+          yesLabel: "Exhaust",
+          noLabel: "Skip",
+          onYes: null,
+          continuation: rest005,
+        } satisfies AbilityOptionPending;
+      }
+    }
+  }
+
+  // ASH_013 Ezra Bridger — "When a friendly unit's attack ends: If it dealt 3 or more COMBAT
+  // damage to a base, [you may exhaust this leader. If you do,] give an Advantage token to a
+  // DIFFERENT unit." Overwhelm excess counts (CR 8.7.f); damage a card ability adds to a base
+  // does not, which is why this reads combatBaseDamage rather than the base's damage total.
+  if (combatBaseDamage >= 3) {
+    const ezra = GetLeaderForPlayer(attacker.controller);
+    if (ezra.cardId === "ASH_013" && !LeaderAbilitiesIgnored() && (ezra.deployed || ezra.ready)) {
+      const rest013 = attackerOwnWhenAttackEnds(game, attacker, continuation, defDefeated, excessDamage, baseDamagedPlayer, combatDamagedPlayId, abilitySources);
+      return {
+        type: "ability-option",
+        cardId: "ASH_013",
+        player: attacker.controller,
+        sourcePlayId: attacker.playId,
+        helperText: ezra.deployed
+          ? "Give an Advantage token to a different unit?"
+          : `Exhaust ${CardTitle("ASH_013")} to give an Advantage token to a different unit?`,
+        yesLabel: ezra.deployed ? "Give token" : "Exhaust",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: rest013,
+      } satisfies AbilityOptionPending;
+    }
+  }
+
   // LAW_056 Cassian Andor — "When a friendly unit's attack ends: If the defending unit was
   // defeated, deal 2 damage to a base." A watcher on EVERY friendly attack, his own included, so
   // it is checked here rather than in the attacker's own When-Attack-Ends switch. Unlike Revan
@@ -4800,6 +4903,12 @@ function completePlayCard(
     log.push(`${CardTitle("SHD_198")}: waived the aspect penalty on ${CardTitle(cardId)}.`);
   }
 
+  let sabineShieldedPending = false;
+  // ASH_006 Sabine Wren — "the next unit you play this phase gains Shielded for this phase."
+  // Converted from a player marker into a per-unit grant here, BEFORE the unit enters play, so the
+  // Shielded trigger queued on entry sees it.
+  if (CardType(cardId) === "Unit") sabineShieldedPending = consumeNextPlayMarker(game, player, "ASH_006_next_shielded");
+
   // SEC_110 GNK Power Droid: consume the discount only when a unit is played.
   if (CardType(cardId) === "Unit") consumeNextPlayMarker(game, player, "SEC_110");
 
@@ -4844,6 +4953,15 @@ function completePlayCard(
 
   if (CardType(cardId) === "Unit") {
     const unit = addToArena(game, player, cardId, opts?.enterReady ?? (neelReady || entersPlayReady(cardId, player)));
+    if (sabineShieldedPending) {
+      game.currentEffects.push({
+        cardId: "ASH_006_shielded",
+        duration: "Phase",
+        affectedPlayer: player,
+        targetPlayId: unit.playId,
+      });
+      log.push(`${CardTitle("ASH_006")}: ${CardTitle(cardId)} gains Shielded for this phase.`);
+    }
     log.push(`${CardTitle(cardId) ?? cardId} entered the ${CardArena(cardId) ?? "ground"} arena.`);
     game.roundState.cardsPlayedThisPhase.push({ fromPlayer: player, cardId, playId: unit.playId });
     game.roundState.cardsPlayedThisRound.push({ fromPlayer: player, cardId, playId: unit.playId, playedAs: "Unit" });
@@ -8824,6 +8942,39 @@ function applyAbilityOptionEffect(
       }
       return sweepDeadUnits(game, log, pending.continuation ?? null);
     }
+    case "ASH_017": { // Greef Karga (front) — pay the exhaust, then give the token.
+      const greef017 = GetPlayer(game, pending.player!).leader;
+      if (!greef017.ready) return pending.continuation ?? null;
+      greef017.ready = false;
+      const unit017 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      if (unit017) {
+        GiveAdvantageTokens(game, Unit.FromInterface(unit017), 1, log, "ASH_017");
+      }
+      return pending.continuation ?? null;
+    }
+    case "ASH_005": { // Luke Skywalker (front) — exhaust him, then heal 1 from the attacker.
+      const luke005 = GetPlayer(game, pending.player!).leader;
+      if (!luke005.ready) return pending.continuation ?? null;
+      luke005.ready = false;
+      const healed005 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      if (healed005 && healed005.damage > 0) {
+        healed005.damage -= 1;
+        log.push(`${CardTitle("ASH_005")}: healed 1 damage from ${CardTitle(healed005.cardId)}.`);
+      }
+      return pending.continuation ?? null;
+    }
+    case "ASH_013": { // Ezra Bridger — pay the exhaust (front only), then pick the recipient. The
+                      // offer is made even with no other unit in play, so a fizzle is possible.
+      const ezra013 = GetPlayer(game, pending.player!).leader;
+      if (!ezra013.deployed) {
+        if (!ezra013.ready) return pending.continuation ?? null;
+        ezra013.ready = false;
+        log.push(`${CardTitle("ASH_013")}: exhausted.`);
+      }
+      const others013 = AllUnits().filter(u => u.playId !== pending.sourcePlayId);
+      if (others013.length === 0) return pending.continuation ?? null;
+      return mandatoryTarget("ASH_013", pending.player!, others013.map(u => u.playId), pending.continuation ?? null);
+    }
     case "TWI_080": { // Poggle the Lesser — exhaust him, then create the Battle Droid.
       const poggle080 = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (!poggle080 || !poggle080.ready) return pending.continuation ?? null;
@@ -10547,8 +10698,25 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "ASH_004": // Grand Admiral Thrawn (ASH) — If you control 8 or more resources.
       return p.resources.length >= 8;
+    case "ASH_005": // Luke Skywalker (I Can Save Him) — If you control 7 or more resources.
+    case "ASH_015": // Emperor Palpatine — If you control 7 or more resources.
     case "ASH_008": // Moff Gideon — If you control 7 or more resources.
       return p.resources.length >= 7;
+    case "ASH_010": { // Bo-Katan Kryze — "If the number of resources you control PLUS the number
+                      // of friendly Mandalorian units is 10 or more." The only deploy condition
+                      // that counts anything other than resources, so she can deploy well below 10.
+      const mandalorians = [...p.groundArena, ...p.spaceArena].filter(
+        u => TraitContains(u.cardId, "Mandalorian", player, u.playId),
+      ).length;
+      return p.resources.length + mandalorians >= 10;
+    }
+    case "ASH_011": // Cad Bane (Still Faster than You) — If you control 6 or more resources.
+    case "ASH_017": // Greef Karga — If you control 6 or more resources.
+      return p.resources.length >= 6;
+    case "ASH_006": // Sabine Wren (Bargaining on Belief) — If you control 5 or more resources.
+    case "ASH_007": // Grand Admiral Sloane — If you control 5 or more resources.
+    case "ASH_013": // Ezra Bridger (It's Now or Never) — If you control 5 or more resources.
+      return p.resources.length >= 5;
     case "SEC_009": // Mon Mothma — If you control 5 or more resources.
     case "ASH_001": // The Armorer — If you control 5 or more resources.
     case "HMW_001": // Asajj Ventress — If you control 5 or more resources.
@@ -11561,6 +11729,54 @@ function resolveActionAbility(
       }
       if (!GetHand(player).some(c => CardType(c.cardId) === "Unit")) return null;
       return { type: "play-from-hand", cardId: "ASH_008", player } satisfies PlayFromHandPending;
+    }
+    case "ASH_006": { // Sabine Wren — "An opponent gives 2 Advantage tokens to a unit THEY control.
+                      // If they do, the next unit you play this phase gains Shielded for this
+                      // phase." The opponent picks which of their units receives the tokens.
+      const opponent006 = GetOtherPlayer(player);
+      const theirs006 = GetUnitsForPlayer(opponent006);
+      if (theirs006.length === 0) return null; // nothing for them to give tokens to
+      const pick006 = mandatoryTarget("ASH_006", opponent006, theirs006.map(u => u.playId));
+      // sourcePlayId carries WHOSE next unit gains Shielded — the Sabine player, not the chooser.
+      pick006.sourcePlayId = `player${player}`;
+      return pick006;
+    }
+    case "ASH_007": { // Grand Admiral Sloane — "Choose one: give each GROUND unit Sentinel and
+                      // Overwhelm for this phase, or each SPACE unit."
+      return {
+        type: "choose-one",
+        cardId: "ASH_007",
+        player,
+        options: [
+          { id: "ground", label: "Each ground unit gains Sentinel and Overwhelm" },
+          { id: "space", label: "Each space unit gains Sentinel and Overwhelm" },
+        ],
+        continuation: null,
+      } satisfies ChooseOnePending;
+    }
+    case "ASH_010": { // Bo-Katan Kryze — "If you control a unit in EACH arena, create a Mandalorian
+                      // token." The 2 resources were already paid; the condition just fizzles.
+      const hasBoth010 = NumberOfUnitsInArena(player, "Ground") > 0
+        && NumberOfUnitsInArena(player, "Space") > 0;
+      if (hasBoth010) {
+        CreateMandalorianToken(game, player, log, "ASH_010");
+      } else {
+        log.push(`${CardTitle("ASH_010")}: no unit in each arena — no token created.`);
+      }
+      return null;
+    }
+    case "ASH_011": { // Cad Bane — "Deal 1 damage to a unit with 2 or more remaining HP." Any
+                      // unit, either side, leaders included. Remaining HP is CURRENT HP minus
+                      // damage, so a 1-HP-remaining unit is out of reach.
+      const targets011 = AllUnits().filter(u => UnitRemainingHp(u) >= 2);
+      if (targets011.length === 0) return null; // the exhaust was already paid
+      return mandatoryTarget("ASH_011", player, targets011.map(u => u.playId));
+    }
+    case "ASH_015": { // Emperor Palpatine — "Choose an EXHAUSTED friendly unit. Give an Advantage
+                      // token to it for each OTHER friendly unit."
+      const exhausted015 = GetUnitsForPlayer(player).filter(u => !u.ready);
+      if (exhausted015.length === 0) return null;
+      return mandatoryTarget("ASH_015", player, exhausted015.map(u => u.playId));
     }
     case "ASH_123": { // Lang — Action: deal damage equal to HIS power to a ground unit.
       const ground123 = AllGroundUnits();
@@ -16005,6 +16221,62 @@ function applyAbilityEffect(
       const target127 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target127) {
         GrantKeywordForPhase("ASH_127", Unit.FromInterface(target127), game.gameLog, "Sentinel");
+      }
+      break;
+    }
+    case "ASH_006": { // Sabine Wren — the opponent's chosen unit takes 2 Advantage tokens, and
+                      // "if they do" the SABINE player's next unit this phase gains Shielded.
+      if (!targetPlayId) break;
+      const theirUnit006 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!theirUnit006) break;
+      GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(theirUnit006), 2, game.gameLog, "ASH_006");
+      const sabinePlayer = Number(String(pending.sourcePlayId ?? "").replace("player", "")) as PlayerId;
+      if (sabinePlayer === 1 || sabinePlayer === 2) {
+        game.currentGameState.currentEffects.push({
+          cardId: "ASH_006_next_shielded",
+          duration: "Phase",
+          affectedPlayer: sabinePlayer,
+        });
+        game.gameLog.push(`${CardTitle("ASH_006")}: the next unit player ${sabinePlayer} plays this phase gains Shielded.`);
+      }
+      break;
+    }
+    case "ASH_005_deployed": { // Luke Skywalker (deployed) — heal 2 from the chosen unit or base.
+      const player005 = pending.player!;
+      if (targetPlayId === `player${player005}.base` || targetIsBase) {
+        HealBaseForPlayer(game.currentGameState, player005, 2, game.gameLog, "ASH_005");
+        break;
+      }
+      if (!targetPlayId) break;
+      const unit005 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (unit005) {
+        const before005 = unit005.damage;
+        unit005.damage = Math.max(0, unit005.damage - 2);
+        game.gameLog.push(`${CardTitle("ASH_005")}: healed ${before005 - unit005.damage} damage from ${CardTitle(unit005.cardId)}.`);
+      }
+      break;
+    }
+    case "ASH_013": { // Ezra Bridger — an Advantage token to the chosen different unit.
+      if (!targetPlayId) break;
+      const target013 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target013) {
+        GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(target013), 1, game.gameLog, "ASH_013");
+      }
+      break;
+    }
+    case "ASH_011": { // Cad Bane — deal 1 to the chosen unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "ASH_011", targetPlayId, 1, game.gameLog, pending.player);
+      break;
+    }
+    case "ASH_015": { // Emperor Palpatine — one Advantage token per OTHER friendly unit. The count
+                      // excludes the chosen unit itself, so a lone unit receives nothing.
+      if (!targetPlayId) break;
+      const target015 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target015) break;
+      const others015 = GetUnitsForPlayer(pending.player!).filter(u => u.playId !== targetPlayId).length;
+      if (others015 > 0) {
+        GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(target015), others015, game.gameLog, "ASH_015");
       }
       break;
     }

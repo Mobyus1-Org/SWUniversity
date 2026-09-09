@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 783 cards across 10 sets.**
+**Total: 775 cards across 10 sets.**
 
 ---
 
@@ -746,23 +746,15 @@ SEC_261: Inspiring Senator Unit
 SEC_263: Assassin Probe Unit
 ```
 
-## ASH — Ashes of the Empire (76)
+## ASH — Ashes of the Empire (68)
 
 **Message 1 of 3**
 ```
 ASH:
 ASH_002: Fennec Shand - Ready for War Leader
 ASH_003: Baylan Skoll - Power Beyond Dream Leader
-ASH_005: Luke Skywalker - I Can Save Him Leader
-ASH_006: Sabine Wren - Bargaining on Belief Leader
-ASH_007: Grand Admiral Sloane - Holding the Empire Together Leader
-ASH_010: Bo-Katan Kryze - Reclaiming Mandalore Leader
-ASH_011: Cad Bane - Still Faster than You Leader
 ASH_012: Vane - Quarrelsome Pirate Leader
-ASH_013: Ezra Bridger - It's Now or Never Leader
-ASH_015: Emperor Palpatine - According to My Design Leader
 ASH_016: Shin Hati - Eager Adversary Leader
-ASH_017: Greef Karga - Gracious Magistrate Leader
 ASH_018: Grogu - Charming Companion Leader
 ASH_027: Enoch - Solemn Servant Unit
 ASH_028: Paz Vizsla - For a Brighter Future Unit

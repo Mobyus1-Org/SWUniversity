@@ -3,6 +3,13 @@ import { PlayerId } from "@/lib/engine/core-models";
 
 export function HasShielded(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): boolean
 {
+  // ASH_006 Sabine Wren — "the NEXT unit you play this phase gains Shielded for this phase." The
+  // marker sits on the PLAYER; it is consumed when that unit is played (see completePlayCard), so
+  // by the time this is asked the unit either carries its own per-unit grant or nothing.
+  if (player && playId && GetCurrentEffectsForPlayer(player).some(
+    e => e.cardId === "ASH_006_shielded" && e.targetPlayId === playId,
+  )) return true;
+
   if (player && playId) {
     for(const currentEffect of GetCurrentEffectsForPlayer(player)) {
       if(currentEffect.cardId == "JTL_047_Shielded" && TraitContains(cardId, "Vehicle", player)) return true;//Admiral Yularen - Fleet Coordinator

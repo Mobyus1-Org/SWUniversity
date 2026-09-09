@@ -586,15 +586,23 @@ function selfStatBonus(unit: Unit): number {
  */
 function selfPowerOnlyBonus(unit: Unit): number {
   if (unit.LostAbilities()) return 0;
+  // ASH_010 Bo-Katan Kryze (deployed) — "OTHER friendly Mandalorian units get +1/+0." A power-only
+  // aura from a unit, so it is applied to every Mandalorian rather than listed per card.
+  let bonus = 0;
+  if (TraitContains(unit.cardId, "Mandalorian", unit.controller, unit.playId)) {
+    bonus += GetUnitsForPlayer(unit.controller).filter(
+      u => u.cardId === "ASH_010" && u.playId !== unit.playId && !Unit.FromInterface(u).LostAbilities(),
+    ).length;
+  }
   switch (unit.cardId) {
     // ASH_113 Mandalorian Flagship — "+1/+0 for each OTHER friendly Mandalorian unit."
     case "ASH_113":
-      return GetUnitsForPlayer(unit.controller).filter(
+      return bonus + GetUnitsForPlayer(unit.controller).filter(
         u => u.playId !== unit.playId
           && TraitContains(u.cardId, "Mandalorian", unit.controller, u.playId),
       ).length;
     default:
-      return 0;
+      return bonus;
   }
 }
 
