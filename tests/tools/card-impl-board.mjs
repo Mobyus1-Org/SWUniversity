@@ -4,7 +4,7 @@
  *
  *   node tests/tools/card-impl-board.mjs                    # counts per lane
  *   node tests/tools/card-impl-board.mjs --lane priority    # what's queued, in rank order
- *   node tests/tools/card-impl-board.mjs --lane needs-work  # with the note on each card
+ *   node tests/tools/card-impl-board.mjs --lane todo        # the triaged backlog
  *   node tests/tools/card-impl-board.mjs --set HMW
  *   node tests/tools/card-impl-board.mjs --lane priority --ids      # bare ids, for piping
  *   node tests/tools/card-impl-board.mjs --out /tmp/board.json
@@ -28,7 +28,7 @@ const GENERATED = path.join(REPO_ROOT, "src/server/engine/card-db/generated.ts")
 
 /** Mongoose lower-cases and pluralises the model name — must match CardImplStatusModel. */
 const COLLECTION = "cardimplstatuses";
-const LANES = ["todo", "priority", "needs-work", "done"];
+const LANES = ["not-implemented", "todo", "priority", "done"];
 
 /** Reads the URI without ever echoing it. */
 function connectionString() {
@@ -133,8 +133,8 @@ try {
     for (const r of all) if (counts[r.status] !== undefined) counts[r.status] += 1;
     console.log(`${all.length} stored row(s) in ${COLLECTION}`);
     for (const l of LANES) console.log(`  ${l.padEnd(11)} ${counts[l]}`);
-    console.log("\nCards with no row at all count as To Do — the board derives that lane by");
-    console.log("subtraction, so it will not appear in these numbers.");
+    console.log("\nCards with no row at all count as Not Implemented — the board derives that");
+    console.log("lane by subtraction, so it will not appear in these numbers.");
     if (all.length === 0) {
       console.log("\nCollection is empty. Seed it with: node scripts/seed-card-impl.mjs --push");
     }

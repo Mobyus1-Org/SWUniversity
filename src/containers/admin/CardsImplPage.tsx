@@ -18,30 +18,30 @@ type BoardCard = {
 };
 
 const LANE_LABEL: Record<CardImplLane, string> = {
+  "not-implemented": "Not Implemented",
   todo: "To Do",
   priority: "Priority",
-  "needs-work": "Needs Work",
   done: "Done",
 };
 
-/** Buttons offered on each lane, straight off the spec's control table. */
+/** Buttons offered on each lane — every other lane, since all moves are legal. */
 const LANE_ACTIONS: Record<CardImplLane, CardImplLane[]> = {
-  todo: ["priority", "needs-work", "done"],
-  priority: ["todo", "needs-work", "done"],
-  "needs-work": ["done"],
-  done: ["needs-work"],
+  "not-implemented": ["todo", "priority", "done"],
+  todo: ["not-implemented", "priority", "done"],
+  priority: ["not-implemented", "todo", "done"],
+  done: ["not-implemented", "todo", "priority"],
 };
 
 const LANE_ACCENT: Record<CardImplLane, string> = {
-  todo: "border-white/15",
+  "not-implemented": "border-white/15",
+  todo: "border-sky-400/40",
   priority: "border-amber-400/40",
-  "needs-work": "border-rose-400/40",
   done: "border-emerald-400/40",
 };
 
 /**
- * How many cards each lane renders. To Do opens at ~2400 and Done trends toward it, so neither can
- * be drawn in full; the search box is how you reach a specific card.
+ * How many cards each lane renders. Not Implemented opens at ~2400 and Done trends toward it, so
+ * neither can be drawn in full; the search box is how you reach a specific card.
  */
 const LANE_RENDER_CAP = 60;
 
@@ -105,9 +105,10 @@ export default function CardsImplPage() {
     if (!isLegalTransition(from, to)) return;
 
     let note: string | undefined;
-    if (to === "needs-work") {
-      // A reason captured now is what stops this lane rotting into unexplained cards later.
-      note = window.prompt(`What needs work on ${byId.get(cardId)?.title ?? cardId}?`) ?? undefined;
+    if (to === "priority" && from === "done") {
+      // Sending finished work back is the one move that needs explaining — without a reason the
+      // Priority lane fills with cards nobody remembers the problem with.
+      note = window.prompt(`What is wrong with ${byId.get(cardId)?.title ?? cardId}?`) ?? undefined;
     }
 
     setIsMutating(true);

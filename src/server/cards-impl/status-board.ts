@@ -1,4 +1,4 @@
-export type CardImplLane = "todo" | "priority" | "needs-work" | "done";
+export type CardImplLane = "not-implemented" | "todo" | "priority" | "done";
 
 export type CardImplRow = {
   cardId: string;
@@ -9,20 +9,20 @@ export type CardImplRow = {
   updatedAt: string;
 };
 
-export const CARD_IMPL_LANES: CardImplLane[] = ["todo", "priority", "needs-work", "done"];
+export const CARD_IMPL_LANES: CardImplLane[] = ["not-implemented", "todo", "priority", "done"];
 
 /**
- * Which lanes a card can move to from each lane, per the spec's control table.
+ * Which lanes a card can move to from each lane.
  *
- * Needs Work and Done can only swap with each other — neither routes back to To Do. That is the
- * behaviour as specified; it is also a recorded open question, so change it HERE and the UI and
- * the agent CLI both follow.
+ * Every move is legal. The old table existed to protect the Needs Work lane, which is gone: a card
+ * found to be buggy now goes back to Priority, so Done must be able to route there. Change it HERE
+ * and the UI and the agent CLI both follow.
  */
 const ALLOWED_MOVES: Record<CardImplLane, CardImplLane[]> = {
-  todo: ["priority", "needs-work", "done"],
-  priority: ["todo", "needs-work", "done"],
-  "needs-work": ["done"],
-  done: ["needs-work"],
+  "not-implemented": ["todo", "priority", "done"],
+  todo: ["not-implemented", "priority", "done"],
+  priority: ["not-implemented", "todo", "done"],
+  done: ["not-implemented", "todo", "priority"],
 };
 
 export function isLegalTransition(from: CardImplLane, to: CardImplLane): boolean {
@@ -39,8 +39,9 @@ export function nextPriorityRank(rows: CardImplRow[]): number {
 }
 
 /**
- * Splits the card universe into lanes. A card with no row — or an explicit `todo` row — is To Do,
- * so moving a card back to To Do never requires deleting a document.
+ * Splits the card universe into lanes. A card with no row is NOT IMPLEMENTED — that is the derived
+ * lane, which is how ~2400 untouched cards cost nothing to store. To Do is an explicit lane: a
+ * card only lands there once someone deliberately triages it.
  */
 export function deriveLanes(inScopeIds: string[], rows: CardImplRow[]): Record<CardImplLane, string[]> {
   const inScope = new Set(inScopeIds);
@@ -49,11 +50,15 @@ export function deriveLanes(inScopeIds: string[], rows: CardImplRow[]): Record<C
     if (inScope.has(r.cardId)) byCard.set(r.cardId, r);
   }
 
-  const lanes: Record<CardImplLane, string[]> = { todo: [], priority: [], "needs-work": [], done: [] };
+  const lanes: Record<CardImplLane, string[]> = {
+    "not-implemented": [], todo: [], priority: [], done: [],
+  };
 
   for (const cardId of inScopeIds) {
-    const status = byCard.get(cardId)?.status ?? "todo";
-    lanes[status].push(cardId);
+    const status = byCard.get(cardId)?.status ?? "not-implemented";
+    // A row left over from an older lane (needs-work) reads as not-implemented rather than
+    // throwing, so a stale document can never blank the board.
+    (lanes[status] ?? lanes["not-implemented"]).push(cardId);
   }
 
   // Priority is a ranked lane. A rankless row sorts last but keeps its relative order.

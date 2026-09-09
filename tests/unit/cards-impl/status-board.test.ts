@@ -11,28 +11,39 @@ const row = (cardId: string, status: CardImplRow["status"], extra: Partial<CardI
 const UNIVERSE = ["SOR_001", "SOR_002", "SOR_003", "SOR_004"];
 
 describe("deriveLanes", () => {
-  it("puts every card with no row in To Do", () => {
+  it("puts every card with no row in Not Implemented", () => {
     expect(deriveLanes(UNIVERSE, [])).toEqual({
-      todo: UNIVERSE, priority: [], "needs-work": [], done: [],
+      "not-implemented": UNIVERSE, todo: [], priority: [], done: [],
     });
   });
 
-  it("removes a card from To Do once it has a non-todo row", () => {
+  it("removes a card from Not Implemented once it has a row", () => {
     const lanes = deriveLanes(UNIVERSE, [row("SOR_002", "done")]);
-    expect(lanes.todo).toEqual(["SOR_001", "SOR_003", "SOR_004"]);
+    expect(lanes["not-implemented"]).toEqual(["SOR_001", "SOR_003", "SOR_004"]);
     expect(lanes.done).toEqual(["SOR_002"]);
   });
 
-  it("treats an explicit todo row as equivalent to no row", () => {
-    // Priority -> To Do writes a row rather than deleting one; both must read the same.
-    expect(deriveLanes(UNIVERSE, [row("SOR_002", "todo")]).todo).toEqual(UNIVERSE);
+  it("treats To Do as an EXPLICIT lane, not a synonym for having no row", () => {
+    // This is the whole point of the four-lane split: a card only reaches To Do by being
+    // deliberately triaged there.
+    const lanes = deriveLanes(UNIVERSE, [row("SOR_002", "todo")]);
+    expect(lanes.todo).toEqual(["SOR_002"]);
+    expect(lanes["not-implemented"]).toEqual(["SOR_001", "SOR_003", "SOR_004"]);
+  });
+
+  it("reads a leftover row from a retired lane as Not Implemented rather than dropping the card", () => {
+    // Guards the migration: a stale needs-work document must not blank a column.
+    const stale = { ...row("SOR_002", "done"), status: "needs-work" } as unknown as CardImplRow;
+    const lanes = deriveLanes(UNIVERSE, [stale]);
+    expect(lanes["not-implemented"]).toContain("SOR_002");
+    expect(lanes.done).toEqual([]);
   });
 
   it("ignores a row for a card outside the universe", () => {
     // A retired or mistyped id must not conjure a lane entry.
     const lanes = deriveLanes(UNIVERSE, [row("ASHP_003", "done")]);
     expect(lanes.done).toEqual([]);
-    expect(lanes.todo).toEqual(UNIVERSE);
+    expect(lanes["not-implemented"]).toEqual(UNIVERSE);
   });
 
   it("orders Priority by priorityRank, not by card id", () => {
@@ -70,30 +81,18 @@ describe("nextPriorityRank", () => {
 });
 
 describe("isLegalTransition", () => {
-  // Exactly the table in the spec. Needs Work and Done can only swap with each other; neither
-  // has a route back to To Do. This is a deliberate, recorded open question.
-  it("allows every move out of To Do", () => {
-    expect(isLegalTransition("todo", "priority")).toBe(true);
-    expect(isLegalTransition("todo", "needs-work")).toBe(true);
-    expect(isLegalTransition("todo", "done")).toBe(true);
+  const LANES = ["not-implemented", "todo", "priority", "done"] as const;
+
+  it("allows every move between every pair of lanes", () => {
+    for (const from of LANES) {
+      for (const to of LANES) {
+        expect(isLegalTransition(from, to), `${from} -> ${to}`).toBe(true);
+      }
+    }
   });
 
-  it("allows every move out of Priority", () => {
-    expect(isLegalTransition("priority", "todo")).toBe(true);
-    expect(isLegalTransition("priority", "needs-work")).toBe(true);
-    expect(isLegalTransition("priority", "done")).toBe(true);
-  });
-
-  it("allows only Needs Work -> Done", () => {
-    expect(isLegalTransition("needs-work", "done")).toBe(true);
-    expect(isLegalTransition("needs-work", "todo")).toBe(false);
-    expect(isLegalTransition("needs-work", "priority")).toBe(false);
-  });
-
-  it("allows only Done -> Needs Work", () => {
-    expect(isLegalTransition("done", "needs-work")).toBe(true);
-    expect(isLegalTransition("done", "todo")).toBe(false);
-    expect(isLegalTransition("done", "priority")).toBe(false);
+  it("specifically allows Done -> Priority, the route a buggy card takes back", () => {
+    expect(isLegalTransition("done", "priority")).toBe(true);
   });
 
   it("treats a no-op move as legal", () => {

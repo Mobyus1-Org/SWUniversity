@@ -5,7 +5,7 @@
  *   node tests/tools/card-impl.mjs --list
  *   node tests/tools/card-impl.mjs --list --status needs-work
  *   node tests/tools/card-impl.mjs --card HMW_035 --status done
- *   node tests/tools/card-impl.mjs --card SOR_042 --status needs-work --note "On Attack fires twice"
+ *   node tests/tools/card-impl.mjs --card SOR_042 --status priority --note "On Attack fires twice"
  *
  * This is the ONLY write tool in this directory, and it is deliberately not a database client:
  * it talks to the app over HTTP as an admin and never opens a Mongo connection or reads
@@ -18,7 +18,7 @@
  * Must be run from the repo root.
  */
 
-const VALID = ["todo", "priority", "needs-work", "done"];
+const VALID = ["not-implemented", "todo", "priority", "done"];
 
 function argValue(flag) {
   const i = process.argv.indexOf(flag);
@@ -55,9 +55,9 @@ async function main() {
     const rows = filter ? statuses.filter((s) => s.status === filter) : statuses;
 
     const counts = statuses.reduce((acc, s) => ({ ...acc, [s.status]: (acc[s.status] ?? 0) + 1 }), {});
-    const todo = cards.length - statuses.filter((s) => s.status !== "todo").length;
+    const notImpl = cards.length - statuses.length;
     console.log(`${cards.length} cards in scope`);
-    console.log(`  todo ${todo}` + VALID.slice(1).map((l) => `  ${l} ${counts[l] ?? 0}`).join(""));
+    console.log(`  not-implemented ${notImpl}` + VALID.slice(1).map((l) => `  ${l} ${counts[l] ?? 0}`).join(""));
     if (rows.length > 0) console.log("");
     for (const s of rows.sort((a, b) => a.cardId.localeCompare(b.cardId))) {
       console.log(`  ${s.cardId.padEnd(10)} ${s.status.padEnd(11)} ${s.note ?? ""}`);
@@ -70,7 +70,7 @@ async function main() {
   const note = argValue("--note");
 
   if (!card || !status) {
-    die("Usage: --card SET_NNN --status todo|priority|needs-work|done [--note '...']\n"
+    die("Usage: --card SET_NNN --status not-implemented|todo|priority|done [--note '...']\n"
       + "       --list [--status <lane>]");
   }
   if (!VALID.includes(status)) {

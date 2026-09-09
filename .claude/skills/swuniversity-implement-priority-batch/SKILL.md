@@ -44,7 +44,9 @@ admin UI — the batch never depends on a write path being available.
    `SET_NNN`**, so the summary's `- Card Title (SET) Type` lines are directly actionable — no
    separate list of ids needed.
 
-5. **Add a `Needs Work:` section for anything unfinished. REQUIRED whenever a card did not land.**
+5. **Add a `Needs Work:` section to the SUMMARY for anything unfinished. REQUIRED whenever a card
+   did not land.** (This is a heading in the Discord summary, not a board lane — such a card stays
+   in Priority so it is picked up again.)
    The standard summary format has no slot for failure, so a card that stalled would otherwise
    vanish from the report entirely — and from the board, since it stays in Priority looking
    untouched.
@@ -62,17 +64,17 @@ admin UI — the batch never depends on a write path being available.
 
    ```bash
    node tests/tools/card-impl.mjs --card <ID> --status done
-   node tests/tools/card-impl.mjs --card <ID> --status needs-work --note "<what is wrong>"
+   node tests/tools/card-impl.mjs --card <ID> --status priority --note "<what is wrong>"
    ```
 
 ## Lane rules the engine enforces
 
-Priority can move to **To Do, Needs Work, or Done**. Needs Work and Done can only swap with each
-other — neither routes back to To Do. A card wrongly sent to Needs Work is stuck between those
-two, so read the card before moving it.
+The lanes are **Not Implemented → To Do → Priority → Done**, and every move between them is legal.
+Not Implemented is DERIVED: a card with no database row is in it, which is why the stored counts
+never add up to the card total.
 
-The rules live in `src/server/cards-impl/status-board.ts`; the API rejects an illegal move, so a
-failed write is a signal to re-read, not to retry.
+A card that turns out to be buggy goes back to **Priority** with a note — there is no separate
+"needs work" lane. The rules live in `src/server/cards-impl/status-board.ts`.
 
 ## Common mistakes
 
@@ -82,7 +84,7 @@ failed write is a signal to re-read, not to retry.
 | Omitting a card that went badly | Silence reads as "never started". An unfinished card needs a `Needs Work:` line naming what blocked it |
 | Assuming the lane emptied itself | You do not move cards. Priority still shows them until the user flips them |
 | Marking `done` because tests pass | `implement-swu-card` is the gate. Green tests on a half-wired card are still half-wired — see the KNOWN_GAPS list in `tests/unit/engine/ability-registry-consistency.test.ts` |
-| `needs-work` with no note | The lane fills with cards nobody remembers the problem with |
+| Sending a card back to Priority with no note | The queue fills with cards nobody remembers the problem with |
 | Reading the queue alphabetically | Priority is RANKED; `--lane priority` prints it in rank order for a reason |
 | Editing the collection directly | Writes go through `card-impl.mjs` and the admin endpoint. `card-impl-board.mjs` is read-only — see rule 1 in `tests/tools/README.md` |
 

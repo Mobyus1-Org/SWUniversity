@@ -119,25 +119,24 @@ nothing reaches the engine until `generated.ts` is regenerated.
 
 ### `card-impl.mjs` — move a card on the implementation board
 
-The board at `/admin/cards-impl` tracks which cards are implemented (To Do / Priority / Needs Work
-/ Done). This is how an agent updates it while working through a set, so the board stays honest
-without anyone remembering to drag cards afterwards.
+The board at `/admin/cards-impl` tracks which cards are implemented (Not Implemented / To Do /
+Priority / Done). This is how an agent updates it while working through a set, so the board stays
+honest without anyone remembering to drag cards afterwards.
 
 ```bash
 export CARD_IMPL_COOKIE='session=...'          # an ADMIN session cookie, from devtools
 node tests/tools/card-impl.mjs --list
-node tests/tools/card-impl.mjs --list --status needs-work
+node tests/tools/card-impl.mjs --list --status priority
 node tests/tools/card-impl.mjs --card HMW_035 --status done
-node tests/tools/card-impl.mjs --card SOR_042 --status needs-work --note "On Attack fires twice"
+node tests/tools/card-impl.mjs --card SOR_042 --status priority --note "On Attack fires twice"
 ```
 
 **This is the only write tool here** — see rule 1 for why it is allowed and what shape a future
 one must take. It needs a running server (`npm run dev`, or `--base https://…` for another host).
 
-Lane moves are validated server-side: Needs Work and Done can only swap with each other, so a
-card cannot be sent back to To Do from either. That is deliberate, and it is a recorded open
-question in the design doc — if it changes, it changes in `src/server/cards-impl/status-board.ts`
-and both the UI and this tool follow.
+Every lane move is legal, including Done back to Priority — that is how a card found to be buggy
+re-enters the queue, and it replaced the old Needs Work lane. The table lives in
+`src/server/cards-impl/status-board.ts`; the UI and this tool both follow it.
 
 Mark a card **as you finish it**, not in a batch at the end — a run that dies halfway then leaves
 the board describing what actually happened.
@@ -150,13 +149,13 @@ this needs no dev server and no cookie, so it is the cheap way to see what is qu
 ```bash
 node tests/tools/card-impl-board.mjs                    # counts per lane
 node tests/tools/card-impl-board.mjs --lane priority    # in RANK order, not alphabetical
-node tests/tools/card-impl-board.mjs --lane needs-work  # shows the note on each card
+node tests/tools/card-impl-board.mjs --lane todo        # the triaged backlog
 node tests/tools/card-impl-board.mjs --set HMW --ids    # bare ids, for piping
 ```
 
-Only cards that have been MOVED have a row. To Do is the absence of one, so it never appears in
-the counts — a nearly-empty collection means almost nothing has been triaged, not that there is
-nothing to do.
+Only cards that have been MOVED have a row. **Not Implemented is the absence of one**, so it never
+appears in the counts — a nearly-empty collection means almost nothing has been triaged, not that
+there is nothing to do.
 
 Seed it from the code with `node scripts/seed-card-impl.mjs` (dry run by default; `--out` for JSON,
 `--push` to write). That script derives "done" the same way `cards-remaining.md` documents.

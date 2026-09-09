@@ -9,13 +9,23 @@ describe("validateStatusUpdate", () => {
     expect(result).toEqual({ ok: true, value: { cardId: "SOR_095", status: "done" } });
   });
 
-  it("keeps a note on a needs-work update", () => {
+  it("keeps a note when a card is sent back to Priority", () => {
     const result = validateStatusUpdate(
-      { cardId: "SOR_095", status: "needs-work", note: "On Attack fires twice" }, inScope);
+      { cardId: "SOR_095", status: "priority", note: "On Attack fires twice" }, inScope);
     expect(result).toEqual({
       ok: true,
-      value: { cardId: "SOR_095", status: "needs-work", note: "On Attack fires twice" },
+      value: { cardId: "SOR_095", status: "priority", note: "On Attack fires twice" },
     });
+  });
+
+  it("rejects the retired needs-work status", () => {
+    const result = validateStatusUpdate({ cardId: "SOR_095", status: "needs-work" }, inScope);
+    expect(result).toEqual({ ok: false, error: "Unknown status: needs-work" });
+  });
+
+  it("accepts the new not-implemented status", () => {
+    const result = validateStatusUpdate({ cardId: "SOR_095", status: "not-implemented" }, inScope);
+    expect(result).toEqual({ ok: true, value: { cardId: "SOR_095", status: "not-implemented" } });
   });
 
   it("rejects a card outside the universe", () => {
