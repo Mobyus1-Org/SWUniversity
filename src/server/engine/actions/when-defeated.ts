@@ -16,6 +16,29 @@ export function resolveWhenDefeated(
   player: PlayerId,
   causedByCombatDamage: boolean = false,
 ): PendingResolution | null {
+  // TWI_103 Pyrrhic Assault: "For this phase, each friendly unit gains 'When Defeated: Deal 2
+  // damage to an enemy unit.'" A granted trigger, so it is checked ahead of the unit's own printed
+  // When Defeated and chains that ability on as its continuation.
+  const gamePyrrhic = GetGame();
+  const pyrrhicActive = gamePyrrhic?.currentGameState.currentEffects.some(
+    e => e.cardId === "TWI_103" && e.affectedPlayer === player,
+  ) ?? false;
+  if (pyrrhicActive) {
+    const enemies103 = GetUnitsForPlayer(player === 1 ? 2 : 1);
+    if (enemies103.length > 0) {
+      const own = resolveWhenDefeatedInner(unit, player, causedByCombatDamage);
+      return mandatoryTarget("TWI_103", player, enemies103.map(u => u.playId), own);
+    }
+  }
+
+  return resolveWhenDefeatedInner(unit, player, causedByCombatDamage);
+}
+
+function resolveWhenDefeatedInner(
+  unit: Unit,
+  player: PlayerId,
+  causedByCombatDamage: boolean = false,
+): PendingResolution | null {
   // TWI_218 Droid Cohort: attached unit gains "When Defeated: Create a Battle Droid token."
   const droidCohortCount = unit.upgrades.filter(u => u.cardId === "TWI_218").length;
   if (droidCohortCount > 0) {

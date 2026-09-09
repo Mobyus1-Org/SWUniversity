@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 816 cards across 10 sets.**
+**Total: 799 cards across 10 sets.**
 
 ---
 
@@ -23,7 +23,7 @@ SOR_019: Security Complex Base
 SOR_238: C-3PO - Protocol Droid Unit
 ```
 
-## SHD — Shadows of the Galaxy (63)
+## SHD — Shadows of the Galaxy (57)
 
 **Message 1 of 2**
 ```
@@ -62,7 +62,6 @@ SHD_145: Headhunting Event
 SHD:
 SHD_156: Cripple Authority Event
 SHD_157: Bo-Katan Kryze - Fighting For Mandalore Unit
-SHD_159: The Chaos of War Event
 SHD_163: Migs Mayfeld - Triggerman Unit
 SHD_170: IG-11 - I Cannot Be Captured Unit
 SHD_180: Detention Block Rescue Event
@@ -75,14 +74,10 @@ SHD_198: Omega - Part of the Squad Unit
 SHD_199: Coruscant Dissident Unit
 SHD_202: Qi'ra - Playing Her Part Unit
 SHD_205: Let the Wookiee Win Event
-SHD_206: Spare the Target Event
-SHD_207: A New Adventure Event
-SHD_208: Final Showdown Event
 SHD_209: Criminal Muscle Unit
 SHD_227: Look the Other Way Event
 SHD_228: Bounty Posting Event
 SHD_232: Relentless Pursuit Event
-SHD_233: Evacuate Event
 SHD_234: Incinerator Trooper Unit
 SHD_239: Toro Calican - Ambitious Upstart Unit
 SHD_241: Kragan Gorr - Warbird Captain Unit
@@ -92,13 +87,12 @@ SHD_245: Greef Karga - Affable Commissioner Unit
 SHD_246: Grey Squadron Y-Wing Unit
 SHD_253: This Is The Way Event
 SHD_254: Bounty Guild Initiate Unit
-SHD_255: Lady Proxima - White Worm Matriarch Unit
 SHD_258: Mandalorian Warrior Unit
 SHD_260: Street Gang Recruiter Unit
 SHD_262: Confiscate Event
 ```
 
-## TWI — Twilight of the Republic (79)
+## TWI — Twilight of the Republic (68)
 
 **Message 1 of 3**
 ```
@@ -109,10 +103,8 @@ TWI_025: Shadow Collective Camp Base
 TWI_028: Petranaki Arena Base
 TWI_034: General Grievous - Trophy Collector Unit
 TWI_040: A Fine Addition Event
-TWI_041: Lethal Crackdown Event
 TWI_042: Barriss Offee - Unassuming Apprentice Unit
 TWI_047: Satine Kryze - Committed to Peace Unit
-TWI_048: Obi-Wan's Aethersprite - This is Why I Hate Flying Unit
 TWI_049: Knight of the Republic Unit
 TWI_052: Hello There Event
 TWI_053: Finn - On the Run Unit
@@ -121,10 +113,8 @@ TWI_059: Royal Guard Attaché Unit
 TWI_060: Trade Federation Shuttle Unit
 TWI_067: The Zillo Beast - Awoken From The Depths Unit
 TWI_068: Foresight Upgrade
-TWI_069: Roger Roger Upgrade
 TWI_072: I Have the High Ground Event
 TWI_076: Death by Droids Event
-TWI_080: Poggle the Lesser - Archduke of the Stalgasin Hive Unit
 TWI_082: MagnaGuard Wing Leader Unit
 TWI_083: General's Guardian Unit
 TWI_085: Kalani - Analytical General Unit
@@ -133,9 +123,7 @@ TWI_089: Consolidation of Power Event
 TWI_100: Petition the Senate Event
 TWI_101: Mas Amedda - Vice Chair Unit
 TWI_102: Manufactured Soldiers Event
-TWI_103: Pyrrhic Assault Event
 TWI_107: Patrolling V-Wing Unit
-TWI_110: Huyang - Enduring Instructor Unit
 TWI_120: Strategic Acumen Upgrade
 TWI_123: Outflank Event
 ```
@@ -147,15 +135,10 @@ TWI_124: Tactical Advantage Event
 TWI_125: The Clone Wars Event
 TWI_127: Resupply Event
 TWI_135: Darth Maul - Revenge At Last Unit
-TWI_139: Corner the Prey Event
 TWI_146: Steela Gerrera - Beloved Tactician Unit
 TWI_151: Resolute - Under Anakin's Command Unit
-TWI_153: Bold Resistance Event
-TWI_154: Mister Bones - I Performed Violence Unit
-TWI_156: Unlimited Power Event
 TWI_168: Old Access Codes Upgrade
 TWI_175: Strategic Analysis Event
-TWI_176: Caught in the Crossfire Event
 TWI_177: Guerilla Insurgency Event
 TWI_179: Soulless One - Customized for Grievous Unit
 TWI_181: Elite P-38 Starfighter Unit

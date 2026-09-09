@@ -201,6 +201,14 @@ export class Unit implements UnitInterface {
         case PHASE_STAT_MOD: // generic +X/+X or –X/–X for this phase
           power += currentEffect.value ?? 0;
           break;
+        // TWI_110 Huyang — "While THIS UNIT is in play, the chosen unit gets +2/+2." The grant is
+        // conditional on Huyang still being around, so the effect is re-checked here rather than
+        // being torn down when he leaves.
+        case "TWI_110":
+          power += GetUnitsForPlayer(this.controller).some(
+            u => u.cardId === "TWI_110" && !Unit.FromInterface(u).LostAbilities(),
+          ) ? 2 : 0;
+          break;
         case POWER_MOD: // generic +X/+0 or –X/–0 (HP untouched — see TotalHP, which ignores it)
           power += currentEffect.value ?? 0;
           break;
@@ -455,6 +463,11 @@ export class Unit implements UnitInterface {
       if (effect.targetPlayId && effect.targetPlayId !== this.playId) continue;
       switch (effect.cardId) {
         case PHASE_STAT_MOD: hp += effect.value ?? 0; break; // generic +X/+X or –X/–X for this phase
+        case "TWI_110": // Huyang — the HP half of his +2/+2, gated on him still being in play.
+          hp += GetUnitsForPlayer(this.controller).some(
+            u => u.cardId === "TWI_110" && !Unit.FromInterface(u).LostAbilities(),
+          ) ? 2 : 0;
+          break;
         case HP_MOD: hp += effect.value ?? 0; break; // generic +0/+X or –0/–X (power untouched)
         case "SOR_106_3": hp += 3; break; // Attack Pattern Delta
         case "SOR_106_2": hp += 2; break;

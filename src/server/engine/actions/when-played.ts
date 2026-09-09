@@ -1053,6 +1053,120 @@ export function resolveWhenPlayed(
       return optionalTarget("TWI_031", player, targets031.map(u => u.playId),
         "Give a unit –1/–1 for this phase?", { yesLabel: "Give –1/–1" });
     }
+    case "TWI_048": // Obi-Wan's Aethersprite — the When Played half of its shared ability.
+      return buildAethersprite(player, playId ?? "", null);
+    case "TWI_103": { // Pyrrhic Assault — "For this phase, each friendly unit gains: 'When
+                      // Defeated: Deal 2 damage to an enemy unit.'" One phase-long marker on the
+                      // PLAYER, so units played later this phase are covered too.
+      game.currentGameState.currentEffects.push({
+        cardId: "TWI_103",
+        duration: "Phase",
+        affectedPlayer: player,
+      });
+      game.gameLog.push(`${CardTitle("TWI_103")}: your units gain "When Defeated: Deal 2 damage to an enemy unit" this phase.`);
+      return null;
+    }
+    case "TWI_110": { // Huyang — "When Played: Choose ANOTHER friendly unit. While this unit is in
+                      // play, the chosen unit gets +2/+2."
+      const others110 = GetUnitsForPlayer(player).filter(u => u.playId !== playId);
+      if (others110.length === 0) return null;
+      return mandatoryTarget("TWI_110", player, others110.map(u => u.playId));
+    }
+    case "TWI_139": { // Corner the Prey — "Attack with a unit." Only a unit that can actually
+                      // attack is offered; the damage-scaled buff is applied once the defender is
+                      // known, inside the attack itself.
+      const attackers139 = GetUnitsForPlayer(player, true).filter(u => CanUnitAttack(u));
+      if (attackers139.length === 0) return null;
+      return mandatoryTarget("TWI_139", player, attackers139.map(u => u.playId));
+    }
+    case "SHD_208": { // Final Showdown — "Ready each unit you control. At the start of the regroup
+                      // phase, you lose the game." Both halves are automatic.
+      for (const u of GetUnitsForPlayer(player)) {
+        const unit208 = GetUnitByPlayId(game.currentGameState, u.playId);
+        if (unit208) unit208.ready = true;
+      }
+      game.currentGameState.currentEffects.push({
+        cardId: "SHD_208_lose",
+        duration: "Permanent",
+        affectedPlayer: player,
+      });
+      game.gameLog.push(`${CardTitle("SHD_208")}: readied each unit; player ${player} loses at the start of the regroup phase.`);
+      return null;
+    }
+    case "TWI_153": { // Bold Resistance — "Choose UP TO 3 units that share the same Trait. Each of
+                      // those units gets +2/+0 for this phase." The shared-trait rule is validated
+                      // at resolution, where the whole selection is known.
+      const targets153 = AllUnits();
+      if (targets153.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "TWI_153",
+        player,
+        fromPlayIds: targets153.map(u => u.playId),
+        needsMultiple: true,
+        maxTargets: 3,
+        continuation: null,
+      };
+    }
+    case "TWI_156": { // Unlimited Power — "Deal 4 damage to a unit, 3 to a second, 2 to a third and
+                      // 1 to a fourth." Picked one at a time; each amount fizzles if no unit is
+                      // left to take it.
+      const targets156 = AllUnits();
+      if (targets156.length === 0) return null;
+      return mandatoryTarget("TWI_156_4", player, targets156.map(u => u.playId));
+    }
+    case "TWI_176": { // Caught in the Crossfire — "Choose 2 ENEMY units in the SAME arena. Each of
+                      // those units deals damage equal to its power to the other." Only an arena
+                      // holding 2+ enemy units can supply a legal pair, so the first pick is
+                      // filtered to those arenas rather than to every enemy unit.
+      const enemy176 = GetUnitsForPlayer(GetOtherPlayer(player));
+      const eligible176 = enemy176.filter(u => {
+        const arena = CardArena(u.cardId) ?? "Ground";
+        return enemy176.filter(o => (CardArena(o.cardId) ?? "Ground") === arena).length >= 2;
+      });
+      if (eligible176.length < 2) return null;
+      return mandatoryTarget("TWI_176_first", player, eligible176.map(u => u.playId));
+    }
+    case "SHD_206": { // Spare the Target — "Return an ENEMY non-leader unit to its owner's hand.
+                      // Collect that unit's Bounties." Enemy units only, both arenas.
+      const enemies206 = GetUnitsForPlayer(GetOtherPlayer(player)).filter(u => !CardIsLeader(u.cardId));
+      if (enemies206.length === 0) return null;
+      return mandatoryTarget("SHD_206", player, enemies206.map(u => u.playId));
+    }
+    case "SHD_207": { // A New Adventure — "Return a non-leader unit that costs 6 or less to its
+                      // owner's hand. Then, ITS OWNER may play it for free." Either side's units.
+      const targets207 = AllUnits().filter(
+        u => !CardIsLeader(u.cardId) && (CardCost(u.cardId) ?? 0) <= 6,
+      );
+      if (targets207.length === 0) return null;
+      return mandatoryTarget("SHD_207", player, targets207.map(u => u.playId));
+    }
+    case "SHD_159": { // The Chaos of War — "Deal damage to each player's base equal to the number
+                      // of cards in that player's hand." Hand sizes are read HERE, after this event
+                      // has already left its caster's hand, so the caster does not count it.
+      for (const p159 of [1, 2] as const) {
+        const cards159 = GetHand(p159).length;
+        if (cards159 > 0) {
+          DealDamageToBase(game.currentGameState, p159, cards159, player);
+          game.gameLog.push(`${CardTitle("SHD_159")}: dealt ${cards159} damage to player ${p159}'s base.`);
+        }
+      }
+      return null;
+    }
+    case "TWI_041": { // Lethal Crackdown — "Defeat a non-leader unit. Deal damage to YOUR base
+                      // equal to that unit's power." Either player's non-leader unit is a target;
+                      // the base damage always lands on the caster.
+      const targets041 = AllUnits().filter(u => !CardIsLeader(u.cardId));
+      if (targets041.length === 0) return null;
+      return mandatoryTarget("TWI_041", player, targets041.map(u => u.playId));
+    }
+    case "SHD_233": { // Evacuate — "Return each non-leader unit to its owner's hand." Both sides,
+                      // both arenas; deployed leaders stay put. playIds are collected before any
+                      // bounce so the list cannot shift underneath the loop.
+      // The bounce itself runs in completePlayCard, which owns the leave-play cleanup (captives,
+      // stolen resources, upgrades) that a hand-rolled splice here would skip.
+      return null;
+    }
     case "TWI_140": { // Self-Destruct — "Defeat a friendly unit. If you do, deal 4 damage to a
                       // unit." The defeat is a prerequisite: with no friendly unit the whole card
                       // does nothing, so it is not offered at all.
@@ -3541,6 +3655,39 @@ export function buildTraskWalkerChoice(
     player,
     maxCount: 1,
     eligiblePlayIds: eligible.map(c => c.playId),
+    continuation,
+  };
+}
+
+/**
+ * TWI_048 Obi-Wan's Aethersprite — "When Played/On Attack: You may deal 1 damage to this unit and
+ * 2 damage to another SPACE unit." One builder for both triggers. The self-damage is part of the
+ * same "may", so declining spares the Aethersprite too, and with no other space unit in play there
+ * is nothing to offer at all.
+ */
+export function buildAethersprite(
+  player: PlayerId,
+  selfPlayId: string,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const others = AllSpaceUnits().filter(u => u.playId !== selfPlayId);
+  if (others.length === 0) return continuation;
+  return {
+    type: "ability-option",
+    cardId: "TWI_048",
+    player,
+    sourcePlayId: selfPlayId,
+    helperText: "Deal 1 damage to this unit and 2 damage to another space unit?",
+    yesLabel: "Deal damage",
+    noLabel: "Skip",
+    onYes: {
+      type: "ability-target",
+      cardId: "TWI_048",
+      player,
+      sourcePlayId: selfPlayId,
+      fromPlayIds: others.map(u => u.playId),
+      continuation,
+    },
     continuation,
   };
 }

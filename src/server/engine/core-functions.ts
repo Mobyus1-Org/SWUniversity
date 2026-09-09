@@ -1594,6 +1594,9 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "TWI_034": //General Grievous (Trophy Collector) — On Attack: 4+ Lightsabers, defeat 4 enemy units
+    case "TWI_048": //Obi-Wan's Aethersprite — On Attack: 1 to self, 2 to another space unit
+    case "TWI_154": //Mister Bones — On Attack: with an empty hand, may deal 3 to a ground unit
     case "TWI_147": //Anakin Skywalker (Maverick Mentor) — Coordinate-gated On Attack draw
     case "TWI_063": //Vulture Interceptor Wing — On Attack: give an enemy unit -1/-1
     case "TWI_084": //Kraken — On Attack: buff each friendly token unit

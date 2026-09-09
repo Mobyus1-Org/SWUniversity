@@ -366,6 +366,7 @@ export const Cards = {
       seventhSister: "SOR_133",
     },
     shd: {
+      ladyProxima: "SHD_255",
       frontierTrader: "SHD_214", // 2/2 Ground Fringe/Jawa, cost 3
       superlaserTechnician: "SHD_085",
       echoRestored: "SHD_099",
@@ -501,6 +502,12 @@ export const Cards = {
       awakenedSpecters: "LOF_066", // 4/5 Ground Night — no card text, a plain Night body
     },
     twi: {
+      generalGrievousTrophyCollector: "TWI_034",
+      obiWansAethersprite: "TWI_048",
+      poggleTheLesser: "TWI_080",
+      huyang: "TWI_110",
+      darthMaulRevengeAtLast: "TWI_135",
+      misterBones: "TWI_154",
       runeHaako: "TWI_031",
       wartimeTradeOfficial: "TWI_032",
       padawanStarfighter: "TWI_058",
@@ -806,6 +813,7 @@ export const Cards = {
       theWayOfTheMandalor: "ASH_263",
     },
     twi: {
+      rogerRoger: "TWI_069",
       perilousPosition: "TWI_070",   // -2/-2, no attach restriction
       twiceThePride: "TWI_155",      // +4/+0
       maceWindusLightsaber: "TWI_152",
@@ -828,6 +836,11 @@ export const Cards = {
   },
   events: {
     shd: {
+      theChaosOfWar: "SHD_159",
+      spareTheTarget: "SHD_206",
+      aNewAdventure: "SHD_207",
+      finalShowdown: "SHD_208",
+      evacuate: "SHD_233",
       timelyIntervention: "SHD_129",
       chooseSides: "SHD_132",
       midnightRepairs: "SHD_054",
@@ -902,6 +915,12 @@ export const Cards = {
       cunning: "SOR_203",
     },
     twi: {
+      lethalCrackdown: "TWI_041",
+      pyrrhicAssault: "TWI_103",
+      cornerThePrey: "TWI_139",
+      boldResistance: "TWI_153",
+      unlimitedPower: "TWI_156",
+      caughtInTheCrossfire: "TWI_176",
       grievousReassembly: "TWI_073",
       disruptiveBurst: "TWI_075",
       encouragingLeadership: "TWI_126",

@@ -9,7 +9,7 @@ import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens, GiveExperienceTokens, CreateSpy } from "@/server/engine/token-helpers";
-import { jabbasRancorDamage, buildTraskWalkerChoice } from "@/server/engine/actions/when-played";
+import { jabbasRancorDamage, buildTraskWalkerChoice, buildAethersprite } from "@/server/engine/actions/when-played";
 
 /**
  * On Attack abilities — called after the attack target is chosen.
@@ -1273,6 +1273,35 @@ function resolveInnateOnAttack(
       return searchDeck("SOR_236", attacker.controller, 1, "scry", { continuation }) ?? continuation;
     case "SOR_040": { // Avenger On Attack — opponent chooses a non-leader unit they control to defeat.
       return chooseAndDefeatUnit("SOR_040", attacker.controller, false, continuation);
+    }
+    case "TWI_034": { // General Grievous (Trophy Collector) — "On Attack: If this unit has 4 or
+                      // more Lightsaber upgrades attached to him, defeat 4 enemy units." Offered
+                      // as a pick-up-to-4; with 4 or fewer enemies the player simply takes them
+                      // all, which is the same outcome as "defeat 4" on a smaller board.
+      const sabers034 = attacker.upgrades.filter(u => TraitContains(u.cardId, "Lightsaber")).length;
+      if (sabers034 < 4) return continuation;
+      const enemies034 = GetUnitsForPlayer(attacker.controller === 1 ? 2 : 1);
+      if (enemies034.length === 0) return continuation;
+      return {
+        type: "ability-target",
+        cardId: "TWI_034",
+        player: attacker.controller,
+        fromPlayIds: enemies034.map(u => u.playId),
+        needsMultiple: true,
+        maxTargets: 4,
+        continuation,
+      };
+    }
+    case "TWI_154": { // Mister Bones — "On Attack: If you have no cards in your hand, you may deal
+                      // 3 damage to a ground unit." Any ground unit, either side.
+      if (GetHand(attacker.controller).length > 0) return continuation;
+      const ground154 = AllGroundUnits();
+      if (ground154.length === 0) return continuation;
+      return optionalTarget("TWI_154", attacker.controller, ground154.map(u => u.playId),
+        "Deal 3 damage to a ground unit?", { yesLabel: "Deal 3", continuation });
+    }
+    case "TWI_048": { // Obi-Wan's Aethersprite — the On Attack half of its shared ability.
+      return buildAethersprite(attacker.controller, attacker.playId, continuation);
     }
     case "TWI_147": { // Anakin Skywalker (Maverick Mentor) — "Coordinate — On Attack: Draw a
                       // card." Coordinate turns on at 3+ friendly units; re-checked here because

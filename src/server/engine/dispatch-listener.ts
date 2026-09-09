@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -918,6 +918,25 @@ function upgradeLeavesPlay(game: GameState, upgrade: CardInPlay, log: string[]):
   if (IsTokenUpgrade(upgrade.cardId)) {
     log.push(`${CardTitle(upgrade.cardId)} token set aside.`);
     return;
+  }
+
+  // TWI_069 Roger Roger — "When Defeated: Attach this upgrade to a friendly Battle Droid token."
+  // It never reaches the discard while a token is available to take it, so this sits ahead of the
+  // discard below. Its own host has already been removed by the time this runs, so any remaining
+  // Battle Droid token is by definition a different one.
+  if (upgrade.cardId === "TWI_069") {
+    const droid069 = [...GetPlayer(game, owner).groundArena, ...GetPlayer(game, owner).spaceArena]
+      .find(u => u.cardId === "TWI_T01" || u.cardId === "TS26_T01");
+    if (droid069) {
+      droid069.upgrades.push({
+        cardId: "TWI_069",
+        playId: String(game.nextPlayId++),
+        owner,
+        controller: owner,
+      });
+      log.push(`${CardTitle("TWI_069")}: re-attached to ${CardTitle(droid069.cardId)}.`);
+      return;
+    }
   }
 
   GetPlayer(game, owner).discard.unshift({
@@ -1931,6 +1950,38 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
           yesLabel: "Use the Force",
           noLabel: "Skip",
           onYes: null,
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
+      case "TWI_080": { // Poggle the Lesser — "You may exhaust this unit. If you do, create a
+                        // Battle Droid token." The exhaust is paid in the Yes branch.
+        return {
+          type: "ability-option",
+          cardId: "TWI_080",
+          player: trigger.fromPlayer,
+          sourcePlayId: trigger.playId,
+          helperText: `Exhaust ${CardTitle("TWI_080")} to create a Battle Droid token?`,
+          yesLabel: "Exhaust",
+          noLabel: "Skip",
+          onYes: null,
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
+      case "SHD_255": { // Lady Proxima — "You may deal 1 damage to a base." Either base is legal.
+        return {
+          type: "ability-option",
+          cardId: "SHD_255",
+          player: trigger.fromPlayer,
+          helperText: "Deal 1 damage to a base?",
+          yesLabel: "Deal 1",
+          noLabel: "Skip",
+          onYes: {
+            type: "ability-target",
+            cardId: "SHD_255",
+            player: trigger.fromPlayer,
+            fromPlayIds: ["player1.base", "player2.base"],
+            continuation: null,
+          },
           continuation: null,
         } satisfies AbilityOptionPending;
       }
@@ -2982,14 +3033,20 @@ function resolveAttack(
     // runs over every ability source the attacker has for this attack.
     const damagedDefenderBonus = defender.IsDamaged()
       && AttackAbilityCardIds(Unit.FromInterface(attacker)).includes("ASH_241") ? 2 : 0;
+    // TWI_139 Corner the Prey — "+1/+0 for this attack for each damage on the defender at the
+    // start of this attack." Defender-dependent like ASH_241 above, so it is read here rather
+    // than at target selection, and it counts DAMAGE MARKERS, not missing HP.
+    const cornerThePreyBonus = game.currentEffects.some(
+      e => e.cardId === "TWI_139" && e.targetPlayId === attacker.playId && e.duration === "ForAttack",
+    ) ? defender.damage : 0;
     // ASH_196: combat damage dealt by a friendly Underworld unit bypasses all prevention.
     const attackerUnpreventable = DamageIsUnpreventable(attacker.cardId, attacker.controller, attacker.playId);
     // Shien Flurry prevention on the DEFENDER reduces the attacker's damage before the Shield.
     const effectiveAtkPower = attackerUnpreventable
-      ? Math.max(0, atkPower + damagedDefenderBonus - electrostaffModifier)
+      ? Math.max(0, atkPower + damagedDefenderBonus + cornerThePreyBonus - electrostaffModifier)
       : ApplyDamagePrevention(
           game, defender.playId,
-          Math.max(0, atkPower + damagedDefenderBonus - electrostaffModifier),
+          Math.max(0, atkPower + damagedDefenderBonus + cornerThePreyBonus - electrostaffModifier),
           log,
         );
     // ASH_150 Deadly Vulnerability: a unit carrying it takes twice as much combat damage.
@@ -4323,6 +4380,29 @@ function queueMazKanataReactions(game: GameState, player: PlayerId, playedPlayId
   }
 }
 
+/**
+ * SHD_255 Lady Proxima — "When you play another Underworld CARD: You may deal 1 damage to a base."
+ * Any card type counts, so this is queued from the unit, upgrade and event play paths alike;
+ * `playedPlayId` is empty for the non-unit ones, which is fine — "another" only ever needs to
+ * exclude Proxima's own entry into play.
+ */
+function queueLadyProximaReactions(
+  game: GameState, player: PlayerId, cardId: string, playedPlayId: string, nested: boolean,
+): void {
+  if (!TraitContains(cardId, "Underworld")) return;
+  const proximas = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
+    .filter(u => u.cardId === "SHD_255" && u.playId !== playedPlayId && !Unit.FromInterface(u).LostAbilities());
+  for (const proxima of proximas) {
+    game.triggerBag.push({
+      triggerType: "card-played-reaction",
+      cardId: "SHD_255",
+      fromPlayer: player,
+      playId: proxima.playId,
+      nested,
+    });
+  }
+}
+
 function queueLeaderPlayReactions(game: GameState, player: PlayerId, cardId: string, nested: boolean): void {
   const leader = GetPlayer(game, player).leader;
   const canFront = !leader.deployed && leader.ready; // front: exhausting the leader is the cost
@@ -4427,6 +4507,23 @@ function queueUnitEntryTriggers(
 
   // SHD_096 Maz Kanata: "When you play another unit" — your own Mazes react.
   queueMazKanataReactions(game, player, unit.playId, nested);
+
+  // SHD_255 Lady Proxima: "When you play another Underworld card" — your own Proximas react.
+  queueLadyProximaReactions(game, player, cardId, unit.playId, nested);
+
+  // TWI_080 Poggle the Lesser: "When you play another unit" — your own Poggles react. Exhausting
+  // himself is the cost, so a Poggle that is already exhausted is not offered.
+  for (const poggle of [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
+    .filter(u => u.cardId === "TWI_080" && u.playId !== unit.playId && u.ready
+      && !Unit.FromInterface(u).LostAbilities())) {
+    game.triggerBag.push({
+      triggerType: "card-played-reaction",
+      cardId: "TWI_080",
+      fromPlayer: player,
+      playId: poggle.playId,
+      nested,
+    });
+  }
 
   // Leader "when you play a unit" reactions (e.g. TWI_018 Quinlan Vos).
   queueLeaderPlayReactions(game, player, cardId, nested);
@@ -4582,6 +4679,17 @@ function completePlayCard(
     viaSmuggle?: boolean;
   },
 ): HandlerResult {
+  // SHD_233 Evacuate — "Return each non-leader unit to its owner's hand." A targetless event whose
+  // effect needs the leave-play cleanup that lives in this file, so it resolves here rather than in
+  // resolveWhenPlayed. playIds are collected first so the list cannot shift under the loop.
+  if (cardId === "SHD_233") {
+    const doomed233 = GetAllUnits(game).filter(u => !CardIsLeader(u.cardId)).map(u => u.playId);
+    for (const playId of doomed233) bounceUnitToHand(game, log, playId, "SHD_233", null);
+    if (doomed233.length > 0) {
+      log.push(`${CardTitle("SHD_233")}: returned each non-leader unit to its owner's hand.`);
+    }
+  }
+
   // SOR_056 Bendu: consume the discount after a qualifying non-Heroism non-Villainy card is played.
   if (!CardAspects(cardId).includes("Heroism") && !CardAspects(cardId).includes("Villainy")) {
     const benduIdx = game.currentEffects.findIndex(e => e.cardId === "SOR_056" && e.affectedPlayer === player);
@@ -4686,6 +4794,7 @@ function completePlayCard(
     // SHD_172 Krayt Dragon: opponent's Krayt reacts to this upgrade being played (resolves
     // after the upgrade is attached, when the trigger bag drains).
     queueKraytReactions(game, player, cardId, game.triggerBag.length > 0);
+    queueLadyProximaReactions(game, player, cardId, "", game.triggerBag.length > 0);
     // Leader "when you play an upgrade" reactions (e.g. SHD_018 The Mandalorian).
     queueLeaderPlayReactions(game, player, cardId, game.triggerBag.length > 0);
     return { response: resolutionResponse(pendingToResolution(upgradePending, game)), pending: upgradePending, stateChanged: false };
@@ -4729,6 +4838,8 @@ function completePlayCard(
 
     // SHD_172 Krayt Dragon: opponent's Krayt reacts to this event being played.
     queueKraytReactions(game, player, cardId, game.triggerBag.length > 0);
+    // SHD_255 Lady Proxima: an Underworld EVENT is still "an Underworld card".
+    queueLadyProximaReactions(game, player, cardId, "", game.triggerBag.length > 0);
     // Leader "when you play a card" reactions on events (e.g. SHD_014 Cad Bane / Underworld event).
     queueLeaderPlayReactions(game, player, cardId, game.triggerBag.length > 0);
 
@@ -5936,6 +6047,54 @@ function handleChooseTarget(
       updateDefeatedPlayers(game);
       const bag104 = drainTriggerBag(game, log);
       if (bag104) return { response: resolutionResponse(pendingToResolution(bag104, game)), pending: bag104, stateChanged: false };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    // TWI_034 General Grievous — "defeat 4 enemy units", taken as a pick of up to 4.
+    if (pending.cardId === "TWI_034") {
+      const chosen034 = (data.targetPlayIds ?? []).slice(0, 4);
+      for (const id of chosen034) {
+        if (!pending.fromPlayIds.includes(id)) {
+          return { response: invalidResponse(`Unit ${id} is not a valid target for ${CardTitle("TWI_034")}.`), pending, stateChanged: false };
+        }
+      }
+      for (const id of chosen034) {
+        const victim034 = GetUnitByPlayId(game, id);
+        if (victim034) defeatUnit(game, log, Unit.FromInterface(victim034));
+      }
+      if (chosen034.length > 0) {
+        log.push(`${CardTitle("TWI_034")}: defeated ${chosen034.length} enemy unit(s).`);
+      }
+      const after034 = sweepDeadUnits(game, log, pending.continuation ?? null);
+      updateDefeatedPlayers(game);
+      if (after034?.type === "resolve-attack") return handleResolveAttack(game, log, after034);
+      if (after034) return { response: resolutionResponse(pendingToResolution(after034, game)), pending: after034, stateChanged: true };
+      const bag034 = drainTriggerBag(game, log);
+      if (bag034) return { response: resolutionResponse(pendingToResolution(bag034, game)), pending: bag034, stateChanged: true };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    // TWI_153 Bold Resistance — "Choose UP TO 3 units that share the same Trait." The shared-trait
+    // rule spans the whole selection, so it is validated here where every pick is known.
+    if (pending.cardId === "TWI_153") {
+      const chosen153 = (data.targetPlayIds ?? []).slice(0, 3);
+      const units153 = chosen153
+        .map(id => GetUnitByPlayId(game, id))
+        .filter((u): u is NonNullable<ReturnType<typeof GetUnitByPlayId>> => !!u);
+      if (units153.length !== chosen153.length) {
+        return { response: invalidResponse("Bold Resistance: a chosen unit is not in play."), pending, stateChanged: false };
+      }
+      if (units153.length > 1) {
+        const shared153 = CardTraits(units153[0].cardId)
+          .filter(t => units153.every(u => CardTraits(u.cardId).includes(t)));
+        if (shared153.length === 0) {
+          return { response: invalidResponse("Bold Resistance: the chosen units share no Trait."), pending, stateChanged: false };
+        }
+      }
+      for (const u of units153) GivePowerMod("TWI_153", u, 2, "Phase", log);
+      updateDefeatedPlayers(game);
+      const bag153 = drainTriggerBag(game, log);
+      if (bag153) return { response: resolutionResponse(pendingToResolution(bag153, game)), pending: bag153, stateChanged: true };
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
@@ -8517,6 +8676,19 @@ function applyAbilityOptionEffect(
     return sweepDeadUnits(game, log, pending.continuation ?? null);
   }
 
+  // SHD_207 A New Adventure — the returned unit's owner replays it for free. The card id rides in
+  // sourcePlayId because the card is in hand, not in play, so it has no playId of its own.
+  if (pending.cardId === "SHD_207_replay") {
+    const owner = pending.player!;
+    const cardId207 = pending.sourcePlayId!;
+    const hand207 = GetPlayer(game, owner).hand;
+    const idx207 = hand207.findIndex(c => c.cardId === cardId207);
+    if (idx207 === -1) return pending.continuation ?? null;
+    hand207.splice(idx207, 1);
+    log.push(`${CardTitle("SHD_207")}: Player ${owner} played ${CardTitle(cardId207)} for free.`);
+    return completePlayCard(game, log, cardId207, owner).pending ?? (pending.continuation ?? null);
+  }
+
   if (pending.cardId.endsWith("_pay1")) {
     const paidCardId = pending.cardId.slice(0, -"_pay1".length);
     const payer = pending.player!;
@@ -8526,6 +8698,14 @@ function applyAbilityOptionEffect(
   }
 
   switch (pending.cardId) {
+    case "TWI_080": { // Poggle the Lesser — exhaust him, then create the Battle Droid.
+      const poggle080 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      if (!poggle080 || !poggle080.ready) return pending.continuation ?? null;
+      poggle080.ready = false;
+      log.push(`${CardTitle("TWI_080")}: exhausted himself.`);
+      CreateBattleDroid(game, pending.player!, log, "TWI_080");
+      return pending.continuation ?? null;
+    }
     case "ASH_062": { // The Mandalorian (Devoted Rescuer) — spend a Shield to prevent the damage.
       SpendMandoShield(game, pending.sourcePlayId!, log);
       return pending.continuation ?? null;
@@ -10142,6 +10322,20 @@ function advanceTurn(game: GameState, log: string[], wasPass: boolean): void {
   if (wasPass && prevWasPass) {
     game.gamePhase = "RegroupDraw";
     log.push("Both players passed consecutively. Action phase ended.");
+    // SHD_208 Final Showdown — "At the start of the regroup phase, you lose the game." This runs
+    // BEFORE the draw, so a player who would otherwise deck out never gets there.
+    for (const p208 of [1, 2] as const) {
+      const idx208 = game.currentEffects.findIndex(
+        e => e.cardId === "SHD_208_lose" && e.affectedPlayer === p208,
+      );
+      if (idx208 !== -1) {
+        game.currentEffects.splice(idx208, 1);
+        MarkPlayerLost(game, p208);
+        log.push(`${CardTitle("SHD_208")}: Player ${p208} loses the game.`);
+      }
+    }
+    updateDefeatedPlayers(game);
+    if (game.defeatedPlayers.length > 0) return;
     executeRegroupDraw(game, log);
     updateDefeatedPlayers(game);
     return;
@@ -15567,6 +15761,150 @@ function applyAbilityEffect(
       }
       break;
     }
+    case "SHD_206": { // Spare the Target — return the enemy unit, then collect its Bounties for the
+                      // CASTER. The bounce returns the unit that left play, which is what the
+                      // bounty collector needs: by now it is no longer in any arena.
+      if (!targetPlayId) break;
+      const bounce206 = bounceUnitToHand(
+        game.currentGameState, game.gameLog, targetPlayId, "SHD_206", pending.continuation ?? null,
+      );
+      if (!bounce206) break;
+      const bounties206 = collectBounties(bounce206.unit, pending.player!, bounce206.pending ?? null);
+      if (bounties206) return bounties206;
+      if (bounce206.pending) return bounce206.pending;
+      break;
+    }
+    case "SHD_207": { // A New Adventure — return the unit, then offer its OWNER a free replay.
+      if (!targetPlayId) break;
+      const owner207 = GetUnitByPlayId(game.currentGameState, targetPlayId)?.owner;
+      const bounce207 = bounceUnitToHand(
+        game.currentGameState, game.gameLog, targetPlayId, "SHD_207", pending.continuation ?? null,
+      );
+      if (!bounce207 || owner207 === undefined) break;
+      // A token is set aside rather than returned, so there is nothing to replay.
+      if (bounce207.unit.IsTokenUnit()) return bounce207.pending ?? null;
+      const replay207: AbilityOptionPending = {
+        type: "ability-option",
+        cardId: "SHD_207_replay",
+        player: owner207,
+        helperText: `Play ${CardTitle(bounce207.unit.cardId)} for free?`,
+        yesLabel: "Play free",
+        noLabel: "Skip",
+        onYes: null,
+        amount: undefined,
+        sourcePlayId: bounce207.unit.cardId, // the card to replay, by id
+        continuation: bounce207.pending ?? null,
+      };
+      return replay207;
+    }
+    case "TWI_156_4": // Unlimited Power — 4 to the first pick, then 3, 2 and 1 to the next picks.
+    case "TWI_156_3":
+    case "TWI_156_2":
+    case "TWI_156_1": {
+      if (!targetPlayId) break;
+      const amount156 = Number(pending.cardId.slice(-1));
+      DealDamageToUnit(game.currentGameState, "TWI_156", targetPlayId, amount156, game.gameLog, pending.player);
+      const next156 = amount156 - 1;
+      if (next156 <= 0) break;
+      // "A second/third/fourth unit" — each amount goes to a DIFFERENT unit, so the next pool is
+      // this one minus the unit just hit. The chain simply ends when the pool empties.
+      const remaining156 = pending.fromPlayIds.filter(id => id !== targetPlayId);
+      if (remaining156.length === 0) break;
+      return mandatoryTarget(`TWI_156_${next156}`, pending.player!, remaining156);
+    }
+    case "TWI_176_first": { // Caught in the Crossfire — the first of the two enemy units. The
+                            // second must share its arena.
+      if (!targetPlayId) break;
+      const first176 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!first176) break;
+      const arena176 = CardArena(first176.cardId) ?? "Ground";
+      const partners176 = GetUnitsForPlayer(GetOtherPlayer(pending.player!)).filter(
+        u => u.playId !== targetPlayId && (CardArena(u.cardId) ?? "Ground") === arena176,
+      );
+      if (partners176.length === 0) break;
+      const second176 = mandatoryTarget("TWI_176_second", pending.player!, partners176.map(u => u.playId));
+      second176.sourcePlayId = targetPlayId;
+      return second176;
+    }
+    case "TWI_176_second": { // Each unit deals damage equal to its power to the other. Both powers
+                             // are read BEFORE any damage lands, so the trade is simultaneous.
+      if (!targetPlayId || !pending.sourcePlayId) break;
+      const a176 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
+      const b176 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!a176 || !b176) break;
+      const powerA = Math.max(0, Unit.FromInterface(a176).CurrentPower());
+      const powerB = Math.max(0, Unit.FromInterface(b176).CurrentPower());
+      DealDamageToUnit(game.currentGameState, "TWI_176", b176.playId, powerA, game.gameLog, pending.player);
+      DealDamageToUnit(game.currentGameState, "TWI_176", a176.playId, powerB, game.gameLog, pending.player);
+      break;
+    }
+    case "TWI_103": { // Pyrrhic Assault — the granted When Defeated deals its 2.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "TWI_103", targetPlayId, 2, game.gameLog, pending.player);
+      break;
+    }
+    case "TWI_110": { // Huyang — mark the chosen unit; the +2/+2 is read off this effect for as
+                      // long as a Huyang is in play.
+      if (!targetPlayId) break;
+      const buffed110 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!buffed110) break;
+      game.currentGameState.currentEffects.push({
+        cardId: "TWI_110",
+        duration: "Permanent",
+        affectedPlayer: buffed110.controller,
+        targetPlayId,
+      });
+      game.gameLog.push(`${CardTitle("TWI_110")}: ${CardTitle(buffed110.cardId)} gets +2/+2 while ${CardTitle("TWI_110")} is in play.`);
+      break;
+    }
+    case "TWI_139": { // Corner the Prey — "Attack with a unit. It gets +1/+0 for this attack for
+                      // each damage on the defender." The bonus is applied inside resolveAttack,
+                      // once the defender is known; this just marks the attacker and sends it in.
+      if (!targetPlayId) break;
+      const attacker139 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!attacker139) break;
+      game.currentGameState.currentEffects.push({
+        cardId: "TWI_139",
+        duration: "ForAttack",
+        affectedPlayer: attacker139.controller,
+        targetPlayId,
+      });
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "TWI_139",
+        continuation: pending.continuation ?? null,
+      };
+    }
+    case "TWI_154": { // Mister Bones — deal 3 to the chosen ground unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "TWI_154", targetPlayId, 3, game.gameLog, pending.player);
+      break;
+    }
+    case "TWI_048": { // Obi-Wan's Aethersprite — 1 to itself and 2 to the chosen other space unit.
+                      // Both halves are one effect, so the self-damage lands here rather than at
+                      // the Yes, where a cancelled target would have left it applied anyway.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "TWI_048", pending.sourcePlayId, 1, game.gameLog, pending.player);
+      DealDamageToUnit(game.currentGameState, "TWI_048", targetPlayId, 2, game.gameLog, pending.player);
+      break;
+    }
+    case "TWI_041": { // Lethal Crackdown — "Defeat a non-leader unit. Deal damage to YOUR base
+                      // equal to that unit's power." The power is read BEFORE the defeat, and it is
+                      // CURRENT power, so upgrades and buffs on the victim count.
+      if (!targetPlayId) break;
+      const victim041 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!victim041) break;
+      const power041 = Math.max(0, Unit.FromInterface(victim041).CurrentPower());
+      game.gameLog.push(`${CardTitle("TWI_041")}: defeated ${CardTitle(victim041.cardId)}.`);
+      const defeat041 = defeatUnit(game.currentGameState, game.gameLog, Unit.FromInterface(victim041));
+      if (power041 > 0) {
+        dealBaseDamage(game.currentGameState, pending.player!, power041, pending.player);
+        game.gameLog.push(`${CardTitle("TWI_041")}: dealt ${power041} damage to player ${pending.player}'s base.`);
+      }
+      if (defeat041) return defeat041;
+      break;
+    }
     case "TWI_140": { // Self-Destruct — defeat the chosen friendly unit, then offer the 4 damage.
                       // The damage pool is computed AFTER the defeat, so the sacrificed unit is
                       // never a legal target for it.
@@ -15634,6 +15972,17 @@ function applyAbilityEffect(
       const victim063 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (victim063) {
         GiveStatModForPhase("TWI_063", Unit.FromInterface(victim063), -1, game.gameLog);
+      }
+      break;
+    }
+    case "SHD_255": { // Lady Proxima — deal 1 to the chosen base.
+      let basePlayer255: PlayerId | null = null;
+      if (targetPlayId === "player1.base") basePlayer255 = 1;
+      else if (targetPlayId === "player2.base") basePlayer255 = 2;
+      else if (targetIsBase) basePlayer255 = targetBasePlayer ?? null;
+      if (basePlayer255 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer255, 1, pending.player);
+        game.gameLog.push(`${CardTitle("SHD_255")}: dealt 1 damage to player ${basePlayer255}'s base.`);
       }
       break;
     }
