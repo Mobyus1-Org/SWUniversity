@@ -182,6 +182,7 @@ export class Unit implements UnitInterface {
     }
 
     power += selfStatBonus(this);
+    power += selfPowerOnlyBonus(this);
     power += friendlyAuraBonus(this);
     power -= enemyAuraDebuff(this);
 
@@ -574,6 +575,24 @@ function selfStatBonus(unit: Unit): number {
         u => TraitContains(u.cardId, "Force", unit.controller, u.playId)
           || (u.upgrades ?? []).some(up => TraitContains(up.cardId, "Force")),
       ) ? 1 : 0;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Power-only self bonuses. Sibling of selfStatBonus above, which moves power AND HP in lockstep —
+ * these cards print a +X/+0, so they cannot live there.
+ */
+function selfPowerOnlyBonus(unit: Unit): number {
+  if (unit.LostAbilities()) return 0;
+  switch (unit.cardId) {
+    // ASH_113 Mandalorian Flagship — "+1/+0 for each OTHER friendly Mandalorian unit."
+    case "ASH_113":
+      return GetUnitsForPlayer(unit.controller).filter(
+        u => u.playId !== unit.playId
+          && TraitContains(u.cardId, "Mandalorian", unit.controller, u.playId),
+      ).length;
     default:
       return 0;
   }

@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetHand, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerControlsCardWithTitle, PlayerHasTokenUnitInPlay, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetHand, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerControlsCardWithTitle, PlayerHasTokenUnitInPlay, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , LeaderUnitWasDefeatedThisPhase } from "@/server/engine/core-functions";
 import { CardAspects } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 
@@ -72,6 +72,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     const otherPlayer = player === 1 ? 2 : 1;
     switch (unit.cardId) {
       //conditional raid
+      case "ASH_093": amount += LeaderUnitWasDefeatedThisPhase() ? 3 : 0; break;//Captain Pellaeon (Plotting from the Shadows)
       case "SOR_159": amount += PlayerHasUnitWithAspectInPlay(player, "Aggression", true, playId) ? 2 : 0; break;//Partisan Insurgent
       case "SOR_131": amount += unit.TotalHP() - unit.CurrentHP(); break;//Fifth Brother
       case "SOR_188": // Chopper (SOR)

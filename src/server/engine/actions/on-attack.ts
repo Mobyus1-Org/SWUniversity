@@ -9,7 +9,7 @@ import { CardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens, GiveExperienceTokens, CreateSpy } from "@/server/engine/token-helpers";
-import { jabbasRancorDamage, buildTraskWalkerChoice, buildAethersprite } from "@/server/engine/actions/when-played";
+import { jabbasRancorDamage, buildTraskWalkerChoice, buildAethersprite, buildTwinsSentinel } from "@/server/engine/actions/when-played";
 
 /**
  * On Attack abilities — called after the attack target is chosen.
@@ -1273,6 +1273,9 @@ function resolveInnateOnAttack(
       return searchDeck("SOR_236", attacker.controller, 1, "scry", { continuation }) ?? continuation;
     case "SOR_040": { // Avenger On Attack — opponent chooses a non-leader unit they control to defeat.
       return chooseAndDefeatUnit("SOR_040", attacker.controller, false, continuation);
+    }
+    case "ASH_127": { // The Twins — the On Attack half of its shared Sentinel grant.
+      return buildTwinsSentinel(attacker.controller, attacker.playId, continuation) ?? continuation;
     }
     case "TWI_034": { // General Grievous (Trophy Collector) — "On Attack: If this unit has 4 or
                       // more Lightsaber upgrades attached to him, defeat 4 enemy units." Offered

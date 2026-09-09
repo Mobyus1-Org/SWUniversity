@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -54,7 +54,7 @@ import type {
   ResolutionRequest,
   UseAbilityDispatchData,
 } from "@/lib/engine/message-types";
-import { aspectPenalty, effectiveSmuggleCost, spendableFor, playCost, palpatinesReturnCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks, onlyHopeCost } from "@/server/engine/card-playability";
+import { aspectPenalty, effectiveSmuggleCost, spendableFor, playCost, palpatinesReturnCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks, onlyHopeCost, omegaWaivesAspectPenalty } from "@/server/engine/card-playability";
 import type { Game, GameState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import type { DealtHeavyDamageContext } from "@/lib/engine/trigger-types";
@@ -918,6 +918,18 @@ function upgradeLeavesPlay(game: GameState, upgrade: CardInPlay, log: string[]):
   if (IsTokenUpgrade(upgrade.cardId)) {
     log.push(`${CardTitle(upgrade.cardId)} token set aside.`);
     return;
+  }
+
+  // ASH_161 Zeb Orrelios — "When a friendly upgrade is defeated: Deal 1 damage to a base." The
+  // declared `when-upgrade-detached` trigger type is never dispatched anywhere, so this hooks the
+  // real chokepoint instead. Mandatory and targetless in practice: it always hits the enemy base.
+  const zebs161 = [...GetPlayer(game, owner).groundArena, ...GetPlayer(game, owner).spaceArena]
+    .filter(u => u.cardId === "ASH_161" && !Unit.FromInterface(u).LostAbilities());
+  if (zebs161.length > 0 && !IsTokenUpgrade(upgrade.cardId)) {
+    for (let i = 0; i < zebs161.length; i++) {
+      dealBaseDamage(game, owner === 1 ? 2 : 1, 1, owner);
+      log.push(`${CardTitle("ASH_161")}: dealt 1 damage to player ${owner === 1 ? 2 : 1}'s base.`);
+    }
   }
 
   // TWI_069 Roger Roger — "When Defeated: Attach this upgrade to a friendly Battle Droid token."
@@ -1953,6 +1965,36 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
           continuation: null,
         } satisfies AbilityOptionPending;
       }
+      case "SHD_239": { // Toro Calican — "You may deal 1 damage to it. If you do, ready this unit."
+        const ctx239 = trigger.context as CardPlayedContext | undefined;
+        const victim239 = (ctx239 as { playedPlayId?: string } | undefined)?.playedPlayId;
+        if (!victim239) return null;
+        return {
+          type: "ability-option",
+          cardId: "SHD_239",
+          player: trigger.fromPlayer,
+          sourcePlayId: victim239, // the just-played Bounty Hunter; Toro is unique and found by id
+          helperText: `Deal 1 damage to it to ready ${CardTitle("SHD_239")}?`,
+          yesLabel: "Deal 1 & ready",
+          noLabel: "Skip",
+          onYes: null,
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
+      case "SHD_163": { // Migs Mayfeld — "You may deal 2 damage to a unit or base." Once per round;
+                        // the marker is set when the ability is actually used.
+        const targets163 = [...AllUnits().map(u => u.playId), "player1.base", "player2.base"];
+        return {
+          type: "ability-option",
+          cardId: "SHD_163",
+          player: trigger.fromPlayer,
+          helperText: "Deal 2 damage to a unit or base?",
+          yesLabel: "Deal 2",
+          noLabel: "Skip",
+          onYes: mandatoryTarget("SHD_163", trigger.fromPlayer, targets163),
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      }
       case "TWI_080": { // Poggle the Lesser — "You may exhaust this unit. If you do, create a
                         // Battle Droid token." The exhaust is paid in the Yes branch.
         return {
@@ -2249,6 +2291,10 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
     const t = game.triggerBag[i];
     if (t.triggerType !== "when-defeated" || t.nested) { i++; continue; }
     game.triggerBag.splice(i, 1);
+    if (t.cardId === "ASH_127_heal") {
+      HealBaseForPlayer(game, t.fromPlayer, 1, log, "ASH_127");
+      continue;
+    }
     const wdCtx = t.context as { defeatedUnit?: UnitInterface } | undefined;
     if (!wdCtx?.defeatedUnit) continue;
     const unit = Unit.FromInterface(wdCtx.defeatedUnit);
@@ -2402,6 +2448,21 @@ function defeatUnit(
   bypassL337 = false,
   causedByCombatDamage = false,
 ): PendingResolution | null {
+  // ASH_127 The Twins — "When ANOTHER friendly unit is defeated: Heal 1 damage from your base."
+  // Queued rather than applied inline: this function also runs on passes whose state is discarded,
+  // so an inline heal here is silently lost. The trigger bag drains exactly once.
+  for (const twins of GetUnitsForPlayer(unit.controller)) {
+    if (twins.cardId !== "ASH_127" || twins.playId === unit.playId) continue;
+    if (Unit.FromInterface(twins).LostAbilities()) continue;
+    game.triggerBag.push({
+      triggerType: "when-defeated",
+      cardId: "ASH_127_heal",
+      fromPlayer: unit.controller,
+      playId: twins.playId,
+      nested: game.triggerBag.length > 0,
+    });
+  }
+
   // L3-37 replacement effect: intercept BEFORE removing from arena.
   if (!bypassL337 && unit.cardId === "JTL_049") {
     const eligible = l337EligibleVehicles(game, unit.controller, unit.playId);
@@ -2812,6 +2873,13 @@ function applyCombatDamageToBaseAutoEffects(
     .find(u => u.cardId === "ASH_144" && !Unit.FromInterface(u).LostAbilities());
   if (vane144) GiveAdvantageTokens(game, vane144, 1, log, "ASH_144");
 
+  // ASH_031 Hera Syndulla (Renegade General) — "When Attack Ends: If this unit dealt combat damage
+  // to a base, heal THAT MUCH damage from your base." Only her own attack counts, and only the
+  // direct base hit — Overwhelm spill never reaches this function.
+  if (attacker.cardId === "ASH_031" && !attacker.LostAbilities()) {
+    HealBaseForPlayer(game, attacker.controller, amount, log, "ASH_031");
+  }
+
   // JTL_177 Stay on Target — grants the attacker "When this unit deals damage to a base: Draw a card."
   if (stayOnTarget) {
     DrawCardForPlayer(game, log, attacker.controller);
@@ -3024,7 +3092,10 @@ function resolveAttack(
       log.push(`${CardTitle("ASH_046")}: gave –1/–1 to ${CardTitle(defender.cardId)} for this attack.`);
     }
 
-    const defPower = Math.max(0, defender.CurrentPower(false, true) - (defenderIsGround212 ? 2 : 0));
+    // ASH_073 Palace Chef Droid — "This unit gets +2/+0 WHILE DEFENDING." Only meaningful here, in
+    // the counter-damage it deals, so it is added to defPower rather than to its printed stats.
+    const defendingBonus = defender.cardId === "ASH_073" && !defender.LostAbilities() ? 2 : 0;
+    const defPower = Math.max(0, defender.CurrentPower(false, true) + defendingBonus - (defenderIsGround212 ? 2 : 0));
 
     // SOR_071 Electrostaff: while attached unit is defending, attacker gets –1/–0.
     const electrostaffModifier = defender.upgrades.some(u => u.cardId === "SOR_071") ? 1 : 0;
@@ -4511,6 +4582,27 @@ function queueUnitEntryTriggers(
   // SHD_255 Lady Proxima: "When you play another Underworld card" — your own Proximas react.
   queueLadyProximaReactions(game, player, cardId, unit.playId, nested);
 
+  // SHD_239 Toro Calican — "When you play another BOUNTY HUNTER unit: You may deal 1 damage to it.
+  // If you do, ready this unit. Use this ability only once each round."
+  if (TraitContains(cardId, "Bounty Hunter", player)) {
+    for (const toro of [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
+      .filter(u => u.cardId === "SHD_239" && u.playId !== unit.playId
+        && !Unit.FromInterface(u).LostAbilities())) {
+      const used239 = game.currentEffects.some(
+        e => e.cardId === "SHD_239_usedThisRound" && e.affectedPlayer === player,
+      );
+      if (used239) continue;
+      game.triggerBag.push({
+        triggerType: "card-played-reaction",
+        cardId: "SHD_239",
+        fromPlayer: player,
+        playId: toro.playId,
+        nested,
+        context: { playedCardCost: 0, cardPlayer: player, playedPlayId: unit.playId },
+      });
+    }
+  }
+
   // TWI_080 Poggle the Lesser: "When you play another unit" — your own Poggles react. Exhausting
   // himself is the cost, so a Poggle that is already exhausted is not offered.
   for (const poggle of [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
@@ -4694,6 +4786,18 @@ function completePlayCard(
   if (!CardAspects(cardId).includes("Heroism") && !CardAspects(cardId).includes("Villainy")) {
     const benduIdx = game.currentEffects.findIndex(e => e.cardId === "SOR_056" && e.affectedPlayer === player);
     if (benduIdx !== -1) game.currentEffects.splice(benduIdx, 1);
+  }
+
+  // SHD_198 Omega — spend the once-per-round Clone waiver on the FIRST Clone unit actually played,
+  // whether or not that unit needed the discount. Consumed here rather than in aspectPenalty,
+  // which also runs when merely reporting a cost.
+  if (omegaWaivesAspectPenalty(game, player, cardId)) {
+    game.currentEffects.push({
+      cardId: "SHD_198_usedThisRound",
+      duration: "Round",
+      affectedPlayer: player,
+    });
+    log.push(`${CardTitle("SHD_198")}: waived the aspect penalty on ${CardTitle(cardId)}.`);
   }
 
   // SEC_110 GNK Power Droid: consume the discount only when a unit is played.
@@ -6704,6 +6808,7 @@ function handleChooseTarget(
       turnDiscarded: game.currentRound, discardEffect: "",
     });
     QueueWhenDiscardedTrigger(game, pending.targetPlayer, discardedCard.cardId);
+    QueueMigsMayfeldReaction(game, pending.targetPlayer); // SHD_163 — a discard from HAND
     log.push(`Player ${pending.targetPlayer} discarded a card.`);
     // JTL_014 Admiral Trench: "If you do, draw a card."
     if (pending.thenDrawForPlayer !== undefined) DrawCardForPlayer(game, log, pending.thenDrawForPlayer);
@@ -6808,6 +6913,12 @@ function handleChooseTarget(
       return { response: resolutionResponse(pendingToResolution(nextPending, game)), pending: nextPending, stateChanged: false };
     }
     updateDefeatedPlayers(game);
+    // This branch never drained the bag, so any reaction queued by the discard itself (SHD_163
+    // Migs Mayfeld) was left sitting there to fire on some unrelated later dispatch.
+    const bagDiscard = drainTriggerBag(game, log);
+    if (bagDiscard) {
+      return { response: resolutionResponse(pendingToResolution(bagDiscard, game)), pending: bagDiscard, stateChanged: true };
+    }
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
 
@@ -8698,6 +8809,21 @@ function applyAbilityOptionEffect(
   }
 
   switch (pending.cardId) {
+    case "SHD_239": { // Toro Calican — "Deal 1 damage to it. If you do, ready this unit." The
+                      // damage is the cost, so it lands before the ready, and it can be lethal.
+      const player239 = pending.player!;
+      game.currentEffects.push({
+        cardId: "SHD_239_usedThisRound",
+        duration: "Round",
+        affectedPlayer: player239,
+      });
+      DealDamageToUnit(game, "SHD_239", pending.sourcePlayId, 1, log, player239);
+      const toro239 = GetUnitsForPlayer(player239).find(u => u.cardId === "SHD_239");
+      if (toro239 && ReadyUnit(game, toro239)) {
+        log.push(`${CardTitle("SHD_239")}: readied himself.`);
+      }
+      return sweepDeadUnits(game, log, pending.continuation ?? null);
+    }
     case "TWI_080": { // Poggle the Lesser — exhaust him, then create the Battle Droid.
       const poggle080 = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (!poggle080 || !poggle080.ready) return pending.continuation ?? null;
@@ -11435,6 +11561,15 @@ function resolveActionAbility(
       }
       if (!GetHand(player).some(c => CardType(c.cardId) === "Unit")) return null;
       return { type: "play-from-hand", cardId: "ASH_008", player } satisfies PlayFromHandPending;
+    }
+    case "ASH_123": { // Lang — Action: deal damage equal to HIS power to a ground unit.
+      const ground123 = AllGroundUnits();
+      if (ground123.length === 0) return null;
+      const lang123 = GetUnitByPlayId(game, playId ?? "");
+      const power123 = lang123 ? Math.max(0, Unit.FromInterface(lang123).CurrentPower()) : 0;
+      const pend123 = mandatoryTarget("ASH_123", player, ground123.map(u => u.playId));
+      pend123.amount = power123;
+      return pend123;
     }
     case "ASH_001": { // The Armorer — step 1: choose an upgrade in your RESOURCE row.
       const upgrades001 = ArmorerResourceUpgrades(player);
@@ -15836,6 +15971,81 @@ function applyAbilityEffect(
       const powerB = Math.max(0, Unit.FromInterface(b176).CurrentPower());
       DealDamageToUnit(game.currentGameState, "TWI_176", b176.playId, powerA, game.gameLog, pending.player);
       DealDamageToUnit(game.currentGameState, "TWI_176", a176.playId, powerB, game.gameLog, pending.player);
+      break;
+    }
+    case "SHD_163": { // Migs Mayfeld — deal 2 to the chosen unit or base, and spend the round's use.
+      game.currentGameState.currentEffects.push({
+        cardId: "SHD_163_usedThisRound",
+        duration: "Round",
+        affectedPlayer: pending.player!,
+      });
+      if (targetPlayId === "player1.base" || targetPlayId === "player2.base" || targetIsBase) {
+        const bp163 = targetPlayId === "player1.base" ? 1
+          : targetPlayId === "player2.base" ? 2 : (targetBasePlayer ?? null);
+        if (bp163 !== null) {
+          dealBaseDamage(game.currentGameState, bp163, 2, pending.player);
+          game.gameLog.push(`${CardTitle("SHD_163")}: dealt 2 damage to player ${bp163}'s base.`);
+        }
+        break;
+      }
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "SHD_163", targetPlayId, 2, game.gameLog, pending.player);
+      break;
+    }
+    case "ASH_161": { // Zeb Orrelios — 3 Advantage tokens to the chosen other unit.
+      if (!targetPlayId) break;
+      const target161 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target161) {
+        GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(target161), 3, game.gameLog, "ASH_161");
+      }
+      break;
+    }
+    case "ASH_127": { // The Twins — grant the chosen friendly unit Sentinel for this phase.
+      if (!targetPlayId) break;
+      const target127 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target127) {
+        GrantKeywordForPhase("ASH_127", Unit.FromInterface(target127), game.gameLog, "Sentinel");
+      }
+      break;
+    }
+    case "ASH_123": { // Lang — deal his power to the chosen ground unit. The amount was captured
+                      // when the Action was used, before the exhaust could change anything.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "ASH_123", targetPlayId, pending.amount ?? 0, game.gameLog, pending.player);
+      break;
+    }
+    case "ASH_136": { // Display of Strength — +3/+3 to the chosen unit for the phase.
+      if (!targetPlayId) break;
+      const buffed136 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (buffed136) GiveStatModForPhase("ASH_136", Unit.FromInterface(buffed136), 3, game.gameLog);
+      break;
+    }
+    case "ASH_081": { // Nebulon-C Frigate — heal 3 from the chosen unit or base.
+      if (targetPlayId === "player1.base" || targetPlayId === "player2.base" || targetIsBase) {
+        const bp081 = targetPlayId === "player1.base" ? 1
+          : targetPlayId === "player2.base" ? 2 : (targetBasePlayer ?? null);
+        if (bp081 !== null) HealBaseForPlayer(game.currentGameState, bp081, 3, game.gameLog, "ASH_081");
+        break;
+      }
+      if (!targetPlayId) break;
+      const healed081 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (healed081) {
+        const before081 = healed081.damage;
+        healed081.damage = Math.max(0, healed081.damage - 3);
+        game.gameLog.push(`${CardTitle("ASH_081")}: healed ${before081 - healed081.damage} damage from ${CardTitle(healed081.cardId)}.`);
+      }
+      break;
+    }
+    case "ASH_044": { // Barriss Offee — heal up to 2, then one Advantage token per damage healed.
+      if (!targetPlayId) break;
+      const healed044 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!healed044) break;
+      const amount044 = Math.min(2, healed044.damage);
+      healed044.damage -= amount044;
+      if (amount044 > 0) {
+        game.gameLog.push(`${CardTitle("ASH_044")}: healed ${amount044} damage from ${CardTitle(healed044.cardId)}.`);
+        GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(healed044), amount044, game.gameLog, "ASH_044");
+      }
       break;
     }
     case "TWI_103": { // Pyrrhic Assault — the granted When Defeated deals its 2.

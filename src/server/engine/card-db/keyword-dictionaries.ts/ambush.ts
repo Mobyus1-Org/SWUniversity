@@ -1,7 +1,8 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , ImperialUnitInDiscardHasKeyword , FriendlyLeaderUnitCount } from "@/server/engine/core-functions";
 import { PlayerId, Zones } from "@/lib/engine/core-models";
 import { CardCost, CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { EnemyUnitsLoseAmbushAndSupport } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
+import { CardIsUnique } from "@/server/engine/card-db/generated";
 
 export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, player?: PlayerId, isRecursion = false): boolean
 {
@@ -52,6 +53,10 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
 
     switch (cardId) {
       //conditional ambush
+      case "ASH_098"://AT-ST Raider — while you control ANOTHER NON-UNIQUE unit
+        return GetUnitsForPlayer(player).some(u => u.playId !== playId && !CardIsUnique(u.cardId));
+      case "ASH_113"://Mandalorian Flagship — while you control a leader unit
+        return FriendlyLeaderUnitCount(player) > 0;
       case "ASH_008"://Moff Gideon (deployed) — gains this keyword if an Imperial unit in
                      //your discard pile has it. Printed keywords only.
         return ImperialUnitInDiscardHasKeyword(player, c => HasAmbush(c));

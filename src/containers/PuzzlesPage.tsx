@@ -157,6 +157,7 @@ const UPGRADE_GRANTED_UNIT_ACTIONS: Record<string, string> = {
 };
 
 const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
+  ASH_123: "Deal Damage", // Lang — deals damage equal to his power to a ground unit
   "SHD_028": "Draw a card",
   "LOF_206": "Attack with a Droid",
   "ASH_109": "+2/+2 to a unit",

@@ -138,6 +138,12 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       if (GetHand(player).some(c => CardType(c.cardId) === "Unit")) abilities.push(cardId);
       break;
     }
+    case "ASH_123": { // Lang — Action [Exhaust]: "This unit deals damage equal to his power to a
+                      // ground unit." Needs a ground unit to aim at; his power may be 0, which is
+                      // still a legal (if pointless) use, so power is not a condition.
+      if (AllGroundUnits().length > 0) abilities.push(cardId);
+      break;
+    }
     case "ASH_001": { // The Armorer — Action [Exhaust]: play an upgrade from your RESOURCES onto a
                         // unit that entered play this phase. Offered only when both halves exist:
                         // an upgrade in the row, and something legal to attach it to.

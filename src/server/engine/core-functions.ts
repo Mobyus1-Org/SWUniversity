@@ -1594,6 +1594,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "ASH_127": //The Twins — On Attack: may give another friendly unit Sentinel
     case "TWI_034": //General Grievous (Trophy Collector) — On Attack: 4+ Lightsabers, defeat 4 enemy units
     case "TWI_048": //Obi-Wan's Aethersprite — On Attack: 1 to self, 2 to another space unit
     case "TWI_154": //Mister Bones — On Attack: with an empty hand, may deal 3 to a ground unit
@@ -1914,6 +1915,46 @@ export function ImperialUnitInDiscardHasKeyword(
   );
 }
 
+/**
+ * Whether a LEADER unit left play defeated this phase, either player's. Read by ASH_093 Captain
+ * Pellaeon ("While a leader unit has been defeated this phase, this unit gains Raid 3").
+ */
+export function LeaderUnitWasDefeatedThisPhase(): boolean {
+  const game = GetGame();
+  if (!game) return false;
+  return game.currentGameState.roundState.cardsLeftPlayThisPhase.some(
+    e => (e.reason === "defeated" || e.reason === "token-defeated") && CardIsLeader(e.cardId),
+  );
+}
+
+/**
+ * SHD_163 Migs Mayfeld (Triggerman) — "When A PLAYER discards a card from their hand: You may deal
+ * 2 damage to a unit or base. Use this ability only once each round."
+ *
+ * "A player" means either of them, so this fires on its controller's own discards too. The
+ * once-per-round marker is set when the ability is USED, not when it is offered.
+ */
+export function QueueMigsMayfeldReaction(gs: GameState, discardingPlayer: PlayerId): void {
+  void discardingPlayer;
+  for (const controller of [1, 2] as const) {
+    const migs = GetUnitsForPlayer(controller).find(
+      u => u.cardId === "SHD_163" && !Unit.FromInterface(u).LostAbilities(),
+    );
+    if (!migs) continue;
+    const usedThisRound = gs.currentEffects.some(
+      e => e.cardId === "SHD_163_usedThisRound" && e.affectedPlayer === controller,
+    );
+    if (usedThisRound) continue;
+    gs.triggerBag.push({
+      triggerType: "card-played-reaction",
+      cardId: "SHD_163",
+      fromPlayer: controller,
+      playId: migs.playId,
+      nested: gs.triggerBag.length > 0,
+    });
+  }
+}
+
 export function ApplyDamagePrevention(gs: GameState, targetPlayId: string, amount: number, log?: string[]): number {
   if (amount <= 0) return amount;
 
@@ -2101,6 +2142,7 @@ export function DiscardRandomCardFromHand(
     discardEffect: "",
   });
   QueueWhenDiscardedTrigger(gs, player, discarded.cardId);
+  QueueMigsMayfeldReaction(gs, player); // SHD_163 — a discard from HAND
   gameLog.push(`${CardTitle(sourceCardId)}: Player ${player} discarded ${CardTitle(discarded.cardId)} at random.`);
 }
 

@@ -65,8 +65,30 @@ export function aspectPenalty(game: GameState, player: PlayerId, cardId: string)
   // Leader waivers (Hera / Nala Se): matching trait → no aspect penalty.
   if (leaderWaivesAspectPenalty(game, player, cardId)) return 0;
 
+  // SHD_198 Omega — "Ignore the aspect penalty on the FIRST Clone unit you play each round."
+  // The marker is consumed by completePlayCard, not here: this function is also called to REPORT
+  // a cost, and consuming it on a report would spend the waiver on a card never actually played.
+  if (omegaWaivesAspectPenalty(game, player, cardId)) return 0;
+
   return aspectPenaltyForAspects(game, player, CardAspects(cardId));
 }
+
+/**
+ * True while Omega's once-per-round waiver would apply to `cardId`: a Clone UNIT, a live Omega on
+ * the board, and the waiver not yet spent this round.
+ */
+export function omegaWaivesAspectPenalty(game: GameState, player: PlayerId, cardId: string): boolean {
+  if (CardType(cardId) !== "Unit") return false;
+  if (!CardTraits(cardId).includes("Clone")) return false;
+  const p = player === 1 ? game.player1 : game.player2;
+  const hasOmega = [...p.groundArena, ...p.spaceArena].some(u => u.cardId === "SHD_198");
+  if (!hasOmega) return false;
+  return !game.currentEffects.some(
+    e => e.cardId === "SHD_198_usedThisRound" && e.affectedPlayer === player,
+  );
+}
+
+
 
 function delMeekoEventTax(game: GameState, player: PlayerId, cardId: string): number {
   if (CardType(cardId) !== "Event") return 0;

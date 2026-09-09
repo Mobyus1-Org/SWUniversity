@@ -366,6 +366,9 @@ export const Cards = {
       seventhSister: "SOR_133",
     },
     shd: {
+      migsMayfeldTriggerman: "SHD_163",
+      omegaPartOfTheSquad: "SHD_198",
+      toroCalican: "SHD_239",
       ladyProxima: "SHD_255",
       frontierTrader: "SHD_214", // 2/2 Ground Fringe/Jawa, cost 3
       superlaserTechnician: "SHD_085",
@@ -606,6 +609,18 @@ export const Cards = {
       chewbaccaMightyRescuer: "LAW_034", // 4/4 Ground Rebel/Wookiee, Overwhelm + When Attack Ends
     },
     ash: {
+      heraSyndullaRenegadeGeneral: "ASH_031",
+      barrissOffee: "ASH_044",
+      homeOne: "ASH_065",
+      palaceChefDroid: "ASH_073",
+      nebulonCFrigate: "ASH_081",
+      captainPellaeon: "ASH_093",
+      atStRaider: "ASH_098",
+      mandalorianFlagship: "ASH_113",
+      lang: "ASH_123",
+      theTwins: "ASH_127",
+      zebOrrelios: "ASH_161",
+      helixStarfighter: "ASH_221",
       theMandalorianDevotedRescuer: "ASH_062",
       theArmorerSecrecyIsOurSurvival: "ASH_064",
       wicket: "ASH_034",
@@ -971,6 +986,7 @@ export const Cards = {
       emergencyPowers: "SEC_040",
     },
     ash: {
+      displayOfStrength: "ASH_136",
       getLost: "ASH_067",
       turningTheTide: "ASH_138",
       // Identical reprint of SEC_258 Grassroots Resistance.

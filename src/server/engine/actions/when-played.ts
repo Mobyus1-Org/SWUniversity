@@ -1055,6 +1055,44 @@ export function resolveWhenPlayed(
     }
     case "TWI_048": // Obi-Wan's Aethersprite — the When Played half of its shared ability.
       return buildAethersprite(player, playId ?? "", null);
+    case "SHD_198": { // Omega — "When Played: Search the top 5 cards of your deck for a CLONE card,
+                      // reveal it, and draw it." A Clone CARD, so units and non-units alike.
+      return searchDeck("SHD_198", player, 5, "draw", { filter: { trait: "Clone" } });
+    }
+    case "ASH_161": { // Zeb Orrelios — "When Played: Give 3 Advantage tokens to ANOTHER unit."
+                      // Any other unit, either side.
+      const others161 = AllUnits().filter(u => u.playId !== playId);
+      if (others161.length === 0) return null;
+      return mandatoryTarget("ASH_161", player, others161.map(u => u.playId));
+    }
+    case "ASH_127": // The Twins — the When Played half of its shared Sentinel grant.
+      return buildTwinsSentinel(player, playId ?? "");
+    case "ASH_136": { // Display of Strength — "Give a unit +3/+3 for this phase." Any unit.
+      const targets136 = AllUnits();
+      if (targets136.length === 0) return null;
+      return mandatoryTarget("ASH_136", player, targets136.map(u => u.playId));
+    }
+    case "ASH_081": { // Nebulon-C Frigate — "When Played: You MAY heal 3 damage from a unit or
+                      // base." Either player's unit, and either base.
+      const targets081 = [...AllUnits().map(u => u.playId), "player1.base", "player2.base"];
+      return {
+        type: "ability-option",
+        cardId: "ASH_081",
+        player,
+        helperText: "Heal 3 damage from a unit or base?",
+        yesLabel: "Heal 3",
+        noLabel: "Skip",
+        onYes: mandatoryTarget("ASH_081", player, targets081),
+        continuation: null,
+      };
+    }
+    case "ASH_044": { // Barriss Offee — "Heal UP TO 2 damage from a unit. Give an Advantage token
+                      // to it for each damage healed THIS WAY." The token count is what was really
+                      // healed, so a unit on 1 damage yields one token, not two.
+      const targets044 = AllUnits();
+      if (targets044.length === 0) return null;
+      return mandatoryTarget("ASH_044", player, targets044.map(u => u.playId));
+    }
     case "TWI_103": { // Pyrrhic Assault — "For this phase, each friendly unit gains: 'When
                       // Defeated: Deal 2 damage to an enemy unit.'" One phase-long marker on the
                       // PLAYER, so units played later this phase are covered too.
@@ -3690,4 +3728,19 @@ export function buildAethersprite(
     },
     continuation,
   };
+}
+
+/**
+ * ASH_127 The Twins — "When Played/On Attack: You may give ANOTHER friendly unit Sentinel for this
+ * phase." One builder for both triggers; with no other friendly unit there is nothing to offer.
+ */
+export function buildTwinsSentinel(
+  player: PlayerId,
+  selfPlayId: string,
+  continuation: PendingResolution | null = null,
+): PendingResolution | null {
+  const others = GetUnitsForPlayer(player).filter(u => u.playId !== selfPlayId);
+  if (others.length === 0) return null;
+  return optionalTarget("ASH_127", player, others.map(u => u.playId),
+    "Give another friendly unit Sentinel for this phase?", { yesLabel: "Give Sentinel", continuation });
 }

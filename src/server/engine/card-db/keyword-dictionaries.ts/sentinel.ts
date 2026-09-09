@@ -38,6 +38,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
       }
 
       switch(currentEffect.cardId) {
+        case "ASH_127": hasSentinel = true; break;//The Twins — granted for the phase
         case "SEC_048": hasSentinel = true; break;//Captain Rex — this unit AND an enemy unit, for the phase
         case "SOR_086": hasSentinel = true; break;//Gladiator Star Destroyer
         case "SOR_003": hasSentinel = true; break;//Chewbacca (Walking Carpet)
@@ -256,6 +257,8 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "LAW_118"://Droid Laser Turret
     case "LAW_251"://Night Wind Assailants
     case "LAW_263"://Kessel Hulk
+    case "ASH_065"://Home One - Heart of the Fleet
+    case "ASH_073"://Palace Chef Droid
     case "ASH_029"://Scorpenek Annihilator Droid
     case "ASH_048"://Imperial Armored Commando
     case "ASH_117"://Outland Protector

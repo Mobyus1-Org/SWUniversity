@@ -2,6 +2,7 @@ import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
 import { BaseHealingPrevented, DealDamageToBase, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains } from "@/server/engine/core-functions";
+import { Unit } from "@/server/engine/unit";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateCloneTrooper, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
 
@@ -20,7 +21,7 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
   "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149", "ASH_179", "ASH_251",
-  "ASH_237", "ASH_248", "SEC_119", "JTL_087", "HMW_121", "ASH_079", "ASH_111", "ASH_064", "TWI_144", "TWI_097", "TWI_084", "TWI_137", "TWI_160",
+  "ASH_237", "ASH_248", "SEC_119", "JTL_087", "HMW_121", "ASH_079", "ASH_111", "ASH_064", "TWI_144", "TWI_097", "TWI_084", "TWI_137", "TWI_160", "ASH_065", "ASH_221",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -111,6 +112,30 @@ export function resolveWhenPlayedTrigger(
           owner: host.owner, controller: host.controller,
         });
         log.push(`${CardTitle(trigger.cardId)}: gave a Shield token to ${CardTitle(host.cardId)}.`);
+      }
+      break;
+    }
+    case "ASH_065": { // Home One — "When Played: Heal all damage from each friendly unit."
+      for (const u of GetUnitsForPlayer(trigger.fromPlayer)) {
+        const unit065 = GetUnitByPlayId(gs, u.playId);
+        if (unit065) unit065.damage = 0;
+      }
+      log.push(`${CardTitle(trigger.cardId)}: healed all damage from each friendly unit.`);
+      break;
+    }
+    case "ASH_221": { // Helix Starfighter — "If an opponent controls a space unit, give a Shield
+                      // token to this unit. Otherwise, give 2 Advantage tokens to this unit."
+      const self221 = GetUnitByPlayId(gs, trigger.playId ?? "");
+      if (!self221) break;
+      const enemySpace = (trigger.fromPlayer === 1 ? gs.player2 : gs.player1).spaceArena.length > 0;
+      if (enemySpace) {
+        self221.upgrades.push({
+          cardId: "SOR_T02", playId: String(gs.nextPlayId++),
+          owner: self221.owner, controller: self221.controller,
+        });
+        log.push(`${CardTitle(trigger.cardId)}: gave a Shield token to itself.`);
+      } else {
+        GiveAdvantageTokens(gs, Unit.FromInterface(self221), 2, log, trigger.cardId);
       }
       break;
     }

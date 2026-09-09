@@ -10,7 +10,7 @@ execution case at all. Treat this as "definitely not started", not "everything t
 
 Each block below is under Discord's 2000-character limit — paste one block per message.
 
-**Total: 799 cards across 10 sets.**
+**Total: 783 cards across 10 sets.**
 
 ---
 
@@ -23,7 +23,7 @@ SOR_019: Security Complex Base
 SOR_238: C-3PO - Protocol Droid Unit
 ```
 
-## SHD — Shadows of the Galaxy (57)
+## SHD — Shadows of the Galaxy (54)
 
 **Message 1 of 2**
 ```
@@ -62,7 +62,6 @@ SHD_145: Headhunting Event
 SHD:
 SHD_156: Cripple Authority Event
 SHD_157: Bo-Katan Kryze - Fighting For Mandalore Unit
-SHD_163: Migs Mayfeld - Triggerman Unit
 SHD_170: IG-11 - I Cannot Be Captured Unit
 SHD_180: Detention Block Rescue Event
 SHD_182: Bravado Event
@@ -70,7 +69,6 @@ SHD_183: Kintan Intimidator Unit
 SHD_189: Slaver's Freighter Unit
 SHD_194: Triple Dark Raid Event
 SHD_196: Grogu - Irresistible Unit
-SHD_198: Omega - Part of the Squad Unit
 SHD_199: Coruscant Dissident Unit
 SHD_202: Qi'ra - Playing Her Part Unit
 SHD_205: Let the Wookiee Win Event
@@ -79,7 +77,6 @@ SHD_227: Look the Other Way Event
 SHD_228: Bounty Posting Event
 SHD_232: Relentless Pursuit Event
 SHD_234: Incinerator Trooper Unit
-SHD_239: Toro Calican - Ambitious Upstart Unit
 SHD_241: Kragan Gorr - Warbird Captain Unit
 SHD_243: Altering the Deal Event
 SHD_244: No Bargain Event
@@ -749,7 +746,7 @@ SEC_261: Inspiring Senator Unit
 SEC_263: Assassin Probe Unit
 ```
 
-## ASH — Ashes of the Empire (89)
+## ASH — Ashes of the Empire (76)
 
 **Message 1 of 3**
 ```
@@ -769,13 +766,11 @@ ASH_017: Greef Karga - Gracious Magistrate Leader
 ASH_018: Grogu - Charming Companion Leader
 ASH_027: Enoch - Solemn Servant Unit
 ASH_028: Paz Vizsla - For a Brighter Future Unit
-ASH_031: Hera Syndulla - Renegade General Unit
 ASH_035: Tatooine Repulsor Train Unit
 ASH_038: Purrgil Ultra Unit
 ASH_039: Baylan Skoll - Fallen Jedi Unit
 ASH_041: Outcast - Mercenary Starship Unit
 ASH_042: Jabba the Hutt - Eminence of Tatooine Unit
-ASH_044: Barriss Offee - Redeeming Herself Unit
 ASH_045: Reanimated Night Trooper Unit
 ASH_047: Gar Saxon - Coveting Power Unit
 ASH_051: Reinforcing Light Cruiser Unit
@@ -785,47 +780,37 @@ ASH_057: Lothal E-Wing Unit
 ASH_058: Duchess's Protector Unit
 ASH_060: Cobb Vanth - Let Me Handle This Unit
 ASH_063: Bo-Katan's Gauntlet - Reinforce from Above Unit
-ASH_065: Home One - Heart of the Fleet Unit
 ASH_071: Battered Haulcraft Unit
 ```
 
 **Message 2 of 3**
 ```
 ASH:
-ASH_073: Palace Chef Droid Unit
 ASH_075: Pit Droid Team Unit
 ASH_077: Ryder Azadi - Restored Governor Unit
 ASH_078: B-Wing Rearguard Unit
 ASH_080: Covert Believers Unit
-ASH_081: Nebulon-C Frigate Unit
 ASH_082: Trexler Armored Marauder Unit
 ASH_084: Arcana Star Map - Path to Peridea Upgrade
 ASH_088: The Conflict Within Upgrade
 ASH_089: Perseverance Event
 ASH_090: Reforge Event
 ASH_091: Buy Time Event
-ASH_093: Captain Pellaeon - Plotting from the Shadows Unit
 ASH_094: Moff Jerjerrod - We Shall Redouble Our Efforts Unit
-ASH_098: AT-ST Raider Unit
 ASH_100: Gallius Rax - Counselor to the Empire Unit
 ASH_104: Dathomiri Magicks Event
 ASH_107: Clan Wren Loyalist Unit
 ASH_110: Admiral Ackbar - Assume Attack Coordinates Unit
-ASH_113: Mandalorian Flagship - Captured from the Empire Unit
 ASH_118: 8D8 - Daimyo's Majordomo Unit
 ASH_119: Greef Karga - Introductions are in Order Unit
 ASH_122: Consortium StarViper Unit
-ASH_123: Lang - Arrogant Mercenary Unit
 ASH_125: Stolen Eta Shuttle Unit
-ASH_127: The Twins - We Don't Want War Unit
 ASH_128: Bothan-5 - New Republic Prison Ship Unit
 ASH_134: Warrior's Legacy Upgrade
 ASH_135: The Darksaber - Icon of Leadership Upgrade
-ASH_136: Display of Strength Event
 ASH_155: Grogu - Yes. Yes. Yes. Unit
 ASH_159: Alphabet Squadron U-Wing - Quiet Devotion Unit
 ASH_160: Kachirho Militia Unit
-ASH_161: Zeb Orrelios - Fists Work Every Time Unit
 ASH_162: Rash Action Event
 ASH_169: Axe Woves - Undaunted Unit
 ```
@@ -842,7 +827,6 @@ ASH_212: Peli Motto - You Bring the Cash? Unit
 ASH_214: Amnesty Officer Unit
 ASH_217: Mayor's Majordomo - No Problem Groveling Unit
 ASH_219: Jod Na Nawood - Keeping Secrets Unit
-ASH_221: Helix Starfighter Unit
 ASH_224: Elzar Mann - Haunted by a Vision Unit
 ASH_227: Heightened Awareness Upgrade
 ASH_230: Improvised Identity Upgrade
