@@ -10,7 +10,7 @@ import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens, GiveExperienceTokens, CreateSpy } from "@/server/engine/token-helpers";
 import { CreateMandalorianToken } from "@/server/engine/token-helpers";
-import { jabbasRancorDamage, buildTraskWalkerChoice, buildAethersprite, buildTwinsSentinel } from "@/server/engine/actions/when-played";
+import { jabbasRancorDamage, buildTraskWalkerChoice, buildAethersprite, buildTwinsSentinel, buildPreVizslaOffer } from "@/server/engine/actions/when-played";
 
 /**
  * On Attack abilities — called after the attack target is chosen.
@@ -117,15 +117,16 @@ export function resolveOnAttackTrigger(
           const top = defState156.deck.pop(); // the top of the deck is the END of the array
           if (!top) break;
           discarded156.push(top.cardId);
+          const discardPlayId156 = String(gs156.nextPlayId++);
           defState156.discard.unshift({
             cardId: top.cardId,
-            playId: String(gs156.nextPlayId++),
+            playId: discardPlayId156,
             owner: defender156,
             controller: defender156,
             turnDiscarded: gs156.currentRound,
             discardEffect: "",
           });
-          QueueWhenDiscardedTrigger(gs156, defender156, top.cardId);
+          QueueWhenDiscardedTrigger(gs156, defender156, top.cardId, discardPlayId156, "Deck");
         }
         if (discarded156.length > 0) {
           game156.gameLog.push(`${CardTitle("JTL_156")}: discarded ${discarded156.map(c => CardTitle(c)).join(", ")} from player ${defender156}'s deck.`);
@@ -818,6 +819,21 @@ function resolveInnateOnAttack(
       return optionalTarget("TWI_006", attacker.controller, others006.map(u => u.playId),
         "Give another unit +2/+2 for this phase?", { yesLabel: "Give +2/+2", continuation });
     }
+    case "TWI_085": { // Kalani — "On Attack: You may choose another unit. If you have the initiative,
+                      // you may choose up to 2 other units instead. Give each chosen unit +2/+2 for
+                      // this phase." One pick-up-to-N; choosing nothing is the "may" decline.
+      const others085 = AllUnits().filter(u => u.playId !== attacker.playId);
+      if (others085.length === 0) return continuation;
+      return {
+        type: "ability-target",
+        cardId: "TWI_085",
+        player: attacker.controller,
+        fromPlayIds: others085.map(u => u.playId),
+        needsMultiple: true,
+        maxTargets: InitiativePlayer() === attacker.controller ? 2 : 1,
+        continuation,
+      };
+    }
     case "SOR_008": { // Hera Syndulla (deployed) — "On Attack: You may give an Experience token to
                       // another unique unit."
       const uniqueOthers008 = AllUnits()
@@ -1049,10 +1065,11 @@ function resolveInnateOnAttack(
         continuation,
       };
     }
-    case "LAW_079": { // K-2SO — On Attack: You may deal 3 damage to a damaged ground unit.
+    case "LAW_079":   // K-2SO — On Attack: You may deal 3 damage to a damaged ground unit.
+    case "SHD_170": { // IG-11 — identical On Attack text.
       const damagedGround079 = AllGroundUnits().filter(u => u.damage > 0);
       if (damagedGround079.length === 0) return continuation;
-      return optionalTarget("LAW_079", attacker.controller, damagedGround079.map(u => u.playId),
+      return optionalTarget(sourceCardId, attacker.controller, damagedGround079.map(u => u.playId),
         "Deal 3 damage to a damaged ground unit?", { yesLabel: "Deal 3", continuation });
     }
     case "ASH_043": { // Corona Four — On Attack: You may give a unit –2/–0 for this phase.
@@ -1321,13 +1338,14 @@ function resolveInnateOnAttack(
       return buildTwinsSentinel(attacker.controller, attacker.playId, continuation) ?? continuation;
     }
     case "TWI_034": { // General Grievous (Trophy Collector) — "On Attack: If this unit has 4 or
-                      // more Lightsaber upgrades attached to him, defeat 4 enemy units." Offered
-                      // as a pick-up-to-4; with 4 or fewer enemies the player simply takes them
-                      // all, which is the same outcome as "defeat 4" on a smaller board.
+                      // more Lightsaber upgrades attached to him, defeat 4 enemy units." Not a
+                      // "may": exactly 4 must be picked, or every enemy unit when there are fewer.
+                      // The count is enforced where the picks are resolved.
       const sabers034 = attacker.upgrades.filter(u => TraitContains(u.cardId, "Lightsaber")).length;
       if (sabers034 < 4) return continuation;
       const enemies034 = GetUnitsForPlayer(attacker.controller === 1 ? 2 : 1);
       if (enemies034.length === 0) return continuation;
+      const required034 = Math.min(4, enemies034.length);
       return {
         type: "ability-target",
         cardId: "TWI_034",
@@ -1335,6 +1353,7 @@ function resolveInnateOnAttack(
         fromPlayIds: enemies034.map(u => u.playId),
         needsMultiple: true,
         maxTargets: 4,
+        helperText: `Choose ${required034} enemy unit${required034 === 1 ? "" : "s"} to defeat.`,
         continuation,
       };
     }
@@ -1772,6 +1791,22 @@ function resolveInnateOnAttack(
         } satisfies GiveXpMultiplePending,
         continuation,
       };
+    }
+    case "SHD_142": // Pre Vizsla — the On Attack half of his When Played/On Attack.
+      return buildPreVizslaOffer(attacker.controller, attacker.playId, continuation);
+    case "SHD_046": { // Rey (Keeping the Past) — "On Attack: You may heal 2 damage from a unit. If
+                      // it's a non-Heroism unit, give a Shield token to it." Any unit — damaged or
+                      // not, Rey included — since the Shield rider matters on its own.
+      const units046 = AllUnits();
+      return optionalTarget("SHD_046", attacker.controller, units046.map(u => u.playId),
+        "Heal 2 damage from a unit? A non-Heroism unit also gets a Shield token.",
+        { yesLabel: "Heal 2", sourcePlayId: attacker.playId, continuation });
+    }
+    case "SHD_141": { // Kylo Ren (Killing the Past) — "On Attack: Give a unit +2/+0 for this phase.
+                      // If it's a non-Villainy unit, also give an Experience token to it."
+                      // Mandatory; any unit, Kylo included.
+      const units141 = AllUnits();
+      return mandatoryTarget("SHD_141", attacker.controller, units141.map(u => u.playId), continuation);
     }
     case "SOR_059": { // 2-1B Surgical Droid — On Attack: You may heal 2 damage from another unit.
       const damagedOthers059 = AllUnits()

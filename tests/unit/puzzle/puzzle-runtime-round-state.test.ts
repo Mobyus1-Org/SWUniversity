@@ -51,6 +51,8 @@ describe("puzzle hydration — roundState defaults", () => {
     expect(rs.lastActionWasPass).toBe(false);
     expect(rs.regroupResourcedPlayers).toEqual([]);
     expect(rs.forceUsedThisPhase).toBe(0);
+    expect(rs.cardsDiscardedThisPhase).toEqual([]);
+    expect(rs.discardPlayGrants).toEqual([]);
   });
 
   it("keeps a stored roundState's values while defaulting the fields it omits", () => {

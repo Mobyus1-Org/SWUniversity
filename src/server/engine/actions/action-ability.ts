@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllUnits, GetPlayer, UnitWasDefeatedThisPhase, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllUnits, GetPlayer, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { CardTraits, CardCost, CardType, CardAspects } from "@/server/engine/card-db/generated";
 import { HasFortify } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
@@ -595,24 +595,17 @@ export function ArmorerFriendlyAttachTargets(player: PlayerId): string[] {
 
 /**
  * Cards whose Action is used while they sit in the DISCARD PILE — a third actor location, after
- * unit/leader and the base-upgrade path (HMW_037).
+ * unit/leader and the base-upgrade path (HMW_037). Each such Action is "play this card from your
+ * discard pile"; its condition lives in DiscardPlayPermission (card-playability), which the client
+ * shares.
  *
  * A discard card is in no arena, so neither ActionAbilities' walk nor GetUnitByPlayId can reach it.
  */
 export function DiscardHostsAction(cardId: string): boolean {
   switch (cardId) {
     case "SHD_038": // Brutal Traditions — Action: play this upgrade from your discard
+    case "SHD_135": // Kylo's TIE Silencer — Action: play this unit from your discard
       return true;
-    default:
-      return false;
-  }
-}
-
-/** Whether the discard-hosted Action's condition holds. Checked BEFORE any cost is paid. */
-export function DiscardActionAvailable(cardId: string, player: PlayerId): boolean {
-  switch (cardId) {
-    case "SHD_038": // "If an enemy unit was defeated this phase"
-      return UnitWasDefeatedThisPhase(player === 1 ? 2 : 1);
     default:
       return false;
   }

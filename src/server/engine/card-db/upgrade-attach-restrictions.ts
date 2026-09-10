@@ -123,6 +123,7 @@ export function UpgradeEligibleTargets(
       }).map(u => u.playId);
 
     // "Attach to a non-leader unit."
+    case "SHD_053": //Second Chance
     case "SHD_193": //Frozen in Carbonite
     case "SHD_226": //Unrefusable Offer
     case "TWI_122": //Squad Support
@@ -201,6 +202,27 @@ export function PilotlessVehiclePlayIds(game: GameState, player: PlayerId, exclu
       return pilotCountOn(u) === 0;
     })
     .map(u => u.playId);
+}
+
+/**
+ * Where an upgrade already in play may be attached once `newController` controls it — "take
+ * control of an upgrade and attach it to an eligible unit" (SHD_077 Evidence of the Crime). The
+ * upgrade's own attach restriction is read for its NEW controller, and its current host is not
+ * excluded: staying put is a legal choice. A Pilot needs a Vehicle with no Pilot on it (an attach,
+ * so the strict PilotlessVehiclePlayIds reading), or its current host.
+ */
+export function UpgradeDestinationsOnControlChange(
+  upgradeCardId: string,
+  game: GameState,
+  newController: PlayerId,
+  currentHostPlayId: string,
+): string[] {
+  if (IsPilotUpgrade(upgradeCardId)) {
+    return allUnits(game)
+      .filter(u => u.playId === currentHostPlayId || (TraitContains(u.cardId, "Vehicle") && pilotCountOn(u) === 0))
+      .map(u => u.playId);
+  }
+  return UpgradeEligibleTargets(upgradeCardId, game, newController);
 }
 
 export function PilotingEligibleVehicles(

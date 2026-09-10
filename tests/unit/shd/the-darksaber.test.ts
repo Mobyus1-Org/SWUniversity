@@ -50,6 +50,64 @@ describe("SHD_126 The Darksaber — aspect penalty exemption", () => {
   });
 });
 
+describe("SHD_126 The Darksaber — the waiver follows the HOST", () => {
+  // "While playing this upgrade on a Mandalorian unit, ignore its aspect penalty." Darksaber
+  // (cost 4, Command) under a Darth Vader leader + Vigilance base: 6 normally, 4 on a Mandalorian.
+  function setup(resources: number) {
+    return new GameStateBuilder()
+      .MyBase(Cards.bases.common.blue30HP)
+      .MyLeader(Cards.leaders.sor.darthVader)
+      .TheirBase(Cards.bases.common.green30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .WithActivePlayer(1)
+      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, resources)
+      .WithCardInHandForPlayer(1, Cards.upgrades.shd.theDarksaber);
+  }
+  const ready = (g: GameTestAdapter) => g.state.player1.resources.filter(r => r.ready).length;
+
+  it("on a NON-Mandalorian it pays the penalty, even with a Mandalorian in play", async () => {
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      setup(10)
+        .WithGroundUnitForPlayer(1, Cards.units.shd.theMandalorian)
+        .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
+        .Build(),
+    );
+
+    await g.playCardFromHandAsync(1, 0);
+    await g.chooseGroundUnitAsync(1, 1); // the Marine
+
+    expect(g.state.player1.groundArena[1].upgrades.map(u => u.cardId)).toEqual([Cards.upgrades.shd.theDarksaber]);
+    expect(10 - ready(g)).toBe(6);
+  });
+
+  it("with only the waived price affordable, only Mandalorian hosts are offered", async () => {
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      setup(4)
+        .WithGroundUnitForPlayer(1, Cards.units.shd.theMandalorian)
+        .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
+        .Build(),
+    );
+
+    await g.playCardFromHandAsync(1, 0);
+
+    const res = g.lastDispatchResponse?.resolutionNeeded as { fromPlayIds?: string[] };
+    expect(res.fromPlayIds).toEqual([g.state.player1.groundArena[0].playId]);
+  });
+
+  it("an ENEMY Mandalorian host waives it too — 'a Mandalorian unit', either side", async () => {
+    const g = new GameTestAdapter();
+    g.loadNewState(setup(4).WithGroundUnitForPlayer(2, Cards.units.shd.theMandalorian).Build());
+
+    await g.playCardFromHandAsync(1, 0);
+    await g.chooseGroundUnitAsync(2, 0);
+
+    expect(g.state.player2.groundArena[0].upgrades.map(u => u.cardId)).toEqual([Cards.upgrades.shd.theDarksaber]);
+    expect(ready(g)).toBe(0);
+  });
+});
+
 describe("SHD_126 The Darksaber — On Attack", () => {
   it("gives an Experience token to each OTHER friendly Mandalorian when the carrier attacks", async () => {
     const g = new GameTestAdapter();

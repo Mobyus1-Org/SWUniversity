@@ -722,6 +722,27 @@ export function UnitsThatAttackedBase(basePlayer: PlayerId): { fromPlayer: Playe
     .map(({ fromPlayer, cardId, playId }) => ({ fromPlayer, cardId, playId }));
 }
 
+/**
+ * The live enemy non-leader units that attacked `player`'s base this phase — each once, however
+ * many times it attacked. Units that have since left play, or that `player` now controls, drop
+ * out. Units immune to an enemy capture are excluded, since the only reader captures them.
+ */
+export function EnemyNonLeadersThatAttackedBase(player: PlayerId): Unit[] {
+  const game = GetGame();
+  if (!game) return [];
+  const seen = new Set<string>();
+  const result: Unit[] = [];
+  for (const entry of UnitsThatAttackedBase(player)) {
+    if (seen.has(entry.playId)) continue;
+    seen.add(entry.playId);
+    const unit = GetUnitByPlayId(game.currentGameState, entry.playId);
+    if (!unit || unit.controller === player) continue;
+    if (Unit.FromInterface(unit).IsLeader() || UnitImmuneToEnemyCapture(unit)) continue;
+    result.push(unit);
+  }
+  return result;
+}
+
 export const LOST_THE_GAME = "__lost_the_game";
 
 /**
@@ -972,7 +993,8 @@ export function HealBaseForPlayer(
 export function UnitHasWhenDefeatedAbility(unit: Unit): boolean {
   if (unit.LostAbilities()) return false;
   if (CardText(unit.cardId).includes("When Defeated")) return true;
-  if (unit.upgrades.some(u => u.cardId === "TWI_218")) return true;
+  // Upgrades whose text grants the attached unit a When Defeated.
+  if (unit.upgrades.some(u => u.cardId === "TWI_218" || u.cardId === "SHD_053")) return true;
   return GetUnitsForPlayer(unit.controller)
     .some(u => u.cardId === "SOR_105" && u.playId !== unit.playId);
 }
@@ -1486,13 +1508,37 @@ export function QueueWhenDrawnTrigger(gs: GameState, player: PlayerId, cardId: s
 const WHEN_DISCARDED_CARDS = new Set(["LAW_206"]); // That's a Rock
 
 /**
- * Queues a "when this card is discarded from your hand or deck" trigger. Call from EVERY site
- * that moves a card from a player's HAND or DECK to the discard pile — hand-discard pendings,
- * random discards, deck mills, reveal-then-discard flows. Do NOT call it for a played event
- * finishing resolution or for defeated units/upgrades/resources: those are not discards from
- * hand or deck.
+ * "For this phase, `player` may play the card `discardPlayId` from their discard pile" — the grant
+ * SHD_053 Second Chance and SHD_115 Cobb Vanth create. Read by DiscardPlayPermission; the whole
+ * list goes when roundState is rebuilt, and a grant is used up when the card is played.
  */
-export function QueueWhenDiscardedTrigger(gs: GameState, owner: PlayerId, cardId: string): void {
+export function GrantPlayFromDiscardThisPhase(
+  gs: GameState,
+  player: PlayerId,
+  discardPlayId: string,
+  free: boolean,
+  source: string,
+): void {
+  gs.roundState.discardPlayGrants.push({ player, playId: discardPlayId, free, source });
+}
+
+/**
+ * Records a discard from a player's HAND or DECK and queues its "when this card is discarded from
+ * your hand or deck" trigger. Call from EVERY site that moves a card from a player's HAND or DECK
+ * to the discard pile — hand-discard pendings, random discards, deck mills, reveal-then-discard
+ * flows — passing the new discard entry's playId. Do NOT call it for a played event finishing
+ * resolution or for defeated units/upgrades/resources: those are not discards from hand or deck.
+ *
+ * The record (roundState.cardsDiscardedThisPhase) is what SHD_135 Kylo's TIE Silencer reads.
+ */
+export function QueueWhenDiscardedTrigger(
+  gs: GameState,
+  owner: PlayerId,
+  cardId: string,
+  discardPlayId: string,
+  from: "Hand" | "Deck",
+): void {
+  gs.roundState.cardsDiscardedThisPhase.push({ player: owner, cardId, playId: discardPlayId, from });
   if (!WHEN_DISCARDED_CARDS.has(cardId)) return;
   gs.triggerBag.push({
     triggerType: "when-discarded",
@@ -1733,6 +1779,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SEC_110": //GNK Power Droid
     case "SOR_067": //Rugged Survivors
     case "LAW_079": //K-2SO — On Attack: may deal 3 damage to a damaged ground unit
+    case "SHD_170": //IG-11 — On Attack: may deal 3 damage to a damaged ground unit (same text as K-2SO)
     case "ASH_043": //Corona Four — On Attack: may give a unit -2/-0 for this phase
     case "ASH_056": //Huyang — On Attack: may give an upgraded unit -4/-0 for this phase
     case "ASH_083": //Summa-verminoth — On Attack: defeat all other space units
@@ -1745,6 +1792,10 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_008": //Hera Syndulla (deployed) — On Attack: may give an XP token to another unique unit
     case "TWI_002": //Nute Gunray (deployed) — On Attack: create a Battle Droid token
     case "TWI_006": //Wat Tambor (deployed) — On Attack: if a friendly unit was defeated this phase, may give +2/+2
+    case "TWI_085": //Kalani — On Attack: may give another unit (up to 2 with the initiative) +2/+2 for this phase
+    case "SHD_046": //Rey (Keeping the Past) — On Attack: may heal 2 from a unit; non-Heroism → Shield
+    case "SHD_142": //Pre Vizsla — When Played/On Attack: may pay for an upgrade on another non-Vehicle unit and take it
+    case "SHD_141": //Kylo Ren (Killing the Past) — On Attack: a unit gets +2/+0 this phase; non-Villainy → Experience
     case "TWI_014": //Asajj Ventress (deployed) — On Attack: if you played an event this phase, +1/+0 and first strike
     case "ASH_132": //Queen Soruna — On Attack: may reveal a unit from hand to deal 3 damage to a unit with the same cost
     case "ASH_146": //Justifier — On Attack: may deal 1 damage to a unit; if defeated, give an Advantage token to a unit
@@ -2170,15 +2221,16 @@ export function DiscardRandomCardFromHand(
   if (pState.hand.length === 0) return;
   const idx = Math.floor(Math.random() * pState.hand.length);
   const [discarded] = pState.hand.splice(idx, 1);
+  const discardPlayId = String(gs.nextPlayId++);
   pState.discard.push({
     cardId: discarded.cardId,
-    playId: String(gs.nextPlayId++),
+    playId: discardPlayId,
     owner: player,
     controller: player,
     turnDiscarded: gs.currentRound,
     discardEffect: "",
   });
-  QueueWhenDiscardedTrigger(gs, player, discarded.cardId);
+  QueueWhenDiscardedTrigger(gs, player, discarded.cardId, discardPlayId, "Hand");
   QueueMigsMayfeldReaction(gs, player); // SHD_163 — a discard from HAND
   gameLog.push(`${CardTitle(sourceCardId)}: Player ${player} discarded ${CardTitle(discarded.cardId)} at random.`);
 }
@@ -2685,6 +2737,8 @@ export interface SearchDeckOpts {
   maxChoices?: number;
   maxCombinedCost?: number;
   costModifier?: 'free' | number;
+  /** With action "discard": the discarded card may be played from the discard for free this phase. */
+  freePlayFromDiscard?: boolean;
   continuation?: PendingResolution | null;
 }
 
@@ -2696,7 +2750,7 @@ export function searchDeck(
   cardId: string,
   player: PlayerId,
   topN: number,
-  action: "draw" | "play" | "scry",
+  action: "draw" | "play" | "scry" | "discard",
   opts?: SearchDeckOpts,
 ): DeckSearchPending | null {
   const game = GetGame();
@@ -2742,6 +2796,7 @@ export function searchDeck(
     ...(opts?.maxChoices !== undefined && { maxChoices: opts.maxChoices }),
     ...(opts?.maxCombinedCost !== undefined && { maxCombinedCost: opts.maxCombinedCost }),
     ...(opts?.costModifier !== undefined && { costModifier: opts.costModifier }),
+    ...(opts?.freePlayFromDiscard && { freePlayFromDiscard: true }),
     action,
     continuation: opts?.continuation ?? null,
   } satisfies DeckSearchPending;

@@ -148,15 +148,16 @@ export function executeRegroupDraw(gs: GameState, log: string[]): void {
     const p = ps(gs, player);
     if (p.leader.cardId === "SHD_015" && !p.leader.deployed && p.deck.length > 0) {
       const card = p.deck.pop()!;
+      const discardPlayId = String(gs.nextPlayId++);
       p.discard.unshift({
         cardId: card.cardId,
-        playId: String(gs.nextPlayId++),
+        playId: discardPlayId,
         owner: player,
         controller: player,
         turnDiscarded: gs.currentRound,
         discardEffect: "",
       });
-      QueueWhenDiscardedTrigger(gs, player, card.cardId);
+      QueueWhenDiscardedTrigger(gs, player, card.cardId, discardPlayId, "Deck");
       log.push(`${CardTitle("SHD_015")}: discarded ${CardTitle(card.cardId)} from the deck.`);
     }
   }
@@ -278,6 +279,8 @@ function executeRegroupReady(gs: GameState, log: string[]): void {
     baseDamagedThisPhase: [],
     unitsDamagedThisPhase: [],
     cardsDrawnThisPhase: { 1: 0, 2: 0 },
+    cardsDiscardedThisPhase: [],
+    discardPlayGrants: [],
     lastActionWasPass: false,
     regroupResourcedPlayers: [],
     forceUsedThisPhase: 0,

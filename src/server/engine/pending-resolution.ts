@@ -220,6 +220,12 @@ export interface UpgradeTargetPending {
    * The trigger fires after the attach, so how the upgrade was played has to survive the prompt.
    */
   viaSmuggle?: boolean;
+  /**
+   * Set when the upgrade's aspect penalty depends on its host (SHD_126 The Darksaber, a Lightsaber
+   * on TWI_034 General Grievous). Nothing was paid at play time; the chosen host decides whether
+   * `waived` or `full` is charged when it is attached.
+   */
+  deferredCost?: { full: number; waived: number; waivedHostPlayIds: string[] };
 }
 
 /** Uniqueness rule: player must defeat one copy when a duplicate unique enters play. */
@@ -284,6 +290,11 @@ export interface PlayFromHandPending {
   freePlay?: boolean;
   /** LOF_016 Qui-Gon Jinn (deployed): the attack pipeline to resume after the free play resolves. */
   continuation?: PendingResolution | null;
+  /**
+   * TWI_089 Consolidation of Power — the chosen units, defeated whether or not a unit is played
+   * ("Then, defeat the chosen units"). Carried here so the decline path can find them too.
+   */
+  thenDefeatPlayIds?: string[];
 }
 
 /** Step 1 of Exploit: prompt the playing player whether to use Exploit. */
@@ -573,8 +584,13 @@ export interface DeckSearchPending {
   costModifier?: 'free' | number;
   /** When true, chosen cards are NOT revealed before being drawn/played. Default behaviour is to reveal. */
   dontReveal?: boolean;
-  /** What happens to chosen cards: "play" = enter arena, "draw" = go to hand, "scry" = selected go to bottom of deck, unchosen stay on top. */
-  action: "play" | "draw" | "scry";
+  /** What happens to chosen cards: "play" = enter arena, "draw" = go to hand, "scry" = selected go to bottom of deck, unchosen stay on top, "discard" = go to the discard pile. */
+  action: "play" | "draw" | "scry" | "discard";
+  /**
+   * With action "discard": for this phase, the searching player may play each discarded card from
+   * their discard pile for free (SHD_115 Cobb Vanth).
+   */
+  freePlayFromDiscard?: boolean;
   continuation?: PendingResolution | null;
 }
 

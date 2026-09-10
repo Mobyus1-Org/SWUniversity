@@ -1,9 +1,9 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase } from "@/server/engine/core-functions";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase } from "@/server/engine/core-functions";
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost } from "@/server/engine/card-playability";
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
-import { IsTokenUpgrade, PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { IsTokenUpgrade, PilotlessVehiclePlayIds, UpgradeDestinationsOnControlChange } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending, BudgetSelectPending, PlayFromHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateBeast, CreateCloneTrooper, CreateXWing, CreateTieFighter, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens, GiveWeaknessToken } from "@/server/engine/token-helpers";
@@ -38,6 +38,52 @@ export function jabbasRancorDamage(
       continuation,
     } satisfies AbilityTargetPending,
   } satisfies AbilityTargetPending;
+}
+
+/**
+ * SHD_142 Pre Vizsla — "When Played/On Attack: You may pay the cost of an upgrade attached to
+ * another non-Vehicle unit. If you do, take control of that upgrade and attach it to this unit, if
+ * able. If it can't attach to this unit, defeat it instead." Shared by both triggers. Only upgrades
+ * the player can afford are offered; a token has no cost, so it's free.
+ */
+export function buildPreVizslaOffer(
+  player: PlayerId,
+  prePlayId: string | undefined,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const game = GetGame();
+  if (!game || !prePlayId) return continuation;
+  const budget = spendableFor(game.currentGameState, player);
+  const pool142 = AllUnits()
+    .filter(u => u.playId !== prePlayId && !TraitContains(u.cardId, "Vehicle", u.controller, u.playId))
+    .flatMap(u => u.upgrades)
+    .filter(upg => !CardIsLeader(upg.cardId) && (CardCost(upg.cardId) ?? 0) <= budget)
+    .map(upg => upg.playId);
+  if (pool142.length === 0) return continuation;
+  return optionalTarget("SHD_142", player, pool142,
+    "Pay the cost of an upgrade on another non-Vehicle unit to take control of it?",
+    { yesLabel: "Pay", sourcePlayId: prePlayId, continuation });
+}
+
+/**
+ * SHD_109 Endless Legions — "Reveal any number of resources you control. Play each unit revealed
+ * this way for free (one at a time)." Offered one resource at a time until the player is done.
+ * `revealable` is fixed when the event resolves — a resource that arrives mid-loop (from a played
+ * unit's own ability) was never revealed, so it isn't offered.
+ */
+export function buildEndlessLegionsOffer(
+  player: PlayerId,
+  revealable: string[],
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const game = GetGame();
+  if (!game) return continuation;
+  const resources = GetPlayer(game.currentGameState, player).resources;
+  const live109 = revealable.filter(id => resources.some(r => r.playId === id));
+  if (live109.length === 0) return continuation;
+  return optionalTarget("SHD_109", player, live109,
+    "Reveal a unit resource and play it for free?",
+    { yesLabel: "Reveal & play", noLabel: "Done", continuation });
 }
 
 /**
@@ -999,6 +1045,14 @@ export function resolveWhenPlayed(
       return optionalTarget(cardId, player, republic091.map(u => u.playId),
         "Attack with a Republic unit? It gets +2/+0 for this attack.", { yesLabel: "Attack" });
     }
+    case "SHD_101": { // Adelphi Patrol Wing — "When Played: You may attack with a unit. If you have
+                      // the initiative, it gets +2/+0 for this attack." The initiative is read when
+                      // the attack is chosen (applyAbilityEffect), not here — this runs twice for units.
+      const attackers101 = GetUnitsForPlayer(player, true).filter(u => CanUnitAttack(u));
+      if (attackers101.length === 0) return null;
+      return optionalTarget(cardId, player, attackers101.map(u => u.playId),
+        "Attack with a unit? If you have the initiative, it gets +2/+0 for this attack.", { yesLabel: "Attack" });
+    }
     case "IBH_064": // Hoth Lieutenant — "When Played: You may attack with another unit. It gets +2/+0
     case "IBH_092": { // for this attack." Optional; the +2/+0 and the attack are applied in applyAbilityEffect.
       const readyOthers064 = GetUnitsForPlayer(player).filter(u => u.ready && u.playId !== playId);
@@ -1219,6 +1273,20 @@ export function resolveWhenPlayed(
       const damaged073 = AllUnits().filter(u => u.damage > 0);
       if (damaged073.length === 0) return null;
       return mandatoryTarget("TWI_073", player, damaged073.map(u => u.playId));
+    }
+    case "TWI_076": { // Death by Droids — "Defeat a unit that costs 3 or less. Create 2 Battle
+                      // Droid tokens." The eligible list is taken BEFORE the droids exist, so the
+                      // new (cost 0) tokens can't be picked; they're created after the defeat.
+                      // With nothing to defeat, the droids still arrive.
+      const eligible076 = AllUnits().filter(u =>
+        (CardCost(u.cardId) ?? 0) <= 3
+        && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player));
+      if (eligible076.length === 0) {
+        CreateBattleDroid(game.currentGameState, player, game.gameLog, "TWI_076");
+        CreateBattleDroid(game.currentGameState, player, game.gameLog, "TWI_076");
+        return null;
+      }
+      return mandatoryTarget(cardId, player, eligible076.map(u => u.playId));
     }
     case "TWI_171": { // Grenade Strike — "Deal 2 damage to a unit." The optional second hit is
                       // built once the first target is known (it must share that unit's arena).
@@ -1776,6 +1844,52 @@ export function resolveWhenPlayed(
         fromPlayIds: friendlyRebels241.map(u => u.playId),
         continuation: null,
       };
+    }
+    case "SHD_077": { // Evidence of the Crime — "Take control of an upgrade that costs 3 or less and
+                      // attach it to an eligible unit of your choice." Mandatory. Tokens have no
+                      // printed cost, so they never qualify; leaders can't change control. Only
+                      // upgrades with somewhere legal to go are offered.
+      const gs077 = GetGame()?.currentGameState;
+      if (!gs077) return null;
+      const pool077 = AllUnits().flatMap(u => u.upgrades
+        .filter(upg => !IsTokenUpgrade(upg.cardId) && !CardIsLeader(upg.cardId)
+          && (CardCost(upg.cardId) ?? 0) <= 3
+          && UpgradeDestinationsOnControlChange(upg.cardId, gs077, player, u.playId).length > 0)
+        .map(upg => upg.playId));
+      if (pool077.length === 0) return null;
+      return mandatoryTarget(cardId, player, pool077);
+    }
+    case "SHD_109": { // Endless Legions — the unit resources are what can be revealed and played.
+      const gs109 = GetGame()?.currentGameState;
+      if (!gs109) return null;
+      const unitResources109 = GetPlayer(gs109, player).resources
+        .filter(r => CardType(r.cardId) === "Unit")
+        .map(r => r.playId);
+      return buildEndlessLegionsOffer(player, unitResources109, null);
+    }
+    case "TWI_089": { // Consolidation of Power — step 1: "Choose any number of friendly units."
+                      // The free play and the defeat follow once the choice is known.
+      const friendly089 = GetUnitsForPlayer(player);
+      if (friendly089.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "TWI_089",
+        player,
+        fromPlayIds: friendly089.map(u => u.playId),
+        needsMultiple: true,
+        maxTargets: friendly089.length,
+        helperText: "Choose any number of friendly units. You may play a unit from your hand costing up to their combined power for free; then they are defeated.",
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "SHD_142": // Pre Vizsla — When Played half; the On Attack half calls the same builder.
+      return buildPreVizslaOffer(player, playId, null);
+    case "SHD_106": { // Rule with Respect — "A friendly unit captures each enemy non-leader unit that
+                      // attacked your base this phase." Pick the captor here; the victims are
+                      // re-read when it's chosen. Nothing to capture → no prompt.
+      const friendly106 = GetUnitsForPlayer(player);
+      if (friendly106.length === 0 || EnemyNonLeadersThatAttackedBase(player).length === 0) return null;
+      return mandatoryTarget(cardId, player, friendly106.map(u => u.playId));
     }
     case "SHD_131": // Take Captive — TWI_128 is the reprint; identical text.
     case "TWI_128": { // Take Captive "A friendly unit captures an enemy non-leader unit in the same arena."
@@ -3064,6 +3178,12 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies RevealDiscardPending;
     }
+    case "SHD_182": { // Bravado — "Ready a unit." Any unit, either side. (Its cost reduction lives
+                      // in card-playability.)
+      const allUnits182 = AllUnits();
+      if (allUnits182.length === 0) return null;
+      return mandatoryTarget(cardId, player, allUnits182.map(u => u.playId));
+    }
     case "SOR_169": { // Keep Fighting — Ready a unit with 3 or less power.
       const eligible169 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
         .filter(u => new Unit(u.cardId, u.playId, u.controller).CurrentPower() <= 3);
@@ -3139,6 +3259,18 @@ export function resolveWhenPlayed(
       const allUnits172 = AllUnits();
       if (allUnits172.length === 0) return null;
       return mandatoryTarget(cardId, player, allUnits172.map(u => u.playId));
+    }
+    case "SHD_076": { // Unexpected Escape — "Exhaust a unit. You may rescue a captured card guarded
+                      // by that unit." The rescue offer is built once the unit is known.
+      const allUnits076 = AllUnits();
+      if (allUnits076.length === 0) return null;
+      return mandatoryTarget(cardId, player, allUnits076.map(u => u.playId));
+    }
+    case "SHD_180": { // Detention Block Rescue — deal 3 damage to a unit, 6 if it guards captives.
+                      // (Amount is decided by the chosen target's captives.)
+      const allUnits180 = AllUnits();
+      if (allUnits180.length === 0) return null;
+      return mandatoryTarget(cardId, player, allUnits180.map(u => u.playId));
     }
     case "ASH_067": { // Get Lost — Defeat an upgraded non-leader unit. A Shield token is an
                       // upgrade, so a unit carrying only a Shield is a legal target. Either

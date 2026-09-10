@@ -57,6 +57,8 @@ function hydrateRoundState(raw: unknown): GameState["roundState"] {
     baseDamagedThisPhase: stored.baseDamagedThisPhase ?? [],
     unitsDamagedThisPhase: stored.unitsDamagedThisPhase ?? [],
     cardsDrawnThisPhase: stored.cardsDrawnThisPhase ?? { 1: 0, 2: 0 },
+    cardsDiscardedThisPhase: stored.cardsDiscardedThisPhase ?? [],
+    discardPlayGrants: stored.discardPlayGrants ?? [],
     lastActionWasPass: stored.lastActionWasPass ?? false,
     regroupResourcedPlayers: stored.regroupResourcedPlayers ?? [],
     forceUsedThisPhase: stored.forceUsedThisPhase ?? 0,

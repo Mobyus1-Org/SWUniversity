@@ -89,7 +89,7 @@ export interface NeedsDeckSearch {
   helperText: string;
   choices: Array<{ tempId: string; cardId: string; cost: number }>;
   /** "scry" = player chooses which cards go to top (in click order, first = topmost); unchosen go to bottom. "draw"/"play" = player picks cards to take. */
-  action: "play" | "draw" | "scry";
+  action: "play" | "draw" | "scry" | "discard";
   maxChoices?: number; // maximum number of cards the player can choose, regardless of cost
   maxCombinedCost?: number; // maximum total cost of chosen cards, regardless of number
   costModifier?: "free" | number; // applied to each chosen card, usually to make them free or reduce cost by a certain amount
@@ -149,6 +149,8 @@ export type PlayCardSourceZone = "Hand" | "Deck" | "Discard";
 export interface PlayCardDispatchData {
   cardId: string;
   fromZone: PlayCardSourceZone;
+  /** With fromZone "Discard": which copy in the pile. */
+  playId?: string;
 }
 
 export interface PlaySmuggleDispatchData {

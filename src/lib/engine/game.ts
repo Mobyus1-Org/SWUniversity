@@ -58,7 +58,12 @@ export interface GameState {
     cardsPlayedThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string }[];
     cardsPlayedThisRound: { fromPlayer: PlayerId; cardId: string; playId: string; playedAs: "Unit" | "Upgrade" | "Event" | "Pilot" }[];
     cardsEnteredPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: EntryReason }[];
-    cardsLeftPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: ExitReason }[];
+    /**
+     * `defeatedBy` is the player credited with a defeat (SHD_182 Bravado, "if you've defeated an
+     * enemy unit this phase"): the opponent of a unit killed by combat damage, otherwise the player
+     * whose action was resolving. Absent for non-defeats and defeats nobody caused (regroup).
+     */
+    cardsLeftPlayThisPhase: { fromPlayer: PlayerId; cardId: string; playId: string; reason: ExitReason; defeatedBy?: PlayerId }[];
     /**
      * `attackedBasePlayer` is the base that was attacked, when the attack targeted a base at all —
      * absent for an attack on a unit. Needed by "each enemy unit that attacked your base this
@@ -75,6 +80,19 @@ export interface GameState {
      * see DrawCardForPlayer and the deck-search draw route.
      */
     cardsDrawnThisPhase: { 1: number; 2: number };
+    /**
+     * Cards moved from a player's HAND or DECK to their discard pile this phase, keyed by the
+     * discard entry's playId (SHD_135 Kylo's TIE Silencer: "if this unit was discarded from your
+     * hand or deck this phase"). Written only by QueueWhenDiscardedTrigger — the one call every
+     * such discard makes.
+     */
+    cardsDiscardedThisPhase: { player: PlayerId; cardId: string; playId: string; from: "Hand" | "Deck" }[];
+    /**
+     * "For this phase, you may play <card> from your discard pile [for free]" (SHD_053 Second
+     * Chance, SHD_115 Cobb Vanth). Keyed by the card's discard playId, so the grant dies with the
+     * card leaving the pile; consumed when the card is played. See DiscardPlayPermission.
+     */
+    discardPlayGrants: { player: PlayerId; playId: string; free: boolean; source: string }[];
     lastActionWasPass: boolean;
     regroupResourcedPlayers: PlayerId[];
     /** Number of times either player has Used the Force this phase (e.g. LOF_007 Avar Kriss). */

@@ -1,5 +1,5 @@
 import type { GameState } from "@/lib/engine/game";
-import type { PlayerId, Resource } from "@/lib/engine/core-models";
+import type { PlayerId, Resource, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { CardAspects, CardCost, CardHp, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradeEligibleTargets, PilotingEligibleVehicles, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
@@ -51,17 +51,27 @@ function leaderWaivesAspectPenalty(game: GameState, player: PlayerId, cardId: st
   return TraitContains(cardId, waiver.trait, player);
 }
 
-export function aspectPenalty(game: GameState, player: PlayerId, cardId: string): number {
+// Units that ignore ONE of their own aspects' penalty while you control a named partner. Only that
+// aspect's icons are dropped — any other uncovered icon still costs 2.
+//   SHD_046 Rey — "While playing this unit, ignore her Heroism aspect penalty if you control Kylo Ren."
+//   SHD_141 Kylo Ren — "While playing this unit, ignore his Villainy aspect penalty if you control Rey."
+const PARTNER_ASPECT_WAIVERS: Record<string, { aspect: string; partnerTitle: string }> = {
+  SHD_046: { aspect: "Heroism", partnerTitle: "Kylo Ren" },
+  SHD_141: { aspect: "Villainy", partnerTitle: "Rey" },
+};
+
+/**
+ * True when `player` controls a card titled `title`: their leader (deployed or not), a unit, or an
+ * upgrade on one of their units. The GameState-parameter twin of PlayerControlsCardWithTitle.
+ */
+function controlsCardWithTitle(game: GameState, player: PlayerId, title: string): boolean {
   const p = player === 1 ? game.player1 : game.player2;
+  const units = [...p.groundArena, ...p.spaceArena];
+  return CardTitle(p.leader.cardId) === title
+    || units.some(u => CardTitle(u.cardId) === title || (u.upgrades ?? []).some(up => CardTitle(up.cardId) === title));
+}
 
-  // Darksaber: free aspect penalty when a friendly non-Vehicle Mandalorian unit is in play
-  if (cardId === "SHD_126") {
-    const hasMandalorian = [...p.groundArena, ...p.spaceArena].some(
-      u => !TraitContains(u.cardId, "Vehicle") && TraitContains(u.cardId, "Mandalorian", player, u.playId),
-    );
-    if (hasMandalorian) return 0;
-  }
-
+export function aspectPenalty(game: GameState, player: PlayerId, cardId: string): number {
   // Leader waivers (Hera / Nala Se): matching trait → no aspect penalty.
   if (leaderWaivesAspectPenalty(game, player, cardId)) return 0;
 
@@ -70,7 +80,100 @@ export function aspectPenalty(game: GameState, player: PlayerId, cardId: string)
   // a cost, and consuming it on a report would spend the waiver on a card never actually played.
   if (omegaWaivesAspectPenalty(game, player, cardId)) return 0;
 
+  const partner = PARTNER_ASPECT_WAIVERS[cardId];
+  if (partner && controlsCardWithTitle(game, player, partner.partnerTitle)) {
+    return aspectPenaltyForAspects(game, player, CardAspects(cardId).filter(a => a !== partner.aspect));
+  }
+
   return aspectPenaltyForAspects(game, player, CardAspects(cardId));
+}
+
+/**
+ * Upgrades whose aspect penalty is ignored only when played ON a particular host. The discount
+ * depends on the attach target, so it can't live in aspectPenalty(): payment for these is deferred
+ * to the upgrade-target step (see HostDependentUpgradeCost).
+ *   SHD_126 The Darksaber — "While playing this upgrade on a Mandalorian unit, ignore its aspect
+ *     penalty." Any Mandalorian host, either side.
+ *   TWI_034 General Grievous — "Ignore the aspect penalty on each Lightsaber upgrade you play on
+ *     this unit." Only YOUR Grievous — "you" is his controller.
+ */
+export function HostWaivesUpgradeAspectPenalty(player: PlayerId, upgradeCardId: string, host: UnitInterface): boolean {
+  if (upgradeCardId === "SHD_126") {
+    return TraitContains(host.cardId, "Mandalorian", host.controller, host.playId);
+  }
+  if (host.cardId === "TWI_034") {
+    return host.controller === player
+      && !Unit.FromInterface(host).LostAbilities()
+      && TraitContains(upgradeCardId, "Lightsaber");
+  }
+  return false;
+}
+
+/**
+ * For an upgrade whose cost depends on its host: the full cost, the cost on a waiving host, and
+ * which eligible hosts waive. Null when no eligible host would change the cost — the upgrade then
+ * pays up front like any other card.
+ */
+export function HostDependentUpgradeCost(
+  game: GameState,
+  player: PlayerId,
+  cardId: string,
+): { full: number; waived: number; waivedHostPlayIds: string[] } | null {
+  if (CardType(cardId) !== "Upgrade") return null;
+  const penalty = aspectPenalty(game, player, cardId);
+  if (penalty === 0) return null;
+  const units = [...game.player1.groundArena, ...game.player1.spaceArena, ...game.player2.groundArena, ...game.player2.spaceArena];
+  const waivedHostPlayIds = UpgradeEligibleTargets(cardId, game, player).filter(id => {
+    const host = units.find(u => u.playId === id);
+    return !!host && HostWaivesUpgradeAspectPenalty(player, cardId, host);
+  });
+  if (waivedHostPlayIds.length === 0) return null;
+  const full = playCost(game, player, cardId);
+  return { full, waived: Math.max(0, full - penalty), waivedHostPlayIds };
+}
+
+/**
+ * Whether `player` may play the card `playId` from THEIR OWN discard pile right now — its
+ * permission and condition, not its cost — and whether that play is free. Two sources:
+ *   - a per-phase grant (roundState.discardPlayGrants): SHD_053 Second Chance, SHD_115 Cobb Vanth;
+ *   - an Action printed on the discard card itself (registered in DiscardHostsAction) whose
+ *     condition holds.
+ * Pure over GameState, so the client asks it too (the discard pile's Play button).
+ */
+export function DiscardPlayPermission(game: GameState, player: PlayerId, playId: string): { free: boolean } | null {
+  const p = player === 1 ? game.player1 : game.player2;
+  const card = p.discard.find(c => c.playId === playId);
+  if (!card) return null;
+  const grant = game.roundState.discardPlayGrants.find(g => g.player === player && g.playId === playId);
+  if (grant) return { free: grant.free };
+  switch (card.cardId) {
+    case "SHD_038": // Brutal Traditions — "Action: If an enemy unit was defeated this phase, play
+                    // this upgrade from your discard pile (paying its cost)."
+      return game.roundState.cardsLeftPlayThisPhase.some(e =>
+        e.fromPlayer !== player && (e.reason === "defeated" || e.reason === "token-defeated"))
+        ? { free: false } : null;
+    case "SHD_135": // Kylo's TIE Silencer — "Action: If this unit was discarded from your hand or
+                    // deck this phase, play it from your discard pile (paying its cost)." Keyed on
+                    // THIS copy's discard playId, so a copy defeated from play never qualifies.
+      return game.roundState.cardsDiscardedThisPhase.some(e => e.player === player && e.playId === playId)
+        ? { free: false } : null;
+    default:
+      return null;
+  }
+}
+
+/** The cards `player` could play from their discard pile right now: permitted, affordable, and
+ * (for an upgrade) with somewhere to attach. */
+export function DiscardPlayableCards(game: GameState, player: PlayerId): { playId: string; cardId: string; cost: number }[] {
+  const p = player === 1 ? game.player1 : game.player2;
+  return p.discard.flatMap(c => {
+    const permission = DiscardPlayPermission(game, player, c.playId);
+    if (!permission) return [];
+    const cost = permission.free ? 0 : playCost(game, player, c.cardId);
+    if (spendableFor(game, player) < cost) return [];
+    if (CardType(c.cardId) === "Upgrade" && UpgradeEligibleTargets(c.cardId, game, player).length === 0) return [];
+    return [{ playId: c.playId, cardId: c.cardId, cost }];
+  });
 }
 
 /**
@@ -145,6 +248,16 @@ function forceChokeDiscount(game: GameState, player: PlayerId, cardId: string): 
     u => CardTraits(u.cardId).includes("Force") && !Unit.FromInterface(u).LostAbilities(),
   );
   return hasForceUnit ? 1 : 0;
+}
+
+// SHD_182 Bravado: "If you've defeated an enemy unit this phase, this event costs 2 resources less
+// to play." Keyed on who DEFEATED it (the ledger's defeatedBy), not merely that an enemy unit left
+// play — an opponent defeating their own unit doesn't count.
+function bravadoDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (cardId !== "SHD_182") return 0;
+  const defeatedOne = game.roundState.cardsLeftPlayThisPhase.some(e =>
+    (e.reason === "defeated" || e.reason === "token-defeated") && e.fromPlayer !== player && e.defeatedBy === player);
+  return defeatedOne ? 2 : 0;
 }
 
 // LOF_056 Size Matters Not: this upgrade costs 1 less to play if you control a Force unit.
@@ -330,6 +443,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - guardianOfTheWhillsDiscount(game, player, cardId)
     - traitAttachUpgradeDiscount(game, player, cardId)
     - forceChokeDiscount(game, player, cardId)
+    - bravadoDiscount(game, player, cardId)
     - sizeMattersNotDiscount(game, player, cardId)
     - jabbaTheTrickDiscount(game, player, cardId)
     - benduDiscount(game, player, cardId)
@@ -477,6 +591,10 @@ export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string
     const hasVehicle = PilotingEligibleVehicles(game, player).length > 0;
     if (canAffordPilot && hasVehicle) return true;
   }
+
+  // An upgrade that's cheaper on some hosts is playable if it's affordable on one of them.
+  const hostDependent = HostDependentUpgradeCost(game, player, cardId);
+  if (hostDependent && readyResources >= hostDependent.waived) return true;
 
   if (readyResources < minUnitCost) return false;
 

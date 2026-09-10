@@ -19,7 +19,7 @@ import type { PlayerId } from "@/lib/engine/core-models";
 import type { DispatchResponse, DispatchType, DispatchData, GameDispatch, ResolutionRequest } from "@/lib/engine/message-types";
 import type { EngineContext } from "@/server/engine/pending-resolution";
 import { CardIsLeader } from "@/server/engine/core-functions";
-import { CardIsPlayable, ResourceIsSmuggleable } from "@/server/engine/card-playability";
+import { CardIsPlayable, DiscardPlayableCards, ResourceIsSmuggleable } from "@/server/engine/card-playability";
 
 
 // ---------------------------------------------------------------------------
@@ -1396,6 +1396,12 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     ? new Set(resolutionNeeded.fromPlayIds ?? [])
     : new Set();
   const hasDiscardSelection = selectableDiscardPlayIds.size > 0;
+  // Cards the player may play out of their OWN discard pile right now — a "for this phase" grant
+  // (Second Chance, Cobb Vanth) or a discard-hosted Action (Brutal Traditions, Kylo's TIE
+  // Silencer). Same gate as playable hand cards.
+  const discardPlayable: Map<string, number> = !resolutionNeeded && !isGameOver
+    ? new Map(DiscardPlayableCards(gameState, PLAYER).map(c => [c.playId, c.cost]))
+    : new Map();
 
   const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[0] : null;
   const latestPlayerDiscard = player.discard.length > 0 ? player.discard[0] : null;
@@ -2240,7 +2246,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                 />
                 <ZoneStatPanel
                   title="Discard"
-                  highlight={hasDiscardSelection}
+                  highlight={hasDiscardSelection || discardPlayable.size > 0}
                   media={latestPlayerDiscard
                     ? <CardRatioImage
                         primarySrc={getCardImageLink(latestPlayerDiscard.cardId)}
@@ -2558,6 +2564,30 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
               {discardCards.map(d => {
                 const isSelectable = selectableDiscardPlayIds.has(d.playId);
                 const isSelected = selectedTargetPlayIds.includes(d.playId);
+                const playCostHere = discardModalPlayer === 1 ? discardPlayable.get(d.playId) : undefined;
+                if (playCostHere !== undefined) {
+                  return <div key={d.playId} className="flex w-24 flex-col gap-1">
+                    <CardVisual
+                      cardId={d.cardId}
+                      selectable={!isResolving}
+                      onPreviewStart={handlePreviewStart}
+                      onPreviewEnd={handlePreviewEnd}
+                      compact
+                      square
+                    />
+                    <button
+                      type="button"
+                      disabled={isResolving}
+                      onClick={() => {
+                        setDiscardModalPlayer(null);
+                        void sendDispatch(createDispatch("play-card", { cardId: d.cardId, fromZone: "Discard", playId: d.playId }));
+                      }}
+                      className="rounded-md border border-emerald-400/40 bg-emerald-500/20 px-2 py-1 text-xs font-semibold text-white transition hover:bg-emerald-500/35 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {playCostHere === 0 ? "Play (free)" : `Play (${playCostHere})`}
+                    </button>
+                  </div>;
+                }
                 return <button
                   key={d.playId}
                   type="button"

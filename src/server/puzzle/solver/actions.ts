@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { CardIsPlayable, ResourceIsSmuggleable } from "@/server/engine/card-playability";
+import { CardIsPlayable, DiscardPlayableCards, ResourceIsSmuggleable } from "@/server/engine/card-playability";
 import type { GameState } from "@/lib/engine/game";
 import type { GameDispatch, ResolutionRequest } from "@/lib/engine/message-types";
 import type { PlayerId } from "@/lib/engine/core-models";
@@ -48,6 +48,11 @@ export function getTopLevelActions(gs: GameState): GameDispatch[] {
     if (CardIsPlayable(gs, 1, card.cardId)) {
       dispatches.push(makeDispatch(1, "play-card", { cardId: card.cardId, fromZone: "Hand" }));
     }
+  }
+
+  // play-card from the discard pile: each card a grant or discard-hosted Action lets P1 play now
+  for (const card of DiscardPlayableCards(gs, 1)) {
+    dispatches.push(makeDispatch(1, "play-card", { cardId: card.cardId, fromZone: "Discard", playId: card.playId }));
   }
 
   // play-smuggle: each smuggleable resource

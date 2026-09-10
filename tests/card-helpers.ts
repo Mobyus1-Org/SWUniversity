@@ -423,6 +423,13 @@ export const Cards = {
       ketsuOnyo: "SHD_147",
       kraytDragon: "SHD_172",
       collectionsStarhopper: "SHD_111", // 2/2 Space, Smuggle [3, Command] and no other ability
+      reyKeepingThePast: "SHD_046",
+      adelphiPatrolWing: "SHD_101",
+      cobbVanth: "SHD_115",
+      kylosTieSilencer: "SHD_135",
+      kyloRenKillingThePast: "SHD_141",
+      preVizsla: "SHD_142",
+      ig11: "SHD_170",
     },
     jtl: {
       frisk: "JTL_148", // 3/2 Ground New Republic Pilot, Piloting 2
@@ -555,6 +562,7 @@ export const Cards = {
       subjugatingStarfighter: "TWI_112",
       confederateTriFighter: "TWI_132",
       the501stLiberator: "TWI_109",
+      kalani: "TWI_085",
     },
     sec: {
       cruelCommandos: "SEC_086", // 5/5 Ground Republic Clone Trooper, Sentinel + Overwhelm
@@ -803,6 +811,7 @@ export const Cards = {
       wanted: "SHD_221",
       unrefusableOffer: "SHD_226",
       ruthlessness: "SHD_143",
+      secondChance: "SHD_053",
     },
     jtl: {
       jarekYeager: "JTL_109",
@@ -817,6 +826,7 @@ export const Cards = {
       cravingPower: "LOF_091",
       sithHolocron: "LOF_138", // +1/+1, attaches to a Force unit, grants an On Attack
       battleFury: "LOF_139", // +3/+3, grants "On Attack: Discard a card from your hand."
+      inquisitorsLightsaber: "LOF_090", // +1/+3 Lightsaber, attaches to any non-Vehicle unit
     },
     ash: {
       gravCharge: "ASH_085",
@@ -879,6 +889,12 @@ export const Cards = {
       takeCaptiveShd: "SHD_131",
       sparkOfHope: "SHD_105",
       surpriseStrikeShd: "SHD_231", // identical reprint of SOR_220
+      unexpectedEscape: "SHD_076",
+      evidenceOfTheCrime: "SHD_077",
+      ruleWithRespect: "SHD_106",
+      endlessLegions: "SHD_109",
+      detentionBlockRescue: "SHD_180",
+      bravado: "SHD_182",
     },
     sor: {
       searchYourFeelings: "SOR_042",
@@ -961,6 +977,8 @@ export const Cards = {
       unnaturalLife: "TWI_189",
       breakingIn: "TWI_224",
       synchronizedStrike: "TWI_099",
+      deathByDroids: "TWI_076",
+      consolidationOfPower: "TWI_089",
     },
     jtl: {
       iHaveYouNow: "JTL_193",

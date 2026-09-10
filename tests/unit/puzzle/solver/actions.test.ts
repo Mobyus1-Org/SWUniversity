@@ -3,6 +3,7 @@ import { getTopLevelActions, getResolutionActions } from "@/server/puzzle/solver
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import type { NeedsOption, NeedsTarget, NeedsDeckSearch, NeedsPlot } from "@/lib/engine/message-types";
 import type { PlayerId } from "@/lib/engine/core-models";
+import { Cards } from "../../../card-helpers";
 
 describe("getTopLevelActions", () => {
   it("returns only pass-action when active player is 2", () => {
@@ -267,5 +268,30 @@ describe("getResolutionActions", () => {
       return d.spreadDamageAssignments?.find(x => x.playId === "player2.base")?.damage === 4;
     });
     expect(baseDispatch).toBeDefined();
+  });
+});
+
+describe("getTopLevelActions — playing from the discard pile", () => {
+  it("offers a play-card from the Discard zone for each card P1 may play from there now", () => {
+    const gs = new GameStateBuilder()
+      .WithActivePlayer(1)
+      .WithGamePhase("ActionPhase")
+      .MyBase(Cards.bases.common.red30HP)
+      .MyLeader(Cards.leaders.sor.darthVader, false, false, true)
+      .TheirBase(Cards.bases.common.green30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 4)
+      .WithCardInDiscardForPlayer(1, Cards.units.shd.kylosTieSilencer) // qualifies (below)
+      .WithCardInDiscardForPlayer(1, Cards.units.sor.battlefieldMarine) // no permission
+      .Build();
+    const silencer = gs.player1.discard.find(c => c.cardId === Cards.units.shd.kylosTieSilencer)!;
+    gs.roundState.cardsDiscardedThisPhase.push({ player: 1, cardId: silencer.cardId, playId: silencer.playId, from: "Hand" });
+
+    const fromDiscard = getTopLevelActions(gs)
+      .filter(a => a.dispatchType === "play-card" && (a.dispatchData as { fromZone?: string }).fromZone === "Discard");
+
+    expect(fromDiscard.map(a => a.dispatchData)).toEqual([
+      { cardId: Cards.units.shd.kylosTieSilencer, fromZone: "Discard", playId: silencer.playId },
+    ]);
   });
 });

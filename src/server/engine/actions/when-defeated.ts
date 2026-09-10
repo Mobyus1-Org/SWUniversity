@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken } from "@/server/engine/core-functions";
+import { AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -47,6 +47,18 @@ function resolveWhenDefeatedInner(
       for (let i = 0; i < droidCohortCount; i++) {
         CreateBattleDroid(game.currentGameState, player, game.gameLog, "TWI_218");
       }
+    }
+  }
+
+  // SHD_053 Second Chance: attached unit gains "When Defeated: For this phase, this unit's owner may
+  // play it from their discard pile for free." The OWNER, not the controller — a stolen unit goes
+  // home. The host kept its playId on the way to the discard, which is what the grant keys on. A
+  // token is set aside rather than discarded, so it has nothing to replay.
+  if (unit.upgrades.some(u => u.cardId === "SHD_053") && !unit.IsTokenUnit()) {
+    const game053 = GetGame();
+    if (game053) {
+      GrantPlayFromDiscardThisPhase(game053.currentGameState, unit.owner as PlayerId, unit.playId, true, "SHD_053");
+      game053.gameLog.push(`${CardTitle("SHD_053")}: ${CardTitle(unit.cardId)} may be played from the discard pile for free this phase.`);
     }
   }
 
@@ -533,6 +545,15 @@ function resolveOwnWhenDefeated(
       }
       // Base + unit damage are applied together when the ability-target resolves (applyAbilityEffect).
       return mandatoryTarget("SOR_134", player, enemyUnits134.map(u => u.playId));
+    }
+    case "SHD_115": { // Cobb Vanth — "When Defeated: Search the top 10 cards of your deck for a unit
+                      // that costs 2 or less and discard it. For this phase, you may play that card
+                      // from your discard pile for free." "Your" is his controller.
+      return searchDeck("SHD_115", player, 10, "discard", {
+        filter: { type: "Unit", maxCost: 2 },
+        maxChoices: 1,
+        freePlayFromDiscard: true,
+      });
     }
     case "SOR_031": { // Inferno Four — When Defeated: Look at top 2, put any on bottom, rest on top.
       const gs031 = GetGameState();
