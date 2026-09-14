@@ -353,6 +353,11 @@ export class Unit implements UnitInterface {
       power -= GetHand(this.controller).length;
     }
 
+    // D'Qar Cargo Frigate — "This unit gets –1/–0 for each damage on it." Floored by the final Math.max.
+    if (this.cardId === "JTL_052" && !this.LostAbilities()) {
+      power -= this.damage;
+    }
+
     // Kelleran Beq — "This unit gets +1/+0 for each other unit (friendly and enemy) with 0 power."
     // Reading another unit's CurrentPower can come straight back here (two Kellerans in play), so
     // the re-entrant call is served from the flat computation instead — see kelleranPowerDepth.

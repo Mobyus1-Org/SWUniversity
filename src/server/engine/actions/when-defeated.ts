@@ -1,11 +1,11 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck } from "@/server/engine/core-functions";
+import { AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { CreateBattleDroid, CreateTieFighter, CreateSpy } from "@/server/engine/token-helpers";
+import { CreateBattleDroid, CreateTieFighter, CreateSpy, CreateMandalorianToken } from "@/server/engine/token-helpers";
 
 /**
  * When Defeated abilities — called immediately after the unit is removed from
@@ -102,9 +102,9 @@ function resolveWhenDefeatedInner(
           player,
           options: returnable.map(up => ({ id: up.playId, label: CardTitle(up.cardId) ?? up.cardId })),
           data,
-          continuation: resolveOwnWhenDefeated(unit, player),
+          continuation: resolveOwnWhenDefeated(unit, player, causedByCombatDamage),
         },
-        continuation: resolveOwnWhenDefeated(unit, player),
+        continuation: resolveOwnWhenDefeated(unit, player, causedByCombatDamage),
       };
     }
   }
@@ -445,13 +445,54 @@ function resolveOwnWhenDefeated(
       if (captors193.length === 0) return null;
       return mandatoryTarget("SEC_193_wd", player, captors193.map(u => u.playId));
     }
-    case "LAW_097": { // Imperial Door Technician — "When Defeated: Heal 2 damage from your base."
+    case "LAW_097":   // Imperial Door Technician — "When Defeated: Heal 2 damage from your base."
+    case "IBH_015":   // Tauntaun Mount — same text, three printings.
+    case "IBH_028":
+    case "IBH_051": {
       // "your" = the controller of the unit as it was defeated, which is what `player` holds.
       // HealBaseForPlayer clamps to the damage present and honours TWI_132's healing lock.
       const game097 = GetGame();
-      if (game097) HealBaseForPlayer(game097.currentGameState, player, 2, game097.gameLog, "LAW_097");
+      if (game097) HealBaseForPlayer(game097.currentGameState, player, 2, game097.gameLog, unit.cardId);
       return null;
     }
+    case "ASH_027":   // Enoch — "When Defeated: You may deal up to 6 damage to your base. The next unit
+    case "ASHP_001": { // you play this phase costs 1 resource less for every 2 damage dealt this way."
+                       // 0 is the decline; the discount is worked out from what was actually dealt.
+      const amounts027 = ["0", "1", "2", "3", "4", "5", "6"];
+      return {
+        type: "choose-one",
+        cardId: unit.cardId,
+        player,
+        options: amounts027.map(n => ({
+          id: n,
+          label: n === "0" ? "Deal no damage" : `Deal ${n} to your base (next unit −${Math.floor(Number(n) / 2)})`,
+        })),
+        continuation: null,
+      };
+    }
+    case "ASH_028": { // Paz Vizsla — "When Defeated: If this unit wasn't defeated by combat damage,
+                      // create 2 Mandalorian tokens." `player` is his controller as he died.
+      if (causedByCombatDamage) return null;
+      const game028 = GetGame();
+      if (game028) {
+        CreateMandalorianToken(game028.currentGameState, player, game028.gameLog, "ASH_028");
+        CreateMandalorianToken(game028.currentGameState, player, game028.gameLog, "ASH_028");
+      }
+      return null;
+    }
+    case "ASH_038": // Purrgil Ultra — When Defeated half of "When Played/When Defeated".
+      return buildPurrgilUltraOffer(player, unit.playId);
+    case "JTL_063": // Landing Shuttle — "When Defeated: You may draw a card."
+      return {
+        type: "ability-option",
+        cardId: "JTL_063",
+        player,
+        helperText: `${CardTitle("JTL_063")}: draw a card?`,
+        yesLabel: "Draw",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: null,
+      };
     case "ASH_216": { // Mandalorian Scout — "When Defeated: Exhaust a ready friendly resource."
       // Resources are interchangeable, so there is nothing to choose — exhaust the first ready one.
       const game216 = GetGame();

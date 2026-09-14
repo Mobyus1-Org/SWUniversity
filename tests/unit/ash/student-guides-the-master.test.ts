@@ -55,6 +55,8 @@ describe("ASH_115 The Student Guides the Master", () => {
     const walker = g.state.player1.groundArena.find(u => u.playId === walkerPlayId)!;
     // 3 other friendly units, all with less power than 5 → +3/+0 → power 8.
     expect(Unit.FromInterface(walker).CurrentPower()).toBe(8);
+    // +X/+0 — HP stays at the printed 5.
+    expect(Unit.FromInterface(walker).TotalHP()).toBe(5);
   });
 
   it("a friendly unit with equal or higher power is not counted", async () => {

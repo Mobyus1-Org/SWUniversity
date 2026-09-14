@@ -331,6 +331,16 @@ function honorBoundPartisanDiscount(game: GameState, player: PlayerId, cardId: s
   return game.currentEffects.some(e => e.cardId === "LAW_058" && e.affectedPlayer === player) ? 1 : 0;
 }
 
+// ASH_027 Enoch: the NEXT unit you play this phase costs 1 less for every 2 damage he dealt to your
+// base. Each Enoch's discount rides on its effect's `value`; two stack onto the same next unit, and
+// completePlayCard spends them all.
+function enochNextUnitDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Unit") return 0;
+  return game.currentEffects
+    .filter(e => e.cardId === "ASH_027" && e.affectedPlayer === player)
+    .reduce((sum, e) => sum + (e.value ?? 0), 0);
+}
+
 // ASH_237 Mouse Droid: the NEXT Imperial unit you play this phase costs 1 resource less. The
 // effect is consumed in completePlayCard once an Imperial unit is played.
 function imperialNextUnitDiscount(game: GameState, player: PlayerId, cardId: string): number {
@@ -454,6 +464,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - imperialNextUnitDiscount(game, player, cardId)
     - tranquilityRepublicDiscount(game, player, cardId)
     - honorBoundPartisanDiscount(game, player, cardId)
+    - enochNextUnitDiscount(game, player, cardId)
     - redLeaderPilotDiscount(game, player, cardId)
     - reputableHunterDiscount(game, player, cardId)
     - jabbasRancorDiscount(game, player, cardId)

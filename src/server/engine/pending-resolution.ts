@@ -98,6 +98,8 @@ export interface ThrawnReplayPending {
   defeatedUnit: UnitInterface;
   /** true = deployed side (free, once per round); false = leader side (exhaust as the cost). */
   deployed: boolean;
+  /** Whether the unit died to combat damage — a replay must see what the original saw (ASH_028). */
+  causedByCombatDamage?: boolean;
   continuation: PendingResolution | null;
 }
 

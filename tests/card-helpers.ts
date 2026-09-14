@@ -225,6 +225,8 @@ export const Cards = {
       darthVader: "IBH_053",
     },
     ash: {
+      baylanSkoll: "ASH_003",
+      vane: "ASH_012",
       lukeSkywalkerICanSaveHim: "ASH_005",
       sabineWrenBargaining: "ASH_006",
       grandAdmiralSloane: "ASH_007",
@@ -432,6 +434,11 @@ export const Cards = {
       ig11: "SHD_170",
     },
     jtl: {
+      banshee: "JTL_037",
+      dqarCargoFrigate: "JTL_052",
+      silverAngel: "JTL_062",
+      landingShuttle: "JTL_063",
+      cloakedStarViper: "JTL_067",
       frisk: "JTL_148", // 3/2 Ground New Republic Pilot, Piloting 2
       nienNunb: "JTL_093", // 1/2 Ground Rebel Pilot, Piloting 1
       fireball: "JTL_198",   // 3/3 Space Vehicle, Ambush
@@ -625,6 +632,10 @@ export const Cards = {
       chewbaccaMightyRescuer: "LAW_034", // 4/4 Ground Rebel/Wookiee, Overwhelm + When Attack Ends
     },
     ash: {
+      enoch: "ASH_027",
+      pazVizslaBrighterFuture: "ASH_028",
+      tatooineRepulsorTrain: "ASH_035",
+      purrgilUltra: "ASH_038",
       heraSyndullaRenegadeGeneral: "ASH_031",
       barrissOffee: "ASH_044",
       homeOne: "ASH_065",
@@ -757,6 +768,11 @@ export const Cards = {
       ahsokaTano: "TS26_08",
     },
     ibh: {
+      tauntaunMount: "IBH_015",
+      tauntaunMount2: "IBH_028",
+      tauntaunMount3: "IBH_051",
+      millenniumFalconBucketOfBolts: "IBH_031",
+      avengerHuntingTheRebels: "IBH_072",
       // Each card has multiple identical printings within IBH; suffix letters are alternate printings.
       echoCoordinator: "IBH_007", // 1/5 Ground, no abilities — survives a hit and barely counters
       chewbacca: "IBH_003", chewbaccaB: "IBH_046",
@@ -981,6 +997,8 @@ export const Cards = {
       consolidationOfPower: "TWI_089",
     },
     jtl: {
+      powerFromPain: "JTL_042",
+      youreAllClearKid: "JTL_055",
       iHaveYouNow: "JTL_193",
       planetaryBombardment: "JTL_181",
       repair: "JTL_075",
@@ -1067,6 +1085,8 @@ export const Cards = {
       lightsaberThrow: "LOF_176",
     },
     ibh: {
+      recovery: "IBH_013",
+      watchThis: "IBH_052",
       // Suffix letters are alternate identical printings within IBH.
       theDesolationOfHoth: "IBH_104",
       youHaveFailedMe: "IBH_095",

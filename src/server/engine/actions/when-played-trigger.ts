@@ -1,7 +1,7 @@
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { BaseHealingPrevented, DealDamageToBase, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains } from "@/server/engine/core-functions";
+import { BaseHealingPrevented, DealDamageToBase, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateCloneTrooper, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
@@ -22,6 +22,7 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
   "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149", "ASH_179", "ASH_251",
   "ASH_237", "ASH_248", "SEC_119", "JTL_087", "HMW_121", "ASH_079", "ASH_111", "ASH_064", "TWI_144", "TWI_097", "TWI_084", "TWI_137", "TWI_160", "ASH_065", "ASH_221",
+  "IBH_031", "IBH_072", "JTL_067",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -118,7 +119,7 @@ export function resolveWhenPlayedTrigger(
     case "ASH_065": { // Home One — "When Played: Heal all damage from each friendly unit."
       for (const u of GetUnitsForPlayer(trigger.fromPlayer)) {
         const unit065 = GetUnitByPlayId(gs, u.playId);
-        if (unit065) unit065.damage = 0;
+        if (unit065) HealUnit(gs, unit065, unit065.damage);
       }
       log.push(`${CardTitle(trigger.cardId)}: healed all damage from each friendly unit.`);
       break;
@@ -298,6 +299,27 @@ export function resolveWhenPlayedTrigger(
       const base068 = trigger.fromPlayer === 1 ? gs.player1.base : gs.player2.base;
       base068.damage = Math.max(0, base068.damage - 4);
       log.push(`${CardTitle(trigger.cardId)}: healed 4 damage from your base.`);
+      break;
+    }
+    case "IBH_031": { // Millennium Falcon (Bucket of Bolts) — "If your base has more damage on it
+                      // than an enemy base, ready this unit." Strictly more: a tie leaves it exhausted.
+      if (player.base.damage <= otherPlayer.base.damage) break;
+      const self031 = GetUnitByPlayId(gs, trigger.playId ?? "");
+      if (self031 && ReadyUnit(gs, self031)) {
+        log.push(`${CardTitle(trigger.cardId)}: readied — your base has more damage than the enemy base.`);
+      }
+      break;
+    }
+    case "JTL_067": { // Cloaked StarViper — "When Played: Give 2 Shield tokens to this unit."
+      const self067 = GetUnitByPlayId(gs, trigger.playId ?? "");
+      if (!self067) break;
+      for (let i = 0; i < 2; i++) {
+        self067.upgrades.push({
+          cardId: "SOR_T02", playId: String(gs.nextPlayId++),
+          owner: self067.owner, controller: self067.controller,
+        });
+      }
+      log.push(`${CardTitle(trigger.cardId)}: gave 2 Shield tokens to itself.`);
       break;
     }
     case "SOR_148": { // Guerilla Attack Pod — If a base has 15+ damage, ready this unit.

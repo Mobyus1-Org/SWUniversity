@@ -1,6 +1,6 @@
 import { PendingResolution } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, CardIsLeader, MarkUnitDamaged, AllUnits, DealDamageToUnit } from "@/server/engine/core-functions";
+import { GetGame, CardIsLeader, MarkUnitDamaged, AllUnits, DealDamageToUnit, HealUnit } from "@/server/engine/core-functions";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -101,7 +101,7 @@ export function resolveWhenDeployed(
         ...gs.player2.spaceArena,
       ];
       for (const u of allUnits) {
-        u.damage = 0;
+        HealUnit(gs, u, u.damage);
       }
       for (const u of allUnits) {
         const unit = Unit.FromInterface(u);

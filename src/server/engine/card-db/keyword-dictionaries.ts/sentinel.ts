@@ -40,6 +40,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
       switch(currentEffect.cardId) {
         case "ASH_127": hasSentinel = true; break;//The Twins — granted for the phase
         case "ASH_007_sentinel": hasSentinel = true; break;//Grand Admiral Sloane leader Action
+        case "ASH_003_sentinel": hasSentinel = true; break;//Baylan Skoll (deployed) On Attack
         case "SEC_048": hasSentinel = true; break;//Captain Rex — this unit AND an enemy unit, for the phase
         case "SOR_086": hasSentinel = true; break;//Gladiator Star Destroyer
         case "SOR_003": hasSentinel = true; break;//Chewbacca (Walking Carpet)
@@ -193,6 +194,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
 
   //Self Sentinel
   switch(cardId) {
+    case "ASH_028"://Paz Vizsla - For a Brighter Future
     case "SOR_003"://Chewbacca - Walking Carpet
     case "SOR_035"://Lieutenant Childsen
     case "SOR_037"://Academy Defense Walker

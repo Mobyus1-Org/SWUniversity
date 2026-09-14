@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase } from "@/server/engine/core-functions";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer } from "@/server/engine/core-functions";
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost } from "@/server/engine/card-playability";
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -1882,6 +1882,8 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    case "ASH_038": // Purrgil Ultra — When Played half; its When Defeated calls the same builder.
+      return buildPurrgilUltraOffer(player, playId);
     case "SHD_142": // Pre Vizsla — When Played half; the On Attack half calls the same builder.
       return buildPreVizslaOffer(player, playId, null);
     case "SHD_106": { // Rule with Respect — "A friendly unit captures each enemy non-leader unit that
@@ -3077,6 +3079,35 @@ export function resolveWhenPlayed(
       const units066 = AllUnits();
       if (units066.length === 0) return null;
       return { type: "ability-target", cardId, player, fromPlayIds: units066.map(u => u.playId), continuation: null };
+    }
+    case "IBH_013": { // Recovery — "Heal 5 damage from a unit." Any unit, damaged or not.
+      const units013 = AllUnits();
+      if (units013.length === 0) return null;
+      return mandatoryTarget(cardId, player, units013.map(u => u.playId));
+    }
+    case "IBH_052": { // Watch This — "Return a non-leader unit that costs 6 or less to its owner's
+                      // hand. Exhaust each other enemy unit in the same arena." A unit that can't
+                      // be returned by enemy abilities (JTL_103) is still a legal target: it stays,
+                      // and the exhaust still happens.
+      const eligible052 = AllUnits().filter(u =>
+        !Unit.FromInterface(u).IsLeader() && (CardCost(u.cardId) ?? 0) <= 6);
+      if (eligible052.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible052.map(u => u.playId));
+    }
+    case "JTL_042": { // Power from Pain — "Give a unit +1/+0 for this phase for each damage on it."
+      const units042 = AllUnits();
+      if (units042.length === 0) return null;
+      return mandatoryTarget(cardId, player, units042.map(u => u.playId));
+    }
+    case "JTL_055": { // You're All Clear, Kid — "Defeat an enemy space unit with 3 or less remaining
+                      // HP. If you do and an opponent controls no space units, you may give an
+                      // Experience token to a unit."
+      const gs055 = GetGame()?.currentGameState;
+      if (!gs055) return null;
+      const eligible055 = GetPlayer(gs055, GetOtherPlayer(player)).spaceArena
+        .filter(u => UnitRemainingHp(u) <= 3 && !UnitImmuneToEnemyDefeat(u));
+      if (eligible055.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible055.map(u => u.playId));
     }
     case "IBH_059": // Target the Main Generator — "Deal 2 damage to a base." (either base)
     case "IBH_071":

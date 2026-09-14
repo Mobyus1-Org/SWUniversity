@@ -130,7 +130,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   //Secrets of Power
   "SEC_004", "SEC_005", "SEC_006", "SEC_007", "SEC_011", "SEC_015",
   //ASH
-  "ASH_004", "ASH_009",
+  "ASH_003", "ASH_004", "ASH_009", "ASH_012",
   //IBH
   "IBH_053", "IBH_001",
 ]);
@@ -516,16 +516,22 @@ function BaseSubcards({
   onPreviewStart,
   onPreviewEnd,
   onUseUpgradeAction,
+  selectableUpgradePlayIds,
+  onSelectUpgrade,
 }: {
   base: { upgrades?: { cardId: string; playId: string }[]; captives?: { cardId: string; playId: string }[] };
   onPreviewStart: PreviewStart;
   onPreviewEnd: () => void;
   /** Only passed for the local player's own base — the opponent's Fortify actions are not yours. */
   onUseUpgradeAction?: (playId: string) => void;
+  /** Base upgrades the current prompt lets the player pick (e.g. ASH_012 Vane's "defeat a friendly upgrade"). */
+  selectableUpgradePlayIds?: Set<string>;
+  onSelectUpgrade?: (playId: string) => void;
 }) {
   const [open, setOpen] = React.useState<"fortified" | "arrested" | null>(null);
   const upgrades = base.upgrades ?? [];
   const captives = base.captives ?? [];
+  const anySelectable = upgrades.some(u => selectableUpgradePlayIds?.has(u.playId));
 
   if (upgrades.length === 0 && captives.length === 0) return null;
 
@@ -550,7 +556,9 @@ function BaseSubcards({
     <div className="relative mt-0.5">
       <div className="flex flex-wrap justify-center gap-1">
         {tab("fortified", "Fortified", upgrades.length,
-          "bg-slate-300/20 text-slate-200 hover:bg-slate-300/35 border border-slate-300/40")}
+          anySelectable
+            ? "bg-amber-300/25 text-amber-100 hover:bg-amber-300/40 border border-amber-300/70 ring-1 ring-amber-300/60"
+            : "bg-slate-300/20 text-slate-200 hover:bg-slate-300/35 border border-slate-300/40")}
         {tab("arrested", "Arrested", captives.length,
           "bg-[#DAA520]/20 text-[#DAA520] hover:bg-[#DAA520]/35 border border-[#DAA520]/50")}
       </div>
@@ -564,11 +572,16 @@ function BaseSubcards({
               {shown.map((card) => {
                 const title = CardTitle(card.cardId);
                 const previewState: PreviewState = { imageId: card.cardId, cardId: card.cardId, label: title };
+                const isSelectable = open === "fortified" && !!selectableUpgradePlayIds?.has(card.playId);
                 return (
-                  <div key={card.playId} className="w-16">
+                  <div
+                    key={card.playId}
+                    className={`w-16${isSelectable ? " cursor-pointer" : ""}`}
+                    onClick={isSelectable && onSelectUpgrade ? (e) => { e.stopPropagation(); setOpen(null); onSelectUpgrade(card.playId); } : undefined}
+                  >
                     <CardVisual
                       cardId={card.cardId}
-                      selectable={false}
+                      selectable={isSelectable}
                       onPreviewStart={onPreviewStart}
                       onPreviewEnd={onPreviewEnd}
                       compact
@@ -1396,6 +1409,14 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     ? new Set(resolutionNeeded.fromPlayIds ?? [])
     : new Set();
   const hasDiscardSelection = selectableDiscardPlayIds.size > 0;
+  // A prompt that offers a Fortify upgrade on the player's base (ASH_012 Vane defeats "a friendly
+  // upgrade") — base upgrades live in the base's Fortified popover, not on any unit.
+  const selectableBaseUpgradePlayIds: Set<string> = resolutionNeeded?.type === "Target"
+    ? new Set((player.base.upgrades ?? []).map(u => u.playId).filter(id => (resolutionNeeded.fromPlayIds ?? []).includes(id)))
+    : new Set();
+  const handleSelectBaseUpgrade = (playId: string) => {
+    void sendDispatch(createDispatch("choose-target", { targetPlayIds: [playId] }));
+  };
   // Cards the player may play out of their OWN discard pile right now — a "for this phase" grant
   // (Second Chance, Cobb Vanth) or a discard-hosted Action (Brutal Traditions, Kylo's TIE
   // Silencer). Same gate as playable hand cards.
@@ -1931,7 +1952,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     epicUsed={player.base.epicActionUsed}
                     forceToken={player.supplemental.forceToken}
                   />{spreadBaseControls("player1.base")}
-                  <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} onUseUpgradeAction={handleUpgradeAction} />
+                  <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} onUseUpgradeAction={handleUpgradeAction} selectableUpgradePlayIds={selectableBaseUpgradePlayIds} onSelectUpgrade={handleSelectBaseUpgrade} />
                   </div>
                 </div>
               </div>
@@ -2111,7 +2132,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     epicUsed={player.base.epicActionUsed}
                     forceToken={player.supplemental.forceToken}
                   />{spreadBaseControls("player1.base")}
-                  <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} onUseUpgradeAction={handleUpgradeAction} />
+                  <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} onUseUpgradeAction={handleUpgradeAction} selectableUpgradePlayIds={selectableBaseUpgradePlayIds} onSelectUpgrade={handleSelectBaseUpgrade} />
                   </div>
                 </div>
                 <div className="hidden xl:space-y-2 xl:block">
@@ -2129,7 +2150,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                       forceToken={player.supplemental.forceToken}
                     />
                     {spreadBaseControls("player1.base")}
-                    <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} onUseUpgradeAction={handleUpgradeAction} />
+                    <BaseSubcards base={player.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} onUseUpgradeAction={handleUpgradeAction} selectableUpgradePlayIds={selectableBaseUpgradePlayIds} onSelectUpgrade={handleSelectBaseUpgrade} />
                   </div>
                   {!player.leader.deployed ? <CardVisual
                     cardId={player.leader.cardId}

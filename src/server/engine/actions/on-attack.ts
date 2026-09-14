@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
-import { GetUnitByPlayId, GetOtherPlayer, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena } from "@/server/engine/core-functions";
+import { GetUnitByPlayId, GetOtherPlayer, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles } from "@/server/engine/card-db/generated";
@@ -688,6 +688,47 @@ function resolveInnateOnAttack(
       return optionalTarget("SHD_150", attacker.controller, ground150.map(u => u.playId),
         "Deal 2 damage to a ground unit?", { yesLabel: "Deal 2", continuation });
     }
+    case "ASH_035": { // Tatooine Repulsor Train — "On Attack: Deal 2 damage to a ground unit for
+                      // each friendly exhausted unit." Mandatory, one ground unit either side (the
+                      // Train included). The Train is still ready while its On Attack resolves, but
+                      // an attacking unit is an exhausted one, so it counts itself.
+      const exhausted035 = GetUnitsForPlayer(attacker.controller)
+        .filter(u => !u.ready || u.playId === attacker.playId).length;
+      const ground035 = AllGroundUnits();
+      if (ground035.length === 0) return continuation;
+      return {
+        type: "ability-target",
+        cardId: "ASH_035",
+        player: attacker.controller,
+        fromPlayIds: ground035.map(u => u.playId),
+        amount: 2 * exhausted035,
+        helperText: `Deal ${2 * exhausted035} damage to a ground unit.`,
+        continuation,
+      } satisfies AbilityTargetPending;
+    }
+    case "JTL_037": { // Banshee — "On Attack: You may deal damage to a unit equal to the amount of
+                      // damage on this unit." Snapshotted now, before combat adds to it. Any unit,
+                      // Banshee included.
+      const amount037 = attacker.damage;
+      if (amount037 <= 0) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "JTL_037",
+        player: attacker.controller,
+        helperText: `Deal ${amount037} damage to a unit?`,
+        yesLabel: `Deal ${amount037}`,
+        noLabel: "Skip",
+        onYes: {
+          type: "ability-target",
+          cardId: "JTL_037",
+          player: attacker.controller,
+          fromPlayIds: AllUnits().map(u => u.playId),
+          amount: amount037,
+          continuation,
+        } satisfies AbilityTargetPending,
+        continuation,
+      } satisfies AbilityOptionPending;
+    }
     case "SHD_139": { // Krrsantan — "On Attack: Choose a ground unit. You may deal 1 damage to it
                       // for each damage on this unit." The amount is snapshotted onto the pending
                       // so the combat damage he takes moments later can't inflate it.
@@ -893,6 +934,27 @@ function resolveInnateOnAttack(
         .filter(u => u.upgrades.some(up => up.cardId === "SOR_T02"));
       if (shieldedEnemies037.length === 0) return continuation;
       return mandatoryTarget("LOF_037_OA", attacker.controller, shieldedEnemies037.map(u => u.playId), continuation);
+    }
+    case "ASH_003": { // Baylan Skoll (deployed) — "On Attack: You may give a friendly unit +2/+2 and
+                      // Sentinel for this phase if it's the only non-leader unit you control in its
+                      // arena." Only qualifying units are offered; Baylan (a leader) never is.
+      const gs003 = GetGame()?.currentGameState;
+      if (!gs003) return continuation;
+      const alone003 = FriendlyUnitsAloneInArena(gs003, attacker.controller, true);
+      if (alone003.length === 0) return continuation;
+      return optionalTarget("ASH_003_oa", attacker.controller, alone003,
+        "Give the only non-leader unit in its arena +2/+2 and Sentinel for this phase?", { continuation });
+    }
+    case "ASH_012": { // Vane (deployed) — "On Attack: You may defeat a friendly upgrade. If you do,
+                      // deal 2 damage to the defending unit or a base." Step 1 is the upgrade; the
+                      // damage step is built once it's gone (the defender may have died with it).
+      const gs012 = GetGame()?.currentGameState;
+      if (!gs012) return continuation;
+      const upgrades012 = UpgradesYouControl(gs012, attacker.controller);
+      if (upgrades012.length === 0) return continuation;
+      return optionalTarget("ASH_012_oa", attacker.controller, upgrades012,
+        "Defeat a friendly upgrade to deal 2 damage to the defending unit or a base?",
+        { yesLabel: "Defeat an upgrade", continuation });
     }
     case "ASH_009": { // Ahsoka Tano (deployed) — "On Attack: You may give a unit with less power
                       // than this unit +2/+0 for this phase."

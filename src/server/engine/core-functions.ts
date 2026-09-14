@@ -9,7 +9,7 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { AbilityOptionPending, AbilityTargetPending, DeckSearchPending, PendingResolution } from "@/server/engine/pending-resolution";
-import { UpgradeEligibleTargets } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { UpgradeEligibleTargets, IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 
 let activeGame: Game | null = null;
 
@@ -741,6 +741,48 @@ export function EnemyNonLeadersThatAttackedBase(player: PlayerId): Unit[] {
     result.push(unit);
   }
   return result;
+}
+
+/**
+ * ASH_038 Purrgil Ultra — "When Played/When Defeated: You may return another friendly non-leader
+ * unit to its owner's hand. If you do, deal damage to a unit equal to the returned unit's cost."
+ * The shared offer; the return and the damage step resolve in applyAbilityEffect.
+ */
+export function buildPurrgilUltraOffer(player: PlayerId, selfPlayId: string | undefined): PendingResolution | null {
+  const returnable = GetUnitsForPlayer(player)
+    .filter(u => u.playId !== selfPlayId && !Unit.FromInterface(u).IsLeader());
+  if (returnable.length === 0) return null;
+  return optionalTarget("ASH_038", player, returnable.map(u => u.playId),
+    "Return another friendly non-leader unit to its owner's hand? Then deal damage equal to its cost to a unit.",
+    { yesLabel: "Return a unit" });
+}
+
+/**
+ * playIds of the upgrades `player` controls — "a friendly upgrade" (ASH_012 Vane). An upgrade on a
+ * unit counts by its own controller (whoever played it), except a token, which belongs with the
+ * unit it's on — a Shield on a unit you took control of is yours. Fortify upgrades on a base count
+ * too. Pure over GameState.
+ */
+export function UpgradesYouControl(gs: GameState, player: PlayerId): string[] {
+  const onUnits = GetAllUnits(gs).flatMap(u => u.upgrades
+    .filter(upg => (IsTokenUpgrade(upg.cardId) ? u.controller : upg.controller) === player)
+    .map(upg => upg.playId));
+  const onBases = [gs.player1.base, gs.player2.base]
+    .flatMap(b => (b.upgrades ?? []).filter(upg => upg.controller === player).map(upg => upg.playId));
+  return [...onUnits, ...onBases];
+}
+
+/**
+ * ASH_003 Baylan Skoll — friendly units that are alone in their arena. With `nonLeaderOnly`
+ * (his deployed side, "the only non-leader unit you control in its arena") leader units are
+ * neither candidates nor counted as company.
+ */
+export function FriendlyUnitsAloneInArena(gs: GameState, player: PlayerId, nonLeaderOnly: boolean): string[] {
+  const p = GetPlayer(gs, player);
+  return [p.groundArena, p.spaceArena].flatMap(arena => {
+    const counted = nonLeaderOnly ? arena.filter(u => !Unit.FromInterface(u).IsLeader()) : arena;
+    return counted.length === 1 ? [counted[0].playId] : [];
+  });
 }
 
 export const LOST_THE_GAME = "__lost_the_game";
@@ -1795,6 +1837,10 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "TWI_085": //Kalani — On Attack: may give another unit (up to 2 with the initiative) +2/+2 for this phase
     case "SHD_046": //Rey (Keeping the Past) — On Attack: may heal 2 from a unit; non-Heroism → Shield
     case "SHD_142": //Pre Vizsla — When Played/On Attack: may pay for an upgrade on another non-Vehicle unit and take it
+    case "JTL_037": //Banshee — On Attack: may deal damage to a unit equal to the damage on this unit
+    case "ASH_035": //Tatooine Repulsor Train — On Attack: 2 damage to a ground unit per friendly exhausted unit
+    case "ASH_003": //Baylan Skoll (deployed) — On Attack: may give the lone non-leader unit in an arena +2/+2 and Sentinel
+    case "ASH_012": //Vane (deployed) — On Attack: may defeat a friendly upgrade to deal 2 to the defender or a base
     case "SHD_141": //Kylo Ren (Killing the Past) — On Attack: a unit gets +2/+0 this phase; non-Villainy → Experience
     case "TWI_014": //Asajj Ventress (deployed) — On Attack: if you played an event this phase, +1/+0 and first strike
     case "ASH_132": //Queen Soruna — On Attack: may reveal a unit from hand to deal 3 damage to a unit with the same cost
@@ -2322,6 +2368,21 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
  * hasn't used the ability this round. Called after damage lands, from both the ability-damage path
  * (DealDamageToUnit) and the combat-damage path (resolveAttack).
  */
+/**
+ * Heals up to `amount` damage from a unit — THE unit-heal chokepoint; every heal of a unit goes
+ * through here. Returns how much was actually healed (never past 0). When that is 1 or more it
+ * queues the "when damage is healed from this unit" reactions (JTL_062 Silver Angel).
+ */
+export function HealUnit(gs: GameState, unit: UnitInterface, amount: number): number {
+  const healed = Math.min(Math.max(0, amount), unit.damage);
+  if (healed <= 0) return 0;
+  unit.damage -= healed;
+  if (unit.cardId === "JTL_062" && !Unit.FromInterface(unit).LostAbilities()) {
+    gs.triggerBag.push({ triggerType: "when-unit-healed", cardId: "JTL_062", fromPlayer: unit.controller, playId: unit.playId, nested: true });
+  }
+  return healed;
+}
+
 export function QueueRancorKeeperReaction(gs: GameState, damaged: Unit): void {
   if (damaged.CurrentHP() <= 0) return; // must survive
   const controller = damaged.controller;

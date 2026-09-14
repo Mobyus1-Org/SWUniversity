@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllUnits, GetPlayer, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllUnits, GetPlayer, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains, UpgradesYouControl } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { CardTraits, CardCost, CardType, CardAspects } from "@/server/engine/card-db/generated";
 import { HasFortify } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
@@ -145,6 +145,16 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
     case "ASH_007":
       abilities.push(cardId);
       break;
+    case "ASH_003": // Baylan Skoll — Action [1 resource, Exhaust]. The resource is a cost; having a unit
+                    // alone in its arena is a condition, so it doesn't gate availability.
+      if (GetResources(player, true).length >= 1) abilities.push(cardId);
+      break;
+    case "ASH_012": { // Vane — Action [Exhaust, defeat a friendly upgrade]. Defeating the upgrade IS a
+                      // cost, so with none to defeat the Action can't be used.
+      const game012 = GetGame();
+      if (game012 && UpgradesYouControl(game012.currentGameState, player).length > 0) abilities.push(cardId);
+      break;
+    }
     case "ASH_010": // Bo-Katan Kryze — Action [2 resources, Exhaust]. The RESOURCES are a cost, so
                     // they gate availability; controlling a unit in each arena is a condition and
                     // does not.
@@ -749,6 +759,8 @@ export function ActionAbilityCost(cardId: string): number {
     case "LOF_006"://Supreme Leader Snoke
       return 1;
     case "IBH_053"://Darth Vader - Don't Fail Me Again
+      return 1;
+    case "ASH_003"://Baylan Skoll - Power Beyond Dream
       return 1;
     case "IBH_001"://Leia Organa - Get To Your Transports!
       return 1;

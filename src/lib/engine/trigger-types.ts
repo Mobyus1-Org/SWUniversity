@@ -23,6 +23,7 @@ export type TriggerType =
   | "unit-entered-play"  // reaction to any unit entering play, tokens included (e.g. HMW_171 Trap Field)
   | "damage-prevention"  // a replacement effect asking whether to prevent a damage instance (ASH_062)
   | "dealt-heavy-damage"  // reaction to dealing one instance of N+ damage (e.g. HMW_011 Darth Sidious)
+  | "when-unit-healed"  // reaction to 1+ damage being healed from a unit (e.g. JTL_062 Silver Angel)
 
 export interface TriggerEntry {
   triggerType: TriggerType;
