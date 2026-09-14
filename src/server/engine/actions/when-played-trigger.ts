@@ -1,7 +1,7 @@
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { BaseHealingPrevented, DealDamageToBase, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit } from "@/server/engine/core-functions";
+import { BaseHealingPrevented, DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateCloneTrooper, CreateMandalorianToken, GiveAdvantageTokens, CreateXWing } from "@/server/engine/token-helpers";
@@ -24,6 +24,7 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "ASH_237", "ASH_248", "SEC_119", "JTL_087", "HMW_121", "ASH_079", "ASH_111", "ASH_064", "TWI_144", "TWI_097", "TWI_084", "TWI_137", "TWI_160", "ASH_065", "ASH_221",
   "IBH_031", "IBH_072", "JTL_067",
   "JTL_099", "JTL_117",
+  "JTL_135", "JTL_158", "JTL_248",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -327,6 +328,29 @@ export function resolveWhenPlayedTrigger(
       log.push(`${CardTitle(trigger.cardId)}: gave 2 Shield tokens to itself.`);
       break;
     }
+    case "JTL_135": { // Special Forces TIE Fighter — "If an opponent controls more space units than
+                      // you, ready this unit." The TIE is already in your space arena, so a tie
+                      // leaves it exhausted.
+      if (otherPlayer.spaceArena.length <= player.spaceArena.length) break;
+      const self135 = GetUnitByPlayId(gs, trigger.playId ?? "");
+      if (self135 && ReadyUnit(gs, self135)) {
+        log.push(`${CardTitle(trigger.cardId)}: readied — an opponent controls more space units.`);
+      }
+      break;
+    }
+    case "JTL_158": { // Crackshot V-Wing — "If you control no other Fighter units, deal 1 damage to
+                      // this unit." Fighter tokens (TIE Fighter, X-Wing) count.
+      const otherFighter158 = GetUnitsForPlayer(trigger.fromPlayer).some(
+        u => u.playId !== trigger.playId && TraitContains(u.cardId, "Fighter", trigger.fromPlayer, u.playId),
+      );
+      if (otherFighter158 || !trigger.playId) break;
+      DealDamageToUnit(gs, trigger.cardId, trigger.playId, 1, log, trigger.fromPlayer);
+      break;
+    }
+    case "JTL_248": // Dilapidated Ski Speeder — "When Played: Deal 3 damage to this unit." It has
+                    // 7 HP, so it survives and no sweep is needed.
+      if (trigger.playId) DealDamageToUnit(gs, trigger.cardId, trigger.playId, 3, log, trigger.fromPlayer);
+      break;
     case "SOR_148": { // Guerilla Attack Pod — If a base has 15+ damage, ready this unit.
       if (gs.player1.base.damage < 15 && gs.player2.base.damage < 15) break;
       if (!trigger.playId) break;

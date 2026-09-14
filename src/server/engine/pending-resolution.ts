@@ -158,6 +158,11 @@ export interface DiscardFromHandPending {
    * discarded card's printed cost, divided among any number of units. Holds that player's id.
    */
   thenSpreadDamageEqualToCostFor?: PlayerId;
+  /**
+   * JTL_201 Ahsoka Tano: after the opponent discards, "if it's a unit, you may exhaust a unit".
+   * Holds the player who may exhaust. Read against the card actually discarded.
+   */
+  thenMayExhaustIfUnitFor?: PlayerId;
 }
 
 /**
@@ -284,6 +289,8 @@ export interface PlayFromHandPending {
   sharesKeywordWithPlayer?: PlayerId;
   /** LOF_005 Morgan Elsbeth: play the chosen unit for this many resources less. */
   costReduction?: number;
+  /** Hand indices that may be chosen, when only some cards qualify (JTL_155: Vehicle units). */
+  eligibleHandIndices?: number[];
   /** LOF_016 Qui-Gon Jinn: the played unit's printed cost must be at most this (cost < returned unit). */
   maxCost?: number;
   /** LOF_016 Qui-Gon Jinn: the played unit must NOT have this aspect (non-Villainy). */
@@ -757,7 +764,7 @@ export interface PeekHandPending {
   /** If true, the peeking player must choose one card from the target hand to discard. */
   mustDiscard: boolean;
   /** If set, only cards of this type are eligible to be discarded. */
-  discardFilter?: "non-unit";
+  discardFilter?: "non-unit" | "event";
   /**
    * If set, only cards with this exact TITLE are eligible to be discarded (SEC_186 Garindan
    * "discard a card with that name"). Matched on title rather than cardId because separate

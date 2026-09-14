@@ -3,7 +3,7 @@ import { AllGroundUnits, AllUnits, GetPlayer, AttackedThisPhasePlayIds, CanUnitA
 import { Unit } from "@/server/engine/unit";
 import { CardTraits, CardCost, CardType, CardAspects } from "@/server/engine/card-db/generated";
 import { HasFortify } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
-import { AllSpaceUnits } from "@/server/engine/core-functions";
+import { AllSpaceUnits, FightersReadyToAttack } from "@/server/engine/core-functions";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
 import { PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
@@ -498,6 +498,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         if (GetUnitsForPlayer(player, true).some(u => u.playId !== playId && (CardAspects(u.cardId)?.includes("Heroism") ?? false))) {
           abilities.push(cardId);
         }
+        break;
+      case "JTL_146": // Massassi Tactical Officer — Action [Exhaust]: Attack with a Fighter unit (+2/+0).
+        if (FightersReadyToAttack(player).length > 0) abilities.push(cardId);
         break;
       case "IBH_062": // Imperial Deck Officer — Action [Exhaust]: Heal 2 damage from a Villainy unit.
       case "IBH_100":

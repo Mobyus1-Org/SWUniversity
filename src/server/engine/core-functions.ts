@@ -1710,6 +1710,17 @@ export function FisherYatesShuffle<T>(array: T[]): T[] {
  * A unit that has lost its abilities also loses the restriction — "can't attack" is itself
  * an ability, so silencing the unit frees it to attack.
  */
+/** A card in hand that is a Vehicle unit — for "play a Vehicle unit from your hand" abilities. */
+export function IsVehicleUnitCard(cardId: string, player: PlayerId): boolean {
+  return CardType(cardId) === "Unit" && TraitContains(cardId, "Vehicle", player);
+}
+
+/** Ready friendly Fighter units able to attack — for "Attack with a Fighter unit" abilities. */
+export function FightersReadyToAttack(player: PlayerId): UnitInterface[] {
+  return GetUnitsForPlayer(player, true)
+    .filter(u => CanUnitAttack(u) && TraitContains(u.cardId, "Fighter", player, u.playId));
+}
+
 export function CanUnitAttack(unit: UnitInterface): boolean {
   const asUnit = Unit.FromInterface(unit);
   if (asUnit.LostAbilities()) return true;
@@ -1723,6 +1734,22 @@ export function CanUnitAttack(unit: UnitInterface): boolean {
     default:
       return true;
   }
+}
+
+/**
+ * How many "On Attack" abilities `unit` has right now (JTL_174 Hotshot Maneuver): its printed one,
+ * one per upgrade granting one (a conditional grant counts only while its condition holds), and one
+ * per effect granting one. A "When Played/On Attack" ability is one On Attack. Keywords (Raid,
+ * Saboteur, …) are not On Attack abilities.
+ */
+export function CountOnAttackAbilities(unit: UnitInterface): number {
+  if (Unit.FromInterface(unit).LostAbilities()) return 0;
+  let count = HasOnAttack(unit.cardId, unit.controller) ? 1 : 0; // no playId: printed ability only
+  count += unit.upgrades.filter(u => UpgradeGrantsOnAttack(u.cardId, u.controller, u.playId)).length;
+  count += GetCurrentEffectsForPlayer(unit.controller)
+    .filter(e => (!e.targetPlayId || e.targetPlayId === unit.playId) && EffectGrantsOnAttack(e.cardId))
+    .length;
+  return count;
 }
 
 export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string): boolean {
@@ -1824,6 +1851,9 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "JTL_151": //Red Five — On Attack: may deal 2 damage to a damaged unit
     case "LOF_045": //Yaddle — On Attack: each other friendly Jedi gains Restore 1 this phase
     case "SEC_087": //Dedra Meero — On Attack: create a Spy token
+    case "JTL_160": //Supporting Eta-2 — On Attack: may give a ground unit +2/+0 this phase
+    case "JTL_157": //Relentless Firespray — On Attack: ready this unit (once each round)
+    case "JTL_132": //First Order Stormtrooper — On Attack/When Defeated: 1 indirect damage to a player
     case "JTL_133": //Allegiant General Pryde — On Attack: if you have initiative, 2 indirect damage
     case "JTL_149": //Red Squadron Y-Wing — On Attack: 3 indirect damage to the defending player
     case "SHD_153": //Poe Dameron — On Attack: discard up to 3, then one different option per discard
@@ -1929,7 +1959,14 @@ export function EffectGrantsOnAttack(cardId: string): boolean {
 export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?: string): boolean {
   if (player && playId) {
     //for conditional on-attack abilities granted by upgrades
-    //TODO: example Jedi Lightsaber
+
+    // Jedi Lightsaber / Fallen Lightsaber — "Attached unit gains: On Attack: ... if it's a Force
+    // unit" is printed as a condition on the GAIN, so a non-Force host has no On Attack at all.
+    if (cardId === "SOR_054" || cardId === "SOR_137") {
+      const host = AllUnits().find(u => u.upgrades.some(upg => upg.playId === playId));
+      if (!host) return false;
+      return TraitContains(host.cardId, "Force", host.controller, host.playId);
+    }
 
     // Luke Skywalker (Hero of Yavin) as a Pilot upgrade only grants the On Attack
     // "If it's a Fighter" — a piloted Transport or Capital Ship gains nothing.
@@ -1956,6 +1993,7 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
     case "SEC_210": //Stolen Starpath Unit — grants "On Attack: name a card, reveal, make Spies"
     case "JTL_018": //Kazuda Xiono piloting — grants his On Attack to the attached Vehicle
     case "JTL_142": //Darth Vader (Scourge of Squadrons) piloting — 1 damage, then 1 more on a kill
+    case "JTL_172": //Twin Laser Turret — 1 damage to each of up to 2 units in this arena
       return true;
     default: return false;
   }
@@ -2300,6 +2338,41 @@ export function ResourceTopCardOfDeck(
   });
   gameLog.push(`${CardTitle(sourceCardId)}: put ${CardTitle(top.cardId)} into play as a${opts.ready ? " ready" : "n exhausted"} resource.`);
   return true;
+}
+
+/**
+ * "Discard N cards from [player]'s deck": moves up to `count` cards from the top of the deck to the
+ * discard pile, firing each one's when-discarded trigger. A short deck discards what it has.
+ * Returns the discarded card ids.
+ */
+export function DiscardFromTopOfDeck(
+  gs: GameState,
+  player: PlayerId,
+  count: number,
+  gameLog: string[],
+  sourceCardId: string,
+): string[] {
+  const pState = GetPlayer(gs, player);
+  const discarded: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const top = pState.deck.pop(); // the top of the deck is the END of the array
+    if (!top) break;
+    const discardPlayId = String(gs.nextPlayId++);
+    pState.discard.unshift({
+      cardId: top.cardId,
+      playId: discardPlayId,
+      owner: player,
+      controller: player,
+      turnDiscarded: gs.currentRound,
+      discardEffect: "",
+    });
+    QueueWhenDiscardedTrigger(gs, player, top.cardId, discardPlayId, "Deck");
+    discarded.push(top.cardId);
+  }
+  if (discarded.length > 0) {
+    gameLog.push(`${CardTitle(sourceCardId)}: discarded ${discarded.map(c => CardTitle(c)).join(", ")} from player ${player}'s deck.`);
+  }
+  return discarded;
 }
 
 /**

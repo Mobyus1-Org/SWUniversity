@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
-import { GetUnitByPlayId, GetOtherPlayer, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer } from "@/server/engine/core-functions";
+import { GetUnitByPlayId, GetOtherPlayer, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles } from "@/server/engine/card-db/generated";
@@ -36,18 +36,36 @@ function chainBeforeCombat(
   combat: ResolveAttackPending,
   insert: PendingResolution,
 ): PendingResolution {
+  // `optionalTarget` hangs the follow-up target off `onYes`, which the continuation walk alone
+  // misses — so both links are walked, at every level (a chain of several deferred upgrade
+  // abilities nests one option inside another's continuation).
   const swap = (node: PendingResolution): PendingResolution => {
-    if (!("continuation" in node) || node.continuation === undefined) return node;
-    if (node.continuation === combat) return { ...node, continuation: insert } as PendingResolution;
-    if (node.continuation === null) return node;
-    return { ...node, continuation: swap(node.continuation) } as PendingResolution;
+    let out = node;
+    if ("continuation" in node && node.continuation) {
+      out = (node.continuation === combat
+        ? { ...node, continuation: insert }
+        : { ...node, continuation: swap(node.continuation) }) as PendingResolution;
+    }
+    const onYes = (out as { onYes?: PendingResolution | null }).onYes;
+    if (onYes) {
+      out = { ...out, onYes: onYes === combat ? insert : swap(onYes) } as PendingResolution;
+    }
+    return out;
   };
-  const swapped = swap(pending) as PendingResolution & { onYes?: PendingResolution | null };
-  // `optionalTarget` hangs the follow-up target off `onYes`, which the continuation walk misses.
-  if (swapped.onYes) {
-    return { ...swapped, onYes: swap(swapped.onYes) } as PendingResolution;
-  }
-  return swapped;
+  return swap(pending);
+}
+
+/**
+ * Adds `next` to the upgrade On Attack abilities waiting for player input, after any already
+ * queued: each one's hand-off to combat becomes the next one, so all of them resolve before combat.
+ */
+function queueDeferred(
+  existing: PendingResolution | null,
+  combat: ResolveAttackPending,
+  next: PendingResolution | null,
+): PendingResolution | null {
+  if (!next || next === combat) return existing; // nothing to ask (a builder that fizzled hands back combat)
+  return existing ? chainBeforeCombat(existing, combat, next) : next;
 }
 
 export function resolveOnAttackTrigger(
@@ -150,25 +168,25 @@ export function resolveOnAttackTrigger(
   }
 
   //Upgrade-granted On Attack abilities.
-  // An interactive upgrade (one that needs player input) is captured in `deferredPending` rather
+  // An interactive upgrade (one that needs player input) is queued in `deferredPending` rather
   // than returned immediately, so that any auto (fire-and-forget) upgrade abilities later in the
   // list — e.g. The Darksaber's Experience-token grant — still resolve instead of being dropped.
+  // Several interactive upgrades queue one after another (queueDeferred), none is dropped.
   let deferredPending: PendingResolution | null = null;
   for (const upgrade of activeUpgrades) {
     switch (upgrade.cardId) {
       case "JTL_018": // Kazuda Xiono piloting — same On Attack as his deployed side.
-        deferredPending ??= kazudaSilencePending(attacker, continuation);
+        deferredPending = queueDeferred(deferredPending, continuation, kazudaSilencePending(attacker, continuation));
         break;
       case "JTL_142": { // Darth Vader piloting — "On Attack: You may deal 1 damage to a unit. If a
                         // unit is defeated this way, you may deal 1 damage to a unit or base."
                         // The follow-up is chained in the JTL_142_pilot dispatch case, which is
                         // what knows whether the first damage actually defeated anything.
-        if (!deferredPending) {
-          const allUnits142 = AllUnits();
-          if (allUnits142.length > 0) {
-            deferredPending = optionalTarget("JTL_142_pilot", attacker.controller, allUnits142.map(u => u.playId),
-              "Deal 1 damage to a unit?", { yesLabel: "Deal 1", sourcePlayId: attacker.playId, continuation });
-          }
+        const allUnits142 = AllUnits();
+        if (allUnits142.length > 0) {
+          deferredPending = queueDeferred(deferredPending, continuation, optionalTarget("JTL_142_pilot",
+            attacker.controller, allUnits142.map(u => u.playId),
+            "Deal 1 damage to a unit?", { yesLabel: "Deal 1", sourcePlayId: attacker.playId, continuation }));
         }
         break;
       }
@@ -199,63 +217,61 @@ export function resolveOnAttackTrigger(
       case "LOF_138": { // Sith Holocron — "On Attack: You may deal 2 damage to a friendly unit. If
                         // you do, this unit gets +2/+0 for this attack." The host is itself a
                         // friendly unit, so it can pay the 2 to power up its own swing.
-        if (!deferredPending) {
-          const friendly138 = GetUnitsForPlayer(attacker.controller);
-          if (friendly138.length > 0) {
-            deferredPending = optionalTarget("LOF_138", attacker.controller,
-              friendly138.map(u => u.playId),
-              "Deal 2 damage to a friendly unit for +2/+0 this attack?",
-              { yesLabel: "Deal 2", sourcePlayId: attacker.playId, continuation });
-          }
+        const friendly138 = GetUnitsForPlayer(attacker.controller);
+        if (friendly138.length > 0) {
+          deferredPending = queueDeferred(deferredPending, continuation, optionalTarget("LOF_138", attacker.controller,
+            friendly138.map(u => u.playId),
+            "Deal 2 damage to a friendly unit for +2/+0 this attack?",
+            { yesLabel: "Deal 2", sourcePlayId: attacker.playId, continuation }));
         }
         break;
       }
       case "LOF_139": { // Battle Fury — "On Attack: Discard a card from your hand." Mandatory, and
                         // a drawback rather than a benefit; an empty hand simply fizzles.
-        if (!deferredPending && GetHand(attacker.controller).length > 0) {
-          deferredPending = {
+        if (GetHand(attacker.controller).length > 0) {
+          deferredPending = queueDeferred(deferredPending, continuation, {
             type: "discard-from-hand",
             targetPlayer: attacker.controller,
             count: 1,
             continuation,
-          } satisfies DiscardFromHandPending;
+          } satisfies DiscardFromHandPending);
         }
         break;
       }
       case "SHD_175": { // Armed to the Teeth — "On Attack: Give another friendly unit +2/+0 for
                         // this phase." Mandatory, and "another" excludes the attacker wearing it.
-        if (!deferredPending) {
-          const others175 = GetUnitsForPlayer(attacker.controller)
-            .filter(u => u.playId !== attacker.playId);
-          if (others175.length > 0) {
-            deferredPending = mandatoryTarget("SHD_175", attacker.controller,
-              others175.map(u => u.playId), continuation);
-          }
+        const others175 = GetUnitsForPlayer(attacker.controller)
+          .filter(u => u.playId !== attacker.playId);
+        if (others175.length > 0) {
+          deferredPending = queueDeferred(deferredPending, continuation, mandatoryTarget("SHD_175",
+            attacker.controller, others175.map(u => u.playId), continuation));
         }
         break;
       }
       case "JTL_012": { // Luke Skywalker piloting a Fighter — "On Attack: You may deal 3 damage to a unit."
-        if (!deferredPending) {
-          const allUnits012 = AllUnits();
-          if (allUnits012.length > 0) {
-            deferredPending = optionalTarget("JTL_012_pilot", attacker.controller, allUnits012.map(u => u.playId),
-              "Deal 3 damage to a unit?", { continuation });
-          }
+        const allUnits012 = AllUnits();
+        if (allUnits012.length > 0) {
+          deferredPending = queueDeferred(deferredPending, continuation, optionalTarget("JTL_012_pilot",
+            attacker.controller, allUnits012.map(u => u.playId), "Deal 3 damage to a unit?", { continuation }));
         }
         break;
       }
       case "SOR_121": { // Hardpoint Heavy Blaster
-        if (!deferredPending && continuation.target.type === "unit") {
+        if (continuation.target.type === "unit") {
           const defenderPlayId = continuation.target.playId;
           const inGround = AllGroundUnits().some(u => u.playId === defenderPlayId);
           const arenaUnits = inGround ? AllGroundUnits() : AllSpaceUnits();
           if (arenaUnits.length > 0) {
-            deferredPending = optionalTarget("SOR_121", attacker.controller, arenaUnits.map(u => u.playId),
-              "Deal 2 damage to a unit in the defender's arena?", { continuation });
+            deferredPending = queueDeferred(deferredPending, continuation, optionalTarget("SOR_121",
+              attacker.controller, arenaUnits.map(u => u.playId),
+              "Deal 2 damage to a unit in the defender's arena?", { continuation }));
           }
         }
         break;
       }
+      case "JTL_172": // Twin Laser Turret — "On Attack: Deal 1 damage to each of up to 2 units in this arena."
+        deferredPending = queueDeferred(deferredPending, continuation, buildTwinLaserTurretPending(attacker, continuation));
+        break;
       case "SOR_214": { // Smuggling Compartment — On Attack: Ready a resource.
         const game214 = GetGame();
         if (game214) {
@@ -306,13 +322,13 @@ export function resolveOnAttackTrigger(
       case "SEC_210": { // Stolen Starpath Unit — "On Attack: Name a card. The defending player
                         // reveals their hand. For each card in their hand with that name, create
                         // a Spy token." No hand to reveal means nothing to name.
-        if (!deferredPending) {
+        {
           const defender210 = continuation.target.type === "base"
             ? continuation.target.player
             : AllUnits().find(u => u.playId === (continuation.target as { playId: string }).playId)?.controller;
           const game210 = GetGame();
           if (defender210 && game210 && GetPlayer(game210.currentGameState, defender210).hand.length > 0) {
-            deferredPending = {
+            deferredPending = queueDeferred(deferredPending, continuation, {
               type: "ability-target",
               cardId: "SEC_210",
               player: attacker.controller,
@@ -321,20 +337,20 @@ export function resolveOnAttackTrigger(
               fromPlayIds: [],   // any card title is valid; the UI renders fromChoices
               fromChoices: AllCardTitles(),
               continuation,
-            };
+            });
           }
         }
         break;
       }
       case "SEC_264": { // Clandestine Connections — On Attack: You may pay 2 resources. If you do, deal 2 damage to a base.
-        if (!deferredPending) {
+        {
           const game264 = GetGame();
           if (game264) {
             const pState264 = attacker.controller === 1 ? game264.currentGameState.player1 : game264.currentGameState.player2;
             const ready264 = pState264.resources.filter(r => r.ready).length;
             const credits264 = pState264.supplemental.creditTokens ?? 0;
             if (ready264 + credits264 >= 2) { // can afford
-              deferredPending = {
+              deferredPending = queueDeferred(deferredPending, continuation, {
                 type: "ability-option",
                 cardId: "SEC_264",
                 player: attacker.controller,
@@ -344,7 +360,7 @@ export function resolveOnAttackTrigger(
                 noLabel: "Skip",
                 onYes: null,
                 continuation,
-              };
+              });
             }
           }
         }
@@ -355,7 +371,7 @@ export function resolveOnAttackTrigger(
         break;
       }
       case "SHD_177": { // Vambrace Flamethrower
-        if (!deferredPending) {
+        {
           const game = GetGame();
           if (game) {
             const gs = game.currentGameState;
@@ -372,13 +388,13 @@ export function resolveOnAttackTrigger(
                 eligiblePlayIds: enemyGround,
                 continuation,
               };
-              deferredPending = {
+              deferredPending = queueDeferred(deferredPending, continuation, {
                 type: "ability-option",
                 cardId: "SHD_177",
                 helperText: "Deal 3 damage divided among enemy ground units?",
                 onYes: spreadPending,
                 continuation,
-              };
+              });
             }
           }
         }
@@ -410,6 +426,33 @@ export function resolveOnAttackTrigger(
 }
 
 /**
+ * JTL_172 Twin Laser Turret's granted "On Attack: Deal 1 damage to each of up to 2 units in this
+ * arena." Any units in the arena the attacker is in — its own side and itself included — and zero
+ * picks is allowed.
+ */
+export function buildTwinLaserTurretPending(
+  attacker: Unit,
+  continuation: ResolveAttackPending,
+): AbilityTargetPending | null {
+  const game = GetGame();
+  if (!game) return null;
+  const arena = UnitArenaOf(game.currentGameState, attacker.playId);
+  const units = arena === "Ground" ? AllGroundUnits() : arena === "Space" ? AllSpaceUnits() : [];
+  if (units.length === 0) return null;
+  return {
+    type: "ability-target",
+    cardId: "JTL_172",
+    player: attacker.controller,
+    sourcePlayId: attacker.playId,
+    helperText: "Deal 1 damage to each of up to 2 units in this arena.",
+    fromPlayIds: units.map(u => u.playId),
+    needsMultiple: true,
+    maxTargets: 2,
+    continuation,
+  };
+}
+
+/**
  * Resolves the On Attack ability printed on `sourceCardId`, applied to `attacker`.
  * `sourceCardId` is normally the attacker's own cardId, but is the supporter's when the attacker
  * gained its abilities via Support.
@@ -432,6 +475,22 @@ function resolveInnateOnAttack(
         exhausted189.ready = true;
         game189.gameLog.push(`${CardTitle("ASH_189")}: readied a resource.`);
       }
+      return continuation;
+    }
+    case "JTL_157": { // Relentless Firespray — "On Attack: Ready this unit. Use this ability only once
+                      // each round." The attacker is exhausted AFTER its On Attack abilities, so this
+                      // leaves a ForAttack marker that resolveAttack honours right after that exhaust.
+                      // The once-per-round use is tracked per copy (it isn't unique).
+      const game157 = GetGame();
+      if (!game157) return continuation;
+      const effects157 = game157.currentGameState.currentEffects;
+      if (effects157.some(e => e.cardId === "JTL_157_used" && e.targetPlayId === attacker.playId)) {
+        return continuation;
+      }
+      effects157.push(
+        { cardId: "JTL_157_used", duration: "Round", affectedPlayer: attacker.controller, targetPlayId: attacker.playId },
+        { cardId: "JTL_157_ready", duration: "ForAttack", affectedPlayer: attacker.controller, targetPlayId: attacker.playId },
+      );
       return continuation;
     }
     case "IBH_053": // Darth Vader (deployed) — On Attack: Deal 2 damage to a base. (Mandatory, either base.)
@@ -657,6 +716,15 @@ function resolveInnateOnAttack(
       if (game087) CreateSpy(game087.currentGameState, attacker.controller, game087.gameLog, "SEC_087");
       return continuation;
     }
+    case "JTL_132": // First Order Stormtrooper — the On Attack half of "On Attack/When Defeated:
+                    // Deal 1 indirect damage to a player."
+      return {
+        type: "choose-indirect-target",
+        cardId: "JTL_132",
+        sourcePlayer: attacker.controller,
+        totalDamage: 1,
+        continuation,
+      } satisfies ChooseIndirectTargetPending;
     case "JTL_133": { // Allegiant General Pryde — "On Attack: If you have the initiative, deal 2
                       // indirect damage to a player."
       if (InitiativePlayer() !== attacker.controller) return continuation;
@@ -1249,6 +1317,14 @@ function resolveInnateOnAttack(
       if (enemyGround057.length === 0) return continuation;
       return mandatoryTarget("LAW_057", attacker.controller,
         enemyGround057.map(u => u.playId), continuation);
+    }
+    case "JTL_160": { // Supporting Eta-2 — "On Attack: You may give a ground unit +2/+0 for this
+                      // phase." Any ground unit, friendly or enemy.
+      const ground160 = AllGroundUnits();
+      if (ground160.length === 0) return continuation;
+      return optionalTarget("JTL_160", attacker.controller, ground160.map(u => u.playId),
+        "Give a ground unit +2/+0 for this phase?",
+        { yesLabel: "Give +2/+0", sourcePlayId: attacker.playId, continuation });
     }
     case "LOF_135": { // Scythe — "On Attack: You may give another friendly Inquisitor unit +2/+0
                       // for this phase." No arena restriction: a ground Inquisitor is fair game.

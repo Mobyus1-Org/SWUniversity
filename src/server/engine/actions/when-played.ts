@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf } from "@/server/engine/core-functions";
-import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost } from "@/server/engine/card-playability";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck } from "@/server/engine/core-functions";
+import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost, CardIsPlayable } from "@/server/engine/card-playability";
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds, UpgradeDestinationsOnControlChange, PilotlessFighterOrTransportPlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -558,17 +558,26 @@ export function resolveWhenPlayed(
         "Give an Advantage token to a unit?", { yesLabel: "Give token" });
     }
     case "ASH_158": { // Han Solo — deal 3 damage to this unit, then give 3 Advantage tokens to a unit.
-      const self158 = playId ? GetUnitByPlayId(game.currentGameState, playId) : undefined;
-      if (self158) DealDamageToUnit(game.currentGameState, "ASH_158", self158.playId, 3, game.gameLog);
+      // The damage lands before the choice (it can defeat him, and he is a legal target), so it
+      // stays here — but once per play: a unit's When Played runs twice when it is bagged (Ambush),
+      // a preview then the real run, and the second pass must not deal another 3.
+      const gs158 = game.currentGameState;
+      const dealt158 = !!playId && gs158.currentEffects.some(
+        e => e.cardId === "ASH_158_self_damage" && e.targetPlayId === playId);
+      const self158 = playId && !dealt158 ? GetUnitByPlayId(gs158, playId) : undefined;
+      if (self158) {
+        gs158.currentEffects.push({ cardId: "ASH_158_self_damage", duration: "Phase", affectedPlayer: player, targetPlayId: self158.playId });
+        DealDamageToUnit(gs158, "ASH_158", self158.playId, 3, game.gameLog);
+      }
       const allUnits158 = AllUnits();
       if (allUnits158.length === 0) return null;
       return mandatoryTarget("ASH_158", player, allUnits158.map(u => u.playId));
     }
-    case "JTL_248": { // Dilapidated Ski Speeder — "When Played: Deal 3 damage to this unit."
-      const self248 = playId ? GetUnitByPlayId(game.currentGameState, playId) : undefined;
-      if (self248) DealDamageToUnit(game.currentGameState, "JTL_248", self248.playId, 3, game.gameLog);
-      return null; // 7 HP, so it survives — no sweep needed.
-    }
+    case "JTL_135": // Special Forces TIE Fighter — automatic; see resolveWhenPlayedTrigger.
+    case "JTL_158": // Crackshot V-Wing — automatic; see resolveWhenPlayedTrigger.
+    case "JTL_248": // Dilapidated Ski Speeder — automatic; see resolveWhenPlayedTrigger (this runs
+                    // twice for units, so self-damage here would double-apply).
+      return null;
     case "ASH_147": { // The Cyborg Mech — deal 2 damage to an undamaged ground unit, or 5 to a
                       // damaged ground unit. (Amount is decided by the chosen target's state.)
       const groundUnits147 = AllGroundUnits();
@@ -1206,6 +1215,18 @@ export function resolveWhenPlayed(
       const targets156 = AllUnits();
       if (targets156.length === 0) return null;
       return mandatoryTarget("TWI_156_4", player, targets156.map(u => u.playId));
+    }
+    case "JTL_173": { // Fight Fire With Fire — "Choose a friendly unit and an enemy unit in the same
+                      // arena. If you do, deal 3 damage to each of them." Only a friendly unit whose
+                      // arena holds an enemy can start a legal pair.
+      const gs173 = game.currentGameState;
+      const enemies173 = GetUnitsForPlayer(GetOtherPlayer(player));
+      const friendly173 = GetUnitsForPlayer(player).filter(u => {
+        const arena = UnitArenaOf(gs173, u.playId);
+        return enemies173.some(e => UnitArenaOf(gs173, e.playId) === arena);
+      });
+      if (friendly173.length === 0) return null;
+      return mandatoryTarget("JTL_173_friendly", player, friendly173.map(u => u.playId));
     }
     case "TWI_176": { // Caught in the Crossfire — "Choose 2 ENEMY units in the SAME arena. Each of
                       // those units deals damage equal to its power to the other." Only an arena
@@ -1965,6 +1986,12 @@ export function resolveWhenPlayed(
       return optionalTarget(cardId, player, others076.map(u => u.playId),
         "Give a Shield token to another unit?", { yesLabel: "Give Shield" });
     }
+    case "JTL_144": { // No Disintegrations — "Deal damage to a non-leader unit equal to 1 less than
+                      // its remaining HP." Either side; the amount is read when it resolves.
+      const nonLeaders144 = AllUnits().filter(u => !Unit.FromInterface(u).IsLeader());
+      if (nonLeaders144.length === 0) return null;
+      return mandatoryTarget(cardId, player, nonLeaders144.map(u => u.playId));
+    }
     case "JTL_078": { // Direct Hit — "Defeat a non-leader Vehicle unit." A Vehicle with a leader Pilot
                       // on it is a leader unit.
       const vehicles078 = AllUnits().filter(u =>
@@ -2174,6 +2201,29 @@ export function resolveWhenPlayed(
       if (!hasEligible235) return null;
       return { type: "play-from-hand", cardId: "SOR_235", player };
     }
+    case "JTL_155": { // They Hate That Ship — "An opponent creates 2 TIE Fighter tokens and readies
+                      // them. Then, play a Vehicle unit from your hand. It costs 3 resources less."
+                      // Events resolve once, so the tokens can be created inline. The play step is
+                      // skipped when no Vehicle in hand is affordable even with the discount.
+      const gs155 = game.currentGameState;
+      const opponent155 = GetOtherPlayer(player);
+      for (let i = 0; i < 2; i++) {
+        const tie = CreateTieFighter(gs155, opponent155, game.gameLog, i === 0 ? cardId : undefined);
+        tie.ready = true; // tokens are created exhausted; "and readies them"
+      }
+      const eligible155 = GetPlayer(gs155, player).hand
+        .map((c, i) => ({ c, i }))
+        .filter(({ c }) => IsVehicleUnitCard(c.cardId, player) && CardIsPlayable(gs155, player, c.cardId, 3))
+        .map(({ i }) => i);
+      if (eligible155.length === 0) return null;
+      return {
+        type: "play-from-hand",
+        cardId,
+        player,
+        costReduction: 3,
+        eligibleHandIndices: eligible155,
+      };
+    }
     case "SOR_219": { // Sneak Attack — "Play a unit from your hand. It costs 3 less and enters play ready. At the start of the regroup phase, defeat it."
       const pState219 = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
       const hasUnit219 = pState219.hand.some(c => CardType(c.cardId) === "Unit");
@@ -2182,6 +2232,25 @@ export function resolveWhenPlayed(
         type: "play-from-hand",
         cardId: "SOR_219",
         player,
+      };
+    }
+    case "JTL_164": { // Cham Syndulla — "If an opponent controls more resources than you, you may put
+                      // the top card of your deck into play as a resource." Only offered (never
+                      // applied) here, so the unit preview's second run is harmless.
+      const gs164 = game.currentGameState;
+      const mine164 = GetPlayer(gs164, player);
+      if (GetPlayer(gs164, GetOtherPlayer(player)).resources.length <= mine164.resources.length) return null;
+      if (mine164.deck.length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        player,
+        sourcePlayId: playId,
+        helperText: "Put the top card of your deck into play as a resource?",
+        yesLabel: "Put into play",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: null,
       };
     }
     case "JTL_096": { // Blue Leader — "You may pay 2 resources. If you do, move this unit to the ground arena and give 2 Experience tokens to it."
@@ -2739,6 +2808,28 @@ export function resolveWhenPlayed(
         yesLabel: "Defeat an upgrade",
         noLabel: "Skip",
       });
+    }
+    case "JTL_176": { // Shoot Down — "Deal 3 damage to a space unit. If that unit is defeated this
+                      // way, you may deal 2 damage to a base." Either side.
+      const space176 = AllSpaceUnits();
+      if (space176.length === 0) return null;
+      return mandatoryTarget(cardId, player, space176.map(u => u.playId));
+    }
+    case "JTL_174": { // Hotshot Maneuver — "Choose a friendly unit. For each of its 'On Attack'
+                      // abilities, deal 2 damage to a different enemy unit. Then, attack with the
+                      // chosen unit." Any friendly unit — an exhausted one still deals the damage.
+      const friendly174 = GetUnitsForPlayer(player);
+      if (friendly174.length === 0) return null;
+      return mandatoryTarget(cardId, player, friendly174.map(u => u.playId));
+    }
+    case "JTL_175": { // System Shock — "Defeat a non-leader upgrade attached to a unit. If you do,
+                      // deal 1 damage to that unit." Tokens count; a leader Pilot doesn't.
+      const upgrades175 = DefeatableUpgradePlayIds(player).filter(id => {
+        const upg = FindUpgradeByPlayId(id);
+        return upg !== null && !CardIsLeader(upg.cardId);
+      });
+      if (upgrades175.length === 0) return null;
+      return mandatoryTarget(cardId, player, upgrades175);
     }
     case "SOR_251": { // Confiscate — "Defeat an upgrade."
       // Upgrades immune to enemy abilities (Luke JTL_012 as a Pilot) aren't legal targets.
@@ -3323,6 +3414,19 @@ export function resolveWhenPlayed(
       if (allUnits182.length === 0) return null;
       return mandatoryTarget(cardId, player, allUnits182.map(u => u.playId));
     }
+    case "JTL_179": { // Koiogran Turn — "Ready a Fighter or Transport unit with 6 or less power."
+                      // Either side; a ready unit is still a legal choice.
+      const eligible179 = AllUnits().filter(u =>
+        (TraitContains(u.cardId, "Fighter", u.controller, u.playId) || TraitContains(u.cardId, "Transport", u.controller, u.playId))
+        && Unit.FromInterface(u).CurrentPower() <= 6);
+      if (eligible179.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible179.map(u => u.playId));
+    }
+    case "JTL_180": { // Piercing Shot — "Defeat all Shield tokens on a unit. Deal 3 damage to that unit."
+      const units180 = AllUnits();
+      if (units180.length === 0) return null;
+      return mandatoryTarget(cardId, player, units180.map(u => u.playId));
+    }
     case "SOR_169": { // Keep Fighting — Ready a unit with 3 or less power.
       const eligible169 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
         .filter(u => new Unit(u.cardId, u.playId, u.controller).CurrentPower() <= 3);
@@ -3389,6 +3493,18 @@ export function resolveWhenPlayed(
         targetPlayer: opponent148,
         count: 1,
         thenSpreadDamageEqualToCostFor: player,
+        continuation: null,
+      } satisfies DiscardFromHandPending;
+    }
+    case "JTL_201": { // Ahsoka Tano (Chasing Whispers) — "An opponent discards a card from their hand.
+                      // If it's a unit, you may exhaust a unit." The opponent picks the card.
+      const opponent201 = GetOtherPlayer(player);
+      if (GetHand(opponent201).length === 0) return null;
+      return {
+        type: "discard-from-hand",
+        targetPlayer: opponent201,
+        count: 1,
+        thenMayExhaustIfUnitFor: player,
         continuation: null,
       } satisfies DiscardFromHandPending;
     }
@@ -3563,6 +3679,43 @@ export function resolveWhenPlayed(
         peekingPlayer: player,
         targetPlayer: opponent228,
         mustDiscard: false,
+        continuation: null,
+      } satisfies PeekHandPending;
+    }
+    case "JTL_208": { // Never Tell Me the Odds — "Discard 3 cards from an opponent's deck and 3 cards
+                      // from your deck. Deal damage to a unit equal to the number of cards with an
+                      // odd cost discarded this way." A card with no cost counts as 0 (even).
+      const gs208 = game.currentGameState;
+      const discarded208 = [
+        ...DiscardFromTopOfDeck(gs208, GetOtherPlayer(player), 3, game.gameLog, cardId),
+        ...DiscardFromTopOfDeck(gs208, player, 3, game.gameLog, cardId),
+      ];
+      const odd208 = discarded208.filter(id => (CardCost(id) ?? 0) % 2 === 1).length;
+      game.gameLog.push(`${CardTitle(cardId)}: ${odd208} odd-cost card(s) discarded.`);
+      const units208 = AllUnits();
+      if (odd208 === 0 || units208.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId,
+        player,
+        fromPlayIds: units208.map(u => u.playId),
+        amount: odd208,
+        helperText: `Deal ${odd208} damage to a unit`,
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "JTL_207": { // Jam Communications — "Look at an opponent's hand and discard an event from it."
+                      // With no event there you still look.
+      const opponent207 = GetOtherPlayer(player);
+      const hand207 = GetHand(opponent207);
+      if (hand207.length === 0) return null;
+      const hasEvent207 = hand207.some(c => CardType(c.cardId) === "Event");
+      return {
+        type: "peek-hand",
+        peekingPlayer: player,
+        targetPlayer: opponent207,
+        mustDiscard: hasEvent207,
+        ...(hasEvent207 ? { discardFilter: "event" as const } : {}),
         continuation: null,
       } satisfies PeekHandPending;
     }

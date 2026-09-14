@@ -181,6 +181,7 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
   "IBH_027": "3 dmg to a space unit",
   "IBH_023": "Attack w/ another Heroism unit (+2/+0)", // General Rieekan
   "IBH_036": "Attack w/ another Heroism unit (+2/+0)",
+  "JTL_146": "Attack w/ a Fighter (+2/+0)", // Massassi Tactical Officer
   "IBH_062": "Heal 2 from a Villainy unit", // Imperial Deck Officer
   "IBH_100": "Heal 2 from a Villainy unit",
   // Deployed leaders are units in the arena, so their Action button comes from this list too.

@@ -579,12 +579,16 @@ function bamboozleAltCostAvailable(game: GameState, player: PlayerId): boolean {
   return allCunningCount - 1 > 0;
 }
 
-export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string): boolean {
+/**
+ * `costDelta` is a discount taken off the full cost (aspect penalty included), for "play a card
+ * from your hand. It costs N less" abilities checking a card before offering it.
+ */
+export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string, costDelta = 0): boolean {
   if (regionalGovernorBlocks(game, player, cardId)) return false;
 
   const p = player === 1 ? game.player1 : game.player2;
   const readyResources = spendableFor(game, player);
-  const fullCost = playCost(game, player, cardId);
+  const fullCost = Math.max(0, playCost(game, player, cardId) - costDelta);
 
   // SOR_199 Bamboozle: can be played via alternate cost (discard a Cunning card from hand).
   if (cardId === "SOR_199" && bamboozleAltCostAvailable(game, player)) return true;
@@ -597,7 +601,7 @@ export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string
   if (pilotBase >= 0) {
     // Must match the payment path exactly: piloting cost + aspect penalty. (This used to be
     // `fullCost - CardCost`, which wrongly folded card-cost discounts and taxes into it.)
-    const pilotFullCost = pilotPlayCost(game, player, cardId);
+    const pilotFullCost = Math.max(0, pilotPlayCost(game, player, cardId) - costDelta);
     const canAffordPilot = readyResources >= pilotFullCost;
     const hasVehicle = PilotingEligibleVehicles(game, player).length > 0;
     if (canAffordPilot && hasVehicle) return true;
