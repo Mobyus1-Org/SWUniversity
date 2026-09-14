@@ -59,4 +59,26 @@ describe("LAW_168 Haymaker", () => {
     expect(marine.upgrades.some(u => u.cardId === Cards.upgrades.token.experience)).toBe(true);
     expect(g.state.player2.spaceArena[0].damage).toBe(0);
   });
+
+  it("'the same arena' is where the unit IS — a space card fighting in the ground arena hits ground units", async () => {
+    const g = new GameTestAdapter();
+    const state = new GameStateBuilder()
+      .MyBase(Cards.bases.common.green30HP)
+      .MyLeader(Cards.leaders.sor.grandMoffTarkin)
+      .TheirBase(Cards.bases.common.green30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 8)
+      .WithGroundUnitForPlayer(1, Cards.units.jtl.phoenixSquadronAWing) // printed Space, now in the ground arena
+      .WithGroundUnitForPlayer(2, Cards.units.sor.reinforcementWalker)
+      .WithSpaceUnitForPlayer(2, Cards.units.lof.hyperspaceWayfarer)
+      .WithCardInHandForPlayer(1, Cards.events.law.haymaker)
+      .Build();
+    g.loadNewState(state);
+
+    await g.playCardFromHandAsync(1, 0);
+    await g.dispatchAsync(1, "choose-target", { targetPlayIds: [state.player1.groundArena[0].playId] });
+
+    const res = g.lastDispatchResponse?.resolutionNeeded as { fromPlayIds?: string[] };
+    expect(res.fromPlayIds).toEqual([state.player2.groundArena[0].playId]);
+  });
 });

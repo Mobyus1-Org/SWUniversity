@@ -1,6 +1,6 @@
 import { CardInPlay, HP_MOD, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { GetCurrentEffectsForPlayer, EffectiveRaid, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard } from "@/server/engine/core-functions";
-import { CardArena, CardAspects, CardCost, CardHp, CardPower } from "@/server/engine/card-db/generated";
+import { CardArena, CardAspects, CardCost, CardHp, CardPower, CardTitle } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
@@ -600,6 +600,12 @@ function selfPowerOnlyBonus(unit: Unit): number {
     ).length;
   }
   switch (unit.cardId) {
+    // JTL_256 Swarming Vulture Droid — "+1/+0 for each other friendly Swarming Vulture Droid."
+    // Counted by name, so a promo printing of the same card counts too.
+    case "JTL_256":
+      return bonus + GetUnitsForPlayer(unit.controller).filter(
+        u => u.playId !== unit.playId && CardTitle(u.cardId) === "Swarming Vulture Droid",
+      ).length;
     // ASH_113 Mandalorian Flagship — "+1/+0 for each OTHER friendly Mandalorian unit."
     case "ASH_113":
       return bonus + GetUnitsForPlayer(unit.controller).filter(

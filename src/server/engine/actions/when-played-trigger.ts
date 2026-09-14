@@ -4,7 +4,7 @@ import type { GameState } from "@/lib/engine/game";
 import { BaseHealingPrevented, DealDamageToBase, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
-import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateCloneTrooper, CreateMandalorianToken, GiveAdvantageTokens } from "@/server/engine/token-helpers";
+import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateCloneTrooper, CreateMandalorianToken, GiveAdvantageTokens, CreateXWing } from "@/server/engine/token-helpers";
 
 /**
  * Cards whose When Played does something without asking the player anything — i.e. the
@@ -23,6 +23,7 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149", "ASH_179", "ASH_251",
   "ASH_237", "ASH_248", "SEC_119", "JTL_087", "HMW_121", "ASH_079", "ASH_111", "ASH_064", "TWI_144", "TWI_097", "TWI_084", "TWI_137", "TWI_160", "ASH_065", "ASH_221",
   "IBH_031", "IBH_072", "JTL_067",
+  "JTL_099", "JTL_117",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -310,6 +311,10 @@ export function resolveWhenPlayedTrigger(
       }
       break;
     }
+    case "JTL_099":   // Veteran Fleet Officer — "When Played: Create an X-Wing token."
+    case "JTL_117":   // General Draven — the When Played half of "When Played/On Attack".
+      CreateXWing(gs, trigger.fromPlayer, log, trigger.cardId);
+      break;
     case "JTL_067": { // Cloaked StarViper — "When Played: Give 2 Shield tokens to this unit."
       const self067 = GetUnitByPlayId(gs, trigger.playId ?? "");
       if (!self067) break;

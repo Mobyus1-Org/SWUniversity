@@ -1,9 +1,9 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer } from "@/server/engine/core-functions";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf } from "@/server/engine/core-functions";
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost } from "@/server/engine/card-playability";
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
-import { IsTokenUpgrade, PilotlessVehiclePlayIds, UpgradeDestinationsOnControlChange } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { IsTokenUpgrade, PilotlessVehiclePlayIds, UpgradeDestinationsOnControlChange, PilotlessFighterOrTransportPlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending, BudgetSelectPending, PlayFromHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateBeast, CreateCloneTrooper, CreateXWing, CreateTieFighter, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens, GiveWeaknessToken } from "@/server/engine/token-helpers";
@@ -1212,9 +1212,11 @@ export function resolveWhenPlayed(
                       // holding 2+ enemy units can supply a legal pair, so the first pick is
                       // filtered to those arenas rather than to every enemy unit.
       const enemy176 = GetUnitsForPlayer(GetOtherPlayer(player));
+      const gs176 = GetGame()?.currentGameState;
+      const arenaOf176 = (id: string) => (gs176 ? UnitArenaOf(gs176, id) : null);
       const eligible176 = enemy176.filter(u => {
-        const arena = CardArena(u.cardId) ?? "Ground";
-        return enemy176.filter(o => (CardArena(o.cardId) ?? "Ground") === arena).length >= 2;
+        const arena = arenaOf176(u.playId);
+        return enemy176.filter(o => arenaOf176(o.playId) === arena).length >= 2;
       });
       if (eligible176.length < 2) return null;
       return mandatoryTarget("TWI_176_first", player, eligible176.map(u => u.playId));
@@ -1884,6 +1886,104 @@ export function resolveWhenPlayed(
     }
     case "ASH_038": // Purrgil Ultra — When Played half; its When Defeated calls the same builder.
       return buildPurrgilUltraOffer(player, playId);
+    case "JTL_083": { // Pantoran Starship Thief — "When Played: You may pay 3 resources. If you do,
+                      // attach this unit as an upgrade to a Fighter or Transport unit without a Pilot
+                      // on it. Take control of that unit." Offered only when it can go somewhere and
+                      // the 3 can be paid; the payment happens on Yes (this runs twice for units).
+      const gs083 = GetGame()?.currentGameState;
+      if (!gs083 || !playId) return null;
+      if (spendableFor(gs083, player) < 3 || PilotlessFighterOrTransportPlayIds(gs083).length === 0) return null;
+      return {
+        type: "ability-option",
+        cardId: "JTL_083",
+        player,
+        sourcePlayId: playId,
+        helperText: "Pay 3 resources to attach this unit as a Pilot to a Fighter or Transport and take control of it?",
+        yesLabel: "Pay 3",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "JTL_126": { // Eject — "Detach a Pilot upgrade, move it to the ground arena as a unit, and
+                      // exhaust it. Draw a card." The draw happens even with no Pilot to eject.
+      const gs126 = GetGame()?.currentGameState;
+      if (!gs126) return null;
+      const pilots126 = AllUnits().flatMap(u => u.upgrades.filter(upg => IsPilotUpgrade(upg.cardId) && !IsTokenUpgrade(upg.cardId)).map(upg => upg.playId));
+      if (pilots126.length === 0) {
+        DrawCardForPlayer(gs126, GetGame()!.gameLog, player);
+        return null;
+      }
+      return mandatoryTarget(cardId, player, pilots126);
+    }
+    case "JTL_124": { // Tandem Assault — "Attack with a space unit. If you do, attack with a ground
+                      // unit, and that ground unit gets +2/+0 for this attack." Step 1: the space unit.
+      const gs124 = GetGame()?.currentGameState;
+      if (!gs124) return null;
+      const space124 = GetPlayer(gs124, player).spaceArena.filter(u => u.ready && CanUnitAttack(u));
+      if (space124.length === 0) return null;
+      return mandatoryTarget(cardId, player, space124.map(u => u.playId));
+    }
+    case "JTL_129": { // Focus Fire — "Choose a unit. Each friendly Vehicle unit in the same arena
+                      // deals damage equal to its power to that unit." Only units in an arena where
+                      // you control a Vehicle are worth choosing; arenas are read live.
+      const gs129 = GetGame()?.currentGameState;
+      if (!gs129) return null;
+      const mine129 = GetPlayer(gs129, player);
+      const hasVehicle129 = (zone: "groundArena" | "spaceArena") =>
+        mine129[zone].some(u => TraitContains(u.cardId, "Vehicle", u.controller, u.playId));
+      const eligible129 = (["groundArena", "spaceArena"] as const)
+        .filter(hasVehicle129)
+        .flatMap(zone => [...gs129.player1[zone], ...gs129.player2[zone]]);
+      if (eligible129.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible129.map(u => u.playId));
+    }
+    case "JTL_131": { // Turbolaser Salvo — "Choose an arena. A friendly space unit deals damage equal
+                      // to its power to each enemy unit in that arena." No space unit, nothing to do.
+      const gs131 = GetGame()?.currentGameState;
+      if (!gs131 || GetPlayer(gs131, player).spaceArena.length === 0) return null;
+      return {
+        type: "choose-one",
+        cardId: "JTL_131",
+        player,
+        options: [{ id: "ground", label: "Ground arena" }, { id: "space", label: "Space arena" }],
+        continuation: null,
+      } satisfies ChooseOnePending;
+    }
+    case "JTL_089": // The Invisible Hand — When Played half; completing an attack calls the same builder.
+      return buildInvisibleHandOffer(player, null);
+    case "JTL_088": // Captain Phasma — When Played half of "When Played/On Attack".
+      return buildPhasmaOnMyCommandOffer(player, playId, null);
+    case "JTL_076": { // Covering the Wing — "Create an X-Wing token. You may give a Shield token to
+                      // another unit." Events resolve once, so the token is made here. "Another" is
+                      // relative to the new X-Wing: every other unit, either side, may take the Shield.
+      const gs076 = GetGame()?.currentGameState;
+      if (!gs076) return null;
+      const xWing076 = CreateXWing(gs076, player, GetGame()!.gameLog, "JTL_076");
+      const others076 = AllUnits().filter(u => u.playId !== xWing076.playId);
+      if (others076.length === 0) return null;
+      return optionalTarget(cardId, player, others076.map(u => u.playId),
+        "Give a Shield token to another unit?", { yesLabel: "Give Shield" });
+    }
+    case "JTL_078": { // Direct Hit — "Defeat a non-leader Vehicle unit." A Vehicle with a leader Pilot
+                      // on it is a leader unit.
+      const vehicles078 = AllUnits().filter(u =>
+        !Unit.FromInterface(u).IsLeader()
+        && TraitContains(u.cardId, "Vehicle", u.controller, u.playId)
+        && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player));
+      if (vehicles078.length === 0) return null;
+      return mandatoryTarget(cardId, player, vehicles078.map(u => u.playId));
+    }
+    case "JTL_091": { // Apology Accepted — "Defeat a friendly unit. You may give 2 Experience tokens to
+                      // a unit." The Experience isn't conditional on the defeat, so with no friendly
+                      // unit it's still offered.
+      const friendly091 = GetUnitsForPlayer(player);
+      if (friendly091.length > 0) return mandatoryTarget(cardId, player, friendly091.map(u => u.playId));
+      const all091 = AllUnits();
+      if (all091.length === 0) return null;
+      return optionalTarget("JTL_091_xp", player, all091.map(u => u.playId),
+        "Give 2 Experience tokens to a unit?", { yesLabel: "Give Experience" });
+    }
     case "SHD_142": // Pre Vizsla — When Played half; the On Attack half calls the same builder.
       return buildPreVizslaOffer(player, playId, null);
     case "SHD_106": { // Rule with Respect — "A friendly unit captures each enemy non-leader unit that
@@ -2125,7 +2225,7 @@ export function resolveWhenPlayed(
                       // Either side; CURRENT power, so buffs and debuffs both count. Immunity to
                       // enemy defeat only shields a unit from its opponent, not from its own side.
       const eligible078 = AllUnits().filter(u =>
-        !CardIsLeader(u.cardId)
+        !Unit.FromInterface(u).IsLeader() // a Vehicle with a leader Pilot is a leader unit
         && Unit.FromInterface(u).CurrentPower() >= 5
         && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player));
       if (eligible078.length === 0) return null;
@@ -2554,7 +2654,15 @@ export function resolveWhenPlayed(
                       // Pilot never puts a unit into play, so this trigger never fires there.
       const game100 = GetGame();
       if (!game100) return null;
-      CreateXWing(game100.currentGameState, player, game100.gameLog, "JTL_100");
+      // The X-Wing must exist before the attach choice (it's a legal Vehicle to attach to), so it
+      // is made here — but once per play: a unit's When Played runs twice when it also has Ambush
+      // (a preview, then the real run), and the second pass must not make a second X-Wing.
+      const made100 = !!playId && game100.currentGameState.currentEffects.some(
+        e => e.cardId === "JTL_100_xwing" && e.targetPlayId === playId);
+      if (!made100) {
+        if (playId) game100.currentGameState.currentEffects.push({ cardId: "JTL_100_xwing", duration: "Phase", affectedPlayer: player, targetPlayId: playId });
+        CreateXWing(game100.currentGameState, player, game100.gameLog, "JTL_100");
+      }
       if (!playId) return null;
       const vehicles100 = PilotlessVehiclePlayIds(game100.currentGameState, player, playId);
       if (vehicles100.length === 0) return null;
@@ -3691,6 +3799,24 @@ export function resolveWhenPlayed(
         } satisfies ReturnFromDiscardPending,
         continuation: null,
       } satisfies AbilityOptionPending;
+    }
+    case "JTL_121": { // Salvage — "Play a Vehicle unit from your discard pile (paying its cost). Then,
+                      // deal 1 damage to it." Only Vehicles you can afford are offered.
+      const gs121 = game.currentGameState;
+      const pState121 = GetPlayer(gs121, player);
+      const eligible121 = pState121.discard.filter(d =>
+        CardType(d.cardId) === "Unit"
+        && TraitContains(d.cardId, "Vehicle")
+        && playCost(gs121, player, d.cardId) <= spendableFor(gs121, player));
+      if (eligible121.length === 0) return null;
+      return {
+        type: "return-from-discard",
+        cardId,
+        player,
+        maxCount: 1,
+        eligiblePlayIds: eligible121.map(d => d.playId),
+        continuation: null,
+      } satisfies ReturnFromDiscardPending;
     }
     case "SHD_094": { // Palpatine's Return — "Play a unit from your discard pile. It costs 6
                       // resources less. If it's a Force unit, it costs 8 resources less instead."

@@ -99,4 +99,24 @@ describe("SHD_078 Fell the Dragon", () => {
     expect(g.lastDispatchResponse?.resolutionNeeded).toBeFalsy();
     expect(g.state.player2.groundArena.length).toBe(1);
   });
+
+  it("a Vehicle with a leader Pilot on it is a leader unit — not offered, even at 5+ power", async () => {
+    const { Unit } = await import("@/server/engine/unit");
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      base()
+        .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 14)
+        .WithSpaceUnitForPlayer(2, Cards.units.law.shieldedHauler)
+        .WithUpgradesOnSpaceUnitForPlayer(2, 0, [GameStateBuilder.Upgrade(Cards.leaders.jtl.lukeSkywalker, 2)])
+        .WithGroundUnitForPlayer(2, Cards.units.sor.reinforcementWalker) // 6 power, no pilot
+        .WithCardInHandForPlayer(1, Cards.events.shd.fellTheDragon)
+        .Build(),
+    );
+    expect(Unit.FromInterface(g.state.player2.spaceArena[0]).CurrentPower()).toBeGreaterThanOrEqual(5);
+
+    await g.playCardFromHandAsync(1, 0);
+
+    const res = g.lastDispatchResponse?.resolutionNeeded as { fromPlayIds?: string[] };
+    expect(res.fromPlayIds).toEqual([g.state.player2.groundArena[0].playId]);
+  });
 });

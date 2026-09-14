@@ -785,6 +785,54 @@ export function FriendlyUnitsAloneInArena(gs: GameState, player: PlayerId, nonLe
   });
 }
 
+/**
+ * JTL_088 Captain Phasma (On My Command) — "When Played/On Attack: You may give another First
+ * Order unit +2/+2 for this phase." Either side's First Order units, never Phasma herself.
+ */
+export function buildPhasmaOnMyCommandOffer(
+  player: PlayerId,
+  selfPlayId: string | undefined,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const firstOrder = AllUnits().filter(u =>
+    u.playId !== selfPlayId && TraitContains(u.cardId, "First Order", u.controller, u.playId));
+  if (firstOrder.length === 0) return continuation;
+  return optionalTarget("JTL_088", player, firstOrder.map(u => u.playId),
+    "Give another First Order unit +2/+2 for this phase?", { yesLabel: "Give +2/+2", continuation });
+}
+
+/**
+ * JTL_089 The Invisible Hand — "When Played/When this unit completes an attack (and survives): You
+ * may search the top 8 cards of your deck for a Droid unit, reveal it, and draw it. If it costs 2
+ * or less, you may play it for free." The "may" comes first and the search is built only once it's
+ * accepted, so passing leaves the deck untouched.
+ */
+export function buildInvisibleHandOffer(player: PlayerId, continuation: PendingResolution | null): PendingResolution | null {
+  const game = GetGame();
+  if (!game || GetPlayer(game.currentGameState, player).deck.length === 0) return continuation;
+  return {
+    type: "ability-option",
+    cardId: "JTL_089",
+    player,
+    helperText: `${CardTitle("JTL_089")}: search the top 8 cards of your deck for a Droid unit and draw it?`,
+    yesLabel: "Search",
+    noLabel: "Skip",
+    onYes: null,
+    continuation,
+  } satisfies AbilityOptionPending;
+}
+
+/**
+ * The arena a unit is IN right now — read from which array holds it, not its printed arena, so a
+ * unit that moved (Blue Leader JTL_096 to the ground) is found where it actually is. Null when the
+ * unit isn't in play.
+ */
+export function UnitArenaOf(gs: GameState, playId: string): "Ground" | "Space" | null {
+  if ([...gs.player1.groundArena, ...gs.player2.groundArena].some(u => u.playId === playId)) return "Ground";
+  if ([...gs.player1.spaceArena, ...gs.player2.spaceArena].some(u => u.playId === playId)) return "Space";
+  return null;
+}
+
 export const LOST_THE_GAME = "__lost_the_game";
 
 /**
@@ -1840,6 +1888,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "JTL_037": //Banshee — On Attack: may deal damage to a unit equal to the damage on this unit
     case "ASH_035": //Tatooine Repulsor Train — On Attack: 2 damage to a ground unit per friendly exhausted unit
     case "ASH_003": //Baylan Skoll (deployed) — On Attack: may give the lone non-leader unit in an arena +2/+2 and Sentinel
+    case "JTL_117": //General Draven — On Attack: create an X-Wing token
+    case "JTL_088": //Captain Phasma (On My Command) — On Attack: may give another First Order unit +2/+2
     case "ASH_012": //Vane (deployed) — On Attack: may defeat a friendly upgrade to deal 2 to the defender or a base
     case "SHD_141": //Kylo Ren (Killing the Past) — On Attack: a unit gets +2/+0 this phase; non-Villainy → Experience
     case "TWI_014": //Asajj Ventress (deployed) — On Attack: if you played an event this phase, +1/+0 and first strike

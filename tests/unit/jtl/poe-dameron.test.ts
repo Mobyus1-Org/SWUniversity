@@ -86,3 +86,35 @@ describe("JTL_100 Poe Dameron — When played as a unit", () => {
     expect(craft.upgrades.some(u => u.cardId === Cards.units.jtl.poeDameron)).toBe(true);
   });
 });
+
+describe("JTL_100 Poe Dameron — X-Wing made once", () => {
+  it("with Ambush alongside his When Played (which runs it twice), still only one X-Wing", async () => {
+    const g = new GameTestAdapter();
+    const state = new GameStateBuilder()
+      .MyBase(Cards.bases.common.green30HP)
+      .MyLeader(Cards.leaders.sor.leiaOrgana)
+      .TheirBase(Cards.bases.common.green30HP)
+      .TheirLeader(Cards.leaders.sor.sabineWren)
+      .WithActivePlayer(1)
+      .FillResourcesForPlayer(1, Cards.units.sor.battlefieldMarine, 10)
+      .WithCardInHandForPlayer(1, Cards.units.jtl.poeDameron)
+      .Build();
+    // SEC_109 Diplomatic Envoy's marker — "the next unit you play this phase gains Ambush".
+    state.currentEffects.push({ cardId: "SEC_109_armed", duration: "Phase", affectedPlayer: 1 });
+    g.loadNewState(state);
+
+    await g.playCardFromHandAsync(1, 0);
+    // Both triggers are bagged; resolve When Played first, then decline the attach and the Ambush.
+    const first = g.lastDispatchResponse?.resolutionNeeded as { options?: string[] };
+    expect(first.options?.some(o => o.includes("When Played"))).toBe(true);
+    await g.chooseOptionAsync(1, first.options!.find(o => o.includes("When Played"))!);
+    for (let i = 0; i < 4 && g.lastDispatchResponse?.resolutionNeeded; i++) {
+      const res = g.lastDispatchResponse.resolutionNeeded as { type: string; options?: string[] };
+      if (res.type !== "Option") break;
+      await g.chooseOptionAsync(1, res.options?.includes("No") ? "No" : res.options![res.options!.length - 1]);
+    }
+
+    expect(g.state.player1.spaceArena.filter(u => u.cardId === Cards.units.token.xWing)).toHaveLength(1);
+  });
+});
+

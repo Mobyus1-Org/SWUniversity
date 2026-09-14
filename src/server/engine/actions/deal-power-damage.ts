@@ -1,9 +1,8 @@
 import type { PlayerId } from "@/lib/engine/core-models";
 import type { GameState } from "@/lib/engine/game";
 import { AbilityTargetPending } from "@/server/engine/pending-resolution";
-import { GetUnitsForPlayer, GetOtherPlayer, GetUnitByPlayId, DealDamageToUnit } from "@/server/engine/core-functions";
+import { GetUnitsForPlayer, GetOtherPlayer, GetUnitByPlayId, DealDamageToUnit, UnitArenaOf } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
-import { CardArena } from "@/server/engine/card-db/generated";
 
 // Shared mechanic: "<a friendly unit> deals damage equal to <its power | its remaining HP> to
 // <an enemy unit>." Used by Strike True (SOR_127), Haymaker (LAW_168), Director Krennic's deployed
@@ -34,10 +33,10 @@ export function chooseEnemyForPowerDamage(
 ): AbilityTargetPending | null {
   let enemies = GetUnitsForPlayer(GetOtherPlayer(player));
   if (opts.sameArena) {
-    const friendly = GetUnitByPlayId(game, friendlyPlayId);
-    if (!friendly) return null;
-    const friendlyArena = CardArena(friendly.cardId) ?? "Ground";
-    enemies = enemies.filter(u => (CardArena(u.cardId) ?? "Ground") === friendlyArena);
+    // Where the units actually are — a unit that moved arenas is judged by its current one.
+    const friendlyArena = UnitArenaOf(game, friendlyPlayId);
+    if (!friendlyArena) return null;
+    enemies = enemies.filter(u => UnitArenaOf(game, u.playId) === friendlyArena);
   }
   if (enemies.length === 0) return null;
   return { type: "ability-target", cardId: dealCardId, player, sourcePlayId: friendlyPlayId, fromPlayIds: enemies.map(u => u.playId), continuation: null };

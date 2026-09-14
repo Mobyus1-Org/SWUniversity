@@ -92,6 +92,7 @@ export function UpgradeEligibleTargets(
       return everyone.filter(u => TraitContains(u.cardId, "Jedi") && !TraitContains(u.cardId, "Vehicle")).map(u => u.playId);
 
     // "Attach to a VEHICLE unit."
+    case "JTL_120": //Dorsal Turret
     case "SOR_121": //Hardpoint Heavy Blaster
     case "SOR_214": //Smuggling Compartment
       return everyone.filter(u => TraitContains(u.cardId, "Vehicle")).map(u => u.playId);
@@ -155,7 +156,10 @@ export function UpgradeEligibleTargets(
 export function IsPilotUpgrade(cardId: string): boolean {
   return PilotingCost(cardId) >= 0
     || (CardIsLeader(cardId) && LeaderDeployPilotThreshold(cardId) !== null)
-    || (CardIsLeader(cardId) && TraitContains(cardId, "Pilot"));
+    // Any Pilot-trait card attached as an upgrade is a Pilot — a leader attached by its own ability
+    // (Poe JTL_013), or a unit that attaches itself without Piloting (JTL_083 Pantoran Starship
+    // Thief). Missing either made the Vehicle read as pilotless.
+    || TraitContains(cardId, "Pilot");
 }
 
 /** How many Pilots are currently attached to a unit. */
@@ -223,6 +227,18 @@ export function UpgradeDestinationsOnControlChange(
       .map(u => u.playId);
   }
   return UpgradeEligibleTargets(upgradeCardId, game, newController);
+}
+
+/**
+ * JTL_083 Pantoran Starship Thief — "a Fighter or Transport unit without a Pilot on it", on either
+ * side of the board.
+ */
+export function PilotlessFighterOrTransportPlayIds(game: GameState): string[] {
+  return allUnits(game)
+    .filter(u =>
+      (TraitContains(u.cardId, "Fighter", u.controller, u.playId) || TraitContains(u.cardId, "Transport", u.controller, u.playId))
+      && pilotCountOn(u) === 0)
+    .map(u => u.playId);
 }
 
 export function PilotingEligibleVehicles(
