@@ -170,3 +170,32 @@ memory system (see `MEMORY.md`), not just here.
   sessions; it does not cover *bug-fix* sessions on an already-shipped card, which is exactly when
   the tracker's staleness goes unnoticed. Cheap addition to the mental checklist: when touching a
   card, grep the trackers for its id regardless of whether the work is new implementation.
+
+## 2026-09-13
+
+- **What worked well: a research pass per mechanic, sibling-engine test scenarios included.** Before
+  proposing approaches, three parallel Explore agents mapped each card group to its analogue card,
+  exact file:line and edge cases. That made the 19-card Priority batch nearly mechanical: one red
+  fixture cycle (the phase is `"ActionPhase"`, not `"Action"`), zero engine debugging. It also
+  found three real latent bugs before any code was written: interactive upgrade On Attacks were
+  silently dropped after the first (`deferredPending ??=`), the Lightsaber On Attack grant was
+  unconditional, and Han Solo's self-damage ran twice under Ambush. This confirms the 2026-07-17
+  "trace every consumer" and 2026-07-20 "upfront mapping pass" lessons.
+- **Repeated, 3rd time: the zsh glob lesson (logged 2026-08-09 and 2026-08-18).** `--include=*.ts`
+  died again early in the session, and later an unquoted `keep-fighting*` test path. The logged rule
+  isn't reached before the first grep. Default to the Grep tool, or quote every `*` on sight.
+- **Partial repeat: "prefer actually running red first" (2026-08-09/08-18).** Under batch pace,
+  most batch-3 cards had their test and engine edit written back to back and were first run green.
+  Only Han Solo's fix was observed red. An earlier Poe regression test passed without the fix
+  because "No" is silently rejected at the trigger-order prompt, and only a mutation check caught it
+  ([[feedback-negative-tests-need-prompt-assertion]]). Cheap fix: run the new test file once, ~5s,
+  before touching the engine.
+- **Fixture lesson, new disguise: leader passives.** Krennic's leader gives damaged units +1/+0 and
+  skewed a Power from Pain assertion. Christophsis' Exploit prompt ambushed another test, and I
+  guessed `Cards.units.lof.*` for JTL units. Default fixture leader: Sabine (no passive). Grep
+  `card-helpers.ts` for the exact key rather than guessing the set namespace.
+- **This skill file hardcodes `/Users/mariotorresjr/...` as the memory dir.** On this machine the dir
+  is `/Users/mt/.claude/projects/-Users-mt-Documents-GitHub-SWUniversity/memory/`. Worth making the
+  path machine-agnostic ("the auto-memory dir named in the system prompt"). *Resolved 2026-09-14:*
+  the user moved machines (`/Users/mariotorresjr` → `/Users/mt`, repo dir `SWUniversity`); both
+  session-start and session-close now point at the new path.

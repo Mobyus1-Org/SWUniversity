@@ -1,6 +1,6 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId, Resource, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { CardAspects, CardCost, CardHp, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
+import { CardAspects, CardCost, CardHp, CardSubtitle, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradeEligibleTargets, PilotingEligibleVehicles, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
@@ -446,7 +446,31 @@ function originTreeShyyyoDiscount(game: GameState, player: PlayerId, cardId: str
  * The single definition used by BOTH the playability check (what the UI offers) and the payment
  * path in dispatch-listener (what actually gets charged) — they must never disagree.
  */
+/** Prefix of JTL_232 Jump to Lightspeed's free-copy marker; the returned unit's cardId follows it. */
+export const JUMP_TO_LIGHTSPEED_FREE = "JTL_232_free:";
+
+/** "A copy of" a card: same title AND subtitle, so reprints count and a different Falcon doesn't. */
+export function IsCopyOf(cardId: string, otherCardId: string): boolean {
+  return CardTitle(cardId) === CardTitle(otherCardId) && CardSubtitle(cardId) === CardSubtitle(otherCardId);
+}
+
+/**
+ * JTL_232 Jump to Lightspeed — "The next time you play a copy of that unit this phase, you may play
+ * it for free." Index of this player's marker that `cardId` would use, or -1. Units only: playing a
+ * copy as a Pilot upgrade doesn't use it.
+ */
+export function JumpToLightspeedMarkerIndex(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Unit") return -1;
+  return game.currentEffects.findIndex(e =>
+    e.affectedPlayer === player
+    && e.cardId.startsWith(JUMP_TO_LIGHTSPEED_FREE)
+    && IsCopyOf(e.cardId.slice(JUMP_TO_LIGHTSPEED_FREE.length), cardId));
+}
+
 export function playCost(game: GameState, player: PlayerId, cardId: string): number {
+  // Free means free: nothing is owed, aspect penalty included. Never worse than paying, so it is
+  // applied without asking.
+  if (JumpToLightspeedMarkerIndex(game, player, cardId) !== -1) return 0;
   return CardCost(cardId)
     + aspectPenalty(game, player, cardId)
     + delMeekoEventTax(game, player, cardId)
@@ -583,6 +607,32 @@ function bamboozleAltCostAvailable(game: GameState, player: PlayerId): boolean {
  * `costDelta` is a discount taken off the full cost (aspect penalty included), for "play a card
  * from your hand. It costs N less" abilities checking a card before offering it.
  */
+/** What a card costs when an ability plays it for `discount` less — never below 0. */
+export function discountedPlayCost(game: GameState, player: PlayerId, cardId: string, discount: number): number {
+  return Math.max(0, playCost(game, player, cardId) - discount);
+}
+
+/**
+ * Units in this player's discard pile they can afford to play right now at `discount` less — the
+ * offer side of "play a unit from your discard pile. It costs N resources less" (TWI_189, HMW_204).
+ * Priced through the same playCost/spendableFor pipeline that charges the play, so the offer can't
+ * list a card the payment then refuses. `extraFilter` carries card-specific limits (TWI_189 only
+ * allows units defeated this phase).
+ */
+export function DiscardUnitsPlayableAtDiscount(
+  game: GameState,
+  player: PlayerId,
+  discount: number,
+  extraFilter?: (entry: { cardId: string; playId: string }) => boolean,
+): string[] {
+  const spendable = spendableFor(game, player);
+  return (player === 1 ? game.player1 : game.player2).discard
+    .filter(d => CardType(d.cardId) === "Unit")
+    .filter(d => !extraFilter || extraFilter(d))
+    .filter(d => discountedPlayCost(game, player, d.cardId, discount) <= spendable)
+    .map(d => d.playId);
+}
+
 export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string, costDelta = 0): boolean {
   if (regionalGovernorBlocks(game, player, cardId)) return false;
 

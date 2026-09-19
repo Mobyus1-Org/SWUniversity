@@ -2341,6 +2341,52 @@ export function ResourceTopCardOfDeck(
 }
 
 /**
+ * "Search [player]'s deck and hand for each card with that name and discard them" (JTL_041
+ * Annihilator). Every card whose TITLE matches — any printing, any subtitle — goes from their hand
+ * and deck to their discard pile, each through the discard ledger, then that deck is shuffled.
+ * Returns how many were discarded.
+ */
+export function DiscardCardsWithTitleFromHandAndDeck(
+  gs: GameState,
+  player: PlayerId,
+  title: string,
+  gameLog: string[],
+  sourceCardId: string,
+): number {
+  const pState = GetPlayer(gs, player);
+  const toDiscard = (cardId: string, from: "Hand" | "Deck") => {
+    const discardPlayId = String(gs.nextPlayId++);
+    pState.discard.unshift({
+      cardId, playId: discardPlayId, owner: player, controller: player,
+      turnDiscarded: gs.currentRound, discardEffect: "",
+    });
+    QueueWhenDiscardedTrigger(gs, player, cardId, discardPlayId, from);
+  };
+  const handMatches = pState.hand.filter(c => CardTitle(c.cardId) === title);
+  pState.hand = pState.hand.filter(c => CardTitle(c.cardId) !== title);
+  for (const c of handMatches) toDiscard(c.cardId, "Hand");
+  if (handMatches.length > 0) QueueMigsMayfeldReaction(gs, player); // SHD_163 — a discard from HAND
+  const deckMatches = pState.deck.filter(c => CardTitle(c.cardId) === title);
+  pState.deck = pState.deck.filter(c => CardTitle(c.cardId) !== title);
+  for (const c of deckMatches) toDiscard(c.cardId, "Deck");
+  FisherYatesShuffle(pState.deck);
+  const total = handMatches.length + deckMatches.length;
+  gameLog.push(`${CardTitle(sourceCardId)}: discarded ${total} card(s) named ${title} from Player ${player}'s hand and deck; they shuffle their deck.`);
+  return total;
+}
+
+/**
+ * JTL_041 Annihilator's When Played/When Defeated offer: "You may defeat an enemy unit." Enemy
+ * units — leaders included — that can be defeated by an enemy ability.
+ */
+export function buildAnnihilatorOffer(player: PlayerId): PendingResolution | null {
+  const eligible = GetUnitsForPlayer(GetOtherPlayer(player)).filter(u => !UnitImmuneToEnemyDefeat(u));
+  if (eligible.length === 0) return null;
+  return optionalTarget("JTL_041", player, eligible.map(u => u.playId), "Defeat an enemy unit?",
+    { yesLabel: "Defeat", noLabel: "Skip" });
+}
+
+/**
  * "Discard N cards from [player]'s deck": moves up to `count` cards from the top of the deck to the
  * discard pile, firing each one's when-discarded trigger. A short deck discards what it has.
  * Returns the discarded card ids.

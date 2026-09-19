@@ -124,7 +124,17 @@ export interface NeedsDontGetCocky {
   canReveal: boolean;
 }
 
-export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot | NeedsSpreadDamage | NeedsDeckSearch | NeedsPeekHand | NeedsRevealDiscard | NeedsDontGetCocky;
+/**
+ * Look-only prompt: the player is shown some cards (e.g. an opponent's deck) and acknowledges with
+ * "OK" (`choose-option`). Nothing is chosen.
+ */
+export interface NeedsViewCards {
+  type: "ViewCards";
+  helperText: string;
+  cards: Array<{ cardId: string }>;
+}
+
+export type ResolutionRequest = NeedsTarget | NeedsOption | NeedsPlayer | NeedsTrigger | NeedsPlot | NeedsSpreadDamage | NeedsDeckSearch | NeedsPeekHand | NeedsRevealDiscard | NeedsDontGetCocky | NeedsViewCards;
 
 // ---------------------------------------------------------------------------
 // Inbound: dispatch types and data payloads

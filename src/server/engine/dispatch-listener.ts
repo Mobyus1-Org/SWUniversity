@@ -46,6 +46,7 @@ import type {
   NeedsSpreadDamage,
   NeedsTarget,
   NeedsPeekHand,
+  NeedsViewCards,
   NeedsRevealDiscard,
   NeedsDontGetCocky,
   PlayCardDispatchData,
@@ -54,7 +55,7 @@ import type {
   ResolutionRequest,
   UseAbilityDispatchData,
 } from "@/lib/engine/message-types";
-import { aspectPenalty, CardIsPlayable, effectiveSmuggleCost, spendableFor, playCost, palpatinesReturnCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks, onlyHopeCost, omegaWaivesAspectPenalty, HostDependentUpgradeCost, DiscardPlayPermission } from "@/server/engine/card-playability";
+import { aspectPenalty, CardIsPlayable, discountedPlayCost, JumpToLightspeedMarkerIndex, JUMP_TO_LIGHTSPEED_FREE, effectiveSmuggleCost, spendableFor, playCost, palpatinesReturnCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks, onlyHopeCost, omegaWaivesAspectPenalty, HostDependentUpgradeCost, DiscardPlayPermission } from "@/server/engine/card-playability";
 import type { Game, GameState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import type { DealtHeavyDamageContext } from "@/lib/engine/trigger-types";
@@ -77,6 +78,7 @@ import type {
   OnAttackOrderPending,
   OnAttackTriggerEntry,
   PeekHandPending,
+  ViewCardsPending,
   PendingResolution,
   PilotingOptionPending,
   PlayFromHandPending,
@@ -118,7 +120,7 @@ import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { BaseTargetPlayer } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
-import { QueueUnitEnteredPlayReaction, FightersReadyToAttack, IsVehicleUnitCard, CountOnAttackAbilities } from "@/server/engine/core-functions";
+import { QueueUnitEnteredPlayReaction, FightersReadyToAttack, IsVehicleUnitCard, CountOnAttackAbilities, DiscardCardsWithTitleFromHandAndDeck } from "@/server/engine/core-functions";
 import { CreateBeast, GiveWeaknessToken, UnitsWithoutWeaknessToken } from "@/server/engine/token-helpers";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -1088,6 +1090,58 @@ function releaseCaptives(game: GameState, unit: Unit, log: string[]): void {
  * `keepCaptives` is for the one caller that isn't a departure: transferControl moves a unit
  * between arenas, and a guard that merely changes hands keeps its captives.
  */
+/**
+ * JTL_041 Annihilator — discard every card named `title` from `player`'s hand and deck, then defeat
+ * the unit. Whatever its defeat still needs (L3-37's replacement, a When Defeated or Bounty prompt)
+ * comes before `continuation`.
+ */
+function annihilatorSearchThenDefeat(
+  game: GameState,
+  log: string[],
+  player: PlayerId,
+  title: string,
+  victimPlayId: string,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  DiscardCardsWithTitleFromHandAndDeck(game, player, title, log, "JTL_041");
+  const victim = GetUnitByPlayId(game, victimPlayId);
+  if (!victim) return continuation;
+  const defeatPend = defeatUnit(game, log, Unit.FromInterface(victim));
+  return sweepDeadUnits(game, log, defeatPend ? injectContinuation(defeatPend, continuation) : continuation);
+}
+
+/**
+ * JTL_232 Jump to Lightspeed — return `unitPlayId` and the chosen upgrades on it to their OWNERS'
+ * hands. The chosen upgrades come off first; everything else leaves with the unit as usual (cards to
+ * the discard, tokens set aside, a leader Pilot to its zone). Then the next copy is free this phase.
+ */
+function jumpToLightspeedReturn(
+  game: GameState,
+  log: string[],
+  player: PlayerId,
+  unitPlayId: string,
+  upgradePlayIds: string[],
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const unit = GetUnitByPlayId(game, unitPlayId);
+  if (!unit) return continuation;
+  for (const id of upgradePlayIds) {
+    const idx = unit.upgrades.findIndex(u => u.playId === id);
+    if (idx === -1) continue;
+    const [upg] = unit.upgrades.splice(idx, 1);
+    GetPlayer(game, upg.owner as PlayerId).hand.push({ cardId: upg.cardId });
+    log.push(`${CardTitle("JTL_232")}: ${CardTitle(upg.cardId)} returned to Player ${upg.owner}'s hand.`);
+  }
+  const returnedCardId = unit.cardId;
+  const isToken = Unit.FromInterface(unit).IsTokenUnit();
+  const bounced = bounceUnitToHand(game, log, unitPlayId, "JTL_232", continuation);
+  if (!isToken) {
+    game.currentEffects.push({ cardId: `${JUMP_TO_LIGHTSPEED_FREE}${returnedCardId}`, duration: "Phase", affectedPlayer: player });
+    log.push(`${CardTitle("JTL_232")}: the next ${CardTitle(returnedCardId)} you play this phase is free.`);
+  }
+  return bounced?.pending ?? continuation;
+}
+
 function removeFromArena(
   game: GameState,
   playId: string,
@@ -1136,6 +1190,13 @@ function bounceUnitToHand(
   if (!removed) return null;
   const { unit } = removed;
   const title = CardTitle(sourceCardId);
+  // It LEFT PLAY — "if a unit left play this phase" (ASH_211, TWI_004, TWI_203) must see a bounce.
+  game.roundState.cardsLeftPlayThisPhase.push({
+    fromPlayer: removed.player,
+    cardId: unit.cardId,
+    playId: unit.playId,
+    reason: unit.IsTokenUnit() ? "other" : "returned-to-hand",
+  });
   if (unit.IsTokenUnit()) {
     log.push(`${title}: ${CardTitle(unit.cardId)} set aside (token).`);
     return { unit, pending: null };
@@ -4354,6 +4415,12 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
           : `${CardTitle(pending.cardId)}: choose 1 of the remaining cards to draw; the other is discarded.`,
         choices: pending.revealed.map(c => ({ tempId: c.tempId, cardId: c.cardId })),
       } satisfies NeedsRevealDiscard;
+    case "view-cards":
+      return {
+        type: "ViewCards",
+        helperText: pending.helperText,
+        cards: pending.cards.map(cardId => ({ cardId })),
+      } satisfies NeedsViewCards;
     case "peek-hand": {
       const targetHand = GetPlayer(game, pending.targetPlayer).hand;
       const eligibleIndices = pending.mustDiscard
@@ -5131,6 +5198,10 @@ function completePlayCard(
   if (CardTraits(cardId).includes("Pilot")) {
     consumeNextPlayMarker(game, player, "JTL_008_next_pilot");
   }
+
+  // JTL_232 Jump to Lightspeed: the free copy is used up by this play.
+  const jump232 = JumpToLightspeedMarkerIndex(game, player, cardId);
+  if (jump232 !== -1) game.currentEffects.splice(jump232, 1);
 
   // ASH_248 Neel: "the next unit you play this phase with 1 or less power enters play ready."
   // Only a qualifying (≤1 power) unit consumes it; bigger units played first leave it armed.
@@ -6610,6 +6681,22 @@ function handleChooseTarget(
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
+    // JTL_232 Jump to Lightspeed — any number of the unit's upgrades, none included.
+    if (pending.cardId === "JTL_232_upgrades") {
+      const chosen232 = [...new Set(data.targetPlayIds ?? [])];
+      for (const id of chosen232) {
+        if (!pending.fromPlayIds.includes(id)) {
+          return { response: invalidResponse(`${CardTitle("JTL_232")}: that upgrade can't be returned.`), pending, stateChanged: false };
+        }
+      }
+      const after232 = jumpToLightspeedReturn(game, log, pending.player!, pending.sourcePlayId!, chosen232, pending.continuation ?? null);
+      if (after232?.type === "resolve-attack") return handleResolveAttack(game, log, after232);
+      if (after232) return { response: resolutionResponse(pendingToResolution(after232, game)), pending: after232, stateChanged: true };
+      const bag232 = drainTriggerBag(game, log);
+      if (bag232) return { response: resolutionResponse(pendingToResolution(bag232, game)), pending: bag232, stateChanged: true };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
     // JTL_174 Hotshot Maneuver — exactly `maxTargets` different enemy units (the count was capped at
     // the number of enemy units when the prompt was built), 2 damage each; then the attack, if any.
     if (pending.cardId === "JTL_174_damage") {
@@ -6973,9 +7060,11 @@ function handleChooseTarget(
       return completePlayCard(game, log, cardId094, pending.player);
     }
 
-    // TWI_189 Unnatural Life: play the chosen unit from discard at cost -2, entering ready, and
-    // defeat it at the start of the regroup phase (via the UntilStartOfRegroup effect).
-    if (pending.cardId === "TWI_189") {
+    // "Play a unit from your discard pile. It costs N resources less and enters play ready. At the
+    // start of the (next) regroup phase, defeat it." — TWI_189 Unnatural Life and HMW_204
+    // Nightbrother. The discount rides on the pending, so it is the same number the offer filtered
+    // by. An empty selection declines.
+    if (pending.cardId === "TWI_189" || pending.cardId === "HMW_204") {
       const playId189 = chosen[0];
       if (!playId189) {
         const bag189a = drainTriggerBag(game, log);
@@ -6987,16 +7076,17 @@ function handleChooseTarget(
       if (idx189 === -1)
         return { response: invalidResponse("Unnatural Life: card not found in discard."), pending, stateChanged: false };
       const cardId189 = playerState189.discard[idx189].cardId;
-      const reducedCost189 = Math.max(0, playCost(game, pending.player, cardId189) - 2);
+      const discount189 = pending.costReduction ?? 0;
+      const reducedCost189 = discountedPlayCost(game, pending.player, cardId189, discount189);
       const ready189 = spendableFor(game, pending.player);
       if (ready189 < reducedCost189)
-        return { response: invalidResponse(`Unnatural Life: not enough resources to play ${CardTitle(cardId189)} (needs ${reducedCost189}).`), pending, stateChanged: false };
+        return { response: invalidResponse(`${CardTitle(pending.cardId)}: not enough resources to play ${CardTitle(cardId189)} (needs ${reducedCost189}).`), pending, stateChanged: false };
       playerState189.discard.splice(idx189, 1);
       payResources(game, pending.player, reducedCost189, log, cardId189);
-      log.push(`${CardTitle("TWI_189")}: played ${CardTitle(cardId189)} from discard (cost -2 = ${reducedCost189}, enters ready).`);
+      log.push(`${CardTitle(pending.cardId)}: played ${CardTitle(cardId189)} from discard (cost -${discount189} = ${reducedCost189}, enters ready).`);
       return completePlayCard(game, log, cardId189, pending.player, {
         enterReady: true,
-        injectEffect: { cardId: "TWI_189", duration: "UntilStartOfRegroup", affectedPlayer: pending.player },
+        injectEffect: { cardId: pending.cardId, duration: "UntilStartOfRegroup", affectedPlayer: pending.player },
       });
     }
 
@@ -10230,6 +10320,20 @@ function handleChooseOption(
 ): HandlerResult {
   const option = (dispatch.dispatchData as ChooseOptionDispatchData).option;
 
+  // A look-only prompt: "OK" finishes the effect that showed the cards, then play continues.
+  if (pending?.type === "view-cards") {
+    if (option !== "OK") return { response: invalidResponse("Choose OK."), pending, stateChanged: false };
+    const nextView = pending.cardId === "JTL_041" && pending.matchTitle && pending.thenDefeatPlayId
+      ? annihilatorSearchThenDefeat(game, log, pending.viewedPlayer, pending.matchTitle, pending.thenDefeatPlayId, pending.continuation)
+      : pending.continuation;
+    if (nextView?.type === "resolve-attack") return handleResolveAttack(game, log, nextView);
+    if (nextView) return { response: resolutionResponse(pendingToResolution(nextView, game)), pending: nextView, stateChanged: true };
+    const bagView = drainTriggerBag(game, log);
+    if (bagView) return { response: resolutionResponse(pendingToResolution(bagView, game)), pending: bagView, stateChanged: true };
+    updateDefeatedPlayers(game);
+    return { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
   if (pending?.type === "ability-option") {
     if (option === "Yes") {
       // SOR_246 You're My Only Hope — playing the revealed top card runs the full play pipeline
@@ -11123,7 +11227,18 @@ function silenceUnitForRound(game: GameState, log: string[], targetPlayId: strin
   log.push(`${CardTitle("JTL_018")}: ${CardTitle(target.cardId)} loses all abilities for this round.`);
 }
 
-function advanceTurn(game: GameState, log: string[], wasPass: boolean): void {
+/**
+ * The regroup phase's delayed defeats ("at the start of the regroup phase, defeat it"), through the
+ * real defeat path. Returns what their When Defeated abilities still need decided, if anything.
+ */
+function defeatUnitsAtRegroup(game: GameState, log: string[], playIds: string[]): PendingResolution | null {
+  const chain = defeatUnitsInOrder(game, log, playIds, null);
+  const afterSweep = sweepDeadUnits(game, log, chain);
+  return afterSweep ?? drainTriggerBag(game, log);
+}
+
+/** Advances the turn. Returns a pending only when the regroup phase began and needs a decision. */
+function advanceTurn(game: GameState, log: string[], wasPass: boolean): PendingResolution | null {
   const prevWasPass = game.roundState.lastActionWasPass;
   game.roundState.lastActionWasPass = wasPass;
 
@@ -11144,10 +11259,10 @@ function advanceTurn(game: GameState, log: string[], wasPass: boolean): void {
       }
     }
     updateDefeatedPlayers(game);
-    if (game.defeatedPlayers.length > 0) return;
-    executeRegroupDraw(game, log);
+    if (game.defeatedPlayers.length > 0) return null;
+    const regroupPending = executeRegroupDraw(game, log, ids => defeatUnitsAtRegroup(game, log, ids));
     updateDefeatedPlayers(game);
-    return;
+    return regroupPending;
   }
 
   // "Take an extra action after this one" — the acting player keeps priority instead of the
@@ -11155,7 +11270,7 @@ function advanceTurn(game: GameState, log: string[], wasPass: boolean): void {
   if (game.roundState.extraActionPlayer === game.activePlayer) {
     game.roundState.extraActionPlayer = undefined;
     log.push(`Player ${game.activePlayer} takes an extra action.`);
-    return;
+    return null;
   }
 
   // Switch active player.
@@ -11168,13 +11283,14 @@ function advanceTurn(game: GameState, log: string[], wasPass: boolean): void {
     if (wasPass) {
       game.gamePhase = "RegroupDraw";
       log.push("Action phase ended.");
-      executeRegroupDraw(game, log);
+      const regroupPending = executeRegroupDraw(game, log, ids => defeatUnitsAtRegroup(game, log, ids));
       updateDefeatedPlayers(game);
-      return;
+      return regroupPending;
     }
     game.roundState.lastActionWasPass = true;
     game.activePlayer = game.activePlayer === 1 ? 2 : 1;
   }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -15904,6 +16020,55 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, "JTL_208", targetPlayId, pending.amount ?? 0, game.gameLog, pending.player);
       break;
+    case "JTL_041": { // Annihilator — "defeat an enemy unit. If you do, search its controller's deck
+                      // and hand for each card with that unit's name and discard them." The whole
+                      // ability resolves before the victim's own When Defeated / Bounty, but this
+                      // engine resolves an automatic When Defeated INSIDE defeatUnit — so the search
+                      // runs first and the defeat last. Immune units are never offered, so the defeat
+                      // can't fail after the search; a replaced defeat (L3-37) still counts.
+      if (!targetPlayId) break;
+      const victim041 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!victim041) break;
+      const gs041 = game.currentGameState;
+      const title041 = CardTitle(victim041.cardId);
+      const controller041 = victim041.controller as PlayerId;
+      const deck041 = GetPlayer(gs041, controller041).deck;
+      if (deck041.length === 0) {
+        return annihilatorSearchThenDefeat(gs041, game.gameLog, controller041, title041, victim041.playId, pending.continuation ?? null);
+      }
+      // First the searching player looks at the deck (OK to continue); see the view-cards handler.
+      return {
+        type: "view-cards",
+        cardId: "JTL_041",
+        player: pending.player!,
+        helperText: `Player ${controller041}'s deck — every card named ${title041} in it and in their hand will be discarded, then ${CardTitle(victim041.cardId)} is defeated.`,
+        cards: [...deck041].reverse().map(c => c.cardId), // top of deck first
+        viewedPlayer: controller041,
+        matchTitle: title041,
+        thenDefeatPlayId: victim041.playId,
+        continuation: pending.continuation ?? null,
+      } satisfies ViewCardsPending;
+    }
+    case "JTL_232": { // Jump to Lightspeed — the unit; then any number of its upgrades, in one pick.
+      if (!targetPlayId) break;
+      const unit232 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit232) break;
+      const returnable232 = unit232.upgrades.filter(u => !CardIsLeader(u.cardId) && !IsTokenUpgrade(u.cardId));
+      if (returnable232.length === 0) {
+        return jumpToLightspeedReturn(game.currentGameState, game.gameLog, pending.player!, unit232.playId, [], pending.continuation ?? null);
+      }
+      return {
+        type: "ability-target",
+        cardId: "JTL_232_upgrades",
+        player: pending.player,
+        sourcePlayId: unit232.playId,
+        helperText: `Choose any upgrades on ${CardTitle(unit232.cardId)} to return to their owners' hands.`,
+        fromPlayIds: returnable232.map(u => u.playId),
+        needsMultiple: true,
+        maxTargets: returnable232.length,
+        continuation: pending.continuation ?? null,
+      } satisfies AbilityTargetPending;
+    }
     case "JTL_144": { // No Disintegrations — damage equal to 1 less than the target's remaining HP.
       if (!targetPlayId) break;
       const target144 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -18895,7 +19060,12 @@ function runDispatch(
       // After a successful top-level action, advance the turn.
       if (isTopLevelAction && !result.response.invalidAction) {
         const wasPass = dispatch.dispatchType === "pass-action" || dispatch.dispatchType === "claim-initiative";
-        advanceTurn(gs, log, wasPass);
+        const turnPending = advanceTurn(gs, log, wasPass);
+        // Only the regroup phase's delayed defeats produce one, and they start on a pass — an
+        // action that never leaves a pending of its own.
+        if (turnPending && !result.pending) {
+          result = { response: resolutionResponse(pendingToResolution(turnPending, gs)), pending: turnPending, stateChanged: true };
+        }
       }
     }
 

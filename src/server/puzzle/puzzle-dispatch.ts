@@ -268,6 +268,7 @@ function pendingOwner(pending: PendingResolution): PlayerId | undefined {
     case "upgrade-target":
     case "reveal-from-hand":
     case "thrawn-replay":
+    case "view-cards":
     case "plot-window":          return pending.player;
     default:                     return undefined;
   }
@@ -454,6 +455,12 @@ function resolveAutoOption(
       return { dispatchType: "choose-option", dispatchData: { option } };
     }
     return null; // unmapped — surfaces as the "Puzzle Auto Target not set" error
+  }
+
+  // A look-only prompt has one answer. P2 looking at cards (their Annihilator's search) just
+  // acknowledges.
+  if (pending.type === "view-cards" && pending.player === 2) {
+    return { dispatchType: "choose-option", dispatchData: { option: "OK" } };
   }
 
   // An effect that makes the OPPONENT discard (e.g. K-2SO's When Defeated) is their choice

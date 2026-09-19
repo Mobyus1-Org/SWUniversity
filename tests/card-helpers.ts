@@ -405,6 +405,7 @@ export const Cards = {
       concordDawnInterceptors: "SHD_042",
       doctorPershing: "SHD_028",
       lurkingTiePhantom: "SHD_187",
+      millenniumFalconLandosPride: "SHD_204",
       generalTagge: "SHD_081",
       sundariPeaceKeeper: "SHD_098",
       clanChallengers: "SHD_169",
@@ -434,6 +435,7 @@ export const Cards = {
       ig11: "SHD_170",
     },
     jtl: {
+      annihilator: "JTL_041", // Tagge's Flagship — 12/12 Space, WP/WD: defeat + discard by name
       firstOrderStormtrooper: "JTL_132",
       specialForcesTieFighter: "JTL_135",
       massassiTacticalOfficer: "JTL_146",
@@ -501,6 +503,7 @@ export const Cards = {
       darthVaderScourgeOfSquadrons: "JTL_142", // Piloting 3 — grants the host an On Attack
     },
     lof: {
+      armyOfTheDead: "LOF_236", // 7/6 Ground Villainy, no abilities
       maceWinduLeaping: "LOF_149", // 6/6 Ground Force Jedi Republic, Overwhelm + When Played
       rey: "LOF_148", // With Palpatine's Power — 5/5 Ground, "when you draw this card" reveal
       curiousFlock: "LOF_255", // 1/1/1 Ground Creature — When Played: pay up to 6 for that many XP
@@ -614,6 +617,7 @@ export const Cards = {
       garindan: "SEC_186",
     },
     law: {
+      millenniumFalconDodgingPatrols: "LAW_068", // same title as JTL_249, different subtitle
       mercenaryFleet: "LAW_164", // 10/10 Space Vehicle, no abilities — a legal Pilot host
       bWingSkirmisher: "LAW_183", // 4/4 Space Rebel Vehicle Fighter, When Played
       beilertValance: "LAW_051", // 3/6 Ground Underworld Bounty Hunter, On Attack
@@ -646,6 +650,7 @@ export const Cards = {
       chewbaccaMightyRescuer: "LAW_034", // 4/4 Ground Rebel/Wookiee, Overwhelm + When Attack Ends
     },
     ash: {
+      deathTrooperSquad: "ASH_242", // 5/4 Ground Villainy, no abilities
       enoch: "ASH_027",
       pazVizslaBrighterFuture: "ASH_028",
       tatooineRepulsorTrain: "ASH_035",
@@ -806,6 +811,10 @@ export const Cards = {
       generalVeers: "IBH_068", generalVeersB: "IBH_088",
       surfaceAssaultBomber: "IBH_078", surfaceAssaultBomberB: "IBH_093", surfaceAssaultBomberC: "IBH_094",
       blizzardOne: "IBH_099",
+      scoutingTieFighter: "IBH_075", // 2/2 Space Villainy, no abilities — cheap discard-replay fodder
+    },
+    hmw: {
+      nightbrotherMaulsGauntlet: "HMW_204",
     },
   },
   upgrades: {
@@ -1013,6 +1022,7 @@ export const Cards = {
       consolidationOfPower: "TWI_089",
     },
     jtl: {
+      jumpToLightspeed: "JTL_232",
       noDisintegrations: "JTL_144",
       theyHateThatShip: "JTL_155",
       fightFireWithFire: "JTL_173",

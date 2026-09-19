@@ -10,7 +10,7 @@ Orient before doing anything else. This repo already auto-loads `.claude/CLAUDE.
 ## Steps
 
 1. **Read the memory index.** `MEMORY.md` at
-   `/Users/mariotorresjr/.claude/projects/-Users-mariotorresjr-Documents-GitHub-swuniversity/memory/MEMORY.md`
+   `/Users/mt/.claude/projects/-Users-mt-Documents-GitHub-SWUniversity/memory/MEMORY.md`
    is not auto-injected — read it explicitly. It's a one-line-per-entry index into topic files
    (engine gotchas, feedback/conventions, project facts). Pull the specific memory files relevant
    to whatever the user is about to ask for (e.g. if the task is a card batch, check

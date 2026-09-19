@@ -83,6 +83,7 @@ function formatStatus(status: GameStatus, resolutionNeeded: ResolutionRequest | 
   if (resolutionNeeded?.type === "Trigger") return "Choose a trigger.";
   if (resolutionNeeded?.type === "Player") return "Choose a player.";
   if (resolutionNeeded?.type === "DeckSearch") return resolutionNeeded.helperText;
+  if (resolutionNeeded?.type === "ViewCards") return resolutionNeeded.helperText;
   if (resolutionNeeded?.type === "PeekHand") return resolutionNeeded.mustDiscard ? "Choose a card to discard from the opponent's hand." : "Look at the opponent's hand.";
   return "Choose an action — click a hand card, your leader, or a ready friendly unit.";
 }
@@ -419,6 +420,7 @@ function UpgradeStrip({
   cardId,
   playId,
   selectable = false,
+  selected = false,
   onClick,
   onPreviewStart,
   onPreviewEnd,
@@ -426,6 +428,8 @@ function UpgradeStrip({
   cardId: string;
   playId?: string;
   selectable?: boolean;
+  /** Picked in a multi-select prompt that hasn't been confirmed yet. */
+  selected?: boolean;
   onClick?: () => void;
   onPreviewStart: PreviewStart;
   onPreviewEnd: () => void;
@@ -447,7 +451,7 @@ function UpgradeStrip({
 
   const inner = (
     <div
-      className={`overflow-hidden rounded-b-xl border-x border-b border-white/15 bg-black/40${selectable && onClick ? " ring-2 ring-rose-400/90 shadow-[0_0_10px_rgba(251,113,133,0.5)]" : ""}`}
+      className={`overflow-hidden rounded-b-xl border-x border-b border-white/15 bg-black/40${selected ? " ring-2 ring-amber-400/80 shadow-[0_0_14px_rgba(251,191,36,0.5)]" : selectable && onClick ? " ring-2 ring-rose-400/90 shadow-[0_0_10px_rgba(251,113,133,0.5)]" : ""}`}
       {...hold.props}
       style={{ ...hold.props.style, height: 18 }}
       onMouseEnter={() => onPreviewStart(previewState)}
@@ -873,19 +877,28 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     }
   }, [isResolving, isMultiSelectHand, selectedTargetIndices, selectedTargetPlayIds, sendDispatch]);
 
+  /**
+   * Clicking a unit or an upgrade while a Target prompt is open: a multi-select prompt toggles it
+   * (confirmed with the Confirm bar), a single-target prompt answers straight away.
+   */
+  const handleTargetClick = React.useCallback((playId: string) => {
+    if (isResolving || resolutionNeeded?.type !== "Target") return;
+    if (isMultiSelectTarget) {
+      setSelectedTargetPlayIds(prev => {
+        if (prev.includes(playId)) return prev.filter(id => id !== playId);
+        const max = resolutionNeeded.maxTargets ?? Infinity;
+        if (prev.length >= max) return prev;
+        return [...prev, playId];
+      });
+    } else {
+      void sendDispatch(createDispatch("choose-target", { targetPlayIds: [playId] }));
+    }
+  }, [isResolving, isMultiSelectTarget, resolutionNeeded, sendDispatch]);
+
   const handleUnitClick = React.useCallback((playId: string) => {
     if (isResolving) return;
     if (resolutionNeeded?.type === "Target") {
-      if (isMultiSelectTarget) {
-        setSelectedTargetPlayIds(prev => {
-          if (prev.includes(playId)) return prev.filter(id => id !== playId);
-          const max = resolutionNeeded.maxTargets ?? Infinity;
-          if (prev.length >= max) return prev;
-          return [...prev, playId];
-        });
-      } else {
-        void sendDispatch(createDispatch("choose-target", { targetPlayIds: [playId] }));
-      }
+      handleTargetClick(playId);
     } else if (!resolutionNeeded && gameState) {
       const unit =
         [...gameState.player1.groundArena, ...gameState.player1.spaceArena].find(u => u.playId === playId);
@@ -898,7 +911,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
         void sendDispatch(createDispatch("initiate-attack", { playId }));
       }
     }
-  }, [isResolving, isMultiSelectTarget, resolutionNeeded, gameState, sendDispatch]);
+  }, [isResolving, resolutionNeeded, gameState, sendDispatch, handleTargetClick]);
 
   const handleUnitAttack = React.useCallback(() => {
     if (!unitAbilityModal) return;
@@ -1428,7 +1441,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   const latestEnemyDiscard = opponent.discard.length > 0 ? opponent.discard[0] : null;
   const latestPlayerDiscard = player.discard.length > 0 ? player.discard[0] : null;
   const isNameCardPrompt = resolutionNeeded?.type === "Target" && (resolutionNeeded.fromChoices?.length ?? 0) > 0;
-  const hasPrompt = resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "Trigger" || resolutionNeeded?.type === "Player" || resolutionNeeded?.type === "DeckSearch" || resolutionNeeded?.type === "PeekHand" || isNameCardPrompt;
+  const hasPrompt = resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "Trigger" || resolutionNeeded?.type === "Player" || resolutionNeeded?.type === "DeckSearch" || resolutionNeeded?.type === "PeekHand" || resolutionNeeded?.type === "ViewCards" || isNameCardPrompt;
   const hasPlotPrompt = resolutionNeeded?.type === "Plot";
   const getUnitGlowClass = (playId: string) =>
     isMultiSelectTarget && selectedTargetPlayIds.includes(playId)
@@ -1665,7 +1678,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                           cardId={upgrade.cardId}
                           playId={upgrade.playId}
                           selectable={isSelectable}
-                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          selected={isMultiSelectTarget && selectedTargetPlayIds.includes(upgrade.playId)}
+                          onClick={isSelectable ? () => handleTargetClick(upgrade.playId) : undefined}
                           onPreviewStart={handlePreviewStart}
                           onPreviewEnd={handlePreviewEnd}
                         />
@@ -1712,7 +1726,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                           cardId={upgrade.cardId}
                           playId={upgrade.playId}
                           selectable={isSelectable}
-                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          selected={isMultiSelectTarget && selectedTargetPlayIds.includes(upgrade.playId)}
+                          onClick={isSelectable ? () => handleTargetClick(upgrade.playId) : undefined}
                           onPreviewStart={handlePreviewStart}
                           onPreviewEnd={handlePreviewEnd}
                         />
@@ -1793,7 +1808,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                           cardId={upgrade.cardId}
                           playId={upgrade.playId}
                           selectable={isSelectable}
-                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          selected={isMultiSelectTarget && selectedTargetPlayIds.includes(upgrade.playId)}
+                          onClick={isSelectable ? () => handleTargetClick(upgrade.playId) : undefined}
                           onPreviewStart={handlePreviewStart}
                           onPreviewEnd={handlePreviewEnd}
                         />
@@ -1903,7 +1919,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                           cardId={upgrade.cardId}
                           playId={upgrade.playId}
                           selectable={isSelectable}
-                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          selected={isMultiSelectTarget && selectedTargetPlayIds.includes(upgrade.playId)}
+                          onClick={isSelectable ? () => handleTargetClick(upgrade.playId) : undefined}
                           onPreviewStart={handlePreviewStart}
                           onPreviewEnd={handlePreviewEnd}
                         />
@@ -1988,7 +2005,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                           cardId={upgrade.cardId}
                           playId={upgrade.playId}
                           selectable={isSelectable}
-                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          selected={isMultiSelectTarget && selectedTargetPlayIds.includes(upgrade.playId)}
+                          onClick={isSelectable ? () => handleTargetClick(upgrade.playId) : undefined}
                           onPreviewStart={handlePreviewStart}
                           onPreviewEnd={handlePreviewEnd}
                         />
@@ -2037,7 +2055,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                           cardId={upgrade.cardId}
                           playId={upgrade.playId}
                           selectable={isSelectable}
-                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          selected={isMultiSelectTarget && selectedTargetPlayIds.includes(upgrade.playId)}
+                          onClick={isSelectable ? () => handleTargetClick(upgrade.playId) : undefined}
                           onPreviewStart={handlePreviewStart}
                           onPreviewEnd={handlePreviewEnd}
                         />
@@ -2087,7 +2106,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                           cardId={upgrade.cardId}
                           playId={upgrade.playId}
                           selectable={isSelectable}
-                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          selected={isMultiSelectTarget && selectedTargetPlayIds.includes(upgrade.playId)}
+                          onClick={isSelectable ? () => handleTargetClick(upgrade.playId) : undefined}
                           onPreviewStart={handlePreviewStart}
                           onPreviewEnd={handlePreviewEnd}
                         />
@@ -2203,7 +2223,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                           cardId={upgrade.cardId}
                           playId={upgrade.playId}
                           selectable={isSelectable}
-                          onClick={isSelectable ? () => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [upgrade.playId] })) : undefined}
+                          selected={isMultiSelectTarget && selectedTargetPlayIds.includes(upgrade.playId)}
+                          onClick={isSelectable ? () => handleTargetClick(upgrade.playId) : undefined}
                           onPreviewStart={handlePreviewStart}
                           onPreviewEnd={handlePreviewEnd}
                         />
@@ -2373,9 +2394,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     {hasPrompt ? <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className={`rounded-xl border border-white/20 bg-[rgba(8,12,26,0.97)] p-6 shadow-2xl${resolutionNeeded?.type === "DeckSearch" ? " w-[min(90vw,43.75rem)]" : " w-[min(90vw,43.75rem)]"}`}>
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/80">
-          {isNameCardPrompt ? "Name a Card" : resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry" ? "Look at the top cards" : resolutionNeeded?.type === "DeckSearch" ? "Deck Search" : "Choose"}
+          {isNameCardPrompt ? "Name a Card" : resolutionNeeded?.type === "Trigger" ? "Choose a Trigger" : resolutionNeeded?.type === "Player" ? "Choose a Player" : resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action === "scry" ? "Look at the top cards" : resolutionNeeded?.type === "DeckSearch" ? "Deck Search" : resolutionNeeded?.type === "ViewCards" ? "Look at the Cards" : "Choose"}
         </h3>
-        {(resolutionNeeded?.type === "Option" || (resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action !== "scry"))
+        {(resolutionNeeded?.type === "Option" || resolutionNeeded?.type === "ViewCards" || (resolutionNeeded?.type === "DeckSearch" && resolutionNeeded.action !== "scry"))
             ? <p className="-mt-2 mb-4 max-w-xs text-xs text-white/65">{resolutionNeeded.helperText}</p>
             : null}
         <div className="flex flex-col gap-3">
@@ -2484,6 +2505,21 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                 onClick={handleScryConfirm}
                 className="rounded-lg border border-emerald-400/40 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500/35 disabled:cursor-not-allowed disabled:opacity-40">
                 Confirm
+              </button>
+            </>
+          ) : resolutionNeeded?.type === "ViewCards" ? (
+            <>
+              <div className="mb-1 flex max-h-[60vh] flex-wrap justify-center gap-3 overflow-y-auto">
+                {resolutionNeeded.cards.map((c, i) => (
+                  <div key={`${c.cardId}-${i}`} className="w-[5rem]">
+                    <CardVisual cardId={c.cardId} selectable={false} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} compact />
+                  </div>
+                ))}
+              </div>
+              <button type="button" disabled={isResolving}
+                onClick={() => void sendDispatch(createDispatch("choose-option", { option: "OK" }))}
+                className="rounded-lg border border-emerald-400/40 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500/35 disabled:cursor-not-allowed disabled:opacity-40">
+                OK
               </button>
             </>
           ) : resolutionNeeded?.type === "DeckSearch" ? (

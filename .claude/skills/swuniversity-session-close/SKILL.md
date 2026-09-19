@@ -21,7 +21,7 @@ This skill's job is to make sure both are actually current, then hand the user a
 2. **Check for unsaved memory-worthy learnings.** Scan back over the session for anything that
    matches the auto-memory triggers (a user correction/confirmation on approach, a non-obvious
    engine gotcha discovered, a project fact/deadline learned) that you have NOT yet written to
-   `/Users/mariotorresjr/.claude/projects/-Users-mariotorresjr-Documents-GitHub-swuniversity/memory/`.
+   `/Users/mt/.claude/projects/-Users-mt-Documents-GitHub-SWUniversity/memory/`.
    Write any that are missing (see the memory-type definitions already governing this session —
    `feedback-*`, `engine-*`, `project-*`, `reference-*`). Don't write duplicates of what's already
    there; check `MEMORY.md` first.

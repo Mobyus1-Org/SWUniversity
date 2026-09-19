@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck } from "@/server/engine/core-functions";
-import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost, CardIsPlayable } from "@/server/engine/card-playability";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer } from "@/server/engine/core-functions";
+import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost, CardIsPlayable, DiscardUnitsPlayableAtDiscount } from "@/server/engine/card-playability";
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds, UpgradeDestinationsOnControlChange, PilotlessFighterOrTransportPlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -1985,6 +1985,19 @@ export function resolveWhenPlayed(
       if (others076.length === 0) return null;
       return optionalTarget(cardId, player, others076.map(u => u.playId),
         "Give a Shield token to another unit?", { yesLabel: "Give Shield" });
+    }
+    case "JTL_041": // Annihilator — the When Played half of "When Played/When Defeated: You may
+                    // defeat an enemy unit. If you do, search its controller's deck and hand…".
+                    // Only an offer (no side effect), so the unit preview's second run is harmless.
+      return buildAnnihilatorOffer(player);
+    case "JTL_232": { // Jump to Lightspeed — "Return a friendly space unit and any number of
+                      // non-leader upgrades on it to their owners' hands. The next time you play a
+                      // copy of that unit this phase, you may play it for free." A Vehicle with a
+                      // leader Pilot is fine (the leader goes back to its zone); a leader unit's own
+                      // card can't go to a hand.
+      const space232 = GetPlayer(game.currentGameState, player).spaceArena.filter(u => !CardIsLeader(u.cardId));
+      if (space232.length === 0) return null;
+      return mandatoryTarget(cardId, player, space232.map(u => u.playId));
     }
     case "JTL_144": { // No Disintegrations — "Deal damage to a non-leader unit equal to 1 less than
                       // its remaining HP." Either side; the amount is read when it resolves.
@@ -3994,26 +4007,36 @@ export function resolveWhenPlayed(
                       // pile. It costs 2 resources less and enters play ready. At the start of the
                       // regroup phase, defeat it."
       const gs189 = game.currentGameState;
-      const pState189 = player === 1 ? gs189.player1 : gs189.player2;
-      const readyResources189 = pState189.resources.filter(r => r.ready).length;
       const defeatedThisPhase189 = new Set(
         gs189.roundState.cardsLeftPlayThisPhase
           .filter(c => c.fromPlayer === player && (c.reason === "defeated" || c.reason === "token-defeated"))
           .map(c => c.playId),
       );
-      const eligible189 = pState189.discard.filter(d => {
-        if (CardType(d.cardId) !== "Unit") return false;
-        if (!defeatedThisPhase189.has(d.playId)) return false;
-        const effectiveCost = Math.max(0, CardCost(d.cardId) + aspectPenalty(gs189, player, d.cardId) - 2);
-        return effectiveCost <= readyResources189;
-      });
+      const eligible189 = DiscardUnitsPlayableAtDiscount(gs189, player, 2, d => defeatedThisPhase189.has(d.playId));
       if (eligible189.length === 0) return null;
       return {
         type: "return-from-discard",
         cardId: "TWI_189",
         player,
         maxCount: 1,
-        eligiblePlayIds: eligible189.map(d => d.playId),
+        eligiblePlayIds: eligible189,
+        costReduction: 2,
+        continuation: null,
+      } satisfies ReturnFromDiscardPending;
+    }
+    case "HMW_204": { // Nightbrother (Maul's Gauntlet) — "You may play a unit from your discard pile.
+                      // It costs 3 resources less and enters play ready. At the start of the next
+                      // regroup phase, defeat it." An empty selection is the "you may" decline; an
+                      // offer is only made for units the player can actually pay for at -3.
+      const eligible204 = DiscardUnitsPlayableAtDiscount(game.currentGameState, player, 3);
+      if (eligible204.length === 0) return null;
+      return {
+        type: "return-from-discard",
+        cardId: "HMW_204",
+        player,
+        maxCount: 1,
+        eligiblePlayIds: eligible204,
+        costReduction: 3,
         continuation: null,
       } satisfies ReturnFromDiscardPending;
     }

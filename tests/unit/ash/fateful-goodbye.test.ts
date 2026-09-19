@@ -49,6 +49,31 @@ describe("ASH_211 Fateful Goodbye", () => {
     expect(advantageCount(g.state.player1.groundArena[0])).toBe(3);
   });
 
+  it("a unit RETURNED TO HAND also left play (bounced by the opponent's Waylay)", async () => {
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      baseSetup()
+        .WithActivePlayer(2)
+        .WithCardInHandForPlayer(1, Cards.events.ash.fatefulGoodbye)
+        .WithCardInHandForPlayer(2, Cards.events.sor.waylay)
+        .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)     // bounced below
+        .WithGroundUnitForPlayer(1, Cards.units.sor.consularSecurityForce) // survives to receive
+        .Build(),
+    );
+
+    await g.playCardFromHandAsync(2, 0);   // Waylay
+    await g.chooseGroundUnitAsync(1, 0);   // return the Marine to its owner's hand
+    expect(g.state.player1.groundArena).toHaveLength(1);
+
+    await g.playCardFromHandAsync(1, 0);   // Fateful Goodbye
+    const survivor = g.state.player1.groundArena[0];
+    await g.dispatchAsync(1, "choose-target", {
+      spreadDamageAssignments: [{ playId: survivor.playId, damage: 3 }],
+    });
+
+    expect(advantageCount(g.state.player1.groundArena[0])).toBe(3);
+  });
+
   it("distributes 5 instead when a friendly LEADER unit left play", async () => {
     const g = new GameTestAdapter();
     g.loadNewState(

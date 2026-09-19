@@ -504,6 +504,11 @@ export interface ReturnFromDiscardPending {
   player: PlayerId;
   maxCount: number;
   eligiblePlayIds: string[];
+  /**
+   * "It costs N resources less" for cards that PLAY the chosen card (TWI_189, HMW_204). Carried on
+   * the pending so the offer's affordability filter and the payment use the same number.
+   */
+  costReduction?: number;
   continuation: PendingResolution | null;
 }
 
@@ -717,6 +722,7 @@ export type PendingResolution =
   | PlayFromHandPending
   | DeckSearchPending
   | PeekHandPending
+  | ViewCardsPending
   | MillPending
   | MillResultPending
   | RevealFromHandPending
@@ -752,6 +758,27 @@ export interface RevealDiscardPending {
   /** All revealed cards, in order from bottommost to topmost (last = top of deck). tempId = array index as string. */
   revealedCards: Array<{ tempId: string; cardId: string }>;
   /** Continuation fired after discard choices are resolved. */
+  continuation: PendingResolution | null;
+}
+
+/**
+ * The player looks at some cards and clicks OK; then `cardId`'s effect finishes (see the view-cards
+ * branch of the choose-option handler). JTL_041 Annihilator shows the searched deck before the
+ * named cards are discarded from it.
+ */
+export interface ViewCardsPending {
+  type: "view-cards";
+  cardId: string;
+  player: PlayerId;
+  helperText: string;
+  /** Card ids shown, top of deck first. */
+  cards: string[];
+  /** Whose cards these are. */
+  viewedPlayer: PlayerId;
+  /** JTL_041: the name whose cards are discarded once the view is acknowledged. */
+  matchTitle?: string;
+  /** JTL_041: the unit defeated after that discard. */
+  thenDefeatPlayId?: string;
   continuation: PendingResolution | null;
 }
 

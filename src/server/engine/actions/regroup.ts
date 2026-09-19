@@ -1,5 +1,6 @@
 import type { GameState, PlayerState } from "@/lib/engine/game";
-import type { DiscardedCard, PlayerId } from "@/lib/engine/core-models";
+import type { PlayerId } from "@/lib/engine/core-models";
+import type { PendingResolution } from "@/server/engine/pending-resolution";
 import { CardArena, CardTitle, CardHp, CardUpgradeHp } from "@/server/engine/card-db/generated";
 import { DealDamageToBase, DefeatResource, DrawCardForPlayer, QueueWhenDiscardedTrigger, ReadyUnit } from "@/server/engine/core-functions";
 
@@ -137,7 +138,18 @@ function resolveRegroupStartUnitAbilities(gs: GameState, log: string[]): void {
   }
 }
 
-export function executeRegroupDraw(gs: GameState, log: string[]): void {
+/**
+ * Defeats the units whose "At the start of the regroup phase, defeat it" came due, through the real
+ * defeat path (When Defeated abilities, upgrades leaving play). Supplied by the dispatcher, which
+ * owns that path; returns whatever those When Defeated abilities still need the players to decide.
+ */
+export type DefeatUnitsAtRegroup = (playIds: string[]) => PendingResolution | null;
+
+export function executeRegroupDraw(
+  gs: GameState,
+  log: string[],
+  defeatUnits: DefeatUnitsAtRegroup,
+): PendingResolution | null {
   releaseBaseCaptives(gs, log);
   resolveRegroupStartUnitAbilities(gs, log);
   resolveRegroupStartBaseAbilities(gs, log);
@@ -163,6 +175,7 @@ export function executeRegroupDraw(gs: GameState, log: string[]): void {
   }
 
   // Revert "UntilStartOfRegroup" effects before drawing (e.g. Change of Heart).
+  const delayedDefeats: string[] = [];
   const revertEffects = gs.currentEffects.filter(e => e.duration === "UntilStartOfRegroup");
   for (const eff of revertEffects) {
     // TS26_12 Sundari Palace — "defeat that many friendly resources at the start of the regroup
@@ -181,31 +194,12 @@ export function executeRegroupDraw(gs: GameState, log: string[]): void {
 
     if (!eff.targetPlayId) continue;
 
-    if (eff.cardId === "SOR_219" || eff.cardId === "TWI_189" || eff.cardId === "SHD_226") {
-      // Sneak Attack (SOR_219) / Unnatural Life (TWI_189) / Unrefusable Offer (SHD_226): defeat the
-      // unit at start of regroup. It goes to its OWNER's discard, which for SHD_226 is not the
-      // player who was controlling it.
-      outer219: for (const pState of [gs.player1, gs.player2]) {
-        for (const zone of ["groundArena", "spaceArena"] as const) {
-          const idx = pState[zone].findIndex(u => u.playId === eff.targetPlayId);
-          if (idx !== -1) {
-            const [unit] = pState[zone].splice(idx, 1);
-            const ownerState = unit.owner === 1 ? gs.player1 : gs.player2;
-            const discarded: DiscardedCard = {
-              cardId: unit.cardId,
-              playId: unit.playId,
-              owner: unit.owner,
-              controller: unit.owner,
-              turnDiscarded: gs.currentRound,
-              discardEffect: "",
-            };
-            ownerState.discard.unshift(discarded);
-            gs.roundState.cardsLeftPlayThisPhase.push({ fromPlayer: unit.owner as PlayerId, cardId: unit.cardId, playId: unit.playId, reason: "defeated" });
-            log.push(`${CardTitle(eff.cardId)}: ${CardTitle(unit.cardId)} was defeated at start of regroup.`);
-            break outer219;
-          }
-        }
-      }
+    if (eff.cardId === "SOR_219" || eff.cardId === "TWI_189" || eff.cardId === "SHD_226" || eff.cardId === "HMW_204") {
+      // Sneak Attack (SOR_219) / Unnatural Life (TWI_189) / Unrefusable Offer (SHD_226) /
+      // Nightbrother (HMW_204): "at the start of the regroup phase, defeat it". Collected here and
+      // defeated together below. A unit that already left play has a fresh playId if it came back,
+      // so a stale marker simply finds nothing.
+      delayedDefeats.push(eff.targetPlayId);
       continue;
     }
 
@@ -225,6 +219,7 @@ export function executeRegroupDraw(gs: GameState, log: string[]): void {
     }
   }
   gs.currentEffects = gs.currentEffects.filter(e => e.duration !== "UntilStartOfRegroup");
+  const defeatPending = delayedDefeats.length > 0 ? defeatUnits(delayedDefeats) : null;
 
   for (const player of [1, 2] as PlayerId[]) {
     const p = ps(gs, player);
@@ -247,6 +242,7 @@ export function executeRegroupDraw(gs: GameState, log: string[]): void {
   gs.activePlayer = gs.initiativePlayer;
   gs.roundState.regroupResourcedPlayers = [];
   log.push("Regroup phase: draw step complete. Players may now resource a card.");
+  return defeatPending;
 }
 
 function executeRegroupReady(gs: GameState, log: string[]): void {
