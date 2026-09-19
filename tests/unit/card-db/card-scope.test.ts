@@ -4,8 +4,9 @@ import { InScopeBoardCardIds, IsInScopeBoardCard } from "@/server/engine/card-db
 // The board's card universe. Literal ids are used deliberately here: this test is ABOUT id
 // filtering, so routing through the Cards helper would hide the very strings under test.
 describe("in-scope board cards", () => {
-  it("totals 2405 cards", () => {
-    expect(InScopeBoardCardIds()).toHaveLength(2405);
+  // 2549 since 2026-09-18: HMW moved from 128 mocked cards to its full official 272.
+  it("totals 2549 cards", () => {
+    expect(InScopeBoardCardIds()).toHaveLength(2549);
   });
 
   it("includes official cards", () => {

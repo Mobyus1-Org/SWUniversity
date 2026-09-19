@@ -52,3 +52,31 @@ export function LeaderFrontAspectsOf(cardId: string): string[] | null {
 export function LeaderBackSideOf(cardId: string): LeaderBackSide | null {
   return LEADER_BACK_SIDES[cardId] ?? null;
 }
+
+/**
+ * A leader whose DEPLOYED unit side is a different card from its front — HMW_004 Grand Moff Tarkin
+ * deploys as The Death Star. The upstream API describes only the front (title, subtitle, traits);
+ * its arena, stats and deployed-side text ARE published, so only these three fields live here.
+ *
+ * Read only while the leader is on the table as its unit (see LeaderShowsUnitSide in
+ * core-functions). The printed traits here REPLACE the front's rather than adding to them.
+ * Uniqueness keeps the leader's own identity (its cardId).
+ */
+export type LeaderUnitSide = {
+  title: string;
+  subtitle: string;
+  traits: string[];
+};
+
+const LEADER_UNIT_SIDES: Record<string, LeaderUnitSide> = {
+  HMW_004: {
+    title: "The Death Star",
+    subtitle: "Icon of Tyranny",
+    traits: ["Imperial", "Vehicle", "Capital Ship"],
+  },
+};
+
+/** The deployed unit side of a leader whose unit is a different card, or null for every other card. */
+export function LeaderUnitSideOf(cardId: string): LeaderUnitSide | null {
+  return LEADER_UNIT_SIDES[cardId] ?? null;
+}

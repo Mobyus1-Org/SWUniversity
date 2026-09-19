@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildAnnihilatorOffer, AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer } from "@/server/engine/core-functions";
+import { buildAnnihilatorOffer, UnitTraits, AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -65,7 +65,7 @@ function resolveWhenDefeatedInner(
   // TWI_001 Nala Se (deployed): each friendly Clone unit gains "When Defeated: Heal 2 damage from
   // your base." Mandatory and targetless. The dying unit is already out of the arena, so a Nala Se
   // found in GetUnitsForPlayer is a surviving source.
-  if (unit.isClone || CardTraits(unit.cardId).includes("Clone")) {
+  if (unit.isClone || UnitTraits(unit).includes("Clone")) {
     const gameNala = GetGame();
     if (gameNala && !BaseHealingPrevented() && GetUnitsForPlayer(player).some(u => u.cardId === "TWI_001")) { // TWI_132 Confederate Tri-Fighter
       const pStateNala = GetPlayer(gameNala.currentGameState, player);

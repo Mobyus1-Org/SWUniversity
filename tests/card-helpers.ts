@@ -134,6 +134,7 @@ export const Cards = {
       quinlanVos: "TWI_018",
     },
     hmw: {
+      grandMoffTarkin: "HMW_004", // Tyrant of the Outer Rim — deploys as The Death Star
       chewbacca: "HMW_009",     // Relentless Rebel
       tarfful: "HMW_010",       // Fighting from the Shadowlands
       doctorHemlock: "HMW_003", // Emotion Has No Place Here
@@ -962,6 +963,7 @@ export const Cards = {
       takedown: "SOR_077",
       overwhelmingBarrage: "SOR_092",
       vanquish: "SOR_078",
+      sneakAttack: "SOR_219",
       recruit: "SOR_123",
       uWingReinforcement: "SOR_104",
       makeAnOpening: "SOR_076",

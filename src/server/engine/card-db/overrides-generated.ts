@@ -14,6 +14,8 @@ export const cardOverrides = {
   "C25_004": "LOF_191",
   "C25_005": "SEC_093",
   "C25_006": "SEC_147",
+  "CST_002": "ASH_059",
+  "CST_003": "ASH_158",
   "GG_001": "SOR_021",
   "GG_002": "SOR_024",
   "GG_003": "SOR_026",

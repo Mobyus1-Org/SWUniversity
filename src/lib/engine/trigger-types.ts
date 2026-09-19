@@ -24,6 +24,7 @@ export type TriggerType =
   | "damage-prevention"  // a replacement effect asking whether to prevent a damage instance (ASH_062)
   | "dealt-heavy-damage"  // reaction to dealing one instance of N+ damage (e.g. HMW_011 Darth Sidious)
   | "when-unit-healed"  // reaction to 1+ damage being healed from a unit (e.g. JTL_062 Silver Angel)
+  | "regroup-start"  // "When the regroup phase starts" (e.g. HMW_004 deployed as The Death Star)
 
 export interface TriggerEntry {
   triggerType: TriggerType;
@@ -32,6 +33,12 @@ export interface TriggerEntry {
   playId?: string;  // the unit this trigger is about (e.g. for shielded)
   context?: TriggerContext;
   nested?: boolean; // true when this trigger arose during resolution of another trigger (CR 7.6.11)
+  /**
+   * A When Defeated that waits in the bag to be ORDERED against the other triggers that went off
+   * at the same time (e.g. at the start of the regroup phase, beside HMW_004 The Death Star),
+   * rather than resolving first in the bag's in-order When Defeated pass.
+   */
+  orderable?: boolean;
 }
 
 export type TriggerContext =

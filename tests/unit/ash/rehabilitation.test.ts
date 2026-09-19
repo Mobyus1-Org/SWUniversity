@@ -52,7 +52,7 @@ describe("ASH_200 Rehabilitation", () => {
     await g.chooseGroundUnitAsync(2, 0);
     expect(g.state.player1.groundArena).toHaveLength(1);
 
-    executeRegroupDraw(g.state, [], () => null); // no delayed defeats in this fixture
+    executeRegroupDraw(g.state, [], () => null); // nothing at the start of regroup in this fixture
 
     expect(g.state.player1.groundArena).toHaveLength(0);
     expect(g.state.player2.groundArena).toHaveLength(1);

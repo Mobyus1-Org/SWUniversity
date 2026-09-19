@@ -163,4 +163,21 @@ describe("SHD_208 Final Showdown", () => {
     expect(g.state.defeatedPlayers).toContain(1);
     expect(g.state.defeatedPlayers).not.toContain(2);
   });
+
+  it("also when the action phase ends through the claimed-initiative auto-pass", async () => {
+    // The action phase can end two ways: two consecutive passes, or a pass handing the turn to a
+    // player who claimed the initiative (they auto-pass). The second used to skip the loss check.
+    // Reaching it in play needs an extra action (the pass must follow a non-pass), so the state is
+    // seeded: P2 claimed, P1's last action wasn't a pass, and P1 cast Final Showdown earlier.
+    const g = new GameTestAdapter();
+    const s = base().WithInitiativePlayerBeing(2).WithInitiativeClaimed().Build();
+    s.roundState.lastActionWasPass = false;
+    s.currentEffects.push({ cardId: "SHD_208_lose", duration: "Permanent", affectedPlayer: 1 });
+    g.loadNewState(s);
+
+    await g.dispatchAsync(1, "pass-action", {});
+
+    expect(g.state.gamePhase).not.toBe("ActionPhase");
+    expect(g.state.defeatedPlayers).toEqual([1]);
+  });
 });

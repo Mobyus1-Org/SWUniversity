@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { getCardImageLink } from "@/util/func";
+import { artFileStem, getCardImageLink } from "@/util/func";
 import { MOCK_CARD_IDS } from "@/server/engine/card-db/card-mocks";
 import { CardType } from "@/server/engine/card-db/generated";
 
@@ -21,10 +21,15 @@ const FULL_ART_DIR = path.join(process.cwd(), "public", "assets", "cards", "full
 const fileFor = (link: string) => path.join(FULL_ART_DIR, path.basename(link));
 
 describe("card art links", () => {
+  // Between preview sets there may be no mocks at all, so the prefix rule itself is pinned with a
+  // stand-in registry; the on-disk checks below cover whatever mocks exist right now.
   const mockLeaders = MOCK_CARD_IDS.filter(id => CardType(id) === "Leader");
+  const fakeMock = (cardId: string) => cardId === "XYZ_003";
 
-  it("there are mocked leaders to check", () => {
-    expect(mockLeaders.length).toBeGreaterThan(0);
+  it("a mocked leader's _BACK art keeps the mock_ prefix (the registry is keyed by bare ids)", () => {
+    expect(artFileStem("XYZ_003_BACK", fakeMock)).toBe("mock_XYZ_003_BACK");
+    expect(artFileStem("XYZ_003", fakeMock)).toBe("mock_XYZ_003");
+    expect(artFileStem("XYZ_004_BACK", fakeMock)).toBe("XYZ_004_BACK");
   });
 
   it("a mocked leader's FRONT art link points at a real file", () => {
@@ -42,9 +47,11 @@ describe("card art links", () => {
     expect(missing).toEqual([]);
   });
 
-  it("keeps the mock_ prefix on the _BACK art", () => {
-    const id = mockLeaders[0];
-    expect(getCardImageLink(`${id}_BACK`)).toBe(`/assets/cards/full/mock_${id}_BACK.webp`);
+  it("an OFFICIAL leader's front and _BACK art links point at real files", () => {
+    // HMW_004 Grand Moff Tarkin — official since 2026-09-18, with a deployed side.
+    for (const link of [getCardImageLink("HMW_004"), getCardImageLink("HMW_004_BACK")]) {
+      expect(fs.existsSync(fileFor(link)), link).toBe(true);
+    }
   });
 
   it("leaves OFFICIAL card art unprefixed, front and back", () => {

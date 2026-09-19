@@ -3,7 +3,7 @@ import { GetAllCardIds } from "@/server/engine/card-db/generated";
 /** Sets the board and the puzzle editor both cover. Moved here from card-catalog.ts. */
 export const CATALOG_SETS = new Set([
   "SOR", "SHD", "TWI", "JTL", "LOF", "SEC", "IBH", "LAW", "TS26", "ASH",
-  "HMW", // preview set — mocked cards, offered so puzzles can be authored ahead of release
+  "HMW",
 ]);
 
 /**
@@ -14,7 +14,7 @@ export const EXCLUDED_SETS = new Set([
   // Promo reprints — a "<SET>P" id is the same card as its base-set printing.
   "ASHP", "LAWP", "JTLP", "LOFP", "SECP",
   // Convention, judge and other special printings.
-  "C24", "C25", "C26", "G25", "GG", "J24", "J25", "MV26", "P25", "P26",
+  "C24", "C25", "C26", "CST", "G25", "GG", "J24", "J25", "MV26", "P25", "P26",
 ]);
 
 /**

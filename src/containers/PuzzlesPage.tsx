@@ -19,6 +19,7 @@ import type { PlayerId } from "@/lib/engine/core-models";
 import type { DispatchResponse, DispatchType, DispatchData, GameDispatch, ResolutionRequest } from "@/lib/engine/message-types";
 import type { EngineContext } from "@/server/engine/pending-resolution";
 import { CardIsLeader } from "@/server/engine/core-functions";
+import { LeaderUnitSideOf } from "@/server/engine/card-db/double-sided-leaders";
 import { CardIsPlayable, DiscardPlayableCards, ResourceIsSmuggleable } from "@/server/engine/card-playability";
 
 
@@ -283,8 +284,11 @@ function CardVisual({
   }, [pattern, square]);
   const [imageStage, setImageStage] = React.useState(0);
   const imageSrc = imageChain[Math.min(imageStage, imageChain.length - 1)];
-  const title = CardTitle(cardId);
-  const subtitle = CardSubtitle(cardId);
+  // Showing a leader's deployed side: a leader whose unit side is a different card (HMW_004 deploys
+  // as The Death Star) is labelled with that card's name, not the front's.
+  const unitSide = imageId === `${cardId}_BACK` ? LeaderUnitSideOf(cardId) : null;
+  const title = unitSide?.title ?? CardTitle(cardId);
+  const subtitle = unitSide?.subtitle ?? CardSubtitle(cardId);
   const previewState: PreviewState = { imageId: imageId ?? cardId, cardId, label: subtitle ? `${title} — ${subtitle}` : title };
   const hold = useLongPress(() => onPreviewStart(previewState, { sticky: true }));
 

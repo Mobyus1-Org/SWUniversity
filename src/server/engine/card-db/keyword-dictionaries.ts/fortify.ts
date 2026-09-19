@@ -7,8 +7,9 @@ import type { PlayerId } from "@/lib/engine/core-models";
  * card text, so a card missing from this list silently has no Fortify and would be offered
  * ordinary unit targets instead.
  *
- * These cards carry a "Fortification" trait too, but the trait is flavour that a future
- * non-Fortify card could also print — the keyword is what changes where the upgrade attaches.
+ * Most of these carry a "Fortification" trait too, but the trait is flavour — HMW_206 has Fortify
+ * with the trait "Law". The keyword is what changes where the upgrade attaches.
+ * tests/unit/engine/fortify-registry.test.ts pins this list to the printed keyword.
  */
 export function HasFortify(cardId: string): boolean {
   switch (cardId) {
@@ -16,6 +17,17 @@ export function HasFortify(cardId: string): boolean {
     case "HMW_171": // Trap Field
     case "HMW_070": // Dark Sanctum
     case "HMW_037": // Bacta Tank
+    case "HMW_095": // Carbonite Chamber
+    case "HMW_112": // Military Academy
+    case "HMW_113": // Sinister War Memorial
+    case "HMW_126": // Verdant Fortress
+    case "HMW_147": // Beast Lair
+    case "HMW_160": // Noxious Refinery
+    case "HMW_172": // Heavy Ion Cannon
+    case "HMW_205": // Intelligence Agency
+    case "HMW_206": // The Tarkin Doctrine (trait "Law", not "Fortification")
+    case "HMW_216": // Insurgent Camp
+    case "HMW_271": // Landing Pad
       return true;
     default:
       return false;

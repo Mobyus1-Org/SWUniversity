@@ -111,14 +111,15 @@ export function getCardSquareImageLink(cardPattern: string): string {
   return `/assets/cards/square/${artFileStem(cardPattern)}.webp`;
 }
 
-function artFileStem(cardPattern: string): string {
+/** Exported for tests: `isMock` defaults to the live mock registry. */
+export function artFileStem(cardPattern: string, isMock: (cardId: string) => boolean = isMockCardId): string {
   // A leader's deployed side is requested as `<id>_BACK`, but the mock registry is keyed by BARE
   // card ids — so the suffix has to come off for the lookup and go back on for the filename.
   // Without this a mocked leader's unit-side art lost its `mock_` prefix and fell through the
   // whole fallback chain to the generic card back.
   const BACK = "_BACK";
   const baseId = cardPattern.endsWith(BACK) ? cardPattern.slice(0, -BACK.length) : cardPattern;
-  return isMockCardId(baseId) ? `mock_${cardPattern}` : cardPattern;
+  return isMock(baseId) ? `mock_${cardPattern}` : cardPattern;
 }
 
 export function getSWUDBImageLink(cardPattern: string): string {

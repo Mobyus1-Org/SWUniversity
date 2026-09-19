@@ -103,7 +103,7 @@ import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/b
 import { resolveWhenDefeated, WhenDefeatedBaseDamage } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets, UpgradeDestinationsOnControlChange, PilotlessFighterOrTransportPlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB, anakinMortisAbility, buildPayForExperiencePrompt, buildKreiaHandPick, buildHunterChoice, buildEndlessLegionsOffer } from "@/server/engine/actions/when-played";
-import { executeRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
+import { executeRegroupDraw, finishRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
 import { resolveWhenPlayedTrigger, WhenPlayedHasAutoEffect } from "@/server/engine/actions/when-played-trigger";
 import { resolveOnAttackTrigger, buildTwinLaserTurretPending } from "@/server/engine/actions/on-attack";
 import { chooseEnemyForPowerDamage, dealPowerToEnemy, dealRemainingHpToEnemy } from "@/server/engine/actions/deal-power-damage";
@@ -119,8 +119,8 @@ import { LeaderDeployPilotThreshold } from "@/server/engine/card-db/keyword-dict
 import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
-import { BaseTargetPlayer } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
-import { QueueUnitEnteredPlayReaction, FightersReadyToAttack, IsVehicleUnitCard, CountOnAttackAbilities, DiscardCardsWithTitleFromHandAndDeck } from "@/server/engine/core-functions";
+import { BaseTargetId, BaseTargetPlayer } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
+import { QueueUnitEnteredPlayReaction, UnitHasWhenDefeatedAbility, UnitTraits, UnitTitle, BaseMaxHp, BaseRemainingHp, FightersReadyToAttack, IsVehicleUnitCard, CountOnAttackAbilities, DiscardCardsWithTitleFromHandAndDeck } from "@/server/engine/core-functions";
 import { CreateBeast, GiveWeaknessToken, UnitsWithoutWeaknessToken } from "@/server/engine/token-helpers";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -1758,6 +1758,8 @@ function triggerLabel(t: TriggerEntry): string {
     case "enemy-unit-defeated":   return `${name} — When Enemy Defeated`;
     case "card-played-reaction":  return `${name} — Reaction`;
     case "damage-prevention":     return `${name} — Prevent Damage`;
+    case "when-defeated":         return `${name} — When Defeated`;
+    case "regroup-start":         return `${UnitTitle({ cardId: t.cardId })} — When the Regroup Phase Starts`;
     default:                    return `${name} — ${t.triggerType}`;
   }
 }
@@ -1873,6 +1875,20 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
     if (!wdCtx?.defeatedUnit) return null;
     const unit = Unit.FromInterface(wdCtx.defeatedUnit);
     return resolveWhenDefeatedWithThrawn(game, unit, trigger.fromPlayer);
+  }
+
+  if (trigger.triggerType === "regroup-start" && trigger.cardId === "HMW_004") {
+    // The Death Star — "When the regroup phase starts: You may defeat a base with 10 or less
+    // remaining HP." Re-checked as it resolves: it must still be deployed with its abilities, and
+    // the bases are read NOW, after anything that resolved before it. Either base qualifies.
+    const deathStar = GetUnitByPlayId(game, trigger.playId ?? "");
+    if (!deathStar || Unit.FromInterface(deathStar).LostAbilities()) return null;
+    const bases004 = ([1, 2] as PlayerId[])
+      .filter(p => BaseRemainingHp(GetPlayer(game, p).base) <= 10)
+      .map(p => BaseTargetId(p));
+    if (bases004.length === 0) return null;
+    return optionalTarget("HMW_004_regroup", trigger.fromPlayer, bases004,
+      "Defeat a base with 10 or less remaining HP?", { yesLabel: "Defeat a base", noLabel: "Skip" });
   }
 
   if (trigger.triggerType === "when-played") {
@@ -2508,7 +2524,7 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
   // Skip nested triggers here — they'll be prioritized by the nested-first block below.
   for (let i = 0; i < game.triggerBag.length; ) {
     const t = game.triggerBag[i];
-    if (t.triggerType !== "when-defeated" || t.nested) { i++; continue; }
+    if (t.triggerType !== "when-defeated" || t.nested || t.orderable) { i++; continue; }
     game.triggerBag.splice(i, 1);
     if (t.cardId === "ASH_127_heal") {
       HealBaseForPlayer(game, t.fromPlayer, 1, log, "ASH_127");
@@ -2630,8 +2646,8 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
  */
 
 function updateDefeatedPlayers(game: GameState): void {
-  const p1Max = CardHp(game.player1.base.cardId) || 30;
-  const p2Max = CardHp(game.player2.base.cardId) || 30;
+  const p1Max = BaseMaxHp(game.player1.base);
+  const p2Max = BaseMaxHp(game.player2.base);
   game.defeatedPlayers = [];
   if (game.player1.base.damage >= p1Max) game.defeatedPlayers.push(1);
   if (game.player2.base.damage >= p2Max) game.defeatedPlayers.push(2);
@@ -2666,6 +2682,12 @@ function defeatUnit(
   unit: Unit,
   bypassL337 = false,
   causedByCombatDamage = false,
+  /**
+   * Bag the unit's own When Defeated as an orderable trigger instead of resolving it here, so its
+   * controller can order it against other effects that went off at the same time (the start of the
+   * regroup phase). Bounties and everything else are unchanged.
+   */
+  opts: { deferWhenDefeated?: boolean } = {},
 ): PendingResolution | null {
   // ASH_127 The Twins — "When ANOTHER friendly unit is defeated: Heal 1 damage from your base."
   // Queued rather than applied inline: this function also runs on passes whose state is discarded,
@@ -2796,7 +2818,19 @@ function defeatUnit(
   // cosmetic: SHD_226 Unrefusable Offer replays the card out of the discard, while SOR_083
   // Superlaser Technician moves it to the resource row — whichever resolves first takes the card,
   // and the other finds nothing.
-  const whenDefeated = resolveWhenDefeatedWithThrawn(game, unit, removed.player, causedByCombatDamage);
+  let whenDefeated: PendingResolution | null = null;
+  if (!opts.deferWhenDefeated) {
+    whenDefeated = resolveWhenDefeatedWithThrawn(game, unit, removed.player, causedByCombatDamage);
+  } else if (UnitHasWhenDefeatedAbility(unit)) {
+    game.triggerBag.push({
+      triggerType: "when-defeated",
+      cardId: unit.cardId,
+      fromPlayer: removed.player,
+      playId: unit.playId,
+      context: { defeatedUnit: unit },
+      orderable: true,
+    });
+  }
   const collectingPlayer: PlayerId = removed.player === 1 ? 2 : 1;
   const bounty = collectBounties(unit, collectingPlayer, null);
   let chainedDefeated: PendingResolution | null;
@@ -6731,8 +6765,8 @@ function handleChooseTarget(
         return { response: invalidResponse("Bold Resistance: a chosen unit is not in play."), pending, stateChanged: false };
       }
       if (units153.length > 1) {
-        const shared153 = CardTraits(units153[0].cardId)
-          .filter(t => units153.every(u => CardTraits(u.cardId).includes(t)));
+        const shared153 = UnitTraits(units153[0])
+          .filter(t => units153.every(u => UnitTraits(u).includes(t)));
         if (shared153.length === 0) {
           return { response: invalidResponse("Bold Resistance: the chosen units share no Trait."), pending, stateChanged: false };
         }
@@ -6892,7 +6926,7 @@ function handleChooseTarget(
         const card = pStateRes.discard[idxRes];
         const qualifies = pending.cardId === "SHD_102"
           // "if it shares a name with a unit you control"
-          ? GetUnitsForPlayer(pending.player).some(u => CardTitle(u.cardId) === CardTitle(card.cardId))
+          ? GetUnitsForPlayer(pending.player).some(u => UnitTitle(u) === CardTitle(card.cardId))
           // "if it was defeated this phase" — matched by playId, which pushToDiscard preserves,
           // so a same-named copy already sitting in the discard does not qualify.
           : game.roundState.cardsLeftPlayThisPhase.some(
@@ -7416,7 +7450,7 @@ function handleChooseTarget(
     // the discarded card." Matched on TITLE, so any printing of that card counts, on either side.
     if (remaining === 0 && pending.thenXpSameNameFor) {
       const discardedTitle = CardTitle(discardedCard.cardId);
-      const sameName = GetAllUnits(game).filter(u => CardTitle(u.cardId) === discardedTitle);
+      const sameName = GetAllUnits(game).filter(u => UnitTitle(u) === discardedTitle);
       if (sameName.length === 0) {
         log.push(`${CardTitle(pending.thenXpSameNameFor)}: no unit named ${discardedTitle} in play.`);
       } else {
@@ -11228,13 +11262,65 @@ function silenceUnitForRound(game: GameState, log: string[], targetPlayId: strin
 }
 
 /**
- * The regroup phase's delayed defeats ("at the start of the regroup phase, defeat it"), through the
- * real defeat path. Returns what their When Defeated abilities still need decided, if anything.
+ * Everything "when the regroup phase starts" that needs the dispatcher: triggered abilities
+ * (HMW_004 The Death Star) are bagged, then the delayed defeats ("at the start of the regroup
+ * phase, defeat it") go through the real defeat path with their When Defeated abilities bagged too
+ * — all waiting together, so each player orders theirs. Returns what's left to decide, if anything.
  */
-function defeatUnitsAtRegroup(game: GameState, log: string[], playIds: string[]): PendingResolution | null {
-  const chain = defeatUnitsInOrder(game, log, playIds, null);
+function resolveStartOfRegroup(game: GameState, log: string[], delayedDefeatPlayIds: string[]): PendingResolution | null {
+  QueueRegroupStartTriggers(game);
+  // The delayed defeats resolve first and automatically (they are not triggered abilities); the
+  // When Defeated abilities they set off wait in the bag beside the regroup triggers, so each
+  // player orders their own (Ruthless Raider before or after The Death Star).
+  let chain: PendingResolution | null = null;
+  for (const id of delayedDefeatPlayIds) {
+    const unit = GetUnitByPlayId(game, id);
+    if (!unit) continue;
+    const defeatPend = defeatUnit(game, log, Unit.FromInterface(unit), false, false, { deferWhenDefeated: true });
+    if (defeatPend) chain = injectContinuation(defeatPend, chain);
+  }
+  updateDefeatedPlayers(game);
   const afterSweep = sweepDeadUnits(game, log, chain);
   return afterSweep ?? drainTriggerBag(game, log);
+}
+
+/**
+ * "When the regroup phase starts" triggered abilities. HMW_004 Grand Moff Tarkin, deployed as The
+ * Death Star: "You may defeat a base with 10 or less remaining HP." Only the deployed side has it.
+ */
+function QueueRegroupStartTriggers(game: GameState): void {
+  for (const player of [game.initiativePlayer, GetOtherPlayer(game.initiativePlayer)] as PlayerId[]) {
+    const leader = GetPlayer(game, player).leader;
+    if (leader.cardId !== "HMW_004" || !leader.deployed) continue;
+    const deathStar = GetUnitByPlayId(game, leader.deployedPlayId ?? "");
+    if (!deathStar || Unit.FromInterface(deathStar).LostAbilities()) continue;
+    game.triggerBag.push({ triggerType: "regroup-start", cardId: "HMW_004", fromPlayer: player, playId: deathStar.playId });
+  }
+}
+
+/**
+ * The action phase has ended: start the regroup phase. Shared by both ways it ends — two
+ * consecutive passes, and the claimed-initiative auto-pass.
+ */
+function startRegroupPhase(game: GameState, log: string[]): PendingResolution | null {
+  game.gamePhase = "RegroupDraw";
+  // SHD_208 Final Showdown — "At the start of the regroup phase, you lose the game." This runs
+  // BEFORE the draw, so a player who would otherwise deck out never gets there.
+  for (const p208 of [1, 2] as const) {
+    const idx208 = game.currentEffects.findIndex(
+      e => e.cardId === "SHD_208_lose" && e.affectedPlayer === p208,
+    );
+    if (idx208 !== -1) {
+      game.currentEffects.splice(idx208, 1);
+      MarkPlayerLost(game, p208);
+      log.push(`${CardTitle("SHD_208")}: Player ${p208} loses the game.`);
+    }
+  }
+  updateDefeatedPlayers(game);
+  if (game.defeatedPlayers.length > 0) return null;
+  const regroupPending = executeRegroupDraw(game, log, ids => resolveStartOfRegroup(game, log, ids));
+  updateDefeatedPlayers(game);
+  return regroupPending;
 }
 
 /** Advances the turn. Returns a pending only when the regroup phase began and needs a decision. */
@@ -11244,25 +11330,8 @@ function advanceTurn(game: GameState, log: string[], wasPass: boolean): PendingR
 
   // Consecutive passes → action phase ends.
   if (wasPass && prevWasPass) {
-    game.gamePhase = "RegroupDraw";
     log.push("Both players passed consecutively. Action phase ended.");
-    // SHD_208 Final Showdown — "At the start of the regroup phase, you lose the game." This runs
-    // BEFORE the draw, so a player who would otherwise deck out never gets there.
-    for (const p208 of [1, 2] as const) {
-      const idx208 = game.currentEffects.findIndex(
-        e => e.cardId === "SHD_208_lose" && e.affectedPlayer === p208,
-      );
-      if (idx208 !== -1) {
-        game.currentEffects.splice(idx208, 1);
-        MarkPlayerLost(game, p208);
-        log.push(`${CardTitle("SHD_208")}: Player ${p208} loses the game.`);
-      }
-    }
-    updateDefeatedPlayers(game);
-    if (game.defeatedPlayers.length > 0) return null;
-    const regroupPending = executeRegroupDraw(game, log, ids => defeatUnitsAtRegroup(game, log, ids));
-    updateDefeatedPlayers(game);
-    return regroupPending;
+    return startRegroupPhase(game, log);
   }
 
   // "Take an extra action after this one" — the acting player keeps priority instead of the
@@ -11281,11 +11350,8 @@ function advanceTurn(game: GameState, log: string[], wasPass: boolean): PendingR
     log.push(`Player ${game.activePlayer} auto-passes (initiative claimed).`);
     // This auto-pass + the previous action being a pass → consecutive → phase ends.
     if (wasPass) {
-      game.gamePhase = "RegroupDraw";
       log.push("Action phase ended.");
-      const regroupPending = executeRegroupDraw(game, log, ids => defeatUnitsAtRegroup(game, log, ids));
-      updateDefeatedPlayers(game);
-      return regroupPending;
+      return startRegroupPhase(game, log);
     }
     game.roundState.lastActionWasPass = true;
     game.activePlayer = game.activePlayer === 1 ? 2 : 1;
@@ -11390,6 +11456,8 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "LOF_012": // Rey — If you control 7 or more resources.
       return p.resources.length >= 7;
+    case "HMW_004": // Grand Moff Tarkin — If you control 9 or more resources.
+      return p.resources.length >= 9;
     case "JTL_014": // Admiral Trench — Action [3 resources, Exhaust]: If you control 6 or more resources.
       return p.resources.length >= 6;
     case "SHD_014": // Cad Bane — If you control 6 or more resources.
@@ -14245,7 +14313,7 @@ function applyAbilityEffect(
       const revealed009 = pState009.resources[idx009];
       game.gameLog.push(`${CardTitle("SHD_009")}: revealed ${CardTitle(revealed009.cardId)}.`);
       const matches009 = GetUnitsForPlayer(owner009).some(
-        u => CardIsUnique(u.cardId) && CardTitle(u.cardId) === CardTitle(revealed009.cardId),
+        u => CardIsUnique(u.cardId) && UnitTitle(u) === CardTitle(revealed009.cardId),
       );
       if (!matches009) {
         game.gameLog.push(`${CardTitle("SHD_009")}: no friendly unique unit shares that name.`);
@@ -16020,6 +16088,16 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, "JTL_208", targetPlayId, pending.amount ?? 0, game.gameLog, pending.player);
       break;
+    case "HMW_004_regroup": { // The Death Star — defeat the chosen base. A DEFEAT, not damage: no
+                              // prevention, caps or damage reactions; its controller loses.
+      const base004 = BaseTargetPlayer(targetPlayId ?? "") ?? (targetIsBase ? targetBasePlayer ?? null : null);
+      if (base004 === null) break;
+      const baseState004 = GetPlayer(game.currentGameState, base004).base;
+      baseState004.damage = BaseMaxHp(baseState004);
+      game.gameLog.push(`${UnitTitle({ cardId: "HMW_004" })}: defeated Player ${base004}'s base.`);
+      updateDefeatedPlayers(game.currentGameState);
+      return pending.continuation ?? null;
+    }
     case "JTL_041": { // Annihilator — "defeat an enemy unit. If you do, search its controller's deck
                       // and hand for each card with that unit's name and discard them." The whole
                       // ability resolves before the victim's own When Defeated / Bounty, but this
@@ -16030,7 +16108,7 @@ function applyAbilityEffect(
       const victim041 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!victim041) break;
       const gs041 = game.currentGameState;
-      const title041 = CardTitle(victim041.cardId);
+      const title041 = UnitTitle(victim041); // a deployed HMW_004 is "The Death Star"
       const controller041 = victim041.controller as PlayerId;
       const deck041 = GetPlayer(gs041, controller041).deck;
       if (deck041.length === 0) {
@@ -18120,7 +18198,7 @@ function applyAbilityEffect(
       target049.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target049.owner, controller: target049.controller });
       target049.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target049.owner, controller: target049.controller });
       game.gameLog.push(`${CardTitle("SOR_049")}: gave 2 Experience tokens to ${CardTitle(target049.cardId)}.`);
-      if (CardTraits(target049.cardId).includes("Force")) {
+      if (UnitTraits(target049).includes("Force")) {
         DrawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
         game.gameLog.push(`${CardTitle("SOR_049")}: drew a card (Force unit).`);
       }
@@ -19071,6 +19149,16 @@ function runDispatch(
 
     if (!result.response.invalidAction) {
       result = skipUnsatisfiableDiscards(gs, log, result);
+    }
+
+    // The regroup draw waits for every start-of-regroup decision (see executeRegroupDraw). The
+    // dispatch that answers the last one — leaving nothing open — carries the regroup on.
+    if (!result.response.invalidAction && gs.gamePhase === "RegroupDraw" && !result.pending) {
+      updateDefeatedPlayers(gs);
+      if (gs.defeatedPlayers.length === 0) {
+        finishRegroupDraw(gs, log);
+        result = { response: stateResponse(gs), pending: null, stateChanged: true };
+      }
     }
 
     // The game can end in the MIDDLE of resolving something — an empty-deck draw damaging your

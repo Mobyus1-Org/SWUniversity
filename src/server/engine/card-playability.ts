@@ -5,7 +5,8 @@ import { UpgradeEligibleTargets, PilotingEligibleVehicles, IsPilotUpgrade } from
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { Unit } from "@/server/engine/unit";
-import { LeaderSideAspects, TraitContains } from "@/server/engine/core-functions";
+import { LeaderAbilitiesIgnored, LeaderSideAspects, LeaderSideTitle, TraitContains, UnitTitle, UnitTraits } from "@/server/engine/core-functions";
+import { HasFortify } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
 import { SmuggleCost, SmuggleAspects } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
 
@@ -32,7 +33,8 @@ export function spendableFor(game: GameState, player: PlayerId): number {
 //   TWI_001 Nala Se — "Ignore the aspect penalty on Clone units you play."
 const LEADER_ASPECT_WAIVERS: Record<
   string,
-  { trait: string; unitOnly?: boolean; excludeAspect?: string }
+  // `trait` matches by trait; `fortifyUpgrade` matches upgrades with the Fortify KEYWORD instead.
+  { trait?: string; fortifyUpgrade?: boolean; unitOnly?: boolean; excludeAspect?: string }
 > = {
   SOR_008: { trait: "Spectre" },
   TWI_001: { trait: "Clone", unitOnly: true },
@@ -40,15 +42,32 @@ const LEADER_ASPECT_WAIVERS: Record<
   //   Printed on both her leader and her deployed side, which this table gives for free: it is
   //   keyed on the leader's cardId regardless of deploy state.
   SEC_009: { trait: "Official", unitOnly: true, excludeAspect: "Villainy" },
+  //   HMW_004 Grand Moff Tarkin — "Ignore the aspect penalties on upgrades with Fortify you play."
+  //   Also printed on his deployed side (The Death Star). Keyed on the keyword, not the
+  //   "Fortification" trait: HMW_206 The Tarkin Doctrine has Fortify with the trait "Law".
+  HMW_004: { fortifyUpgrade: true },
 };
+
+/**
+ * Whether `player`'s leader still has its abilities: in the leader zone that is the leader-wide
+ * effect (TWI_255 Brain Invaders); deployed, it is whatever strips the unit's abilities.
+ */
+function leaderAbilitiesActive(game: GameState, player: PlayerId): boolean {
+  const p = player === 1 ? game.player1 : game.player2;
+  if (!p.leader.deployed) return !LeaderAbilitiesIgnored();
+  const unit = [...p.groundArena, ...p.spaceArena].find(u => u.playId === p.leader.deployedPlayId);
+  return unit ? !Unit.FromInterface(unit).LostAbilities() : !LeaderAbilitiesIgnored();
+}
 
 function leaderWaivesAspectPenalty(game: GameState, player: PlayerId, cardId: string): boolean {
   const p = player === 1 ? game.player1 : game.player2;
   const waiver = LEADER_ASPECT_WAIVERS[p.leader.cardId];
   if (!waiver) return false;
+  if (!leaderAbilitiesActive(game, player)) return false;
   if (waiver.unitOnly && CardType(cardId) !== "Unit") return false;
   if (waiver.excludeAspect && CardAspects(cardId)?.includes(waiver.excludeAspect)) return false;
-  return TraitContains(cardId, waiver.trait, player);
+  if (waiver.fortifyUpgrade) return CardType(cardId) === "Upgrade" && HasFortify(cardId);
+  return waiver.trait !== undefined && TraitContains(cardId, waiver.trait, player);
 }
 
 // Units that ignore ONE of their own aspects' penalty while you control a named partner. Only that
@@ -67,8 +86,10 @@ const PARTNER_ASPECT_WAIVERS: Record<string, { aspect: string; partnerTitle: str
 function controlsCardWithTitle(game: GameState, player: PlayerId, title: string): boolean {
   const p = player === 1 ? game.player1 : game.player2;
   const units = [...p.groundArena, ...p.spaceArena];
-  return CardTitle(p.leader.cardId) === title
-    || units.some(u => CardTitle(u.cardId) === title || (u.upgrades ?? []).some(up => CardTitle(up.cardId) === title));
+  // The leader zone counts only while undeployed — a deployed leader is one of `units`, under the
+  // name its unit side shows (HMW_004 is The Death Star once deployed).
+  return (!p.leader.deployed && LeaderSideTitle(p.leader.cardId, !!p.leader.flipped) === title)
+    || units.some(u => UnitTitle(u) === title || (u.upgrades ?? []).some(up => CardTitle(up.cardId) === title));
 }
 
 export function aspectPenalty(game: GameState, player: PlayerId, cardId: string): number {
@@ -226,7 +247,7 @@ function traitAttachUpgradeDiscount(game: GameState, player: PlayerId, cardId: s
     ...game.player1.groundArena, ...game.player1.spaceArena,
     ...game.player2.groundArena, ...game.player2.spaceArena,
   ];
-  const hasQualifying = allUnits.some(u => eligible.includes(u.playId) && CardTraits(u.cardId).includes(trait));
+  const hasQualifying = allUnits.some(u => eligible.includes(u.playId) && UnitTraits(u).includes(trait));
   return hasQualifying ? 1 : 0;
 }
 
@@ -245,7 +266,7 @@ function forceChokeDiscount(game: GameState, player: PlayerId, cardId: string): 
   if (cardId !== "SOR_139") return 0;
   const p = player === 1 ? game.player1 : game.player2;
   const hasForceUnit = [...p.groundArena, ...p.spaceArena].some(
-    u => CardTraits(u.cardId).includes("Force") && !Unit.FromInterface(u).LostAbilities(),
+    u => UnitTraits(u).includes("Force") && !Unit.FromInterface(u).LostAbilities(),
   );
   return hasForceUnit ? 1 : 0;
 }
@@ -265,7 +286,7 @@ function sizeMattersNotDiscount(game: GameState, player: PlayerId, cardId: strin
   if (cardId !== "LOF_056") return 0;
   const p = player === 1 ? game.player1 : game.player2;
   const hasForceUnit = [...p.groundArena, ...p.spaceArena].some(
-    u => CardTraits(u.cardId).includes("Force") && !Unit.FromInterface(u).LostAbilities(),
+    u => UnitTraits(u).includes("Force") && !Unit.FromInterface(u).LostAbilities(),
   );
   return hasForceUnit ? 1 : 0;
 }

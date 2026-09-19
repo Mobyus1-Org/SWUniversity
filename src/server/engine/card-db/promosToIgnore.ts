@@ -3,6 +3,7 @@
 export const promosToIgnore = [
   "C24",
   "C25",
+  "CST",
   "GG",
   "J24",
   "J25",

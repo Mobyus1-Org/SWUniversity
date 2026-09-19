@@ -139,16 +139,24 @@ function resolveRegroupStartUnitAbilities(gs: GameState, log: string[]): void {
 }
 
 /**
- * Defeats the units whose "At the start of the regroup phase, defeat it" came due, through the real
- * defeat path (When Defeated abilities, upgrades leaving play). Supplied by the dispatcher, which
- * owns that path; returns whatever those When Defeated abilities still need the players to decide.
+ * The start-of-regroup abilities that need the dispatcher: the units whose "At the start of the
+ * regroup phase, defeat it" came due (defeated through the real defeat path — When Defeated
+ * abilities, upgrades leaving play) and triggered "When the regroup phase starts" abilities such as
+ * HMW_004's. Returns whatever those still need the players to decide.
  */
-export type DefeatUnitsAtRegroup = (playIds: string[]) => PendingResolution | null;
+export type ResolveStartOfRegroup = (delayedDefeatPlayIds: string[]) => PendingResolution | null;
 
+/**
+ * Starts the regroup phase: everything that happens "when the regroup phase starts", then the draw.
+ * When a start-of-regroup ability leaves a decision open, the draw WAITS — the phase stays
+ * "RegroupDraw" and the returned pending is answered first; the dispatcher calls
+ * finishRegroupDraw once nothing is left open. Drawing first would let empty-deck damage change
+ * what those abilities see (HMW_004 counts a base's remaining HP).
+ */
 export function executeRegroupDraw(
   gs: GameState,
   log: string[],
-  defeatUnits: DefeatUnitsAtRegroup,
+  resolveStart: ResolveStartOfRegroup,
 ): PendingResolution | null {
   releaseBaseCaptives(gs, log);
   resolveRegroupStartUnitAbilities(gs, log);
@@ -219,8 +227,14 @@ export function executeRegroupDraw(
     }
   }
   gs.currentEffects = gs.currentEffects.filter(e => e.duration !== "UntilStartOfRegroup");
-  const defeatPending = delayedDefeats.length > 0 ? defeatUnits(delayedDefeats) : null;
+  const startPending = resolveStart(delayedDefeats);
+  if (startPending) return startPending;
+  finishRegroupDraw(gs, log);
+  return null;
+}
 
+/** The regroup draw step: 2 cards each (3 base damage per card an empty deck can't give). */
+export function finishRegroupDraw(gs: GameState, log: string[]): void {
   for (const player of [1, 2] as PlayerId[]) {
     const p = ps(gs, player);
     const toDraw = 2;
@@ -242,7 +256,6 @@ export function executeRegroupDraw(
   gs.activePlayer = gs.initiativePlayer;
   gs.roundState.regroupResourcedPlayers = [];
   log.push("Regroup phase: draw step complete. Players may now resource a card.");
-  return defeatPending;
 }
 
 function executeRegroupReady(gs: GameState, log: string[]): void {

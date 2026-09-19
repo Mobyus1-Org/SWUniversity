@@ -1,5 +1,5 @@
-import { CardArena, CardAspects, CardCost, CardIsUnique, CardText, CardTitle, CardTraits, CardType, CardType2 } from "@/server/engine/card-db/generated";
-import { LeaderBackSideOf, LeaderFrontAspectsOf } from "@/server/engine/card-db/double-sided-leaders";
+import { CardArena, CardAspects, CardCost, CardHp, CardIsUnique, CardSubtitle, CardText, CardTitle, CardTraits, CardType, CardType2 } from "@/server/engine/card-db/generated";
+import { LeaderBackSideOf, LeaderFrontAspectsOf, LeaderUnitSideOf } from "@/server/engine/card-db/double-sided-leaders";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { Card, CardInPlay, CardTypes, CurrentEffect, EffectDuration, HP_MOD, Leader, PHASE_STAT_MOD, POWER_MOD, PlayerId, Resource, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { Game, GameState, PlayerState } from "@/lib/engine/game";
@@ -68,8 +68,10 @@ export function PlayerControlsCardWithTitle(player: PlayerId, title: string): bo
   const units = player === 1 ? [...game.currentGameState.player1.spaceArena, ...game.currentGameState.player1.groundArena] : [...game.currentGameState.player2.spaceArena, ...game.currentGameState.player2.groundArena];
   const upgrades = units.flatMap(unit => unit.upgrades || []);
 
-  return CardTitle(leader.cardId) === title ||
-    units.some(u => CardTitle(u.cardId) === title) ||
+  // The leader zone counts only while undeployed — a deployed leader is one of `units`, under the
+  // name its unit side shows (HMW_004 is The Death Star once deployed).
+  return (!leader.deployed && LeaderSideTitle(leader.cardId, !!leader.flipped) === title) ||
+    units.some(u => UnitTitle(u) === title) ||
     upgrades.some(u => CardTitle(u.cardId) === title);
 }
 
@@ -92,10 +94,11 @@ export function PlayerControlsCardWithTrait(player: PlayerId, trait: string, ano
       return true;
     }
 
-    return TraitContains(leader.cardId, trait);
+    return TraitContains(leader.cardId, trait, player);
   }
 
-  return CardTraits(leader.cardId)?.includes(trait) ||
+  // The leader's CURRENT face: its front in the leader zone, or its unit side once deployed.
+  return TraitContains(leader.cardId, trait, player) ||
     units.some(u => TraitContains(u.cardId, trait, player, u.playId)) ||
     upgrades.some(u => TraitContains(u.cardId, trait, player, u.playId));
 }
@@ -368,6 +371,48 @@ export function LeaderSideTraits(cardId: string, flipped: boolean): string[] {
   return back?.traits ?? CardTraits(cardId);
 }
 
+/** A base's HP (its printed HP; 30 when the data has none). */
+export function BaseMaxHp(base: { cardId: string }): number {
+  return CardHp(base.cardId) || 30;
+}
+
+/** HP left on a base: its HP minus the damage on it, never below 0. */
+export function BaseRemainingHp(base: { cardId: string; damage: number }): number {
+  return Math.max(0, BaseMaxHp(base) - base.damage);
+}
+
+/**
+ * Whether a leader whose unit side is a different card (LeaderUnitSideOf — HMW_004 deploys as The
+ * Death Star) is currently on the table as that unit. With a player, that player's leader is asked;
+ * without one, a unit with this cardId in either arena answers it — a leader card only ever becomes
+ * a unit by deploying.
+ */
+export function LeaderShowsUnitSide(cardId: string, player?: PlayerId): boolean {
+  if (!CardIsLeader(cardId) || !LeaderUnitSideOf(cardId)) return false;
+  if (player !== undefined) {
+    const leader = GetLeaderForPlayer(player);
+    if (leader.cardId === cardId) return leader.deployed;
+  }
+  return AllUnits().some(u => u.cardId === cardId);
+}
+
+/**
+ * The printed title / subtitle / traits of a unit IN PLAY, as that card is showing: a deployed
+ * leader whose unit side is a different card answers with that side (The Death Star, not Grand
+ * Moff Tarkin). Use these for in-play units instead of CardTitle / CardTraits.
+ */
+export function UnitTitle(unit: { cardId: string }): string {
+  return (CardIsLeader(unit.cardId) ? LeaderUnitSideOf(unit.cardId)?.title : undefined) ?? CardTitle(unit.cardId);
+}
+
+export function UnitSubtitle(unit: { cardId: string }): string {
+  return (CardIsLeader(unit.cardId) ? LeaderUnitSideOf(unit.cardId)?.subtitle : undefined) ?? CardSubtitle(unit.cardId);
+}
+
+export function UnitTraits(unit: { cardId: string }): string[] {
+  return (CardIsLeader(unit.cardId) ? LeaderUnitSideOf(unit.cardId)?.traits : undefined) ?? CardTraits(unit.cardId);
+}
+
 /**
  * The aspect icons the face a leader is currently showing provides.
  *
@@ -484,6 +529,11 @@ export function TraitContains(cardId: string, trait: string, player?: PlayerId, 
     }
   }
 
+  // A deployed leader whose unit side is a different card has THAT card's traits (The Death Star is
+  // a Vehicle, not an Official) — replacing the front's.
+  if (!isLeaderSide && LeaderShowsUnitSide(cardId, player)) {
+    return LeaderUnitSideOf(cardId)!.traits.includes(trait);
+  }
   return CardTraits(cardId).includes(trait) ?? false;
 }
 
@@ -1973,7 +2023,7 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
     if (cardId === "JTL_012") {
       const attached = GetUnitsForPlayer(player).find(u => u.upgrades.some(upg => upg.playId === playId));
       if (!attached) return false;
-      return CardTraits(attached.cardId).includes("Fighter");
+      return UnitTraits(attached).includes("Fighter");
     }
   }
 
