@@ -1,5 +1,6 @@
 import { CardInPlay, GamePhase, PlayerId } from "@/lib/engine/core-models";
 import { GameState, PlayerState } from "@/lib/engine/game";
+import { LinkDeployedLeaders } from "@/server/engine/deployed-leader-link";
 
 function emptyPlayer(): PlayerState {
   return {
@@ -345,11 +346,14 @@ export class GameStateBuilder {
     const player1 = mapPlayer(raw.player1);
     const player2 = mapPlayer(raw.player2);
 
-    return {
+    const state = {
       ...raw,
       nextPlayId: nextId,
       player1,
       player2,
     } as GameState;
+    // `MyLeader(id, ready, true)` plus the leader's unit in an arena: link the two, as deploying would.
+    LinkDeployedLeaders(state);
+    return state;
   }
 }

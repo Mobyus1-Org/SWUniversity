@@ -11,6 +11,7 @@ import type {
 } from "@/lib/engine/core-models";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import { HP_MOD, POWER_MOD } from "@/lib/engine/core-models";
+import { LinkDeployedLeaders } from "@/server/engine/deployed-leader-link";
 
 // ---------------------------------------------------------------------------
 // Raw puzzle JSON format (stored in src/server/_test-puzzles/*.json)
@@ -205,7 +206,7 @@ export function hydratePuzzleGame(raw: RawPuzzleGameState): GameState {
   const player1 = hydratePlayer(raw.player1 as Record<string, unknown>);
   const player2 = hydratePlayer(raw.player2 as Record<string, unknown>);
 
-  return {
+  const game: GameState = {
     activePlayer: raw.activePlayer as PlayerId,
     gamePhase,
     nextPlayId: nextId,
@@ -219,4 +220,7 @@ export function hydratePuzzleGame(raw: RawPuzzleGameState): GameState {
     triggerBag: (raw.triggerBag as TriggerEntry[]) ?? [],
     roundState: hydrateRoundState(raw.roundState),
   };
+  // The builder stores a deployed leader and its unit, but not the link between them.
+  LinkDeployedLeaders(game);
+  return game;
 }

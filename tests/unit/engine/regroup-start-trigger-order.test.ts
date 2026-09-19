@@ -37,7 +37,6 @@ function setup() {
     .WithCardInHandForPlayer(1, RAIDER);
   for (let i = 0; i < 6; i++) b.WithCardInDeckForPlayer(1, MARINE).WithCardInDeckForPlayer(2, MARINE);
   const s = b.Build();
-  s.player1.leader.deployedPlayId = s.player1.spaceArena[0].playId;
   s.player2.base.damage = 16;
   return s;
 }
