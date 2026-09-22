@@ -27,6 +27,8 @@ export interface NeedsTarget {
   fromChoices?: string[];
   needsMultiple?: boolean;
   maxTargets?: number;
+  /** The player may pick nothing: an empty selection declines ("Choose nothing"). */
+  optional?: boolean;
   /**
    * When `fromZones` includes "Base", restricts which players' bases are legal targets. An attack
    * sets this to the enemy only (a unit can't attack its own base); "a base" ability targets leave

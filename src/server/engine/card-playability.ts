@@ -628,6 +628,17 @@ function bamboozleAltCostAvailable(game: GameState, player: PlayerId): boolean {
  * `costDelta` is a discount taken off the full cost (aspect penalty included), for "play a card
  * from your hand. It costs N less" abilities checking a card before offering it.
  */
+/**
+ * Hand indices of the units this player can play right now paying their normal cost — the offer for
+ * "play a unit from your hand (paying its cost)" (HMW_008 General Grievous).
+ */
+export function PlayableUnitHandIndices(game: GameState, player: PlayerId): number[] {
+  return (player === 1 ? game.player1 : game.player2).hand
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => CardType(c.cardId) === "Unit" && CardIsPlayable(game, player, c.cardId))
+    .map(({ i }) => i);
+}
+
 /** What a card costs when an ability plays it for `discount` less — never below 0. */
 export function discountedPlayCost(game: GameState, player: PlayerId, cardId: string, discount: number): number {
   return Math.max(0, playCost(game, player, cardId) - discount);

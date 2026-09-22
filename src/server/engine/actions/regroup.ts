@@ -2,7 +2,7 @@ import type { GameState, PlayerState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import type { PendingResolution } from "@/server/engine/pending-resolution";
 import { CardArena, CardTitle, CardHp, CardUpgradeHp } from "@/server/engine/card-db/generated";
-import { DealDamageToBase, DefeatResource, DrawCardForPlayer, QueueWhenDiscardedTrigger, ReadyUnit } from "@/server/engine/core-functions";
+import { AfterNonCombatUnitDamage, DealDamageToBase, DefeatResource, DrawCardForPlayer, QueueWhenDiscardedTrigger, ReadyUnit } from "@/server/engine/core-functions";
 
 function ps(gs: GameState, player: PlayerId): PlayerState {
   return player === 1 ? gs.player1 : gs.player2;
@@ -100,6 +100,7 @@ function resolveRegroupStartUnitAbilities(gs: GameState, log: string[]): void {
       const selfDamage = REGROUP_START_SELF_DAMAGE[unit.cardId];
       if (selfDamage) {
         unit.damage += selfDamage;
+        AfterNonCombatUnitDamage(gs, unit, selfDamage);
         log.push(`${CardTitle(unit.cardId)}: took ${selfDamage} damage as the regroup phase started.`);
       }
       for (const upg of unit.upgrades) {
@@ -287,6 +288,7 @@ function executeRegroupReady(gs: GameState, log: string[]): void {
     unitsAttackedThisPhase: [],
     baseDamagedThisPhase: [],
     unitsDamagedThisPhase: [],
+    tokenUpgradesGivenThisPhase: [],
     cardsDrawnThisPhase: { 1: 0, 2: 0 },
     cardsDiscardedThisPhase: [],
     discardPlayGrants: [],

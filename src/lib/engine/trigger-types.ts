@@ -25,6 +25,7 @@ export type TriggerType =
   | "dealt-heavy-damage"  // reaction to dealing one instance of N+ damage (e.g. HMW_011 Darth Sidious)
   | "when-unit-healed"  // reaction to 1+ damage being healed from a unit (e.g. JTL_062 Silver Angel)
   | "regroup-start"  // "When the regroup phase starts" (e.g. HMW_004 deployed as The Death Star)
+  | "non-combat-damage"  // reaction to non-combat damage landing on your unit or base (HMW_013 Cham Syndulla)
 
 export interface TriggerEntry {
   triggerType: TriggerType;
@@ -41,7 +42,14 @@ export interface TriggerEntry {
   orderable?: boolean;
 }
 
+/** What the non-combat damage landed on — one of the two is set (HMW_013 Cham Syndulla). */
+export interface NonCombatDamageContext {
+  damagedPlayId?: string;
+  damagedBasePlayer?: PlayerId;
+}
+
 export type TriggerContext =
+  | NonCombatDamageContext
   | WhenDefeatedContext
   | WhenUnitDealsDamageContext
   | WhenUnitTakesDamageContext

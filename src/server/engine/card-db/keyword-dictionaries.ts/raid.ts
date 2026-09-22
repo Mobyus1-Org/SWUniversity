@@ -1,6 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetHand, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerControlsCardWithTitle, PlayerHasTokenUnitInPlay, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , LeaderUnitWasDefeatedThisPhase } from "@/server/engine/core-functions";
-import { CardAspects } from "@/server/engine/card-db/generated";
+import { GetCurrentEffectsForPlayer, GetHand, GetLeaderForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerControlsCardWithTitle, PlayerHasTokenUnitInPlay, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , LeaderUnitWasDefeatedThisPhase } from "@/server/engine/core-functions";
+import { CardAspects, CardCost } from "@/server/engine/card-db/generated";
+import { Unit } from "@/server/engine/unit";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 
 export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): number {
@@ -24,6 +25,9 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
         case "SOR_012"://IG-88 Leader Unit
           if(playId !== u.playId) amount += 1;
           break;
+        case "HMW_007"://Darth Vader (Might of the Empire) Leader Unit — "OTHER friendly units that cost 3 or more gain Raid 1"
+          if (playId !== u.playId && (CardCost(cardId) ?? 0) >= 3 && !Unit.FromInterface(u).LostAbilities()) amount += 1;
+          break;
         case "JTL_134"://General Hux
           if(playId != u.playId && TraitContains(cardId, "First Order", player, playId)) amount += 1;
           break;
@@ -35,6 +39,13 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
           break;
         default: break;
       }
+    }
+    // HMW_007 Darth Vader (Might of the Empire), front — from the LEADER ZONE: "Friendly units that
+    // cost 3 or more gain Raid 1." Deployed, the unit side's aura above takes over.
+    const leader007 = GetLeaderForPlayer(player);
+    if (leader007.cardId === "HMW_007" && !leader007.deployed && !LeaderAbilitiesIgnored()
+        && (CardCost(cardId) ?? 0) >= 3) {
+      amount += 1;
     }
     for(const currentEffect of GetCurrentEffectsForPlayer(player)) {
       if(currentEffect.targetPlayId && currentEffect.targetPlayId !== playId) continue;
@@ -119,6 +130,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "SOR_009": amount += !LeaderAbilitiesIgnored() ? 1 : 0; break; //Leia Leader Unit
     case "SHD_014": amount += !LeaderAbilitiesIgnored() ? 2 : 0; break; //Cad Bane Leader Unit
     case "SHD_005": amount += !LeaderAbilitiesIgnored() ? 1 : 0; break; //Hondo Ohnaka Leader Unit
+    case "HMW_007": amount += !LeaderAbilitiesIgnored() ? 1 : 0; break; //Darth Vader (Might of the Empire) Leader Unit
     //non-Leader Units
     case "SOR_194": amount += 2; break; //Rogue Operative
     case "SOR_157": amount += 2; break; //Cantina Braggart

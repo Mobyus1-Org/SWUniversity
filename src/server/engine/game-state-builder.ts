@@ -40,6 +40,7 @@ export class GameStateBuilder {
         unitsAttackedThisPhase: [],
         baseDamagedThisPhase: [],
         unitsDamagedThisPhase: [],
+        tokenUpgradesGivenThisPhase: [],
         cardsDrawnThisPhase: { 1: 0, 2: 0 },
         cardsDiscardedThisPhase: [],
         discardPlayGrants: [],

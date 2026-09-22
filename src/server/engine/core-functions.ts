@@ -1092,7 +1092,14 @@ export function QueueGreefKargaReaction(gs: GameState, unit: UnitInterface): voi
   });
 }
 
-export function DealDamageToBase(gs: GameState, player: PlayerId, amount: number, byPlayer?: PlayerId): void {
+export function DealDamageToBase(
+  gs: GameState,
+  player: PlayerId,
+  amount: number,
+  byPlayer?: PlayerId,
+  /** Combat damage — an attack on the base, including Overwhelm excess (CR 7.5.7.d). */
+  combat = false,
+): void {
   // HMW_081 Alliance Shield Generator replaces the whole instance before anything else reads it.
   if (preventBigBaseHit(gs, player, amount)) return;
   amount = CapBaseDamage(player, amount);
@@ -1103,6 +1110,7 @@ export function DealDamageToBase(gs: GameState, player: PlayerId, amount: number
   }
   QueueWhenBaseDamagedReaction(gs, player, amount);
   QueueHeavyDamageReaction(gs, byPlayer, amount, { damagedBasePlayer: player });
+  if (!combat) QueueChamSyndullaReaction(gs, player, { damagedBasePlayer: player });
 }
 
 /**
@@ -1902,6 +1910,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "LOF_045": //Yaddle — On Attack: each other friendly Jedi gains Restore 1 this phase
     case "SEC_087": //Dedra Meero — On Attack: create a Spy token
     case "JTL_160": //Supporting Eta-2 — On Attack: may give a ground unit +2/+0 this phase
+    case "HMW_005": //Jar Jar Binks (deployed) — On Attack: if you gave a token upgrade, may 1 dmg to a unit + heal 1 from a base
     case "JTL_157": //Relentless Firespray — On Attack: ready this unit (once each round)
     case "JTL_132": //First Order Stormtrooper — On Attack/When Defeated: 1 indirect damage to a player
     case "JTL_133": //Allegiant General Pryde — On Attack: if you have initiative, 2 indirect damage
@@ -2426,6 +2435,33 @@ export function DiscardCardsWithTitleFromHandAndDeck(
 }
 
 /**
+ * HMW_005 Jar Jar Binks, both sides: "deal 1 damage to a unit and heal 1 damage from a base". Any
+ * unit (either side), then either base. The heal isn't conditional on the damage — with no unit in
+ * play it goes straight to the base step. Ends in `continuation`.
+ */
+export function buildJarJarDamageAndHeal(player: PlayerId, continuation: PendingResolution | null): AbilityTargetPending {
+  const healStep: AbilityTargetPending = {
+    type: "ability-target",
+    cardId: "HMW_005_heal",
+    player,
+    helperText: "Heal 1 damage from a base.",
+    fromPlayIds: [],
+    fromZones: ["Base"],
+    continuation,
+  };
+  const units = AllUnits();
+  if (units.length === 0) return healStep;
+  return {
+    type: "ability-target",
+    cardId: "HMW_005_damage",
+    player,
+    helperText: "Deal 1 damage to a unit.",
+    fromPlayIds: units.map(u => u.playId),
+    continuation: healStep,
+  };
+}
+
+/**
  * JTL_041 Annihilator's When Played/When Defeated offer: "You may defeat an enemy unit." Enemy
  * units — leaders included — that can be defeated by an enemy ability.
  */
@@ -2578,6 +2614,10 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
   // HMW_011 Darth Sidious — "when you deal 4 or more damage". `amount` here is post-prevention,
   // so a hit a Shield swallowed never reaches the threshold.
   QueueHeavyDamageReaction(gs, sourcePlayer, amount, { damagedPlayId: target.playId });
+
+  // HMW_013 Cham Syndulla — every hit that reaches here is non-combat (combat damage is applied in
+  // resolveAttack), and it has landed, so it is "damage dealt" to the target's controller.
+  QueueChamSyndullaReaction(gs, target.controller, { damagedPlayId: target.playId });
 }
 
 /**
@@ -2662,6 +2702,56 @@ export function QueueHeavyDamageReaction(
     context: { amount, ...hit },
     nested: true,
   });
+}
+
+/**
+ * HMW_013 Cham Syndulla — "When non-combat damage is dealt to a friendly unit or base: You may
+ * exhaust this leader (deployed: no cost). If you do, deal 1 damage to an enemy unit or base."
+ *
+ * Keyed on the VICTIM's controller — who dealt the damage is irrelevant, and your own card damaging
+ * your own unit counts. Called only from non-combat paths, and only once the damage has actually
+ * landed (a Shield that swallowed the instance returns earlier), so "dealt" is literal.
+ * One trigger per damaged unit or base, not per point and not per effect.
+ *
+ * Fires for the LEADER side (undeployed and ready, since exhausting it is the cost) or the DEPLOYED
+ * side (a unit in play, which pays nothing).
+ */
+export function QueueChamSyndullaReaction(
+  gs: GameState,
+  victim: PlayerId,
+  hit: { damagedPlayId?: string; damagedBasePlayer?: PlayerId },
+): void {
+  const pState = GetPlayer(gs, victim);
+  const deployedUnit = [...pState.groundArena, ...pState.spaceArena]
+    .find(u => u.cardId === "HMW_013" && !Unit.FromInterface(u).LostAbilities());
+  const leaderSide = pState.leader.cardId === "HMW_013" && !pState.leader.deployed && pState.leader.ready
+    && !LeaderAbilitiesIgnored();
+  if (!leaderSide && !deployedUnit) return;
+  gs.triggerBag.push({
+    triggerType: "non-combat-damage",
+    cardId: "HMW_013",
+    fromPlayer: victim,
+    ...(deployedUnit && { playId: deployedUnit.playId }), // playId present ⇔ the deployed side
+    context: hit,
+    nested: true,
+  });
+}
+
+/**
+ * Everything that runs once non-combat damage has actually landed on a unit, for the paths that
+ * write `damage` themselves instead of going through DealDamageToUnit (spread, indirect, and the
+ * few cards that apply unpreventable damage directly).
+ */
+export function AfterNonCombatUnitDamage(
+  gs: GameState,
+  target: UnitInterface,
+  amount: number,
+  sourcePlayer?: PlayerId,
+): void {
+  MarkUnitDamaged(gs, target.playId);
+  QueueRancorKeeperReaction(gs, Unit.FromInterface(target));
+  QueueHeavyDamageReaction(gs, sourcePlayer, amount, { damagedPlayId: target.playId });
+  QueueChamSyndullaReaction(gs, target.controller, { damagedPlayId: target.playId });
 }
 
 export function QueueWhenBaseDamagedReaction(gs: GameState, targetPlayer: PlayerId, amount: number): void {

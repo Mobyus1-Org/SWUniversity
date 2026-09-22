@@ -118,6 +118,8 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "ASH_015", // Emperor Palpatine — According to My Design
   "ASH_008", // Moff Gideon — Indomitable Warlord
   "HMW_001", // Asajj Ventress — No Time For Regret
+  "HMW_005", // Jar Jar Binks — Bombad General
+  "HMW_008", // General Grievous — Separatist Warlord
   "HMW_009", // Chewbacca — Relentless Rebel
   "HMW_003", // Doctor Hemlock — Emotion Has No Place Here
   "HMW_010", // Tarfful — Fighting from the Shadowlands
@@ -871,6 +873,15 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     ((resolutionNeeded.needsMultiple ?? false) || (resolutionNeeded.maxTargets ?? 1) > 1);
   const isMultiSelectHand = isMultiSelectTarget && resolutionNeeded?.type === "Target"
     && resolutionNeeded.fromZones?.includes("Hand") && isOwnHandTarget(resolutionNeeded);
+
+  const isOptionalSingleTarget = resolutionNeeded?.type === "Target" && !!resolutionNeeded.optional && !isMultiSelectTarget;
+
+  /** Declines an optional pick: an empty selection, in the shape the prompt expects. */
+  const handleChooseNothing = React.useCallback(() => {
+    if (isResolving || resolutionNeeded?.type !== "Target") return;
+    const handPick = resolutionNeeded.fromZones?.includes("Hand");
+    void sendDispatch(createDispatch("choose-target", handPick ? { targetIndices: [] } : { targetPlayIds: [] }));
+  }, [isResolving, resolutionNeeded, sendDispatch]);
 
   const handleConfirmTargets = React.useCallback(() => {
     if (isResolving) return;
@@ -2372,7 +2383,15 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       </button>
     </div> : null}
 
-    {resolutionNeeded && !hasPrompt ? <div className={`fixed left-1/2 z-40 w-[min(90vw,42rem)] -translate-x-1/2 rounded-xl border border-white/15 bg-black/80 px-5 py-3 text-center text-sm text-white/90 shadow-2xl backdrop-blur-sm transition-all ${isMultiSelectTarget ? "bottom-20" : "bottom-5"}`}>
+    {/* An optional single pick (e.g. HMW_008 "play a unit from your hand") may be declined. */}
+    {isOptionalSingleTarget ? <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-xl border border-white/15 bg-[rgba(8,12,26,0.97)] px-5 py-3 shadow-2xl">
+      <button type="button" disabled={isResolving} onClick={handleChooseNothing}
+        className="rounded-lg border border-white/15 bg-white/10 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40">
+        Choose nothing
+      </button>
+    </div> : null}
+
+    {resolutionNeeded && !hasPrompt ? <div className={`fixed left-1/2 z-40 w-[min(90vw,42rem)] -translate-x-1/2 rounded-xl border border-white/15 bg-black/80 px-5 py-3 text-center text-sm text-white/90 shadow-2xl backdrop-blur-sm transition-all ${isMultiSelectTarget || isOptionalSingleTarget ? "bottom-20" : "bottom-5"}`}>
       {formatStatus(status, resolutionNeeded)}
     </div> : null}
 

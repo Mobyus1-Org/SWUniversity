@@ -291,6 +291,10 @@ export interface PlayFromHandPending {
   costReduction?: number;
   /** Hand indices that may be chosen, when only some cards qualify (JTL_155: Vehicle units). */
   eligibleHandIndices?: number[];
+  /** An empty selection declines ("Choose nothing") instead of being rejected. */
+  optional?: boolean;
+  /** HMW_008 General Grievous: how many unit plays are left in this ability, this one included. */
+  remainingPlays?: number;
   /** LOF_016 Qui-Gon Jinn: the played unit's printed cost must be at most this (cost < returned unit). */
   maxCost?: number;
   /** LOF_016 Qui-Gon Jinn: the played unit must NOT have this aspect (non-Villainy). */

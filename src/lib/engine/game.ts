@@ -75,6 +75,12 @@ export interface GameState {
     /** playIds of units that took damage this phase (e.g. ASH_188 Galvanized Leap). */
     unitsDamagedThisPhase: string[];
     /**
+     * Players who GAVE a token upgrade (Shield, Experience, Advantage, Weakness…) to a unit this
+     * phase — HMW_005 Jar Jar Binks. Recorded by GiveTokenUpgrade (token-helpers) for the player
+     * whose effect gave it, which is not always the unit's controller.
+     */
+    tokenUpgradesGivenThisPhase: PlayerId[];
+    /**
      * Cards each player has drawn this phase (e.g. LAW_051 Beilert Valance scales its damage off
      * this). Incremented wherever a card actually reaches hand, which is more than one place —
      * see DrawCardForPlayer and the deck-search draw route.

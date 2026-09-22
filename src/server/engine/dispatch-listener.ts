@@ -55,7 +55,7 @@ import type {
   ResolutionRequest,
   UseAbilityDispatchData,
 } from "@/lib/engine/message-types";
-import { aspectPenalty, CardIsPlayable, discountedPlayCost, JumpToLightspeedMarkerIndex, JUMP_TO_LIGHTSPEED_FREE, effectiveSmuggleCost, spendableFor, playCost, palpatinesReturnCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks, onlyHopeCost, omegaWaivesAspectPenalty, HostDependentUpgradeCost, DiscardPlayPermission } from "@/server/engine/card-playability";
+import { aspectPenalty, CardIsPlayable, PlayableUnitHandIndices, discountedPlayCost, JumpToLightspeedMarkerIndex, JUMP_TO_LIGHTSPEED_FREE, effectiveSmuggleCost, spendableFor, playCost, palpatinesReturnCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks, onlyHopeCost, omegaWaivesAspectPenalty, HostDependentUpgradeCost, DiscardPlayPermission } from "@/server/engine/card-playability";
 import type { Game, GameState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import type { DealtHeavyDamageContext } from "@/lib/engine/trigger-types";
@@ -120,8 +120,8 @@ import { HasPlot } from "@/server/engine/card-db/keyword-dictionaries.ts/plot";
 import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { BaseTargetId, BaseTargetPlayer } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
-import { QueueUnitEnteredPlayReaction, UnitHasWhenDefeatedAbility, UnitTraits, UnitTitle, BaseMaxHp, BaseRemainingHp, FightersReadyToAttack, IsVehicleUnitCard, CountOnAttackAbilities, DiscardCardsWithTitleFromHandAndDeck } from "@/server/engine/core-functions";
-import { CreateBeast, GiveWeaknessToken, UnitsWithoutWeaknessToken } from "@/server/engine/token-helpers";
+import { QueueUnitEnteredPlayReaction, AfterNonCombatUnitDamage, buildJarJarDamageAndHeal, UnitHasWhenDefeatedAbility, UnitTraits, UnitTitle, BaseMaxHp, BaseRemainingHp, FightersReadyToAttack, IsVehicleUnitCard, CountOnAttackAbilities, DiscardCardsWithTitleFromHandAndDeck } from "@/server/engine/core-functions";
+import { CreateBeast, GiveTokenUpgrade, PlayerGaveTokenUpgradeThisPhase, GiveWeaknessToken, UnitsWithoutWeaknessToken } from "@/server/engine/token-helpers";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, UnitImmuneToEnemyBounce, UnitImmuneToEnemyDefeat, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget, MandoProtector, SpendMandoShield, ArenasWhereYouControlTheMostUnits } from "@/server/engine/core-functions";
@@ -316,7 +316,7 @@ function resolveChooseOne(
         HealBaseForPlayer(game, pending.player, 5, log, "ASH_257");
       } else {
         const token257 = CreateMandalorianToken(game, pending.player, log, "ASH_257");
-        GiveAdvantageTokens(game, token257, 1, log, "ASH_257");
+        GiveAdvantageTokens(game, token257, 1, log, pending.player, "ASH_257");
       }
       break;
     case "JTL_131": { // Turbolaser Salvo — the arena is chosen; now the friendly space unit that fires.
@@ -893,7 +893,7 @@ function payForExperienceTokens(
   if (!Number.isFinite(declared) || declared <= 0) return;
   const { resourcesExhausted } = payResources(game, pending.player, declared, log, pending.cardId);
   const target = GetUnitByPlayId(game, String(pending.data?.targetPlayId ?? ""));
-  if (target) GiveExperienceTokens(game, target, resourcesExhausted, log, pending.cardId);
+  if (target) GiveExperienceTokens(game, target, resourcesExhausted, log, pending.player, pending.cardId);
 }
 
 // ---------------------------------------------------------------------------
@@ -1491,8 +1491,8 @@ function pushEventToDiscard(game: GameState, player: PlayerId, cardId: string): 
   return discarded.playId;
 }
 
-function dealBaseDamage(game: GameState, player: PlayerId, amount: number, byPlayer?: PlayerId): void {
-  DealDamageToBase(game, player, amount, byPlayer);
+function dealBaseDamage(game: GameState, player: PlayerId, amount: number, byPlayer?: PlayerId, combat = false): void {
+  DealDamageToBase(game, player, amount, byPlayer, combat);
 }
 
 /**
@@ -1937,7 +1937,7 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
   if (trigger.triggerType === "shielded" && trigger.playId) {
     const unit = GetUnitByPlayId(game, trigger.playId);
     if (unit) {
-      unit.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: trigger.fromPlayer, controller: trigger.fromPlayer });
+      GiveTokenUpgrade(game, unit, "SOR_T02", trigger.fromPlayer);
       log.push(`Shielded: ${CardTitle(trigger.cardId)} enters play with a Shield token.`);
       // ASH_208 Sabine Wren reacts to upgrades attaching to her — "including from Shielded".
       const sabine208 = sabineWrenAttachReaction(game, unit);
@@ -2018,6 +2018,28 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
     }
   }
 
+  if (trigger.triggerType === "non-combat-damage" && trigger.cardId === "HMW_013") {
+    // HMW_013 Cham Syndulla — "You may exhaust this leader (deployed: no cost). If you do, deal 1
+    // damage to an enemy unit or base." `playId` set at queue time means the DEPLOYED side
+    // triggered it; the leader side pays by exhausting, so a leader that is no longer ready lapses.
+    const deployed013 = trigger.playId !== undefined;
+    const pState013 = GetPlayer(game, trigger.fromPlayer);
+    if (!deployed013 && (!pState013.leader.ready || pState013.leader.deployed)) return null;
+    return {
+      type: "ability-option",
+      cardId: "HMW_013",
+      player: trigger.fromPlayer,
+      helperText: deployed013
+        ? "Deal 1 damage to an enemy unit or base?"
+        : `Exhaust ${CardTitle("HMW_013")} to deal 1 damage to an enemy unit or base?`,
+      yesLabel: "Deal 1",
+      noLabel: "Skip",
+      // onYes stays null so applyAbilityOptionEffect runs and can charge the exhaust.
+      onYes: null,
+      continuation: null,
+    } satisfies AbilityOptionPending;
+  }
+
   if (trigger.triggerType === "dealt-heavy-damage") {
     // HMW_011 Darth Sidious — "You may exhaust this leader (deployed: no cost). If you do, deal 1
     // damage to a DIFFERENT unit or base."
@@ -2074,7 +2096,7 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
       case "SHD_096": { // Maz Kanata — give an Experience token to herself. Not optional.
         const maz096 = GetUnitByPlayId(game, trigger.playId!);
         if (!maz096) return null; // she already left play
-        maz096.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: maz096.owner, controller: maz096.controller });
+        GiveTokenUpgrade(game, maz096, "SOR_T01", trigger.fromPlayer);
         log.push(`${CardTitle("SHD_096")}: gained an Experience token.`);
         return null;
       }
@@ -2216,7 +2238,7 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
         if (!greefUnit) return null;
         const greefLeader = GetPlayer(game, trigger.fromPlayer).leader;
         if (greefLeader.deployed) {
-          GiveAdvantageTokens(game, Unit.FromInterface(greefUnit), 1, log, "ASH_017");
+          GiveAdvantageTokens(game, Unit.FromInterface(greefUnit), 1, log, trigger.fromPlayer, "ASH_017");
           return null;
         }
         if (!greefLeader.ready) return null; // already spent this arrival window
@@ -2411,7 +2433,7 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
   if (trigger.triggerType === "when-base-damaged") {
     if (trigger.cardId === "ASH_204" && trigger.playId) { // Blade Three — give itself an Advantage token.
       const blade204 = GetUnitByPlayId(game, trigger.playId);
-      if (blade204) GiveAdvantageTokens(game, blade204, 1, log, "ASH_204");
+      if (blade204) GiveAdvantageTokens(game, blade204, 1, log, trigger.fromPlayer, "ASH_204");
     }
     return null;
   }
@@ -3153,7 +3175,7 @@ function applyCombatDamageToBaseAutoEffects(
   // ASH_144 Vane's Snub Fighter — reacts to ANY friendly unit's attack, not only its own.
   const vane144 = GetUnitsForPlayer(attacker.controller)
     .find(u => u.cardId === "ASH_144" && !Unit.FromInterface(u).LostAbilities());
-  if (vane144) GiveAdvantageTokens(game, vane144, 1, log, "ASH_144");
+  if (vane144) GiveAdvantageTokens(game, vane144, 1, log, attacker.controller, "ASH_144");
 
   // ASH_031 Hera Syndulla (Renegade General) — "When Attack Ends: If this unit dealt combat damage
   // to a base, heal THAT MUCH damage from your base." Only her own attack counts, and only the
@@ -3283,7 +3305,7 @@ function resolveAttack(
   const attackerName = CardTitle(attacker.cardId);
 
   if (target.type === "base") {
-    dealBaseDamage(game, target.player, atkPower, attacker.controller);
+    dealBaseDamage(game, target.player, atkPower, attacker.controller, true); // combat
     log.push(`${attackerName} attacked the base for ${atkPower} damage.`);
     const willSacrifice = game.currentEffects.some(
       e => e.cardId === "SOR_150_sacrifice" && e.targetPlayId === attacker.playId,
@@ -3331,7 +3353,7 @@ function resolveAttack(
         // HasOverwhelm may throw if the unit isn't in the singleton (test setup); treat as none.
       }
       if (overwhelm && atkPower > 0) {
-        dealBaseDamage(game, GetOtherPlayer(attacker.controller), atkPower);
+        dealBaseDamage(game, GetOtherPlayer(attacker.controller), atkPower, undefined, true); // combat (Overwhelm, defender already gone)
         log.push(`Overwhelm: ${atkPower} excess damage dealt to the base (defender already defeated).`);
         // CR 8.7.f — all of it is excess, and excess dealt to a base is combat damage to that base.
         const stayOnTargetF = game.currentEffects.some(
@@ -3505,7 +3527,7 @@ function resolveAttack(
         )
       ) {
         if (excessDamage > 0) {
-          dealBaseDamage(game, GetOtherPlayer(attacker.controller), excessDamage);
+          dealBaseDamage(game, GetOtherPlayer(attacker.controller), excessDamage, undefined, true); // combat (Overwhelm excess, CR 7.5.7.d)
           log.push(`Overwhelm: ${excessDamage} excess damage dealt to the base.`);
           overwhelmSpill = excessDamage;
         }
@@ -3772,7 +3794,7 @@ function attackerOwnWhenAttackEnds(
   for (const upgrade of attacker.upgrades) {
     switch (upgrade.cardId) {
       case "ASH_180": { // Bokken Saber — grants "When Attack Ends: Give an Advantage token to this unit."
-        GiveAdvantageTokens(game, attacker, 1, GetGame()?.gameLog ?? [], "ASH_180");
+        GiveAdvantageTokens(game, attacker, 1, GetGame()?.gameLog ?? [], attacker.controller, "ASH_180");
         break;
       }
       case "ASH_085": { // Grav Charge — "When attached unit's attack ends: Deal 4 damage to it and
@@ -3927,12 +3949,7 @@ function innateWhenAttackEnds(
     case "ASH_223": { // Halo — "When Attack Ends: If the defending unit was defeated, give a Shield
                       // token to this unit."
       if (defDefeated) {
-        attacker.upgrades.push({
-          cardId: "SOR_T02",
-          playId: nextPlayId(game),
-          owner: attacker.controller,
-          controller: attacker.controller,
-        });
+        GiveTokenUpgrade(game, attacker, "SOR_T02", attacker.controller);
         log.push(`${CardTitle("ASH_223")}: gave a Shield token to ${CardTitle(attacker.cardId)}.`);
       }
       return continuation;
@@ -3940,7 +3957,7 @@ function innateWhenAttackEnds(
     case "LAW_034": { // Chewbacca — "When Attack Ends: If the defending unit was defeated, give an
                       // Experience token to this unit and heal 3 damage from him."
       if (defDefeated) {
-        GiveExperienceTokens(game, attacker, 1, log, "LAW_034");
+        GiveExperienceTokens(game, attacker, 1, log, attacker.controller, "LAW_034");
         HealUnit(game, attacker, 3);
         log.push(`${CardTitle("LAW_034")}: healed 3 damage from ${CardTitle(attacker.cardId)}.`);
       }
@@ -4320,11 +4337,17 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         helperText: "Which Triggers Should Resolve First?",
         options: ["Mine", "Theirs"],
       } satisfies NeedsOption;
-    case "play-from-hand":
+    case "play-from-hand": {
+      // HMW_008's offers are worked out when shown — the previous play has just spent resources.
+      const indices = pending.cardId === "HMW_008"
+        ? PlayableUnitHandIndices(game, pending.player)
+        : pending.eligibleHandIndices;
       return {
         type: "Target", fromZones: ["Hand"], handOwner: pending.player,
-        ...(pending.eligibleHandIndices ? { fromIndices: pending.eligibleHandIndices } : {}),
+        ...(indices ? { fromIndices: indices } : {}),
+        ...(pending.optional ? { optional: true } : {}),
       } satisfies NeedsTarget;
+    }
     case "return-from-discard":
       return {
         type: "Target",
@@ -6658,7 +6681,7 @@ function handleChooseTarget(
       }
       for (const id of chosen205) {
         const target205 = GetUnitByPlayId(game, id);
-        if (target205) GiveAdvantageTokens(game, target205, 1, log, "ASH_205");
+        if (target205) GiveAdvantageTokens(game, target205, 1, log, pending.player!, "ASH_205");
       }
       const next205 = pending.continuation ?? null;
       if (next205?.type === "resolve-attack") return handleResolveAttack(game, log, next205);
@@ -7225,12 +7248,7 @@ function handleChooseTarget(
       for (const playId of chosen) {
         const target047 = GetUnitByPlayId(game, playId);
         if (!target047) continue;
-        target047.upgrades.push({
-          cardId: "SOR_T02",
-          playId: nextPlayId(game),
-          owner: target047.owner,
-          controller: target047.controller,
-        });
+        GiveTokenUpgrade(game, target047, "SOR_T02", pending.player);
       }
       log.push(`${CardTitle("SHD_047")}: gave a Shield token to ${chosen.length} Mandalorian unit(s).`);
       updateDefeatedPlayers(game);
@@ -7266,7 +7284,7 @@ function handleChooseTarget(
     for (const playId of chosen) {
       const target = GetUnitByPlayId(game, playId);
       if (target) {
-        target.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: target.owner, controller: target.controller });
+        GiveTokenUpgrade(game, target, "SOR_T01", pending.player);
         gifted.push(CardTitle(target.cardId) ?? target.cardId);
       }
     }
@@ -7546,7 +7564,7 @@ function handleChooseTarget(
       const pHand035 = GetPlayer(game, pending.player).hand;
       const revealedNames = chosenIndices.map(i => CardTitle(pHand035[i]?.cardId ?? "")).filter(Boolean);
       for (let i = 0; i < chosenIndices.length; i++) {
-        unit035.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: unit035.owner, controller: unit035.controller });
+        GiveTokenUpgrade(game, unit035, "SOR_T01", pending.player);
       }
       log.push(`${CardTitle(pending.cardId)}: revealed ${revealedNames.join(", ")} — gained ${chosenIndices.length} Experience token(s).`);
     } else if (chosenIndices.length === 0) {
@@ -7884,19 +7902,14 @@ function handleChooseTarget(
     // SHD_073 Mandalorian Armor: When Played — if attached unit is Mandalorian, give Shield.
     if (pending.upgradeCardId === "SHD_073") {
       if (TraitContains(targetUnit.cardId, "Mandalorian", pending.player, targetUnit.playId)) {
-        targetUnit.upgrades.push({
-          cardId: "SOR_T02",
-          playId: nextPlayId(game),
-          owner: pending.player,
-          controller: pending.player,
-        });
+        GiveTokenUpgrade(game, targetUnit, "SOR_T02", pending.player);
         log.push(`Mandalorian Armor: Shield token given to ${CardTitle(targetUnit.cardId)}.`);
       }
     }
 
     // ASH_086 Durasteel Plating: When Played — give a Shield token to the attached unit.
     if (pending.upgradeCardId === "ASH_086") {
-      targetUnit.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: targetUnit.owner, controller: targetUnit.controller });
+      GiveTokenUpgrade(game, targetUnit, "SOR_T02", pending.player);
       log.push(`${CardTitle("ASH_086")}: Shield token given to ${CardTitle(targetUnit.cardId)}.`);
     }
 
@@ -7922,14 +7935,14 @@ function handleChooseTarget(
     // upgrade on it not named Advantage (including this one, which is already attached above).
     if (pending.upgradeCardId === "ASH_182") {
       const nonAdvantageCount = targetUnit.upgrades.filter(u => u.cardId !== "ASH_T02").length;
-      if (nonAdvantageCount > 0) GiveAdvantageTokens(game, targetUnit, nonAdvantageCount, log, "ASH_182");
+      if (nonAdvantageCount > 0) GiveAdvantageTokens(game, targetUnit, nonAdvantageCount, log, pending.player, "ASH_182");
     }
 
     // SOR_053 Luke's Lightsaber: When Played — if attached unit is Luke Skywalker, heal all damage and give Shield.
     if (pending.upgradeCardId === "SOR_053") {
       if (CardTitle(targetUnit.cardId) === "Luke Skywalker") {
         HealUnit(game, targetUnit, targetUnit.damage);
-        targetUnit.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: targetUnit.owner, controller: targetUnit.controller });
+        GiveTokenUpgrade(game, targetUnit, "SOR_T02", pending.player);
         log.push(`Luke's Lightsaber: healed all damage from ${CardTitle(targetUnit.cardId)} and gave a Shield token.`);
       }
     }
@@ -8120,6 +8133,16 @@ function handleChooseTarget(
 
   if (pending.type === "play-from-hand") {
     const idx = data.targetIndices?.[0];
+    // "Choose nothing" on an optional play ends it; whatever came next carries on.
+    if (idx == null && pending.optional) {
+      log.push(`Player ${pending.player} chose not to play a card.`);
+      const nextDecline = pending.continuation ?? null;
+      if (nextDecline?.type === "resolve-attack") return handleResolveAttack(game, log, nextDecline);
+      if (nextDecline) return { response: resolutionResponse(pendingToResolution(nextDecline, game)), pending: nextDecline, stateChanged: true };
+      const bagDecline = drainTriggerBag(game, log);
+      if (bagDecline) return { response: resolutionResponse(pendingToResolution(bagDecline, game)), pending: bagDecline, stateChanged: true };
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
     if (idx == null)
       return { response: invalidResponse("Choose a card from hand to play."), pending, stateChanged: false };
     const hand = GetPlayer(game, pending.player).hand;
@@ -8299,6 +8322,23 @@ function handleChooseTarget(
           return { response: invalidResponse(`Not enough resources to play ${CardTitle(cardId) ?? cardId}.`), pending, stateChanged: false };
         log.push(`Player ${pending.player} is playing ${CardTitle(cardId) ?? cardId} via ${CardTitle(pending.cardId)}${discount > 0 ? " (1 aspect penalty ignored)" : ""}.`);
         return playCardFromHand(game, log, pending.player, cardId, discount);
+      }
+      case "HMW_008": { // General Grievous — "Play 2 units from your hand (one at a time, paying their
+                        // costs)." The next offer waits until this unit has fully resolved (its own
+                        // When Played included), and is worked out then.
+        if (CardType(cardId) !== "Unit" || !CardIsPlayable(game, pending.player, cardId))
+          return { response: invalidResponse(`${CardTitle("HMW_008")}: choose a unit you can pay for.`), pending, stateChanged: false };
+        payResources(game, pending.player, playCost(game, pending.player, cardId), log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("HMW_008")}.`);
+        const played008 = completePlayCard(game, log, cardId, pending.player);
+        const left008 = (pending.remainingPlays ?? 1) - 1;
+        const next008: PlayFromHandPending | null = left008 > 0
+          ? { type: "play-from-hand", cardId: "HMW_008", player: pending.player, optional: true, remainingPlays: left008 }
+          : null;
+        if (!next008) return played008;
+        const chained008 = played008.pending ? injectContinuation(played008.pending, next008) : next008;
+        return { response: resolutionResponse(pendingToResolution(chained008, game)), pending: chained008, stateChanged: true };
       }
       case "LOF_123": { // Directed by the Force — "play a unit from your hand (paying its cost)".
                         // Unrestricted: any Unit, full cost. ASH_002 Fennec, JTL_003 Lando and
@@ -8815,10 +8855,10 @@ function handleChooseTarget(
       if (!unit) continue;
       if (givesWeakness) {
         for (let i = 0; i < assignment.damage; i++) {
-          GiveWeaknessToken(game, unit, log, pending.cardId);
+          GiveWeaknessToken(game, unit, log, pending.player, pending.cardId);
         }
       } else {
-        GiveAdvantageTokens(game, unit, assignment.damage, log, pending.cardId);
+        GiveAdvantageTokens(game, unit, assignment.damage, log, pending.player, pending.cardId);
       }
     }
 
@@ -8858,7 +8898,7 @@ function handleChooseTarget(
         log.push(`${CardTitle(unit.cardId)}'s Shield token was defeated, preventing ${assignment.damage} damage.`);
       } else {
         unit.damage += assignment.damage;
-        if (assignment.damage > 0) MarkUnitDamaged(game, unit.playId);
+        if (assignment.damage > 0) AfterNonCombatUnitDamage(game, unit, assignment.damage, pending.player);
       }
     }
 
@@ -8907,7 +8947,7 @@ function handleChooseTarget(
       if (unit) {
         unit.damage += a.damage;
         if (a.damage > 0) {
-          MarkUnitDamaged(game, unit.playId);
+          AfterNonCombatUnitDamage(game, unit, a.damage, pending.sourcePlayer);
           indirectlyDamaged.push(unit.playId);
         }
       }
@@ -9429,11 +9469,11 @@ function FriendlyUpgradePlayIds(game: GameState, player: PlayerId): string[] {
     .flatMap(u => u.upgrades.filter(upg => upg.controller === player).map(upg => upg.playId));
 }
 
-/** Give a Shield token (SOR_T02) to the unit identified by playId. */
-function giveShieldToUnit(game: GameState, playId: string): Unit | null {
+/** Give a Shield token (SOR_T02) to the unit identified by playId. `giver` is who gives it. */
+function giveShieldToUnit(game: GameState, playId: string, giver: PlayerId): Unit | null {
   const unit = GetUnitByPlayId(game, playId);
   if (unit) {
-    unit.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: unit.owner, controller: unit.controller });
+    GiveTokenUpgrade(game, unit, "SOR_T02", giver);
   }
   return unit ?? null;
 }
@@ -9524,7 +9564,7 @@ function applyAbilityOptionEffect(
       greef017.ready = false;
       const unit017 = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (unit017) {
-        GiveAdvantageTokens(game, Unit.FromInterface(unit017), 1, log, "ASH_017");
+        GiveAdvantageTokens(game, Unit.FromInterface(unit017), 1, log, pending.player!, "ASH_017");
       }
       return pending.continuation ?? null;
     }
@@ -9714,7 +9754,7 @@ function applyAbilityOptionEffect(
       const leader017 = GetLeaderForPlayer(pending.player!);
       if (!leader017.deployed) leader017.ready = false; // pay the "exhaust this leader" cost (front side)
       if (attacker017) {
-        attacker017.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: attacker017.owner, controller: attacker017.controller });
+        GiveTokenUpgrade(game, attacker017, "SOR_T01", pending.player!);
         log.push(`${CardTitle("LOF_017")}: gave an Experience token to ${CardTitle(attacker017.cardId)}.`);
       }
       return pending.continuation ?? null;
@@ -9782,6 +9822,22 @@ function applyAbilityOptionEffect(
         fromPlayIds: GetAllUnits(game).map(u => u.playId),
         continuation: pending.continuation ?? null,
       };
+    }
+    case "HMW_013": { // Cham Syndulla Yes — the leader side pays by exhausting; deployed is free.
+      const p013 = GetPlayer(game, pending.player!);
+      if (!p013.leader.deployed) {
+        p013.leader.ready = false;
+        log.push(`${CardTitle("HMW_013")}: exhausted to deal 1 damage.`);
+      }
+      // "An ENEMY unit or base" — the opponent's units and base only.
+      const enemy013 = GetOtherPlayer(pending.player!);
+      return {
+        type: "ability-target",
+        cardId: "HMW_013",
+        player: pending.player,
+        fromPlayIds: [...GetUnitsForPlayer(enemy013).map(u => u.playId), `player${enemy013}.base`],
+        continuation: pending.continuation ?? null,
+      } satisfies AbilityTargetPending;
     }
     case "HMW_011": { // Darth Sidious Yes — the leader side pays by exhausting; deployed is free.
       const p011 = GetPlayer(game, pending.player!);
@@ -10034,8 +10090,8 @@ function applyAbilityOptionEffect(
       if (!UseTheForce(pending.player!, log, "LOF_249")) {
         return pending.continuation ?? null; // no token (shouldn't happen — prompt was gated)
       }
-      luke249.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: luke249.owner, controller: luke249.controller });
-      giveShieldToUnit(game, luke249.playId);
+      GiveTokenUpgrade(game, luke249, "SOR_T01", pending.player!);
+      giveShieldToUnit(game, luke249.playId, pending.player!);
       log.push(`${CardTitle("LOF_249")}: used the Force — gained an Experience token and a Shield token.`);
       return pending.continuation ?? null;
     }
@@ -10043,8 +10099,8 @@ function applyAbilityOptionEffect(
       const unit077 = GetUnitByPlayId(game, pending.sourcePlayId!);
       if (unit077) {
         payResources(game, unit077.controller, 2, log, "TS26_77");
-        unit077.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: unit077.owner, controller: unit077.controller });
-        unit077.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game), owner: unit077.owner, controller: unit077.controller });
+        GiveTokenUpgrade(game, unit077, "SOR_T01", unit077.controller);
+        GiveTokenUpgrade(game, unit077, "SOR_T02", unit077.controller);
         log.push(`${CardTitle("TS26_77")}: paid 2 resources — gained an Experience token and a Shield token.`);
       }
       return pending.continuation ?? null;
@@ -10059,8 +10115,8 @@ function applyAbilityOptionEffect(
           pState.spaceArena.splice(spaceIdx, 1);
           pState.groundArena.push(unit);
         }
-        unit.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: unit.owner, controller: unit.controller });
-        unit.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game), owner: unit.owner, controller: unit.controller });
+        GiveTokenUpgrade(game, unit, "SOR_T01", unit.controller);
+        GiveTokenUpgrade(game, unit, "SOR_T01", unit.controller);
         log.push(`${CardTitle(unit.cardId)} moved to the ground arena and gained 2 Experience tokens.`);
       }
       return pending.continuation ?? null;
@@ -10246,7 +10302,7 @@ function applyAbilityOptionDeclineEffect(
       return defeatUnitsInOrder(game, log, defeat089, pending.continuation ?? null);
     }
     case "SHD_197": { // L3-37 No: "If you don't [rescue], give a Shield token to this unit."
-      const l337 = giveShieldToUnit(game, pending.sourcePlayId!);
+      const l337 = giveShieldToUnit(game, pending.sourcePlayId!, pending.player!);
       if (l337) log.push(`${CardTitle("SHD_197")}: gave a Shield token to ${CardTitle(l337.cardId)}.`);
       return pending.continuation ?? null;
     }
@@ -11320,7 +11376,9 @@ function startRegroupPhase(game: GameState, log: string[]): PendingResolution | 
   if (game.defeatedPlayers.length > 0) return null;
   const regroupPending = executeRegroupDraw(game, log, ids => resolveStartOfRegroup(game, log, ids));
   updateDefeatedPlayers(game);
-  return regroupPending;
+  // The draw step itself can queue reactions (the empty-deck penalty is non-combat damage to your
+  // own base — HMW_013 Cham Syndulla), so anything bagged there is surfaced too.
+  return regroupPending ?? drainTriggerBag(game, log);
 }
 
 /** Advances the turn. Returns a pending only when the regroup phase began and needs a decision. */
@@ -11456,6 +11514,12 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "LOF_012": // Rey — If you control 7 or more resources.
       return p.resources.length >= 7;
+    case "HMW_013": // Cham Syndulla (Hammer of Ryloth) — If you control 6 or more resources.
+    case "HMW_005": // Jar Jar Binks — If you control 6 or more resources.
+    case "HMW_007": // Darth Vader (Might of the Empire) — If you control 6 or more resources.
+      return p.resources.length >= 6;
+    case "HMW_008": // General Grievous (Separatist Warlord) — If you control 5 or more resources.
+      return p.resources.length >= 5;
     case "HMW_004": // Grand Moff Tarkin — If you control 9 or more resources.
       return p.resources.length >= 9;
     case "JTL_014": // Admiral Trench — Action [3 resources, Exhaust]: If you control 6 or more resources.
@@ -11997,6 +12061,22 @@ function resolveActionAbility(
       log.push(`${CardTitle("SOR_002")}: healed 1 damage from your base.`);
       return null;
     }
+    case "HMW_008": { // General Grievous — Action [Exhaust]: Play 2 units from your hand (one at a
+                      // time, paying their costs). Nothing playable: the exhaust was the whole action.
+      if (PlayableUnitHandIndices(game, player).length === 0) {
+        log.push(`${CardTitle("HMW_008")}: no unit in hand to play.`);
+        return null;
+      }
+      return { type: "play-from-hand", cardId: "HMW_008", player, optional: true, remainingPlays: 2 };
+    }
+    case "HMW_005": // Jar Jar Binks — Action [1 resource, Exhaust]: If you gave a token upgrade to a
+                    // unit this phase, deal 1 damage to a unit and heal 1 damage from a base.
+                    // The cost is already paid: an unmet condition only soft-passes.
+      if (!PlayerGaveTokenUpgradeThisPhase(game, player)) {
+        log.push(`${CardTitle("HMW_005")}: no token upgrade given this phase — soft pass.`);
+        return null;
+      }
+      return buildJarJarDamageAndHeal(player, null);
     case "SOR_010": { // Darth Vader — Action [1 resource, exhaust]: If you played a [Villainy] card
                       // this phase, deal 1 damage to a unit and 1 damage to a base.
       const playedVillainy = game.roundState.cardsPlayedThisPhase.some(
@@ -13395,14 +13475,31 @@ function applyAbilityEffect(
       }
       break;
     }
-    case "HMW_011": { // Darth Sidious — 1 damage to the chosen different unit or base.
-      if (!targetPlayId) break;
-      const basePlayer011 = BaseTargetPlayer(targetPlayId);
-      if (basePlayer011 !== null) {
-        dealBaseDamage(game.currentGameState, basePlayer011, 1, pending.player);
-        game.gameLog.push(`${CardTitle("HMW_011")}: dealt 1 damage to Player ${basePlayer011}'s base.`);
+    case "HMW_013": { // Cham Syndulla — 1 damage to the chosen enemy unit or the enemy base.
+      // A base target may arrive either as a "playerN.base" playId or (from the UI) as the
+      // targetIsBase flag + targetBasePlayer. Honour both, or bases become untargetable.
+      const basePlayer013 = BaseTargetPlayer(targetPlayId ?? "")
+        ?? (targetIsBase ? targetBasePlayer ?? GetOtherPlayer(pending.player!) : null);
+      if (basePlayer013 !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer013, 1, pending.player);
+        game.gameLog.push(`${CardTitle("HMW_013")}: dealt 1 damage to Player ${basePlayer013}'s base.`);
         break;
       }
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "HMW_013", targetPlayId, 1, game.gameLog, pending.player);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "HMW_011": { // Darth Sidious — 1 damage to the chosen different unit or base.
+      // Same dual calling convention as HMW_013: a "playerN.base" playId, or the UI's
+      // targetIsBase + targetBasePlayer pair.
+      const basePlayer011a = BaseTargetPlayer(targetPlayId ?? "")
+        ?? (targetIsBase ? targetBasePlayer ?? null : null);
+      if (basePlayer011a !== null) {
+        dealBaseDamage(game.currentGameState, basePlayer011a, 1, pending.player);
+        game.gameLog.push(`${CardTitle("HMW_011")}: dealt 1 damage to Player ${basePlayer011a}'s base.`);
+        break;
+      }
+      if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, "HMW_011", targetPlayId, 1, game.gameLog, pending.player);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
@@ -13468,12 +13565,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target035 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target035) {
-        target035.upgrades.push({
-          cardId: "SOR_T02",
-          playId: nextPlayId(game.currentGameState),
-          owner: target035.owner,
-          controller: target035.controller,
-        });
+        GiveTokenUpgrade(game.currentGameState, target035, "SOR_T02", pending.player!);
         game.gameLog.push(`${CardTitle("HMW_035")}: Shield token given to ${CardTitle(target035.cardId)}.`);
       }
       return pending.continuation ?? null;
@@ -13582,7 +13674,7 @@ function applyAbilityEffect(
     case "SHD_258": { // Mandalorian Warrior — all three grant one Experience token.
       if (!targetPlayId) break;
       const xpTarget = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (xpTarget) GiveExperienceTokens(game.currentGameState, xpTarget, 1, game.gameLog, pending.cardId);
+      if (xpTarget) GiveExperienceTokens(game.currentGameState, xpTarget, 1, game.gameLog, pending.player!, pending.cardId);
       return pending.continuation ?? null;
     }
     case "HMW_037_heal": { // Bacta Tank — heal up to 3 from the chosen non-Vehicle unit.
@@ -13607,7 +13699,7 @@ function applyAbilityEffect(
       const target003 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target003) break;
       const source003 = pending.cardId === "HMW_059" ? "HMW_059" : "HMW_003";
-      GiveWeaknessToken(game.currentGameState, target003, game.gameLog, source003);
+      GiveWeaknessToken(game.currentGameState, target003, game.gameLog, pending.player!, source003);
       // −1 HP can be lethal, and no other upgrade in the engine lowers its host's HP on attach.
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
@@ -13732,13 +13824,13 @@ function applyAbilityEffect(
                       // and When Defeated (Aggression) halves; only the eligible list differs.
       if (!targetPlayId) break;
       const target059 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target059) GiveExperienceTokens(game.currentGameState, target059, 1, game.gameLog, "LAW_059");
+      if (target059) GiveExperienceTokens(game.currentGameState, target059, 1, game.gameLog, pending.player!, "LAW_059");
       return pending.continuation ?? null;
     }
     case "TS26_09": { // First Battle Memorial — one Experience token per prompt in the chain.
       if (!targetPlayId) break;
       const target09 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target09) GiveExperienceTokens(game.currentGameState, target09, 1, game.gameLog, "TS26_09");
+      if (target09) GiveExperienceTokens(game.currentGameState, target09, 1, game.gameLog, pending.player!, "TS26_09");
       return pending.continuation ?? null;
     }
     case "SEC_040": { // Emergency Powers — the non-leader unit is chosen; now ask how many
@@ -13865,7 +13957,7 @@ function applyAbilityEffect(
       const t099 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (t099) {
         for (let i = 0; i < 2; i++) {
-          t099.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: t099.owner, controller: t099.controller });
+          GiveTokenUpgrade(game.currentGameState, t099, "SOR_T01", pending.player!);
         }
         game.gameLog.push(`${CardTitle("SHD_099")}: gave 2 Experience tokens to ${CardTitle(t099.cardId)}.`);
       }
@@ -13875,7 +13967,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const t086 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (t086) {
-        t086.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: t086.owner, controller: t086.controller });
+        GiveTokenUpgrade(game.currentGameState, t086, "SOR_T01", pending.player!);
         game.gameLog.push(`${CardTitle("JTL_086")}: gave an Experience token to ${CardTitle(t086.cardId)}.`);
       }
       break;
@@ -14062,7 +14154,7 @@ function applyAbilityEffect(
     }
     case "JTL_076": { // Covering the Wing — a Shield token to the chosen other unit.
       if (!targetPlayId) break;
-      const shielded076 = giveShieldToUnit(game.currentGameState, targetPlayId);
+      const shielded076 = giveShieldToUnit(game.currentGameState, targetPlayId, pending.player!);
       if (shielded076) game.gameLog.push(`${CardTitle("JTL_076")}: gave a Shield token to ${CardTitle(shielded076.cardId)}.`);
       break;
     }
@@ -14083,7 +14175,7 @@ function applyAbilityEffect(
     case "JTL_091_xp": { // Apology Accepted — the optional 2 Experience tokens.
       if (!targetPlayId) break;
       const unit091 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (unit091) GiveExperienceTokens(game.currentGameState, unit091, 2, game.gameLog, "JTL_091");
+      if (unit091) GiveExperienceTokens(game.currentGameState, unit091, 2, game.gameLog, pending.player!, "JTL_091");
       break;
     }
     case "JTL_062": { // Silver Angel — 1 damage to the chosen space unit.
@@ -14185,7 +14277,7 @@ function applyAbilityEffect(
       // "Then, give a Shield token to it" — only if it survived the damage.
       const t002 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (t002) {
-        giveShieldToUnit(game.currentGameState, targetPlayId);
+        giveShieldToUnit(game.currentGameState, targetPlayId, pending.player!);
         game.gameLog.push(`${CardTitle("SHD_002")}: gave a Shield token to ${CardTitle(t002.cardId)}.`);
       }
       break;
@@ -14210,7 +14302,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const t007 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (t007) {
-        t007.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: t007.owner, controller: t007.controller });
+        GiveTokenUpgrade(game.currentGameState, t007, "SOR_T01", pending.player!);
         game.gameLog.push(`${CardTitle("SOR_007")}: gave an Experience token to ${CardTitle(t007.cardId)}.`);
       }
       break;
@@ -14219,7 +14311,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const t004 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (t004) {
-        t004.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: t004.owner, controller: t004.controller });
+        GiveTokenUpgrade(game.currentGameState, t004, "SOR_T01", pending.player!);
         game.gameLog.push(`${CardTitle("SHD_004")}: gave an Experience token to ${CardTitle(t004.cardId)}.`);
       }
       break;
@@ -14244,14 +14336,14 @@ function applyAbilityEffect(
       const defeatPend003 = defeatUpgradeByPlayId(
         game.currentGameState, game.gameLog, targetPlayId, CardTitle("SHD_003") ?? "Finn", null, pending.player,
       );
-      giveShieldToUnit(game.currentGameState, host003.playId);
+      giveShieldToUnit(game.currentGameState, host003.playId, pending.player!);
       game.gameLog.push(`${CardTitle("SHD_003")}: gave a Shield token to ${CardTitle(host003.cardId)}.`);
       if (defeatPend003) return defeatPend003;
       break;
     }
     case "SOR_005": { // Luke Skywalker (both sides) — give the chosen unit a Shield token.
       if (!targetPlayId) break;
-      const target005 = giveShieldToUnit(game.currentGameState, targetPlayId);
+      const target005 = giveShieldToUnit(game.currentGameState, targetPlayId, pending.player!);
       if (target005) {
         game.gameLog.push(`${CardTitle("SOR_005")}: gave a Shield token to ${CardTitle(target005.cardId)}.`);
       }
@@ -14288,12 +14380,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target005 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target005) break;
-      target005.upgrades.push({
-        cardId: "SOR_T01",
-        playId: nextPlayId(game.currentGameState),
-        owner: target005.owner,
-        controller: target005.controller,
-      });
+      GiveTokenUpgrade(game.currentGameState, target005, "SOR_T01", pending.player!);
       game.gameLog.push(`${CardTitle("SHD_005")}: Experience token given to ${CardTitle(target005.cardId)}.`);
       break;
     }
@@ -14332,12 +14419,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target004 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target004) break;
-      target004.upgrades.push({
-        cardId: "SOR_T02",
-        playId: nextPlayId(game.currentGameState),
-        owner: target004.owner,
-        controller: target004.controller,
-      });
+      GiveTokenUpgrade(game.currentGameState, target004, "SOR_T02", pending.player!);
       game.gameLog.push(`${CardTitle("LOF_004")}: Shield token placed on ${CardTitle(target004.cardId)}.`);
       break;
     }
@@ -14380,7 +14462,7 @@ function applyAbilityEffect(
       const me218 = pending.player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
       const target218s = [...me218.groundArena, ...me218.spaceArena].find(u => u.playId === targetPlayId);
       if (target218s) {
-        target218s.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target218s.owner, controller: target218s.controller });
+        GiveTokenUpgrade(game.currentGameState, target218s, "SOR_T02", pending.player!);
         game.gameLog.push(`${CardTitle("SOR_218")}: gave a Shield token to ${CardTitle(target218s.cardId)}.`);
       }
       break;
@@ -14390,8 +14472,8 @@ function applyAbilityEffect(
       const me231 = pending.player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
       const target231 = [...me231.groundArena, ...me231.spaceArena].find(u => u.playId === targetPlayId);
       if (target231) {
-        target231.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target231.owner, controller: target231.controller });
-        target231.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target231.owner, controller: target231.controller });
+        GiveTokenUpgrade(game.currentGameState, target231, "SOR_T01", pending.player!);
+        GiveTokenUpgrade(game.currentGameState, target231, "SOR_T01", pending.player!);
         game.gameLog.push(`${CardTitle("SOR_231")}: gave 2 Experience tokens to ${CardTitle(target231.cardId)}.`);
       }
       break;
@@ -14426,7 +14508,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target094 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target094) {
-        target094.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target094.owner, controller: target094.controller });
+        GiveTokenUpgrade(game.currentGameState, target094, "SOR_T01", pending.player!);
         game.gameLog.push(`${CardTitle(pending.cardId)}: gave an Experience token to ${CardTitle(target094.cardId)}.`);
       }
       break;
@@ -14435,11 +14517,11 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target055 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target055) break;
-      target055.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target055.owner, controller: target055.controller });
-      target055.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target055.owner, controller: target055.controller });
+      GiveTokenUpgrade(game.currentGameState, target055, "SOR_T01", pending.player!);
+      GiveTokenUpgrade(game.currentGameState, target055, "SOR_T01", pending.player!);
       game.gameLog.push(`${CardTitle(pending.cardId)}: gave 2 Experience tokens to ${CardTitle(target055.cardId)}.`);
       if (PlayerHasUnitWithTraitInPlay(pending.player!, "Force")) {
-        target055.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target055.owner, controller: target055.controller });
+        GiveTokenUpgrade(game.currentGameState, target055, "SOR_T02", pending.player!);
         game.gameLog.push(`${CardTitle(pending.cardId)}: gave a Shield token to ${CardTitle(target055.cardId)}.`);
       }
       return {
@@ -14608,7 +14690,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target036 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target036) {
-        target036.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target036.owner, controller: target036.controller });
+        GiveTokenUpgrade(game.currentGameState, target036, "SOR_T01", pending.player!);
         game.gameLog.push(`${CardTitle("SOR_036")}: gave an Experience token to ${CardTitle(target036.cardId)}.`);
       }
       break;
@@ -14628,7 +14710,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target082 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target082) {
-        target082.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target082.owner, controller: target082.controller });
+        GiveTokenUpgrade(game.currentGameState, target082, "SOR_T01", pending.player!);
         game.gameLog.push(`${CardTitle("LOF_082")}: gave an Experience token to ${CardTitle(target082.cardId)}.`);
       }
       break;
@@ -14637,7 +14719,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target108 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target108) {
-        target108.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target108.owner, controller: target108.controller });
+        GiveTokenUpgrade(game.currentGameState, target108, "SOR_T01", pending.player!);
         game.gameLog.push(`${CardTitle("SOR_108")}: gave an Experience token to ${CardTitle(target108.cardId)}.`);
       }
       break;
@@ -14647,7 +14729,7 @@ function applyAbilityEffect(
       if (!targetPlayId || pending.player === undefined) break;
       const target058 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target058) {
-        target058.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target058.owner, controller: target058.controller });
+        GiveTokenUpgrade(game.currentGameState, target058, "SOR_T01", pending.player!);
         game.gameLog.push(`${CardTitle("TS26_58")}: gave an Experience token to ${CardTitle(target058.cardId)}.`);
       }
       const xpCount058 = GetUnitsForPlayer(pending.player).reduce(
@@ -14820,7 +14902,7 @@ function applyAbilityEffect(
     case "ASH_254": { // Gallofree Transport — When Defeated: give 2 Advantage tokens to the chosen friendly unit.
       if (!targetPlayId) break;
       const target254 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target254) GiveAdvantageTokens(game.currentGameState, target254, 2, game.gameLog, "ASH_254");
+      if (target254) GiveAdvantageTokens(game.currentGameState, target254, 2, game.gameLog, pending.player!, "ASH_254");
       break;
     }
     case "SHD_164": { // Rhokai Gunship — When Defeated: deal 1 damage to the chosen unit or base.
@@ -14841,7 +14923,7 @@ function applyAbilityEffect(
     case "ASH_238": { // Attendant Navigator — give 2 Advantage tokens to the chosen space unit.
       if (!targetPlayId) break;
       const target238 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target238) GiveAdvantageTokens(game.currentGameState, target238, 2, game.gameLog, "ASH_238");
+      if (target238) GiveAdvantageTokens(game.currentGameState, target238, 2, game.gameLog, pending.player!, "ASH_238");
       break;
     }
     case "ASH_259": { // LEP Ratcatcher — deal 1 damage to the chosen ground unit.
@@ -14852,19 +14934,19 @@ function applyAbilityEffect(
     case "ASH_167": { // Flarestar Attack Shuttle — give an Advantage token to the chosen unit.
       if (!targetPlayId) break;
       const target167 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target167) GiveAdvantageTokens(game.currentGameState, target167, 1, game.gameLog, "ASH_167");
+      if (target167) GiveAdvantageTokens(game.currentGameState, target167, 1, game.gameLog, pending.player!, "ASH_167");
       break;
     }
     case "ASH_158": { // Han Solo — give 3 Advantage tokens to the chosen unit.
       if (!targetPlayId) break;
       const target158 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target158) GiveAdvantageTokens(game.currentGameState, target158, 3, game.gameLog, "ASH_158");
+      if (target158) GiveAdvantageTokens(game.currentGameState, target158, 3, game.gameLog, pending.player!, "ASH_158");
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "ASH_157": { // Danger Squadron Wingmen — give an Advantage token to the chosen unit.
       if (!targetPlayId) break;
       const target157 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target157) GiveAdvantageTokens(game.currentGameState, target157, 1, game.gameLog, "ASH_157");
+      if (target157) GiveAdvantageTokens(game.currentGameState, target157, 1, game.gameLog, pending.player!, "ASH_157");
       break;
     }
     case "ASH_165": { // Clan Vizsla Soldier — When Defeated: defeat the chosen upgrade.
@@ -14919,13 +15001,13 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target191 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       const amount191 = pending.cardId === "ASH_191_3" ? 3 : 2;
-      if (target191) GiveAdvantageTokens(game.currentGameState, target191, amount191, game.gameLog, "ASH_191");
+      if (target191) GiveAdvantageTokens(game.currentGameState, target191, amount191, game.gameLog, pending.player!, "ASH_191");
       break;
     }
     case "ASH_146_advantage": { // Justifier follow-up — give an Advantage token to the chosen unit.
       if (!targetPlayId) break;
       const advTarget146 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (advTarget146) GiveAdvantageTokens(game.currentGameState, advTarget146, 1, game.gameLog, "ASH_146");
+      if (advTarget146) GiveAdvantageTokens(game.currentGameState, advTarget146, 1, game.gameLog, pending.player!, "ASH_146");
       break;
     }
     case "SEC_244": { // Darth Nihilus — 3 damage to the chosen lowest-HP unit; if it was a
@@ -14938,7 +15020,7 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, "SEC_244", targetPlayId, 3, game.gameLog, pending.player);
       if (!wasVehicle244 && pending.sourcePlayId) {
         const self244 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
-        if (self244) GiveExperienceTokens(game.currentGameState, self244, 1, game.gameLog, "SEC_244");
+        if (self244) GiveExperienceTokens(game.currentGameState, self244, 1, game.gameLog, pending.player!, "SEC_244");
       }
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
@@ -15093,7 +15175,7 @@ function applyAbilityEffect(
       const nowDead176 = !wasAlready0_176 && Unit.FromInterface(target176).CurrentHP() <= 0;
       if (nowDead176 && pending.sourcePlayId) {
         const self176 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
-        if (self176) GiveAdvantageTokens(game.currentGameState, self176, 3, game.gameLog, "ASH_176");
+        if (self176) GiveAdvantageTokens(game.currentGameState, self176, 3, game.gameLog, pending.player!, "ASH_176");
       }
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
@@ -15161,13 +15243,13 @@ function applyAbilityEffect(
     case "ASH_235": { // Sense Through the Force — give 3 Advantage tokens to the chosen Force unit.
       if (!targetPlayId) break;
       const target235 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target235) GiveAdvantageTokens(game.currentGameState, target235, 3, game.gameLog, "ASH_235");
+      if (target235) GiveAdvantageTokens(game.currentGameState, target235, 3, game.gameLog, pending.player!, "ASH_235");
       break;
     }
     case "ASH_184_tokens": { // Follow Me — give 3 Advantage tokens to the chosen unit.
       if (!targetPlayId) break;
       const target184 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target184) GiveAdvantageTokens(game.currentGameState, target184, 3, game.gameLog, "ASH_184");
+      if (target184) GiveAdvantageTokens(game.currentGameState, target184, 3, game.gameLog, pending.player!, "ASH_184");
       break;
     }
     case "ASH_234": { // Masterstroke — the chosen unit attacks with +1/+0 per enemy unit in its arena.
@@ -15260,12 +15342,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target232s = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target232s) {
-        target232s.upgrades.push({
-          cardId: "SOR_T02",
-          playId: nextPlayId(game.currentGameState),
-          owner: target232s.owner,
-          controller: target232s.controller,
-        });
+        GiveTokenUpgrade(game.currentGameState, target232s, "SOR_T02", pending.player!);
         game.gameLog.push(`${CardTitle("ASH_232")}: Shield token given to ${CardTitle(target232s.cardId)}.`);
       }
       break;
@@ -15320,7 +15397,7 @@ function applyAbilityEffect(
       enemyUnit231.ready = false;
       friendlyUnit231.ready = false;
       game.gameLog.push(`${CardTitle("ASH_231")}: exhausted ${CardTitle(friendlyUnit231.cardId)} and ${CardTitle(enemyUnit231.cardId)}.`);
-      GiveAdvantageTokens(game.currentGameState, friendlyUnit231, 2, game.gameLog, "ASH_231");
+      GiveAdvantageTokens(game.currentGameState, friendlyUnit231, 2, game.gameLog, pending.player!, "ASH_231");
       break;
     }
     case "ASH_236_friendly": { // Far Far Away — bounce the friendly unit, then pick an enemy one.
@@ -15410,7 +15487,7 @@ function applyAbilityEffect(
     case "ASH_036": { // Rukh When Attack Ends: give 3 Advantage tokens to the chosen unit.
       if (!targetPlayId) break;
       const target036 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (target036) GiveAdvantageTokens(game.currentGameState, target036, 3, game.gameLog, "ASH_036");
+      if (target036) GiveAdvantageTokens(game.currentGameState, target036, 3, game.gameLog, pending.player!, "ASH_036");
       break;
     }
     case "ASH_050": { // Morgan Elsbeth When Defeated: give the chosen unit –2/–2 for this phase.
@@ -15567,6 +15644,15 @@ function applyAbilityEffect(
         game.currentGameState, game.gameLog, targetPlayId,
         CardTitle(pending.cardId), pending.continuation ?? null, pending.player,
       );
+    }
+    case "HMW_005_damage": // Jar Jar Binks — 1 damage to the chosen unit, then the heal step.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "HMW_005", targetPlayId, 1, game.gameLog, pending.player);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    case "HMW_005_heal": { // …and heal 1 damage from the chosen base (either one).
+      const base005 = BaseTargetPlayer(targetPlayId ?? "") ?? (targetIsBase ? targetBasePlayer ?? null : null);
+      if (base005 !== null) HealBaseForPlayer(game.currentGameState, base005, 1, game.gameLog, "HMW_005");
+      return pending.continuation ?? null;
     }
     case "SOR_010_leader": { // Darth Vader leader ability: 1 damage to the chosen unit…
       if (!targetPlayId) break;
@@ -16345,7 +16431,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target037 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target037) break;
-      target037.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target037.owner, controller: target037.controller });
+      GiveTokenUpgrade(game.currentGameState, target037, "SOR_T02", pending.player!);
       game.gameLog.push(`${CardTitle("LOF_037")}: Shield token placed on ${CardTitle(target037.cardId)}.`);
       break;
     }
@@ -16362,7 +16448,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target073 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target073) break;
-      target073.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target073.owner, controller: target073.controller });
+      GiveTokenUpgrade(game.currentGameState, target073, "SOR_T02", pending.player!);
       game.gameLog.push(`${CardTitle(pending.cardId)}: Shield token placed on ${CardTitle(target073.cardId)}.`);
       break;
     }
@@ -16370,8 +16456,8 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target241 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target241) break;
-      target241.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target241.owner, controller: target241.controller });
-      target241.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target241.owner, controller: target241.controller });
+      GiveTokenUpgrade(game.currentGameState, target241, "SOR_T01", pending.player!);
+      GiveTokenUpgrade(game.currentGameState, target241, "SOR_T01", pending.player!);
       game.gameLog.push(`${CardTitle(pending.cardId)}: 2 Experience tokens given to ${CardTitle(target241.cardId)}.`);
       break;
     }
@@ -16638,7 +16724,7 @@ function applyAbilityEffect(
       if (!targetPlayId || !pending.player) break;
       const marine168 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (marine168) {
-        marine168.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: marine168.owner, controller: marine168.controller });
+        GiveTokenUpgrade(game.currentGameState, marine168, "SOR_T01", pending.player!);
         game.gameLog.push(`${CardTitle("LAW_168")}: gave an Experience token to ${CardTitle(marine168.cardId)}.`);
       }
       const enemy168 = chooseEnemyForPowerDamage("LAW_168_deal", pending.player, targetPlayId, game.currentGameState, { sameArena: true });
@@ -16751,7 +16837,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target060 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target060) {
-        target060.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target060.owner, controller: target060.controller });
+        GiveTokenUpgrade(game.currentGameState, target060, "SOR_T02", pending.player!);
         game.gameLog.push(`${CardTitle("SOR_060")}: Shield token given to ${CardTitle(target060.cardId)}.`);
       }
       break;
@@ -16784,7 +16870,7 @@ function applyAbilityEffect(
       healTarget(game.currentGameState, targetPlayId, 2, game.gameLog, "SHD_046");
       const healed046 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (healed046 && !CardAspects(healed046.cardId).includes("Heroism")) {
-        giveShieldToUnit(game.currentGameState, targetPlayId);
+        giveShieldToUnit(game.currentGameState, targetPlayId, pending.player!);
         game.gameLog.push(`${CardTitle("SHD_046")}: gave a Shield token to ${CardTitle(healed046.cardId)}.`);
       }
       return pending.continuation;
@@ -16796,7 +16882,7 @@ function applyAbilityEffect(
       if (!target141) break;
       GivePowerMod("SHD_141", target141, 2, "Phase", game.gameLog);
       if (!CardAspects(target141.cardId).includes("Villainy")) {
-        GiveExperienceTokens(game.currentGameState, target141, 1, game.gameLog, "SHD_141");
+        GiveExperienceTokens(game.currentGameState, target141, 1, game.gameLog, pending.player!, "SHD_141");
       }
       return pending.continuation ?? null;
     }
@@ -16908,7 +16994,7 @@ function applyAbilityEffect(
     case "JTL_055_xp": { // You're All Clear, Kid — the optional Experience token.
       if (!targetPlayId) break;
       const unit055 = GetUnitByPlayId(game.currentGameState, targetPlayId);
-      if (unit055) GiveExperienceTokens(game.currentGameState, unit055, 1, game.gameLog, "JTL_055");
+      if (unit055) GiveExperienceTokens(game.currentGameState, unit055, 1, game.gameLog, pending.player!, "JTL_055");
       break;
     }
     case "IBH_066": // Too Strong for Blasters — heal 2 from the chosen unit.
@@ -17190,12 +17276,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target004 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target004) {
-        target004.upgrades.push({
-          cardId: "SOR_T01",
-          playId: nextPlayId(game.currentGameState),
-          owner: target004.owner,
-          controller: target004.controller,
-        });
+        GiveTokenUpgrade(game.currentGameState, target004, "SOR_T01", pending.player!);
         game.gameLog.push(`${CardTitle("SEC_004")}: gave an Experience token to ${CardTitle(target004.cardId)}.`);
       }
       break;
@@ -17207,12 +17288,7 @@ function applyAbilityEffect(
       if (target010d) {
         const count010 = DistinctAspectsAmongUnits(pending.player!).size;
         for (let i = 0; i < count010; i++) {
-          target010d.upgrades.push({
-            cardId: "SOR_T01",
-            playId: nextPlayId(game.currentGameState),
-            owner: target010d.owner,
-            controller: target010d.controller,
-          });
+          GiveTokenUpgrade(game.currentGameState, target010d, "SOR_T01", pending.player!);
         }
         game.gameLog.push(`${CardTitle("LAW_010")}: gave ${count010} Experience token(s) to ${CardTitle(target010d.cardId)}.`);
       }
@@ -17505,7 +17581,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target161 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target161) {
-        GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(target161), 3, game.gameLog, "ASH_161");
+        GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(target161), 3, game.gameLog, pending.player!, "ASH_161");
       }
       break;
     }
@@ -17522,7 +17598,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const theirUnit006 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!theirUnit006) break;
-      GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(theirUnit006), 2, game.gameLog, "ASH_006");
+      GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(theirUnit006), 2, game.gameLog, pending.player!, "ASH_006");
       const sabinePlayer = Number(String(pending.sourcePlayId ?? "").replace("player", "")) as PlayerId;
       if (sabinePlayer === 1 || sabinePlayer === 2) {
         game.currentGameState.currentEffects.push({
@@ -17552,7 +17628,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target013 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target013) {
-        GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(target013), 1, game.gameLog, "ASH_013");
+        GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(target013), 1, game.gameLog, pending.player!, "ASH_013");
       }
       break;
     }
@@ -17568,7 +17644,7 @@ function applyAbilityEffect(
       if (!target015) break;
       const others015 = GetUnitsForPlayer(pending.player!).filter(u => u.playId !== targetPlayId).length;
       if (others015 > 0) {
-        GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(target015), others015, game.gameLog, "ASH_015");
+        GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(target015), others015, game.gameLog, pending.player!, "ASH_015");
       }
       break;
     }
@@ -17606,7 +17682,7 @@ function applyAbilityEffect(
       const amount044 = HealUnit(game.currentGameState, healed044, 2);
       if (amount044 > 0) {
         game.gameLog.push(`${CardTitle("ASH_044")}: healed ${amount044} damage from ${CardTitle(healed044.cardId)}.`);
-        GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(healed044), amount044, game.gameLog, "ASH_044");
+        GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(healed044), amount044, game.gameLog, pending.player!, "ASH_044");
       }
       break;
     }
@@ -17926,7 +18002,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target050 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target050) {
-        target050.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target050.owner, controller: target050.controller });
+        GiveTokenUpgrade(game.currentGameState, target050, "SOR_T02", pending.player!);
         game.gameLog.push(`${CardTitle("SOR_050")}: gave a Shield token to ${CardTitle(target050.cardId)}.`);
       }
       break;
@@ -18195,8 +18271,8 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target049 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!target049) break;
-      target049.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target049.owner, controller: target049.controller });
-      target049.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target049.owner, controller: target049.controller });
+      GiveTokenUpgrade(game.currentGameState, target049, "SOR_T01", pending.player!);
+      GiveTokenUpgrade(game.currentGameState, target049, "SOR_T01", pending.player!);
       game.gameLog.push(`${CardTitle("SOR_049")}: gave 2 Experience tokens to ${CardTitle(target049.cardId)}.`);
       if (UnitTraits(target049).includes("Force")) {
         DrawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
@@ -18716,12 +18792,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const targetSHD068 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!targetSHD068) break;
-      targetSHD068.upgrades.push({
-        cardId: "SOR_T02",
-        playId: nextPlayId(game.currentGameState),
-        owner: pending.player!,
-        controller: pending.player!,
-      });
+      GiveTokenUpgrade(game.currentGameState, targetSHD068, "SOR_T02", pending.player!);
       game.gameLog.push(`Bounty collected: Shield token placed on ${CardTitle(targetSHD068.cardId)}.`);
       return pending.continuation;
     }
@@ -18787,7 +18858,7 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target058s = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target058s) {
-        target058s.upgrades.push({ cardId: "SOR_T02", playId: nextPlayId(game.currentGameState), owner: target058s.owner, controller: target058s.controller });
+        GiveTokenUpgrade(game.currentGameState, target058s, "SOR_T02", pending.player!);
         game.gameLog.push(`${CardTitle("SOR_058")}: gave a Shield token to ${CardTitle(target058s.cardId)}.`);
       }
       return pending.continuation;
@@ -18798,8 +18869,8 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const target107x = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target107x) {
-        target107x.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target107x.owner, controller: target107x.controller });
-        target107x.upgrades.push({ cardId: "SOR_T01", playId: nextPlayId(game.currentGameState), owner: target107x.owner, controller: target107x.controller });
+        GiveTokenUpgrade(game.currentGameState, target107x, "SOR_T01", pending.player!);
+        GiveTokenUpgrade(game.currentGameState, target107x, "SOR_T01", pending.player!);
         game.gameLog.push(`${CardTitle("SOR_107")}: gave 2 Experience tokens to ${CardTitle(target107x.cardId)}.`);
       }
       return pending.continuation;
@@ -18998,13 +19069,21 @@ function checkMillenniumFalconTax(gs: GameState): AbilityOptionPending | null {
 function skipUnsatisfiableDiscards(game: GameState, log: string[], result: HandlerResult): HandlerResult {
   let current = result;
 
-  while (
-    current.pending?.type === "discard-from-hand" &&
-    GetPlayer(game, current.pending.targetPlayer).hand.length === 0
-  ) {
-    log.push(`Player ${current.pending.targetPlayer} has no cards to discard.`);
+  // A forced discard from an empty hand, or an HMW_008 offer with no unit left to pay for: neither
+  // can ever be answered, so it resolves as "nothing" and play moves on.
+  const unsatisfiable = (p: PendingResolution | null): string | null => {
+    if (p?.type === "discard-from-hand" && GetPlayer(game, p.targetPlayer).hand.length === 0)
+      return `Player ${p.targetPlayer} has no cards to discard.`;
+    if (p?.type === "play-from-hand" && p.cardId === "HMW_008" && PlayableUnitHandIndices(game, p.player).length === 0)
+      return `${CardTitle("HMW_008")}: no unit left to play.`;
+    return null;
+  };
+  for (let why = unsatisfiable(current.pending); why; why = unsatisfiable(current.pending)) {
+    log.push(why);
 
-    const next = current.pending.continuation ?? null;
+    // Both shapes that reach here carry an optional continuation.
+    const skipped = current.pending as DiscardFromHandPending | PlayFromHandPending;
+    const next = skipped.continuation ?? null;
     if (next) {
       current = { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: current.stateChanged };
       continue;
@@ -19157,7 +19236,10 @@ function runDispatch(
       updateDefeatedPlayers(gs);
       if (gs.defeatedPlayers.length === 0) {
         finishRegroupDraw(gs, log);
-        result = { response: stateResponse(gs), pending: null, stateChanged: true };
+        const afterDraw = drainTriggerBag(gs, log); // e.g. the empty-deck penalty's reactions
+        result = afterDraw
+          ? { response: resolutionResponse(pendingToResolution(afterDraw, gs)), pending: afterDraw, stateChanged: true }
+          : { response: stateResponse(gs), pending: null, stateChanged: true };
       }
     }
 

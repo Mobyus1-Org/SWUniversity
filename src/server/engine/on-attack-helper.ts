@@ -1,5 +1,6 @@
 import { GetGame, TraitContains } from "./core-functions";
 import { Unit } from "./unit";
+import { GiveTokenUpgrade } from "./token-helpers";
 
 /**
  * Give an Experience token to each other friendly Mandalorian unit (Darksaber On Attack).
@@ -16,12 +17,7 @@ export function applyDarksaberOnAttack(attacker: Unit): void {
   for (const unit of friendly) {
     if (unit.playId === attacker.playId) continue;
     if (TraitContains(unit.cardId, "Mandalorian", player, unit.playId)) {
-      unit.upgrades.push({
-        cardId: "SOR_T01",
-        playId: String(gs.nextPlayId++),
-        owner: player,
-        controller: player,
-      });
+      GiveTokenUpgrade(gs, unit, "SOR_T01", player);
     }
   }
 }

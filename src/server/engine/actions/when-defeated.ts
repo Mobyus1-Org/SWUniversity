@@ -5,7 +5,7 @@ import { buildAnnihilatorOffer, UnitTraits, AllUnits, BaseHealingPrevented, Heal
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { CreateBattleDroid, CreateTieFighter, CreateSpy, CreateMandalorianToken } from "@/server/engine/token-helpers";
+import { GiveTokenUpgrade, CreateBattleDroid, CreateTieFighter, CreateSpy, CreateMandalorianToken } from "@/server/engine/token-helpers";
 
 /**
  * When Defeated abilities — called immediately after the unit is removed from
@@ -396,7 +396,7 @@ function resolveOwnWhenDefeated(
                       // "other". Automatic: no choice to present, so this returns null.
       const gs119 = GetGameState();
       for (const u of GetUnitsForPlayer(player)) {
-        u.upgrades.push({ cardId: "SOR_T01", playId: String(gs119.nextPlayId++), owner: u.owner, controller: u.controller });
+        GiveTokenUpgrade(gs119, u, "SOR_T01", player);
         GetGame()?.gameLog.push(`${CardTitle("SEC_119")}: gave Experience to ${CardTitle(u.cardId)}.`);
       }
       return null;

@@ -606,6 +606,12 @@ function selfPowerOnlyBonus(unit: Unit): number {
       return bonus + GetUnitsForPlayer(unit.controller).filter(
         u => u.playId !== unit.playId && CardTitle(u.cardId) === "Swarming Vulture Droid",
       ).length;
+    // HMW_008 General Grievous (Separatist Warlord), deployed — "While you control more units than an
+    // opponent, this unit gets +3/+0." Strictly more; read live, so it switches on and off.
+    case "HMW_008": {
+      const opponent = unit.controller === 1 ? 2 : 1;
+      return bonus + (GetUnitsForPlayer(unit.controller).length > GetUnitsForPlayer(opponent).length ? 3 : 0);
+    }
     // ASH_113 Mandalorian Flagship — "+1/+0 for each OTHER friendly Mandalorian unit."
     case "ASH_113":
       return bonus + GetUnitsForPlayer(unit.controller).filter(

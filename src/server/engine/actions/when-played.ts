@@ -1424,7 +1424,7 @@ export function resolveWhenPlayed(
       const gs197 = game.currentGameState;
       const friendly197 = GetUnitsForPlayer(player).filter(u => u.playId !== playId);
       for (const u of friendly197) {
-        GiveAdvantageTokens(gs197, u, 1, game.gameLog, cardId);
+        GiveAdvantageTokens(gs197, u, 1, game.gameLog, player, cardId);
       }
       return null;
     }
@@ -1544,7 +1544,7 @@ export function resolveWhenPlayed(
       const gs237 = game.currentGameState;
       CreateBeast(gs237, player, game.gameLog, cardId);
       const theirBeast237 = CreateBeast(gs237, GetOtherPlayer(player), game.gameLog, cardId);
-      GiveWeaknessToken(gs237, theirBeast237, game.gameLog, cardId);
+      GiveWeaknessToken(gs237, theirBeast237, game.gameLog, player, cardId);
       return null;
     }
     case "TWI_187": { // Cad Bane (Hostage Taker) — "captures up to 3 enemy non-leader units with a

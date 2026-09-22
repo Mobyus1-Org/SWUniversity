@@ -1,13 +1,13 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
-import { GetUnitByPlayId, GetOtherPlayer, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits } from "@/server/engine/core-functions";
+import { GetUnitByPlayId, GetOtherPlayer, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens, GiveExperienceTokens, CreateSpy } from "@/server/engine/token-helpers";
+import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens, GiveExperienceTokens, CreateSpy, PlayerGaveTokenUpgradeThisPhase } from "@/server/engine/token-helpers";
 import { CreateMandalorianToken, CreateXWing } from "@/server/engine/token-helpers";
 import { jabbasRancorDamage, buildTraskWalkerChoice, buildAethersprite, buildTwinsSentinel, buildPreVizslaOffer } from "@/server/engine/actions/when-played";
 
@@ -156,7 +156,7 @@ export function resolveOnAttackTrigger(
             const self156 = GetUnitsForPlayer(attacker.controller).find(u => u.playId === attacker.playId);
             if (self156) {
               self156.damage += diff156;
-              MarkUnitDamaged(gs156, self156.playId);
+              AfterNonCombatUnitDamage(gs156, self156, diff156, attacker.controller);
               game156.gameLog.push(`${CardTitle("JTL_156")}: dealt ${diff156} unpreventable damage to ${CardTitle(attacker.cardId)}.`);
             }
           }
@@ -208,7 +208,7 @@ export function resolveOnAttackTrigger(
                         // so a host on its last point of HP survives its own trigger.
         const game046 = GetGame();
         if (game046) {
-          GiveExperienceTokens(game046.currentGameState, attacker, 1, game046.gameLog, "JTL_046");
+          GiveExperienceTokens(game046.currentGameState, attacker, 1, game046.gameLog, attacker.controller, "JTL_046");
           DealDamageToUnit(game046.currentGameState, "JTL_046", attacker.playId, 1, game046.gameLog);
         }
         break;
@@ -476,6 +476,23 @@ function resolveInnateOnAttack(
       }
       return continuation;
     }
+    case "HMW_005": { // Jar Jar Binks (deployed) — "On Attack: If you gave a token upgrade to a unit
+                      // this phase, you may deal 1 damage to a unit and heal 1 damage from a base."
+                      // No offer when the condition is unmet; declining skips both halves.
+      const game005 = GetGame();
+      if (!game005 || !PlayerGaveTokenUpgradeThisPhase(game005.currentGameState, attacker.controller)) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "HMW_005_onAttack",
+        player: attacker.controller,
+        sourcePlayId: attacker.playId,
+        helperText: "Deal 1 damage to a unit and heal 1 damage from a base?",
+        yesLabel: "Yes",
+        noLabel: "Skip",
+        onYes: buildJarJarDamageAndHeal(attacker.controller, continuation),
+        continuation,
+      } satisfies AbilityOptionPending;
+    }
     case "JTL_157": { // Relentless Firespray — "On Attack: Ready this unit. Use this ability only once
                       // each round." The attacker is exhausted AFTER its On Attack abilities, so this
                       // leaves a ForAttack marker that resolveAttack honours right after that exhaust.
@@ -646,7 +663,7 @@ function resolveInnateOnAttack(
       const game149 = GetGame();
       if (game149) {
         for (const u of GetUnitsForPlayer(attacker.controller).filter(u => u.playId !== attacker.playId)) {
-          GiveAdvantageTokens(game149.currentGameState, u, 2, game149.gameLog, "ASH_149");
+          GiveAdvantageTokens(game149.currentGameState, u, 2, game149.gameLog, attacker.controller, "ASH_149");
         }
       }
       return continuation;

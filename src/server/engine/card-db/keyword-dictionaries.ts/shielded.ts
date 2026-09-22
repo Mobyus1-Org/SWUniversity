@@ -43,6 +43,7 @@ export function HasShielded(cardId: string, playId?: string, player?: PlayerId, 
     case "SOR_002"://Iden Versio (SOR) Leader Unit
     case "LOF_004"://Kanan Jarrus (LOF) Leader Unit
     case "SOR_011"://Grand Inquisitor Leader Unit
+    case "HMW_005"://Jar Jar Binks Leader Unit
         return !LeaderAbilitiesIgnored();
     //Spark of Rebellion
     case "SHD_066"://Cargo Juggernaut

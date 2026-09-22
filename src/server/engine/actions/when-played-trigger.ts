@@ -4,7 +4,7 @@ import type { GameState } from "@/lib/engine/game";
 import { BaseHealingPrevented, DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
-import { CreateSpy, CreateTieFighter, CreateBattleDroid, CreateCloneTrooper, CreateMandalorianToken, GiveAdvantageTokens, CreateXWing } from "@/server/engine/token-helpers";
+import { GiveTokenUpgrade, CreateSpy, CreateTieFighter, CreateBattleDroid, CreateCloneTrooper, CreateMandalorianToken, GiveAdvantageTokens, CreateXWing } from "@/server/engine/token-helpers";
 
 /**
  * Cards whose When Played does something without asking the player anything — i.e. the
@@ -110,10 +110,7 @@ export function resolveWhenPlayedTrigger(
         if (!HasShielded(u.cardId, u.playId, trigger.fromPlayer)) continue;
         const host = GetUnitByPlayId(gs, u.playId);
         if (!host) continue;
-        host.upgrades.push({
-          cardId: "SOR_T02", playId: String(gs.nextPlayId++),
-          owner: host.owner, controller: host.controller,
-        });
+        GiveTokenUpgrade(gs, host, "SOR_T02", trigger.fromPlayer);
         log.push(`${CardTitle(trigger.cardId)}: gave a Shield token to ${CardTitle(host.cardId)}.`);
       }
       break;
@@ -132,13 +129,10 @@ export function resolveWhenPlayedTrigger(
       if (!self221) break;
       const enemySpace = (trigger.fromPlayer === 1 ? gs.player2 : gs.player1).spaceArena.length > 0;
       if (enemySpace) {
-        self221.upgrades.push({
-          cardId: "SOR_T02", playId: String(gs.nextPlayId++),
-          owner: self221.owner, controller: self221.controller,
-        });
+        GiveTokenUpgrade(gs, self221, "SOR_T02", trigger.fromPlayer);
         log.push(`${CardTitle(trigger.cardId)}: gave a Shield token to itself.`);
       } else {
-        GiveAdvantageTokens(gs, Unit.FromInterface(self221), 2, log, trigger.cardId);
+        GiveAdvantageTokens(gs, Unit.FromInterface(self221), 2, log, trigger.fromPlayer, trigger.cardId);
       }
       break;
     }
@@ -184,13 +178,13 @@ export function resolveWhenPlayedTrigger(
       break;
     case "ASH_149": // Eviscerator — When Played: give 2 Advantage tokens to each other friendly unit.
       for (const u of GetUnitsForPlayer(trigger.fromPlayer).filter(u => u.playId !== trigger.playId)) {
-        GiveAdvantageTokens(gs, u, 2, log, trigger.cardId);
+        GiveAdvantageTokens(gs, u, 2, log, trigger.fromPlayer, trigger.cardId);
       }
       break;
     case "SHD_197": { // L3-37 — no captured card to rescue → the "If you don't" fallback gives it a Shield token.
       const self197 = [...player.groundArena, ...player.spaceArena].find(u => u.playId === trigger.playId);
       if (self197) {
-        self197.upgrades.push({ cardId: "SOR_T02", playId: String(gs.nextPlayId++), owner: self197.owner, controller: self197.controller });
+        GiveTokenUpgrade(gs, self197, "SOR_T02", trigger.fromPlayer);
         log.push(`${CardTitle(trigger.cardId)}: no captured card to rescue — gained a Shield token.`);
       }
       break;
@@ -207,12 +201,12 @@ export function resolveWhenPlayedTrigger(
       break;
     case "ASH_251": { // Zealous Soldier — When Played: Give an Advantage token to this unit.
       const self251 = [...player.groundArena, ...player.spaceArena].find(u => u.playId === trigger.playId);
-      if (self251) GiveAdvantageTokens(gs, self251, 1, log, trigger.cardId);
+      if (self251) GiveAdvantageTokens(gs, self251, 1, log, trigger.fromPlayer, trigger.cardId);
       break;
     }
     case "ASH_218": { // Ferry Droid — When Played: Give 4 Advantage tokens to this unit.
       const self218 = [...player.groundArena, ...player.spaceArena].find(u => u.playId === trigger.playId);
-      if (self218) GiveAdvantageTokens(gs, self218, 4, log, trigger.cardId);
+      if (self218) GiveAdvantageTokens(gs, self218, 4, log, trigger.fromPlayer, trigger.cardId);
       break;
     }
     case "SOR_134": { // Ruthless Raider — When Played with no enemy unit to hit: deal 2 to the enemy base only.
@@ -265,7 +259,7 @@ export function resolveWhenPlayedTrigger(
       const unit191 = [...pState191.spaceArena, ...pState191.groundArena].find(u => u.playId === trigger.playId);
       if (unit191) {
         for (let i = 0; i < xpCount; i++) {
-          unit191.upgrades.push({ cardId: "SOR_T01", playId: String(gs.nextPlayId++), owner: unit191.owner, controller: unit191.controller });
+          GiveTokenUpgrade(gs, unit191, "SOR_T01", trigger.fromPlayer);
         }
         log.push(`${CardTitle(trigger.cardId)}: gained ${xpCount} Experience token(s).`);
       }
@@ -279,7 +273,7 @@ export function resolveWhenPlayedTrigger(
       const pState119 = trigger.fromPlayer === 1 ? gs.player1 : gs.player2;
       for (const u of [...pState119.groundArena, ...pState119.spaceArena]) {
         if (u.playId === trigger.playId) continue; // "each OTHER friendly unit"
-        u.upgrades.push({ cardId: "SOR_T01", playId: String(gs.nextPlayId++), owner: u.owner, controller: u.controller });
+        GiveTokenUpgrade(gs, u, "SOR_T01", trigger.fromPlayer);
         log.push(`${CardTitle(trigger.cardId)}: gave Experience to ${CardTitle(u.cardId)}.`);
       }
       break;
@@ -289,7 +283,7 @@ export function resolveWhenPlayedTrigger(
       const friendlyUnits037 = [...pState037.groundArena, ...pState037.spaceArena];
       for (const u of friendlyUnits037) {
         if (u.damage > 0) {
-          u.upgrades.push({ cardId: "SOR_T01", playId: String(gs.nextPlayId++), owner: u.owner, controller: u.controller });
+          GiveTokenUpgrade(gs, u, "SOR_T01", trigger.fromPlayer);
           log.push(`${CardTitle(trigger.cardId)}: gave Experience to ${CardTitle(u.cardId)}.`);
         }
       }
@@ -320,10 +314,7 @@ export function resolveWhenPlayedTrigger(
       const self067 = GetUnitByPlayId(gs, trigger.playId ?? "");
       if (!self067) break;
       for (let i = 0; i < 2; i++) {
-        self067.upgrades.push({
-          cardId: "SOR_T02", playId: String(gs.nextPlayId++),
-          owner: self067.owner, controller: self067.controller,
-        });
+        GiveTokenUpgrade(gs, self067, "SOR_T02", trigger.fromPlayer);
       }
       log.push(`${CardTitle(trigger.cardId)}: gave 2 Shield tokens to itself.`);
       break;

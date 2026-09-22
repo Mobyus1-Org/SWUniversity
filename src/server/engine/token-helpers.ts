@@ -2,7 +2,43 @@ import { CardArena, CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { GetUnitsForPlayer, QueueUnitEnteredPlayReaction, UnitsEnterPlayReady } from "@/server/engine/core-functions";
 import type { GameState } from "@/lib/engine/game";
-import type { PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import type { CardInPlay, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+
+/**
+ * THE way a token upgrade (Shield, Experience, Advantage, Weakness…) goes onto a unit. Attaches it —
+ * owned and controlled by whoever holds the unit, so it travels with the unit — and records that
+ * `giver` gave a token upgrade this phase (HMW_005 Jar Jar Binks).
+ *
+ * `giver` is the player whose effect gives the token, NOT necessarily the unit's controller: a
+ * Weakness you put on an enemy unit was given by you; the opponent's Weakness on your unit was not.
+ * tests/unit/engine/token-upgrade-chokepoint.test.ts fails if a token is pushed onto a unit anywhere
+ * else.
+ */
+export function GiveTokenUpgrade(
+  game: GameState,
+  target: UnitInterface,
+  tokenCardId: string,
+  giver: PlayerId,
+): CardInPlay {
+  const token: CardInPlay = {
+    cardId: tokenCardId,
+    playId: String(game.nextPlayId++),
+    owner: target.owner,
+    controller: target.controller,
+  };
+  target.upgrades.push(token);
+  const given = game.roundState.tokenUpgradesGivenThisPhase ??= [];
+  if (!given.includes(giver)) given.push(giver);
+  return token;
+}
+
+/** Whether `player` gave a token upgrade to a unit this phase (HMW_005 Jar Jar Binks). */
+export function PlayerGaveTokenUpgradeThisPhase(game: GameState, player: PlayerId): boolean {
+  return (game.roundState.tokenUpgradesGivenThisPhase ?? []).includes(player);
+}
+
+/** SOR_T02 — the Shield token. */
+export const SHIELD_TOKEN = "SOR_T02";
 
 /**
  * TWI_203 Chancellor Palpatine (Wartime Chancellor) — "Each token unit you create enters play
@@ -83,12 +119,7 @@ export function CreateXWing(game: GameState, player: PlayerId, gameLog: string[]
 /** ASH_T01 Mandalorian token — Shielded, so it enters play with a Shield token attached. */
 export function CreateMandalorianToken(game: GameState, player: PlayerId, gameLog: string[], fromCardId?: string): Unit {
   const unit = spawnToken(game, player, "ASH_T01");
-  unit.upgrades.push({
-    cardId: "SOR_T02",
-    playId: String(game.nextPlayId++),
-    owner: player,
-    controller: player,
-  });
+  GiveTokenUpgrade(game, unit, SHIELD_TOKEN, player); // Shielded: its creator gives the Shield
   if (fromCardId) {
     gameLog.push(`${CardTitle(fromCardId)}: created Mandalorian token.`);
   } else {
@@ -130,17 +161,11 @@ export function GiveAdvantageTokens(
   target: UnitInterface,
   count: number,
   gameLog: string[],
+  giver: PlayerId,
   fromCardId?: string,
 ): void {
   if (count <= 0) return;
-  for (let i = 0; i < count; i++) {
-    target.upgrades.push({
-      cardId: ADVANTAGE_TOKEN,
-      playId: String(game.nextPlayId++),
-      owner: target.owner,
-      controller: target.controller,
-    });
-  }
+  for (let i = 0; i < count; i++) GiveTokenUpgrade(game, target, ADVANTAGE_TOKEN, giver);
   const prefix = fromCardId ? `${CardTitle(fromCardId)}: ` : "";
   gameLog.push(`${prefix}gave ${count} Advantage token${count > 1 ? "s" : ""} to ${CardTitle(target.cardId)}.`);
 }
@@ -162,14 +187,10 @@ export function GiveWeaknessToken(
   game: GameState,
   target: UnitInterface,
   gameLog: string[],
+  giver: PlayerId,
   fromCardId?: string,
 ): void {
-  target.upgrades.push({
-    cardId: WEAKNESS_TOKEN,
-    playId: String(game.nextPlayId++),
-    owner: target.owner,
-    controller: target.controller,
-  });
+  GiveTokenUpgrade(game, target, WEAKNESS_TOKEN, giver);
   const prefix = fromCardId ? `${CardTitle(fromCardId)}: ` : "";
   gameLog.push(`${prefix}gave a Weakness token to ${CardTitle(target.cardId)}.`);
 }
@@ -188,17 +209,11 @@ export function GiveExperienceTokens(
   target: UnitInterface,
   count: number,
   gameLog: string[],
+  giver: PlayerId,
   fromCardId?: string,
 ): void {
   if (count <= 0) return;
-  for (let i = 0; i < count; i++) {
-    target.upgrades.push({
-      cardId: EXPERIENCE_TOKEN,
-      playId: String(game.nextPlayId++),
-      owner: target.owner,
-      controller: target.controller,
-    });
-  }
+  for (let i = 0; i < count; i++) GiveTokenUpgrade(game, target, EXPERIENCE_TOKEN, giver);
   const prefix = fromCardId ? `${CardTitle(fromCardId)}: ` : "";
   gameLog.push(`${prefix}gave ${count} Experience token${count > 1 ? "s" : ""} to ${CardTitle(target.cardId)}.`);
 }

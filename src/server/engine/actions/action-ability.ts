@@ -65,6 +65,8 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "SHD_010": //Bossk - Hunting His Prey
       case "LOF_011": //Kit Fisto - Focused Jedi Master: Action [1 resource, Exhaust]: if you attacked with a Jedi unit this phase, deal 2 damage to a unit. (Soft-passes if the condition isn't met.)
       case "SEC_015": //C-3PO - Human-Cyborg Relations: Action [1 resource, Exhaust]: if you control an exhausted unit, exhaust a unit. (Soft-passes if the condition isn't met.)
+      case "HMW_008": //General Grievous - Separatist Warlord: Action [Exhaust]: play 2 units from hand. (Always usable; nothing playable = just the exhaust.)
+      case "HMW_005": //Jar Jar Binks - Bombad General: Action [1 resource, Exhaust]: if you gave a token upgrade this phase, 1 damage to a unit + heal 1 from a base. (Soft-passes if the condition isn't met.)
       case "SHD_012": //Bo-Katan Kryze - Princess in Exile
       case "SHD_013": //Han Solo - Worth the Risk
       case "SHD_016": //Fennec Shand - Honoring the Deal
@@ -705,6 +707,8 @@ export function ActionAbilityCost(cardId: string): number {
     case "SEC_004"://Leia Organa - Of A Secret Bloodline
       return 1;
     case "SEC_015"://C-3PO - Human-Cyborg Relations
+      return 1;
+    case "HMW_005"://Jar Jar Binks - Bombad General
       return 1;
     case "LAW_003"://Agent Kallus - Action [1 resource, Exhaust]
       return 1;

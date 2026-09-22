@@ -135,11 +135,15 @@ export const Cards = {
     },
     hmw: {
       grandMoffTarkin: "HMW_004", // Tyrant of the Outer Rim — deploys as The Death Star
+      jarJarBinks: "HMW_005",     // Bombad General — gave-a-token-upgrade leader
+      darthVaderMightOfTheEmpire: "HMW_007", // friendly units costing 3+ gain Raid 1
+      generalGrievousSeparatistWarlord: "HMW_008", // Action: play 2 units from hand
       chewbacca: "HMW_009",     // Relentless Rebel
       tarfful: "HMW_010",       // Fighting from the Shadowlands
       doctorHemlock: "HMW_003", // Emotion Has No Place Here
       darthSidious: "HMW_011",  // There is No Mercy
       asajjVentress: "HMW_001", // No Time For Regret
+      chamSyndulla: "HMW_013",  // Hammer of Ryloth — reacts to non-combat damage on your side
     },
     jtl: {
       asajjVentress: "JTL_001",
@@ -330,6 +334,7 @@ export const Cards = {
       greedo: "SOR_204",
       craftySmuggler: "SOR_207",
       wildernessFighter: "SOR_064", // 3-cost Ground, Shielded and nothing else
+      volunteerSoldier: "SOR_248", // 2/3 Ground, cost 3, printed Raid 1 and nothing else
       syndicateLackeys: "SOR_213",
       rebelPathfinder: "SOR_239",
       gamorreanGuards: "SOR_211",
@@ -578,6 +583,7 @@ export const Cards = {
       battleDroidEscort: "TWI_229",
       droidStarfighter: "TWI_228", // 1/1 Space, Villainy only — a single-aspect cost test card
       superBattleDroid: "TWI_230", // 4/3 Ground Separatist/Droid/Trooper, no card text
+      brainInvaders: "TWI_255", // 2/4 Ground — each leader loses all abilities except epic actions
       wartimeChancellor: "TWI_203", // Chancellor Palpatine (unit) — 2/6 Ground, token-ready static
       hotshotVWing: "TWI_209",     // 3/2 Space, Cunning only — a single-aspect cost test card
       cloneHeavyGunner: "TWI_158",

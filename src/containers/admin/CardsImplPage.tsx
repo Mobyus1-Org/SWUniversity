@@ -40,16 +40,23 @@ const LANE_ACCENT: Record<CardImplLane, string> = {
 };
 
 /**
- * How many cards each lane renders. Not Implemented opens at ~2400 and Done trends toward it, so
- * neither can be drawn in full; the search box is how you reach a specific card.
+ * How many cards a lane renders before its "Show more" button. Not Implemented opens at ~2400 and
+ * Done trends toward it, so neither is drawn in full up front; each lane grows a page at a time so
+ * you can browse a column to its end without the other three paying for it.
  */
-const LANE_RENDER_CAP = 60;
+const LANE_PAGE_SIZE = 50;
+
+type LaneLimits = Record<CardImplLane, number>;
+
+const initialLaneLimits = (): LaneLimits =>
+  Object.fromEntries(CARD_IMPL_LANES.map((lane) => [lane, LANE_PAGE_SIZE])) as LaneLimits;
 
 export default function CardsImplPage() {
   const [cards, setCards] = React.useState<BoardCard[]>([]);
   const [statuses, setStatuses] = React.useState<CardImplRow[]>([]);
   const [search, setSearch] = React.useState("");
   const [setFilter, setSetFilter] = React.useState("");
+  const [laneLimits, setLaneLimits] = React.useState<LaneLimits>(initialLaneLimits);
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const [isMutating, setIsMutating] = React.useState(false);
@@ -88,6 +95,10 @@ export default function CardsImplPage() {
     () => deriveLanes(cards.map((c) => c.cardId), statuses),
     [cards, statuses],
   );
+
+  // Narrowing the view starts every lane over: a limit left from the previous query would show a
+  // slice of the new results nobody asked for, and the counts under each heading would read oddly.
+  React.useEffect(() => { setLaneLimits(initialLaneLimits()); }, [search, setFilter]);
 
   /** Title, subtitle or SET_NNN, case-insensitive. */
   const matches = React.useCallback((cardId: string) => {
@@ -165,14 +176,15 @@ export default function CardsImplPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
         {CARD_IMPL_LANES.map((lane) => {
           const all = lanes[lane].filter(matches);
-          const shown = all.slice(0, LANE_RENDER_CAP);
+          const shown = all.slice(0, laneLimits[lane]);
+          const hidden = all.length - shown.length;
           return (
             <section key={lane} className={`rounded-lg border bg-black/30 p-4 ${LANE_ACCENT[lane]}`}>
               <h2 className="text-xl font-semibold">{LANE_LABEL[lane]}</h2>
               <p className="mb-3 text-sm text-gray-400">
-                {all.length === shown.length
-                  ? `${all.length} cards`
-                  : `showing ${shown.length} of ${all.length.toLocaleString()}`}
+                {hidden === 0
+                  ? `${all.length.toLocaleString()} cards`
+                  : `showing ${shown.length.toLocaleString()} of ${all.length.toLocaleString()}`}
               </p>
               {/* Only the card list scrolls, so the lane heading and its count stay put while you
                   work down a column. pr-1 keeps the scrollbar off the tiles. */}
@@ -189,6 +201,20 @@ export default function CardsImplPage() {
                     onPreviewEnd={preview.onPreviewEnd}
                   />
                 ))}
+                {/* Inside the scroller, so you reach it by simply carrying on down the column. */}
+                {hidden > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setLaneLimits((limits) => ({
+                      ...limits,
+                      [lane]: limits[lane] + LANE_PAGE_SIZE,
+                    }))}
+                    className="w-full rounded border border-white/20 bg-white/5 px-2 py-2 text-xs transition hover:bg-white/15"
+                  >
+                    Show {Math.min(LANE_PAGE_SIZE, hidden)} more
+                    <span className="text-gray-400"> ({hidden.toLocaleString()} hidden)</span>
+                  </button>
+                ) : null}
               </div>
             </section>
           );
