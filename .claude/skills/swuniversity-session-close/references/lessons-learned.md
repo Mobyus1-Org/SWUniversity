@@ -199,3 +199,37 @@ memory system (see `MEMORY.md`), not just here.
   path machine-agnostic ("the auto-memory dir named in the system prompt"). *Resolved 2026-09-14:*
   the user moved machines (`/Users/mariotorresjr` → `/Users/mt`, repo dir `SWUniversity`); both
   session-start and session-close now point at the new path.
+
+## 2026-09-22
+
+- **Found the "green in tests, dead in the UI" bug class a second time — and it had already shipped
+  once.** HMW_013 Cham Syndulla's base target did nothing when picked with the adapter's
+  `chooseBaseAsync`, because my handler read only the `"playerN.base"` playId form and opened with
+  `if (!targetPlayId) break;`. Chasing it showed HMW_011 Darth Sidious shipped with the identical
+  gap in a prior session: his tests picked bases by raw `targetPlayIds`, so a fully green card was
+  fully broken in the browser. This is the same shape as the standing
+  [[ui-leader-action-ability-set]] lesson (engine tests never render the UI), one layer lower.
+  Concrete rule now memory'd as [[engine-base-target-dual-convention]]: **for any "a unit or a base"
+  card, write at least one base test through `chooseBaseAsync` (the UI shape), never only the raw
+  playId form.**
+- **Confirmed working — "trace every consumer when extending shared plumbing" (2026-07-17, again
+  07-20 and 09-13).** Cham needed the *victim's* side of every non-combat damage path. Enumerating
+  them up front rather than hanging the reaction off `DealDamageToUnit` produced the
+  `AfterNonCombatUnitDamage` helper covering five sites, and surfaced that the regroup empty-deck
+  penalty queues a prompt the engine then *dropped* — the trigger bag was never drained after
+  `finishRegroupDraw`. A single-site implementation would have passed every test I wrote.
+- **Partial repeat: "prefer actually running red first" (2026-08-09, 08-18, 09-13).** I wrote the
+  whole 16-test Cham file after the engine work and ran it once — which was still worth it: 6 of 16
+  failed and two were genuine (the base-target bug above, plus a real engine gap), the rest fixture
+  slips. Writing the tests last didn't hurt here *because the file was run before declaring done*,
+  which is the part that actually matters. Restate the rule that way rather than as strict
+  test-first: **never report a card done off an unrun test file.**
+- **Fourth repeat, my own session-close command: the zsh glob lesson (2026-08-09, 08-18, 09-13).**
+  `ls *-implement.md` died with `zsh: no matches found` inside this very skill's tracker check. The
+  rule keeps getting logged and keeps not firing because it applies at the moment of typing a `*`,
+  not at session start. Making it stick needs a habit, not a log line: **append `2>/dev/null ||
+  true` or quote the glob on every bare-glob shell command.**
+- **Fixture slips this round, for the running list:** a 3/3 Marine attacking a 3/7 dies to
+  counter-damage, so the *second* attacker's arena index shifts from 1 to 0 — an index computed
+  from the initial board is wrong the moment anything trades. Sibling of the standing "account for
+  what the engine does to the fixture before your assertion" rule.
