@@ -1910,6 +1910,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "LOF_045": //Yaddle — On Attack: each other friendly Jedi gains Restore 1 this phase
     case "SEC_087": //Dedra Meero — On Attack: create a Spy token
     case "JTL_160": //Supporting Eta-2 — On Attack: may give a ground unit +2/+0 this phase
+    case "HMW_014": //Wicket (deployed) — On Attack: draw if you control a unit that costs 3 or less
     case "HMW_005": //Jar Jar Binks (deployed) — On Attack: if you gave a token upgrade, may 1 dmg to a unit + heal 1 from a base
     case "JTL_157": //Relentless Firespray — On Attack: ready this unit (once each round)
     case "JTL_132": //First Order Stormtrooper — On Attack/When Defeated: 1 indirect damage to a player

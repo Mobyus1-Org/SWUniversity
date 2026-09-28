@@ -561,6 +561,18 @@ function resolveInnateOnAttack(
       }
       return continuation;
     }
+    case "HMW_014": { // Wicket (deployed) — On Attack: If you control a unit that costs 3 or less,
+                      // draw a card. Mandatory. Wicket himself costs 4, so he never satisfies his
+                      // own condition — it takes a genuinely cheap friend elsewhere on the board.
+      const game014 = GetGame();
+      if (!game014) return continuation;
+      const cheap014 = GetUnitsForPlayer(attacker.controller).some(u => (CardCost(u.cardId) ?? 0) <= 3);
+      if (cheap014) {
+        DrawCardForPlayer(game014.currentGameState, game014.gameLog, attacker.controller);
+        game014.gameLog.push(`${CardTitle(sourceCardId)}: drew a card.`);
+      }
+      return continuation;
+    }
     case "HMW_061": { // Director Krennic (The Work Has Stalled) — On Attack: If your base is
                       // upgraded, draw a card. Mandatory; "upgraded" is any Fortify upgrade.
       const game061 = GetGame();

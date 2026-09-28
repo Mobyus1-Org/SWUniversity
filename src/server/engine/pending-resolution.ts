@@ -200,6 +200,12 @@ export interface ResolveAttackPending {
    * attack, so without this the same player would be asked again on each resume.
    */
   mandoOffered?: string[];
+  /**
+   * Set once HMW_014 Wicket's "when a friendly unit attacks a unit that costs more than it"
+   * reaction has been offered for this attack. The offer is consulted at both points that hand an
+   * attack off to combat, so without this the second one would ask again after the first answer.
+   */
+  wicketOffered?: boolean;
 }
 
 export interface OnAttackTriggerEntry {

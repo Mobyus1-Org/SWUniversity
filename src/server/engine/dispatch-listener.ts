@@ -6425,6 +6425,11 @@ function handleChooseTarget(
       return { response: resolutionResponse(pendingToResolution(onAttackTriggerPending, game)), pending: onAttackTriggerPending, stateChanged: false };
     }
 
+    const wicketDirect = wicketDrawOffer(game, resolveAttackPending);
+    if (wicketDirect) {
+      return { response: resolutionResponse(pendingToResolution(wicketDirect, game)), pending: wicketDirect, stateChanged: true };
+    }
+
     const mandoDirect = mandoCombatOffer(game, resolveAttackPending);
     if (mandoDirect) {
       return { response: resolutionResponse(pendingToResolution(mandoDirect, game)), pending: mandoDirect, stateChanged: true };
@@ -9749,6 +9754,13 @@ function applyAbilityOptionEffect(
       }
       return pending.continuation ?? null;
     }
+    case "HMW_014": { // Wicket — exhaust this leader (front side), then draw a card.
+      const leader014 = GetLeaderForPlayer(pending.player!);
+      leader014.ready = false; // "You may exhaust this leader" is the cost
+      DrawCardForPlayer(game, log, pending.player!);
+      log.push(`${CardTitle("HMW_014")}: exhausted ${CardTitle("HMW_014")} to draw a card.`);
+      return pending.continuation ?? null;
+    }
     case "LOF_017": { // Darth Revan — (front: exhaust the leader), then give an Experience token to the attacking unit.
       const attacker017 = GetUnitByPlayId(game, pending.sourcePlayId!);
       const leader017 = GetLeaderForPlayer(pending.player!);
@@ -11216,11 +11228,56 @@ function mandoCombatOffer(game: GameState, next: ResolveAttackPending): AbilityO
   return null;
 }
 
+/**
+ * HMW_014 Wicket (front side) — "When a friendly unit attacks a unit that costs more than it:
+ * You may exhaust this leader. If you do, draw a card."
+ *
+ * A controller-level watcher on every friendly attack, so it cannot live in the attacker's own On
+ * Attack switch: `resolveOnAttackTrigger` is only reached when the ATTACKER itself has an On Attack
+ * ability, and a plain attacker punching up is exactly the common case. It is checked instead at
+ * the two points an attack hands off to combat — the same pair `mandoCombatOffer` covers — which
+ * also picks up ability-initiated attacks that never go through handleAttack.
+ *
+ * Only the leader side has this reaction; once deployed Wicket reads his unit side instead, which
+ * is a different ability (On Attack: draw if you control a cheap unit).
+ */
+function wicketDrawOffer(game: GameState, next: ResolveAttackPending): AbilityOptionPending | null {
+  if (next.wicketOffered) return null;
+  if (next.target.type !== "unit") return null; // "attacks a UNIT that costs more"
+  const attacker = GetUnitByPlayId(game, next.attackerPlayId);
+  const defender = GetUnitByPlayId(game, next.target.playId);
+  if (!attacker || !defender) return null;
+
+  const leader = GetLeaderForPlayer(attacker.controller);
+  if (leader.cardId !== "HMW_014" || leader.deployed || !leader.ready) return null;
+  if (LeaderAbilitiesIgnored()) return null;
+
+  // Printed costs, and 0 for a card with none (a token unit) — never the 99 that would read as
+  // "expensive" and make every defender cheaper than it.
+  if ((CardCost(defender.cardId) ?? 0) <= (CardCost(attacker.cardId) ?? 0)) return null;
+
+  return {
+    type: "ability-option",
+    cardId: "HMW_014",
+    player: attacker.controller,
+    sourcePlayId: attacker.playId,
+    helperText: `Exhaust ${CardTitle("HMW_014")} to draw a card?`,
+    yesLabel: "Exhaust",
+    noLabel: "Skip",
+    onYes: null,
+    continuation: { ...next, wicketOffered: true },
+  } satisfies AbilityOptionPending;
+}
+
 function handleResolveAttack(
   game: GameState,
   log: string[],
   pending: ResolveAttackPending,
 ): HandlerResult {
+  const wicketOffer = wicketDrawOffer(game, pending);
+  if (wicketOffer) {
+    return { response: resolutionResponse(pendingToResolution(wicketOffer, game)), pending: wicketOffer, stateChanged: true };
+  }
   const mandoOffer = mandoCombatOffer(game, pending);
   if (mandoOffer) {
     return { response: resolutionResponse(pendingToResolution(mandoOffer, game)), pending: mandoOffer, stateChanged: true };
@@ -11520,6 +11577,10 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "HMW_008": // General Grievous (Separatist Warlord) — If you control 5 or more resources.
       return p.resources.length >= 5;
+    case "HMW_014": // Wicket (Few Greater Battles to Fight) — If you control 4 or more resources.
+      // Same number as his printed deploy cost, so the gate looks identical today — but it is a
+      // CONDITION, not a payment, and so stays at 4 no matter what modifies his cost.
+      return p.resources.length >= 4;
     case "HMW_004": // Grand Moff Tarkin — If you control 9 or more resources.
       return p.resources.length >= 9;
     case "JTL_014": // Admiral Trench — Action [3 resources, Exhaust]: If you control 6 or more resources.

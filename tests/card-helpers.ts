@@ -144,6 +144,7 @@ export const Cards = {
       darthSidious: "HMW_011",  // There is No Mercy
       asajjVentress: "HMW_001", // No Time For Regret
       chamSyndulla: "HMW_013",  // Hammer of Ryloth — reacts to non-combat damage on your side
+      wicket: "HMW_014",        // Few Greater Battles to Fight — reacts to a friendly unit punching up
     },
     jtl: {
       asajjVentress: "JTL_001",
@@ -822,6 +823,7 @@ export const Cards = {
     },
     hmw: {
       nightbrotherMaulsGauntlet: "HMW_204",
+      ewokBrigade: "HMW_116", // 2/4 Ground, cost 2, no abilities — clean "costs 3 or less" fixture
     },
   },
   upgrades: {
