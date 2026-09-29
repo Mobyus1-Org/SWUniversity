@@ -252,6 +252,13 @@ export interface DefeatCopyPending {
   enteringCardId?: string;
   enteringPlayer?: PlayerId;
   enteringInjectEffect?: Omit<CurrentEffect, "targetPlayId">;
+  /**
+   * HMW_016 Maul — "Then, defeat it." The ability that played this unit also defeats it, and
+   * uniqueness interrupting the entry must not swallow that: the defeat is carried across the
+   * prompt and applied once the duplicate is resolved (unless the player defeated the entering
+   * copy itself, in which case there is nothing left to defeat).
+   */
+  enteringDefeatAfter?: { sourceCardId: string };
   // Downstream resolution to run once uniqueness (and the entering unit's triggers) is
   // fully resolved — used when a duplicate arises mid-way through a larger effect (e.g.
   // multiple copies entering via a deck-search "play").

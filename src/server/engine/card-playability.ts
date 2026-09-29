@@ -632,10 +632,10 @@ function bamboozleAltCostAvailable(game: GameState, player: PlayerId): boolean {
  * Hand indices of the units this player can play right now paying their normal cost — the offer for
  * "play a unit from your hand (paying its cost)" (HMW_008 General Grievous).
  */
-export function PlayableUnitHandIndices(game: GameState, player: PlayerId): number[] {
+export function PlayableUnitHandIndices(game: GameState, player: PlayerId, costDelta = 0): number[] {
   return (player === 1 ? game.player1 : game.player2).hand
     .map((c, i) => ({ c, i }))
-    .filter(({ c }) => CardType(c.cardId) === "Unit" && CardIsPlayable(game, player, c.cardId))
+    .filter(({ c }) => CardType(c.cardId) === "Unit" && CardIsPlayable(game, player, c.cardId, costDelta))
     .map(({ i }) => i);
 }
 

@@ -145,6 +145,7 @@ export const Cards = {
       asajjVentress: "HMW_001", // No Time For Regret
       chamSyndulla: "HMW_013",  // Hammer of Ryloth — reacts to non-combat damage on your side
       wicket: "HMW_014",        // Few Greater Battles to Fight — reacts to a friendly unit punching up
+      maulOldMaster: "HMW_016", // Old Master — plays a unit and immediately defeats it
     },
     jtl: {
       asajjVentress: "JTL_001",
@@ -705,6 +706,7 @@ export const Cards = {
       marroksFiendFighter: "ASH_241",
       domesticatedLothCat: "ASH_068",
       emperorsMessenger: "ASH_189",
+      perideaBandit: "ASH_190", // 4/1 Ground, cost 2, Cunning+Villainy, no abilities
       doctorPershing: "ASH_072",
       leiaOrgana: "ASH_059",
       gozantiAssaultCarrier: "ASH_099",
@@ -824,6 +826,8 @@ export const Cards = {
     hmw: {
       nightbrotherMaulsGauntlet: "HMW_204",
       ewokBrigade: "HMW_116", // 2/4 Ground, cost 2, no abilities — clean "costs 3 or less" fixture
+      coastalCatamarans: "HMW_093", // 8/8 Ground, cost 7, Vigilance, no abilities
+      jaxxon: "HMW_219",            // 3/3 Ground, cost 1, Cunning, UNIQUE, no abilities
     },
   },
   upgrades: {

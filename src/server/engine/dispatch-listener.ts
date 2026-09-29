@@ -5180,6 +5180,18 @@ function completePlayCard(
      * damage to it"). Dealt as the unit enters, before its own entry effects (Shielded) resolve.
      */
     entryDamage?: { amount: number; sourceCardId: string };
+    /**
+     * HMW_016 Maul — "Play a unit from your hand. Then, defeat it. (When Played abilities resolve
+     * after the unit is defeated.)" The unit really enters play first — it is played, so its entry
+     * is ledgered and anything watching a unit being played sees it — and is then defeated as part
+     * of the same ability.
+     *
+     * Both of its triggers are deferred into the bag rather than resolved on the way through, so
+     * the When Played lands AFTER the defeat (the parenthetical) and the controller orders it
+     * against the unit's own When Defeated. Deferring is the same treatment the uniqueness path
+     * gives a copy that leaves play before its When Played resolves (CR 8.29.3).
+     */
+    defeatAfterEntry?: { sourceCardId: string };
   },
 ): HandlerResult {
   // SHD_233 Evacuate — "Return each non-leader unit to its owner's hand." A targetless event whose
@@ -5303,9 +5315,25 @@ function completePlayCard(
           enteringCardId: cardId,
           enteringPlayer: player,
           enteringInjectEffect: opts?.injectEffect,
+          enteringDefeatAfter: opts?.defeatAfterEntry,
         };
         return { response: resolutionResponse(pendingToResolution(defeatCopyPending, game)), pending: defeatCopyPending, stateChanged: false };
       }
+    }
+
+    // HMW_016 Maul — the unit is defeated as part of the ability that played it. Both its When
+    // Played and its When Defeated go to the bag, so the defeat happens first and the controller
+    // orders the two triggers that are now waiting.
+    if (opts?.defeatAfterEntry) {
+      queueUnitEntryTriggers(game, log, unit, cardId, player, opts, true);
+      defeatUnit(game, log, unit, false, false, { deferWhenDefeated: true });
+      log.push(`${CardTitle(opts.defeatAfterEntry.sourceCardId)}: defeated ${CardTitle(cardId)}.`);
+      updateDefeatedPlayers(game);
+      const bagDefeat = drainTriggerBag(game, log);
+      if (bagDefeat) {
+        return { response: resolutionResponse(pendingToResolution(bagDefeat, game)), pending: bagDefeat, stateChanged: true };
+      }
+      return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
     // No uniqueness conflict — queue the entering unit's own effects now. An interactive
@@ -7152,6 +7180,33 @@ function handleChooseTarget(
       });
     }
 
+    // HMW_016 Maul — "You may play a unit that was defeated this phase from your discard pile. It
+    // costs 5 resources less." Deliberately NOT folded into the TWI_189/HMW_204 branch above: those
+    // two also make the unit enter ready and defeat it at the start of the regroup phase, and Maul
+    // does neither — the unit he brings back is his to keep. An empty selection declines.
+    if (pending.cardId === "HMW_016") {
+      const playId016 = chosen[0];
+      if (!playId016) {
+        log.push(`${CardTitle("HMW_016")}: declined to replay a defeated unit.`);
+        const bag016 = drainTriggerBag(game, log);
+        if (bag016) return { response: resolutionResponse(pendingToResolution(bag016, game)), pending: bag016, stateChanged: true };
+        return { response: stateResponse(game), pending: null, stateChanged: true };
+      }
+      const pState016 = GetPlayer(game, pending.player);
+      const idx016 = pState016.discard.findIndex(d => d.playId === playId016);
+      if (idx016 === -1)
+        return { response: invalidResponse(`${CardTitle("HMW_016")}: card not found in discard.`), pending, stateChanged: false };
+      const cardId016 = pState016.discard[idx016].cardId;
+      const discount016 = pending.costReduction ?? 0;
+      const reducedCost016 = discountedPlayCost(game, pending.player, cardId016, discount016);
+      if (spendableFor(game, pending.player) < reducedCost016)
+        return { response: invalidResponse(`${CardTitle("HMW_016")}: not enough resources to play ${CardTitle(cardId016)} (needs ${reducedCost016}).`), pending, stateChanged: false };
+      pState016.discard.splice(idx016, 1);
+      payResources(game, pending.player, reducedCost016, log, cardId016);
+      log.push(`${CardTitle("HMW_016")}: played ${CardTitle(cardId016)} from discard (cost -${discount016} = ${reducedCost016}).`);
+      return completePlayCard(game, log, cardId016, pending.player);
+    }
+
     // ASH_247 One Must Destroy to Create: "you may play that unit from your discard pile for free."
     // An empty selection declines; the unit simply stays in the discard.
     if (pending.cardId === "ASH_247") {
@@ -7606,6 +7661,14 @@ function handleChooseTarget(
           pending.enteringInjectEffect ? { injectEffect: pending.enteringInjectEffect } : undefined,
           true,
         );
+        // HMW_016 Maul — the ability that played this unit also defeats it. The uniqueness prompt
+        // interrupted before that could happen, so it happens now; its When Defeated joins the
+        // bag alongside the When Played already deferred there.
+        if (pending.enteringDefeatAfter) {
+          defeatUnit(game, log, entering, false, false, { deferWhenDefeated: true });
+          log.push(`${CardTitle(pending.enteringDefeatAfter.sourceCardId)}: defeated ${CardTitle(pending.enteringCardId)}.`);
+          updateDefeatedPlayers(game);
+        }
       } else if (CardHasWhenPlayed(pending.enteringCardId)) {
         // The player defeated the just-played copy itself. Per CR 8.29.3, abilities that
         // trigger upon that copy being played must still resolve. The entry effects that
@@ -8327,6 +8390,23 @@ function handleChooseTarget(
           return { response: invalidResponse(`Not enough resources to play ${CardTitle(cardId) ?? cardId}.`), pending, stateChanged: false };
         log.push(`Player ${pending.player} is playing ${CardTitle(cardId) ?? cardId} via ${CardTitle(pending.cardId)}${discount > 0 ? " (1 aspect penalty ignored)" : ""}.`);
         return playCardFromHand(game, log, pending.player, cardId, discount);
+      }
+      case "HMW_016": { // Maul (Old Master) — play the chosen unit at -1, then defeat it.
+                        // Played strictly AS A UNIT: unlike playCardFromHand, this never offers the
+                        // piloting choice, so a Pilot card chosen here enters an arena as a unit
+                        // rather than attaching to a Vehicle.
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse(`${CardTitle("HMW_016")}: chosen card is not a Unit.`), pending, stateChanged: false };
+        const discount016 = pending.costReduction ?? 0;
+        const cost016 = discountedPlayCost(game, pending.player, cardId, discount016);
+        if (spendableFor(game, pending.player) < cost016)
+          return { response: invalidResponse(`${CardTitle("HMW_016")}: not enough resources to play ${CardTitle(cardId)} (needs ${cost016}).`), pending, stateChanged: false };
+        payResources(game, pending.player, cost016, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("HMW_016")} (cost -${discount016} = ${cost016}).`);
+        return completePlayCard(game, log, cardId, pending.player, {
+          defeatAfterEntry: { sourceCardId: "HMW_016" },
+        });
       }
       case "HMW_008": { // General Grievous — "Play 2 units from your hand (one at a time, paying their
                         // costs)." The next offer waits until this unit has fully resolved (its own
@@ -11495,6 +11575,7 @@ function leaderHasWhenDeployed(cardId: string): boolean {
     case "TWI_007": return true; // Captain Rex — create a Clone Trooper token
     case "JTL_014": return true; // Admiral Trench — reveal 4, opponent discards 2, draw 1/discard 1
     case "LOF_012": return true; // Rey — may discard your hand to draw 2
+    case "HMW_016": return true; // Maul (Old Master) — may replay a unit defeated this phase for 5 less
     default: return false;
   }
 }
@@ -11577,6 +11658,8 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "HMW_008": // General Grievous (Separatist Warlord) — If you control 5 or more resources.
       return p.resources.length >= 5;
+    case "HMW_016": // Maul (Old Master) — If you control 7 or more resources.
+      return p.resources.length >= 7;
     case "HMW_014": // Wicket (Few Greater Battles to Fight) — If you control 4 or more resources.
       // Same number as his printed deploy cost, so the gate looks identical today — but it is a
       // CONDITION, not a payment, and so stays at 4 no matter what modifies his cost.
@@ -12121,6 +12204,23 @@ function resolveActionAbility(
       base002.damage = Math.max(0, base002.damage - 1);
       log.push(`${CardTitle("SOR_002")}: healed 1 damage from your base.`);
       return null;
+    }
+    case "HMW_016": { // Maul (Old Master) — Action [Exhaust]: Play a unit from your hand. It costs
+                      // 1 resource less. Then, defeat it. The exhaust is the cost, so with nothing
+                      // playable the action still happens and simply does nothing.
+      const eligible016 = PlayableUnitHandIndices(game, player, 1);
+      if (eligible016.length === 0) {
+        log.push(`${CardTitle("HMW_016")}: no unit in hand it can play — soft pass.`);
+        return null;
+      }
+      return {
+        type: "play-from-hand",
+        cardId: "HMW_016",
+        player,
+        optional: true,
+        eligibleHandIndices: eligible016,
+        costReduction: 1,
+      };
     }
     case "HMW_008": { // General Grievous — Action [Exhaust]: Play 2 units from your hand (one at a
                       // time, paying their costs). Nothing playable: the exhaust was the whole action.

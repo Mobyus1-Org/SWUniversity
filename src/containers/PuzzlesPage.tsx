@@ -123,6 +123,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "HMW_009", // Chewbacca — Relentless Rebel
   "HMW_003", // Doctor Hemlock — Emotion Has No Place Here
   "HMW_010", // Tarfful — Fighting from the Shadowlands
+  "HMW_016", // Maul — Old Master
   "TWI_017", // Chancellor Palpatine // Darth Sidious — an Action on BOTH faces
   //Jump to Lightspeed
   "JTL_004", "JTL_005", "JTL_006", "JTL_008", "JTL_010", "JTL_012", "JTL_013", "JTL_014", "JTL_018",

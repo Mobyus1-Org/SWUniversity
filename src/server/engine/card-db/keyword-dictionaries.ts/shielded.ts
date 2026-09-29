@@ -44,6 +44,7 @@ export function HasShielded(cardId: string, playId?: string, player?: PlayerId, 
     case "LOF_004"://Kanan Jarrus (LOF) Leader Unit
     case "SOR_011"://Grand Inquisitor Leader Unit
     case "HMW_005"://Jar Jar Binks Leader Unit
+    case "HMW_016"://Maul (Old Master) Leader Unit
         return !LeaderAbilitiesIgnored();
     //Spark of Rebellion
     case "SHD_066"://Cargo Juggernaut

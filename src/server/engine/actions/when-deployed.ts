@@ -5,6 +5,7 @@ import { CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { CreateCloneTrooper } from "@/server/engine/token-helpers";
+import { DiscardUnitsPlayableAtDiscount } from "@/server/engine/card-playability";
 
 export function resolveWhenDeployed(
   cardId: string,
@@ -49,6 +50,28 @@ export function resolveWhenDeployed(
         fromPlayIds: reclaimable002.map(u => u.playId),
         needsMultiple: true,
         maxTargets: reclaimable002.length,
+        continuation: null,
+      };
+    }
+    case "HMW_016": { // Maul (Old Master) — "When Deployed: You may play a unit that was defeated
+                      // this phase from your discard pile. It costs 5 resources less." The
+                      // defeated-this-phase test is the left-play ledger, so a unit discarded from
+                      // hand or deck never qualifies — it was never in play to be defeated.
+      const gs016 = game.currentGameState;
+      const defeatedThisPhase016 = new Set(
+        gs016.roundState.cardsLeftPlayThisPhase
+          .filter(c => c.fromPlayer === player && (c.reason === "defeated" || c.reason === "token-defeated"))
+          .map(c => c.playId),
+      );
+      const eligible016 = DiscardUnitsPlayableAtDiscount(gs016, player, 5, d => defeatedThisPhase016.has(d.playId));
+      if (eligible016.length === 0) return null;
+      return {
+        type: "return-from-discard",
+        cardId: "HMW_016",
+        player,
+        maxCount: 1,
+        eligiblePlayIds: eligible016,
+        costReduction: 5,
         continuation: null,
       };
     }
