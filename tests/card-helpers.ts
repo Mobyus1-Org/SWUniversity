@@ -147,6 +147,7 @@ export const Cards = {
       wicket: "HMW_014",        // Few Greater Battles to Fight — reacts to a friendly unit punching up
       maulOldMaster: "HMW_016", // Old Master — plays a unit and immediately defeats it
       osha: "HMW_017",          // Haunted By Her Past — plays a Villainy unit out of the resource row
+      theWarrior: "HMW_018",    // Deft Duelist — plays a low-POWER unit and grants it Ambush
     },
     jtl: {
       asajjVentress: "JTL_001",
@@ -336,6 +337,7 @@ export const Cards = {
       chewbaccaLoyalCompanion: "SOR_196",
       greedo: "SOR_204",
       craftySmuggler: "SOR_207",
+      swoopRacer: "SOR_210", // 4/3 Ground, cost 3, Cunning only, no abilities — power 4
       wildernessFighter: "SOR_064", // 3-cost Ground, Shielded and nothing else
       volunteerSoldier: "SOR_248", // 2/3 Ground, cost 3, printed Raid 1 and nothing else
       syndicateLackeys: "SOR_213",
@@ -390,6 +392,7 @@ export const Cards = {
       toroCalican: "SHD_239",
       ladyProxima: "SHD_255",
       frontierTrader: "SHD_214", // 2/2 Ground Fringe/Jawa, cost 3
+      liberatedSlaves: "SHD_200", // 3/5 Ground, cost 3, Cunning+Heroism, no abilities — power 3
       superlaserTechnician: "SHD_085",
       echoRestored: "SHD_099",
       theMarauder: "SHD_102",
@@ -806,6 +809,7 @@ export const Cards = {
       // Each card has multiple identical printings within IBH; suffix letters are alternate printings.
       echoCoordinator: "IBH_007", // 1/5 Ground, no abilities — survives a hit and barely counters
       firstLegionTrooper: "IBH_055", // 3/4 Ground, cost 3, Vigilance+Villainy, no abilities
+      hothTrooper: "IBH_037",        // 2/3 Ground, cost 2, Cunning+Heroism, no abilities
       chewbacca: "IBH_003", chewbaccaB: "IBH_046",
       rogueSquadronSpeeder: "IBH_004", rogueSquadronSpeederB: "IBH_017", rogueSquadronSpeederC: "IBH_034",
       rebellionYWing: "IBH_006", rebellionYWingB: "IBH_024", rebellionYWingC: "IBH_032",

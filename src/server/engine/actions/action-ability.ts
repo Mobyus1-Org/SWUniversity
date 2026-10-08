@@ -77,6 +77,13 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       // These four carry an Action on BOTH sides. The entries in the playId branch below serve the
       // deployed side; the front side needs its own gate because its costs differ (it also
       // exhausts, and Dryden must discard a 6+ card rather than any card).
+      case "HMW_018": // The Warrior — Action [1 resource, Exhaust]: play a unit with 3 or less
+                      // POWER from your hand and give it Ambush. Power, not cost, is the limit —
+                      // the first card in this family to read that way.
+        if (GetResources(player, true).length > 0 && PlayerHasUnitsInHand(player, { maxPower: 3 })) {
+          abilities.push(cardId);
+        }
+        break;
       case "LAW_003": // Agent Kallus — Action [1 resource, Exhaust]: play a card ignoring aspect penalties.
         if (GetResources(player, true).length > 0 && GetHand(player).length > 0) abilities.push(cardId);
         break;
@@ -780,6 +787,7 @@ export function ActionAbilityCost(cardId: string): number {
       return 1;
     case "SHD_004"://Rey
       return 1;
+    case "HMW_018"://The Warrior - Deft Duelist: Action [1 resource, Exhaust]
     case "SHD_016"://Fennec Shand - Honoring the Deal
       return 1;
     case "SHD_009"://Hunter - Outcast Sergeant

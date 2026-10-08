@@ -8501,17 +8501,23 @@ function handleChooseTarget(
       }
       case "SOR_003": // Chewbacca — unit costing 3 or less; gains Sentinel for this phase.
       case "SHD_016": // Fennec Shand — unit costing 4 or less; gains Ambush for this phase.
+      case "HMW_018": // The Warrior — unit with 3 or less POWER; gains Ambush for this phase.
       case "SEC_007": { // Dryden Vos — unit costing 5 or less; gains Ambush for this phase.
         const spec = {
           SOR_003: { maxCost: 3, effect: "SOR_003", keyword: "Sentinel" },
           SHD_016: { maxCost: 4, effect: "SHD_016", keyword: "Ambush" },
           SEC_007: { maxCost: 5, effect: "SEC_007", keyword: "Ambush" },
-        }[pending.cardId as "SOR_003" | "SHD_016" | "SEC_007"];
+          // The odd one out: her limit is on POWER, so maxCost stays open.
+          HMW_018: { maxPower: 3, effect: "HMW_018", keyword: "Ambush" },
+        }[pending.cardId as "SOR_003" | "SHD_016" | "SEC_007" | "HMW_018"] as
+          { maxCost?: number; maxPower?: number; effect: string; keyword: string };
         const who = CardTitle(pending.cardId);
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse(`${who}: chosen card is not a Unit.`), pending, stateChanged: false };
-        if ((CardCost(cardId) ?? 0) > spec.maxCost)
+        if (spec.maxCost !== undefined && (CardCost(cardId) ?? 0) > spec.maxCost)
           return { response: invalidResponse(`${who}: chosen unit costs more than ${spec.maxCost}.`), pending, stateChanged: false };
+        if (spec.maxPower !== undefined && (CardPower(cardId) ?? 0) > spec.maxPower)
+          return { response: invalidResponse(`${who}: chosen unit has more than ${spec.maxPower} power.`), pending, stateChanged: false };
         const costK = playCost(game, pending.player, cardId);
         if (spendableFor(game, pending.player) < costK)
           return { response: invalidResponse(`${who}: not enough resources to play this unit.`), pending, stateChanged: false };
@@ -11719,6 +11725,8 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "HMW_008": // General Grievous (Separatist Warlord) — If you control 5 or more resources.
       return p.resources.length >= 5;
+    case "HMW_018": // The Warrior (Deft Duelist) — If you control 5 or more resources.
+      return p.resources.length >= 5;
     case "HMW_017": // Osha (Haunted By Her Past) — If you control 6 or more resources.
       return p.resources.length >= 6;
     case "HMW_016": // Maul (Old Master) — If you control 7 or more resources.
@@ -11815,6 +11823,12 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
   if (HasShielded(leader.cardId, unit.playId, player)) {
     game.triggerBag.push({ triggerType: "shielded", cardId: leader.cardId, fromPlayer: player, playId: unit.playId, nested });
   }
+  // Ambush on a leader unit reads "When you deploy this leader, she may immediately attack an
+  // enemy unit" — the same timing window as Shielded. HMW_018 The Warrior is the first leader to
+  // print it, and without this the keyword was simply inert on deploy.
+  if (HasAmbush(leader.cardId, unit.playId, "Leader", player)) {
+    game.triggerBag.push({ triggerType: "ambush", cardId: leader.cardId, fromPlayer: player, playId: unit.playId, nested });
+  }
   // Support on a leader unit reads "When you deploy this leader, you may attack with another unit"
   // — same timing window as Shielded, so it queues here (ASH_009 Ahsoka, ASH_014 The Mandalorian).
   if (HasSupport(leader.cardId, unit.playId, player)) {
@@ -11895,6 +11909,25 @@ function resolveActionAbility(
         return null;
       }
       return { type: "play-from-hand", cardId: "SOR_003", player } satisfies PlayFromHandPending;
+    }
+    case "HMW_018": { // The Warrior (leader) — Action [1 resource, Exhaust]: Play a unit with 3 or
+                      // less POWER from your hand (paying its cost) and give it Ambush this phase.
+                      // Eligible indices are supplied rather than left to the handler: a power
+                      // limit is far less obvious to read off a hand than a cost one.
+      const eligible018 = GetHand(player)
+        .map((c, i) => ({ c, i }))
+        .filter(({ c }) => CardType(c.cardId) === "Unit" && (CardPower(c.cardId) ?? 0) <= 3)
+        .map(({ i }) => i);
+      if (eligible018.length === 0) {
+        log.push(`${CardTitle("HMW_018")}: no unit with 3 or less power in hand — soft pass.`);
+        return null;
+      }
+      return {
+        type: "play-from-hand",
+        cardId: "HMW_018",
+        player,
+        eligibleHandIndices: eligible018,
+      } satisfies PlayFromHandPending;
     }
     case "SHD_016": { // Fennec Shand (leader) — Action [1 resource, Exhaust]: Play a unit that costs
                       // 4 or less from your hand (paying its cost). Give it Ambush for this phase.

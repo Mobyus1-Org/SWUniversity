@@ -131,6 +131,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "SHD_014": amount += !LeaderAbilitiesIgnored() ? 2 : 0; break; //Cad Bane Leader Unit
     case "SHD_005": amount += !LeaderAbilitiesIgnored() ? 1 : 0; break; //Hondo Ohnaka Leader Unit
     case "HMW_007": amount += !LeaderAbilitiesIgnored() ? 1 : 0; break; //Darth Vader (Might of the Empire) Leader Unit
+    case "HMW_018": amount += !LeaderAbilitiesIgnored() ? 1 : 0; break; //The Warrior (Deft Duelist) Leader Unit
     //non-Leader Units
     case "SOR_194": amount += 2; break; //Rogue Operative
     case "SOR_157": amount += 2; break; //Cantina Braggart

@@ -1,4 +1,4 @@
-import { CardArena, CardAspects, CardCost, CardHp, CardIsUnique, CardSubtitle, CardText, CardTitle, CardTraits, CardType, CardType2 } from "@/server/engine/card-db/generated";
+import { CardArena, CardAspects, CardCost, CardHp, CardIsUnique, CardPower, CardSubtitle, CardText, CardTitle, CardTraits, CardType, CardType2 } from "@/server/engine/card-db/generated";
 import { LeaderBackSideOf, LeaderFrontAspectsOf, LeaderUnitSideOf } from "@/server/engine/card-db/double-sided-leaders";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { Card, CardInPlay, CardTypes, CurrentEffect, EffectDuration, HP_MOD, Leader, PHASE_STAT_MOD, POWER_MOD, PlayerId, Resource, Unit as UnitInterface } from "@/lib/engine/core-models";
@@ -222,6 +222,8 @@ export function PlayerHasUnitsInHand(player: PlayerId, filters?: {
   trait?: string;
   aspect?: string;
   maxCost?: number;
+  /** PRINTED power, as the card reads in hand (HMW_018 The Warrior: "3 or less power"). */
+  maxPower?: number;
 }): boolean {
   const hand = GetHand(player);
 
@@ -242,6 +244,12 @@ export function PlayerHasUnitsInHand(player: PlayerId, filters?: {
     }
 
     if (filters?.maxCost && CardCost(card.cardId) > filters.maxCost) {
+      return false;
+    }
+
+    // `!== undefined` rather than truthy: a maxPower of 0 is a real limit, and a 0-power unit
+    // reads as an absent entry in the power map.
+    if (filters?.maxPower !== undefined && (CardPower(card.cardId) ?? 0) > filters.maxPower) {
       return false;
     }
 

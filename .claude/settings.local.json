@@ -5,7 +5,8 @@
       "Bash(npm test *)",
       "Bash(npx tsc *)",
       "Bash(npx vitest *)",
-      "Bash(*)"
+      "Bash(*)",
+      "Bash(python3 -)"
     ]
   }
 }

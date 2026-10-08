@@ -26,6 +26,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
         case "SHD_220"://Fennec Shand
         case "SHD_016"://Fennec Shand Leader / Leader unit
         case "SEC_109"://Diplomatic Envoy — the next unit played after its disclose, this phase
+        case "HMW_018"://The Warrior Leader — unit played by her Action gains Ambush this phase
         case "SEC_007"://Dryden Vos Leader — unit played by his Action gains Ambush this phase
         case "LAW_015"://Jabba the Hutt (deployed) — unit played with a Credit gains Ambush this phase
         case "LOF_220"://Shien Flurry
@@ -156,6 +157,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "ASH_194"://Snub Fighter Squadron
     case "ASH_206"://Kelleran Beq
     case "ASH_207"://Heroic Purrgil
+    case "HMW_018"://The Warrior (Deft Duelist) Leader Unit
       return true;
   }
   //JTL_053: The Ghost - Heart of the Family
