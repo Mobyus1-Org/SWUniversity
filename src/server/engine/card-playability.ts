@@ -110,6 +110,29 @@ export function aspectPenalty(game: GameState, player: PlayerId, cardId: string)
 }
 
 /**
+ * What `cardId` costs when the ability playing it "ignores its <aspect> aspect penalties"
+ * (HMW_017 Osha, for Villainy).
+ *
+ * Only the pips of that one aspect are forgiven: the remaining pips are re-priced from scratch, so
+ * they get first claim on whatever the base and leader provide. A Vigilance+Villainy card under a
+ * leader that covers neither still pays 2 for the Vigilance. The waiver is clamped at 0 so a card
+ * whose penalty was already waived outright (a leader waiver, Omega) cannot come out cheaper than
+ * its printed cost.
+ */
+export function costIgnoringAspectPenalties(
+  game: GameState,
+  player: PlayerId,
+  cardId: string,
+  ignoredAspect: string,
+): number {
+  const remaining = aspectPenaltyForAspects(
+    game, player, CardAspects(cardId).filter(a => a !== ignoredAspect),
+  );
+  const waived = Math.max(0, aspectPenalty(game, player, cardId) - remaining);
+  return Math.max(0, playCost(game, player, cardId) - waived);
+}
+
+/**
  * Upgrades whose aspect penalty is ignored only when played ON a particular host. The discount
  * depends on the attach target, so it can't live in aspectPenalty(): payment for these is deferred
  * to the upgrade-target step (see HostDependentUpgradeCost).

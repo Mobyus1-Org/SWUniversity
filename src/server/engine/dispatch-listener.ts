@@ -55,7 +55,7 @@ import type {
   ResolutionRequest,
   UseAbilityDispatchData,
 } from "@/lib/engine/message-types";
-import { aspectPenalty, CardIsPlayable, PlayableUnitHandIndices, discountedPlayCost, JumpToLightspeedMarkerIndex, JUMP_TO_LIGHTSPEED_FREE, effectiveSmuggleCost, spendableFor, playCost, palpatinesReturnCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks, onlyHopeCost, omegaWaivesAspectPenalty, HostDependentUpgradeCost, DiscardPlayPermission } from "@/server/engine/card-playability";
+import { aspectPenalty, CardIsPlayable, PlayableUnitHandIndices, discountedPlayCost, JumpToLightspeedMarkerIndex, JUMP_TO_LIGHTSPEED_FREE, effectiveSmuggleCost, spendableFor, playCost, palpatinesReturnCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks, onlyHopeCost, omegaWaivesAspectPenalty, HostDependentUpgradeCost, DiscardPlayPermission, costIgnoringAspectPenalties } from "@/server/engine/card-playability";
 import type { Game, GameState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import type { DealtHeavyDamageContext } from "@/lib/engine/trigger-types";
@@ -111,7 +111,7 @@ import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/sab
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { HasAmbush } from "@/server/engine/card-db/keyword-dictionaries.ts/ambush";
 import { AttackAbilityCardIds, HasSupport, SupportGrantEffectCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
-import { ActionAbilities, ActionAbilityCost, ActionAbilityExhausts, ActionAbilityCardId, WeakerThanAFriendlyUnitPlayIds, UpgradeHostsOwnAction, UpgradeActionAvailable, BactaTankTargets, UpgradeGrantsHostAction, ArmorerResourceUpgrades, ArmorerAttachTargets, ArmorerFriendlyAttachTargets } from "@/server/engine/actions/action-ability";
+import { ActionAbilities, ActionAbilityCost, ActionAbilityExhausts, ActionAbilityCardId, WeakerThanAFriendlyUnitPlayIds, UpgradeHostsOwnAction, UpgradeActionAvailable, BactaTankTargets, UpgradeGrantsHostAction, ArmorerResourceUpgrades, ArmorerAttachTargets, ArmorerFriendlyAttachTargets, OshaResourceVillainyUnits, FriendlyHeroismUnitDefeatedThisPhase } from "@/server/engine/actions/action-ability";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { IsTokenUpgrade, PilotingEligibleVehicles, PilotlessVehiclePlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -258,6 +258,29 @@ function resolveChooseOne(
         log.push(`${CardTitle("SEC_232")}: put ${CardTitle(card232.cardId)} on the ${destination232} of the deck.`);
       }
       if (destination232 === "top") next = buildKreiaHandPick(pending.player, "bottom");
+      break;
+    }
+    case "HMW_017": { // Osha — "you may resource a card from your hand", exhausted, once.
+      if (optionId !== "skip") {
+        const handIdx017 = Number(optionId);
+        const hand017 = GetPlayer(game, pending.player).hand;
+        if (Number.isInteger(handIdx017) && handIdx017 >= 0 && handIdx017 < hand017.length) {
+          const [card017] = hand017.splice(handIdx017, 1);
+          GetPlayer(game, pending.player).resources.push({
+            cardId: card017.cardId,
+            playId: nextPlayId(game),
+            owner: pending.player,
+            controller: pending.player,
+            ready: false, // she does not say "and ready it"
+            stolen: false,
+          });
+          log.push(`${CardTitle("HMW_017")}: resourced ${CardTitle(card017.cardId)}.`);
+        }
+      }
+      // Osha's ability is finished, so the played unit's entry triggers may now resolve. They are
+      // handed back explicitly: the choose-one exit returns plain state when nothing is pending and
+      // does not drain the bag on its own, which would leave them stranded.
+      next = drainTriggerBag(game, log);
       break;
     }
     case "TS26_12": { // Sundari Palace — resource a hand card ready, then re-prompt.
@@ -5192,6 +5215,14 @@ function completePlayCard(
      * gives a copy that leaves play before its When Played resolves (CR 8.29.3).
      */
     defeatAfterEntry?: { sourceCardId: string };
+    /**
+     * HMW_017 Osha — the ability that plays this unit has more of its own text left to resolve
+     * ("If you do, you may resource a card from your hand"). A unit's entry triggers are NEW
+     * triggers and wait for the ability that played it to finish, so they are left in the bag and
+     * NOT drained here; the caller returns its own prompt, and whatever handles that prompt drains
+     * them at its exit.
+     */
+    deferEntryTriggers?: boolean;
   },
 ): HandlerResult {
   // SHD_233 Evacuate — "Return each non-leader unit to its owner's hand." A targetless event whose
@@ -5333,6 +5364,14 @@ function completePlayCard(
       if (bagDefeat) {
         return { response: resolutionResponse(pendingToResolution(bagDefeat, game)), pending: bagDefeat, stateChanged: true };
       }
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    // The ability that played this unit has text of its own still to resolve, so the unit's entry
+    // triggers stay bagged and undrained — the caller owns what the player sees next.
+    if (opts?.deferEntryTriggers) {
+      queueUnitEntryTriggers(game, log, unit, cardId, player, opts, true);
+      updateDefeatedPlayers(game);
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
@@ -6184,6 +6223,28 @@ function buildSundariPalacePrompt(
       ...hand.map((c, i) => ({ id: String(i), label: `Resource ${CardTitle(c.cardId) ?? c.cardId}` })),
     ],
     data: { remaining, resourced },
+    continuation: null,
+  } satisfies ChooseOnePending;
+}
+
+/**
+ * HMW_017 Osha — "If you do, you may resource a card from your hand."
+ *
+ * One optional prompt, and the card arrives EXHAUSTED: unlike TS26_12 she does not say "and ready
+ * it". Nothing replaces the card that left the row either, so the row is down one card unless this
+ * prompt is accepted. Null with an empty hand, so no dead prompt is shown.
+ */
+function buildOshaResourceFromHandPrompt(game: GameState, player: PlayerId): ChooseOnePending | null {
+  const hand = GetPlayer(game, player).hand;
+  if (hand.length === 0) return null;
+  return {
+    type: "choose-one",
+    cardId: "HMW_017",
+    player,
+    options: [
+      { id: "skip", label: "Skip" },
+      ...hand.map((c, i) => ({ id: String(i), label: `Resource ${CardTitle(c.cardId) ?? c.cardId}` })),
+    ],
     continuation: null,
   } satisfies ChooseOnePending;
 }
@@ -11658,6 +11719,8 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "HMW_008": // General Grievous (Separatist Warlord) — If you control 5 or more resources.
       return p.resources.length >= 5;
+    case "HMW_017": // Osha (Haunted By Her Past) — If you control 6 or more resources.
+      return p.resources.length >= 6;
     case "HMW_016": // Maul (Old Master) — If you control 7 or more resources.
       return p.resources.length >= 7;
     case "HMW_014": // Wicket (Few Greater Battles to Fight) — If you control 4 or more resources.
@@ -12780,6 +12843,22 @@ function resolveActionAbility(
       pend123.amount = power123;
       return pend123;
     }
+    case "HMW_017": { // Osha — choose a Villainy unit in your RESOURCE row to play.
+                      // The leader side first checks "if a friendly Heroism unit was defeated this
+                      // phase"; the deployed side has no such condition. An unmet condition is a
+                      // soft pass — the cost (her Exhaust) is already paid either way.
+      const deployed017 = playId !== undefined;
+      if (!deployed017 && !FriendlyHeroismUnitDefeatedThisPhase(player)) {
+        log.push(`${CardTitle("HMW_017")}: no friendly Heroism unit was defeated this phase — soft pass.`);
+        return null;
+      }
+      const villains017 = OshaResourceVillainyUnits(player);
+      if (villains017.length === 0) {
+        log.push(`${CardTitle("HMW_017")}: no Villainy unit in your resources it can play — soft pass.`);
+        return null;
+      }
+      return mandatoryTarget("HMW_017_from_resources", player, villains017);
+    }
     case "ASH_001": { // The Armorer — step 1: choose an upgrade in your RESOURCE row.
       const upgrades001 = ArmorerResourceUpgrades(player);
       if (upgrades001.length === 0) return null;
@@ -13790,6 +13869,33 @@ function applyAbilityEffect(
         fromPlayIds: targets001,
         continuation: pending.continuation ?? null,
       } satisfies AbilityTargetPending;
+    }
+    case "HMW_017_from_resources": { // Osha — play the chosen Villainy unit out of the resource row.
+      if (!targetPlayId || !pending.player) break;
+      const gs017 = game.currentGameState;
+      const player017 = pending.player;
+      const resource017 = GetPlayer(gs017, player017).resources.find(r => r.playId === targetPlayId);
+      if (!resource017) break;
+      const unitCardId017 = resource017.cardId;
+
+      // "ignoring its Villainy aspect penalties" — only the Villainy pips are forgiven.
+      const cost017 = costIgnoringAspectPenalties(gs017, player017, unitCardId017, "Villainy");
+      // The card leaves the row BEFORE the cost is charged: it cannot pay for itself. Once it is
+      // gone the ready count can be no higher than the new total.
+      const total017 = GetPlayer(gs017, player017).resources.length;
+      if (Math.min(spendableFor(gs017, player017), total017 - 1) < cost017) break;
+      RemoveResourcePreservingReady(gs017, player017, targetPlayId);
+      payResources(gs017, player017, cost017, game.gameLog, unitCardId017);
+      game.gameLog.push(`${CardTitle("HMW_017")}: played ${CardTitle(unitCardId017)} from resources for ${cost017}.`);
+
+      // Her own "If you do, you may resource a card from your hand" is part of THIS ability, so it
+      // resolves before the played unit's entry triggers. deferEntryTriggers leaves those in the
+      // bag; answering the prompt below drains them.
+      completePlayCard(gs017, game.gameLog, unitCardId017, player017, { deferEntryTriggers: true });
+      const tail017 = buildOshaResourceFromHandPrompt(gs017, player017);
+      if (tail017) return tail017;
+      // Nothing in hand to resource — hand the bagged entry triggers back right away.
+      return drainTriggerBag(gs017, game.gameLog);
     }
     case "ASH_001_attach": { // The Armorer — play it from resources, then resource the top of deck.
       if (!targetPlayId || !pending.player || !pending.sourcePlayId) break;

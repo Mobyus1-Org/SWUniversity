@@ -146,6 +146,7 @@ export const Cards = {
       chamSyndulla: "HMW_013",  // Hammer of Ryloth — reacts to non-combat damage on your side
       wicket: "HMW_014",        // Few Greater Battles to Fight — reacts to a friendly unit punching up
       maulOldMaster: "HMW_016", // Old Master — plays a unit and immediately defeats it
+      osha: "HMW_017",          // Haunted By Her Past — plays a Villainy unit out of the resource row
     },
     jtl: {
       asajjVentress: "JTL_001",
@@ -804,6 +805,7 @@ export const Cards = {
       avengerHuntingTheRebels: "IBH_072",
       // Each card has multiple identical printings within IBH; suffix letters are alternate printings.
       echoCoordinator: "IBH_007", // 1/5 Ground, no abilities — survives a hit and barely counters
+      firstLegionTrooper: "IBH_055", // 3/4 Ground, cost 3, Vigilance+Villainy, no abilities
       chewbacca: "IBH_003", chewbaccaB: "IBH_046",
       rogueSquadronSpeeder: "IBH_004", rogueSquadronSpeederB: "IBH_017", rogueSquadronSpeederC: "IBH_034",
       rebellionYWing: "IBH_006", rebellionYWingB: "IBH_024", rebellionYWingC: "IBH_032",

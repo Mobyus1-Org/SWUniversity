@@ -8,6 +8,7 @@ import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/a
 import { PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { UnitsWithoutWeaknessToken } from "@/server/engine/token-helpers";
+import { costIgnoringAspectPenalties, spendableFor } from "@/server/engine/card-playability";
 
 /**
  * Every unit (either side) whose power is below that of at least one unit `player` controls —
@@ -176,6 +177,13 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       if (AllGroundUnits().length > 0) abilities.push(cardId);
       break;
     }
+      case "HMW_017": { // Osha — Action [Exhaust]: play a Villainy unit from your RESOURCES.
+                        // Gated on a legal target only. The "if a friendly Heroism unit was
+                        // defeated this phase" half is a CONDITION, not a cost, so an unmet one
+                        // soft-passes (the leader still exhausts) rather than hiding the ability.
+        if (OshaResourceVillainyUnits(player).length > 0) abilities.push(cardId);
+        break;
+      }
     case "ASH_001": { // The Armorer — Action [Exhaust]: play an upgrade from your RESOURCES onto a
                         // unit that entered play this phase. Offered only when both halves exist:
                         // an upgrade in the row, and something legal to attach it to.
@@ -394,6 +402,11 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         if (attackers009.length > 0 && !used009) abilities.push(cardId);
         break;
       }
+      case "HMW_017": { // Osha (deployed) — plain "Action:", no cost at all, and no Heroism
+                        // condition on this side: just a legal Villainy unit in the resource row.
+        if (OshaResourceVillainyUnits(player).length > 0) abilities.push(cardId);
+        break;
+      }
       case "HMW_001": { // Asajj Ventress (deployed) — plain "Action:", no exhaust, no limit.
         if (GetUnitsForPlayer(player, true).filter(u => CanUnitAttack(u)).length > 0) {
           abilities.push(cardId);
@@ -587,6 +600,41 @@ export function ArmorerResourceUpgrades(player: PlayerId): string[] {
 }
 
 /**
+ * HMW_017 Osha — the Villainy UNITS in your resource row you could actually play right now,
+ * priced with her Villainy waiver applied.
+ *
+ * The resource that becomes the unit leaves the row before the cost is charged, so it cannot help
+ * pay for itself; after it goes, the ready count is capped by the new total. Both sides of the card
+ * share this, and it is also the offer gate — an ability with no legal target is not offered.
+ */
+export function OshaResourceVillainyUnits(player: PlayerId): string[] {
+  const game = GetGame();
+  if (!game) return [];
+  const gs = game.currentGameState;
+  const resources = GetPlayer(gs, player).resources;
+  const spendable = spendableFor(gs, player);
+  return resources
+    .filter(r => CardType(r.cardId) === "Unit" && (CardAspects(r.cardId) ?? []).includes("Villainy"))
+    .filter(r => costIgnoringAspectPenalties(gs, player, r.cardId, "Villainy")
+      <= Math.min(spendable, resources.length - 1))
+    .map(r => r.playId);
+}
+
+/**
+ * HMW_017 Osha (leader side) — "If a friendly Heroism unit was defeated this phase". Reads the
+ * left-play ledger, so it counts a unit the OPPONENT defeated just the same, and a token unit
+ * (Clone Trooper is Heroism) as well as a card. Being per-phase is the ledger's own doing.
+ */
+export function FriendlyHeroismUnitDefeatedThisPhase(player: PlayerId): boolean {
+  const game = GetGame();
+  if (!game) return false;
+  return game.currentGameState.roundState.cardsLeftPlayThisPhase.some(e =>
+    e.fromPlayer === player
+    && (e.reason === "defeated" || e.reason === "token-defeated")
+    && (CardAspects(e.cardId) ?? []).includes("Heroism"));
+}
+
+/**
  * Units the leader side may attach to: any unit that ENTERED PLAY THIS PHASE, either player's —
  * the text says "a unit", not "a friendly unit".
  */
@@ -675,6 +723,7 @@ export function BactaTankTargets(player: PlayerId): { cardId: string; playId: st
 export function ActionAbilityExhausts(abilityId: string): boolean {
   switch (abilityId) {
     case "SHD_155":   // Heroic Resolve — "[2 resources, defeat a Heroic Resolve]", no Exhaust
+    case "HMW_017":   // Osha (deployed) — plain "Action:"; her leader side exhausts inline
     case "HMW_001":   // Asajj Ventress (deployed) — plain "Action:"; leader side exhausts inline
     case "HMW_009":   // Chewbacca (deployed) — plain "Action:", limited once each round
     case "SHD_017":   // Lando Calrissian (deployed) — plain "Action:", limited once each round

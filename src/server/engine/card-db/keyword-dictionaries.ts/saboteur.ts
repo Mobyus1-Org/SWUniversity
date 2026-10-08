@@ -138,6 +138,7 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
     case "ASH_222"://Unsanctioned Patrol
     case "ASH_256"://Rebel Infiltrators
     case "HMW_234"://Ritual Dragon
+    case "HMW_017"://Osha (Haunted By Her Past) Leader Unit
       return true;
     default: break;
   }
