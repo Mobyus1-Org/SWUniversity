@@ -534,6 +534,7 @@ export const Cards = {
       strikeship: "LOF_131",
       witchOfTheMist: "LOF_154",
       theLegacyRun: "LOF_213",
+      outerRimMystic: "LOF_112", // 2/6 Ground, cost 3, Command, Force+Fringe, no abilities
       sandtrooperCavalry: "LOF_232",
       vanee: "LOF_082",
       darthTyranus: "LOF_231",
@@ -925,6 +926,7 @@ export const Cards = {
     hmw: {
       allianceShieldGenerator: "HMW_081", // Fortify — prevents a 5+ damage hit on your base
       trapField: "HMW_171",              // Fortify — 3 damage to a ground unit entering play
+      bestialBond: "HMW_038",            // +2/+2 Innate — Beast token on a Creature or Force host
     },
   },
   events: {

@@ -7936,6 +7936,20 @@ function handleChooseTarget(
       }
     }
 
+    // HMW_038 Bestial Bond — "When Played: If attached unit is a Creature or a Force unit, create
+    // a Beast token." The host's traits are read through TraitContains so that traits an upgrade
+    // grants or removes are honoured, rather than only what the card prints. The token goes to the
+    // player who played the upgrade — the ability's controller — not to the host's controller.
+    if (pending.upgradeCardId === "HMW_038" && targetUnit) {
+      const bonded038 = TraitContains(targetUnit.cardId, "Creature", targetUnit.controller, targetUnit.playId)
+        || TraitContains(targetUnit.cardId, "Force", targetUnit.controller, targetUnit.playId);
+      if (bonded038) {
+        CreateBeast(game, pending.player, log, "HMW_038");
+      } else {
+        log.push(`${CardTitle("HMW_038")}: ${CardTitle(targetUnit.cardId)} is neither a Creature nor a Force unit — no Beast token.`);
+      }
+    }
+
     if (pending.upgradeCardId === "JTL_148") {
       const cheap148 = AllUnits().flatMap(u =>
         u.upgrades
