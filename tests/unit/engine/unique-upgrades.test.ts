@@ -7,9 +7,12 @@ import { Cards } from "../../card-helpers";
 // inside its unit branch, and upgrades never reached it. A player could therefore stack two copies
 // of a unique upgrade, which the rules forbid.
 //
-// Unlike the unit case there is no choice to present: at most one copy can already be in play, so
-// the existing one is defeated outright when the second is attached.
-describe("unique upgrades — playing a second copy defeats the first", () => {
+// The player chooses which copy dies, here as everywhere: CR 8.29.3 — "If a player ever has more
+// than one copy of a unique card in play under their control at a given time, they must defeat one
+// of them." This used to cull the older copy outright on the assumption that an upgrade had no
+// choice to offer, which is wrong twice over — both copies are equally eligible, and the other
+// copy may not even be an upgrade (CR 8.29.3a).
+describe("unique upgrades — playing a second copy prompts to defeat one", () => {
   function base() {
     return new GameStateBuilder()
       .MyBase(Cards.bases.common.blue30HP)
@@ -26,40 +29,57 @@ describe("unique upgrades — playing a second copy defeats the first", () => {
   const upgradesOn = (g: GameTestAdapter, i: number) =>
     g.state.player1.groundArena[i].upgrades.map(u => u.cardId);
 
-  it("moving a unique upgrade to a second unit leaves only one copy in play", async () => {
+  /** Two Marines, a unique upgrade already on the first, a second copy in hand. */
+  function twoCopiesSetup() {
+    return base()
+      .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
+      .WithGroundUnitForPlayer(1, Cards.units.sor.echoBaseDefender)
+      .WithUpgradesOnGroundUnitForPlayer(1, 0, [GameStateBuilder.Upgrade(UNIQUE, 1)])
+      .WithCardInHandForPlayer(1, UNIQUE);
+  }
+
+  it("attaching a second copy prompts, offering both copies", async () => {
     const g = new GameTestAdapter();
-    g.loadNewState(
-      base()
-        .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
-        .WithGroundUnitForPlayer(1, Cards.units.sor.echoBaseDefender)
-        .WithUpgradesOnGroundUnitForPlayer(1, 0, [GameStateBuilder.Upgrade(UNIQUE, 1)])
-        .WithCardInHandForPlayer(1, UNIQUE)
-        .Build(),
-    );
+    g.loadNewState(twoCopiesSetup().Build());
+    const oldCopy = g.state.player1.groundArena[0].upgrades[0].playId;
 
     await g.playCardFromHandAsync(1, 0);
     await g.chooseGroundUnitAsync(1, 1); // attach the new copy to the OTHER unit
 
-    expect(upgradesOn(g, 0)).not.toContain(UNIQUE); // the old copy is gone
-    expect(upgradesOn(g, 1)).toContain(UNIQUE);
-    const total = g.state.player1.groundArena.flatMap(u => u.upgrades).filter(u => u.cardId === UNIQUE);
-    expect(total).toHaveLength(1);
+    const res = g.lastDispatchResponse?.resolutionNeeded as { fromPlayIds?: string[] } | undefined;
+    expect(res?.fromPlayIds).toHaveLength(2);
+    expect(res?.fromPlayIds).toContain(oldCopy);
   });
 
-  it("the defeated copy goes to its owner's discard", async () => {
+  it("choosing the old copy leaves only the new one in play, and discards the old", async () => {
     const g = new GameTestAdapter();
-    g.loadNewState(
-      base()
-        .WithGroundUnitForPlayer(1, Cards.units.sor.battlefieldMarine)
-        .WithGroundUnitForPlayer(1, Cards.units.sor.echoBaseDefender)
-        .WithUpgradesOnGroundUnitForPlayer(1, 0, [GameStateBuilder.Upgrade(UNIQUE, 1)])
-        .WithCardInHandForPlayer(1, UNIQUE)
-        .Build(),
-    );
+    g.loadNewState(twoCopiesSetup().Build());
+    const oldCopy = g.state.player1.groundArena[0].upgrades[0].playId;
 
     await g.playCardFromHandAsync(1, 0);
     await g.chooseGroundUnitAsync(1, 1);
+    await g.dispatchAsync(1, "choose-target", { targetPlayIds: [oldCopy] });
 
+    expect(upgradesOn(g, 0)).not.toContain(UNIQUE);
+    expect(upgradesOn(g, 1)).toContain(UNIQUE);
+    const total = g.state.player1.groundArena.flatMap(u => u.upgrades).filter(u => u.cardId === UNIQUE);
+    expect(total).toHaveLength(1);
+    expect(g.state.player1.discard.map(d => d.cardId)).toContain(UNIQUE);
+  });
+
+  it("choosing the NEW copy instead is equally legal and leaves the old one attached", async () => {
+    const g = new GameTestAdapter();
+    g.loadNewState(twoCopiesSetup().Build());
+    const oldCopy = g.state.player1.groundArena[0].upgrades[0].playId;
+
+    await g.playCardFromHandAsync(1, 0);
+    await g.chooseGroundUnitAsync(1, 1);
+    const res = g.lastDispatchResponse?.resolutionNeeded as { fromPlayIds?: string[] } | undefined;
+    const newCopy = res!.fromPlayIds!.find(id => id !== oldCopy)!;
+    await g.dispatchAsync(1, "choose-target", { targetPlayIds: [newCopy] });
+
+    expect(upgradesOn(g, 0)).toContain(UNIQUE);
+    expect(upgradesOn(g, 1)).not.toContain(UNIQUE);
     expect(g.state.player1.discard.map(d => d.cardId)).toContain(UNIQUE);
   });
 

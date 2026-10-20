@@ -497,6 +497,7 @@ export const Cards = {
       r2d2: "JTL_245",
       millenniumFalcon: "JTL_249",
       theMandalorianPilot: "JTL_210",
+      sidonIthano: "JTL_213",
       shuttleSt149: "JTL_242",
       redFive: "JTL_151",
       devastator: "JTL_143",

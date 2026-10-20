@@ -215,9 +215,27 @@ function effectiveMaxPilots(unit: { cardId: string; upgrades: Array<{ cardId: st
  * a legal attach target.
  */
 export function PilotlessVehiclePlayIds(game: GameState, player: PlayerId, excludePlayId?: string): string[] {
+  return pilotlessVehiclesIn(sideOf(game, player), excludePlayId);
+}
+
+/**
+ * The same predicate on the OTHER side of the board — "...to an ENEMY Vehicle unit without a Pilot
+ * on it" (JTL_213 Sidon Ithano). `player` is the one attaching, so the enemy is their opponent.
+ */
+export function PilotlessEnemyVehiclePlayIds(game: GameState, player: PlayerId): string[] {
+  return pilotlessVehiclesIn(sideOf(game, player === 1 ? 2 : 1));
+}
+
+function sideOf(game: GameState, player: PlayerId) {
   const p = player === 1 ? game.player1 : game.player2;
-  const friendly = [...p.groundArena, ...p.spaceArena];
-  return friendly
+  return [...p.groundArena, ...p.spaceArena];
+}
+
+function pilotlessVehiclesIn(
+  units: ReturnType<typeof sideOf>,
+  excludePlayId?: string,
+): string[] {
+  return units
     .filter(u => {
       if (u.playId === excludePlayId) return false;
       if (!TraitContains(u.cardId, "Vehicle", u.controller, u.playId)) return false;

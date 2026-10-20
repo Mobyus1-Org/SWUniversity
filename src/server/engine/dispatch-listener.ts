@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -1245,6 +1245,7 @@ function bounceUnitToHand(
         defeatedCardId: "JTL_094",
         defeatedPlayId: luke.playId,
         controlledBy: luke.controller as PlayerId,
+        discardToOnDecline: (luke.owner ?? luke.controller) as PlayerId,
         options: [`move_to_ground_exhausted=JTL_094,${luke.controller}`, "decline"],
         continuation,
       },
@@ -1603,6 +1604,7 @@ function defeatUpgradeByPlayId(
         defeatedCardId: "JTL_094",
         defeatedPlayId: defeated.playId,
         controlledBy: defeated.controller as PlayerId,
+        discardToOnDecline: (defeated.owner ?? defeated.controller) as PlayerId,
         options: [`move_to_ground_exhausted=JTL_094,${defeated.controller}`, "decline"],
         continuation,
       };
@@ -2980,6 +2982,7 @@ function defeatUnit(
       defeatedCardId: "JTL_094",
       defeatedPlayId: lukeUpgrade.playId,
       controlledBy: lukeUpgrade.controller as PlayerId,
+      discardToOnDecline: (lukeUpgrade.owner ?? lukeUpgrade.controller) as PlayerId,
       options: [`move_to_ground_exhausted=JTL_094,${lukeUpgrade.controller}`, "decline"],
       continuation: chainedDefeated,
     };
@@ -4860,17 +4863,9 @@ function sec264BaseTargetPending(
  * path so uniqueness always interrupts and resolves before the entering unit's own effects.
  */
 function uniquenessDefeatPending(game: GameState, player: PlayerId): DefeatCopyPending | null {
-  const controlled = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena] as Unit[];
-  const checked = new Set<string>();
-  for (const u of controlled) {
-    if (checked.has(u.cardId) || !CardIsUnique(u.cardId)) continue;
-    checked.add(u.cardId);
-    const copies = controlled.filter(c => c.cardId === u.cardId);
-    if (copies.length > 1) {
-      return { type: "defeat-copy", eligiblePlayIds: copies.map(c => c.playId), enteringPlayer: player };
-    }
-  }
-  return null;
+  const conflict = DuplicateUniqueCopies(game, player);
+  if (!conflict) return null;
+  return { type: "defeat-copy", eligiblePlayIds: conflict.playIds, enteringPlayer: player };
 }
 
 /**
@@ -5470,12 +5465,13 @@ function completePlayCard(
     // The defeat-copy handler resumes entry (via queueUnitEntryTriggers) once a copy is
     // chosen, so When Played and friends fire only after the duplicate is defeated.
     if (CardIsUnique(cardId)) {
-      const controlled = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena] as Unit[];
-      const copies = controlled.filter(u => u.cardId === cardId);
+      // Copies count wherever they are in play, so a unique Pilot already riding a Vehicle as an
+      // upgrade conflicts with this unit entering (CR 8.29.3a).
+      const copies = InPlayCopiesControlled(game, player, cardId);
       if (copies.length > 1) {
         const defeatCopyPending: DefeatCopyPending = {
           type: "defeat-copy",
-          eligiblePlayIds: copies.map(u => u.playId),
+          eligiblePlayIds: copies,
           enteringPlayId: unit.playId,
           enteringCardId: cardId,
           enteringPlayer: player,
@@ -7841,9 +7837,19 @@ function handleChooseTarget(
     if (!pending.eligiblePlayIds.includes(chosen))
       return { response: invalidResponse(`Unit ${chosen} is not a valid uniqueness choice.`), pending, stateChanged: false };
     const unit = GetUnitByPlayId(game, chosen);
-    if (!unit)
-      return { response: invalidResponse("Chosen unit not found."), pending, stateChanged: false };
-    const defeatedPending = defeatUnit(game, log, unit);
+    // The chosen copy may be in play as an UPGRADE rather than a unit (a unique Pilot riding a
+    // Vehicle — CR 8.29.3a). It goes through the real upgrade-defeat path, never a raw splice, so
+    // the host's remaining HP is re-checked and any "if this upgrade would be defeated" replacement
+    // is offered — Luke JTL_094 may eject into the ground arena, which puts a copy straight back
+    // into play and so raises uniqueness again at the dispatch exit.
+    const asUpgrade = unit ? null : FindUpgradeByPlayId(chosen)
+      ?? [game.player1.base, game.player2.base].flatMap(b => b.upgrades ?? []).find(u => u.playId === chosen)
+      ?? null;
+    if (!unit && !asUpgrade)
+      return { response: invalidResponse("Chosen copy not found."), pending, stateChanged: false };
+    const defeatedPending = unit
+      ? defeatUnit(game, log, unit)
+      : defeatUpgradeAnywhere(game, log, chosen, "the uniqueness rule", null);
     updateDefeatedPlayers(game);
 
     // Uniqueness is now resolved — resume the entering unit's own entry (Shielded,
@@ -7969,23 +7975,12 @@ function handleChooseTarget(
       owner: pending.player,
       controller: pending.player,
     };
-    // Duplicate-unique rule for UPGRADES. `completePlayCard` enforces uniqueness for units only,
-    // so a player could stack two copies of a unique upgrade. Unlike the unit case there is nothing
-    // to choose — at most one copy can already be in play — so the older one is defeated outright
-    // rather than prompting. Routed through upgradeLeavesPlay so a pilot leader returns to the
-    // leader zone instead of vanishing.
-    if (CardIsUnique(pending.upgradeCardId)) {
-      for (const host of GetUnitsForPlayer(pending.player)) {
-        const dupe = host.upgrades.find(
-          u => u.cardId === pending.upgradeCardId && (u.controller ?? u.owner) === pending.player,
-        );
-        if (!dupe) continue;
-        host.upgrades = host.upgrades.filter(u => u.playId !== dupe.playId);
-        log.push(`${CardTitle(pending.upgradeCardId)}: the copy already in play was defeated (unique).`);
-        upgradeLeavesPlay(game, dupe, log);
-        break; // only one copy can ever be in play
-      }
-    }
+    // Duplicate-unique rule for UPGRADES is NOT enforced here. It used to cull the older copy
+    // outright on the assumption that there was nothing to choose, but there is: the other copy
+    // may be a UNIT in an arena (CR 8.29.3a), the player picks which one dies (CR 8.29.3), and a
+    // copy riding a host the opponent stole is still this player's. A splice also skipped the
+    // host's HP re-check and any "if this upgrade would be defeated" replacement. The state-based
+    // sweep at the dispatch exit (`enforceUniqueness`) now handles every one of those cases.
     targetUnit.upgrades.push(upgradeInPlay);
     // If a leader deployed as a pilot, record the upgrade's playId as deployedPlayId
     if (CardIsLeader(pending.upgradeCardId)) {
@@ -11141,6 +11136,21 @@ function handleChooseOption(
     }
 
     if (optionType === "decline") {
+      // A card whose accept branch re-creates it in play (Luke JTL_094's eject) is skipped by the
+      // ordinary upgrade leave-play routing, precisely so that accepting does not also discard it.
+      // Declining therefore has to do that routing here, or the card leaves the game altogether.
+      if (pending.discardToOnDecline !== undefined) {
+        const owner = pending.discardToOnDecline;
+        GetPlayer(game, owner).discard.unshift({
+          cardId: pending.defeatedCardId,
+          playId: pending.defeatedPlayId,
+          owner,
+          controller: owner,
+          turnDiscarded: game.currentRound,
+          discardEffect: "",
+        } satisfies DiscardedCard);
+        log.push(`${CardTitle(pending.defeatedCardId)} was discarded.`);
+      }
       const nextPending = pending.continuation ?? null;
       updateDefeatedPlayers(game);
       if (nextPending) {
@@ -19489,6 +19499,29 @@ function applyAbilityEffect(
       updateDefeatedPlayers(game.currentGameState);
       return pending.continuation ?? null;
     }
+    case "JTL_213": { // Sidon Ithano — attach himself as a Pilot upgrade onto the chosen ENEMY Vehicle.
+      if (!targetPlayId || !pending.sourcePlayId) break;
+      const gs213 = game.currentGameState;
+      const sidon213 = GetUnitByPlayId(gs213, pending.sourcePlayId);
+      const vehicle213 = GetUnitByPlayId(gs213, targetPlayId);
+      if (!sidon213 || !vehicle213) break;
+      removeFromArena(gs213, sidon213.playId);
+      for (const upg of sidon213.upgrades) {
+        game.gameLog.push(`${CardTitle(upg.cardId)} on ${CardTitle("JTL_213")} was defeated.`);
+      }
+      // He keeps his own owner AND controller: the clause has no take-control, so the ship stays
+      // its owner's and merely carries an enemy Pilot worth -2/-2.
+      vehicle213.upgrades.push({
+        cardId: "JTL_213",
+        playId: nextPlayId(gs213),
+        owner: sidon213.owner,
+        controller: sidon213.controller,
+      });
+      game.gameLog.push(`${CardTitle("JTL_213")} attached as a Pilot upgrade to ${CardTitle(vehicle213.cardId)}.`);
+      // Unlike the friendly-side attaches above, this upgrade is a DEBUFF: -2/-2 can take the host
+      // to 0 HP, so the board has to be swept before handing control back.
+      return sweepDeadUnits(gs213, game.gameLog, pending.continuation ?? null);
+    }
     case "JTL_049": {
       if (!targetPlayId || !pending.sourcePlayId) break;
       const l3 = GetUnitByPlayId(game.currentGameState, pending.sourcePlayId);
@@ -19740,6 +19773,36 @@ function checkMillenniumFalconTax(gs: GameState): AbilityOptionPending | null {
  * Applied centrally so every card that forces a discard is covered, not just the ones whose
  * handler remembered to check.
  */
+/**
+ * Uniqueness is a STATE-BASED rule, not a trigger: CR 8.29.3 — "If a player *ever* has more than
+ * one copy of a unique card in play under their control at a given time, they must defeat one of
+ * them. Defeating one of the copies occurs immediately and is not a triggered ability."
+ *
+ * So rather than bolting a check onto each of the many ways a copy can reach play (played as a
+ * unit, played or attached as an upgrade, ejected out of a defeated upgrade, taken control of,
+ * created as a token), it is enforced once here, at the dispatch exit, whenever the board has
+ * settled — i.e. when nothing else is waiting on a player.
+ *
+ * It deliberately does nothing while a pending is open. The unit-entry path in `completePlayCard`
+ * raises its own prompt *before* the entering unit's When Played, which this cannot do from out
+ * here, and that ordering is required (CR 8.29.3 still resolves the played/defeated triggers, but
+ * only after the duplicate is gone). Leaving open pendings alone keeps that path authoritative
+ * and avoids double-prompting; any conflict it leaves behind is caught on the next settled exit.
+ *
+ * The acting player is asked first, since a single dispatch can leave both players in conflict.
+ */
+function enforceUniqueness(game: GameState, actingPlayer: PlayerId, result: HandlerResult): HandlerResult {
+  if (result.pending) return result;
+  if (game.defeatedPlayers.length > 0) return result;
+  for (const player of [actingPlayer, GetOtherPlayer(actingPlayer)]) {
+    const conflict = uniquenessDefeatPending(game, player);
+    if (conflict) {
+      return { response: resolutionResponse(pendingToResolution(conflict, game)), pending: conflict, stateChanged: true };
+    }
+  }
+  return result;
+}
+
 function skipUnsatisfiableDiscards(game: GameState, log: string[], result: HandlerResult): HandlerResult {
   let current = result;
 
@@ -19902,6 +19965,7 @@ function runDispatch(
 
     if (!result.response.invalidAction) {
       result = skipUnsatisfiableDiscards(gs, log, result);
+      result = enforceUniqueness(gs, dispatch.fromPlayer, result);
     }
 
     // The regroup draw waits for every start-of-regroup decision (see executeRegroupDraw). The

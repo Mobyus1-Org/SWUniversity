@@ -911,12 +911,65 @@ export function buildPurrgilUltraOffer(player: PlayerId, selfPlayId: string | un
  * too. Pure over GameState.
  */
 export function UpgradesYouControl(gs: GameState, player: PlayerId): string[] {
+  return UpgradeEntriesYouControl(gs, player).map(e => e.playId);
+}
+
+/**
+ * As `UpgradesYouControl`, but keeping each upgrade's cardId — needed wherever the question is
+ * "which COPY of a card is in play as an upgrade", not just "how many upgrades do I control".
+ *
+ * Note the controller reading: taking control of a unit brings its upgrades along physically but
+ * does not change who controls them, so a Pilot riding a ship the opponent stole is still its
+ * own controller's upgrade. Token upgrades are the exception — they follow their host.
+ */
+export function UpgradeEntriesYouControl(
+  gs: GameState,
+  player: PlayerId,
+): Array<{ cardId: string; playId: string }> {
   const onUnits = GetAllUnits(gs).flatMap(u => u.upgrades
     .filter(upg => (IsTokenUpgrade(upg.cardId) ? u.controller : upg.controller) === player)
-    .map(upg => upg.playId));
+    .map(upg => ({ cardId: upg.cardId, playId: upg.playId })));
   const onBases = [gs.player1.base, gs.player2.base]
-    .flatMap(b => (b.upgrades ?? []).filter(upg => upg.controller === player).map(upg => upg.playId));
+    .flatMap(b => (b.upgrades ?? [])
+      .filter(upg => upg.controller === player)
+      .map(upg => ({ cardId: upg.cardId, playId: upg.playId })));
   return [...onUnits, ...onBases];
+}
+
+/**
+ * Every in-play copy of `cardId` that `player` controls, as playIds — units in either arena AND
+ * upgrades wherever they are attached.
+ *
+ * CR 8.29.3a — "The unique copy limit applies to all in-play copies of a unique card, regardless
+ * of how that card is in-play." A unique Pilot standing in the ground arena and a second copy
+ * riding a Vehicle are two copies, so reading only the arenas silently permits a duplicate.
+ */
+export function InPlayCopiesControlled(gs: GameState, player: PlayerId, cardId: string): string[] {
+  const asUnits = GetUnitsForPlayer(player).filter(u => u.cardId === cardId).map(u => u.playId);
+  const asUpgrades = UpgradeEntriesYouControl(gs, player)
+    .filter(e => e.cardId === cardId)
+    .map(e => e.playId);
+  return [...asUnits, ...asUpgrades];
+}
+
+/**
+ * The unique card `player` controls more than one copy of, with every copy's playId, or null when
+ * there is no conflict. The one place that answers "is the uniqueness rule currently violated".
+ */
+export function DuplicateUniqueCopies(
+  gs: GameState,
+  player: PlayerId,
+): { cardId: string; playIds: string[] } | null {
+  const candidates = [
+    ...GetUnitsForPlayer(player).map(u => u.cardId),
+    ...UpgradeEntriesYouControl(gs, player).map(e => e.cardId),
+  ];
+  for (const cardId of new Set(candidates)) {
+    if (!CardIsUnique(cardId)) continue;
+    const playIds = InPlayCopiesControlled(gs, player, cardId);
+    if (playIds.length > 1) return { cardId, playIds };
+  }
+  return null;
 }
 
 /**

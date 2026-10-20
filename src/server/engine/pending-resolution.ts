@@ -63,6 +63,12 @@ export interface WhenDefeatedChoicePending {
   defeatedCardId: string;
   defeatedPlayId: string;
   controlledBy: PlayerId;
+  /**
+   * Where the card goes if the player DECLINES. Set for a card whose accept branch puts it back
+   * into play itself and which is therefore skipped by the ordinary leave-play routing (Luke
+   * JTL_094's eject) — without it, declining drops the card out of the game entirely.
+   */
+  discardToOnDecline?: PlayerId;
   options: string[];
   continuation?: PendingResolution | null;
 }

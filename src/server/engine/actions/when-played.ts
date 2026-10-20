@@ -3,7 +3,7 @@ import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCapta
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost, CardIsPlayable, DiscardUnitsPlayableAtDiscount } from "@/server/engine/card-playability";
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
-import { IsTokenUpgrade, PilotlessVehiclePlayIds, UpgradeDestinationsOnControlChange, PilotlessFighterOrTransportPlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { IsTokenUpgrade, PilotlessVehiclePlayIds, UpgradeDestinationsOnControlChange, PilotlessFighterOrTransportPlayIds, PilotlessEnemyVehiclePlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending, BudgetSelectPending, PlayFromHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateBeast, CreateCloneTrooper, CreateXWing, CreateTieFighter, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens, GiveWeaknessToken } from "@/server/engine/token-helpers";
@@ -2782,6 +2782,36 @@ export function resolveWhenPlayed(
           player,
           sourcePlayId: playId,
           fromPlayIds: vehicles100,
+          continuation: null,
+        } satisfies AbilityTargetPending,
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "JTL_213": { // Sidon Ithano — "When played as a unit: You may attach this unit as an upgrade
+                      // to an enemy Vehicle unit without a Pilot on it." His upgrade side is -2/-2,
+                      // so this is a debuff stapled to an enemy ship rather than a buff to a friendly
+                      // one — the mirror of Poe JTL_100, enemy side, and with no take-control clause
+                      // (unlike JTL_083, the ship stays its owner's).
+      const game213 = GetGame();
+      if (!game213 || !playId) return null;
+      const vehicles213 = PilotlessEnemyVehiclePlayIds(game213.currentGameState, player);
+      if (vehicles213.length === 0) return null;
+      // Hand-built rather than optionalTarget(): the target step needs sourcePlayId (which Sidon to
+      // attach), and optionalTarget only puts sourcePlayId on the option, not on its onYes.
+      return {
+        type: "ability-option",
+        cardId: "JTL_213",
+        player,
+        sourcePlayId: playId,
+        helperText: "Attach Sidon Ithano as an upgrade to an enemy Vehicle without a Pilot?",
+        yesLabel: "Attach as Pilot",
+        noLabel: "Stay as a unit",
+        onYes: {
+          type: "ability-target",
+          cardId: "JTL_213",
+          player,
+          sourcePlayId: playId,
+          fromPlayIds: vehicles213,
           continuation: null,
         } satisfies AbilityTargetPending,
         continuation: null,
