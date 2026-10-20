@@ -171,10 +171,10 @@ export function PlayerHasUnitWithTraitInPlay(player: PlayerId, trait: string,
   const allUnitsInPlay = [...playerObj.spaceArena, ...playerObj.groundArena];
 
   if (another && playId) {
-    return allUnitsInPlay.some(unit => unit.playId !== playId && TraitContains(unit.cardId, trait));
+    return allUnitsInPlay.some(unit => unit.playId !== playId && TraitContains(unit.cardId, trait, unit.controller, unit.playId));
   }
 
-  return allUnitsInPlay.some(unit => TraitContains(unit.cardId, trait));
+  return allUnitsInPlay.some(unit => TraitContains(unit.cardId, trait, unit.controller, unit.playId));
 }
 
 export function PlayerHasUnitWithAspectInPlay(player: PlayerId, aspect: string,
@@ -235,7 +235,7 @@ export function PlayerHasUnitsInHand(player: PlayerId, filters?: {
       return false;
     }
 
-    if (filters?.trait && !CardTraits(card.cardId).includes(filters.trait)) {
+    if (filters?.trait && !TraitContains(card.cardId, filters.trait, player)) {
       return false;
     }
 
@@ -493,15 +493,64 @@ export function GetLeaderForPlayer(player: PlayerId): Leader {
   return playerObj.leader;
 }
 
+/** Prefix of the currentEffect that records HMW_108's named trait; the trait follows the `|`. */
+export const TRAIT_SUPPRESSED = "HMW_108_trait";
+
+/**
+ * HMW_108 The First Legion — "Name a trait. Enemy cards, including those not in play, lose that
+ * trait for this phase."
+ *
+ * The effect is recorded against the player whose cards lose the trait, NOT against The First
+ * Legion, which is what makes it outlive the unit: "for this phase" keeps the trait gone even if
+ * the Legion is defeated by the very attack that named it. The phase duration expires it.
+ *
+ * Owner-aware on purpose. A unit in an arena could carry a per-unit effect, but a card in hand, in
+ * the deck, in the discard pile or in the resource row cannot — so the question has to be asked of
+ * whoever holds the card, which is the one thing every zone has in common.
+ */
+export function TraitSuppressedFor(player: PlayerId, trait: string): boolean {
+  const game = GetGame();
+  if (!game) return false;
+  return game.currentGameState.currentEffects.some(
+    e => e.affectedPlayer === player && e.cardId === `${TRAIT_SUPPRESSED}|${trait}`,
+  );
+}
+
+/** Records the suppression for `trait` on every card `player` holds, for the rest of the phase. */
+export function SuppressTraitForPlayer(
+  gs: GameState,
+  player: PlayerId,
+  trait: string,
+  gameLog: string[],
+  sourceCardId: string,
+): void {
+  if (gs.currentEffects.some(
+    e => e.affectedPlayer === player && e.cardId === `${TRAIT_SUPPRESSED}|${trait}`)) return;
+  gs.currentEffects.push({
+    cardId: `${TRAIT_SUPPRESSED}|${trait}`,
+    duration: "Phase",
+    affectedPlayer: player,
+  });
+  gameLog.push(`${CardTitle(sourceCardId)}: named ${trait} — Player ${player}'s cards lose that trait this phase.`);
+}
+
 export function TraitContains(cardId: string, trait: string, player?: PlayerId, playId?: string): boolean {
+  // HMW_108 The First Legion. Checked before anything else: a trait the holder has lost is gone
+  // however the card would otherwise have had it — printed, granted by an upgrade, or read off a
+  // leader's unit side.
+  if (player !== undefined && TraitSuppressedFor(player, trait)) return false;
+
   const isBase = CardIsBase(cardId);
-  const isLeaderSide = CardIsLeader(cardId) && player && !GetLeaderForPlayer(player).deployed;
+  // Null-safe: the puzzle solver prices cards with no active game, and every caller that passes a
+  // player would otherwise throw here rather than fall back to the card's printed traits.
+  const leaderOf = player !== undefined && GetGame() ? GetLeaderForPlayer(player) : null;
+  const isLeaderSide = CardIsLeader(cardId) && player && leaderOf && !leaderOf.deployed;
 
   // A flipped double-sided leader is a different character with different traits: Darth Sidious
   // is Force/Separatist/Sith where Chancellor Palpatine is Republic/Official. The generated
   // dictionary only holds the front side, so the back face is answered from its own data and
   // must NOT fall through to the front-side lookup below.
-  if (player !== undefined && LeaderIsDoubleSided(cardId) && GetLeaderForPlayer(player).flipped) {
+  if (player !== undefined && LeaderIsDoubleSided(cardId) && leaderOf?.flipped) {
     return LeaderSideTraits(cardId, true).includes(trait);
   }
   if (playId && !isLeaderSide && !isBase) {
@@ -712,7 +761,7 @@ function QueueUseTheForceReactions(player: PlayerId, gs: GameState): void {
  */
 export function UnitsEnterPlayReady(gs: GameState, player: PlayerId, enteringCardId?: string): boolean {
   const pState = GetPlayer(gs, player);
-  if (!TraitContains(pState.base.cardId, "Tatooine")) return false;
+  if (!TraitContains(pState.base.cardId, "Tatooine", pState === gs.player1 ? 1 : 2)) return false;
   if (enteringCardId === "HMW_234") return true;
   return [...pState.groundArena, ...pState.spaceArena].some(
     u => u.cardId === "HMW_234" && !Unit.FromInterface(u).LostAbilities(),
@@ -1396,7 +1445,7 @@ export function UnitWasDefeatedThisPhase(player: PlayerId, trait?: string): bool
 
   const defeatedUnits = game.currentGameState.roundState.cardsLeftPlayThisPhase.filter(defeated => defeated.fromPlayer === player && (defeated.reason === "defeated" || defeated.reason === "token-defeated"));
   if (trait) {
-    return defeatedUnits.some(defeated => TraitContains(defeated.cardId, trait));
+    return defeatedUnits.some(defeated => TraitContains(defeated.cardId, trait, defeated.fromPlayer));
   }
 
   return defeatedUnits.length > 0;
@@ -1432,7 +1481,7 @@ export function UnitAttackedThisPhase(player: PlayerId, trait?: string, another?
       it will be "put" in this array with its original traits; will only be relevant if Nameless Terror
       becomes meta and some future card requires a Force unit to attack
     */
-    return attackedUnits.some(attacked => TraitContains(attacked.cardId, trait));
+    return attackedUnits.some(attacked => TraitContains(attacked.cardId, trait, attacked.fromPlayer));
   }
 
   return attackedUnits.length > 0;
@@ -1448,7 +1497,7 @@ export function AttackedThisPhasePlayIds(opts: { trait?: string; player?: Player
   if (!game) return [];
   let attacked = game.currentGameState.roundState.unitsAttackedThisPhase;
   if (opts.player) attacked = attacked.filter(a => a.fromPlayer === opts.player);
-  if (opts.trait) attacked = attacked.filter(a => TraitContains(a.cardId, opts.trait!));
+  if (opts.trait) attacked = attacked.filter(a => TraitContains(a.cardId, opts.trait!, a.fromPlayer));
   const inPlay = new Set(AllUnits().map(u => u.playId));
   return attacked.filter(a => inPlay.has(a.playId)).map(a => a.playId);
 }
@@ -1461,7 +1510,7 @@ export function CardWasPlayedThisPhase(player: PlayerId, trait?: string, type?: 
 
   const playedCards = game.currentGameState.roundState.cardsPlayedThisPhase.filter(played => played.fromPlayer === player);
   if (trait) {
-    return playedCards.some(played => TraitContains(played.cardId, trait));
+    return playedCards.some(played => TraitContains(played.cardId, trait, played.fromPlayer));
   }
 
   if (type) {
@@ -1928,6 +1977,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "LAW_011": //Darth Vader (deployed) — On Attack: discard any number, deal that much damage
     case "TWI_246": //Tranquility — On Attack: next 3 Republic cards this phase cost 1 less
     case "TWI_203": //Chancellor Palpatine (Wartime Chancellor) — On Attack: create a Clone Trooper if a unit left play
+    case "HMW_108": //The First Legion — On Attack: name a trait, enemy cards lose it this phase
     case "HMW_065": //Clone of the Zillo Beast — On Attack: may give a Weakness token to a unit
     case "HMW_003": //Doctor Hemlock (deployed) — On Attack: may give a Weakness token to a unit
     case "HMW_010": //Tarfful (deployed) — On Attack: may pay 1 to create a Beast token
@@ -2224,7 +2274,7 @@ export function ImperialUnitInDiscardHasKeyword(
   return GetPlayer(game.currentGameState, player).discard.some(
     c => c.cardId !== "ASH_008"
       && CardType(c.cardId) === "Unit"
-      && TraitContains(c.cardId, "Imperial")
+      && TraitContains(c.cardId, "Imperial", player)
       && hasKeyword(c.cardId),
   );
 }
@@ -3179,7 +3229,7 @@ export function searchDeck(
       .filter(c => {
         if (filter.type && CardType(c.cardId) !== filter.type) return false;
         if (filter.aspect && !CardAspects(c.cardId).includes(filter.aspect)) return false;
-        if (filter.trait && !CardTraits(c.cardId).includes(filter.trait)) return false;
+        if (filter.trait && !TraitContains(c.cardId, filter.trait, player)) return false;
         if (filter.keyword && !HasKeyword(c.cardId, filter.keyword)) return false;
         if (filter.maxCost !== undefined && (CardCost(c.cardId) ?? 0) > filter.maxCost) return false;
         return true;

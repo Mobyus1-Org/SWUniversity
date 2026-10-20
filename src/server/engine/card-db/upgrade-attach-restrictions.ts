@@ -81,7 +81,7 @@ export function UpgradeEligibleTargets(
     case "ASH_183": //Whistling Birds
     case "ASH_055": //Blade of Talzin
     case "ASH_180": //Bokken Saber
-      return everyone.filter(u => !TraitContains(u.cardId, "Vehicle")).map(u => u.playId);
+      return everyone.filter(u => !TraitContains(u.cardId, "Vehicle", u.controller, u.playId)).map(u => u.playId);
 
     // "Attach to a damaged unit."
     case "ASH_181": //Mark My Words
@@ -89,20 +89,21 @@ export function UpgradeEligibleTargets(
 
     // "Attach to a Jedi non-Vehicle unit."
     case "LOF_151": //Knight's Saber
-      return everyone.filter(u => TraitContains(u.cardId, "Jedi") && !TraitContains(u.cardId, "Vehicle")).map(u => u.playId);
+      return everyone.filter(u => TraitContains(u.cardId, "Jedi", u.controller, u.playId)
+        && !TraitContains(u.cardId, "Vehicle", u.controller, u.playId)).map(u => u.playId);
 
     // "Attach to a VEHICLE unit."
     case "JTL_120": //Dorsal Turret
     case "JTL_172": //Twin Laser Turret
     case "SOR_121": //Hardpoint Heavy Blaster
     case "SOR_214": //Smuggling Compartment
-      return everyone.filter(u => TraitContains(u.cardId, "Vehicle")).map(u => u.playId);
+      return everyone.filter(u => TraitContains(u.cardId, "Vehicle", u.controller, u.playId)).map(u => u.playId);
 
     // "Attach to a friendly non-Vehicle unit."
     case "SHD_251": //The Mandalorian's Rifle
     case "LOF_140": //Darth Maul's Lightsaber
     case "LOF_201": //Qui-Gon Jinn's Lightsaber
-      return friendly.filter(u => !TraitContains(u.cardId, "Vehicle")).map(u => u.playId);
+      return friendly.filter(u => !TraitContains(u.cardId, "Vehicle", u.controller, u.playId)).map(u => u.playId);
 
     // "Attach to a friendly unit."
     case "SHD_124": // Legal Authority
@@ -137,7 +138,7 @@ export function UpgradeEligibleTargets(
     case "LOF_074": //Bolstered Endurance
     case "LOF_138": //Sith Holocron
     case "LOF_261": //Constructed Lightsaber
-      return everyone.filter(u => TraitContains(u.cardId, "Force")).map(u => u.playId);
+      return everyone.filter(u => TraitContains(u.cardId, "Force", u.controller, u.playId)).map(u => u.playId);
 
     default:
       return everyone.map(u => u.playId);
@@ -160,6 +161,10 @@ export function IsPilotUpgrade(cardId: string): boolean {
     // Any Pilot-trait card attached as an upgrade is a Pilot — a leader attached by its own ability
     // (Poe JTL_013), or a unit that attaches itself without Piloting (JTL_083 Pantoran Starship
     // Thief). Missing either made the Vehicle read as pilotless.
+    // No owner is available here: IsPilotUpgrade is asked about a bare cardId from many places,
+    // including before the card is in play. So a Pilot upgrade whose owner has lost the Pilot trait
+    // (HMW_108) still reads as a Pilot. The hosts it may attach to DO honour the suppression, which
+    // is where the restriction actually bites.
     || TraitContains(cardId, "Pilot");
 }
 
@@ -203,7 +208,7 @@ export function PilotlessVehiclePlayIds(game: GameState, player: PlayerId, exclu
   return friendly
     .filter(u => {
       if (u.playId === excludePlayId) return false;
-      if (!TraitContains(u.cardId, "Vehicle")) return false;
+      if (!TraitContains(u.cardId, "Vehicle", u.controller, u.playId)) return false;
       return pilotCountOn(u) === 0;
     })
     .map(u => u.playId);
@@ -224,7 +229,8 @@ export function UpgradeDestinationsOnControlChange(
 ): string[] {
   if (IsPilotUpgrade(upgradeCardId)) {
     return allUnits(game)
-      .filter(u => u.playId === currentHostPlayId || (TraitContains(u.cardId, "Vehicle") && pilotCountOn(u) === 0))
+      .filter(u => u.playId === currentHostPlayId
+        || (TraitContains(u.cardId, "Vehicle", u.controller, u.playId) && pilotCountOn(u) === 0))
       .map(u => u.playId);
   }
   return UpgradeEligibleTargets(upgradeCardId, game, newController);
@@ -252,7 +258,7 @@ export function PilotingEligibleVehicles(
   const friendly = [...p.groundArena, ...p.spaceArena];
   return friendly
     .filter(u => {
-      if (!TraitContains(u.cardId, "Vehicle")) return false;
+      if (!TraitContains(u.cardId, "Vehicle", u.controller, u.playId)) return false;
       // R2-D2 (JTL_245): "This upgrade can be played on a friendly Vehicle unit with a Pilot on
       // it." He grants the extra slot he occupies, so his own arrival must not be blocked by a
       // Vehicle already being at its pilot limit.

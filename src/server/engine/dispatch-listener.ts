@@ -23,15 +23,15 @@ import {
   CardPower,
   CardSubtitle,
   CardTitle,
-  CardTraits,
   CardType,
+  AllCardTraits,
 } from "@/server/engine/card-db/generated";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/overwhelm";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, UnitArenaOf, MoveUnitToArena } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -1574,7 +1574,9 @@ function defeatUpgradeByPlayId(
     log.push(`${sourceLabel} defeated ${CardTitle(defeated.cardId)} on ${CardTitle(u.cardId)}.`);
     // ASH_055 Blade of Talzin — When Defeated: if it was on a friendly Night unit, return it to hand.
     if (defeated.cardId === "ASH_055" && defeated.owner === defeated.controller
-        && TraitContains(u.cardId, "Night")) {
+        // Controller only, no playId: this runs while the host is mid-removal, and the playId
+        // form re-looks-up a unit that is half out of play.
+        && TraitContains(u.cardId, "Night", u.controller)) {
       GetPlayer(game, defeated.owner as PlayerId).hand.push({ cardId: defeated.cardId });
       log.push(`${CardTitle("ASH_055")} returned to Player ${defeated.owner}'s hand.`);
     } else {
@@ -2851,7 +2853,8 @@ function defeatUnit(
   // this upgrade from your discard pile to your hand." Fires when its host unit is defeated.
   for (const upg of unit.upgrades) {
     if (upg.cardId === "ASH_055" && upg.owner === upg.controller
-        && TraitContains(unit.cardId, "Night")) {
+        // Controller only — see the sibling site above; the host is mid-defeat here.
+        && TraitContains(unit.cardId, "Night", unit.controller)) {
       GetPlayer(game, upg.owner).hand.push({ cardId: upg.cardId });
       log.push(`${CardTitle("ASH_055")} returned to Player ${upg.owner}'s hand.`);
     }
@@ -4919,7 +4922,7 @@ function queueMazKanataReactions(game: GameState, player: PlayerId, playedPlayId
 function queueLadyProximaReactions(
   game: GameState, player: PlayerId, cardId: string, playedPlayId: string, nested: boolean,
 ): void {
-  if (!TraitContains(cardId, "Underworld")) return;
+  if (!TraitContains(cardId, "Underworld", player)) return;
   const proximas = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
     .filter(u => u.cardId === "SHD_255" && u.playId !== playedPlayId && !Unit.FromInterface(u).LostAbilities());
   for (const proxima of proximas) {
@@ -4948,7 +4951,7 @@ function queueLeaderPlayReactions(game: GameState, player: PlayerId, cardId: str
       matches = CardType(cardId) === "Upgrade";
       break;
     case "SHD_014": // Cad Bane — When you play an Underworld card (any type).
-      matches = TraitContains(cardId, "Underworld");
+      matches = TraitContains(cardId, "Underworld", player);
       // Deployed: "use this ability only once each round".
       if (matches && canDeployed && !canFront &&
         game.currentEffects.some(e => e.cardId === "SHD_014_usedThisRound" && e.affectedPlayer === player)) {
@@ -5309,13 +5312,13 @@ function completePlayCard(
 
   // ASH_237 Mouse Droid: "the next IMPERIAL unit you play this phase" — consumed by an Imperial
   // unit only, so a non-Imperial unit played in between leaves the discount armed.
-  if (CardType(cardId) === "Unit" && CardTraits(cardId).includes("Imperial")) {
+  if (CardType(cardId) === "Unit" && TraitContains(cardId, "Imperial", player)) {
     consumeNextPlayMarker(game, player, "ASH_237");
   }
 
   // TWI_246 Tranquility: "each of the next 3 REPUBLIC cards you play this phase" — a charge is
   // spent per Republic card of any type, and the effect ends once the third is used.
-  if (CardTraits(cardId).includes("Republic")) {
+  if (TraitContains(cardId, "Republic", player)) {
     const tranquility = game.currentEffects.find(e => e.cardId === "TWI_246" && e.affectedPlayer === player);
     if (tranquility && (tranquility.value ?? 0) > 0) {
       tranquility.value = (tranquility.value ?? 0) - 1;
@@ -5327,7 +5330,7 @@ function completePlayCard(
 
   // JTL_008 Wedge Antilles: "the next PILOT card you play this phase" — consumed by any
   // Pilot-trait play. Pilot cards played as upgrades consume it at attach instead.
-  if (CardTraits(cardId).includes("Pilot")) {
+  if (TraitContains(cardId, "Pilot", player)) {
     consumeNextPlayMarker(game, player, "JTL_008_next_pilot");
   }
 
@@ -7896,7 +7899,7 @@ function handleChooseTarget(
 
     // JTL_008 Wedge Antilles: a Pilot card PLAYED as an upgrade consumes the next-Pilot
     // discount. A leader attaching here was DEPLOYED, not played — it must not consume it.
-    if (!CardIsLeader(pending.upgradeCardId) && CardTraits(pending.upgradeCardId).includes("Pilot")) {
+    if (!CardIsLeader(pending.upgradeCardId) && TraitContains(pending.upgradeCardId, "Pilot", pending.player)) {
       consumeNextPlayMarker(game, pending.player, "JTL_008_next_pilot");
     }
 
@@ -8007,7 +8010,7 @@ function handleChooseTarget(
     // playing BB-8 as a unit never reaches here. Gated on both an affordable 2 and a legal
     // target, so the prompt never appears when it could not be taken.
     if (pending.upgradeCardId === "JTL_145") {
-      const resistance145 = AllUnits().filter(u => TraitContains(u.cardId, "Resistance"));
+      const resistance145 = AllUnits().filter(u => TraitContains(u.cardId, "Resistance", u.controller, u.playId));
       if (resistance145.length > 0 && spendableFor(game, pending.player) >= 2) {
         const pay145: AbilityOptionPending = {
           type: "ability-option",
@@ -8347,7 +8350,7 @@ function handleChooseTarget(
       case "SOR_129": { // Admiral Ozzel — play an Imperial unit at normal cost, enters ready.
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("Admiral Ozzel: chosen card is not a Unit."), pending, stateChanged: false };
-        if (!CardTraits(cardId).includes("Imperial"))
+        if (!TraitContains(cardId, "Imperial", pending.player))
           return { response: invalidResponse("Admiral Ozzel: chosen unit is not Imperial."), pending, stateChanged: false };
         const cost129 = playCost(game, pending.player, cardId);
         const ready129 = spendableFor(game, pending.player);
@@ -8455,7 +8458,7 @@ function handleChooseTarget(
       case "JTL_005": { // Admiral Piett — play a Capital Ship unit from hand at -1 cost.
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("Admiral Piett: chosen card is not a Unit."), pending, stateChanged: false };
-        if (!CardTraits(cardId).includes("Capital Ship"))
+        if (!TraitContains(cardId, "Capital Ship", pending.player))
           return { response: invalidResponse("Admiral Piett: chosen unit is not a Capital Ship."), pending, stateChanged: false };
         const cost005 = Math.max(0, playCost(game, pending.player, cardId) - 1);
         const ready005 = spendableFor(game, pending.player);
@@ -8580,7 +8583,7 @@ function handleChooseTarget(
                         // with the play rather than applied afterwards.
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("Jabba the Hutt: chosen card is not a Unit."), pending, stateChanged: false };
-        if (!CardTraits(cardId).includes("Underworld"))
+        if (!TraitContains(cardId, "Underworld", pending.player))
           return { response: invalidResponse("Jabba the Hutt: chosen unit is not Underworld."), pending, stateChanged: false };
         const cost015 = playCost(game, pending.player, cardId);
         if (spendableFor(game, pending.player) < cost015)
@@ -8709,7 +8712,7 @@ function handleChooseTarget(
       case "LOF_220": { // Shien Flurry — play a FORCE unit from hand (paying its cost).
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("Shien Flurry: chosen card is not a Unit."), pending, stateChanged: false };
-        if (!CardTraits(cardId).includes("Force"))
+        if (!TraitContains(cardId, "Force", pending.player))
           return { response: invalidResponse("Shien Flurry: chosen unit does not have the Force trait."), pending, stateChanged: false };
         const sfCost = playCost(game, pending.player, cardId);
         if (spendableFor(game, pending.player) < sfCost)
@@ -8724,7 +8727,7 @@ function handleChooseTarget(
         });
       }
       case "TWI_005": {
-        if (!TraitContains(cardId, "Separatist"))
+        if (!TraitContains(cardId, "Separatist", pending.player))
           return { response: invalidResponse("Dooku: chosen card is not a Separatist card."), pending, stateChanged: false };
         const fullCost = playCost(game, pending.player, cardId);
         const cardExploit = ExploitAmount(cardId, undefined, undefined, true);
@@ -8886,7 +8889,7 @@ function handleChooseTarget(
       }
       case "LOF_176": { // Lightsaber Throw — discard the chosen Lightsaber, then deal 4 damage to a
                         // ground unit (either side — the text says "a ground unit") and draw.
-        if (!TraitContains(cardId, "Lightsaber"))
+        if (!TraitContains(cardId, "Lightsaber", pending.player))
           return { response: invalidResponse("Lightsaber Throw: chosen card is not a Lightsaber."), pending, stateChanged: false };
         hand.splice(idx, 1);
         QueueWhenDiscardedTrigger(game, pending.player, cardId, pushEventToDiscard(game, pending.player, cardId), "Hand");
@@ -12292,7 +12295,7 @@ function resolveActionAbility(
                       // AttackedThisPhasePlayIds, which drops attackers that have since left play —
                       // the attack still happened.
       const jediAttacked011 = game.roundState.unitsAttackedThisPhase
-        .some(a => a.fromPlayer === player && TraitContains(a.cardId, "Jedi"));
+        .some(a => a.fromPlayer === player && TraitContains(a.cardId, "Jedi", a.fromPlayer));
       if (!jediAttacked011) {
         log.push(`${CardTitle("LOF_011")}: no Jedi unit attacked this phase — soft pass.`);
         return null;
@@ -12433,7 +12436,7 @@ function resolveActionAbility(
       } satisfies AbilityTargetPending;
     }
     case "JTL_005": { // Admiral Piett — Action [Exhaust]: Play a Capital Ship unit from hand at -1.
-      if (!GetPlayer(game, player).hand.some(c => CardTraits(c.cardId).includes("Capital Ship"))) {
+      if (!GetPlayer(game, player).hand.some(c => TraitContains(c.cardId, "Capital Ship", player))) {
         log.push(`${CardTitle("JTL_005")}: no Capital Ship in hand.`);
         return null;
       }
@@ -12708,7 +12711,7 @@ function resolveActionAbility(
     case "LOF_012": { // Rey — Action [Exhaust]: If you played a non-unit Force card this phase, deal
                       // 1 damage to a unit.
       const playedNonUnitForce = game.roundState.cardsPlayedThisPhase.some(
-        c => c.fromPlayer === player && CardType(c.cardId) !== "Unit" && CardTraits(c.cardId).includes("Force"),
+        c => c.fromPlayer === player && CardType(c.cardId) !== "Unit" && TraitContains(c.cardId, "Force", player),
       );
       if (!playedNonUnitForce) {
         log.push(`${CardTitle("LOF_012")}: no non-unit Force card played this phase — soft pass.`);
@@ -12770,7 +12773,7 @@ function resolveActionAbility(
       };
     }
     case "TWI_005": { // Count Dooku — Action [Exhaust]: Play a Separatist card from your hand. It gains Exploit 1.
-      const separatistInHand = GetPlayer(game, player).hand.some(c => CardTraits(c.cardId).includes("Separatist"));
+      const separatistInHand = GetPlayer(game, player).hand.some(c => TraitContains(c.cardId, "Separatist", player));
       if (!separatistInHand) {
         log.push(`${CardTitle("TWI_005")}: no Separatist cards in hand.`);
         return null;
@@ -14047,6 +14050,24 @@ function applyAbilityEffect(
       const source003 = pending.cardId === "HMW_059" ? "HMW_059" : "HMW_003";
       GiveWeaknessToken(game.currentGameState, target003, game.gameLog, pending.player!, source003);
       // −1 HP can be lethal, and no other upgrade in the engine lowers its host's HP on attach.
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "HMW_108": { // The First Legion — the named trait leaves every card the opponent holds.
+                      // The answer arrives in targetPlayId (the naming prompt is a choice list, not
+                      // a target pool) and is validated against the real trait universe: an
+                      // unrecognised string must not arm a suppression, and above all must not arm
+                      // one that would match nothing or everything.
+      const named108 = String(targetPlayId ?? "").trim();
+      if (!named108 || !pending.player) return pending.continuation ?? null;
+      const real108 = AllCardTraits().find(t => t.toLowerCase() === named108.toLowerCase());
+      if (!real108) {
+        game.gameLog.push(`${CardTitle("HMW_108")}: "${named108}" is not a trait — nothing happens.`);
+        return pending.continuation ?? null;
+      }
+      SuppressTraitForPlayer(
+        game.currentGameState, GetOtherPlayer(pending.player), real108, game.gameLog, "HMW_108",
+      );
+      // Losing a trait can change a unit's stats (a trait-conditional buff), so sweep.
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "HMW_065_OA":       // Clone of the Zillo Beast — On Attack: may give a Weakness token.

@@ -34746,6 +34746,17 @@ export function AllCardTitles(): string[] {
   return [...new Set(Object.values(cardTitle))].sort();
 }
 
+export function AllCardTraits(): string[] {
+  const all = new Set<string>();
+  for (const traits of Object.values(cardTraits)) {
+    for (const t of traits.split(",")) {
+      const trimmed = t.trim();
+      if (trimmed) all.add(trimmed);
+    }
+  }
+  return [...all].sort();
+}
+
 export const cardDbGenerationMetadata = {
   generatedAt: "2026-09-19T02:32:36.896Z",
   processedCards: 2629,

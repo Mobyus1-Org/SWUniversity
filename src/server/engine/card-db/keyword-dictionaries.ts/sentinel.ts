@@ -108,7 +108,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
           ? GetGame()!.currentGameState.player1
           : GetGame()!.currentGameState.player2;
         return PlayerHasUnitWithTraitInPlay(player, "Wookiee", true, playId)
-          || TraitContains(pState142.base.cardId, "Kashyyyk");
+          || TraitContains(pState142.base.cardId, "Kashyyyk", player);
       }
       case "SOR_113"://Homestead Militia (SOR)
       case "JTL_113"://Homestead Militia (JTL)

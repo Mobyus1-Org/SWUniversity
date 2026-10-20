@@ -308,12 +308,12 @@ export class Unit implements UnitInterface {
     }
 
     if (this.cardId === "JTL_249" && !this.LostAbilities()) {
-      power += this.upgrades.filter(upg => TraitContains(upg.cardId, "Pilot")).length;
+      power += this.upgrades.filter(upg => TraitContains(upg.cardId, "Pilot", this.controller, upg.playId)).length;
     }
 
     // Resistance X-Wing — "While this unit has a Pilot on it, it gets +1/+1." (HP half in TotalHP.)
     if (this.cardId === "JTL_247" && !this.LostAbilities()
-      && this.upgrades.some(upg => TraitContains(upg.cardId, "Pilot"))) {
+      && this.upgrades.some(upg => TraitContains(upg.cardId, "Pilot", this.controller, upg.playId))) {
       power += 1;
     }
 
@@ -468,7 +468,7 @@ export class Unit implements UnitInterface {
 
     // Resistance X-Wing — "While this unit has a Pilot on it, it gets +1/+1." (Power half above.)
     if (this.cardId === "JTL_247" && !this.LostAbilities()
-      && this.upgrades.some(upg => TraitContains(upg.cardId, "Pilot"))) {
+      && this.upgrades.some(upg => TraitContains(upg.cardId, "Pilot", this.controller, upg.playId))) {
       hp += 1;
     }
 
@@ -570,7 +570,7 @@ function otherFriendlyPilotCount(controller: PlayerId, selfPlayId: string): numb
   for (const u of GetUnitsForPlayer(controller)) {
     if (u.playId !== selfPlayId && TraitContains(u.cardId, "Pilot", controller, u.playId)) count += 1;
     for (const upgrade of u.upgrades ?? []) {
-      if (upgrade.playId !== selfPlayId && TraitContains(upgrade.cardId, "Pilot")) count += 1;
+      if (upgrade.playId !== selfPlayId && TraitContains(upgrade.cardId, "Pilot", u.controller, upgrade.playId)) count += 1;
     }
   }
   return count;
@@ -599,7 +599,7 @@ function selfStatBonus(unit: Unit): number {
     case "TWI_058":
       return GetUnitsForPlayer(unit.controller).some(
         u => TraitContains(u.cardId, "Force", unit.controller, u.playId)
-          || (u.upgrades ?? []).some(up => TraitContains(up.cardId, "Force")),
+          || (u.upgrades ?? []).some(up => TraitContains(up.cardId, "Force", u.controller, up.playId)),
       ) ? 1 : 0;
     default:
       return 0;

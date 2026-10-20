@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { AllGroundUnits, AllUnits, GetPlayer, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains, UpgradesYouControl } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
-import { CardTraits, CardCost, CardType, CardAspects } from "@/server/engine/card-db/generated";
+import { CardCost, CardType, CardAspects } from "@/server/engine/card-db/generated";
 import { HasFortify } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
 import { AllSpaceUnits, FightersReadyToAttack } from "@/server/engine/core-functions";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
@@ -106,7 +106,7 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         if (GetHand(player).length > 0) abilities.push(cardId);
         break;
       case "TWI_005": // Count Dooku — needs Separatist card in hand
-        if (GetHand(player).some(c => CardTraits(c.cardId).includes("Separatist"))) abilities.push(cardId);
+        if (GetHand(player).some(c => TraitContains(c.cardId, "Separatist", player))) abilities.push(cardId);
         break;
       case "SEC_011": { // Governor Pryce — Action [1 resource, Exhaust]: Ready a token unit.
                         // Needs an exhausted TOKEN unit to be worth anything, plus the resource.
@@ -723,7 +723,7 @@ export function BactaTankTargets(player: PlayerId): { cardId: string; playId: st
   return GetPlayer(game.currentGameState, player).discard
     // No player/playId args: these cards are in the DISCARD, not in play, and passing a discard
     // playId sends TraitContains looking for a unit that does not exist. Traits are static.
-    .filter(c => CardType(c.cardId) === "Unit" && !TraitContains(c.cardId, "Vehicle"))
+    .filter(c => CardType(c.cardId) === "Unit" && !TraitContains(c.cardId, "Vehicle", player))
     .map(c => ({ cardId: c.cardId, playId: c.playId }));
 }
 

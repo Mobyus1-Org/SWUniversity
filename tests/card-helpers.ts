@@ -604,6 +604,7 @@ export const Cards = {
     },
     sec: {
       cruelCommandos: "SEC_086", // 5/5 Ground Republic Clone Trooper, Sentinel + Overwhelm
+      skyhopperCanyonRunner: "SEC_214", // 1/4 Ground, cost 1 — Fringe, Vehicle, Speeder; no text
       strikeForceXWing: "SEC_152", // 3/2 Space Rebel Vehicle Fighter, When Played + Plot
       furtiveHandmaiden: "SEC_197", // 2/2 Ground Naboo, cost 1
       blueAce: "SEC_204",          // 4/5 Space Resistance Vehicle, Ambush
@@ -838,6 +839,7 @@ export const Cards = {
       peppiBow: "HMW_073",          // 2/3 Ground — Restore 1 + "+1/+1 while upgraded"
       nuvoVindi: "HMW_062",         // 1/4 Ground — Weakness tokens on play and on an enemy defeat
       zilloClone: "HMW_065",        // 6/6 Ground — other friendly units get -2/-2
+      theFirstLegion: "HMW_108",    // 5/5 Ground — On Attack: name a trait, enemy cards lose it
       jaxxon: "HMW_219",            // 3/3 Ground, cost 1, Cunning, UNIQUE, no abilities
     },
   },

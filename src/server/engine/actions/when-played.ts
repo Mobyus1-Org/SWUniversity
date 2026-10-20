@@ -7,7 +7,7 @@ import { IsTokenUpgrade, PilotlessVehiclePlayIds, UpgradeDestinationsOnControlCh
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending, BudgetSelectPending, PlayFromHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateBeast, CreateCloneTrooper, CreateXWing, CreateTieFighter, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens, GiveWeaknessToken } from "@/server/engine/token-helpers";
-import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardTraits, CardIsUnique, CardArena } from "@/server/engine/card-db/generated";
+import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardIsUnique, CardArena } from "@/server/engine/card-db/generated";
 
 /**
  * SHD_091 Jabba's Rancor — "Deal 3 damage to another friendly ground unit and 3 damage to an
@@ -502,7 +502,7 @@ export function resolveWhenPlayed(
                       // ability's condition, not a cost: with no Lightsaber in hand the event is
                       // still playable and simply does nothing.
       const hand176 = GetPlayer(game.currentGameState, player).hand;
-      if (!hand176.some(c => TraitContains(c.cardId, "Lightsaber"))) return null;
+      if (!hand176.some(c => TraitContains(c.cardId, "Lightsaber", player))) return null;
       return { type: "play-from-hand", cardId: "LOF_176", player };
     }
     case "ASH_187": { // Reckoning (Event) — "Deal damage to a unit equal to the total amount of
@@ -875,7 +875,7 @@ export function resolveWhenPlayed(
       const game220 = GetGame();
       if (!game220) throw new Error("Game not found in LOF_220 resolution.");
       const hand220 = player === 1 ? game220.currentGameState.player1.hand : game220.currentGameState.player2.hand;
-      const forceUnits = hand220.filter(c => CardType(c.cardId) === "Unit" && CardTraits(c.cardId).includes("Force"));
+      const forceUnits = hand220.filter(c => CardType(c.cardId) === "Unit" && TraitContains(c.cardId, "Force", player));
       if (forceUnits.length === 0) return null;
       return {
         type: "play-from-hand",
@@ -1675,7 +1675,7 @@ export function resolveWhenPlayed(
                       // and runs regardless, so it lives in completePlayCard rather than here —
                       // this branch returning null must NOT mean the card stays in the discard.
       const gs151 = game.currentGameState;
-      if (!TraitContains(GetPlayer(gs151, player).base.cardId, "Kashyyyk")) return null;
+      if (!TraitContains(GetPlayer(gs151, player).base.cardId, "Kashyyyk", player)) return null;
       const friendly151 = GetUnitsForPlayer(player);
       const enemies151 = GetUnitsForPlayer(GetOtherPlayer(player));
       if (friendly151.length === 0 || enemies151.length === 0) return null;
@@ -1691,7 +1691,7 @@ export function resolveWhenPlayed(
       const enemies193 = GetUnitsForPlayer(GetOtherPlayer(player));
       const attackers193 = GetUnitsForPlayer(player, true).filter(u => CanUnitAttack(u));
       const canAttack193 =
-        TraitContains(GetPlayer(gs193, player).base.cardId, "Endor") && attackers193.length > 0;
+        TraitContains(GetPlayer(gs193, player).base.cardId, "Endor", player) && attackers193.length > 0;
 
       const attackStep193: PendingResolution | null = !canAttack193 ? null : {
         type: "ability-option",
@@ -1721,7 +1721,7 @@ export function resolveWhenPlayed(
                       // own continuation a "No" would still run the unit half.
       const gs177 = game.currentGameState;
       const hasOtherEwok = PlayerHasUnitWithTraitInPlay(player, "Ewok", true, playId);
-      const hasEndorBase = TraitContains(GetPlayer(gs177, player).base.cardId, "Endor");
+      const hasEndorBase = TraitContains(GetPlayer(gs177, player).base.cardId, "Endor", player);
       if (!hasOtherEwok && !hasEndorBase) return null;
 
       const enemies177 = GetUnitsForPlayer(player === 1 ? 2 : 1);
@@ -1809,7 +1809,7 @@ export function resolveWhenPlayed(
       const game246 = GetGame();
       if (!game246) return null;
       const eligible246 = GetPlayer(game246.currentGameState, player).discard.filter(c =>
-        CardType(c.cardId) === "Unit" && CardTraits(c.cardId).includes("Republic"));
+        CardType(c.cardId) === "Unit" && TraitContains(c.cardId, "Republic", player));
       if (eligible246.length === 0) return null;
       return {
         type: "ability-option",
@@ -4000,7 +4000,7 @@ export function resolveWhenPlayed(
       const pState121 = GetPlayer(gs121, player);
       const eligible121 = pState121.discard.filter(d =>
         CardType(d.cardId) === "Unit"
-        && TraitContains(d.cardId, "Vehicle")
+        && TraitContains(d.cardId, "Vehicle", player)
         && playCost(gs121, player, d.cardId) <= spendableFor(gs121, player));
       if (eligible121.length === 0) return null;
       return {

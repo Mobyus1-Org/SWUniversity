@@ -1,9 +1,9 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildAnnihilatorOffer, UnitTraits, AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer } from "@/server/engine/core-functions";
+import { buildAnnihilatorOffer, UnitTraits, AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { CardIsUnique, CardPower, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
+import { CardIsUnique, CardPower, CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { GiveTokenUpgrade, CreateBattleDroid, CreateTieFighter, CreateSpy, CreateMandalorianToken } from "@/server/engine/token-helpers";
 
@@ -666,7 +666,7 @@ function resolveOwnWhenDefeated(
       const discard097 = GetPlayer(game097.currentGameState, player).discard;
       const eligible097 = discard097.filter(c =>
         CardType(c.cardId) === "Unit"
-        && CardTraits(c.cardId).includes("Imperial")
+        && TraitContains(c.cardId, "Imperial", player)
         && !CardIsUnique(c.cardId),
       );
       if (eligible097.length === 0) return null;

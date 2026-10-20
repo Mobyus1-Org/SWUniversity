@@ -1,6 +1,6 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId, Resource, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { CardAspects, CardCost, CardHp, CardSubtitle, CardTitle, CardTraits, CardType } from "@/server/engine/card-db/generated";
+import { CardAspects, CardCost, CardHp, CardSubtitle, CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { UpgradeEligibleTargets, PilotingEligibleVehicles, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
@@ -148,7 +148,7 @@ export function HostWaivesUpgradeAspectPenalty(player: PlayerId, upgradeCardId: 
   if (host.cardId === "TWI_034") {
     return host.controller === player
       && !Unit.FromInterface(host).LostAbilities()
-      && TraitContains(upgradeCardId, "Lightsaber");
+      && TraitContains(upgradeCardId, "Lightsaber", player);
   }
   return false;
 }
@@ -226,7 +226,7 @@ export function DiscardPlayableCards(game: GameState, player: PlayerId): { playI
  */
 export function omegaWaivesAspectPenalty(game: GameState, player: PlayerId, cardId: string): boolean {
   if (CardType(cardId) !== "Unit") return false;
-  if (!CardTraits(cardId).includes("Clone")) return false;
+  if (!TraitContains(cardId, "Clone", player)) return false;
   const p = player === 1 ? game.player1 : game.player2;
   const hasOmega = [...p.groundArena, ...p.spaceArena].some(u => u.cardId === "SHD_198");
   if (!hasOmega) return false;
@@ -276,7 +276,7 @@ function traitAttachUpgradeDiscount(game: GameState, player: PlayerId, cardId: s
 
 // SOR_181 Jabba the Hutt: each TRICK event costs 1 less.
 function jabbaTheTrickDiscount(game: GameState, player: PlayerId, cardId: string): number {
-  if (CardType(cardId) !== "Event" || !CardTraits(cardId).includes("Trick")) return 0;
+  if (CardType(cardId) !== "Event" || !TraitContains(cardId, "Trick", player)) return 0;
   const p = player === 1 ? game.player1 : game.player2;
   const hasJabba = [...p.groundArena, ...p.spaceArena].some(
     u => u.cardId === "SOR_181" && !Unit.FromInterface(u).LostAbilities(),
@@ -330,7 +330,7 @@ function gnkPowerDroidDiscount(game: GameState, player: PlayerId, cardId: string
 // costs 1 less — including Piloting costs, so this is subtracted in pilotPlayCost too. Consumed
 // on the next Pilot-trait play (unit in completePlayCard, pilot upgrade at attach).
 function wedgeNextPilotDiscount(game: GameState, player: PlayerId, cardId: string): number {
-  if (!CardTraits(cardId).includes("Pilot")) return 0;
+  if (!TraitContains(cardId, "Pilot", player)) return 0;
   return game.currentEffects.some(e => e.cardId === "JTL_008_next_pilot" && e.affectedPlayer === player) ? 1 : 0;
 }
 
@@ -349,7 +349,7 @@ function morganNextUnitDiscount(game: GameState, player: PlayerId, cardId: strin
 // less." Charged rather than one-shot — the effect's `value` is how many discounts are left, and
 // completePlayCard spends one per Republic card played.
 function tranquilityRepublicDiscount(game: GameState, player: PlayerId, cardId: string): number {
-  if (!CardTraits(cardId).includes("Republic")) return 0;
+  if (!TraitContains(cardId, "Republic", player)) return 0;
   const effect = game.currentEffects.find(e => e.cardId === "TWI_246" && e.affectedPlayer === player);
   return (effect?.value ?? 0) > 0 ? 1 : 0;
 }
@@ -388,13 +388,13 @@ function enochNextUnitDiscount(game: GameState, player: PlayerId, cardId: string
 // ASH_237 Mouse Droid: the NEXT Imperial unit you play this phase costs 1 resource less. The
 // effect is consumed in completePlayCard once an Imperial unit is played.
 function imperialNextUnitDiscount(game: GameState, player: PlayerId, cardId: string): number {
-  if (CardType(cardId) !== "Unit" || !CardTraits(cardId).includes("Imperial")) return 0;
+  if (CardType(cardId) !== "Unit" || !TraitContains(cardId, "Imperial", player)) return 0;
   return game.currentEffects.some(e => e.cardId === "ASH_237" && e.affectedPlayer === player) ? 1 : 0;
 }
 
 // JTL_005 Admiral Piett (deployed): each Capital Ship unit you play costs 2 resources less.
 function piettCapitalShipDiscount(game: GameState, player: PlayerId, cardId: string): number {
-  if (CardType(cardId) !== "Unit" || !CardTraits(cardId).includes("Capital Ship")) return 0;
+  if (CardType(cardId) !== "Unit" || !TraitContains(cardId, "Capital Ship", player)) return 0;
   const p = player === 1 ? game.player1 : game.player2;
   if (p.leader.cardId !== "JTL_005" || !p.leader.deployed) return 0;
   const deployedUnit = [...p.groundArena, ...p.spaceArena].find(u => u.playId === p.leader.deployedPlayId);
@@ -469,7 +469,7 @@ function originTreeShyyyoDiscount(game: GameState, player: PlayerId, cardId: str
   if (CardType(cardId) !== "Unit") return 0;
 
   const p = player === 1 ? game.player1 : game.player2;
-  if (!TraitContains(p.base.cardId, "Kashyyyk")) return 0;
+  if (!TraitContains(p.base.cardId, "Kashyyyk", player)) return 0;
 
   const shyyyoCount = [...p.groundArena, ...p.spaceArena]
     .filter(u => u.cardId === "HMW_145" && !Unit.FromInterface(u).LostAbilities())
@@ -547,7 +547,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
  * the payment path, so the two can't disagree.
  */
 export function palpatinesReturnCost(game: GameState, player: PlayerId, cardId: string): number {
-  const discount = TraitContains(cardId, "Force") ? 8 : 6;
+  const discount = TraitContains(cardId, "Force", player) ? 8 : 6;
   return Math.max(0, playCost(game, player, cardId) - discount);
 }
 

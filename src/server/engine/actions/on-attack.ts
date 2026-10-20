@@ -4,7 +4,7 @@ import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry
 import { GetUnitByPlayId, GetOtherPlayer, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, CardIsLeader, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, MarkUnitDamaged, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
-import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles } from "@/server/engine/card-db/generated";
+import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles, AllCardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens, GiveExperienceTokens, CreateSpy, PlayerGaveTokenUpgradeThisPhase } from "@/server/engine/token-helpers";
@@ -895,6 +895,23 @@ function resolveInnateOnAttack(
       return optionalPayResource("HMW_010", attacker.controller,
         "Pay 1 resource to create a Beast token?", { continuation }) ?? continuation;
     }
+    case "HMW_108": { // The First Legion — "Name a trait. Enemy cards, including those not in play,
+                      // lose that trait for this phase." Mandatory; the card prints no "may".
+                      //
+                      // The pool is every trait in the card data, NOT the traits the opponent
+                      // happens to hold: narrowing it would tell the attacker what is in their
+                      // deck and hand. Naming a trait nobody has is legal and does nothing.
+      return {
+        type: "ability-target",
+        cardId: "HMW_108",
+        player: attacker.controller,
+        sourcePlayId: attacker.playId,
+        helperText: "Name a trait. Enemy cards, including those not in play, lose it this phase.",
+        fromPlayIds: [],            // not a target pool — the UI reads fromChoices
+        fromChoices: AllCardTraits(),
+        continuation,
+      } satisfies AbilityTargetPending;
+    }
     case "HMW_065": { // Clone of the Zillo Beast — "On Attack: You may give a Weakness token to a
                       // unit." Any unit, either side, itself included.
       const units065 = AllUnits();
@@ -1526,7 +1543,7 @@ function resolveInnateOnAttack(
                       // more Lightsaber upgrades attached to him, defeat 4 enemy units." Not a
                       // "may": exactly 4 must be picked, or every enemy unit when there are fewer.
                       // The count is enforced where the picks are resolved.
-      const sabers034 = attacker.upgrades.filter(u => TraitContains(u.cardId, "Lightsaber")).length;
+      const sabers034 = attacker.upgrades.filter(u => TraitContains(u.cardId, "Lightsaber", attacker.controller, u.playId)).length;
       if (sabers034 < 4) return continuation;
       const enemies034 = GetUnitsForPlayer(attacker.controller === 1 ? 2 : 1);
       if (enemies034.length === 0) return continuation;
