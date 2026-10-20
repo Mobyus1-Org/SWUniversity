@@ -885,6 +885,34 @@ export function buildInvisibleHandOffer(player: PlayerId, continuation: PendingR
  * unit that moved (Blue Leader JTL_096 to the ground) is found where it actually is. Null when the
  * unit isn't in play.
  */
+/**
+ * Moves an in-play unit from one arena to the other, keeping the same card and playId
+ * (HMW_050 Low Altitude Combat — "Move a space unit to the ground arena").
+ *
+ * The unit is the SAME unit afterwards: damage, upgrades, readiness and its play id all survive,
+ * so anything tracking it by playId keeps working. Only where it lives changes — which is why
+ * every in-play arena question has to be asked of UnitArenaOf rather than the card's printed
+ * arena, as CardArena still reports where the card would normally have entered.
+ *
+ * Returns false when the unit is not in play, or is already in the destination arena.
+ */
+export function MoveUnitToArena(
+  gs: GameState,
+  playId: string,
+  destination: "Ground" | "Space",
+): boolean {
+  if (UnitArenaOf(gs, playId) === destination) return false;
+  for (const p of [gs.player1, gs.player2]) {
+    const from = destination === "Ground" ? p.spaceArena : p.groundArena;
+    const idx = from.findIndex(u => u.playId === playId);
+    if (idx === -1) continue;
+    const [moved] = from.splice(idx, 1);
+    (destination === "Ground" ? p.groundArena : p.spaceArena).push(moved);
+    return true;
+  }
+  return false;
+}
+
 export function UnitArenaOf(gs: GameState, playId: string): "Ground" | "Space" | null {
   if ([...gs.player1.groundArena, ...gs.player2.groundArena].some(u => u.playId === playId)) return "Ground";
   if ([...gs.player1.spaceArena, ...gs.player2.spaceArena].some(u => u.playId === playId)) return "Space";
@@ -1900,6 +1928,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "LAW_011": //Darth Vader (deployed) — On Attack: discard any number, deal that much damage
     case "TWI_246": //Tranquility — On Attack: next 3 Republic cards this phase cost 1 less
     case "TWI_203": //Chancellor Palpatine (Wartime Chancellor) — On Attack: create a Clone Trooper if a unit left play
+    case "HMW_065": //Clone of the Zillo Beast — On Attack: may give a Weakness token to a unit
     case "HMW_003": //Doctor Hemlock (deployed) — On Attack: may give a Weakness token to a unit
     case "HMW_010": //Tarfful (deployed) — On Attack: may pay 1 to create a Beast token
     case "LAW_214": //Boba Fett (For a Price) — On Attack: may pay 1 to deal 3 to a ground unit

@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, UnitArenaOf } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, UnitArenaOf, MoveUnitToArena } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -121,7 +121,7 @@ import { resolveWhenDeployed } from "@/server/engine/actions/when-deployed";
 import { applyDarksaberOnAttack } from "./on-attack-helper";
 import { BaseTargetId, BaseTargetPlayer } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
 import { QueueUnitEnteredPlayReaction, AfterNonCombatUnitDamage, buildJarJarDamageAndHeal, UnitHasWhenDefeatedAbility, UnitTraits, UnitTitle, BaseMaxHp, BaseRemainingHp, FightersReadyToAttack, IsVehicleUnitCard, CountOnAttackAbilities, DiscardCardsWithTitleFromHandAndDeck } from "@/server/engine/core-functions";
-import { CreateBeast, GiveTokenUpgrade, PlayerGaveTokenUpgradeThisPhase, GiveWeaknessToken, UnitsWithoutWeaknessToken } from "@/server/engine/token-helpers";
+import { CreateBeast, GiveTokenUpgrade, PlayerGaveTokenUpgradeThisPhase, GiveWeaknessToken, UnitsWithoutWeaknessToken, WEAKNESS_TOKEN } from "@/server/engine/token-helpers";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, UnitImmuneToEnemyBounce, UnitImmuneToEnemyDefeat, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget, MandoProtector, SpendMandoShield, ArenasWhereYouControlTheMostUnits } from "@/server/engine/core-functions";
@@ -2575,6 +2575,17 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
       HealBaseForPlayer(game, t.fromPlayer, 1, log, "ASH_127");
       continue;
     }
+    if (t.cardId === "HMW_062_reaction") {
+      // Nuvo may have left play between the defeat and this drain, which takes the offer with him.
+      const nuvo062 = GetUnitByPlayId(game, t.playId!);
+      if (!nuvo062 || Unit.FromInterface(nuvo062).LostAbilities()) continue;
+      const units062 = GetAllUnits(game);
+      if (units062.length === 0) continue;
+      const pend062 = optionalTarget("HMW_062_reaction", t.fromPlayer, units062.map(u => u.playId),
+        "Give a Weakness token to a unit?", { yesLabel: "Give" });
+      if (pend062) return pend062;
+      continue;
+    }
     const wdCtx = t.context as { defeatedUnit?: UnitInterface } | undefined;
     if (!wdCtx?.defeatedUnit) continue;
     const unit = Unit.FromInterface(wdCtx.defeatedUnit);
@@ -2747,6 +2758,27 @@ function defeatUnit(
       playId: twins.playId,
       nested: game.triggerBag.length > 0,
     });
+  }
+
+  // HMW_062 Nuvo Vindi — "When an ENEMY unit with a Weakness token on it is defeated: You may give
+  // a Weakness token to a unit. Use this ability only once each round."
+  //
+  // Queued here, before the unit is removed from its arena, because the Weakness token is one of
+  // its upgrades and goes with it — asking later would always see an untokened unit. "Enemy" is
+  // relative to Nuvo's controller, so his own tokened units dying does nothing.
+  for (const nuvo of GetUnitsForPlayer(GetOtherPlayer(unit.controller))) {
+    if (nuvo.cardId !== "HMW_062" || Unit.FromInterface(nuvo).LostAbilities()) continue;
+    if (!unit.upgrades.some(u => u.cardId === WEAKNESS_TOKEN)) continue;
+    if (game.currentEffects.some(
+      e => e.cardId === "HMW_062_usedThisRound" && e.affectedPlayer === nuvo.controller)) continue;
+    game.triggerBag.push({
+      triggerType: "when-defeated",
+      cardId: "HMW_062_reaction",
+      fromPlayer: nuvo.controller,
+      playId: nuvo.playId,
+      nested: game.triggerBag.length > 0,
+    });
+    break; // one offer however many Nuvos are out — the ability is once each round per player
   }
 
   // L3-37 replacement effect: intercept BEFORE removing from arena.
@@ -14017,6 +14049,26 @@ function applyAbilityEffect(
       // −1 HP can be lethal, and no other upgrade in the engine lowers its host's HP on attach.
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
+    case "HMW_065_OA":       // Clone of the Zillo Beast — On Attack: may give a Weakness token.
+    case "HMW_062_WP":       // Nuvo Vindi — "When Played: You may give a Weakness token to a unit."
+    case "HMW_062_reaction": { // …and the same offer when an enemy tokened unit is defeated.
+      if (!targetPlayId) break;
+      const target062 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target062) break;
+      const source062 = pending.cardId === "HMW_065_OA" ? "HMW_065" : "HMW_062";
+      GiveWeaknessToken(game.currentGameState, target062, game.gameLog, pending.player!, source062);
+      // The once-each-round limit is spent only when the token is actually given — declining the
+      // offer leaves the ability available, matching the other once-each-round cards.
+      if (pending.cardId === "HMW_062_reaction") {
+        game.currentGameState.currentEffects.push({
+          cardId: "HMW_062_usedThisRound",
+          duration: "Round",
+          affectedPlayer: pending.player!,
+        });
+      }
+      // A Weakness token is −1/−1, which can be lethal on its way in.
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
     case "HMW_001": { // Asajj Ventress — pick WHICH replacement before the attack.
                       // The two directions differ whenever the unit has both keywords (LAW_050
                       // Honnah), so this is a real choice rather than a single symmetric swap.
@@ -16235,6 +16287,33 @@ function applyAbilityEffect(
         continuation: pending.continuation ?? null,
       };
     }
+    case "HMW_050": { // Low Altitude Combat — move the chosen space unit down, then offer the attack.
+      if (!targetPlayId || !pending.player) break;
+      const gs050 = game.currentGameState;
+      if (!MoveUnitToArena(gs050, targetPlayId, "Ground")) break;
+      const moved050 = GetUnitByPlayId(gs050, targetPlayId);
+      game.gameLog.push(`${CardTitle("HMW_050")}: moved ${CardTitle(moved050?.cardId ?? "")} to the ground arena.`);
+      // "If you do, you may attack with a ground unit." The unit just moved is a ground unit now,
+      // so it is among the candidates — and only units that can actually attack are offered.
+      const attackers050 = GetUnitsForPlayer(pending.player, true)
+        .filter(u => UnitArenaOf(gs050, u.playId) === "Ground" && CanUnitAttack(u));
+      if (attackers050.length === 0) return pending.continuation ?? null;
+      return optionalTarget("HMW_050_attack", pending.player, attackers050.map(u => u.playId),
+        "Attack with a ground unit (+2/+0 for this attack)?",
+        { yesLabel: "Attack", continuation: pending.continuation ?? null });
+    }
+    case "HMW_050_attack": { // …and that attack, with the +2/+0 that only lasts for it.
+      if (!targetPlayId) break;
+      const attacker050 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!attacker050) break;
+      GivePowerMod("HMW_050", attacker050, 2, "ForAttack", game.gameLog);
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "HMW_050",
+        continuation: pending.continuation ?? null,
+      };
+    }
     case "SHD_101": { // Adelphi Patrol Wing When Played: the chosen unit attacks, +2/+0 if you have the initiative.
       if (!targetPlayId) break;
       const unit101 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -16690,6 +16769,19 @@ function applyAbilityEffect(
       const defeatPend099 = defeatUnit(game.currentGameState, game.gameLog, target099);
       game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target099.cardId)}.`);
       if (defeatPend099) return injectContinuation(defeatPend099, pending.continuation);
+      return pending.continuation;
+    }
+    case "HMW_102": { // Dragon's Might — defeat the chosen non-leader unit with 4 or less power.
+                      // Both guards are re-checked here: the offer is only a filter, and a client
+                      // can name anything.
+      if (!targetPlayId) break;
+      const target102 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target102) break;
+      const unit102 = Unit.FromInterface(target102);
+      if (unit102.IsLeader() || unit102.CurrentPower() > 4) break;
+      const defeatPend102 = defeatUnit(game.currentGameState, game.gameLog, target102);
+      game.gameLog.push(`${CardTitle("HMW_102")} defeated ${CardTitle(target102.cardId)}.`);
+      if (defeatPend102) return injectContinuation(defeatPend102, pending.continuation);
       return pending.continuation;
     }
     case "SOR_078": // Vanquish — defeat a non-leader unit.

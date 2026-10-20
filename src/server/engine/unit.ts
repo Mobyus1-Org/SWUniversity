@@ -1,5 +1,5 @@
 import { CardInPlay, HP_MOD, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, EffectiveRaid, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, EffectiveRaid, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard, UnitArenaOf, GetGame } from "@/server/engine/core-functions";
 import { CardArena, CardAspects, CardCost, CardHp, CardPower, CardTitle } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
@@ -185,6 +185,7 @@ export class Unit implements UnitInterface {
     power += selfPowerOnlyBonus(this);
     power += friendlyAuraBonus(this);
     power -= enemyAuraDebuff(this);
+    power -= friendlyAuraDebuff(this);
 
     // Gar Saxon (SHD_001) grants friendly upgraded units +1/+0 from the leader zone too. When he is
     // deployed he is caught by the loop above; when undeployed his aura still applies from the zone.
@@ -280,6 +281,12 @@ export class Unit implements UnitInterface {
     }
 
     if (this.cardId === "SHD_056" && this.upgrades.length > 0 && !this.LostAbilities()) {
+      power += 1;
+    }
+
+    // Peppi Bow — "While this unit is upgraded, she gets +1/+1." A while-condition, so it pays
+    // once however many upgrades she carries. (HP half in TotalHP.)
+    if (this.cardId === "HMW_073" && this.upgrades.length > 0 && !this.LostAbilities()) {
       power += 1;
     }
 
@@ -436,6 +443,7 @@ export class Unit implements UnitInterface {
     hp += selfStatBonus(this);
     hp += friendlyAuraBonus(this);
     hp -= enemyAuraDebuff(this);
+    hp -= friendlyAuraDebuff(this);
 
     for (const upgrade of this.upgrades) {
       hp += UpgradeHpOf(upgrade.cardId);
@@ -450,6 +458,11 @@ export class Unit implements UnitInterface {
     }
 
     if (this.cardId === "SHD_056" && this.upgrades.length > 0) {
+      hp += 1;
+    }
+
+    // Peppi Bow — the HP half of "While this unit is upgraded, she gets +1/+1."
+    if (this.cardId === "HMW_073" && this.upgrades.length > 0 && !this.LostAbilities()) {
       hp += 1;
     }
 
@@ -518,9 +531,17 @@ export class Unit implements UnitInterface {
   }
 }
 
-/** True when this unit sits in the Space arena. */
+/**
+ * True when this unit sits in the Space arena.
+ *
+ * Reads where the unit actually IS, not where its card would have entered: a unit moved between
+ * arenas (HMW_050 Low Altitude Combat) keeps its printed arena, so CardArena would still call a
+ * grounded starfighter a space unit.
+ */
 function isSpaceUnit(unit: UnitInterface): boolean {
-  return (CardArena(unit.cardId) ?? "Ground") === "Space";
+  const gs = GetGame()?.currentGameState ?? null;
+  const live = gs ? UnitArenaOf(gs, unit.playId) : null;
+  return (live ?? CardArena(unit.cardId) ?? "Ground") === "Space";
 }
 
 /**
@@ -668,7 +689,8 @@ function friendlyAuraBonus(unit: Unit): number {
  * this is true. Keep in sync with enemyAuraDebuff.
  */
 export function ProjectsEnemyStatAura(cardId: string): boolean {
-  return cardId === "SHD_037"; // Supreme Leader Snoke — each enemy non-leader unit gets –2/–2
+  return cardId === "SHD_037"  // Supreme Leader Snoke — each enemy non-leader unit gets –2/–2
+    || cardId === "HMW_065";   // Clone of the Zillo Beast — OTHER FRIENDLY units get –2/–2
 }
 
 /** Troopers controlled by this unit's controller — TWI_122 Squad Support counts every one. */
@@ -676,6 +698,24 @@ function squadSupportCount(unit: Unit): number {
   return GetUnitsForPlayer(unit.controller)
     .filter(u => TraitContains(u.cardId, "Trooper", unit.controller, u.playId))
     .length;
+}
+
+/**
+ * HMW_065 Clone of the Zillo Beast — "OTHER friendly units get –2/–2."
+ *
+ * The mirror of enemyAuraDebuff, with two differences that follow from the printed text: it reads
+ * the unit's OWN controller rather than the opponent, and there is no "non-leader" clause, so a
+ * friendly leader unit is shrunk too. It spares only the Zillo itself.
+ */
+function friendlyAuraDebuff(unit: Unit): number {
+  let debuff = 0;
+  for (const ally of GetUnitsForPlayer(unit.controller)) {
+    if (ally.cardId !== "HMW_065") continue;
+    if (ally.playId === unit.playId) continue; // "OTHER friendly units"
+    if (Unit.FromInterface(ally).LostAbilities()) continue;
+    debuff += 2;
+  }
+  return debuff;
 }
 
 function enemyAuraDebuff(unit: Unit): number {

@@ -114,6 +114,7 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
     case "ASH_074"://Mos Eisley Modifier
     case "ASH_145"://Praetorian Elite
     case "ASH_175"://Wookiee Chieftain
+    case "HMW_055"://Mae - Kill the Dream
       return true;
     default: break;
   }

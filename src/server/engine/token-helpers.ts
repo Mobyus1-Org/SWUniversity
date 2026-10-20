@@ -172,7 +172,7 @@ export function GiveAdvantageTokens(
 
 /** The Experience token upgrade (+1/+1). */
 const EXPERIENCE_TOKEN = "SOR_T01";
-const WEAKNESS_TOKEN = "HMW_T02";
+export const WEAKNESS_TOKEN = "HMW_T02";
 
 /**
  * HMW_T02 Weakness — a −1/−1 UPGRADE token (HMW_003 Doctor Hemlock, and the rest of the HMW

@@ -834,6 +834,10 @@ export const Cards = {
       nightbrotherMaulsGauntlet: "HMW_204",
       ewokBrigade: "HMW_116", // 2/4 Ground, cost 2, no abilities — clean "costs 3 or less" fixture
       coastalCatamarans: "HMW_093", // 8/8 Ground, cost 7, Vigilance, no abilities
+      mae: "HMW_055",               // 2/4 Ground — Ambush + Shielded + Grit, nothing else
+      peppiBow: "HMW_073",          // 2/3 Ground — Restore 1 + "+1/+1 while upgraded"
+      nuvoVindi: "HMW_062",         // 1/4 Ground — Weakness tokens on play and on an enemy defeat
+      zilloClone: "HMW_065",        // 6/6 Ground — other friendly units get -2/-2
       jaxxon: "HMW_219",            // 3/3 Ground, cost 1, Cunning, UNIQUE, no abilities
     },
   },
@@ -1163,6 +1167,10 @@ export const Cards = {
       targetTheMainGenerator: "IBH_059", targetTheMainGeneratorB: "IBH_071",
       illCoverForYou: "IBH_005", illCoverForYouB: "IBH_039",
       improvisedDetonation: "IBH_021", improvisedDetonationB: "IBH_030",
+    },
+    hmw: {
+      dragonsMight: "HMW_102",      // Defeat a non-leader unit with 4 or less power
+      lowAltitudeCombat: "HMW_050", // Move a space unit to the ground arena, then maybe attack
     },
   },
 }

@@ -20,10 +20,12 @@ export function jabbasRancorDamage(
   selfPlayId: string | undefined,
   continuation: PendingResolution | null,
 ): PendingResolution | null {
+  const gs091 = GetGame()?.currentGameState;
+  const isGround091 = (u: { playId: string; cardId: string }) =>
+    (gs091 ? UnitArenaOf(gs091, u.playId) : null) === "Ground";
   const friendly091 = GetUnitsForPlayer(player)
-    .filter(u => u.playId !== selfPlayId && (CardArena(u.cardId) ?? "Ground") === "Ground");
-  const enemy091 = GetUnitsForPlayer(GetOtherPlayer(player))
-    .filter(u => (CardArena(u.cardId) ?? "Ground") === "Ground");
+    .filter(u => u.playId !== selfPlayId && isGround091(u));
+  const enemy091 = GetUnitsForPlayer(GetOtherPlayer(player)).filter(isGround091);
   if (friendly091.length === 0 || enemy091.length === 0) return continuation;
   return {
     type: "ability-target",
@@ -2771,8 +2773,9 @@ export function resolveWhenPlayed(
     }
     case "SHD_120": { // Discerning Veteran — "When Played: This unit captures an enemy non-leader
                       // ground unit." The captor is fixed (itself), so only the victim is chosen.
+      const gs120 = game.currentGameState;
       const enemy120 = GetUnitsForPlayer(GetOtherPlayer(player))
-        .filter(u => (CardArena(u.cardId) ?? "Ground") === "Ground"
+        .filter(u => UnitArenaOf(gs120, u.playId) === "Ground"
           && !CardIsLeader(u.cardId)
           && !UnitImmuneToEnemyCapture(u));
       if (enemy120.length === 0) return null;
@@ -2859,6 +2862,31 @@ export function resolveWhenPlayed(
       const eligible077 = AllUnits().filter(u => Unit.FromInterface(u).CurrentHP() <= 5);
       if (eligible077.length === 0) return null;
       return mandatoryTarget(cardId, player, eligible077.map(u => u.playId));
+    }
+    case "HMW_050": { // Low Altitude Combat — "Move a space unit to the ground arena." Any space
+                      // unit, either player's: moving an enemy ship down into reach is a real play.
+      const space050 = [...AllSpaceUnits()];
+      if (space050.length === 0) return null;
+      return mandatoryTarget(cardId, player, space050.map(u => u.playId));
+    }
+    case "HMW_062": { // Nuvo Vindi — "When Played: You may give a Weakness token to a unit."
+                      // "A unit", not "an enemy unit", so his own side is fair game — himself
+                      // included, since he is already in play by the time this resolves.
+      const units062 = AllUnits();
+      if (units062.length === 0) return null;
+      return optionalTarget("HMW_062_WP", player, units062.map(u => u.playId),
+        "Give a Weakness token to a unit?", { yesLabel: "Give" });
+    }
+    case "HMW_102": { // Dragon's Might — "Defeat a non-leader unit with 4 or less power."
+                      // The power limit reads CURRENT power, not printed: the event resolves when
+                      // announced, so a buff can carry a unit out of range and a debuff into it.
+      const eligible102 = AllUnits().filter(u =>
+        !Unit.FromInterface(u).IsLeader()
+        && Unit.FromInterface(u).CurrentPower() <= 4
+        && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player),
+      );
+      if (eligible102.length === 0) return null;
+      return mandatoryTarget(cardId, player, eligible102.map(u => u.playId));
     }
     case "SOR_078": // Vanquish — "Defeat a non-leader unit."
     case "TWI_077": { // reprint of SOR_078

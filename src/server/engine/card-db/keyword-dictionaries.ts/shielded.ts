@@ -105,6 +105,7 @@ export function HasShielded(cardId: string, playId?: string, player?: PlayerId, 
     case "ASH_208"://Sabine Wren (I Learned the Hard Way)
     case "ASH_243"://Darth Vader (Meet Your Destiny)
     case "ASH_T01"://Mandalorian token
+    case "HMW_055"://Mae - Kill the Dream
       return true;
 
     default: break;

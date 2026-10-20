@@ -895,6 +895,18 @@ function resolveInnateOnAttack(
       return optionalPayResource("HMW_010", attacker.controller,
         "Pay 1 resource to create a Beast token?", { continuation }) ?? continuation;
     }
+    case "HMW_065": { // Clone of the Zillo Beast — "On Attack: You may give a Weakness token to a
+                      // unit." Any unit, either side, itself included.
+      const units065 = AllUnits();
+      if (units065.length === 0) return continuation;
+      return optionalTarget(
+        "HMW_065_OA",
+        attacker.controller,
+        units065.map(u => u.playId),
+        "Give a Weakness token to a unit?",
+        { yesLabel: "Give", continuation },
+      );
+    }
     case "HMW_003": { // Doctor Hemlock (deployed) — "On Attack: You may give a Weakness token to a
                       // unit." No "without a token" restriction here, unlike the leader side.
       const units003 = AllUnits();

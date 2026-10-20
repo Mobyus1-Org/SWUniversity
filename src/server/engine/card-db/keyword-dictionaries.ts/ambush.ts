@@ -158,6 +158,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "ASH_206"://Kelleran Beq
     case "ASH_207"://Heroic Purrgil
     case "HMW_018"://The Warrior (Deft Duelist) Leader Unit
+    case "HMW_055"://Mae - Kill the Dream
       return true;
   }
   //JTL_053: The Ghost - Heart of the Family
