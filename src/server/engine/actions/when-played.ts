@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits } from "@/server/engine/core-functions";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, IsLeaderUnit, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits } from "@/server/engine/core-functions";
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost, CardIsPlayable, DiscardUnitsPlayableAtDiscount } from "@/server/engine/card-playability";
 import { DrawCardForPlayer } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -432,7 +432,7 @@ export function resolveWhenPlayed(
     }
     case "ASH_247": { // One Must Destroy to Create (Event) — "Defeat a friendly non-leader unit.
                       // Then, you may play that unit from your discard pile for free."
-      const friendly247 = GetUnitsForPlayer(player).filter(u => !CardIsLeader(u.cardId));
+      const friendly247 = GetUnitsForPlayer(player).filter(u => !IsLeaderUnit(u));
       if (friendly247.length === 0) return null;
       return mandatoryTarget("ASH_247", player, friendly247.map(u => u.playId));
     }
@@ -473,14 +473,14 @@ export function resolveWhenPlayed(
     case "SEC_040": { // Emergency Powers (Event) — "Choose a non-leader unit and pay any number of
                       // resources. For each resource paid this way, give an Experience token to the
                       // chosen unit." The payment prompt follows once the target is picked.
-      const nonLeaders040 = AllUnits().filter(u => !CardIsLeader(u.cardId));
+      const nonLeaders040 = AllUnits().filter(u => !IsLeaderUnit(u));
       if (nonLeaders040.length === 0) return null;
       return mandatoryTarget("SEC_040", player, nonLeaders040.map(u => u.playId));
     }
     case "ASH_200": { // Rehabilitation (Event) — "Choose a non-leader unit. Give that unit –3/–0 for
                       // this phase, then take control of it. At the start of the regroup phase, its
                       // owner takes control of it."
-      const nonLeaders200 = AllUnits().filter(u => !CardIsLeader(u.cardId));
+      const nonLeaders200 = AllUnits().filter(u => !IsLeaderUnit(u));
       if (nonLeaders200.length === 0) return null;
       return mandatoryTarget("ASH_200", player, nonLeaders200.map(u => u.playId));
     }
@@ -494,7 +494,7 @@ export function resolveWhenPlayed(
     }
     case "ASH_236": { // Far Far Away (Event) — "Return a friendly non-leader unit to its owner's
                       // hand. If you do, return an enemy non-leader unit to its owner's hand."
-      const friendly236 = GetUnitsForPlayer(player).filter(u => !CardIsLeader(u.cardId));
+      const friendly236 = GetUnitsForPlayer(player).filter(u => !IsLeaderUnit(u));
       if (friendly236.length === 0) return null;
       return mandatoryTarget("ASH_236_friendly", player, friendly236.map(u => u.playId));
     }
@@ -1050,7 +1050,7 @@ export function resolveWhenPlayed(
                       // of the regroup phase, its owner rescues it." The rescue is handled by the
                       // regroup-start hook, which releases every base captive.
       const victims195 = GetUnitsForPlayer(GetOtherPlayer(player))
-        .filter(u => !CardIsLeader(u.cardId) && !UnitImmuneToEnemyCapture(Unit.FromInterface(u)));
+        .filter(u => !IsLeaderUnit(u) && !UnitImmuneToEnemyCapture(Unit.FromInterface(u)));
       if (victims195.length === 0) return null;
       return mandatoryTarget(cardId, player, victims195.map(u => u.playId));
     }
@@ -1261,14 +1261,14 @@ export function resolveWhenPlayed(
     }
     case "SHD_206": { // Spare the Target — "Return an ENEMY non-leader unit to its owner's hand.
                       // Collect that unit's Bounties." Enemy units only, both arenas.
-      const enemies206 = GetUnitsForPlayer(GetOtherPlayer(player)).filter(u => !CardIsLeader(u.cardId));
+      const enemies206 = GetUnitsForPlayer(GetOtherPlayer(player)).filter(u => !IsLeaderUnit(u));
       if (enemies206.length === 0) return null;
       return mandatoryTarget("SHD_206", player, enemies206.map(u => u.playId));
     }
     case "SHD_207": { // A New Adventure — "Return a non-leader unit that costs 6 or less to its
                       // owner's hand. Then, ITS OWNER may play it for free." Either side's units.
       const targets207 = AllUnits().filter(
-        u => !CardIsLeader(u.cardId) && (CardCost(u.cardId) ?? 0) <= 6,
+        u => !IsLeaderUnit(u) && (CardCost(u.cardId) ?? 0) <= 6,
       );
       if (targets207.length === 0) return null;
       return mandatoryTarget("SHD_207", player, targets207.map(u => u.playId));
@@ -1288,7 +1288,7 @@ export function resolveWhenPlayed(
     case "TWI_041": { // Lethal Crackdown — "Defeat a non-leader unit. Deal damage to YOUR base
                       // equal to that unit's power." Either player's non-leader unit is a target;
                       // the base damage always lands on the caster.
-      const targets041 = AllUnits().filter(u => !CardIsLeader(u.cardId));
+      const targets041 = AllUnits().filter(u => !IsLeaderUnit(u));
       if (targets041.length === 0) return null;
       return mandatoryTarget("TWI_041", player, targets041.map(u => u.playId));
     }
@@ -1568,7 +1568,7 @@ export function resolveWhenPlayed(
                       // total of 8 or less remaining HP." Same budget-select as ASH_053, with a
                       // count cap as well. "Enemy" is by CONTROLLER, not owner.
       const enemies187 = GetUnitsForPlayer(GetOtherPlayer(player)).filter(
-        u => !CardIsLeader(u.cardId) && !UnitImmuneToEnemyCapture(u),
+        u => !IsLeaderUnit(u) && !UnitImmuneToEnemyCapture(u),
       );
       if (enemies187.length === 0) return null;
       return {
@@ -1585,7 +1585,7 @@ export function resolveWhenPlayed(
                       // less remaining HP. Create a Mandalorian token for each unit defeated."
                       // Unqualified: friendly units and Pre Vizsla himself are legal choices.
       const eligible053 = AllUnits().filter(
-        u => !CardIsLeader(u.cardId) && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player),
+        u => !IsLeaderUnit(u) && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player),
       );
       if (eligible053.length === 0) return null;
       return {
@@ -2009,9 +2009,10 @@ export function resolveWhenPlayed(
       return buildAnnihilatorOffer(player);
     case "JTL_232": { // Jump to Lightspeed — "Return a friendly space unit and any number of
                       // non-leader upgrades on it to their owners' hands. The next time you play a
-                      // copy of that unit this phase, you may play it for free." A Vehicle with a
-                      // leader Pilot is fine (the leader goes back to its zone); a leader unit's own
-                      // card can't go to a hand.
+                      // copy of that unit this phase, you may play it for free." The unit clause has
+                      // no "non-leader" restriction, so the question here is NOT IsLeaderUnit: a
+                      // Vehicle with a leader Pilot is a legal target (the leader goes back to its
+                      // zone), and it is only the leader's own CARD that cannot go to a hand.
       const space232 = GetPlayer(game.currentGameState, player).spaceArena.filter(u => !CardIsLeader(u.cardId));
       if (space232.length === 0) return null;
       return mandatoryTarget(cardId, player, space232.map(u => u.playId));
@@ -2065,7 +2066,7 @@ export function resolveWhenPlayed(
     }
     case "SOR_224": { // Change of Heart — "Take control of a non-leader unit."
       const allNonLeaders = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
-        .filter(u => !CardIsLeader(u.cardId));
+        .filter(u => !IsLeaderUnit(u));
       if (allNonLeaders.length === 0) return null;
       return {
         type: "ability-target",
@@ -2078,7 +2079,7 @@ export function resolveWhenPlayed(
     case "SHD_229": { // Ma Klounkee — "Return a friendly non-leader Underworld unit to its owner's
                       // hand. If you do, deal 3 damage to a unit."
       const underworld229 = GetUnitsForPlayer(player)
-        .filter(u => !CardIsLeader(u.cardId) && TraitContains(u.cardId, "Underworld", player, u.playId));
+        .filter(u => !IsLeaderUnit(u) && TraitContains(u.cardId, "Underworld", player, u.playId));
       if (underworld229.length === 0) return null; // no bounce target — the whole card fizzles
       return {
         type: "ability-target",
@@ -2091,7 +2092,7 @@ export function resolveWhenPlayed(
     case "SOR_222": // Waylay — "Return a non-leader unit to its owner's hand."
     case "TWI_226": { // reprint of SOR_222
       const allNonLeaders = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)]
-        .filter(u => !CardIsLeader(u.cardId));
+        .filter(u => !IsLeaderUnit(u));
       if (allNonLeaders.length === 0) return null;
       return {
         type: "ability-target",
@@ -2334,7 +2335,7 @@ export function resolveWhenPlayed(
                       // each upgrade that was on that unit, give an Experience token to a friendly
                       // unit." Printed cost, matching every other "costs N or less" filter.
       const eligible039 = AllUnits().filter(u =>
-        !CardIsLeader(u.cardId)
+        !IsLeaderUnit(u)
         && (CardCost(u.cardId) ?? 0) <= 3
         && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player));
       if (eligible039.length === 0) return null;
@@ -2412,7 +2413,7 @@ export function resolveWhenPlayed(
       };
     }
     case "SHD_132": { // Choose Sides — "Choose a friendly non-leader unit and an enemy non-leader unit. Exchange control of those units."
-      const friendly132 = GetUnitsForPlayer(player).filter(u => !CardIsLeader(u.cardId));
+      const friendly132 = GetUnitsForPlayer(player).filter(u => !IsLeaderUnit(u));
       if (friendly132.length === 0) return null;
       return {
         type: "ability-target",
@@ -2791,7 +2792,7 @@ export function resolveWhenPlayed(
       const gs120 = game.currentGameState;
       const enemy120 = GetUnitsForPlayer(GetOtherPlayer(player))
         .filter(u => UnitArenaOf(gs120, u.playId) === "Ground"
-          && !CardIsLeader(u.cardId)
+          && !IsLeaderUnit(u)
           && !UnitImmuneToEnemyCapture(u));
       if (enemy120.length === 0) return null;
       return {
@@ -2807,7 +2808,7 @@ export function resolveWhenPlayed(
                       // a non-leader unit they control. If they do, this unit captures that unit.
                       // If they don't, ready this unit." The choice belongs to the OPPONENT.
       const opponent193 = player === 1 ? 2 : 1;
-      const theirUnits193 = GetUnitsForPlayer(opponent193).filter(u => !CardIsLeader(u.cardId));
+      const theirUnits193 = GetUnitsForPlayer(opponent193).filter(u => !IsLeaderUnit(u));
       if (theirUnits193.length === 0) {
         // They can't choose, so they didn't — ready Thrawn straight away.
         ReadyUnitByPlayId(playId, player, "SEC_193");
@@ -3287,7 +3288,7 @@ export function resolveWhenPlayed(
       };
     }
     case "SOR_202": { // Cantina Bouncer — When Played: You may return a non-leader unit to its owner's hand.
-      const nonLeaders202 = AllUnits().filter(u => !CardIsLeader(u.cardId));
+      const nonLeaders202 = AllUnits().filter(u => !IsLeaderUnit(u));
       if (nonLeaders202.length === 0) return null;
       return optionalTarget(cardId, player, nonLeaders202.map(u => u.playId),
         "Return a non-leader unit to its owner's hand?",
@@ -3471,7 +3472,7 @@ export function resolveWhenPlayed(
       return mandatoryTarget(cardId, player, allUnits124.map(u => u.playId));
     }
     case "SOR_187": { // I Had No Choice — Choose up to 2 non-leader units; opponent picks 1 to return to hand; other goes to deck bottom.
-      const nonLeaders187 = AllUnits().filter(u => !CardIsLeader(u.cardId));
+      const nonLeaders187 = AllUnits().filter(u => !IsLeaderUnit(u));
       if (nonLeaders187.length === 0) return null;
       return {
         type: "ability-target",
@@ -4033,7 +4034,7 @@ export function resolveWhenPlayed(
       const game099 = GetGame();
       if (!game099) return null;
       const groundArena099 = player === 1 ? game099.currentGameState.player1.groundArena : game099.currentGameState.player2.groundArena;
-      const friendlyNonLeaderGround099 = groundArena099.filter(u => !CardIsLeader(u.cardId));
+      const friendlyNonLeaderGround099 = groundArena099.filter(u => !IsLeaderUnit(u));
       if (friendlyNonLeaderGround099.length === 0) return null;
       return optionalTarget(cardId, player, friendlyNonLeaderGround099.map(u => u.playId),
         "Return a friendly non-leader ground unit to hand?",
@@ -4195,7 +4196,7 @@ export function resolveWhenPlayed(
       } satisfies GiveXpMultiplePending;
     }
     case "SOR_209": { // Pirated Starfighter (Kylo Ren) — Return a friendly non-leader unit to its owner's hand.
-      const friendlyNonLeaders209 = GetUnitsForPlayer(player).filter(u => !CardIsLeader(u.cardId));
+      const friendlyNonLeaders209 = GetUnitsForPlayer(player).filter(u => !IsLeaderUnit(u));
       if (friendlyNonLeaders209.length === 0) return null;
       return mandatoryTarget(cardId, player, friendlyNonLeaders209.map(u => u.playId));
     }

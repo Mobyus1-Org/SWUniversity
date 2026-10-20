@@ -348,6 +348,24 @@ export function CardIsLeader(cardId: string): boolean {
 }
 
 /**
+ * Whether a unit IN PLAY is a leader unit. This is the question every "leader unit" / "non-leader
+ * unit" ability asks, and it is NOT the same as `CardIsLeader`:
+ *
+ *   CR 3.4.7 — "Some abilities make non-leader units leader units. This means the unit is
+ *   considered a leader unit for all abilities that refer to 'leader' or 'non-leader' units […]"
+ *
+ * The ability in question is a leader deploying as a Pilot upgrade: the Vehicle carrying it is an
+ * ordinary unit card but a LEADER UNIT, so "take control of a non-leader unit" and friends must
+ * leave it alone. `CardIsLeader` answers a different question — "is this CARD a leader card" —
+ * which is the right one for an upgrade's own identity, for a card outside play, and for where a
+ * defeated card goes (3.4.7 also says such a host still discards, because the host is not a
+ * leader card). An ability whose text says plain "unit" asks neither (see JTL_232).
+ */
+export function IsLeaderUnit(unit: UnitInterface): boolean {
+  return Unit.FromInterface(unit).IsLeader();
+}
+
+/**
  * A double-sided leader flips between two LEADER faces instead of deploying into a unit
  * (TWI_017 Chancellor Palpatine // Darth Sidious). Detected from the data — `cardType2` is
  * "Leader" rather than "Unit" — so a future one needs no code change here.
@@ -1622,7 +1640,7 @@ export function CaptureVictimsExistFor(captor: UnitInterface): boolean {
   const enemy: PlayerId = captor.controller === 1 ? 2 : 1;
   const enemyState = enemy === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
   const units = arena === "Ground" ? enemyState.groundArena : enemyState.spaceArena;
-  return units.some(u => !CardIsLeader(u.cardId) && !UnitImmuneToEnemyCapture(u));
+  return units.some(u => !IsLeaderUnit(u) && !UnitImmuneToEnemyCapture(u));
 }
 
 /** The upgrade with this playId, wherever it is attached, or null. */
@@ -2935,7 +2953,7 @@ export function chooseAndDefeatUnit(
   if (!game) throw new Error("Game not found in chooseAndDefeatUnit");
   const opponent = GetOtherPlayer(player);
   const opponentUnits = GetUnitsForPlayer(opponent).filter(u => !UnitImmuneToEnemyDefeat(u));
-  const eligible = includeLeaders ? opponentUnits : opponentUnits.filter(u => !CardIsLeader(u.cardId));
+  const eligible = includeLeaders ? opponentUnits : opponentUnits.filter(u => !IsLeaderUnit(u));
   if (eligible.length === 0) return null;
   return {
     type: "ability-target",

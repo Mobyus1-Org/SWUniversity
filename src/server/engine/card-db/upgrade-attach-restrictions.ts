@@ -1,6 +1,6 @@
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
-import { CardIsLeader, TraitContains } from "../core-functions";
+import { CardIsLeader, IsLeaderUnit, TraitContains } from "../core-functions";
 import { CardCost, CardIsUnique, CardType } from "@/server/engine/card-db/generated";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { LeaderDeployPilotThreshold } from "./keyword-dictionaries.ts/leader-pilot-deploy";
@@ -118,12 +118,7 @@ export function UpgradeEligibleTargets(
     // When attached: take control. Not eligible on units that have a leader as upgrade
     // because those become "Leader units."
     case "SOR_122": // Traitorous
-      return everyone.filter(u => {
-        if (CardIsLeader(u.cardId)) return false;
-        if (CardCost(u.cardId) > 3) return false;
-        if (u.upgrades.some(upg => CardIsLeader(upg.cardId))) return false;
-        return true;
-      }).map(u => u.playId);
+      return everyone.filter(u => !IsLeaderUnit(u) && CardCost(u.cardId) <= 3).map(u => u.playId);
 
     // "Attach to a non-leader unit."
     case "SHD_053": //Second Chance
@@ -131,8 +126,7 @@ export function UpgradeEligibleTargets(
     case "SHD_226": //Unrefusable Offer
     case "TWI_122": //Squad Support
     case "LAW_077": //Shadow of Stygeon Prime
-      return everyone.filter(u => !CardIsLeader(u.cardId) && !u.upgrades.some(upg => CardIsLeader(upg.cardId)))
-        .map(u => u.playId);
+      return everyone.filter(u => !IsLeaderUnit(u)).map(u => u.playId);
 
     // "Attach to a Force unit."
     case "LOF_074": //Bolstered Endurance
@@ -161,16 +155,34 @@ export function IsPilotUpgrade(cardId: string): boolean {
     // Any Pilot-trait card attached as an upgrade is a Pilot — a leader attached by its own ability
     // (Poe JTL_013), or a unit that attaches itself without Piloting (JTL_083 Pantoran Starship
     // Thief). Missing either made the Vehicle read as pilotless.
-    // No owner is available here: IsPilotUpgrade is asked about a bare cardId from many places,
-    // including before the card is in play. So a Pilot upgrade whose owner has lost the Pilot trait
-    // (HMW_108) still reads as a Pilot. The hosts it may attach to DO honour the suppression, which
-    // is where the restriction actually bites.
+    // Deliberately asked of a bare cardId: this answers "is this a Pilot CARD", which is needed
+    // before the card is in play (can it be played as a pilot, is it a pilot-shaped upgrade) and
+    // where no owner exists. The different question — "does this unit have a Pilot ON it right
+    // now" — is pilotCountOn, which is owner-aware so that a trait suppressed by HMW_108 The First
+    // Legion really does leave the Vehicle pilotless.
     || TraitContains(cardId, "Pilot");
 }
 
-/** How many Pilots are currently attached to a unit. */
-function pilotCountOn(unit: { upgrades: Array<{ cardId: string }> }): number {
-  return unit.upgrades.filter(upg => IsPilotUpgrade(upg.cardId)).length;
+/**
+ * How many Pilots are currently attached to a unit.
+ *
+ * Asks the TRAIT question, owner-aware, rather than "is this a Pilot card": "without a Pilot on
+ * it" is about the Pilot trait, so a Pilot whose holder has lost that trait (HMW_108 The First
+ * Legion naming "Pilot") stops counting and the Vehicle reads as pilotless. Every piloting-keyword
+ * card and every leader that deploys as a Pilot prints the trait, so for an unsuppressed board
+ * this is identical to the old card-id test.
+ *
+ * The holder is the UPGRADE's controller, not the host's — a stolen Vehicle wears a Pilot that
+ * still belongs to the thief.
+ */
+function pilotCountOn(unit: {
+  controller?: PlayerId;
+  upgrades: Array<{ cardId: string; playId?: string; controller?: PlayerId; owner?: PlayerId }>;
+}): number {
+  return unit.upgrades.filter(upg => {
+    const holder = upg.controller ?? upg.owner ?? unit.controller;
+    return TraitContains(upg.cardId, "Pilot", holder, upg.playId);
+  }).length;
 }
 
 /**

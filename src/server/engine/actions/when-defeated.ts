@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildAnnihilatorOffer, UnitTraits, AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, CardIsLeader, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains } from "@/server/engine/core-functions";
+import { buildAnnihilatorOffer, UnitTraits, AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains } from "@/server/engine/core-functions";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -555,7 +555,7 @@ function resolveOwnWhenDefeated(
       return mandatoryTarget("SEC_221", player, enemies221.map(u => u.playId));
     }
     case "ASH_043": { // Corona Four — "When Defeated: You may defeat a non-leader unit with 0 power."
-      const zeroPower043 = AllUnits().filter(u => !CardIsLeader(u.cardId) && Unit.FromInterface(u).CurrentPower() === 0);
+      const zeroPower043 = AllUnits().filter(u => !IsLeaderUnit(u) && Unit.FromInterface(u).CurrentPower() === 0);
       if (zeroPower043.length === 0) return null;
       return optionalTarget("ASH_043_wd", player, zeroPower043.map(u => u.playId),
         "Defeat a non-leader unit with 0 power?", { yesLabel: "Defeat" });

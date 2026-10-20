@@ -1,6 +1,6 @@
 import { PendingResolution } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, CardIsLeader, AfterNonCombatUnitDamage, AllUnits, DealDamageToUnit, HealUnit } from "@/server/engine/core-functions";
+import { GetGame, IsLeaderUnit, AfterNonCombatUnitDamage, AllUnits, DealDamageToUnit, HealUnit } from "@/server/engine/core-functions";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -146,7 +146,7 @@ export function resolveWhenDeployed(
       const eligible = [
         ...gs.player1.groundArena, ...gs.player1.spaceArena,
         ...gs.player2.groundArena, ...gs.player2.spaceArena,
-      ].filter(u => !CardIsLeader(u.cardId) && u.damage > 0);
+      ].filter(u => !IsLeaderUnit(u) && u.damage > 0);
       if (eligible.length === 0) {
         log.push(`${CardTitle(cardId)}: no damaged non-leader units to take control of.`);
         return null;

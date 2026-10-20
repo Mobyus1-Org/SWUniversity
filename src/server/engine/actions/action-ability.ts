@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllUnits, GetPlayer, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, CardIsLeader, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains, UpgradesYouControl } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllUnits, GetPlayer, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, IsLeaderUnit, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains, UpgradesYouControl } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { CardCost, CardType, CardAspects } from "@/server/engine/card-db/generated";
 import { HasFortify } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
@@ -328,7 +328,7 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         if (HasTheForce(player) && GetUnitsForPlayer(player === 1 ? 2 : 1).some(u => u.ready)) abilities.push(cardId);
         break;
       case "LOF_016": // Qui-Gon Jinn — Action [Exhaust, use the Force]: return a friendly non-leader unit (needs the Force + a friendly non-leader unit).
-        if (HasTheForce(player) && GetUnitsForPlayer(player).some(u => !CardIsLeader(u.cardId))) abilities.push(cardId);
+        if (HasTheForce(player) && GetUnitsForPlayer(player).some(u => !IsLeaderUnit(u))) abilities.push(cardId);
         break;
       case "SEC_005": // Satine Kryze — Action [Exhaust]: Heal up to 2 from a unit, then deal that
                       // much to your own base. Needs a unit somewhere to heal.

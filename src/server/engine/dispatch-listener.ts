@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -619,7 +619,7 @@ function CaptureVictimPlayIds(game: GameState, captor: Unit): string[] {
   const enemyArena = arena === "Ground"
     ? (GetPlayer(game, enemy).groundArena as Unit[])
     : (GetPlayer(game, enemy).spaceArena as Unit[]);
-  return enemyArena.filter(u => !CardIsLeader(u.cardId) && !UnitImmuneToEnemyCapture(u)).map(u => u.playId);
+  return enemyArena.filter(u => !IsLeaderUnit(u) && !UnitImmuneToEnemyCapture(u)).map(u => u.playId);
 }
 
 /**
@@ -3660,7 +3660,7 @@ function resolveAttack(
       !Unit.FromInterface(attacker).LostAbilities() &&
       effectiveAtkPower > 0 &&
       shieldIdx === -1 && // shield didn't absorb (combat damage was actually dealt)
-      !CardIsLeader(defender.cardId);
+      !IsLeaderUnit(defender);
 
     // Whether each unit died to COMBAT DAMAGE (vs Rukh's defeat or Heroic Sacrifice) — read now,
     // while this attack's ForAttack effects still apply: clearing a –X/–X below must not flip a
@@ -4047,7 +4047,7 @@ function innateWhenAttackEnds(
                       // return a friendly non-leader unit to its owner's hand. Play a non-Villainy
                       // unit that costs less than the returned unit from your hand for free."
                       // The early return at the top guarantees the attacker survived.
-      const friendly016 = GetUnitsForPlayer(attacker.controller).filter(u => !CardIsLeader(u.cardId));
+      const friendly016 = GetUnitsForPlayer(attacker.controller).filter(u => !IsLeaderUnit(u));
       if (friendly016.length === 0) return continuation;
       return {
         type: "ability-option",
@@ -4816,7 +4816,7 @@ function buildMaulSpread(game: GameState, player: PlayerId, continuation: Pendin
  * eligible unit to return. Shared by the leader Action and the deployed When-Attack-Ends trigger.
  */
 function buildQuiGonReturn(game: GameState, player: PlayerId, continuation: PendingResolution | null): PendingResolution | null {
-  const friendly = GetUnitsForPlayer(player).filter(u => !CardIsLeader(u.cardId));
+  const friendly = GetUnitsForPlayer(player).filter(u => !IsLeaderUnit(u));
   if (friendly.length === 0) return continuation;
   return {
     type: "ability-target",
@@ -6434,7 +6434,7 @@ function resolveAllianceOutpostEpicAction(game: GameState, log: string[], player
 
 /** SOR_025 Tarkintown — "Epic Action: Deal 3 damage to a damaged non-leader unit." */
 function resolveTarkintownEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
-  const eligible = GetAllUnits(game).filter(u => u.damage > 0 && !CardIsLeader(u.cardId));
+  const eligible = GetAllUnits(game).filter(u => u.damage > 0 && !IsLeaderUnit(u));
   if (eligible.length === 0) {
     log.push(`${CardTitle("SOR_025")}: no damaged non-leader unit — soft pass.`);
     return { response: invalidResponse("Tarkintown: no damaged non-leader unit to damage."), pending: null, stateChanged: false };
@@ -6454,7 +6454,7 @@ function resolveTarkintownEpicAction(game: GameState, log: string[], player: Pla
 
 /** SOR_028 Jedha City — "Epic Action: Give a non-leader unit -4/-0 for this phase." */
 function resolveJedhaCityEpicAction(game: GameState, log: string[], player: PlayerId): HandlerResult {
-  const eligible = GetAllUnits(game).filter(u => !CardIsLeader(u.cardId));
+  const eligible = GetAllUnits(game).filter(u => !IsLeaderUnit(u));
   if (eligible.length === 0) {
     log.push(`${CardTitle("SOR_028")}: no non-leader unit — soft pass.`);
     return { response: invalidResponse("Jedha City: no non-leader unit to target."), pending: null, stateChanged: false };
@@ -8014,7 +8014,7 @@ function handleChooseTarget(
 
     // Traitorous (SOR_122): take control of the attached unit when it costs 3 or less.
     if (pending.upgradeCardId === "SOR_122"
-        && !CardIsLeader(targetUnit.cardId)
+        && !IsLeaderUnit(targetUnit)
         && CardCost(targetUnit.cardId) <= 3
         && targetUnit.controller !== pending.player) {
       transferControl(game, log, targetUnit, pending.player);
@@ -8341,7 +8341,7 @@ function handleChooseTarget(
     if (pending.upgradeCardId === "SEC_256") {
       const hostHp256 = Unit.FromInterface(targetUnit).CurrentHP();
       const victims256 = GetUnitsForPlayer(GetOtherPlayer(pending.player))
-        .filter(u => !CardIsLeader(u.cardId)
+        .filter(u => !IsLeaderUnit(u)
           && !UnitImmuneToEnemyCapture(u)
           && Unit.FromInterface(u).CurrentHP() < hostHp256);
       if (victims256.length > 0) {
@@ -13677,7 +13677,7 @@ function buildAspectEffect(
 
     // ── SOR_203 Cunning ─────────────────────────────────────────────────────
     case "bounce_unit_4pow": {
-      const eligible203 = allUnits.filter(u => !CardIsLeader(u.cardId) && Unit.FromInterface(u).CurrentPower() <= 4);
+      const eligible203 = allUnits.filter(u => !IsLeaderUnit(u) && Unit.FromInterface(u).CurrentPower() <= 4);
       if (eligible203.length === 0) return continuation;
       return {
         type: "ability-target",
@@ -16044,7 +16044,7 @@ function applyAbilityEffect(
       }
       game.gameLog.push(`${CardTitle("ASH_236")}: returned ${CardTitle(bounced236.unit.cardId)} to its owner's hand.`);
       // "If you do" — the enemy half only happens because the friendly bounce succeeded.
-      const enemy236 = GetUnitsForPlayer(pending.player === 1 ? 2 : 1).filter(u => !CardIsLeader(u.cardId));
+      const enemy236 = GetUnitsForPlayer(pending.player === 1 ? 2 : 1).filter(u => !IsLeaderUnit(u));
       if (enemy236.length === 0) break;
       const enemyStep236: AbilityTargetPending = {
         type: "ability-target",
@@ -17264,7 +17264,7 @@ function applyAbilityEffect(
     case "SHD_132": { // Choose Sides — step 1: chose friendly unit, now prompt for enemy non-leader
       if (!targetPlayId || !pending.player) break;
       const enemyPlayer132 = GetOtherPlayer(pending.player);
-      const enemyUnits132 = GetUnitsForPlayer(enemyPlayer132).filter(u => !CardIsLeader(u.cardId));
+      const enemyUnits132 = GetUnitsForPlayer(enemyPlayer132).filter(u => !IsLeaderUnit(u));
       if (enemyUnits132.length === 0) break;
       return {
         type: "ability-target",
@@ -19402,7 +19402,7 @@ function applyAbilityEffect(
           ? (GetPlayer(game.currentGameState, enemyPlayer).groundArena as Unit[])
           : (GetPlayer(game.currentGameState, enemyPlayer).spaceArena as Unit[]);
         // SHD_187 and other immune units can't be captured by an opponent's card ability.
-        const eligible = enemyArena.filter(u => !CardIsLeader(u.cardId) && !UnitImmuneToEnemyCapture(u));
+        const eligible = enemyArena.filter(u => !IsLeaderUnit(u) && !UnitImmuneToEnemyCapture(u));
         if (eligible.length === 0) break;
         return {
           type: "ability-target",
