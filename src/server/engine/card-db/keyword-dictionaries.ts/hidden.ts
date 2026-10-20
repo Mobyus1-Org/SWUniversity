@@ -92,6 +92,7 @@ export function HasHidden(cardId: string, playId?: string, player?: PlayerId, is
     case "HMW_011"://Darth Sidious (deployed leader unit)
     case "ASH_225"://Tatooine Sand Beast
     case "ASH_244"://Remnant Trooper Corps
+    case "HMW_134"://Zam Wesell - Not What She Seems
     case "ASH_249"://Covert Veteran
       return true;
     default: break;

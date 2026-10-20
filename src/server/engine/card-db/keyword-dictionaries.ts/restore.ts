@@ -1,4 +1,4 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, InitiativePlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasUnitWithTraitInPlay, TraitContains } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, InitiativePlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasUnitWithTraitInPlay, TraitContains, GetGame, GetPlayer } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
 import { CardAspects, CardTitle } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
@@ -163,6 +163,14 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "HMW_036": amount += 2; break;//Kelnacca - Solitary Master
     case "HMW_001": amount += 2; break;//Asajj Ventress - No Time For Regret (deployed side)
     case "HMW_073": amount += 1; break;//Peppi Bow - Shaak Herder
+    case "HMW_066": {//Carrion Spike — "For each upgrade on your base, ... gains Restore 1." Scales,
+                     //so it is a count rather than a flat grant; 0 upgrades means no Restore at all.
+      const gs066 = GetGame()?.currentGameState;
+      if (gs066 && player !== undefined) {
+        amount += (GetPlayer(gs066, player).base.upgrades ?? []).length;
+      }
+      break;
+    }
     default: break;
   }
 

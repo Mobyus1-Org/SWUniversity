@@ -912,6 +912,16 @@ function resolveInnateOnAttack(
         continuation,
       } satisfies AbilityTargetPending;
     }
+    case "HMW_063": { // Rho Medical Shuttle — the On Attack half of "When Played/On Attack: You may
+                      // heal 1 damage from another unit or base."
+      const targets063 = [
+        ...AllUnits().filter(x => x.playId !== attacker.playId).map(x => x.playId),
+        "player1.base",
+        "player2.base",
+      ];
+      return optionalTarget("HMW_063_OA", attacker.controller, targets063,
+        "Heal 1 damage from another unit or base?", { yesLabel: "Heal", continuation });
+    }
     case "HMW_065": { // Clone of the Zillo Beast — "On Attack: You may give a Weakness token to a
                       // unit." Any unit, either side, itself included.
       const units065 = AllUnits();

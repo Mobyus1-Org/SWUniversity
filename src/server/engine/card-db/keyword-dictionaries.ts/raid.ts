@@ -1,8 +1,42 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetHand, GetLeaderForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerControlsCardWithTitle, PlayerHasTokenUnitInPlay, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , LeaderUnitWasDefeatedThisPhase } from "@/server/engine/core-functions";
+import type { GameState } from "@/lib/engine/game";
+import { GetCurrentEffectsForPlayer, GetHand, GetLeaderForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerControlsCardWithTitle, PlayerHasTokenUnitInPlay, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , LeaderUnitWasDefeatedThisPhase, GetGame, GetPlayer } from "@/server/engine/core-functions";
 import { CardAspects, CardCost } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
+
+/**
+ * HMW_138 Commander Gree — "3 or more Command aspect icons among friendly units (including this
+ * one) and upgrades".
+ *
+ * ICONS, not cards: a card printing Command twice contributes 2, which is why this sums the
+ * aspect list rather than counting matching cards. Upgrades count as well, on either a unit or
+ * the base, and a token upgrade belongs to the unit's controller rather than its own.
+ */
+function friendlyCommandIconCount(gs: GameState, player: PlayerId): number {
+  const icons = (cardId: string) => CardAspects(cardId).filter(a => a === "Command").length;
+  let total = 0;
+  for (const unit of GetUnitsForPlayer(player)) {
+    total += icons(unit.cardId);
+    for (const upg of unit.upgrades) total += icons(upg.cardId);
+  }
+  total += (GetPlayer(gs, player).base.upgrades ?? []).reduce((n, upg) => n + icons(upg.cardId), 0);
+  return total;
+}
+
+/** Raid granted by an upgrade attached to this player's BASE (HMW_126 Verdant Fortress). */
+function raidFromBaseUpgrades(gs: GameState, player: PlayerId): number {
+  let amount = 0;
+  for (const upg of GetPlayer(gs, player).base.upgrades ?? []) {
+    switch (upg.cardId) {
+      case "HMW_126": // Verdant Fortress — "Attached base gains: Friendly units gain Raid 1."
+        amount += 1;
+        break;
+      default: break;
+    }
+  }
+  return amount;
+}
 
 export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): number {
   let amount = 0;
@@ -15,6 +49,12 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     if (supported) amount += RaidAmount(supported);
     // LAW_233 Galen Erso: enemy units (of Galen's controller) gain Raid 1.
     if (GetPlayIdForUniqueUnitInPlay("LAW_233", player === 1 ? 2 : 1) !== "0") amount += 1;
+    const gs = GetGame()?.currentGameState;
+    if (gs) {
+      amount += raidFromBaseUpgrades(gs, player);
+      // HMW_138 Commander Gree — his own clause, so it is read off HIM, not off every unit.
+      if (cardId === "HMW_138" && friendlyCommandIconCount(gs, player) >= 3) amount += 4;
+    }
     const units = GetUnitsForPlayer(player);
     for(const u of units) {
       switch(u.cardId)

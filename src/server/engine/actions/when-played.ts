@@ -117,6 +117,21 @@ function bounceableUnits(player: PlayerId): Unit[] {
 }
 
 /** Returns playIds for all units on both sides plus both base identifiers. */
+/**
+ * HMW_051 Third Sister — one step of "you may deal N damage to a unit", asked of `actor`.
+ *
+ * The chain is 2 → 3 → 4 and stops after the 4. Each step's actor is whoever controls the unit the
+ * PREVIOUS step hit, which is why the amount rides on the pending (as `amount`) and the next step
+ * is built only once a target is known. Null when there is nothing to shoot at, which ends it.
+ */
+export function buildThirdSisterStep(actor: PlayerId, amount: number): PendingResolution | null {
+  const units = AllUnits();
+  if (units.length === 0) return null;
+  const pend = optionalTarget(`HMW_051_${amount}`, actor, units.map(u => u.playId),
+    `Deal ${amount} damage to a unit?`, { yesLabel: `Deal ${amount}` });
+  return pend;
+}
+
 function allUnitsAndBasesPlayIds(): string[] {
   return [
     ...GetUnitsForPlayer(1).map(u => u.playId),
@@ -2863,11 +2878,72 @@ export function resolveWhenPlayed(
       if (eligible077.length === 0) return null;
       return mandatoryTarget(cardId, player, eligible077.map(u => u.playId));
     }
+    case "HMW_043": { // Darth Vader (Any Methods Necessary) — "Search the top 8 cards of your deck
+                      // for UP TO 2 units that each cost 4 OR LESS, play them FOR FREE, and deal 2
+                      // damage to each of them." The damage is applied by the search's play path,
+                      // which knows which units actually entered.
+      return searchDeck(cardId, player, 8, "play", {
+        filter: { type: "Unit", maxCost: 4 },
+        maxChoices: 2,
+        costModifier: "free",
+      });
+    }
+    case "HMW_051": { // Third Sister — step 1 of the alternating chain. Each step is optional and
+                      // the ACTING PLAYER follows the unit that was just hit, so every step is
+                      // rebuilt by its predecessor rather than chained up front.
+      return buildThirdSisterStep(player, 2);
+    }
+    case "HMW_054": { // Seismic Detonation — "Choose an arena. At the start of the next regroup
+                      // phase, deal 3 damage to each enemy unit in that arena." Delayed, so the
+                      // chosen arena rides on an UntilStartOfRegroup effect rather than resolving
+                      // now; the regroup drain applies it.
+      return {
+        type: "choose-one",
+        cardId: "HMW_054",
+        player,
+        options: [
+          { id: "Ground", label: "Ground arena" },
+          { id: "Space", label: "Space arena" },
+        ],
+        continuation: null,
+      } satisfies ChooseOnePending;
+    }
+    case "HMW_114": { // Breach — step 1: which friendly unit deals the damage.
+      return chooseFriendlyForPowerDamage("HMW_114", player);
+    }
+    case "HMW_099": { // Always a Bigger Fish — step 1: which friendly CREATURE is defeated.
+                      // "If you do" hangs off the defeat, so the free play is built once the
+                      // victim is known: its cost sets the ceiling for what may replace it.
+      const creatures099 = GetUnitsForPlayer(player).filter(x =>
+        TraitContains(x.cardId, "Creature", player, x.playId));
+      if (creatures099.length === 0) return null;
+      return mandatoryTarget("HMW_099", player, creatures099.map(x => x.playId));
+    }
+    case "HMW_110": { // Emperor Palpatine (Consolidating Power) — "You may take control of an enemy
+                      // NON-LEADER unit that costs 3 OR LESS. If you do, give 2 Weakness tokens."
+      const stealable110 = GetUnitsForPlayer(GetOtherPlayer(player)).filter(x =>
+        !Unit.FromInterface(x).IsLeader()
+        && (CardCost(x.cardId) ?? 0) <= 3);
+      if (stealable110.length === 0) return null;
+      return optionalTarget("HMW_110", player, stealable110.map(x => x.playId),
+        "Take control of an enemy non-leader unit that costs 3 or less?", { yesLabel: "Take control" });
+    }
     case "HMW_050": { // Low Altitude Combat — "Move a space unit to the ground arena." Any space
                       // unit, either player's: moving an enemy ship down into reach is a real play.
       const space050 = [...AllSpaceUnits()];
       if (space050.length === 0) return null;
       return mandatoryTarget(cardId, player, space050.map(u => u.playId));
+    }
+    case "HMW_063": { // Rho Medical Shuttle — "When Played/On Attack: You may heal 1 damage from
+                      // ANOTHER unit or base." The shuttle itself is excluded; both bases are not.
+                      // (The On Attack half shares the apply handler, via HMW_063_OA.)
+      const targets063 = [
+        ...AllUnits().filter(x => x.playId !== playId).map(x => x.playId),
+        "player1.base",
+        "player2.base",
+      ];
+      return optionalTarget("HMW_063", player, targets063,
+        "Heal 1 damage from another unit or base?", { yesLabel: "Heal" });
     }
     case "HMW_062": { // Nuvo Vindi — "When Played: You may give a Weakness token to a unit."
                       // "A unit", not "an enemy unit", so his own side is fair game — himself

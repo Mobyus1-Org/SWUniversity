@@ -1,7 +1,7 @@
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { BaseHealingPrevented, DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit } from "@/server/engine/core-functions";
+import { BaseHealingPrevented, DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { GiveTokenUpgrade, CreateSpy, CreateTieFighter, CreateBattleDroid, CreateCloneTrooper, CreateMandalorianToken, GiveAdvantageTokens, CreateXWing } from "@/server/engine/token-helpers";
@@ -17,6 +17,7 @@ import { GiveTokenUpgrade, CreateSpy, CreateTieFighter, CreateBattleDroid, Creat
  * asked to order a trigger that does nothing.
  */
 const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
+  "HMW_111", // Invasion Lander — each other friendly unit +2/+2 this phase
   "SHD_066", // Cargo Juggernaut — conditional base heal
   "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
@@ -46,6 +47,19 @@ export function resolveWhenPlayedTrigger(
   const player = trigger.fromPlayer === 1 ? gs.player1 : gs.player2;
   const otherPlayer = trigger.fromPlayer === 1 ? gs.player2 : gs.player1;
   switch (trigger.cardId) {
+    case "HMW_111": { // Invasion Lander — "When Played: Give each OTHER friendly unit +2/+2 for
+                      // this phase." Automatic, so it lives HERE rather than in resolveWhenPlayed,
+                      // which runs twice for a unit and would hand out +4/+4.
+      const others111 = [...player.groundArena, ...player.spaceArena]
+        .filter(x => x.playId !== trigger.playId);
+      for (const ally of others111) {
+        GiveStatModForPhase("HMW_111", Unit.FromInterface(ally), 2, log);
+      }
+      if (others111.length > 0) {
+        log.push(`${CardTitle("HMW_111")}: gave +2/+2 to ${others111.length} other friendly unit(s) this phase.`);
+      }
+      break;
+    }
     case "SOR_039": // AT-AT Suppressor — When Played: Exhaust all ground units.
       for (const u of [...player.groundArena, ...otherPlayer.groundArena]) u.ready = false;
       log.push(`${CardTitle(trigger.cardId)}: all ground units exhausted.`);

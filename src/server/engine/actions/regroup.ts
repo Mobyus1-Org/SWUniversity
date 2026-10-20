@@ -2,7 +2,7 @@ import type { GameState, PlayerState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import type { PendingResolution } from "@/server/engine/pending-resolution";
 import { CardArena, CardTitle, CardHp, CardUpgradeHp } from "@/server/engine/card-db/generated";
-import { AfterNonCombatUnitDamage, DealDamageToBase, DefeatResource, DrawCardForPlayer, QueueWhenDiscardedTrigger, ReadyUnit } from "@/server/engine/core-functions";
+import { AfterNonCombatUnitDamage, DealDamageToBase, DefeatResource, DrawCardForPlayer, QueueWhenDiscardedTrigger, ReadyUnit, DealDamageToUnit } from "@/server/engine/core-functions";
 
 function ps(gs: GameState, player: PlayerId): PlayerState {
   return player === 1 ? gs.player1 : gs.player2;
@@ -197,6 +197,22 @@ export function executeRegroupDraw(
         const last = debtor.resources[debtor.resources.length - 1];
         DefeatResource(gs, eff.affectedPlayer as PlayerId, last.playId, log, "TS26_12");
         owed -= 1;
+      }
+      continue;
+    }
+
+    // HMW_054 Seismic Detonation — "deal 3 damage to each ENEMY unit in that arena", enemy being
+    // relative to the player who played it. Carries the arena in its id and no targetPlayId, so
+    // like Sundari Palace it is handled before the guard below.
+    if (eff.cardId.startsWith("HMW_054|")) {
+      const arena054 = eff.cardId.endsWith("Space") ? "spaceArena" : "groundArena";
+      const victimPlayer = eff.affectedPlayer === 1 ? 2 : 1;
+      const victims054 = [...(victimPlayer === 1 ? gs.player1 : gs.player2)[arena054]];
+      for (const victim of victims054) {
+        DealDamageToUnit(gs, "HMW_054", victim.playId, 3, log);
+      }
+      if (victims054.length > 0) {
+        log.push(`${CardTitle("HMW_054")}: dealt 3 damage to ${victims054.length} enemy unit(s) in the ${arena054 === "spaceArena" ? "Space" : "Ground"} arena.`);
       }
       continue;
     }

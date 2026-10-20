@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetGame, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, InitiativePlayer, IsCoordinateActive, NumberOfUnitsInArena, PlayerControlsCardWithTrait, PlayerHasUnitInPlayWithMinimumPower, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetGame, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, InitiativePlayer, IsCoordinateActive, NumberOfUnitsInArena, PlayerControlsCardWithTrait, PlayerHasUnitInPlayWithMinimumPower, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , ImperialUnitInDiscardHasKeyword, GetBaseDamage } from "@/server/engine/core-functions";
 import { CardAspects } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 
@@ -110,6 +110,9 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
         return PlayerHasUnitWithTraitInPlay(player, "Wookiee", true, playId)
           || TraitContains(pState142.base.cardId, "Kashyyyk", player);
       }
+      case "HMW_074"://Yord Fandar — "While A BASE has 15 or more damage on it". Either base: the
+                     //text is unqualified, so the opponent's battered base switches him on too.
+        return GetBaseDamage(1) >= 15 || GetBaseDamage(2) >= 15;
       case "SOR_113"://Homestead Militia (SOR)
       case "JTL_113"://Homestead Militia (JTL)
         return GetResources(player).length >= 6;

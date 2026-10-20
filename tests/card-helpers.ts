@@ -840,6 +840,21 @@ export const Cards = {
       nuvoVindi: "HMW_062",         // 1/4 Ground — Weakness tokens on play and on an enemy defeat
       zilloClone: "HMW_065",        // 6/6 Ground — other friendly units get -2/-2
       theFirstLegion: "HMW_108",    // 5/5 Ground — On Attack: name a trait, enemy cards lose it
+      yordFandar: "HMW_074",        // 1/5 Ground — Sentinel while a base is at 15+ damage
+      commanderGree: "HMW_138",     // 3/6 Ground — Raid 4 on 3+ friendly Command icons
+      carrionSpike: "HMW_066",      // 3/5 Space — Shielded; scales off upgrades on your base
+      rhoMedicalShuttle: "HMW_063", // 3/3 Space — When Played/On Attack: may heal another
+      invasionLander: "HMW_111",    // 3/7 Space — When Played: each other friendly +2/+2 this phase
+      logray: "HMW_045",            // 1/5 Ground — reacts to a cheap friendly taking damage
+      sawGerrera: "HMW_119",        // 3/6 Ground — resources on an opponent's event
+      luminaraUnduli: "HMW_124",    // 7/7 Ground — reacts to you playing a unit, incl. herself
+      emperorPalpatineConsolidating: "HMW_110", // 3/2 Ground — steal a cheap enemy unit + 2 Weakness
+      zamWesell: "HMW_134",         // 2/4 Ground — Hidden; gains friendly leader traits except Force
+      viceAdmiralRampart: "HMW_060", // 1/5 Ground — dies in place of a base upgrade
+      fettsFirespray: "HMW_053",     // 6/6 Space — friendly ambushers may attack bases
+      clevertrapper: "HMW_220",      // Ambush, Ground (keyword not yet registered — see wave notes)
+      thirdSister: "HMW_051",        // 6/3 Ground — Overwhelm + the alternating damage chain
+      darthVaderAnyMethods: "HMW_043", // 9/8 Ground — Saboteur + search 8, play 2 free, 2 damage
       jaxxon: "HMW_219",            // 3/3 Ground, cost 1, Cunning, UNIQUE, no abilities
     },
   },
@@ -933,6 +948,9 @@ export const Cards = {
       allianceShieldGenerator: "HMW_081", // Fortify — prevents a 5+ damage hit on your base
       trapField: "HMW_171",              // Fortify — 3 damage to a ground unit entering play
       bestialBond: "HMW_038",            // +2/+2 Innate — Beast token on a Creature or Force host
+      verdantFortress: "HMW_126",        // Fortify — attached base grants friendly units Raid 1
+      sinisterWarMemorial: "HMW_113",    // Fortify — base heals 1 when a friendly unit is defeated
+      direProwess: "HMW_097",            // +1/+1 Learned — When Played: may give a Weakness token
     },
   },
   events: {
@@ -1172,6 +1190,9 @@ export const Cards = {
     },
     hmw: {
       dragonsMight: "HMW_102",      // Defeat a non-leader unit with 4 or less power
+      breach: "HMW_114",            // A friendly unit deals its power; Overwhelm spills to a base
+      alwaysABiggerFish: "HMW_099", // Defeat a friendly Creature, play a bigger one free
+      seismicDetonation: "HMW_054",  // Choose an arena; 3 to each enemy there at regroup start
       lowAltitudeCombat: "HMW_050", // Move a space unit to the ground arena, then maybe attack
     },
   },

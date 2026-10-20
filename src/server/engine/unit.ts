@@ -290,6 +290,16 @@ export class Unit implements UnitInterface {
       power += 1;
     }
 
+    // Carrion Spike — "For each upgrade on YOUR BASE, this unit gets +1/+0 and gains Restore 1."
+    // Per upgrade, not a flat bonus; the Restore half lives in the Restore dictionary.
+    if (this.cardId === "HMW_066" && !this.LostAbilities()) {
+      const gs066 = GetGame()?.currentGameState;
+      if (gs066) {
+        const p066 = this.controller === 1 ? gs066.player1 : gs066.player2;
+        power += (p066.base.upgrades ?? []).length;
+      }
+    }
+
     // Black One — "While this unit is upgraded, it gets +1/+0."
     if (this.cardId === "JTL_147" && this.upgrades.length > 0 && !this.LostAbilities()) {
       power += 1;

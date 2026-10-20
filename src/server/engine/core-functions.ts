@@ -374,6 +374,16 @@ export function LeaderSideTitle(cardId: string, flipped: boolean): string {
   return back?.title ?? CardTitle(cardId);
 }
 
+/**
+ * HMW_053 Fett's Firespray — "Friendly units can attack bases while using Ambush." Ambush normally
+ * restricts the immediate attack to an enemy UNIT; this reopens bases for that player's units.
+ */
+export function AmbushMayAttackBases(player: PlayerId): boolean {
+  return GetUnitsForPlayer(player).some(
+    u => u.cardId === "HMW_053" && !Unit.FromInterface(u).LostAbilities(),
+  );
+}
+
 export function LeaderSideTraits(cardId: string, flipped: boolean): string[] {
   const back = flipped ? LeaderBackSideOf(cardId) : null;
   return back?.traits ?? CardTraits(cardId);
@@ -539,6 +549,18 @@ export function TraitContains(cardId: string, trait: string, player?: PlayerId, 
   // however the card would otherwise have had it — printed, granted by an upgrade, or read off a
   // leader's unit side.
   if (player !== undefined && TraitSuppressedFor(player, trait)) return false;
+
+  // HMW_134 Zam Wesell — "This unit gains each friendly leader's traits EXCEPT Force, even while
+  // she's NOT IN PLAY." Granted rather than printed, and granted in every zone, so it is answered
+  // from her owner's leader rather than from a unit in an arena — the same reason the suppression
+  // above is owner-keyed. Force is excluded however the leader comes by it.
+  if (cardId === "HMW_134" && player !== undefined && trait !== "Force" && GetGame()) {
+    const zamLeader = GetLeaderForPlayer(player);
+    if (!LeaderAbilitiesIgnored()
+      && LeaderSideTraits(zamLeader.cardId, zamLeader.flipped === true).includes(trait)) {
+      return true;
+    }
+  }
 
   const isBase = CardIsBase(cardId);
   // Null-safe: the puzzle solver prices cards with no active game, and every caller that passes a
@@ -1977,6 +1999,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "LAW_011": //Darth Vader (deployed) — On Attack: discard any number, deal that much damage
     case "TWI_246": //Tranquility — On Attack: next 3 Republic cards this phase cost 1 less
     case "TWI_203": //Chancellor Palpatine (Wartime Chancellor) — On Attack: create a Clone Trooper if a unit left play
+    case "HMW_063": //Rho Medical Shuttle — On Attack: may heal 1 from another unit or base
     case "HMW_108": //The First Legion — On Attack: name a trait, enemy cards lose it this phase
     case "HMW_065": //Clone of the Zillo Beast — On Attack: may give a Weakness token to a unit
     case "HMW_003": //Doctor Hemlock (deployed) — On Attack: may give a Weakness token to a unit
@@ -2698,6 +2721,7 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
 
   // Rancor Keeper (ASH_032): "When a friendly unit is dealt damage and survives" — ability damage path.
   QueueRancorKeeperReaction(gs, target);
+  QueueLograyReaction(gs, target);
 
   // HMW_011 Darth Sidious — "when you deal 4 or more damage". `amount` here is post-prevention,
   // so a hit a Shield swallowed never reaches the threshold.
@@ -2728,6 +2752,31 @@ export function HealUnit(gs: GameState, unit: UnitInterface, amount: number): nu
     gs.triggerBag.push({ triggerType: "when-unit-healed", cardId: "JTL_062", fromPlayer: unit.controller, playId: unit.playId, nested: true });
   }
   return healed;
+}
+
+/**
+ * HMW_045 Logray — "When ANOTHER friendly unit that costs 3 or less is dealt damage: You may deal
+ * 1 damage to an enemy unit."
+ *
+ * Queued from the same shared helper as the other damage reactions, so it fires wherever damage is
+ * applied rather than only in combat. "Another" excludes Logray himself, who is cost 2 and would
+ * otherwise trigger on his own damage; "friendly" is relative to Logray's controller.
+ */
+export function QueueLograyReaction(gs: GameState, damaged: Unit): void {
+  const controller = damaged.controller;
+  if ((CardCost(damaged.cardId) ?? 0) > 3) return;
+  for (const logray of GetUnitsForPlayer(controller)) {
+    if (logray.cardId !== "HMW_045" || logray.playId === damaged.playId) continue;
+    if (Unit.FromInterface(logray).LostAbilities()) continue;
+    gs.triggerBag.push({
+      triggerType: "when-unit-takes-damage",
+      cardId: "HMW_045",
+      fromPlayer: controller,
+      playId: logray.playId,
+      nested: true,
+    });
+    return; // one offer however many Lograys are out
+  }
 }
 
 export function QueueRancorKeeperReaction(gs: GameState, damaged: Unit): void {
@@ -2838,6 +2887,7 @@ export function AfterNonCombatUnitDamage(
 ): void {
   MarkUnitDamaged(gs, target.playId);
   QueueRancorKeeperReaction(gs, Unit.FromInterface(target));
+  QueueLograyReaction(gs, Unit.FromInterface(target));
   QueueHeavyDamageReaction(gs, sourcePlayer, amount, { damagedPlayId: target.playId });
   QueueChamSyndullaReaction(gs, target.controller, { damagedPlayId: target.playId });
 }
