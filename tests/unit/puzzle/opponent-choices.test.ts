@@ -4,6 +4,7 @@ import { hydratePuzzleGame } from "@/server/puzzle/adapters/puzzle-runtime";
 import { processPuzzleDispatch } from "@/server/puzzle/puzzle-dispatch";
 import type { EngineContext } from "@/server/engine/pending-resolution";
 import type { Game } from "@/lib/engine/game";
+import { Cards } from "../../card-helpers";
 
 // Abilities whose text hands the choice to "an opponent" belong to Player 2 in a puzzle. The
 // solver must never be prompted for them — puzzle-dispatch auto-answers on P2's behalf, worst
@@ -162,5 +163,52 @@ describe("SHD_014 Cad Bane — the opponent's damage-target choice is automated 
     expect(gs.player2.groundArena.find(u => u.cardId === "LAW_049")!.damage).toBe(0);
     // The 1/1 non-Sentinel absorbed the ping and died.
     expect(gs.player2.groundArena.some(u => u.cardId === "ASH_237")).toBe(false);
+  });
+});
+
+// HMW_060 Vice Admiral Rampart (P2) — "If an upgrade on your base would be defeated, you may defeat
+// this unit instead." The offer belongs to P2. P2 always takes it: the solver chose to defeat that
+// upgrade, so keeping it is the worse outcome for them, while Rampart — a 1/5 without Sentinel —
+// never stands in the solver's way.
+describe("HMW_060 Rampart — the opponent's replacement choice is automated in puzzles", () => {
+  it("never prompts the solver; P2 defeats Rampart and keeps the base upgrade", () => {
+    const ctx = newCtx([{ cardId: Cards.units.hmw.viceAdmiralRampart }], [Cards.events.sor.confiscate]);
+    const gs0 = ctx.game.currentGameState;
+    gs0.player2.base.upgrades = [{ cardId: Cards.upgrades.hmw.sinisterWarMemorial, playId: "900", owner: 2, controller: 2 }];
+
+    const played = playFromHand(ctx, Cards.events.sor.confiscate);
+    const res = dispatch(played.context, "choose-target", { targetPlayIds: ["900"] });
+
+    expect(res.response.resolutionNeeded).toBeFalsy();
+    const gs = res.context.game.currentGameState;
+    expect(gs.player2.groundArena.some(u => u.cardId === Cards.units.hmw.viceAdmiralRampart)).toBe(false);
+    expect(gs.player2.discard.some(c => c.cardId === Cards.units.hmw.viceAdmiralRampart)).toBe(true);
+    expect(gs.player2.base.upgrades?.map(u => u.playId)).toEqual(["900"]);
+  });
+});
+
+// HMW_058 Mysterious Disappearance — "A player chooses a non-leader unit they control. You may
+// defeat that unit. If you do, that player creates a Beast token." When the solver names P2, the
+// unit choice is P2's: they offer up their cheapest non-Sentinel unit (pickOpponentOwnUnit's
+// "give-up" mode), keeping their blockers and their best units. The defeat stays the solver's call.
+describe("HMW_058 Mysterious Disappearance — the opponent's unit choice is automated in puzzles", () => {
+  const MYSTERIOUS = Cards.events.hmw.mysteriousDisappearance;
+  const CSF = Cards.units.sor.consularSecurityForce;       // cost 4
+  const MARINE = Cards.units.sor.battlefieldMarine;        // cost 2
+  const SENTINEL = Cards.units.sec.cruelCommandos;         // Sentinel
+
+  it("P2 picks their cheapest non-Sentinel unit; the solver only answers the defeat offer", () => {
+    // The solver has no units, so P2 is the only player who can be chosen.
+    const ctx = newCtx([{ cardId: CSF }, { cardId: MARINE }, { cardId: SENTINEL }], [MYSTERIOUS]);
+    const played = playFromHand(ctx, MYSTERIOUS);
+
+    expect(played.response.resolutionNeeded?.type).toBe("Option"); // the solver's "may defeat"
+    const res = dispatch(played.context, "choose-option", { option: "Yes" });
+
+    expect(res.response.resolutionNeeded).toBeFalsy();
+    const gs = res.context.game.currentGameState;
+    expect(gs.player2.discard.map(c => c.cardId)).toEqual([MARINE]);
+    expect(gs.player2.groundArena.map(u => u.cardId).sort())
+      .toEqual([CSF, SENTINEL, Cards.units.token.beast].sort());
   });
 });

@@ -202,6 +202,9 @@ export function HasOverwhelm(cardId: string,
     case "ASH_164"://Alamite Hunter
     case "HMW_121"://Hijacked AT-ST
     case "SEC_086"://Cruel Commandos
+    case "HMW_146"://Outer Rim Garrison
+    case "HMW_042"://Dooku - Corruption Must Be Eradicated
+    case "HMW_049"://Greater Sarlacc
       return true;
     default: break;
   }

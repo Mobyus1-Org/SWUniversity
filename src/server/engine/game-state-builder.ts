@@ -332,7 +332,15 @@ export class GameStateBuilder {
 
     const mapPlayer = (p: typeof raw.player1) => ({
       ...p,
-      base: { numUses: 0, ...p.base },
+      base: {
+        numUses: 0,
+        ...p.base,
+        // Fortify upgrades need real playIds too: two of them sharing "@" can't be told apart.
+        ...(p.base.upgrades && {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          upgrades: p.base.upgrades.map((up: any) => ({ ...up, playId: resolveId(up.playId) })),
+        }),
+      },
       leader: { deployedPlayId: undefined, ...p.leader },
       spaceArena: p.spaceArena.map(mapUnit),
       groundArena: p.groundArena.map(mapUnit),

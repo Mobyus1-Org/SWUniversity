@@ -25,6 +25,13 @@ export interface AbilityOptionPending {
   onYes?: PendingResolution | null;
   /** A value carried to the Yes-effect (e.g. the played card's cost for TWI_018 Quinlan Vos). */
   amount?: number;
+  /** HMW_060 Vice Admiral Rampart's offer: the base upgrade whose defeat he would replace. */
+  replacedUpgradePlayId?: string;
+  /**
+   * An "If you do" damage clause that follows a defeat this offer may replace. CR 9.2: replaced or
+   * not, the text before "If you do" counts as resolved, so it is dealt either way (HMW_171).
+   */
+  thenDealDamage?: { sourceCardId: string; targetPlayId: string; amount: number };
   continuation: PendingResolution | null;
 }
 
@@ -50,6 +57,13 @@ export interface AbilityTargetPending {
   /** A damage/heal amount carried to the effect when it isn't recomputable at apply time
    *  (e.g. SHD_172 Krayt Dragon deals damage equal to the played card's cost). */
   amount?: number;
+  /**
+   * HMW_049 Greater Sarlacc — "you may defeat any number of ready resources you control" while
+   * playing `cardId` (already out of hand). This pick defeats one of them; `remaining` picks are
+   * left, this one included. Once they are done the card is paid for at `fullCost` less its
+   * per-resource discount for each of the `defeated`, and put into play.
+   */
+  resourceDefeatPlay?: { fullCost: number; remaining: number; defeated: number };
   continuation: PendingResolution | null;
 }
 
@@ -265,6 +279,8 @@ export interface DefeatCopyPending {
    * copy itself, in which case there is nothing left to defeat).
    */
   enteringDefeatAfter?: { sourceCardId: string };
+  /** HMW_048 Vernestra Rwoh — When Played abilities the entering unit gained as it was played. */
+  enteringGrantedWhenPlayed?: string[];
   // Downstream resolution to run once uniqueness (and the entering unit's triggers) is
   // fully resolved — used when a duplicate arises mid-way through a larger effect (e.g.
   // multiple copies entering via a deck-search "play").
@@ -532,6 +548,11 @@ export interface ReturnFromDiscardPending {
    * the pending so the offer's affordability filter and the payment use the same number.
    */
   costReduction?: number;
+  /**
+   * HMW_048 Vernestra Rwoh — the chosen units are an ADDITIONAL COST of playing `cardId`, which is
+   * already out of hand; this is the resource cost still to pay once they are chosen.
+   */
+  playCost?: number;
   continuation: PendingResolution | null;
 }
 

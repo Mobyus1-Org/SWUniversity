@@ -2,6 +2,7 @@ import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay
 import { PlayerId } from "@/lib/engine/core-models";
 import { CardAspects, CardTitle } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
+import { Unit } from "@/server/engine/unit";
 
 export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): number
 {
@@ -41,8 +42,11 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     for(const u of units)
     {
       switch(u.cardId) {
+        // "Each other friendly unit gains Restore 1." — an aura, so it stops while the source has
+        // lost its abilities.
         case "SOR_102": //Home One
-          if(u.playId !== playId) amount += 1;
+        case "HMW_039": //Mother Talzin (Pledged to the Sisterhood)
+          if(u.playId !== playId && !Unit.FromInterface(u).LostAbilities()) amount += 1;
           break;
         default: break;
       }

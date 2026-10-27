@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueSelfDamagedSurvivesReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases, UpgradeLeavesPlay, BaseUpgradeHolder, BaseUpgradeDefeatReplacer, RemoveUpgradeFromBase } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -55,7 +55,7 @@ import type {
   ResolutionRequest,
   UseAbilityDispatchData,
 } from "@/lib/engine/message-types";
-import { aspectPenalty, CardIsPlayable, PlayableUnitHandIndices, discountedPlayCost, JumpToLightspeedMarkerIndex, JUMP_TO_LIGHTSPEED_FREE, effectiveSmuggleCost, spendableFor, playCost, palpatinesReturnCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks, onlyHopeCost, omegaWaivesAspectPenalty, HostDependentUpgradeCost, DiscardPlayPermission, costIgnoringAspectPenalties } from "@/server/engine/card-playability";
+import { aspectPenalty, CardIsPlayable, PlayableUnitHandIndices, discountedPlayCost, JumpToLightspeedMarkerIndex, JUMP_TO_LIGHTSPEED_FREE, effectiveSmuggleCost, spendableFor, playCost, palpatinesReturnCost, pilotPlayCost, uncoveredAspects, regionalGovernorBlocks, onlyHopeCost, omegaWaivesAspectPenalty, HostDependentUpgradeCost, DiscardPlayPermission, costIgnoringAspectPenalties, ResourceDefeatDiscount, ResourceDefeatRange } from "@/server/engine/card-playability";
 import type { Game, GameState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import type { DealtHeavyDamageContext } from "@/lib/engine/trigger-types";
@@ -70,6 +70,7 @@ import type {
   TrenchRevealPending,
   EngineContext,
   ExploitOptionPending,
+  ReturnFromDiscardPending,
   ExploitTargetPending,
   CreditPaymentOptionPending,
   CreditPaymentAmountPending,
@@ -102,7 +103,7 @@ import { collectBounties } from "@/server/engine/actions/bounty";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { resolveWhenDefeated, WhenDefeatedBaseDamage } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets, UpgradeDestinationsOnControlChange, PilotlessFighterOrTransportPlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB, anakinMortisAbility, buildPayForExperiencePrompt, buildKreiaHandPick, buildHunterChoice, buildEndlessLegionsOffer, buildThirdSisterStep } from "@/server/engine/actions/when-played";
+import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB, anakinMortisAbility, buildPayForExperiencePrompt, buildKreiaHandPick, buildHunterChoice, buildMysteriousDisappearancePick, buildEndlessLegionsOffer, buildThirdSisterStep } from "@/server/engine/actions/when-played";
 import { executeRegroupDraw, finishRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
 import { resolveWhenPlayedTrigger, WhenPlayedHasAutoEffect } from "@/server/engine/actions/when-played-trigger";
 import { resolveOnAttackTrigger, buildTwinLaserTurretPending } from "@/server/engine/actions/on-attack";
@@ -111,7 +112,7 @@ import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/sab
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { HasAmbush } from "@/server/engine/card-db/keyword-dictionaries.ts/ambush";
 import { AttackAbilityCardIds, HasSupport, SupportGrantEffectCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
-import { ActionAbilities, ActionAbilityCost, ActionAbilityExhausts, ActionAbilityCardId, WeakerThanAFriendlyUnitPlayIds, UpgradeHostsOwnAction, UpgradeActionAvailable, BactaTankTargets, UpgradeGrantsHostAction, ArmorerResourceUpgrades, ArmorerAttachTargets, ArmorerFriendlyAttachTargets, OshaResourceVillainyUnits, FriendlyHeroismUnitDefeatedThisPhase } from "@/server/engine/actions/action-ability";
+import { ActionAbilities, ActionAbilityCost, ActionAbilityExhausts, ActionAbilityCardId, WeakerThanAFriendlyUnitPlayIds, UpgradeHostsOwnAction, UpgradeActionAvailable, BactaTankTargets, HEAVY_ION_CANNON_USED, UpgradeGrantsHostAction, ArmorerResourceUpgrades, ArmorerAttachTargets, ArmorerFriendlyAttachTargets, OshaResourceVillainyUnits, FriendlyHeroismUnitDefeatedThisPhase, MazKanataPlayableHandIndices, MAZ_KANATA_DISCOUNT } from "@/server/engine/actions/action-ability";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { IsTokenUpgrade, PilotingEligibleVehicles, PilotlessVehiclePlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -124,7 +125,7 @@ import { QueueUnitEnteredPlayReaction, AfterNonCombatUnitDamage, buildJarJarDama
 import { CreateBeast, GiveTokenUpgrade, PlayerGaveTokenUpgradeThisPhase, GiveWeaknessToken, UnitsWithoutWeaknessToken, WEAKNESS_TOKEN } from "@/server/engine/token-helpers";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, UnitImmuneToEnemyBounce, UnitImmuneToEnemyDefeat, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget, MandoProtector, SpendMandoShield, ArenasWhereYouControlTheMostUnits } from "@/server/engine/core-functions";
+import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, UnitImmuneToEnemyBounce, UnitImmuneToEnemyDefeat, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueOpponentDrewReaction, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget, MandoProtector, SpendMandoShield, ArenasWhereYouControlTheMostUnits, FriendlyUnitsWithTrait, ReadyUnitThenDealDamage, DefeatableNonLeadersWithPowerAtMost, ReadyableUnitsWithPowerAtMost, UpgradesOnEnemyUnits } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -433,6 +434,12 @@ function resolveChooseOne(
         fromPlayIds: attackers035.map(u => u.playId),
         continuation: after035,
       } satisfies AbilityTargetPending;
+      break;
+    }
+    case "HMW_058": { // Mysterious Disappearance — the caster named the player who chooses a unit.
+      const chooser058: PlayerId = optionId === "you" ? pending.player : GetOtherPlayer(pending.player);
+      next = buildMysteriousDisappearancePick(pending.player, chooser058, pending.continuation ?? null)
+        ?? pending.continuation ?? null;
       break;
     }
     case "HMW_037_recur": { // Bacta Tank — move the chosen discard card to the TOP of the deck.
@@ -970,91 +977,6 @@ function addToArena(
  * under its OWNER's control — control never follows the captor — and is cleared off the guard so
  * it cannot be released twice.
  */
-/**
- * JTL_094 Luke Skywalker as a pilot runs his own exit: the player may eject him to the ground
- * arena instead, and that handler RE-CREATES him with addToArena. Routing him here as well would
- * put a second copy in the discard, so every leave-play site skips him.
- */
-function upgradeHasBespokeExit(cardId: string): boolean {
-  return cardId === "JTL_094";
-}
-
-/**
- * Routes an upgrade that has just left play to the zone it legally belongs in.
- *
- * Units have had this chokepoint all along (removeFromArena + pushToDiscard, with an explicit
- * leader-zone branch); upgrades had none, so every removal site invented its own destination and
- * none of them handled the discard or the leader zone at all.
- *
- *  • A LEADER card may only be in the leader zone or in play — never hand, deck or discard. It
- *    goes back to the zone EXHAUSTED, mirroring how a defeated leader UNIT is handled.
- *  • A token upgrade is set aside rather than discarded (CR 7.6.1).
- *  • Everything else goes to its OWNER's discard.
- */
-function upgradeLeavesPlay(game: GameState, upgrade: CardInPlay, log: string[]): void {
-  if (upgradeHasBespokeExit(upgrade.cardId)) return;
-
-  const owner = (upgrade.owner ?? upgrade.controller) as PlayerId;
-
-  if (CardIsLeader(upgrade.cardId)) {
-    const leader = GetPlayer(game, owner).leader;
-    // Guard against a stale card: only reset the zone if this really is that player's leader.
-    if (leader.cardId === upgrade.cardId) {
-      leader.deployed = false;
-      leader.ready = false;
-      leader.deployedPlayId = undefined;
-    }
-    log.push(`${CardTitle(upgrade.cardId)} returned to Player ${owner}'s leader zone exhausted.`);
-    return;
-  }
-
-  if (IsTokenUpgrade(upgrade.cardId)) {
-    log.push(`${CardTitle(upgrade.cardId)} token set aside.`);
-    return;
-  }
-
-  // ASH_161 Zeb Orrelios — "When a friendly upgrade is defeated: Deal 1 damage to a base." The
-  // declared `when-upgrade-detached` trigger type is never dispatched anywhere, so this hooks the
-  // real chokepoint instead. Mandatory and targetless in practice: it always hits the enemy base.
-  const zebs161 = [...GetPlayer(game, owner).groundArena, ...GetPlayer(game, owner).spaceArena]
-    .filter(u => u.cardId === "ASH_161" && !Unit.FromInterface(u).LostAbilities());
-  if (zebs161.length > 0 && !IsTokenUpgrade(upgrade.cardId)) {
-    for (let i = 0; i < zebs161.length; i++) {
-      dealBaseDamage(game, owner === 1 ? 2 : 1, 1, owner);
-      log.push(`${CardTitle("ASH_161")}: dealt 1 damage to player ${owner === 1 ? 2 : 1}'s base.`);
-    }
-  }
-
-  // TWI_069 Roger Roger — "When Defeated: Attach this upgrade to a friendly Battle Droid token."
-  // It never reaches the discard while a token is available to take it, so this sits ahead of the
-  // discard below. Its own host has already been removed by the time this runs, so any remaining
-  // Battle Droid token is by definition a different one.
-  if (upgrade.cardId === "TWI_069") {
-    const droid069 = [...GetPlayer(game, owner).groundArena, ...GetPlayer(game, owner).spaceArena]
-      .find(u => u.cardId === "TWI_T01" || u.cardId === "TS26_T01");
-    if (droid069) {
-      droid069.upgrades.push({
-        cardId: "TWI_069",
-        playId: String(game.nextPlayId++),
-        owner,
-        controller: owner,
-      });
-      log.push(`${CardTitle("TWI_069")}: re-attached to ${CardTitle(droid069.cardId)}.`);
-      return;
-    }
-  }
-
-  GetPlayer(game, owner).discard.unshift({
-    cardId: upgrade.cardId,
-    playId: upgrade.playId,
-    owner,
-    controller: owner,
-    turnDiscarded: game.currentRound,
-    discardEffect: "",
-  });
-  log.push(`${CardTitle(upgrade.cardId)} was put into Player ${owner}'s discard.`);
-}
-
 /** Cards whose "When Played" only fires when the card was played using Smuggle (SHD_213 DJ). */
 function WhenPlayedRequiresSmuggle(cardId: string): boolean {
   return cardId === "SHD_213";
@@ -1194,7 +1116,7 @@ function removeFromArena(
           returnDjStolenResource(game, unit as Unit, exitLog);
           // Upgrades leave play with their host — including a pilot leader, who returns to the
           // leader zone rather than vanishing along with the ship.
-          for (const upg of unit.upgrades ?? []) upgradeLeavesPlay(game, upg, exitLog);
+          for (const upg of unit.upgrades ?? []) UpgradeLeavesPlay(game, upg, exitLog);
         }
         return { player, unit: unit as Unit, zone };
       }
@@ -1355,8 +1277,9 @@ function playFromDiscard(
 
 /**
  * Defeats the upgrade `playId` wherever it is — on a unit (defeatUpgradeAndSweep, which handles
- * immunity, Traitorous and the host's HP) or on a BASE (a Fortify upgrade, which has no host to
- * sweep). Both go through upgradeLeavesPlay, so tokens are set aside and cards go to their owner.
+ * immunity, Traitorous and the host's HP) or on a BASE (defeatBaseUpgrade, which may offer HMW_060
+ * Vice Admiral Rampart's replacement first). Both go through UpgradeLeavesPlay, so tokens are set
+ * aside and cards go to their owner. `bypassReplacement` marks a defeat paid as a COST.
  */
 function defeatUpgradeAnywhere(
   game: GameState,
@@ -1365,17 +1288,74 @@ function defeatUpgradeAnywhere(
   sourceLabel: string,
   continuation: PendingResolution | null,
   bySourcePlayer?: PlayerId,
+  opts: { bypassReplacement?: boolean } = {},
 ): PendingResolution | null {
-  for (const basePlayer of [1, 2] as PlayerId[]) {
-    const base = GetPlayer(game, basePlayer).base;
-    const onBase = (base.upgrades ?? []).find(u => u.playId === playId);
-    if (!onBase) continue;
-    base.upgrades = (base.upgrades ?? []).filter(u => u.playId !== playId);
-    upgradeLeavesPlay(game, onBase, log);
-    log.push(`${sourceLabel}: defeated ${CardTitle(onBase.cardId)}.`);
-    return continuation;
+  if (BaseUpgradeHolder(game, playId) !== null) {
+    return defeatBaseUpgrade(game, log, playId, sourceLabel, continuation, opts) ?? continuation;
   }
   return defeatUpgradeAndSweep(game, log, playId, sourceLabel, continuation, bySourcePlayer);
+}
+
+/**
+ * THE chokepoint for defeating an upgrade attached to a BASE (a Fortify upgrade). Every removal
+ * goes through here, so HMW_060 Vice Admiral Rampart — "If an upgrade on your base would be
+ * defeated, you may defeat this unit instead." — is always asked.
+ *
+ * When a Rampart controlled by that base's player can step in, nothing happens yet: his offer is
+ * returned (owned by his controller, carrying `continuation`), and its Yes/No handlers resolve the
+ * defeat. Otherwise the upgrade is defeated here (RemoveUpgradeFromBase → UpgradeLeavesPlay) and
+ * null is returned, the same convention as defeatUpgradeByPlayId.
+ *
+ * `bypassReplacement`: a defeat paid as a COST ("Action [defeat this upgrade]", Vane's
+ * "[defeat a friendly upgrade]") is not offered — this engine's ruling — and the "No" answer must
+ * not ask again.
+ */
+function defeatBaseUpgrade(
+  game: GameState,
+  log: string[],
+  playId: string,
+  sourceLabel: string,
+  continuation: PendingResolution | null,
+  opts: { bypassReplacement?: boolean } = {},
+): AbilityOptionPending | null {
+  const basePlayer = BaseUpgradeHolder(game, playId);
+  if (basePlayer === null) return null;
+  const upgrade = (GetPlayer(game, basePlayer).base.upgrades ?? []).find(u => u.playId === playId)!;
+
+  const rampart = opts.bypassReplacement ? null : BaseUpgradeDefeatReplacer(game, basePlayer);
+  if (rampart) {
+    return {
+      type: "ability-option",
+      cardId: "HMW_060",
+      player: rampart.controller,
+      sourcePlayId: rampart.playId,
+      replacedUpgradePlayId: playId,
+      helperText: `Defeat ${CardTitle("HMW_060")} instead of ${CardTitle(upgrade.cardId)}?`,
+      yesLabel: `Defeat ${CardTitle("HMW_060")}`,
+      noLabel: `Defeat ${CardTitle(upgrade.cardId)}`,
+      onYes: null,
+      continuation,
+    } satisfies AbilityOptionPending;
+  }
+
+  RemoveUpgradeFromBase(game, log, basePlayer, playId);
+  log.push(`${sourceLabel}: defeated ${CardTitle(upgrade.cardId)}.`);
+  return null;
+}
+
+/**
+ * Finishes a base-upgrade defeat that carried an "If you do" damage clause (HMW_171 Trap Field):
+ * deals it — CR 9.2, it resolves whether or not HMW_060 Rampart took the upgrade's place — then
+ * sweeps, so a unit the damage (or the defeat) finished leaves play before `chain` continues.
+ */
+function resolveAfterBaseUpgradeDefeat(
+  game: GameState,
+  log: string[],
+  then: AbilityOptionPending["thenDealDamage"],
+  chain: PendingResolution | null,
+): PendingResolution | null {
+  if (then) DealDamageToUnit(game, then.sourceCardId, then.targetPlayId, then.amount, log);
+  return sweepDeadUnits(game, log, chain);
 }
 
 /**
@@ -1463,23 +1443,11 @@ function activateBaseUpgradeAction(
     if (upgrade.controller !== player) {
       return { response: invalidResponse("That upgrade is not yours."), pending: null, stateChanged: false };
     }
-    if (!UpgradeActionAvailable(upgrade.cardId, player)) {
-      return { response: invalidResponse(`${CardTitle(upgrade.cardId)} has nothing to target.`), pending: null, stateChanged: false };
+    if (!UpgradeActionAvailable(upgrade.cardId, player, upgrade.playId)) {
+      return { response: invalidResponse(`${CardTitle(upgrade.cardId)} can't be used right now.`), pending: null, stateChanged: false };
     }
 
-    // Cost: defeat this upgrade.
-    base.upgrades = (base.upgrades ?? []).filter(u => u.playId !== playId);
-    GetPlayer(game, upgrade.owner as PlayerId).discard.unshift({
-      cardId: upgrade.cardId,
-      playId: upgrade.playId,
-      owner: upgrade.owner,
-      controller: upgrade.owner,
-      turnDiscarded: game.currentRound,
-      discardEffect: "",
-    });
-    log.push(`${CardTitle(upgrade.cardId)} was defeated to pay for its Action.`);
-
-    const pending = resolveBaseUpgradeAction(game, player, upgrade.cardId);
+    const pending = payBaseUpgradeActionCost(game, log, player, upgrade);
     if (pending) {
       return { response: resolutionResponse(pendingToResolution(pending, game)), pending, stateChanged: true };
     }
@@ -1487,6 +1455,38 @@ function activateBaseUpgradeAction(
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
   return null;
+}
+
+/**
+ * Pays an upgrade-hosted Action's cost and returns the prompt that follows. A cost that needs a
+ * choice (a hand discard) is itself a prompt, with the ability's effect as its continuation.
+ */
+function payBaseUpgradeActionCost(
+  game: GameState,
+  log: string[],
+  player: PlayerId,
+  upgrade: CardInPlay,
+): PendingResolution | null {
+  switch (upgrade.cardId) {
+    case "HMW_172": { // Heavy Ion Cannon — [discard a card from your hand], once each phase.
+      // Marked as the ability is used, before the cost resolves: the limit counts uses, and a use
+      // is committed the moment it is activated. Phase-scoped, so regroup clears it.
+      game.currentEffects.push({
+        cardId: HEAVY_ION_CANNON_USED, duration: "Phase", affectedPlayer: player, targetPlayId: upgrade.playId,
+      });
+      // The discard handler fires the when-discarded reactions and then hands off to the damage.
+      return {
+        type: "discard-from-hand",
+        targetPlayer: player,
+        count: 1,
+        continuation: resolveBaseUpgradeAction(game, player, upgrade.cardId),
+      } satisfies DiscardFromHandPending;
+    }
+    default:
+      // Cost: defeat this upgrade (HMW_037 Bacta Tank). A cost is never offered to HMW_060 Rampart.
+      defeatBaseUpgrade(game, log, upgrade.playId, `${CardTitle(upgrade.cardId)} (cost of its Action)`, null, { bypassReplacement: true });
+      return resolveBaseUpgradeAction(game, player, upgrade.cardId);
+  }
 }
 
 /** The prompt each upgrade-hosted Action raises once its cost is paid. */
@@ -1506,6 +1506,14 @@ function resolveBaseUpgradeAction(
         options: targets.map(t => ({ id: t.playId, label: CardTitle(t.cardId) ?? t.cardId })),
         continuation: null,
       } satisfies ChooseOnePending;
+    }
+    case "HMW_172": { // Heavy Ion Cannon — deal 2 damage to a unit. Any unit, either side.
+      const units172 = GetAllUnits(game);
+      if (units172.length === 0) return null;
+      return {
+        ...mandatoryTarget("HMW_172", player, units172.map(u => u.playId)),
+        helperText: "Deal 2 damage to a unit.",
+      } satisfies AbilityTargetPending;
     }
     default:
       return null;
@@ -1569,6 +1577,10 @@ function defeatUpgradeByPlayId(
   /** The player whose card ability is doing the defeating, when one is. */
   bySourcePlayer?: PlayerId,
 ): PendingResolution | null {
+  // An upgrade on a BASE has no host: it goes through the base chokepoint (HMW_060 Rampart's offer).
+  if (BaseUpgradeHolder(game, targetPlayId) !== null) {
+    return defeatBaseUpgrade(game, log, targetPlayId, sourceLabel, continuation);
+  }
   for (const u of GetAllUnits(game)) {
     const upgradeIdx = u.upgrades.findIndex(upg => upg.playId === targetPlayId);
     if (upgradeIdx === -1) continue;
@@ -1593,7 +1605,7 @@ function defeatUpgradeByPlayId(
     } else {
       // Everything else goes to the zone it belongs in — the owner's discard, or, for a pilot
       // leader, back to the leader zone. Without this the card simply left the game.
-      upgradeLeavesPlay(game, defeated, log);
+      UpgradeLeavesPlay(game, defeated, log);
     }
     // Traitorous / Pantoran Starship Thief unattach: the unit's owner reclaims control.
     onUpgradeDetached(game, log, u, defeated);
@@ -1795,6 +1807,7 @@ function triggerLabel(t: TriggerEntry): string {
     case "enemy-unit-defeated":   return `${name} — When Enemy Defeated`;
     case "card-played-reaction":  return `${name} — Reaction`;
     case "damage-prevention":     return `${name} — Prevent Damage`;
+    case "base-upgrade-defeat":   return `${name} — Defeated`;
     case "when-defeated":         return `${name} — When Defeated`;
     case "regroup-start":         return `${UnitTitle({ cardId: t.cardId })} — When the Regroup Phase Starts`;
     default:                    return `${name} — ${t.triggerType}`;
@@ -1882,6 +1895,12 @@ function reissueDeferredDamage(game: GameState, log: string[], ctx: DamagePreven
 }
 
 function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: string[]): PendingResolution | null {
+  if (trigger.triggerType === "base-upgrade-defeat") {
+    // A base upgrade's defeat held back by a synchronous site (HMW_081 inside DealDamageToBase) so
+    // HMW_060 Rampart can be offered. If he left play meanwhile, the chokepoint just defeats it.
+    return defeatBaseUpgrade(game, log, trigger.playId!, CardTitle(trigger.cardId), null);
+  }
+
   if (trigger.triggerType === "damage-prevention") {
     // ASH_062 The Mandalorian — an instance of ability damage held back by DealDamageToUnit.
     const ctx = trigger.context as DamagePreventionContext | undefined;
@@ -2479,6 +2498,20 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    if (trigger.cardId === "HMW_156") { // Arena Acklay — "Deal 2 damage to each enemy base."
+      // Already triggered, so it resolves even if the Acklay has since left play.
+      DealDamageToBase(game, GetOtherPlayer(trigger.fromPlayer), 2, trigger.fromPlayer);
+      log.push(`${CardTitle("HMW_156")}: survived damage — dealt 2 damage to each enemy base.`);
+      return null;
+    }
+    if (trigger.cardId === "HMW_169") { // Crosshair (I've Changed) — "Each player draws a card."
+      // Its controller first. Each is its own draw, so the opponent's can set off Crosshair's
+      // "when an opponent draws" in turn.
+      DrawCardForPlayer(game, log, trigger.fromPlayer);
+      DrawCardForPlayer(game, log, GetOtherPlayer(trigger.fromPlayer));
+      log.push(`${CardTitle("HMW_169")}: survived damage — each player drew a card.`);
+      return null;
+    }
     if (trigger.cardId === "HMW_045") { // Logray — "You may deal 1 damage to an enemy unit."
       const logray045 = GetUnitByPlayId(game, trigger.playId!);
       if (!logray045 || Unit.FromInterface(logray045).LostAbilities()) return null;
@@ -2494,6 +2527,15 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
     if (trigger.cardId === "ASH_204" && trigger.playId) { // Blade Three — give itself an Advantage token.
       const blade204 = GetUnitByPlayId(game, trigger.playId);
       if (blade204) GiveAdvantageTokens(game, blade204, 1, log, trigger.fromPlayer, "ASH_204");
+    }
+    return null;
+  }
+
+  if (trigger.triggerType === "opponent-drew") {
+    if (trigger.cardId === "HMW_169") { // Crosshair (I've Changed) — "Deal 2 damage to their base."
+      const drawer169 = GetOtherPlayer(trigger.fromPlayer);
+      DealDamageToBase(game, drawer169, 2, trigger.fromPlayer);
+      log.push(`${CardTitle("HMW_169")}: Player ${drawer169} drew during the action phase — dealt 2 damage to their base.`);
     }
     return null;
   }
@@ -3318,7 +3360,9 @@ function combatDamageToBaseAbility(
 
   // SHD_147 Ketsu Onyo — may defeat an upgrade that costs 2 or less.
   if (attacker.cardId === "SHD_147") {
-    const eligible147 = GetAllUnits(game).flatMap(u => u.upgrades).filter(up => CardCost(up.cardId) <= 2);
+    // "An upgrade" — units or bases. CardCost is undefined for 0-cost tokens, hence `?? 0`.
+    const eligible147 = DefeatableUpgradePlayIds(attacker.controller)
+      .filter(id => (CardCost(FindUpgradeByPlayId(id)?.cardId ?? "") ?? 0) <= 2);
     if (eligible147.length === 0) return tail;
     return {
       type: "ability-option" as const,
@@ -3331,7 +3375,7 @@ function combatDamageToBaseAbility(
         type: "ability-target" as const,
         cardId: "SHD_147_defeat_upgrade",
         player: attacker.controller,
-        fromPlayIds: eligible147.map(up => up.playId),
+        fromPlayIds: eligible147,
         continuation: tail,
       },
       continuation: tail,
@@ -3612,13 +3656,17 @@ function resolveAttack(
     if (shieldIdx === -1 && effectiveAtkPower > 0) QueueJangoDamageReaction(game, attacker.controller, defender.playId);
     if (attackerShieldIdx === -1 && effectiveDefPower > 0) QueueJangoDamageReaction(game, defender.controller, attacker.playId);
 
-    // Rancor Keeper (ASH_032): "When a friendly unit is dealt damage and survives" — combat path.
+    // Rancor Keeper (ASH_032): "When a friendly unit is dealt damage and survives" — combat path —
+    // and the units that react to their OWN damage (HMW_156 Arena Acklay). Queued after both hits
+    // land, so a unit both sides' damage killed reads as defeated, not as a survivor.
     if (shieldIdx === -1 && effectiveAtkPower > 0) {
       QueueRancorKeeperReaction(game, defender);
+      QueueSelfDamagedSurvivesReaction(game, defender);
       QueueLograyReaction(game, defender);
     }
     if (attackerShieldIdx === -1 && effectiveDefPower > 0) {
       QueueRancorKeeperReaction(game, attacker);
+      QueueSelfDamagedSurvivesReaction(game, attacker);
       QueueLograyReaction(game, attacker);
     }
 
@@ -5070,7 +5118,7 @@ function queueUnitEntryTriggers(
   unit: Unit,
   cardId: string,
   player: PlayerId,
-  opts: { injectEffect?: Omit<CurrentEffect, "targetPlayId">; viaSmuggle?: boolean } | undefined,
+  opts: { injectEffect?: Omit<CurrentEffect, "targetPlayId">; viaSmuggle?: boolean; grantedWhenPlayed?: string[] } | undefined,
   deferWhenPlayed: boolean,
 ): PendingResolution | null {
   // Colonel Yularen (SOR_109): when a Command unit is played, heal 1 from base.
@@ -5194,6 +5242,16 @@ function queueUnitEntryTriggers(
 
   if (HasSupport(cardId, unit.playId, player)) {
     game.triggerBag.push({ triggerType: "support", cardId: unit.cardId, fromPlayer: player, playId: unit.playId, nested });
+  }
+
+  // HMW_048 Vernestra Rwoh — "This unit gains those units' 'When Played' abilities": each gained
+  // ability triggers as THIS unit's own (its source playId is this unit), from the bag, so the
+  // player orders it against the unit's other entry triggers. Skipped like any When Played that
+  // can do nothing — no ability at all, a no-op right now, or one that needs a Smuggle play.
+  for (const granted of opts?.grantedWhenPlayed ?? []) {
+    if (!CardHasWhenPlayed(granted) || WhenPlayedRequiresSmuggle(granted)) continue;
+    if (resolveWhenPlayed(granted, player, unit.playId) === null && !WhenPlayedHasAutoEffect(granted)) continue;
+    game.triggerBag.push({ triggerType: "when-played", cardId: granted, fromPlayer: player, playId: unit.playId, nested });
   }
 
   // SHD_213 DJ reads "When played USING SMUGGLE" — his When Played must stay silent on an
@@ -5333,6 +5391,12 @@ function completePlayCard(
      */
     entryDamage?: { amount: number; sourceCardId: string };
     /**
+     * A Weakness token the playing ability gives the unit it just played (HMW_002 Maz Kanata, "Give
+     * a Weakness token to it"). Attached as the unit enters, like entryDamage, and swept with it: a
+     * 1-HP unit dies on the spot but has still been played, so its When Played still resolves.
+     */
+    entryWeakness?: { sourceCardId: string };
+    /**
      * HMW_016 Maul — "Play a unit from your hand. Then, defeat it. (When Played abilities resolve
      * after the unit is defeated.)" The unit really enters play first — it is played, so its entry
      * is ledgered and anything watching a unit being played sees it — and is then defeated as part
@@ -5352,6 +5416,11 @@ function completePlayCard(
      * them at its exit.
      */
     deferEntryTriggers?: boolean;
+    /**
+     * HMW_048 Vernestra Rwoh — card ids whose "When Played" abilities this unit gained while being
+     * played. Each triggers on entry as the unit's own (see queueUnitEntryTriggers).
+     */
+    grantedWhenPlayed?: string[];
   },
 ): HandlerResult {
   // SHD_233 Evacuate — "Return each non-leader unit to its owner's hand." A targetless event whose
@@ -5458,6 +5527,9 @@ function completePlayCard(
     if (opts?.entryDamage) {
       DealDamageToUnit(game, opts.entryDamage.sourceCardId, unit.playId, opts.entryDamage.amount, log, player);
     }
+    if (opts?.entryWeakness) {
+      GiveWeaknessToken(game, unit, log, player, opts.entryWeakness.sourceCardId);
+    }
 
     // Duplicate-unique rule: uniqueness must ALWAYS interrupt and resolve first. If the
     // player now controls >1 copy, return the defeat prompt immediately — before any of
@@ -5477,6 +5549,7 @@ function completePlayCard(
           enteringPlayer: player,
           enteringInjectEffect: opts?.injectEffect,
           enteringDefeatAfter: opts?.defeatAfterEntry,
+          enteringGrantedWhenPlayed: opts?.grantedWhenPlayed,
         };
         return { response: resolutionResponse(pendingToResolution(defeatCopyPending, game)), pending: defeatCopyPending, stateChanged: false };
       }
@@ -5511,7 +5584,7 @@ function completePlayCard(
     // A unit whose aura shrinks enemy units (SHD_037 Snoke) can defeat one just by arriving: an
     // enemy already damaged past its newly reduced HP is defeated as a state-based action. No
     // other step in the entry path re-checks HP, so sweep for it here.
-    const afterEntry = ProjectsEnemyStatAura(cardId) || opts?.entryDamage
+    const afterEntry = ProjectsEnemyStatAura(cardId) || opts?.entryDamage || opts?.entryWeakness
       ? sweepDeadUnits(game, log, whenPlayedPending)
       : whenPlayedPending;
     if (afterEntry) {
@@ -5867,8 +5940,26 @@ function playCardFromHand(
     return completePlayCard(game, log, cardId, player, { deferredUpgradeCost });
   }
 
+  // HMW_049 Greater Sarlacc — may defeat ready resources while being played, for a discount each.
+  // A card whose cost is already 0 has nothing to discount (max 0) and is paid normally below.
+  const resourceDefeat = ResourceDefeatRange(game, player, cardId, fullCost);
+  if (resourceDefeat && resourceDefeat.max > 0) {
+    hand.splice(idx, 1);
+    log.push(`Player ${player} is playing ${CardTitle(cardId) ?? cardId}.`);
+    return startResourceDefeatPlay(game, log, player, cardId, fullCost, resourceDefeat);
+  }
+
   if (readyCount < minCost)
     return { response: invalidResponse(`Player ${player} cannot afford ${cardId}.`), pending: null, stateChanged: false };
+
+  // An additional cost of recycling discard-pile cards (HMW_048 Vernestra Rwoh) is chosen first;
+  // the return-from-discard handler then pays the resources and plays the card.
+  const recycleCost = discardRecycleAdditionalCost(game, player, cardId, fullCost);
+  if (recycleCost) {
+    hand.splice(idx, 1);
+    log.push(`Player ${player} is playing ${CardTitle(cardId) ?? cardId}.`);
+    return { response: resolutionResponse(pendingToResolution(recycleCost, game)), pending: recycleCost, stateChanged: false };
+  }
 
   if (exploitAmt > 0) {
     hand.splice(idx, 1);
@@ -5887,6 +5978,167 @@ function playCardFromHand(
   payResources(game, player, fullCost, log, cardId);
   hand.splice(idx, 1);
   log.push(`Player ${player} played ${CardTitle(cardId) ?? cardId}.`);
+  return completePlayCard(game, log, cardId, player);
+}
+
+/**
+ * HMW_048 Vernestra Rwoh — "As an additional cost to play this unit, put up to 2 units that each
+ * cost 5 or less from your discard pile on the bottom of your deck."
+ *
+ * The prompt for that cost, or null when the card has none or nothing in the discard pile could
+ * pay it ("up to 2" makes zero legal, so there is nothing to ask). `fullCost` rides along to be
+ * paid once the cards are chosen.
+ */
+function discardRecycleAdditionalCost(
+  game: GameState,
+  player: PlayerId,
+  cardId: string,
+  fullCost: number,
+): ReturnFromDiscardPending | null {
+  if (cardId !== "HMW_048") return null;
+  const eligible = GetPlayer(game, player).discard
+    .filter(c => CardType(c.cardId) === "Unit" && (CardCost(c.cardId) ?? 0) <= 5)
+    .map(c => c.playId);
+  if (eligible.length === 0) return null;
+  return {
+    type: "return-from-discard",
+    cardId,
+    player,
+    maxCount: 2,
+    eligiblePlayIds: eligible,
+    playCost: fullCost,
+    continuation: null,
+  };
+}
+
+/**
+ * HMW_048 Vernestra Rwoh — the additional cost is chosen: put each chosen unit on the bottom of
+ * the deck (one at a time, in the order chosen), pay the resource cost, then play her with those
+ * units' When Played abilities.
+ */
+function payDiscardRecycleCost(
+  game: GameState,
+  log: string[],
+  pending: ReturnFromDiscardPending,
+  chosen: string[],
+): HandlerResult {
+  const picked = [...new Set(chosen)];
+  if (picked.length > pending.maxCount)
+    return { response: invalidResponse(`${CardTitle(pending.cardId)}: choose at most ${pending.maxCount} units.`), pending, stateChanged: false };
+  const pState = GetPlayer(game, pending.player);
+  const recycled: string[] = [];
+  for (const id of picked) {
+    const idx = pState.discard.findIndex(d => d.playId === id);
+    if (idx === -1) continue;
+    const [card] = pState.discard.splice(idx, 1);
+    pState.deck.unshift({ cardId: card.cardId }); // the bottom of the deck is index 0
+    recycled.push(card.cardId);
+    log.push(`${CardTitle(pending.cardId)}: put ${CardTitle(card.cardId)} on the bottom of the deck.`);
+  }
+  payResources(game, pending.player, pending.playCost ?? 0, log, pending.cardId);
+  log.push(`Player ${pending.player} played ${CardTitle(pending.cardId)}.`);
+  return completePlayCard(game, log, pending.cardId, pending.player, { grantedWhenPlayed: recycled });
+}
+
+/**
+ * HMW_049 Greater Sarlacc — "While playing this unit, you may defeat any number of ready resources
+ * you control. For each resource defeated this way, this unit costs 3 resources less to play."
+ *
+ * The card is already out of hand. The player says how many to defeat (skipped when only one
+ * number is legal), then picks each resource in turn (resolveResourceDefeatPick); the remainder
+ * is paid last, through payResources like any other cost.
+ */
+function startResourceDefeatPlay(
+  game: GameState,
+  log: string[],
+  player: PlayerId,
+  cardId: string,
+  fullCost: number,
+  range: { min: number; max: number },
+): HandlerResult {
+  if (range.min === range.max) return resourceDefeatCountChosen(game, log, player, cardId, fullCost, range.min);
+  const discount = ResourceDefeatDiscount(cardId);
+  const countPending: ChooseOnePending = {
+    type: "choose-one",
+    cardId,
+    player,
+    options: Array.from({ length: range.max - range.min + 1 }, (_, i) => {
+      const n = range.min + i;
+      const pay = Math.max(0, fullCost - discount * n);
+      return { id: String(n), label: n === 0 ? `Defeat no resources — pay ${pay}` : `Defeat ${n} resource(s) — pay ${pay}` };
+    }),
+    data: { resourceDefeatFullCost: fullCost },
+    continuation: null,
+  };
+  return { response: resolutionResponse(pendingToResolution(countPending, game)), pending: countPending, stateChanged: false };
+}
+
+/** The count is settled: start picking resources, or pay in full when it is 0. */
+function resourceDefeatCountChosen(
+  game: GameState,
+  log: string[],
+  player: PlayerId,
+  cardId: string,
+  fullCost: number,
+  count: number,
+): HandlerResult {
+  if (count <= 0) return payResourceDefeatPlay(game, log, player, cardId, fullCost, 0);
+  const pick = resourceDefeatPick(game, player, cardId, { fullCost, remaining: count, defeated: 0 });
+  return { response: resolutionResponse(pendingToResolution(pick, game)), pending: pick, stateChanged: false };
+}
+
+function resourceDefeatPick(
+  game: GameState,
+  player: PlayerId,
+  cardId: string,
+  play: NonNullable<AbilityTargetPending["resourceDefeatPlay"]>,
+): AbilityTargetPending {
+  return {
+    type: "ability-target",
+    cardId,
+    player,
+    helperText: `${CardTitle(cardId)}: defeat a ready resource (${play.remaining} left to defeat).`,
+    fromPlayIds: GetPlayer(game, player).resources.filter(r => r.ready).map(r => r.playId),
+    resourceDefeatPlay: play,
+    continuation: null,
+  };
+}
+
+/** One resource picked: defeat it, then the next pick — or, after the last, pay and play. */
+function resolveResourceDefeatPick(
+  game: GameState,
+  log: string[],
+  pending: AbilityTargetPending & { resourceDefeatPlay: NonNullable<AbilityTargetPending["resourceDefeatPlay"]> },
+  chosen: string | undefined,
+): HandlerResult {
+  const player = pending.player!;
+  const play = pending.resourceDefeatPlay;
+  const isReadyResource = !!chosen && pending.fromPlayIds.includes(chosen)
+    && GetPlayer(game, player).resources.some(r => r.playId === chosen && r.ready);
+  if (!isReadyResource)
+    return { response: invalidResponse(`${CardTitle(pending.cardId)}: choose a ready resource you control to defeat.`), pending, stateChanged: false };
+  DefeatResource(game, player, chosen!, log, pending.cardId);
+  const defeated = play.defeated + 1;
+  if (play.remaining > 1) {
+    const next = resourceDefeatPick(game, player, pending.cardId, { fullCost: play.fullCost, remaining: play.remaining - 1, defeated });
+    return { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: true };
+  }
+  return payResourceDefeatPlay(game, log, player, pending.cardId, play.fullCost, defeated);
+}
+
+function payResourceDefeatPlay(
+  game: GameState,
+  log: string[],
+  player: PlayerId,
+  cardId: string,
+  fullCost: number,
+  defeated: number,
+): HandlerResult {
+  const reduction = ResourceDefeatDiscount(cardId) * defeated;
+  payResources(game, player, Math.max(0, fullCost - reduction), log, cardId);
+  log.push(defeated > 0
+    ? `Player ${player} played ${CardTitle(cardId)}, defeating ${defeated} resource(s) to pay ${reduction} less.`
+    : `Player ${player} played ${CardTitle(cardId)}.`);
   return completePlayCard(game, log, cardId, player);
 }
 
@@ -6238,6 +6490,7 @@ function splashCardIsAffordable(game: GameState, player: PlayerId, cardId: strin
   const unitCost = Math.max(0, playCost(game, player, cardId) - discount);
   const minUnitCost = exploitAmt > 0 ? Math.max(0, unitCost - exploitAmt * 2) : unitCost;
   if (ready >= minUnitCost) return true;
+  if (ResourceDefeatRange(game, player, cardId, unitCost)) return true; // HMW_049 Greater Sarlacc
 
   // A Pilot the player can't hard-cast may still be affordable attached to a Vehicle.
   if (PilotingCost(cardId) >= 0 && PilotingEligibleVehicles(game, player, cardId).length > 0) {
@@ -6781,6 +7034,11 @@ function handleChooseTarget(
     const chosen = data.targetPlayIds?.[0] ?? chosenLeader;
     const chosenBase = data.targetZones?.includes("Base") ?? false;
 
+    // HMW_049 Greater Sarlacc — a resource being defeated while the card is played.
+    if (pending.resourceDefeatPlay) {
+      return resolveResourceDefeatPick(game, log, { ...pending, resourceDefeatPlay: pending.resourceDefeatPlay }, chosen);
+    }
+
     // JTL_018 Kazuda Xiono On Attack: "Choose ANY NUMBER of friendly units." Zero is a legal
     // choice, so this must run before the empty-selection guard below.
     if (pending.cardId === "JTL_018_OA") {
@@ -7120,6 +7378,9 @@ function handleChooseTarget(
     const invalid = chosen.find(id => !pending.eligiblePlayIds.includes(id));
     if (invalid)
       return { response: invalidResponse(`Card ${invalid} is not eligible for return from discard.`), pending, stateChanged: false };
+
+    // HMW_048 Vernestra Rwoh — the additional cost of playing her (zero units is legal).
+    if (pending.cardId === "HMW_048") return payDiscardRecycleCost(game, log, pending, chosen);
 
     if (pending.cardId === "ASH_133") {
       // Trask Walker — the card is chosen; now pick which of the two things to do with it. The
@@ -7861,7 +8122,9 @@ function handleChooseTarget(
       if (entering) {
         queueUnitEntryTriggers(
           game, log, entering, pending.enteringCardId, pending.enteringPlayer,
-          pending.enteringInjectEffect ? { injectEffect: pending.enteringInjectEffect } : undefined,
+          pending.enteringInjectEffect || pending.enteringGrantedWhenPlayed
+            ? { injectEffect: pending.enteringInjectEffect, grantedWhenPlayed: pending.enteringGrantedWhenPlayed }
+            : undefined,
           true,
         );
         // HMW_016 Maul — the ability that played this unit also defeats it. The uniqueness prompt
@@ -7872,27 +8135,37 @@ function handleChooseTarget(
           log.push(`${CardTitle(pending.enteringDefeatAfter.sourceCardId)}: defeated ${CardTitle(pending.enteringCardId)}.`);
           updateDefeatedPlayers(game);
         }
-      } else if (CardHasWhenPlayed(pending.enteringCardId)) {
+      } else {
         // The player defeated the just-played copy itself. Per CR 8.29.3, abilities that
         // trigger upon that copy being played must still resolve. The entry effects that
         // need the unit in play (Shielded, Ambush, injected effects) are moot now that it
         // is gone, but its When Played still fires — queue it to the bag so it resolves
-        // after the just-defeated copy's own When Defeated triggers.
-        game.triggerBag.push({
-          triggerType: "when-played",
-          cardId: pending.enteringCardId,
-          fromPlayer: pending.enteringPlayer,
-          playId: pending.enteringPlayId,
-          nested: game.triggerBag.length > 0,
-        });
+        // after the just-defeated copy's own When Defeated triggers. When Played abilities it
+        // gained while being played (HMW_048 Vernestra Rwoh) are its own too.
+        const whenPlayedIds = [
+          ...(CardHasWhenPlayed(pending.enteringCardId) ? [pending.enteringCardId] : []),
+          ...(pending.enteringGrantedWhenPlayed ?? []).filter(id => CardHasWhenPlayed(id)),
+        ];
+        const nestedWhenPlayed = game.triggerBag.length > 0;
+        for (const whenPlayedId of whenPlayedIds) {
+          game.triggerBag.push({
+            triggerType: "when-played",
+            cardId: whenPlayedId,
+            fromPlayer: pending.enteringPlayer,
+            playId: pending.enteringPlayId,
+            nested: nestedWhenPlayed,
+          });
+        }
       }
     }
 
     const cont = pending.continuation ?? null;
 
     // If more than two copies entered at once (multiple duplicates), keep prompting —
-    // uniqueness must resolve fully before anything downstream.
-    if (pending.enteringPlayer) {
+    // uniqueness must resolve fully before anything downstream. Not while the chosen copy is still
+    // on its base, though: HMW_060 Rampart is offering to die in its place, and re-asking now would
+    // drop that offer. Once it is answered, the dispatch-exit uniqueness check re-applies the rule.
+    if (pending.enteringPlayer && BaseUpgradeHolder(game, chosen) === null) {
       const nextConflict = uniquenessDefeatPending(game, pending.enteringPlayer);
       if (nextConflict) {
         nextConflict.continuation = cont;
@@ -7948,6 +8221,12 @@ function handleChooseTarget(
       // HMW_037 Bacta Tank: "When Played: Heal up to 3 damage from a non-Vehicle unit."
       // A Fortify upgrade's When Played fires HERE, not in the unit branch below — the host is a
       // base, so nothing downstream ever sees it.
+      // HMW_172 Heavy Ion Cannon: "When Played: Draw a card." Through the draw helper, so an empty
+      // deck costs the usual 3 and draw reactions see it.
+      if (pending.upgradeCardId === "HMW_172") {
+        DrawCardsForPlayer(game, log, pending.player, 1);
+      }
+
       if (pending.upgradeCardId === "HMW_037") {
         const healable037 = AllUnits().filter(
           u => !TraitContains(u.cardId, "Vehicle", u.controller, u.playId),
@@ -8095,12 +8374,9 @@ function handleChooseTarget(
     }
 
     if (pending.upgradeCardId === "JTL_148") {
-      const cheap148 = AllUnits().flatMap(u =>
-        u.upgrades
-          .filter(upg => CardCost(upg.cardId) <= 2)
-          .filter(upg => !(UpgradeImmuneToEnemyAbilities(upg.cardId) && u.controller !== pending.player))
-          .map(upg => upg.playId),
-      );
+      // "An upgrade" — units or bases. CardCost is undefined for 0-cost tokens, hence `?? 0`.
+      const cheap148 = DefeatableUpgradePlayIds(pending.player)
+        .filter(id => (CardCost(FindUpgradeByPlayId(id)?.cardId ?? "") ?? 0) <= 2);
       if (cheap148.length > 0) {
         const defeat148 = optionalTarget(
           "JTL_148",
@@ -8633,6 +8909,21 @@ function handleChooseTarget(
         return completePlayCard(game, log, cardId, pending.player, {
           defeatAfterEntry: { sourceCardId: "HMW_016" },
         });
+      }
+      case "HMW_002": { // Maz Kanata (both sides) — play a Fringe or Underworld unit at 1 less, then
+                        // give it a Weakness token. Played strictly as a unit, like Maul's.
+        const who002 = CardTitle("HMW_002");
+        if (CardType(cardId) !== "Unit")
+          return { response: invalidResponse(`${who002}: chosen card is not a Unit.`), pending, stateChanged: false };
+        if (!TraitContains(cardId, "Fringe", pending.player) && !TraitContains(cardId, "Underworld", pending.player))
+          return { response: invalidResponse(`${who002}: chosen unit is not Fringe or Underworld.`), pending, stateChanged: false };
+        const cost002 = discountedPlayCost(game, pending.player, cardId, pending.costReduction ?? 0);
+        if (spendableFor(game, pending.player) < cost002)
+          return { response: invalidResponse(`${who002}: not enough resources to play ${CardTitle(cardId)} (needs ${cost002}).`), pending, stateChanged: false };
+        payResources(game, pending.player, cost002, log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${who002} (cost -${pending.costReduction ?? 0} = ${cost002}).`);
+        return completePlayCard(game, log, cardId, pending.player, { entryWeakness: { sourceCardId: "HMW_002" } });
       }
       case "HMW_008": { // General Grievous — "Play 2 units from your hand (one at a time, paying their
                         // costs)." The next offer waits until this unit has fully resolved (its own
@@ -9444,6 +9735,8 @@ function handleChooseTarget(
         MarkCardDrawn(game, pending.player);
         drawnTitles.push(CardTitle(choice.cardId) ?? choice.cardId);
       }
+      // The whole search is one draw event, however many cards it drew.
+      if (chosen.length > 0) QueueOpponentDrewReaction(game, pending.player);
       log.push(`${CardTitle(pending.cardId)}: drew ${drawnTitles.join(", ")}.`);
       // ASH_235 Sense Through the Force — "If its cost is the chosen number, you may give 3
       // Advantage tokens to a Force unit." The number was stashed when it was picked.
@@ -10201,20 +10494,42 @@ function applyAbilityOptionEffect(
         continuation: pending.continuation ?? null,
       } satisfies AbilityTargetPending;
     }
+    case "HMW_058_defeat": { // Mysterious Disappearance Yes — defeat the unit; if you do, its
+                             // controller (the player who chose it) creates a Beast token.
+      const victim058 = pending.sourcePlayId ? GetUnitByPlayId(game, pending.sourcePlayId) : null;
+      if (!victim058) return pending.continuation ?? null;
+      const chooser058 = victim058.controller;
+      if (chooser058 !== pending.player && UnitImmuneToEnemyDefeat(victim058)) return pending.continuation ?? null;
+      const defeatPend058 = defeatUnit(game, log, victim058);
+      log.push(`${CardTitle("HMW_058")}: defeated ${CardTitle(victim058.cardId)}.`);
+      // "If you do" — only once the unit has really left play.
+      if (!GetUnitByPlayId(game, victim058.playId)) CreateBeast(game, chooser058, log, "HMW_058");
+      if (defeatPend058) return injectContinuation(defeatPend058, pending.continuation ?? null);
+      return sweepDeadUnits(game, log, pending.continuation ?? null);
+    }
     case "HMW_171": { // Trap Field Yes — defeat the upgrade, then deal 3 to the unit that entered.
       const trapBase171 = GetPlayer(game, pending.player!).base;
       const trap171 = (trapBase171.upgrades ?? []).find(u => u.cardId === "HMW_171");
       if (!trap171) return pending.continuation ?? null; // spent in the meantime
-      trapBase171.upgrades = (trapBase171.upgrades ?? []).filter(u => u.playId !== trap171.playId);
-      const owner171 = (trap171.owner ?? trap171.controller ?? pending.player!) as PlayerId;
-      GetPlayer(game, owner171).discard.push({
-        ...trap171, controller: owner171, turnDiscarded: game.currentRound, discardEffect: "",
-      });
-      log.push(`${CardTitle("HMW_171")}: was defeated to spring the trap.`);
-      if (pending.sourcePlayId) {
-        DealDamageToUnit(game, "HMW_171", pending.sourcePlayId, 3, log);
+      // "You may defeat this upgrade. If you do, deal 3 damage" — not a cost, so HMW_060 Rampart may
+      // die in its place; CR 9.2 still counts the defeat as done, so the 3 damage follows either way.
+      const damage171 = pending.sourcePlayId
+        ? { sourceCardId: "HMW_171", targetPlayId: pending.sourcePlayId, amount: 3 }
+        : undefined;
+      const offer171 = defeatBaseUpgrade(game, log, trap171.playId, `${CardTitle("HMW_171")} (springing the trap)`, pending.continuation ?? null);
+      if (offer171) return { ...offer171, thenDealDamage: damage171 };
+      return resolveAfterBaseUpgradeDefeat(game, log, damage171, pending.continuation ?? null);
+    }
+    case "HMW_060": { // Vice Admiral Rampart Yes — he is defeated instead; the base upgrade stays.
+      const rampart060 = pending.sourcePlayId ? GetUnitByPlayId(game, pending.sourcePlayId) : null;
+      if (!rampart060) { // gone before he could stand in — the original defeat happens
+        defeatBaseUpgrade(game, log, pending.replacedUpgradePlayId!, CardTitle("HMW_060"), null, { bypassReplacement: true });
+        return resolveAfterBaseUpgradeDefeat(game, log, pending.thenDealDamage, pending.continuation ?? null);
       }
-      return sweepDeadUnits(game, log, pending.continuation ?? null);
+      const saved060 = FindUpgradeByPlayId(pending.replacedUpgradePlayId!);
+      log.push(`${CardTitle("HMW_060")}: defeated instead of ${CardTitle(saved060?.cardId ?? "")}.`);
+      const chain060 = defeatUnitsInOrder(game, log, [rampart060.playId], pending.continuation ?? null);
+      return resolveAfterBaseUpgradeDefeat(game, log, pending.thenDealDamage, chain060);
     }
     case "SEC_264": { // Clandestine Connections Yes — pay 2, then deal 2 to a base
       const unit264 = GetUnitByPlayId(game, pending.sourcePlayId!);
@@ -10321,10 +10636,10 @@ function applyAbilityOptionEffect(
       return pending.continuation ?? null;
     }
     case "SOR_119": { // Reinforcement Walker Yes — draw the top card
-      const pState119 = GetPlayer(game, pending.player!);
-      const top119 = pState119.deck.pop();
+      // A real draw — through the helper, so it is counted and seen by draw reactions.
+      const top119 = GetPlayer(game, pending.player!).deck.at(-1);
       if (top119) {
-        pState119.hand.push({ cardId: top119.cardId });
+        DrawCardForPlayer(game, log, pending.player!);
         log.push(`${CardTitle(pending.cardId)}: drew ${CardTitle(top119.cardId)}.`);
       }
       return pending.continuation ?? null;
@@ -10403,6 +10718,17 @@ function applyAbilityOptionEffect(
       });
       log.push(`${CardTitle(pending.cardId)}: entered play as a ready resource.`);
       return pending.continuation ?? null;
+    }
+    case "HMW_056": { // Yoda (Trickster in Exile) Yes — discard → top of deck; "if you do", heal 2.
+      const pState056 = GetPlayer(game, pending.player!);
+      const idx056 = pState056.discard.findIndex(d => d.playId === pending.sourcePlayId);
+      // Re-checked: something resolving earlier may already have taken the card. No card moved
+      // means no "if you do".
+      if (idx056 < 0) return pending.continuation ?? null;
+      const [card056] = pState056.discard.splice(idx056, 1);
+      pState056.deck.push({ cardId: card056.cardId }); // deck top is the END of the array
+      log.push(`${CardTitle("HMW_056")}: put on top of Player ${pending.player}'s deck.`);
+      return healChosenBasePending("HMW_056_heal", pending.player!, 2, pending.continuation ?? null);
     }
     case "LAW_159": { // Expendable Mercenary — resource it from its OWNER's discard into the
                       // controller's resource zone (stolen if they aren't the owner).
@@ -10638,6 +10964,10 @@ function applyAbilityOptionDeclineEffect(
   }
 
   switch (pending.cardId) {
+    case "HMW_060": { // Vice Admiral Rampart No — the base upgrade is defeated as it would have been.
+      defeatBaseUpgrade(game, log, pending.replacedUpgradePlayId!, CardTitle("HMW_060"), null, { bypassReplacement: true });
+      return resolveAfterBaseUpgradeDefeat(game, log, pending.thenDealDamage, pending.continuation ?? null);
+    }
     case "TWI_089_play": { // Consolidation of Power — no unit played, but "Then, defeat the chosen units."
       const defeat089 = pending.onYes?.type === "play-from-hand" ? pending.onYes.thenDefeatPlayIds ?? [] : [];
       return defeatUnitsInOrder(game, log, defeat089, pending.continuation ?? null);
@@ -11044,6 +11374,10 @@ function handleChooseOption(
     if (!pending.options.some(o => o.id === option)) {
       return { response: invalidResponse(`Unknown option: ${option}`), pending, stateChanged: false };
     }
+    // HMW_049 Greater Sarlacc — how many ready resources to defeat while playing it.
+    if (pending.data?.resourceDefeatFullCost !== undefined) {
+      return resourceDefeatCountChosen(game, log, pending.player, pending.cardId, Number(pending.data.resourceDefeatFullCost), Number(option));
+    }
     const chosen = resolveChooseOne(game, log, pending, option);
     // A "Choose one" on an On Attack ability (ASH_133) carries the rest of the attack as its
     // continuation. That has to be RUN, not rendered — handing a bare resolve-attack back to the
@@ -11054,6 +11388,10 @@ function handleChooseOption(
     if (chosen) {
       return { response: resolutionResponse(pendingToResolution(chosen, game)), pending: chosen, stateChanged: false };
     }
+    // The chain is finished, so anything a mode queued (a draw reaction from Kreia's Whispers'
+    // draws, say) resolves now instead of sitting in the bag.
+    const bagChooseOne = drainTriggerBag(game, log);
+    if (bagChooseOne) return { response: resolutionResponse(pendingToResolution(bagChooseOne, game)), pending: bagChooseOne, stateChanged: true };
     updateDefeatedPlayers(game);
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
@@ -11343,6 +11681,7 @@ function handleChooseOption(
       leader.deployed = true;
       const unit = addToArena(game, pending.playingPlayer, pending.cardId, true);
       leader.deployedPlayId = unit.playId;
+      recordLeaderUnitEnteredPlay(game, pending.playingPlayer, unit);
       log.push(`Player ${pending.playingPlayer} deployed ${CardTitle(pending.cardId)} as a unit.`);
       updateDefeatedPlayers(game);
       return { response: stateResponse(game), pending: null, stateChanged: true };
@@ -11491,11 +11830,37 @@ function handleChooseOption(
  * recipient is chosen once combat is over, so its eligible list can only be built here; anything
  * that died in the attack must not be offered.
  */
+/** HMW_149 Log Trap's second attack — the source tag its queued attack-target carries. */
+const LOG_TRAP_SECOND_ATTACK = "HMW_149_again";
+
 function refreshPostAttackTargets(game: GameState, next: PendingResolution | null): PendingResolution | null {
   // Combat deaths can push defeat prompts in front of the token step, so walk the whole
   // continuation chain rather than only looking at the pending that surfaced first.
   let prev: PendingResolution | null = null;
   for (let node = next; node; node = ("continuation" in node ? node.continuation : null) ?? null) {
+    // HMW_149 Log Trap — "Then attack with it again, even if it's exhausted. It can't attack bases
+    // for the second attack." Queued behind the first attack; once that is over, "it" must still
+    // be in play and able to attack, with an enemy unit it can legally attack (Sentinel, Hidden…
+    // via computeAttackTargets). Otherwise the second attack never begins and the step is dropped.
+    if (node.type === "attack-target" && node.source === LOG_TRAP_SECOND_ATTACK) {
+      const again149 = GetUnitByPlayId(game, node.attackerPlayId);
+      const canAttack149 = !!again149 && CanUnitAttack(again149)
+        && computeAttackTargets(game, again149).unitPlayIds.length > 0;
+      if (canAttack149) {
+        // ForAttack: the first attack's ForAttack effects were cleared as it ended, so this one
+        // lives exactly as long as the second attack. Both no-base readers honour the suffix.
+        game.currentEffects.push({
+          cardId: "HMW_149_no_base", duration: "ForAttack", affectedPlayer: again149!.controller,
+          targetPlayId: again149!.playId,
+        });
+        prev = node;
+        continue;
+      }
+      const after149 = node.continuation ?? null;
+      if (!prev) return refreshPostAttackTargets(game, after149);
+      (prev as { continuation?: PendingResolution | null }).continuation = after149;
+      continue;
+    }
     if (node.type === "ability-target" && node.cardId === "ASH_184_tokens") {
       node.fromPlayIds = GetAllUnits(game).map(u => u.playId);
       return next;
@@ -11840,6 +12205,7 @@ function leaderHasWhenDeployed(cardId: string): boolean {
     case "JTL_014": return true; // Admiral Trench — reveal 4, opponent discards 2, draw 1/discard 1
     case "LOF_012": return true; // Rey — may discard your hand to draw 2
     case "HMW_016": return true; // Maul (Old Master) — may replay a unit defeated this phase for 5 less
+    case "HMW_012": return true; // Poggle the Lesser — create a Beast token
     default: return false;
   }
 }
@@ -11924,6 +12290,12 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 5;
     case "HMW_018": // The Warrior (Deft Duelist) — If you control 5 or more resources.
       return p.resources.length >= 5;
+    case "HMW_002": // Maz Kanata (Eclectic Pirate Queen) — If you control 6 or more resources.
+      return p.resources.length >= 6;
+    case "HMW_006": // Omega (Close Your Eyes and Focus) — If you control 5 or more resources.
+    case "HMW_012": // Poggle the Lesser (Let the Executions Begin) — If you control 5 or more resources.
+    case "HMW_015": // Bossk (Cruel Hunter) — If you control 5 or more resources.
+      return p.resources.length >= 5;
     case "HMW_017": // Osha (Haunted By Her Past) — If you control 6 or more resources.
       return p.resources.length >= 6;
     case "HMW_016": // Maul (Old Master) — If you control 7 or more resources.
@@ -11956,6 +12328,16 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
     default:
       return null;
   }
+}
+
+/**
+ * Deploying a leader as a unit is that unit ENTERING PLAY ("deployed"), so it goes on the same
+ * ledger played units do. Hidden on a leader unit ("can't be attacked if she was deployed this
+ * phase"), Boba Fett's "didn't enter play this round" and The Armorer's "a unit that entered play
+ * this phase" all read it — without this entry Hidden was inert on every leader unit.
+ */
+function recordLeaderUnitEnteredPlay(game: GameState, player: PlayerId, unit: Unit): void {
+  game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId: unit.cardId, playId: unit.playId, reason: "deployed" });
 }
 
 function deployLeader(game: GameState, log: string[], player: PlayerId): HandlerResult {
@@ -12015,6 +12397,7 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
   leader.epicActionUsed = true;
   const unit = addToArena(game, player, leader.cardId, true);
   leader.deployedPlayId = unit.playId;
+  recordLeaderUnitEnteredPlay(game, player, unit);
   log.push(`Player ${player} deployed ${CardTitle(leader.cardId) ?? leader.cardId}.`);
   const nested = game.triggerBag.length > 0;
   if (HasShielded(leader.cardId, unit.playId, player)) {
@@ -12498,6 +12881,22 @@ function resolveActionAbility(
       log.push(`${CardTitle("SOR_002")}: healed 1 damage from your base.`);
       return null;
     }
+    case "HMW_002": { // Maz Kanata — both sides: "Play a Fringe or Underworld unit from your hand.
+                      // It costs 1 resource less. Give a Weakness token to it." Offered only with
+                      // such a unit playable, so the list is never empty here.
+      const eligible002 = MazKanataPlayableHandIndices(player);
+      if (eligible002.length === 0) {
+        log.push(`${CardTitle("HMW_002")}: no Fringe or Underworld unit in hand it can play — soft pass.`);
+        return null;
+      }
+      return {
+        type: "play-from-hand",
+        cardId: "HMW_002",
+        player,
+        eligibleHandIndices: eligible002,
+        costReduction: MAZ_KANATA_DISCOUNT,
+      };
+    }
     case "HMW_016": { // Maul (Old Master) — Action [Exhaust]: Play a unit from your hand. It costs
                       // 1 resource less. Then, defeat it. The exhaust is the cost, so with nothing
                       // playable the action still happens and simply does nothing.
@@ -12618,6 +13017,35 @@ function resolveActionAbility(
         fromPlayIds: spaceUnits016.map(u => u.playId),
         continuation: null,
       } satisfies AbilityTargetPending;
+    }
+    case "HMW_015": { // Bossk — Action [Exhaust]: Heal 1 damage from a damaged enemy unit and give a
+                      // Weakness token to it. The exhaust is paid; no damaged enemy = soft pass.
+      const damaged015 = GetUnitsForPlayer(GetOtherPlayer(player)).filter(u => u.damage > 0);
+      if (damaged015.length === 0) {
+        log.push(`${CardTitle("HMW_015")}: no damaged enemy unit — soft pass.`);
+        return null;
+      }
+      return mandatoryTarget("HMW_015", player, damaged015.map(u => u.playId));
+    }
+    case "HMW_012": { // Poggle the Lesser — Action [1 resource, Exhaust]: Ready a friendly Creature
+                      // unit and deal 1 damage to it. Paid already; no Creature = soft pass.
+      const creatures012 = FriendlyUnitsWithTrait(player, "Creature");
+      if (creatures012.length === 0) {
+        log.push(`${CardTitle("HMW_012")}: no friendly Creature unit — soft pass.`);
+        return null;
+      }
+      return mandatoryTarget("HMW_012", player, creatures012.map(u => u.playId));
+    }
+    case "HMW_006": { // Omega — Action [1 resource, Exhaust]: Attack with a Heroism unit. It gains
+                      // Grit for this attack. The cost is paid; with no Heroism unit able to
+                      // attack, the Action resolves to nothing.
+      const heroism006 = GetUnitsForPlayer(player, true)
+        .filter(u => CanUnitAttack(u) && (CardAspects(u.cardId)?.includes("Heroism") ?? false));
+      if (heroism006.length === 0) {
+        log.push(`${CardTitle("HMW_006")}: no Heroism unit can attack — soft pass.`);
+        return null;
+      }
+      return mandatoryTarget("HMW_006", player, heroism006.map(u => u.playId));
     }
     case "IBH_023": // General Rieekan — Action [Exhaust]: Attack with another Heroism unit. It gets +2/+0.
     case "IBH_036": {
@@ -13883,6 +14311,29 @@ function healTarget(
  * Applies an ability effect once the player has selected a target.
  * Returns the next pending state if further input is required.
  */
+/**
+ * "Heal N damage from a base" where either base may be chosen. The amount rides on the pending
+ * because it is fixed when the prompt is built (Dooku HMW_042: the readied unit's cost). Resolved
+ * by the `<cardId>` case in applyAbilityEffect, which accepts both base-pick conventions.
+ */
+function healChosenBasePending(
+  cardId: string,
+  player: PlayerId,
+  amount: number,
+  continuation: PendingResolution | null,
+): AbilityTargetPending {
+  return {
+    type: "ability-target",
+    cardId,
+    player,
+    fromPlayIds: ["player1.base", "player2.base"],
+    fromZones: ["Base"],
+    helperText: `Heal ${amount} damage from a base.`,
+    amount,
+    continuation,
+  };
+}
+
 function applyAbilityEffect(
   pending: AbilityTargetPending,
   targetIsBase: boolean,
@@ -14183,6 +14634,51 @@ function applyAbilityEffect(
         game.gameLog.push(`${CardTitle("HMW_037")}: healed ${healed037} damage from ${CardTitle(target037.cardId)}.`);
       }
       return pending.continuation ?? null;
+    }
+    case "HMW_015": { // Bossk, leader Action — heal 1 FIRST, then the Weakness. In that order the
+                      // token can never be lethal by itself (HP and damage both drop by 1), but
+                      // the sweep still runs for anything else the heal or token set off.
+      if (!targetPlayId) break;
+      const target015 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target015) break;
+      const healed015 = HealUnit(game.currentGameState, target015, 1);
+      if (healed015 > 0) game.gameLog.push(`${CardTitle("HMW_015")}: healed ${healed015} damage from ${CardTitle(target015.cardId)}.`);
+      GiveWeaknessToken(game.currentGameState, target015, game.gameLog, pending.player!, "HMW_015");
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "HMW_058_pick": { // Mysterious Disappearance — the chosen player named their unit; now the
+                           // caster's "You may defeat that unit" offer (the continuation) is about it.
+      const offer058 = pending.continuation;
+      if (offer058?.type !== "ability-option") break;
+      const victim058 = targetPlayId ? GetUnitByPlayId(game.currentGameState, targetPlayId) : null;
+      if (!victim058) return offer058.continuation ?? null;
+      // Immune to the caster's abilities (their own units never are): the defeat can't happen, so
+      // there is nothing to offer — and with no defeat there is no Beast.
+      if (victim058.controller !== offer058.player && UnitImmuneToEnemyDefeat(victim058)) {
+        game.gameLog.push(`${CardTitle("HMW_058")}: ${CardTitle(victim058.cardId)} can't be defeated by enemy card abilities.`);
+        return offer058.continuation ?? null;
+      }
+      return {
+        ...offer058,
+        sourcePlayId: victim058.playId,
+        helperText: `${CardTitle("HMW_058")}: defeat ${CardTitle(victim058.cardId)}? If you do, Player ${victim058.controller} creates a Beast token.`,
+      } satisfies AbilityOptionPending;
+    }
+    case "HMW_172": { // Heavy Ion Cannon (base Action) — 2 damage to the chosen unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "HMW_172", targetPlayId, 2, game.gameLog, pending.player);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "HMW_015_OA": { // Bossk, deployed On Attack — 2 damage to the chosen unit with a token upgrade.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "HMW_015", targetPlayId, 2, game.gameLog, pending.player);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "HMW_012":      // Poggle the Lesser, leader Action —
+    case "HMW_012_OA": { // …and his deployed On Attack: ready the chosen Creature, deal 1 to it.
+      if (!targetPlayId) break;
+      ReadyUnitThenDealDamage(game.currentGameState, pending.player!, targetPlayId, 1, "HMW_012");
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "HMW_064": { // Scorch — 1 damage to the chosen upgraded unit.
       if (!targetPlayId) break;
@@ -14646,7 +15142,8 @@ function applyAbilityEffect(
         helperText: "Deal 2 damage to a base.",
         continuation: pending.continuation ?? null,
       };
-      return defeatUpgradeAnywhere(game.currentGameState, game.gameLog, targetPlayId, CardTitle("ASH_012"), next012, pending.player);
+      // "[Exhaust, defeat a friendly upgrade]" is the Action's COST — never replaced by HMW_060.
+      return defeatUpgradeAnywhere(game.currentGameState, game.gameLog, targetPlayId, CardTitle("ASH_012"), next012, pending.player, { bypassReplacement: true });
     }
     case "ASH_012_oa": { // Vane deployed On Attack — defeat the upgrade, then the defender or a base.
       if (!targetPlayId || pending.player === undefined) break;
@@ -16552,6 +17049,39 @@ function applyAbilityEffect(
         continuation: pending.continuation ?? null,
       };
     }
+    case "HMW_042": { // Dooku When Played — ready the chosen unit; "if you do", heal a base by its cost.
+      if (!targetPlayId || pending.player === undefined) break;
+      const gs042 = game.currentGameState;
+      const unit042 = GetUnitByPlayId(gs042, targetPlayId);
+      if (!unit042 || !ReadyUnit(gs042, unit042)) break;
+      game.gameLog.push(`${CardTitle("HMW_042")}: readied ${CardTitle(unit042.cardId)}.`);
+      // The cost is read now, off the unit that actually readied. A 0-cost token heals nothing,
+      // so there is no base to choose.
+      const cost042 = CardCost(unit042.cardId) ?? 0;
+      if (cost042 <= 0) break;
+      return healChosenBasePending("HMW_042_heal", pending.player, cost042, pending.continuation ?? null);
+    }
+    case "SHD_189": { // Slaver's Freighter When Played — ready the chosen unit. The count and the
+                      // eligibility are re-read now: the offer is only a filter.
+      if (!targetPlayId || pending.player === undefined) break;
+      const gs189 = game.currentGameState;
+      const unit189 = ReadyableUnitsWithPowerAtMost(gs189, UpgradesOnEnemyUnits(pending.player), pending.sourcePlayId)
+        .find(u => u.playId === targetPlayId);
+      if (!unit189) break;
+      const live189 = GetUnitByPlayId(gs189, unit189.playId);
+      if (live189 && ReadyUnit(gs189, live189)) {
+        game.gameLog.push(`${CardTitle("SHD_189")}: readied ${CardTitle(live189.cardId)}.`);
+      }
+      break;
+    }
+    case "HMW_042_heal": // Dooku — heal the chosen base by the readied unit's cost.
+    case "HMW_056_heal": { // Yoda (Trickster in Exile) — heal 2 from the chosen base.
+      if (pending.player === undefined) break;
+      const basePlayerHeal = BaseTargetPlayer(targetPlayId ?? "") ?? (targetIsBase ? targetBasePlayer ?? null : null);
+      if (basePlayerHeal === null) break;
+      HealBaseForPlayer(game.currentGameState, basePlayerHeal, pending.amount ?? 0, game.gameLog, pending.cardId.slice(0, 7));
+      break;
+    }
     case "IBH_064": // Hoth Lieutenant When Played: the chosen other unit attacks with +2/+0 for this attack.
     case "IBH_092": {
       if (!targetPlayId) break;
@@ -17049,16 +17579,14 @@ function applyAbilityEffect(
       if (defeatPend099) return injectContinuation(defeatPend099, pending.continuation);
       return pending.continuation;
     }
+    case "HMW_068": // Imperial Commandos When Played — the same "non-leader unit with 4 or less power".
     case "HMW_102": { // Dragon's Might — defeat the chosen non-leader unit with 4 or less power.
-                      // Both guards are re-checked here: the offer is only a filter, and a client
-                      // can name anything.
-      if (!targetPlayId) break;
-      const target102 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+                      // Re-checked here: the offer is only a filter, and a client can name anything.
+      if (!targetPlayId || pending.player === undefined) break;
+      const target102 = DefeatableNonLeadersWithPowerAtMost(pending.player, 4).find(u => u.playId === targetPlayId);
       if (!target102) break;
-      const unit102 = Unit.FromInterface(target102);
-      if (unit102.IsLeader() || unit102.CurrentPower() > 4) break;
       const defeatPend102 = defeatUnit(game.currentGameState, game.gameLog, target102);
-      game.gameLog.push(`${CardTitle("HMW_102")} defeated ${CardTitle(target102.cardId)}.`);
+      game.gameLog.push(`${CardTitle(pending.cardId)} defeated ${CardTitle(target102.cardId)}.`);
       if (defeatPend102) return injectContinuation(defeatPend102, pending.continuation);
       return pending.continuation;
     }
@@ -17264,6 +17792,22 @@ function applyAbilityEffect(
       });
       return { type: "attack-target", attackerPlayId: targetPlayId, source: "LOF_124", continuation: pending.continuation ?? null };
     }
+    case "HMW_149": { // Log Trap — the chosen unit attacks; its second attack is queued behind it and
+                      // re-checked once the first is over (see refreshPostAttackTargets).
+      if (!targetPlayId || !pending.player) break;
+      if (!GetUnitByPlayId(game.currentGameState, targetPlayId)) break;
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "HMW_149",
+        continuation: {
+          type: "attack-target",
+          attackerPlayId: targetPlayId,
+          source: LOG_TRAP_SECOND_ATTACK,
+          continuation: pending.continuation ?? null,
+        },
+      };
+    }
     case "SOR_150": { // Heroic Sacrifice — chosen unit attacks with +2/+0; dies after dealing combat damage
       if (!targetPlayId || !pending.player) break;
       const gs150 = game.currentGameState;
@@ -17420,8 +17964,14 @@ function applyAbilityEffect(
       dealPowerToEnemy(game.currentGameState, game.gameLog, "Haymaker", pending.sourcePlayId, targetPlayId);
       break;
     }
-    case "SOR_162": //Disabling Fang Fighter
-    case "SHD_166": //reprint of SOR_162
+    case "SOR_162": //Disabling Fang Fighter — "You may defeat an upgrade." Nothing more: the 1
+    case "SHD_166": //reprint of SOR_162      damage below is System Shock's text alone.
+    {
+      if (!targetPlayId) break;
+      const pend162 = defeatUpgradeByPlayId(game.currentGameState, game.gameLog, targetPlayId, CardTitle(pending.cardId), pending.continuation ?? null, pending.player);
+      if (pend162) return pend162;
+      break;
+    }
     case "JTL_175": { // System Shock — defeat the upgrade; only if it actually left, 1 damage to its unit.
       if (!targetPlayId) break;
       const gs175 = game.currentGameState;
@@ -17591,6 +18141,25 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "HMW_006": { // Omega — the chosen Heroism unit attacks with Grit for this attack. grit.ts
+                      // reads the targeted ForAttack effect; it ends with the attack.
+      if (!targetPlayId) break;
+      const unit006 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit006) break;
+      game.currentGameState.currentEffects.push({
+        cardId: "HMW_006",
+        duration: "ForAttack",
+        affectedPlayer: unit006.controller,
+        targetPlayId,
+      });
+      game.gameLog.push(`${CardTitle("HMW_006")}: ${CardTitle(unit006.cardId)} gains Grit for this attack.`);
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "HMW_006",
+        continuation: pending.continuation ?? null,
+      };
     }
     case "JTL_146": // Massassi Tactical Officer — the chosen Fighter attacks with +2/+0 for this attack.
     case "IBH_023": // General Rieekan — the chosen other Heroism unit attacks with +2/+0 for this attack.
@@ -17828,6 +18397,13 @@ function applyAbilityEffect(
     case "SHD_235": { // Ruthless Assassin WP: Deal 2 damage to the chosen friendly unit.
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
+      break;
+    }
+    case "HMW_158": { // Battle-Scarred Destroyer WP: deal 4 damage to the chosen FRIENDLY unit.
+      if (!targetPlayId || pending.player === undefined) break;
+      const target158 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target158 || target158.controller !== pending.player) break; // the offer is only a filter
+      DealDamageToUnit(game.currentGameState, "HMW_158", targetPlayId, 4, game.gameLog, pending.player);
       break;
     }
     case "LAW_173": { // BT-1 On Attack: deal 1 damage to the chosen ground unit.
@@ -18612,7 +19188,7 @@ function applyAbilityEffect(
             // pilot leader (Luke JTL_012) isn't protected from it — but the card still cannot enter
             // an illegal zone, so it is defeated instead and returns to the leader zone exhausted.
             game.gameLog.push(`${CardTitle("SOR_199")}: ${CardTitle(upg.cardId)} cannot be returned to hand.`);
-            upgradeLeavesPlay(game.currentGameState, upg, game.gameLog);
+            UpgradeLeavesPlay(game.currentGameState, upg, game.gameLog);
           } else if (IsTokenUpgrade(upg.cardId)) {
             game.gameLog.push(`${CardTitle("SOR_199")}: ${CardTitle(upg.cardId)} token set aside.`);
           } else {

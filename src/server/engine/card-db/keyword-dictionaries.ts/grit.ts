@@ -1,6 +1,8 @@
 import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
+import { Unit } from "@/server/engine/unit";
+import { CardAspects } from "@/server/engine/card-db/generated";
 
 export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): boolean
 {
@@ -22,6 +24,11 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
         }
       }
     }
+    // HMW_006 Omega (deployed) — "Other friendly Heroism units gain Grit." Board-wide from a unit,
+    // and outside the non-leader block above: a friendly Heroism LEADER unit benefits too.
+    if (CardAspects(cardId).includes("Heroism") && GetUnitsForPlayer(player).some(
+      u => u.cardId === "HMW_006" && u.playId !== playId && !Unit.FromInterface(u).LostAbilities(),
+    )) return true;
     const upgrades = unit.upgrades;
     for(const u of upgrades) {
       switch(u.cardId) {
@@ -46,6 +53,7 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
       if(currentEffect.targetPlayId && currentEffect.targetPlayId !== playId) continue;
       switch(currentEffect.cardId) {
         case "TWI_172": return true;//Grim Resolve
+        case "HMW_006": return true;//Omega leader Action — for this attack
         default: break;
       }
     }

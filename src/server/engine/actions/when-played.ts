@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, IsLeaderUnit, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits } from "@/server/engine/core-functions";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, IsLeaderUnit, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits, CanUnitReady } from "@/server/engine/core-functions";
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost, CardIsPlayable, DiscardUnitsPlayableAtDiscount } from "@/server/engine/card-playability";
-import { DrawCardForPlayer } from "@/server/engine/core-functions";
+import { DrawCardForPlayer, DrawCardsForPlayer, DefeatableNonLeadersWithPowerAtMost, ReadyableUnitsWithPowerAtMost, UpgradesOnEnemyUnits } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds, UpgradeDestinationsOnControlChange, PilotlessFighterOrTransportPlayIds, PilotlessEnemyVehiclePlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending, BudgetSelectPending, PlayFromHandPending } from "@/server/engine/pending-resolution";
@@ -272,6 +272,46 @@ export function buildHunterChoice(
   } satisfies ChooseOnePending;
 }
 
+/**
+ * HMW_058 Mysterious Disappearance — the players who can be "a player" for it: those controlling a
+ * non-leader unit (a piloting leader makes its host a leader unit, so IsLeaderUnit covers both).
+ */
+export function MysteriousDisappearancePlayers(caster: PlayerId): PlayerId[] {
+  return ([caster, GetOtherPlayer(caster)] as PlayerId[])
+    .filter(p => GetUnitsForPlayer(p).some(u => !IsLeaderUnit(u)));
+}
+
+/**
+ * HMW_058 Mysterious Disappearance — `chooser` picks one of their own non-leader units. The
+ * caster's "You may defeat that unit" offer rides as the continuation: it is what carries the
+ * caster through the chooser's step, and the pick fills in which unit it is about.
+ */
+export function buildMysteriousDisappearancePick(
+  caster: PlayerId,
+  chooser: PlayerId,
+  continuation: PendingResolution | null,
+): AbilityTargetPending | null {
+  const units = GetUnitsForPlayer(chooser).filter(u => !IsLeaderUnit(u));
+  if (units.length === 0) return null;
+  return {
+    type: "ability-target",
+    cardId: "HMW_058_pick",
+    player: chooser, // the CHOSEN player answers, not the caster
+    helperText: `${CardTitle("HMW_058")}: choose a non-leader unit you control.`,
+    fromPlayIds: units.map(u => u.playId),
+    continuation: {
+      type: "ability-option",
+      cardId: "HMW_058_defeat",
+      player: caster,
+      helperText: `${CardTitle("HMW_058")}: defeat that unit?`,
+      yesLabel: "Defeat it",
+      noLabel: "Skip",
+      onYes: null,
+      continuation,
+    } satisfies AbilityOptionPending,
+  } satisfies AbilityTargetPending;
+}
+
 export function resolveWhenPlayed(
   cardId: string,
   player: PlayerId,
@@ -324,7 +364,7 @@ export function resolveWhenPlayed(
                       // on the top of your deck and another card from your hand on the bottom of
                       // your deck." Both placements are mandatory with fixed destinations, so this
                       // is two sequential hand picks rather than a top-or-bottom choice.
-      for (let i = 0; i < 3; i++) DrawCardForPlayer(game.currentGameState, game.gameLog, player);
+      DrawCardsForPlayer(game.currentGameState, game.gameLog, player, 3); // one draw event, not three
       return buildKreiaHandPick(player, "top");
     }
     case "SHD_214": { // Frontier Trader — "When Played: You may return a resource you control to
@@ -901,7 +941,8 @@ export function resolveWhenPlayed(
     case "SOR_162": //Disabling Fang Fighter: You may defeat an upgrade.
     case "SHD_166": //reprint of SOR_162
       if (!playId && !player) return null;
-      const allUpgradePlayIds162 = AllUnits().flatMap(u => u.upgrades.map(upg => upg.playId));
+      // "An upgrade" — on a unit or a base, minus those protected from enemy abilities.
+      const allUpgradePlayIds162 = DefeatableUpgradePlayIds(player);
       if (allUpgradePlayIds162.length === 0) return null;
       return optionalTarget(cardId, player, allUpgradePlayIds162,
         "Defeat an upgrade?", { yesLabel: "Defeat", sourcePlayId: playId });
@@ -1086,6 +1127,18 @@ export function resolveWhenPlayed(
       return optionalTarget(cardId, player, readyOthers064.map(u => u.playId),
         "Attack with another unit? It gets +2/+0 for this attack.", { yesLabel: "Attack" });
     }
+    case "HMW_042": { // Dooku (Corruption Must Be Eradicated) — "When Played: You may ready another
+                      // unit. If you do, heal damage from a base equal to that unit's cost." Either
+                      // side's unit; only an exhausted one that is allowed to ready can be "done".
+      const gs042 = GetGame()?.currentGameState;
+      if (!gs042) return null;
+      const readyable042 = AllUnits()
+        .filter(u => u.playId !== playId && !u.ready && CanUnitReady(gs042, u));
+      if (readyable042.length === 0) return null;
+      return optionalTarget(cardId, player, readyable042.map(u => u.playId),
+        "Ready another unit? If you do, heal damage from a base equal to its cost.",
+        { yesLabel: "Ready", sourcePlayId: playId });
+    }
     case "IBH_068": // General Veers — "When Played: If you control a Vigilance unit, deal 2 damage to an
     case "IBH_088": { // enemy base and heal 2 damage from your base." Mandatory + conditional, no target.
       const game068 = GetGame();
@@ -1096,6 +1149,23 @@ export function resolveWhenPlayed(
       game068.gameLog.push(`${CardTitle(cardId)}: dealt 2 damage to player ${opponent068}'s base.`);
       HealBaseForPlayer(game068.currentGameState, player, 2, game068.gameLog, cardId);
       return null;
+    }
+    case "SHD_189": { // Slaver's Freighter — "When Played: You may ready another unit with power equal to
+                      // or less than the number of upgrades on enemy units." Either side's unit.
+      const gs189 = GetGame()?.currentGameState;
+      if (!gs189) return null;
+      const readyable189 = ReadyableUnitsWithPowerAtMost(gs189, UpgradesOnEnemyUnits(player), playId);
+      if (readyable189.length === 0) return null;
+      return optionalTarget(cardId, player, readyable189.map(u => u.playId),
+        "Ready another unit with power equal to or less than the number of upgrades on enemy units?",
+        { yesLabel: "Ready", sourcePlayId: playId });
+    }
+    case "HMW_068": { // Imperial Commandos — "When Played: You may defeat a non-leader unit with 4 or
+                      // less power." Either side; the Commandos (4 power) can pick themselves.
+      const eligible068 = DefeatableNonLeadersWithPowerAtMost(player, 4);
+      if (eligible068.length === 0) return null;
+      return optionalTarget(cardId, player, eligible068.map(u => u.playId),
+        "Defeat a non-leader unit with 4 or less power?", { yesLabel: "Defeat" });
     }
     case "IBH_099": { // Blizzard One — "When Played: You may defeat a non-leader ground unit with 3 or
                       // less remaining HP."
@@ -1617,7 +1687,8 @@ export function resolveWhenPlayed(
     case "SHD_209": { // Criminal Muscle — "You may return a non-unique upgrade to its owner's hand."
                       // Tokens are upgrades but have no card to return, so they are excluded with
                       // the unique ones.
-      const eligible209 = DefeatableUpgradePlayIds(player).filter(pid => {
+      // Units only: it RETURNS rather than defeats, and a base upgrade has no return path yet.
+      const eligible209 = DefeatableUpgradePlayIds(player, { unitsOnly: true }).filter(pid => {
         const upg = FindUpgradeByPlayId(pid);
         return !!upg && !CardIsUnique(upg.cardId) && !upg.cardId.includes("_T");
       });
@@ -2372,6 +2443,31 @@ export function resolveWhenPlayed(
       if (units079.length === 0) return null;
       return mandatoryTarget(cardId, player, units079.map(u => u.playId));
     }
+    case "HMW_058": { // Mysterious Disappearance — "A player chooses a non-leader unit they
+                      // control. You may defeat that unit. If you do, that player creates a Beast
+                      // token." A player with nothing to choose can't be the one chosen; with a
+                      // single candidate there is nothing to ask, and with none the event fizzles.
+      const players058 = MysteriousDisappearancePlayers(player);
+      if (players058.length === 0) return null;
+      if (players058.length === 1) return buildMysteriousDisappearancePick(player, players058[0], null);
+      return {
+        type: "choose-one",
+        cardId,
+        player,
+        options: [
+          { id: "you", label: "You" },
+          { id: "opponent", label: "Opponent" },
+        ],
+        continuation: null,
+      } satisfies ChooseOnePending;
+    }
+    case "HMW_149": { // Log Trap — "Attack with a friendly unit. Then attack with it again, even if
+                      // it's exhausted." The "even if exhausted" belongs to the SECOND attack only,
+                      // so the first needs a ready unit. No ready unit: the event does nothing.
+      const attackers149 = GetUnitsForPlayer(player, true).filter(u => CanUnitAttack(u));
+      if (attackers149.length === 0) return null;
+      return mandatoryTarget(cardId, player, attackers149.map(u => u.playId));
+    }
     case "LOF_124": { // Niman Strike — "Attack with a Force unit, even if it's exhausted. It gets
                       // +1/+0 and can't attack bases for this attack." Exhausted units are eligible:
                       // the ready check lives on the initiate-attack path, not this one.
@@ -2392,16 +2488,9 @@ export function resolveWhenPlayed(
       return mandatoryTarget(cardId, player, eligible246.map(u => u.playId));
     }
     case "SOR_150": { // Heroic Sacrifice — "Draw a card, then attack with a unit. It gets +2/+0 and dies when it deals combat damage."
-      const game150 = game!;
-      const gs150 = game150.currentGameState;
-      const p150 = player === 1 ? gs150.player1 : gs150.player2;
-      if (p150.deck.length > 0) {
-        p150.hand.push(p150.deck.pop()!);
-        game150.gameLog.push(`${CardTitle("SOR_150")}: drew a card.`);
-      } else {
-        DealDamageToBase(gs150, player, 3);
-        game150.gameLog.push(`${CardTitle("SOR_150")}: drew from empty deck — 3 damage to base.`);
-      }
+      // Through the draw helper, not a bare deck→hand move: the draw must be counted and seen by
+      // draw reactions, and an empty deck costs the usual 3.
+      DrawCardForPlayer(game!.currentGameState, game!.gameLog, player);
       const attackers150 = GetUnitsForPlayer(player, true);
       if (attackers150.length === 0) return null;
       return {
@@ -2886,7 +2975,7 @@ export function resolveWhenPlayed(
     }
     case "JTL_175": { // System Shock — "Defeat a non-leader upgrade attached to a unit. If you do,
                       // deal 1 damage to that unit." Tokens count; a leader Pilot doesn't.
-      const upgrades175 = DefeatableUpgradePlayIds(player).filter(id => {
+      const upgrades175 = DefeatableUpgradePlayIds(player, { unitsOnly: true }).filter(id => {
         const upg = FindUpgradeByPlayId(id);
         return upg !== null && !CardIsLeader(upg.cardId);
       });
@@ -2987,11 +3076,7 @@ export function resolveWhenPlayed(
     case "HMW_102": { // Dragon's Might — "Defeat a non-leader unit with 4 or less power."
                       // The power limit reads CURRENT power, not printed: the event resolves when
                       // announced, so a buff can carry a unit out of range and a debuff into it.
-      const eligible102 = AllUnits().filter(u =>
-        !Unit.FromInterface(u).IsLeader()
-        && Unit.FromInterface(u).CurrentPower() <= 4
-        && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player),
-      );
+      const eligible102 = DefeatableNonLeadersWithPowerAtMost(player, 4);
       if (eligible102.length === 0) return null;
       return mandatoryTarget(cardId, player, eligible102.map(u => u.playId));
     }
@@ -3240,6 +3325,7 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "HMW_158": // Battle-Scarred Destroyer — "Deal 4 damage to a friendly unit." (itself included)
     case "SHD_235": { // Ruthless Assassin — When Played: Deal 2 damage to a friendly unit. (mandatory)
       const friendly235 = GetUnitsForPlayer(player);
       if (friendly235.length === 0) return null;

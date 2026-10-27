@@ -1,14 +1,14 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
-import { GetUnitByPlayId, GetOtherPlayer, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage } from "@/server/engine/core-functions";
+import { GetUnitByPlayId, GetOtherPlayer, ReadyUnit, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage, FriendlyUnitsWithTrait } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles, AllCardTraits } from "@/server/engine/card-db/generated";
 import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens, GiveExperienceTokens, CreateSpy, PlayerGaveTokenUpgradeThisPhase } from "@/server/engine/token-helpers";
-import { CreateMandalorianToken, CreateXWing } from "@/server/engine/token-helpers";
+import { CreateMandalorianToken, CreateXWing, CreateBeast, UnitsWithTokenUpgrade } from "@/server/engine/token-helpers";
 import { jabbasRancorDamage, buildTraskWalkerChoice, buildAethersprite, buildTwinsSentinel, buildPreVizslaOffer } from "@/server/engine/actions/when-played";
 
 /**
@@ -946,6 +946,31 @@ function resolveInnateOnAttack(
         { yesLabel: "Give", continuation },
       );
     }
+    case "HMW_015": { // Bossk (deployed) — "On Attack: You may deal 2 damage to a unit with a token
+                      // upgrade on it." Either side's units, Bossk himself included.
+      const tokened015 = UnitsWithTokenUpgrade(AllUnits());
+      if (tokened015.length === 0) return continuation;
+      return optionalTarget(
+        "HMW_015_OA",
+        attacker.controller,
+        tokened015.map(u => u.playId),
+        "Deal 2 damage to a unit with a token upgrade on it?",
+        { yesLabel: "Deal 2 damage", continuation },
+      );
+    }
+    case "HMW_012": { // Poggle the Lesser (deployed) — "On Attack: You may ready a friendly Creature
+                      // unit and deal 1 damage to it." Ready or exhausted, any friendly Creature;
+                      // with none there is nothing to offer.
+      const creatures012 = FriendlyUnitsWithTrait(attacker.controller, "Creature");
+      if (creatures012.length === 0) return continuation;
+      return optionalTarget(
+        "HMW_012_OA",
+        attacker.controller,
+        creatures012.map(u => u.playId),
+        "Ready a friendly Creature unit and deal 1 damage to it?",
+        { yesLabel: "Ready", continuation },
+      );
+    }
     case "TWI_015": { // General Grievous (deployed) — "On Attack: You may give a Droid unit +1/+0
                       // and Sentinel for this phase." Any Droid unit, either side; Grievous is
                       // Separatist/Official, so he is never among his own targets.
@@ -978,6 +1003,13 @@ function resolveInnateOnAttack(
     }
     case "JTL_088": // Captain Phasma — the On Attack half; When Played calls the same builder.
       return buildPhasmaOnMyCommandOffer(attacker.controller, attacker.playId, continuation);
+    case "HMW_047": { // Eravana — "On Attack: Create a Beast token and ready it."
+      const game047 = GetGame();
+      if (!game047) return continuation;
+      const beast047 = CreateBeast(game047.currentGameState, attacker.controller, game047.gameLog, "HMW_047");
+      ReadyUnit(game047.currentGameState, beast047);
+      return continuation;
+    }
     case "TWI_002": { // Nute Gunray (deployed) — "On Attack: Create a Battle Droid token."
       const game002 = GetGame();
       if (game002) CreateBattleDroid(game002.currentGameState, attacker.controller, game002.gameLog, "TWI_002");

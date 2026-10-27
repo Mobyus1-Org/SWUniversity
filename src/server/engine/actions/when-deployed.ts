@@ -4,7 +4,7 @@ import { GetGame, IsLeaderUnit, AfterNonCombatUnitDamage, AllUnits, DealDamageTo
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
-import { CreateCloneTrooper } from "@/server/engine/token-helpers";
+import { CreateBeast, CreateCloneTrooper } from "@/server/engine/token-helpers";
 import { DiscardUnitsPlayableAtDiscount } from "@/server/engine/card-playability";
 
 export function resolveWhenDeployed(
@@ -74,6 +74,10 @@ export function resolveWhenDeployed(
         costReduction: 5,
         continuation: null,
       };
+    }
+    case "HMW_012": { // Poggle the Lesser — When Deployed: Create a Beast token.
+      CreateBeast(game.currentGameState, player, log, "HMW_012");
+      return null;
     }
     case "TWI_007": { // Captain Rex — When Deployed: Create a Clone Trooper token.
       CreateCloneTrooper(game.currentGameState, player, log, "TWI_007");

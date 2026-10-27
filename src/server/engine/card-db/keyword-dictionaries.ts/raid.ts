@@ -180,6 +180,8 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "SOR_144": amount += 1; break; //Red Three
     case "SOR_208": amount += 1; break; //Outer Rim Headhunter
     case "SOR_248": amount += 1; break; //Volunteer Soldier
+    case "HMW_039": amount += 1; break; //Mother Talzin (Pledged to the Sisterhood)
+    case "HMW_167": amount += 3; break; //Dune Sea Nomads
     case "SHD_169": amount += 3; break; //Clan Challengers
     case "SHD_098": amount += 2; break; //Sundari Peacekeeper
     case "SHD_100": amount += 2; break; //Modded Cohort

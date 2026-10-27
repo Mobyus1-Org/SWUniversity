@@ -148,6 +148,10 @@ export const Cards = {
       maulOldMaster: "HMW_016", // Old Master — plays a unit and immediately defeats it
       osha: "HMW_017",          // Haunted By Her Past — plays a Villainy unit out of the resource row
       theWarrior: "HMW_018",    // Deft Duelist — plays a low-POWER unit and grants it Ambush
+      mazKanata: "HMW_002",     // Eclectic Pirate Queen — plays a Fringe/Underworld unit at −1 with a Weakness
+      omega: "HMW_006",         // Close Your Eyes and Focus — attack with a Heroism unit with Grit
+      poggleTheLesser: "HMW_012", // Let the Executions Begin — ready a Creature and deal 1 to it
+      bossk: "HMW_015",         // Cruel Hunter — heal 1 + Weakness on a damaged enemy
     },
     jtl: {
       asajjVentress: "JTL_001",
@@ -334,6 +338,7 @@ export const Cards = {
       fightersForFreedom: "SOR_143",
       k2so: "SOR_145",
       wampa: "SOR_164",
+      disablingFangFighter: "SOR_162", // 3/2 Space — When Played: may defeat an upgrade
       chewbaccaLoyalCompanion: "SOR_196",
       greedo: "SOR_204",
       craftySmuggler: "SOR_207",
@@ -388,6 +393,8 @@ export const Cards = {
     },
     shd: {
       migsMayfeldTriggerman: "SHD_163",
+      criminalMuscle: "SHD_209", // 2/1 Ground — When Played: may return a non-unique upgrade to hand
+      slaversFreighter: "SHD_189", // 4/5 Space — When Played: may ready another unit with power ≤ upgrades on enemy units
       omegaPartOfTheSquad: "SHD_198",
       toroCalican: "SHD_239",
       ladyProxima: "SHD_255",
@@ -422,6 +429,7 @@ export const Cards = {
       sundariPeaceKeeper: "SHD_098",
       clanChallengers: "SHD_169",
       recklessGunslinger: "SHD_160",
+      underworldThug: "SHD_257", // 2/3 Ground, cost 2, no aspects, Underworld, no abilities
       fourLom: "SHD_188",
       zuckuss: "SHD_190",
       hylobonEnforcer: "SHD_027",
@@ -857,6 +865,23 @@ export const Cards = {
       thirdSister: "HMW_051",        // 6/3 Ground — Overwhelm + the alternating damage chain
       darthVaderAnyMethods: "HMW_043", // 9/8 Ground — Saboteur + search 8, play 2 free, 2 damage
       jaxxon: "HMW_219",            // 3/3 Ground, cost 1, Cunning, UNIQUE, no abilities
+      filthyDianoga: "HMW_155",     // 5/5 Ground, cost 4, Aggression/Villainy, Creature, no abilities
+      rexOutservedHisPurpose: "HMW_141", // 5/6 Ground — friendly units with no abilities get +1/+1
+      motherTalzinPledged: "HMW_039", // 3/4 Ground — Raid 1; each other friendly unit gains Restore 1
+      chiefChirpa: "HMW_164",       // 1/5 Ground Ewok — +1/+0 for each other friendly Ewok unit
+      duneSeaNomads: "HMW_167",     // 3/5 Ground — Raid 3, nothing else
+      outerRimGarrison: "HMW_146",  // 6/6 Ground, cost 7 — Ambush + Overwhelm, nothing else
+      dookuCorruption: "HMW_042",   // 8/7 Ground — Overwhelm; When Played: may ready another unit, heal a base by its cost
+      yodaTrickster: "HMW_056",     // 4/4 Ground — Hidden; When Defeated: may go discard → deck top, heal 2 from a base
+
+      eravana: "HMW_047",           // 1/7 Space — On Attack: create a Beast token and ready it
+      arenaAcklay: "HMW_156",       // 5/6 Ground — dealt damage and survives: 2 to each enemy base
+      crosshairIveChanged: "HMW_169", // 5/6 Ground — damaged & survives: each player draws; opponent draws → 2 to their base
+      battleScarredDestroyer: "HMW_158", // 7/8 Space — When Played: deal 4 damage to a friendly unit
+      imperialCommandos: "HMW_068", // 4/4 Ground — When Played: may defeat a non-leader unit with 4 or less power
+      greaterSarlacc: "HMW_049",    // 9/8 Ground, cost 9 — Overwhelm; defeat ready resources, -3 cost each
+      vernestraRwoh: "HMW_048",     // 5/5 Ground, cost 6 — Sentinel; recycle up to 2 cost-≤5 units, gains their When Played
+      hijackedAtSt: "HMW_121",      // 7/7 Ground, cost 5 — Overwhelm; When Played: this unit doesn't ready next regroup
     },
   },
   upgrades: {
@@ -951,6 +976,9 @@ export const Cards = {
       bestialBond: "HMW_038",            // +2/+2 Innate — Beast token on a Creature or Force host
       verdantFortress: "HMW_126",        // Fortify — attached base grants friendly units Raid 1
       sinisterWarMemorial: "HMW_113",    // Fortify — base heals 1 when a friendly unit is defeated
+      bactaTank: "HMW_037",              // Fortify — Action [defeat this upgrade]: recur a unit to the deck
+      heavyIonCannon: "HMW_172",         // Fortify — draw on play; base Action [discard]: 2 damage to a unit, once per phase
+      tarkinDoctrine: "HMW_206",         // unique Fortify — base gains "play a Fortification: exhaust an enemy"
       direProwess: "HMW_097",            // +1/+1 Learned — When Played: may give a Weakness token
     },
   },
@@ -1035,6 +1063,7 @@ export const Cards = {
       smokeAndCinders: "SOR_174",
       forcedSurrender: "SOR_175",
       noGoodToMeDead: "SOR_186",
+      forceLightning: "SOR_138", // a unit loses all abilities for this phase
       bamboozle: "SOR_199",
       vigilance: "SOR_058",
       command: "SOR_107",
@@ -1195,6 +1224,8 @@ export const Cards = {
       alwaysABiggerFish: "HMW_099", // Defeat a friendly Creature, play a bigger one free
       seismicDetonation: "HMW_054",  // Choose an arena; 3 to each enemy there at regroup start
       lowAltitudeCombat: "HMW_050", // Move a space unit to the ground arena, then maybe attack
+      logTrap: "HMW_149",           // Attack with a friendly unit, then again (exhausted), not a base
+      mysteriousDisappearance: "HMW_058", // A player picks their non-leader unit; may defeat → Beast
     },
   },
 }

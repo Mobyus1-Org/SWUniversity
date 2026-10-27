@@ -10,6 +10,7 @@ import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid
 import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { AbilityOptionPending, AbilityTargetPending, DeckSearchPending, PendingResolution } from "@/server/engine/pending-resolution";
 import { UpgradeEligibleTargets, IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
+import { UpgradeGrantsHostAction } from "@/server/engine/actions/action-ability";
 
 let activeGame: Game | null = null;
 
@@ -158,6 +159,11 @@ export function PlayerHasUnitInPlay(player: PlayerId, cardId: string): boolean {
   const allUnitsInPlay = [...playerObj.spaceArena, ...playerObj.groundArena];
 
   return allUnitsInPlay.some(card => card.cardId === cardId);
+}
+
+/** The units `player` controls that have `trait` — "a friendly Creature unit" (HMW_012 Poggle). */
+export function FriendlyUnitsWithTrait(player: PlayerId, trait: string) {
+  return GetUnitsForPlayer(player).filter(u => TraitContains(u.cardId, trait, player, u.playId));
 }
 
 export function PlayerHasUnitWithTraitInPlay(player: PlayerId, trait: string,
@@ -1181,6 +1187,140 @@ export function CapBaseDamage(targetPlayer: PlayerId, amount: number): number {
  * `base.damage` directly so every future "when your base is dealt damage" card keeps working.
  */
 /**
+ * JTL_094 Luke Skywalker as a pilot runs his own exit: the player may eject him to the ground
+ * arena instead, and that handler RE-CREATES him with addToArena. Routing him here as well would
+ * put a second copy in the discard, so every leave-play site skips him.
+ */
+function upgradeHasBespokeExit(cardId: string): boolean {
+  return cardId === "JTL_094";
+}
+
+/**
+ * Routes an upgrade that has just left play to the zone it legally belongs in.
+ *
+ * Units have had this chokepoint all along (removeFromArena + pushToDiscard, with an explicit
+ * leader-zone branch); upgrades had none, so every removal site invented its own destination and
+ * none of them handled the discard or the leader zone at all.
+ *
+ *  • A LEADER card may only be in the leader zone or in play — never hand, deck or discard. It
+ *    goes back to the zone EXHAUSTED, mirroring how a defeated leader UNIT is handled.
+ *  • A token upgrade is set aside rather than discarded (CR 7.6.1).
+ *  • Everything else goes to its OWNER's discard.
+ *
+ * Lives here rather than in dispatch-listener so the synchronous base-damage path (HMW_081 Alliance
+ * Shield Generator defeating itself inside DealDamageToBase) gets the same bookkeeping.
+ */
+export function UpgradeLeavesPlay(game: GameState, upgrade: CardInPlay, log: string[]): void {
+  if (upgradeHasBespokeExit(upgrade.cardId)) return;
+
+  const owner = (upgrade.owner ?? upgrade.controller) as PlayerId;
+
+  if (CardIsLeader(upgrade.cardId)) {
+    const leader = GetPlayer(game, owner).leader;
+    // Guard against a stale card: only reset the zone if this really is that player's leader.
+    if (leader.cardId === upgrade.cardId) {
+      leader.deployed = false;
+      leader.ready = false;
+      leader.deployedPlayId = undefined;
+    }
+    log.push(`${CardTitle(upgrade.cardId)} returned to Player ${owner}'s leader zone exhausted.`);
+    return;
+  }
+
+  if (IsTokenUpgrade(upgrade.cardId)) {
+    log.push(`${CardTitle(upgrade.cardId)} token set aside.`);
+    return;
+  }
+
+  // ASH_161 Zeb Orrelios — "When a friendly upgrade is defeated: Deal 1 damage to a base." The
+  // declared `when-upgrade-detached` trigger type is never dispatched anywhere, so this hooks the
+  // real chokepoint instead. Mandatory and targetless in practice: it always hits the enemy base.
+  const zebs161 = [...GetPlayer(game, owner).groundArena, ...GetPlayer(game, owner).spaceArena]
+    .filter(u => u.cardId === "ASH_161" && !Unit.FromInterface(u).LostAbilities());
+  if (zebs161.length > 0 && !IsTokenUpgrade(upgrade.cardId)) {
+    for (let i = 0; i < zebs161.length; i++) {
+      DealDamageToBase(game, owner === 1 ? 2 : 1, 1, owner);
+      log.push(`${CardTitle("ASH_161")}: dealt 1 damage to player ${owner === 1 ? 2 : 1}'s base.`);
+    }
+  }
+
+  // TWI_069 Roger Roger — "When Defeated: Attach this upgrade to a friendly Battle Droid token."
+  // It never reaches the discard while a token is available to take it, so this sits ahead of the
+  // discard below. Its own host has already been removed by the time this runs, so any remaining
+  // Battle Droid token is by definition a different one.
+  if (upgrade.cardId === "TWI_069") {
+    const droid069 = [...GetPlayer(game, owner).groundArena, ...GetPlayer(game, owner).spaceArena]
+      .find(u => u.cardId === "TWI_T01" || u.cardId === "TS26_T01");
+    if (droid069) {
+      droid069.upgrades.push({
+        cardId: "TWI_069",
+        playId: String(game.nextPlayId++),
+        owner,
+        controller: owner,
+      });
+      log.push(`${CardTitle("TWI_069")}: re-attached to ${CardTitle(droid069.cardId)}.`);
+      return;
+    }
+  }
+
+  GetPlayer(game, owner).discard.unshift({
+    cardId: upgrade.cardId,
+    playId: upgrade.playId,
+    owner,
+    controller: owner,
+    turnDiscarded: game.currentRound,
+    discardEffect: "",
+  });
+  log.push(`${CardTitle(upgrade.cardId)} was put into Player ${owner}'s discard.`);
+}
+
+/** The player whose base the upgrade `playId` is attached to, or null when it isn't on a base. */
+export function BaseUpgradeHolder(gs: GameState, playId: string): PlayerId | null {
+  for (const player of [1, 2] as PlayerId[]) {
+    if ((GetPlayer(gs, player).base.upgrades ?? []).some(u => u.playId === playId)) return player;
+  }
+  return null;
+}
+
+/**
+ * HMW_060 Vice Admiral Rampart — "If an upgrade on your base would be defeated, you may defeat this
+ * unit instead." The Rampart that may replace the defeat of an upgrade on `basePlayer`'s base, or
+ * null. "Your base" is his controller's, so only a Rampart `basePlayer` controls qualifies; he is
+ * unique, so there is never more than one, and one that has lost its abilities offers nothing.
+ */
+export function BaseUpgradeDefeatReplacer(gs: GameState, basePlayer: PlayerId): UnitInterface | null {
+  const pState = GetPlayer(gs, basePlayer);
+  return [...pState.groundArena, ...pState.spaceArena]
+    .find(u => u.cardId === "HMW_060" && !Unit.FromInterface(u).LostAbilities()) ?? null;
+}
+
+/**
+ * The plain half of defeating an upgrade on a base: takes it off and routes it through
+ * UpgradeLeavesPlay (owner's discard, ASH_161 Zeb's reaction). Offers NO replacement — that is
+ * defeatBaseUpgrade's job in dispatch-listener, which every non-cost removal goes through; a
+ * synchronous site that can't return a prompt queues a "base-upgrade-defeat" trigger instead.
+ * Returns the removed upgrade, or null when `playId` isn't on that base.
+ */
+export function RemoveUpgradeFromBase(
+  gs: GameState,
+  log: string[],
+  basePlayer: PlayerId,
+  playId: string,
+): CardInPlay | null {
+  const base = GetPlayer(gs, basePlayer).base;
+  const upgrade = (base.upgrades ?? []).find(u => u.playId === playId);
+  if (!upgrade) return null;
+  base.upgrades = (base.upgrades ?? []).filter(u => u.playId !== playId);
+  UpgradeLeavesPlay(gs, upgrade, log);
+  return upgrade;
+}
+
+/** True while the defeat of base upgrade `playId` is held in the trigger bag awaiting HMW_060. */
+function BaseUpgradeDefeatQueued(gs: GameState, playId: string): boolean {
+  return gs.triggerBag.some(t => t.triggerType === "base-upgrade-defeat" && t.playId === playId);
+}
+
+/**
  * HMW_081 Alliance Shield Generator — "If attached base would be dealt 5 or more damage, prevent
  * that damage. If you do, defeat this upgrade and draw a card."
  *
@@ -1191,25 +1331,37 @@ export function CapBaseDamage(targetPlayer: PlayerId, amount: number): number {
  * the damage as thrown, and both effects belong to the defender anyway, so taking the stronger of
  * the two is the outcome that player would choose regardless.
  *
+ * HMW_060 Vice Admiral Rampart may replace the "defeat this upgrade". The prevention is the
+ * "If you do" condition here, not the defeat, so the prevention and the draw happen regardless of
+ * how that is answered — and CR 9.2 would keep the draw even if the defeat were the condition.
+ * The prevention must apply to THIS hit, synchronously, so it stays inline; only the defeat waits
+ * in the trigger bag (this function can't return a prompt) when a Rampart could take its place.
+ * A generator waiting there is already spent and does not prevent a second hit meanwhile.
+ *
  * Returns true when the damage was prevented and the caller should stop.
  */
 function preventBigBaseHit(gs: GameState, player: PlayerId, amount: number): boolean {
   if (amount < 5) return false;
   const base = GetPlayer(gs, player).base;
-  const shield = (base.upgrades ?? []).find(u => u.cardId === "HMW_081");
+  const shield = (base.upgrades ?? [])
+    .find(u => u.cardId === "HMW_081" && !BaseUpgradeDefeatQueued(gs, u.playId));
   if (!shield) return false;
 
-  base.upgrades = (base.upgrades ?? []).filter(u => u.playId !== shield.playId);
   const owner = (shield.owner ?? shield.controller ?? player) as PlayerId;
-  GetPlayer(gs, owner).discard.push({
-    ...shield,
-    controller: owner,
-    turnDiscarded: gs.currentRound,
-    discardEffect: "",
-  });
-
   const log = GetGame()?.gameLog ?? [];
-  log.push(`${CardTitle("HMW_081")}: prevented ${amount} damage to Player ${player}'s base, then was defeated.`);
+  log.push(`${CardTitle("HMW_081")}: prevented ${amount} damage to Player ${player}'s base.`);
+  if (BaseUpgradeDefeatReplacer(gs, player)) {
+    gs.triggerBag.push({
+      triggerType: "base-upgrade-defeat",
+      cardId: "HMW_081",
+      fromPlayer: player,
+      playId: shield.playId,
+      nested: gs.triggerBag.length > 0,
+    });
+  } else {
+    RemoveUpgradeFromBase(gs, log, player, shield.playId);
+    log.push(`${CardTitle("HMW_081")} was defeated.`);
+  }
   DrawCardForPlayer(gs, log, owner);
   return true;
 }
@@ -1323,6 +1475,33 @@ export function UnitHasWhenDefeatedAbility(unit: Unit): boolean {
   if (unit.upgrades.some(u => u.cardId === "TWI_218" || u.cardId === "SHD_053")) return true;
   return GetUnitsForPlayer(unit.controller)
     .some(u => u.cardId === "SOR_105" && u.playId !== unit.playId);
+}
+
+/**
+ * True when `unit` has no abilities right now (HMW_141 Rex — "Friendly units with no abilities").
+ *
+ * A unit that has lost all its abilities has none. Otherwise it needs blank printed text AND
+ * nothing granting it one: no keyword from any source (Home One's Restore aura, a Sentinel
+ * upgrade, …), no granted When Defeated, and no upgrade/effect handing the host an On Attack or
+ * Action. Tokens attached to it (Experience, Shield) carry their own text but give the HOST
+ * nothing, so they don't disqualify it.
+ *
+ * Printed text is checked first: it is cheap, and it keeps the keyword lookups — some of which
+ * read a unit's stats — away from every card that prints a stat-dependent ability, so calling
+ * this from inside CurrentPower/TotalHP can't recurse.
+ */
+export function UnitHasNoAbilities(unit: Unit): boolean {
+  if (unit.LostAbilities()) return true;
+  if (CardText(unit.cardId).trim() !== "") return false;
+  if (HasKeyword(unit.cardId, "Any", unit.playId, unit.controller)) return false;
+  if (UnitHasWhenDefeatedAbility(unit)) return false;
+  if (unit.upgrades.some(u =>
+    UpgradeGrantsOnAttack(u.cardId, unit.controller, u.playId) || UpgradeGrantsHostAction(u.cardId))) {
+    return false;
+  }
+  return !GetCurrentEffectsForPlayer(unit.controller).some(
+    e => e.targetPlayId === unit.playId && EffectGrantsOnAttack(e.cardId),
+  );
 }
 
 /**
@@ -1685,6 +1864,17 @@ export function ReadyUnitByPlayId(playId: string | undefined, player: PlayerId, 
   game.gameLog.push(`${prefix}readied ${CardTitle(unit.cardId)}.`);
 }
 
+/**
+ * "Ready a friendly <X> unit and deal N damage to it" — HMW_012 Poggle the Lesser, shared by his
+ * leader Action and his deployed On Attack. The damage does not hinge on the ready: a unit that
+ * can't ready still takes it. Friendly damage, so `player` is passed as the source (it reaches a
+ * unit immune to ENEMY damage). The caller sweeps — the damage can be lethal.
+ */
+export function ReadyUnitThenDealDamage(gs: GameState, player: PlayerId, playId: string, amount: number, fromCardId: string): void {
+  ReadyUnitByPlayId(playId, player, fromCardId);
+  DealDamageToUnit(gs, fromCardId, playId, amount, GetGame()?.gameLog, player);
+}
+
 /** True when `captor` has at least one enemy non-leader unit in its arena to capture. */
 export function CaptureVictimsExistFor(captor: UnitInterface): boolean {
   const game = GetGame();
@@ -1696,22 +1886,39 @@ export function CaptureVictimsExistFor(captor: UnitInterface): boolean {
   return units.some(u => !IsLeaderUnit(u) && !UnitImmuneToEnemyCapture(u));
 }
 
-/** The upgrade with this playId, wherever it is attached, or null. */
+/** The upgrade with this playId, wherever it is attached — a unit or a base — or null. */
 export function FindUpgradeByPlayId(playId: string): CardInPlay | null {
   for (const unit of AllUnits()) {
     const upgrade = unit.upgrades.find(u => u.playId === playId);
     if (upgrade) return upgrade;
   }
-  return null;
+  const gs = GetGame()?.currentGameState;
+  if (!gs) return null;
+  return [gs.player1.base, gs.player2.base]
+    .flatMap(b => b.upgrades ?? [])
+    .find(u => u.playId === playId) ?? null;
 }
 
-/** Upgrade playIds `player` may legally target with a "defeat an upgrade" ability. */
-export function DefeatableUpgradePlayIds(player: PlayerId): string[] {
-  return AllUnits().flatMap(u =>
+/**
+ * Upgrade playIds `player` may legally target with a "defeat an upgrade" ability.
+ *
+ * "An upgrade" is unqualified, so it includes the Fortify upgrades on EITHER base. Pass `unitsOnly`
+ * for text that narrows it to units ("attached to a unit", "a unit's upgrade").
+ */
+export function DefeatableUpgradePlayIds(player: PlayerId, opts: { unitsOnly?: boolean } = {}): string[] {
+  const onUnits = AllUnits().flatMap(u =>
     u.upgrades
       .filter(upg => !(UpgradeImmuneToEnemyAbilities(upg.cardId) && u.controller !== player))
       .map(upg => upg.playId),
   );
+  const gs = GetGame()?.currentGameState;
+  if (opts.unitsOnly || !gs) return onUnits;
+  const onBases = ([1, 2] as PlayerId[]).flatMap(basePlayer =>
+    (GetPlayer(gs, basePlayer).base.upgrades ?? [])
+      .filter(upg => !(UpgradeImmuneToEnemyAbilities(upg.cardId) && basePlayer !== player))
+      .map(upg => upg.playId),
+  );
+  return [...onUnits, ...onBases];
 }
 
 /**
@@ -1889,19 +2096,34 @@ export function CardsDrawnThisPhase(player: PlayerId): number {
   return gs.roundState.cardsDrawnThisPhase[player] ?? 0;
 }
 
+/**
+ * Draws ONE card as its own draw event. Every effect that says "draw a card" comes through here;
+ * an effect that draws more than one goes through DrawCardsForPlayer instead, so that its draw is
+ * one event (see there).
+ */
 export function DrawCardForPlayer(gs: GameState, log: string[], player: PlayerId): void {
+  if (MoveTopCardToHand(gs, log, player)) QueueOpponentDrewReaction(gs, player);
+  else DrawEmptyDeckPenalty(gs, log, player, 1);
+}
+
+/**
+ * Puts the top card of `player`'s deck into their hand with the per-CARD draw bookkeeping (the
+ * draw count and "when you draw this card"). False when the deck is empty and nothing moved.
+ *
+ * Not a draw EVENT on its own: the per-event reactions (QueueOpponentDrewReaction) are queued by
+ * the caller, once however many cards the event drew.
+ */
+function MoveTopCardToHand(gs: GameState, log: string[], player: PlayerId): boolean {
   const p = player === 1 ? gs.player1 : gs.player2;
-  if (p.deck.length > 0) {
-    const drawn = p.deck.pop()!;
-    p.hand.push(drawn);
-    MarkCardDrawn(gs, player);
-    log.push(`Player ${player} drew a card.`);
-    // Queued rather than returned: DrawCardForPlayer has many callers, none of which can handle
-    // a pending, so the trigger bag carries it to the end of the current dispatch.
-    QueueWhenDrawnTrigger(gs, player, drawn.cardId);
-    return;
-  }
-  DrawEmptyDeckPenalty(gs, log, player, 1);
+  if (p.deck.length === 0) return false;
+  const drawn = p.deck.pop()!;
+  p.hand.push(drawn);
+  MarkCardDrawn(gs, player);
+  log.push(`Player ${player} drew a card.`);
+  // Queued rather than returned: draws have many callers, none of which can handle a pending,
+  // so the trigger bag carries it to the end of the current dispatch.
+  QueueWhenDrawnTrigger(gs, player, drawn.cardId);
+  return true;
 }
 
 /**
@@ -1911,13 +2133,43 @@ export function DrawCardForPlayer(gs: GameState, log: string[], player: PlayerId
  * of 3. HMW_081 Alliance Shield Generator triggers on "5 or more damage" in one instance, so
  * looping DrawCardForPlayer would slip a 6 past it as 3 + 3. The regroup draw already got this
  * right by computing its penalty once; every card effect that draws more than one card must go
- * through here for the same reason.
+ * through here for the same reason. "When an opponent draws 1 or more cards" (HMW_169) is likewise
+ * one trigger for the whole event.
  */
 export function DrawCardsForPlayer(gs: GameState, log: string[], player: PlayerId, count: number): void {
   const p = player === 1 ? gs.player1 : gs.player2;
   const drawn = Math.min(count, p.deck.length);
-  for (let i = 0; i < drawn; i++) DrawCardForPlayer(gs, log, player);
+  for (let i = 0; i < drawn; i++) MoveTopCardToHand(gs, log, player);
+  if (drawn > 0) QueueOpponentDrewReaction(gs, player);
   if (drawn < count) DrawEmptyDeckPenalty(gs, log, player, count - drawn);
+}
+
+/** Units with "When an opponent draws 1 or more cards during the action phase: …". */
+const OPPONENT_DREW_UNITS = new Set([
+  "HMW_169", // Crosshair (I've Changed) — deal 2 damage to their base
+]);
+
+/**
+ * Queues the "when an opponent draws 1 or more cards during the action phase" reactions of the
+ * units `drawingPlayer`'s opponent controls. Call ONCE PER DRAW EVENT, and only when at least one
+ * card was actually drawn — an empty-deck draw moves nothing. DrawCardForPlayer and
+ * DrawCardsForPlayer call it themselves; a route that puts deck cards into hand some other way
+ * (the deck-search "draw") must call it too.
+ */
+export function QueueOpponentDrewReaction(gs: GameState, drawingPlayer: PlayerId): void {
+  // "During the action phase" — the regroup draw must not trigger it.
+  if (gs.gamePhase !== "ActionPhase") return;
+  const reactor: PlayerId = drawingPlayer === 1 ? 2 : 1;
+  for (const u of GetUnitsForPlayer(reactor)) {
+    if (!OPPONENT_DREW_UNITS.has(u.cardId) || Unit.FromInterface(u).LostAbilities()) continue;
+    gs.triggerBag.push({
+      triggerType: "opponent-drew",
+      cardId: u.cardId,
+      fromPlayer: reactor,
+      playId: u.playId,
+      nested: true,
+    });
+  }
 }
 
 /**
@@ -2074,6 +2326,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "HMW_108": //The First Legion — On Attack: name a trait, enemy cards lose it this phase
     case "HMW_065": //Clone of the Zillo Beast — On Attack: may give a Weakness token to a unit
     case "HMW_003": //Doctor Hemlock (deployed) — On Attack: may give a Weakness token to a unit
+    case "HMW_012": //Poggle the Lesser (deployed) — On Attack: may ready a friendly Creature and deal 1 to it
+    case "HMW_015": //Bossk (deployed) — On Attack: may deal 2 damage to a unit with a token upgrade
     case "HMW_010": //Tarfful (deployed) — On Attack: may pay 1 to create a Beast token
     case "LAW_214": //Boba Fett (For a Price) — On Attack: may pay 1 to deal 3 to a ground unit
     case "ASH_248": //Neel — On Attack: next unit with 1 or less power enters play ready
@@ -2152,6 +2406,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "TWI_094": //Shaak Ti - Unity Wins Wars
     case "SOR_008": //Hera Syndulla (deployed) — On Attack: may give an XP token to another unique unit
     case "TWI_002": //Nute Gunray (deployed) — On Attack: create a Battle Droid token
+    case "HMW_047": //Eravana — On Attack: create a Beast token and ready it
     case "TWI_006": //Wat Tambor (deployed) — On Attack: if a friendly unit was defeated this phase, may give +2/+2
     case "TWI_085": //Kalani — On Attack: may give another unit (up to 2 with the initiative) +2/+2 for this phase
     case "SHD_046": //Rey (Keeping the Past) — On Attack: may heal 2 from a unit; non-Heroism → Shield
@@ -2260,6 +2515,43 @@ export function GetAllUnits(game: GameState): Unit[] {
 /** All units from both arenas of both players. Requires active game singleton. */
 export function AllUnits(): Unit[] {
   return GetAllUnits(GetGameState());
+}
+
+/**
+ * How many upgrades are on the units `player`'s opponent controls — token upgrades and Pilots
+ * included, since each is an upgrade on a unit; a base's Fortify upgrades are on no unit and don't
+ * count. (SHD_189 Slaver's Freighter.)
+ */
+export function UpgradesOnEnemyUnits(player: PlayerId): number {
+  return GetUnitsForPlayer(GetOtherPlayer(player)).reduce((n, u) => n + u.upgrades.length, 0);
+}
+
+/**
+ * "Ready another unit with `maxPower` or less power" — either side's units other than
+ * `excludePlayId`, by CURRENT power, that are exhausted and allowed to ready (readying a ready unit
+ * would do nothing, so it is not offered).
+ */
+export function ReadyableUnitsWithPowerAtMost(gs: GameState, maxPower: number, excludePlayId?: string): Unit[] {
+  return AllUnits().filter(u =>
+    u.playId !== excludePlayId
+    && !u.ready
+    && CanUnitReady(gs, u)
+    && Unit.FromInterface(u).CurrentPower() <= maxPower);
+}
+
+/**
+ * "Defeat a non-leader unit with `maxPower` or less power" — the units `player` may pick. Either
+ * side's, by CURRENT power (a buff carries a unit out of range), minus enemy units immune to being
+ * defeated by enemy abilities. Shared by HMW_102 Dragon's Might and HMW_068 Imperial Commandos;
+ * their resolution re-checks it, since the offer is only a filter.
+ */
+export function DefeatableNonLeadersWithPowerAtMost(player: PlayerId, maxPower: number): Unit[] {
+  return AllUnits().filter(u => {
+    const unit = Unit.FromInterface(u);
+    return !unit.IsLeader()
+      && unit.CurrentPower() <= maxPower
+      && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player);
+  });
 }
 
 /** All ground units from both players. Requires active game singleton. */
@@ -2792,6 +3084,7 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
 
   // Rancor Keeper (ASH_032): "When a friendly unit is dealt damage and survives" — ability damage path.
   QueueRancorKeeperReaction(gs, target);
+  QueueSelfDamagedSurvivesReaction(gs, target);
   QueueLograyReaction(gs, target);
 
   // HMW_011 Darth Sidious — "when you deal 4 or more damage". `amount` here is post-prevention,
@@ -2848,6 +3141,34 @@ export function QueueLograyReaction(gs: GameState, damaged: Unit): void {
     });
     return; // one offer however many Lograys are out
   }
+}
+
+/**
+ * Units with a "When THIS unit is dealt damage and survives: …" reaction printed on themselves.
+ * Unlike Rancor Keeper (which watches every friendly unit), the trigger source IS the damaged unit.
+ */
+const SELF_DAMAGED_SURVIVES_UNITS = new Set([
+  "HMW_156", // Arena Acklay — deal 2 damage to each enemy base
+  "HMW_169", // Crosshair (I've Changed) — each player draws a card
+]);
+
+/**
+ * Queues the damaged unit's own "when this unit is dealt damage and survives" reaction. Called from
+ * every site where unit damage lands, right beside QueueRancorKeeperReaction: DealDamageToUnit,
+ * AfterNonCombatUnitDamage, and both combat applications in resolveAttack. Those sites only run once
+ * the damage is ON the unit (a Shield that swallowed the instance returns earlier), so "dealt" is
+ * literal; "survives" is the post-damage HP, read now — a hit that defeats it is no trigger.
+ */
+export function QueueSelfDamagedSurvivesReaction(gs: GameState, damaged: Unit): void {
+  if (!SELF_DAMAGED_SURVIVES_UNITS.has(damaged.cardId)) return;
+  if (damaged.CurrentHP() <= 0 || damaged.LostAbilities()) return;
+  gs.triggerBag.push({
+    triggerType: "when-unit-takes-damage",
+    cardId: damaged.cardId,
+    fromPlayer: damaged.controller,
+    playId: damaged.playId,
+    nested: true,
+  });
 }
 
 export function QueueRancorKeeperReaction(gs: GameState, damaged: Unit): void {
@@ -2958,6 +3279,7 @@ export function AfterNonCombatUnitDamage(
 ): void {
   MarkUnitDamaged(gs, target.playId);
   QueueRancorKeeperReaction(gs, Unit.FromInterface(target));
+  QueueSelfDamagedSurvivesReaction(gs, Unit.FromInterface(target));
   QueueLograyReaction(gs, Unit.FromInterface(target));
   QueueHeavyDamageReaction(gs, sourcePlayer, amount, { damagedPlayId: target.playId });
   QueueChamSyndullaReaction(gs, target.controller, { damagedPlayId: target.playId });

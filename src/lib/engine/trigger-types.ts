@@ -11,6 +11,7 @@ export type TriggerType =
   | "when-unit-takes-damage"
   | "when-base-damaged"
   | "when-card-drawn"  // reaction to drawing a specific card (e.g. LOF_148 Rey)
+  | "opponent-drew"    // reaction to an opponent drawing 1+ cards in one event (e.g. HMW_169 Crosshair)
   | "when-discarded"   // reaction to a specific card being discarded from hand or deck (e.g. LAW_206)
   | "when-upgrade-detached"
   | "shielded"  // same timing window as when-played
@@ -22,6 +23,7 @@ export type TriggerType =
   | "use-the-force"  // reaction to its controller using the Force (e.g. LOF_260 The Father)
   | "unit-entered-play"  // reaction to any unit entering play, tokens included (e.g. HMW_171 Trap Field)
   | "damage-prevention"  // a replacement effect asking whether to prevent a damage instance (ASH_062)
+  | "base-upgrade-defeat"  // a base upgrade's defeat held back from a synchronous site so HMW_060 Rampart can be offered
   | "dealt-heavy-damage"  // reaction to dealing one instance of N+ damage (e.g. HMW_011 Darth Sidious)
   | "when-unit-healed"  // reaction to 1+ damage being healed from a unit (e.g. JTL_062 Silver Angel)
   | "regroup-start"  // "When the regroup phase starts" (e.g. HMW_004 deployed as The Death Star)

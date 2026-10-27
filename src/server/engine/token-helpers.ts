@@ -2,6 +2,7 @@ import { CardArena, CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { GetUnitsForPlayer, QueueUnitEnteredPlayReaction, UnitsEnterPlayReady } from "@/server/engine/core-functions";
 import type { GameState } from "@/lib/engine/game";
+import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import type { CardInPlay, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 
 /**
@@ -198,6 +199,14 @@ export function GiveWeaknessToken(
 /** Units that do NOT already carry a Weakness token — Hemlock's leader-side target restriction. */
 export function UnitsWithoutWeaknessToken(units: UnitInterface[]): UnitInterface[] {
   return units.filter(u => !(u.upgrades ?? []).some(x => x.cardId === WEAKNESS_TOKEN));
+}
+
+/**
+ * Units carrying at least one TOKEN upgrade (Shield, Experience, Weakness, Advantage…) — HMW_015
+ * Bossk's "a unit with a token upgrade on it". A non-token upgrade alone does not qualify.
+ */
+export function UnitsWithTokenUpgrade(units: UnitInterface[]): UnitInterface[] {
+  return units.filter(u => (u.upgrades ?? []).some(x => IsTokenUpgrade(x.cardId)));
 }
 
 /**

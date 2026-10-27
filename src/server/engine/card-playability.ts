@@ -653,12 +653,20 @@ function bamboozleAltCostAvailable(game: GameState, player: PlayerId): boolean {
  */
 /**
  * Hand indices of the units this player can play right now paying their normal cost — the offer for
- * "play a unit from your hand (paying its cost)" (HMW_008 General Grievous).
+ * "play a unit from your hand (paying its cost)" (HMW_008 General Grievous). `filter` narrows the
+ * kind of unit the ability names ("a Fringe or Underworld unit" — HMW_002 Maz Kanata).
  */
-export function PlayableUnitHandIndices(game: GameState, player: PlayerId, costDelta = 0): number[] {
+export function PlayableUnitHandIndices(
+  game: GameState,
+  player: PlayerId,
+  costDelta = 0,
+  filter?: (cardId: string) => boolean,
+): number[] {
   return (player === 1 ? game.player1 : game.player2).hand
     .map((c, i) => ({ c, i }))
-    .filter(({ c }) => CardType(c.cardId) === "Unit" && CardIsPlayable(game, player, c.cardId, costDelta))
+    .filter(({ c }) => CardType(c.cardId) === "Unit"
+      && (!filter || filter(c.cardId))
+      && CardIsPlayable(game, player, c.cardId, costDelta))
     .map(({ i }) => i);
 }
 
@@ -688,6 +696,42 @@ export function DiscardUnitsPlayableAtDiscount(
     .map(d => d.playId);
 }
 
+/**
+ * "While playing this unit, you may defeat any number of ready resources you control. For each
+ * resource defeated this way, this unit costs N resources less to play." → N, or 0 for a card
+ * without it.
+ *   HMW_049 Greater Sarlacc — 3 per resource.
+ */
+export function ResourceDefeatDiscount(cardId: string): number {
+  return cardId === "HMW_049" ? 3 : 0;
+}
+
+/**
+ * How many ready resources may be defeated while playing `cardId` at `fullCost` (its cost before
+ * the defeats): `min` is the fewest that make the play affordable, `max` the most that still lower
+ * what is paid. Null when the card has no such ability or no count makes it affordable.
+ *
+ * Each defeat removes one ready resource from the pool AND takes the discount off the cost, so
+ * `k` defeats are affordable when spendable - k >= fullCost - discount × k. Credits are spendable
+ * but are not resources, so they can never be defeated this way.
+ */
+export function ResourceDefeatRange(
+  game: GameState,
+  player: PlayerId,
+  cardId: string,
+  fullCost: number,
+): { min: number; max: number } | null {
+  const discount = ResourceDefeatDiscount(cardId);
+  if (discount === 0) return null;
+  const p = player === 1 ? game.player1 : game.player2;
+  const ready = p.resources.filter(r => r.ready).length;
+  const shortfall = fullCost - spendableFor(game, player);
+  // A discount of 1 per defeat nets nothing, so it can never close a shortfall.
+  const min = shortfall <= 0 ? 0 : discount > 1 ? Math.ceil(shortfall / (discount - 1)) : Infinity;
+  const max = Math.min(ready, Math.ceil(fullCost / discount));
+  return min <= max ? { min, max } : null;
+}
+
 export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string, costDelta = 0): boolean {
   if (regionalGovernorBlocks(game, player, cardId)) return false;
 
@@ -715,6 +759,9 @@ export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string
   // An upgrade that's cheaper on some hosts is playable if it's affordable on one of them.
   const hostDependent = HostDependentUpgradeCost(game, player, cardId);
   if (hostDependent && readyResources >= hostDependent.waived) return true;
+
+  // HMW_049 Greater Sarlacc — affordable if some number of ready resources defeated covers it.
+  if (ResourceDefeatRange(game, player, cardId, fullCost)) return true;
 
   if (readyResources < minUnitCost) return false;
 

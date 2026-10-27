@@ -159,6 +159,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "ASH_207"://Heroic Purrgil
     case "HMW_018"://The Warrior (Deft Duelist) Leader Unit
     case "HMW_055"://Mae - Kill the Dream
+    case "HMW_146"://Outer Rim Garrison
       return true;
   }
   //JTL_053: The Ghost - Heart of the Family

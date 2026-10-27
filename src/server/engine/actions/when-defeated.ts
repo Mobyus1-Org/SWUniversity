@@ -278,6 +278,23 @@ function resolveOwnWhenDefeated(
         options: [`deal_base_damage=${opponent},3`, `player_discards_from_hand=${opponent},1`],
       };
     }
+    case "HMW_056": { // Yoda (Trickster in Exile) — "When Defeated: You may put this card from YOUR
+                      // discard pile on top of your deck. If you do, heal 2 damage from a base."
+                      // A stolen Yoda goes to its owner's discard, which isn't "your" discard pile
+                      // for the controller resolving this, so there is nothing to offer.
+      if (!GetPlayer(GetGameState(), player).discard.some(c => c.playId === unit.playId)) return null;
+      return {
+        type: "ability-option",
+        cardId: "HMW_056",
+        player,
+        sourcePlayId: unit.playId, // locates the card in the discard pile
+        helperText: `Put ${CardTitle("HMW_056")} on top of your deck? If you do, heal 2 damage from a base.`,
+        yesLabel: "Put on top",
+        noLabel: "Leave it in the discard",
+        onYes: null,
+        continuation: null,
+      };
+    }
     case "LAW_159": { // Expendable Mercenary — "When Defeated: You may resource this unit from its
                       // owner's discard pile." The ability belongs to its controller; the card is
                       // in its OWNER's discard (that's the distinction the text draws).

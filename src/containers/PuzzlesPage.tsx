@@ -126,6 +126,10 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "HMW_016", // Maul — Old Master
   "HMW_017", // Osha — Haunted By Her Past (an Action on BOTH sides)
   "HMW_018", // The Warrior — Deft Duelist
+  "HMW_002", // Maz Kanata — Eclectic Pirate Queen (an Action on BOTH sides)
+  "HMW_006", // Omega — Close Your Eyes and Focus
+  "HMW_012", // Poggle the Lesser — Let the Executions Begin
+  "HMW_015", // Bossk — Cruel Hunter
   "TWI_017", // Chancellor Palpatine // Darth Sidious — an Action on BOTH faces
   //Jump to Lightspeed
   "JTL_004", "JTL_005", "JTL_006", "JTL_008", "JTL_010", "JTL_012", "JTL_013", "JTL_014", "JTL_018",
@@ -156,6 +160,7 @@ type UnitAction = { abilityId: string; label: string };
  */
 const UPGRADES_WITH_ACTION_ABILITY: Record<string, string> = {
   "HMW_037": "Recur a non-Vehicle unit", // Bacta Tank — Action [defeat this upgrade]
+  "HMW_172": "Discard: 2 damage to a unit", // Heavy Ion Cannon — Action [discard a card], once each phase
 };
 
 /**
@@ -538,7 +543,7 @@ function BaseSubcards({
   onPreviewEnd: () => void;
   /** Only passed for the local player's own base — the opponent's Fortify actions are not yours. */
   onUseUpgradeAction?: (playId: string) => void;
-  /** Base upgrades the current prompt lets the player pick (e.g. ASH_012 Vane's "defeat a friendly upgrade"). */
+  /** Base upgrades the current prompt lets the player pick (Vane's "defeat a friendly upgrade", Confiscate's "an upgrade"). */
   selectableUpgradePlayIds?: Set<string>;
   onSelectUpgrade?: (playId: string) => void;
 }) {
@@ -1441,10 +1446,12 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     ? new Set(resolutionNeeded.fromPlayIds ?? [])
     : new Set();
   const hasDiscardSelection = selectableDiscardPlayIds.size > 0;
-  // A prompt that offers a Fortify upgrade on the player's base (ASH_012 Vane defeats "a friendly
-  // upgrade") — base upgrades live in the base's Fortified popover, not on any unit.
+  // A prompt that offers a Fortify upgrade on EITHER base (ASH_012 Vane defeats "a friendly
+  // upgrade"; Confiscate defeats "an upgrade") — base upgrades live in each base's Fortified
+  // popover, not on any unit.
   const selectableBaseUpgradePlayIds: Set<string> = resolutionNeeded?.type === "Target"
-    ? new Set((player.base.upgrades ?? []).map(u => u.playId).filter(id => (resolutionNeeded.fromPlayIds ?? []).includes(id)))
+    ? new Set([...(player.base.upgrades ?? []), ...(opponent.base.upgrades ?? [])]
+      .map(u => u.playId).filter(id => (resolutionNeeded.fromPlayIds ?? []).includes(id)))
     : new Set();
   const handleSelectBaseUpgrade = (playId: string) => {
     void sendDispatch(createDispatch("choose-target", { targetPlayIds: [playId] }));
@@ -1789,7 +1796,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     epicUsed={opponent.base.epicActionUsed}
                     forceToken={opponent.supplemental.forceToken}
                   />{spreadBaseControls("player2.base")}
-                  <BaseSubcards base={opponent.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+                  <BaseSubcards base={opponent.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} selectableUpgradePlayIds={selectableBaseUpgradePlayIds} onSelectUpgrade={handleSelectBaseUpgrade} />
                   </div>
                 </div>
               </div>
@@ -1871,7 +1878,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     epicUsed={opponent.base.epicActionUsed}
                     forceToken={opponent.supplemental.forceToken}
                   />{spreadBaseControls("player2.base")}
-                  <BaseSubcards base={opponent.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+                  <BaseSubcards base={opponent.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} selectableUpgradePlayIds={selectableBaseUpgradePlayIds} onSelectUpgrade={handleSelectBaseUpgrade} />
                   </div>
                 </div>
                 <div className="hidden xl:space-y-2 xl:block">
@@ -1902,7 +1909,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                       forceToken={opponent.supplemental.forceToken}
                     />
                     {spreadBaseControls("player2.base")}
-                    <BaseSubcards base={opponent.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+                    <BaseSubcards base={opponent.base} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} selectableUpgradePlayIds={selectableBaseUpgradePlayIds} onSelectUpgrade={handleSelectBaseUpgrade} />
                   </div>
                 </div>
               </div>

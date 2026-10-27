@@ -8,7 +8,7 @@ import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/a
 import { PilotlessVehiclePlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { UnitsWithoutWeaknessToken } from "@/server/engine/token-helpers";
-import { costIgnoringAspectPenalties, spendableFor } from "@/server/engine/card-playability";
+import { costIgnoringAspectPenalties, PlayableUnitHandIndices, spendableFor } from "@/server/engine/card-playability";
 
 /**
  * Every unit (either side) whose power is below that of at least one unit `player` controls —
@@ -83,6 +83,27 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         if (GetResources(player, true).length > 0 && PlayerHasUnitsInHand(player, { maxPower: 3 })) {
           abilities.push(cardId);
         }
+        break;
+      case "HMW_002": // Maz Kanata — Action [Exhaust]: play a Fringe or Underworld unit from your
+                      // hand at 1 less and give it a Weakness token. Needs such a unit she can
+                      // actually pay for at the discount.
+        if (MazKanataPlayableHandIndices(player).length > 0) abilities.push(cardId);
+        break;
+      case "HMW_006": // Omega — Action [1 resource, Exhaust]: attack with a Heroism unit; it gains
+                      // Grit for this attack. The resource is the only cost to check: a Heroism
+                      // unit able to attack is a target, and an Action with a cost is still usable
+                      // when its effect would do nothing (it soft-passes on resolution).
+        if (GetResources(player, true).length > 0) abilities.push(cardId);
+        break;
+      case "HMW_012": // Poggle the Lesser — Action [1 resource, Exhaust]: ready a friendly Creature
+                      // unit and deal 1 damage to it. Only the resource gates it; with no Creature
+                      // the Action still pays, exhausts and soft-passes.
+        if (GetResources(player, true).length > 0) abilities.push(cardId);
+        break;
+      case "HMW_015": // Bossk — Action [Exhaust]: heal 1 damage from a damaged enemy unit and give
+                      // a Weakness token to it. The Exhaust is the only cost; with no damaged
+                      // enemy the Action is still usable and soft-passes.
+        abilities.push(cardId);
         break;
       case "LAW_003": // Agent Kallus — Action [1 resource, Exhaust]: play a card ignoring aspect penalties.
         if (GetResources(player, true).length > 0 && GetHand(player).length > 0) abilities.push(cardId);
@@ -414,6 +435,10 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         if (OshaResourceVillainyUnits(player).length > 0) abilities.push(cardId);
         break;
       }
+      case "HMW_002": // Maz Kanata (deployed) — plain "Action:", no exhaust and no limit; the same
+                      // Fringe/Underworld gate as her leader side.
+        if (MazKanataPlayableHandIndices(player).length > 0) abilities.push(cardId);
+        break;
       case "HMW_001": { // Asajj Ventress (deployed) — plain "Action:", no exhaust, no limit.
         if (GetUnitsForPlayer(player, true).filter(u => CanUnitAttack(u)).length > 0) {
           abilities.push(cardId);
@@ -606,6 +631,21 @@ export function ArmorerResourceUpgrades(player: PlayerId): string[] {
     .map(r => r.playId);
 }
 
+/** HMW_002 Maz Kanata's discount — "It costs 1 resource less." */
+export const MAZ_KANATA_DISCOUNT = 1;
+
+/**
+ * HMW_002 Maz Kanata — hand indices of the Fringe or Underworld units this player could play right
+ * now at 1 less. Both sides of the card share it, as the offer gate and as the prompt's list: an
+ * ability with no legal target is not offered.
+ */
+export function MazKanataPlayableHandIndices(player: PlayerId): number[] {
+  const game = GetGame();
+  if (!game) return [];
+  return PlayableUnitHandIndices(game.currentGameState, player, MAZ_KANATA_DISCOUNT, cardId =>
+    TraitContains(cardId, "Fringe", player) || TraitContains(cardId, "Underworld", player));
+}
+
 /**
  * HMW_017 Osha — the Villainy UNITS in your resource row you could actually play right now,
  * priced with her Villainy waiver applied.
@@ -695,22 +735,33 @@ export function DiscardHostsAction(cardId: string): boolean {
 export function UpgradeHostsOwnAction(cardId: string): boolean {
   switch (cardId) {
     case "HMW_037": // Bacta Tank — Action [defeat this upgrade]
+    case "HMW_172": // Heavy Ion Cannon — Action [discard a card from your hand], once each phase
       return true;
     default:
       return false;
   }
 }
 
+/** The once-each-phase marker for HMW_172 Heavy Ion Cannon, keyed by the upgrade's playId. */
+export const HEAVY_ION_CANNON_USED = "HMW_172_usedThisPhase";
+
 /**
- * Whether the upgrade's own Action currently has anything to do. Checked BEFORE its cost is paid —
+ * Whether the upgrade's own Action can be used right now. Checked BEFORE its cost is paid —
  * Bacta Tank's cost is defeating itself, and an ability with no legal target must not eat it.
+ * `playId` is the upgrade itself, for limits that are tracked per copy.
  */
-export function UpgradeActionAvailable(cardId: string, player: PlayerId): boolean {
+export function UpgradeActionAvailable(cardId: string, player: PlayerId, playId?: string): boolean {
   const game = GetGame();
   if (!game) return false;
   switch (cardId) {
     case "HMW_037": // Bacta Tank — needs a non-Vehicle UNIT card in your discard.
       return BactaTankTargets(player).length > 0;
+    case "HMW_172": // Heavy Ion Cannon — the cost needs a card in hand; once each phase per copy.
+                    // A board with no unit is fine: the discard is still paid, the damage fizzles.
+      return GetHand(player).length > 0
+        && !game.currentGameState.currentEffects.some(
+          e => e.cardId === HEAVY_ION_CANNON_USED && e.targetPlayId === playId,
+        );
     default:
       return false;
   }
@@ -731,6 +782,7 @@ export function ActionAbilityExhausts(abilityId: string): boolean {
   switch (abilityId) {
     case "SHD_155":   // Heroic Resolve — "[2 resources, defeat a Heroic Resolve]", no Exhaust
     case "HMW_017":   // Osha (deployed) — plain "Action:"; her leader side exhausts inline
+    case "HMW_002":   // Maz Kanata (deployed) — plain "Action:"; leader side exhausts inline
     case "HMW_001":   // Asajj Ventress (deployed) — plain "Action:"; leader side exhausts inline
     case "HMW_009":   // Chewbacca (deployed) — plain "Action:", limited once each round
     case "SHD_017":   // Lando Calrissian (deployed) — plain "Action:", limited once each round
@@ -786,6 +838,12 @@ export function ActionAbilityCost(cardId: string): number {
     case "SHD_002"://Qi'Ra
       return 1;
     case "SHD_004"://Rey
+      return 1;
+    case "HMW_006"://Omega - Close Your Eyes and Focus: Action [1 resource, Exhaust]. Her deployed
+                   //side has no Action, so the two sides share no ability cost.
+      return 1;
+    case "HMW_012"://Poggle the Lesser - Let the Executions Begin: Action [1 resource, Exhaust].
+                   //His deployed side has no Action, so the sides share no ability cost.
       return 1;
     case "HMW_018"://The Warrior - Deft Duelist: Action [1 resource, Exhaust]
     case "SHD_016"://Fennec Shand - Honoring the Deal

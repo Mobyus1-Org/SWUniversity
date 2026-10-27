@@ -285,6 +285,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "ASH_109"://T-6 Shuttle 1974
     case "SEC_117"://Consular's Cruiser
     case "HMW_107"://Stormtrooper Patrol
+    case "HMW_048"://Vernestra Rwoh - We Should Handle This Ourselves
     case "HMW_010"://Tarfful (deployed leader unit) — printed Sentinel
     case "SEC_086"://Cruel Commandos
       return true;

@@ -1,5 +1,5 @@
 import { CardInPlay, HP_MOD, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, EffectiveRaid, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard, UnitArenaOf, GetGame } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, EffectiveRaid, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard, UnitArenaOf, GetGame, UnitHasNoAbilities } from "@/server/engine/core-functions";
 import { CardArena, CardAspects, CardCost, CardHp, CardPower, CardTitle } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
@@ -73,6 +73,7 @@ export class Unit implements UnitInterface {
       case "JTL_T02": //X-Wing
       case "SEC_T01": //Spy
       case "ASH_T01": //Mandalorian
+      case "HMW_T03": //Beast
         return true;
       default: break;
     }
@@ -645,13 +646,20 @@ function selfPowerOnlyBonus(unit: Unit): number {
     }
     // ASH_113 Mandalorian Flagship — "+1/+0 for each OTHER friendly Mandalorian unit."
     case "ASH_113":
-      return bonus + GetUnitsForPlayer(unit.controller).filter(
-        u => u.playId !== unit.playId
-          && TraitContains(u.cardId, "Mandalorian", unit.controller, u.playId),
-      ).length;
+      return bonus + otherFriendlyUnitsWithTrait(unit, "Mandalorian");
+    // HMW_164 Chief Chirpa — "+1/+0 for each OTHER friendly Ewok unit."
+    case "HMW_164":
+      return bonus + otherFriendlyUnitsWithTrait(unit, "Ewok");
     default:
       return bonus;
   }
+}
+
+/** Friendly units OTHER than `unit` that have `trait` (read live, so granted/suppressed traits count). */
+function otherFriendlyUnitsWithTrait(unit: Unit, trait: string): number {
+  return GetUnitsForPlayer(unit.controller).filter(
+    u => u.playId !== unit.playId && TraitContains(u.cardId, trait, unit.controller, u.playId),
+  ).length;
 }
 
 /**
@@ -661,6 +669,7 @@ function selfPowerOnlyBonus(unit: Unit): number {
  *
  * JTL_085 Victor Leader — "Each other friendly space unit gets +1/+1."
  * LAW_139 Admiral Motti — "Friendly leader units get +2/+2."
+ * HMW_141 Rex (Outserved His Purpose) — "Friendly units with no abilities get +1/+1."
  */
 function friendlyAuraBonus(unit: Unit): number {
   const friendly = GetUnitsForPlayer(unit.controller);
@@ -677,6 +686,11 @@ function friendlyAuraBonus(unit: Unit): number {
   if (unit.IsLeader()) {
     bonus += friendly.filter(u => u.cardId === "LAW_139" && u.playId !== unit.playId && active(u)).length * 2;
   }
+
+  // Rex: friendly units with NO abilities. Not "other", but Rex prints text, so he never qualifies.
+  // The source scan comes first so the no-abilities check only runs while a Rex is in play.
+  const rexes = friendly.filter(u => u.cardId === "HMW_141" && active(u)).length;
+  if (rexes > 0 && UnitHasNoAbilities(unit)) bonus += rexes;
 
   return bonus;
 }

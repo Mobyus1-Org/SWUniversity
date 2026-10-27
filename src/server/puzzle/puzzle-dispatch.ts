@@ -491,6 +491,14 @@ function resolveAutoOption(
     return { dispatchType: "choose-target", dispatchData: { targetPlayIds: ["player1.base"] } };
   }
 
+  // HMW_060 Vice Admiral Rampart controlled by the opponent (P2): "If an upgrade on your base would
+  // be defeated, you may defeat this unit instead." Always taken. The solver chose to defeat that
+  // upgrade (or forced its self-defeat), so keeping it is the worse outcome for them — while
+  // Rampart is a 1/5 without Sentinel that never stands between the solver and anything.
+  if (pending.type === "ability-option" && pending.cardId === "HMW_060" && pending.player === 2) {
+    return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };
+  }
+
   // SEC_193 Grand Admiral Thrawn: "An opponent may choose a non-leader unit they control. If they
   // do, this unit captures that unit. If they don't, ready this unit." Both halves are P2's call.
   // Giving up a unit is strictly worse for the solver than letting Thrawn ready, so P2 always
@@ -499,6 +507,17 @@ function resolveAutoOption(
     return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };
   }
   if (pending.type === "ability-target" && pending.cardId === "SEC_193" && pending.player === 2) {
+    const targetPlayId = pickOpponentOwnUnit(pending.fromPlayIds, gameState, "give-up");
+    return targetPlayId
+      ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
+      : NOTHING_TO_DO;
+  }
+
+  // HMW_058 Mysterious Disappearance: "A player chooses a non-leader unit they control. You may
+  // defeat that unit." When the solver names P2, P2 picks which unit is put on the line. The solver
+  // will defeat it if that helps them, so P2 offers the one they lose least by: "give-up" mode, the
+  // cheapest non-Sentinel unit — their blockers stay up and their best units are never exposed.
+  if (pending.type === "ability-target" && pending.cardId === "HMW_058_pick" && pending.player === 2) {
     const targetPlayId = pickOpponentOwnUnit(pending.fromPlayIds, gameState, "give-up");
     return targetPlayId
       ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
