@@ -3,12 +3,13 @@ import { GameTestAdapter } from "./game-test-adapter";
 import { GameStateBuilder } from "@/server/engine/game-state-builder";
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { CardText, CardType, GetAllCardIds, CardTitle } from "@/server/engine/card-db/generated";
+import { IsInScopeBoardCard } from "@/server/engine/card-db/card-scope";
 import { Cards } from "../card-helpers";
 
-// LAW/ASH/SHD units whose entire card text is keywords: implementing them means registering their
-// keywords in the keyword dictionaries. The sweep below derives the expectation from the card
-// data itself, so a newly-added keyword-only unit in a covered set fails here until it is
-// registered. Widening the set list is how a set gets swept — SHD was added with Batch 1.1.
+// Units whose entire card text is keywords: implementing them means registering their keywords in
+// the keyword dictionaries. The sweep below derives the expectation from the card data itself, so
+// a newly-added keyword-only unit in any set the implementation board tracks fails here until it
+// is registered. Promo reprints are out of scope, as they are on the board.
 
 // Support is a keyword the engine does not model yet — units carrying it are excluded from the
 // sweep for that keyword only (their other keywords are still checked).
@@ -29,10 +30,10 @@ function isKeywordLine(line: string): boolean {
   return AMOUNTLESS.test(line) || WITH_AMOUNT.test(line);
 }
 
-/** Every LAW/ASH/SHD unit whose printed text is nothing but keywords. */
+/** Every board-tracked unit whose printed text is nothing but keywords. */
 function keywordOnlyUnits(): { cardId: string; keywords: string[] }[] {
   return GetAllCardIds()
-    .filter(id => /^(LAW|ASH|SHD)_/.test(id) && CardType(id) === "Unit")
+    .filter(id => IsInScopeBoardCard(id) && CardType(id) === "Unit")
     .map(cardId => ({ cardId, lines: abilityLines(cardId) }))
     .filter(({ lines }) => lines.length > 0 && lines.every(isKeywordLine))
     .map(({ cardId, lines }) => ({
@@ -42,7 +43,7 @@ function keywordOnlyUnits(): { cardId: string; keywords: string[] }[] {
     .filter(({ keywords }) => keywords.length > 0);
 }
 
-describe("keyword-only units (LAW/ASH/SHD)", () => {
+describe("keyword-only units (every board set)", () => {
   beforeEach(() => {
     // HasKeyword reaches into the live game (e.g. ASH_040 Poe Dameron's "all units lose
     // Sentinel"), so a game must exist even for these static, no-playId lookups.

@@ -107,6 +107,8 @@ export function HasShielded(cardId: string, playId?: string, player?: PlayerId, 
     case "ASH_T01"://Mandalorian token
     case "HMW_055"://Mae - Kill the Dream
     case "HMW_066"://Carrion Spike - Harbinger of Tyranny
+    case "HMW_213"://Tribubble Bongo Sub
+    case "HMW_254"://Captain Tarpals - Grand Army Captain
       return true;
 
     default: break;

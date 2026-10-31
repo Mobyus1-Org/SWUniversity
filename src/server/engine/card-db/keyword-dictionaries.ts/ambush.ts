@@ -73,8 +73,6 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
         return IsCoordinateActive(player);
       case "TWI_081"://Droid Commando
         return PlayerHasUnitWithTraitInPlay(player, "Separatist", true, playId);
-      case "TWI_117"://Baktoid Spider Droid
-        return true;
       case "TWI_194"://Ahsoka Tano
         return units.length < GetUnitsForPlayer(otherPlayer).length;
       case "LOF_118"://Terentatek
@@ -160,6 +158,15 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "HMW_018"://The Warrior (Deft Duelist) Leader Unit
     case "HMW_055"://Mae - Kill the Dream
     case "HMW_146"://Outer Rim Garrison
+    case "TWI_117"://Baktoid Spider Droid
+    case "SEC_100"://Dressellian Commandos
+    case "HMW_143"://Banking Clan Warship
+    case "HMW_198"://Treacherous Pyke
+    case "HMW_201"://Sandtrooper Squad
+    case "HMW_220"://Clever Trapper
+    case "SEC_121"://Shadow Crawler
+    case "SEC_222"://Loan Shark
+    case "TS26_17"://Rush Clovis - Trapped by Authority
       return true;
   }
   //JTL_053: The Ghost - Heart of the Family

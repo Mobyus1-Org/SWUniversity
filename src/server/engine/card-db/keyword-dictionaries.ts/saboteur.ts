@@ -140,6 +140,12 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
     case "HMW_234"://Ritual Dragon
     case "HMW_043"://Darth Vader - Any Methods Necessary
     case "HMW_017"://Osha (Haunted By Her Past) Leader Unit
+    case "HMW_157"://Corpo Thugs
+    case "HMW_198"://Treacherous Pyke
+    case "HMW_245"://Trandoshan Collaborator
+    case "SEC_160"://Reckless Rebel
+    case "SEC_250"://Rebel Pathfinder
+    case "TS26_74"://Pre Vizsla - For Mandalore!
       return true;
     default: break;
   }

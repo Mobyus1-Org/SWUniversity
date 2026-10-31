@@ -205,6 +205,12 @@ export function HasOverwhelm(cardId: string,
     case "HMW_146"://Outer Rim Garrison
     case "HMW_042"://Dooku - Corruption Must Be Eradicated
     case "HMW_049"://Greater Sarlacc
+    case "HMW_139"://Flock of Mynocks
+    case "HMW_183"://Nightsister Prodigy
+    case "LOF_164"://Wampa
+    case "SEC_113"://Daro Commando
+    case "SEC_173"://Republic War Walker
+    case "TS26_21"://Gar Saxon - Sundari Pillager
       return true;
     default: break;
   }

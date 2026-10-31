@@ -123,6 +123,10 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
     case "ASH_145"://Praetorian Elite
     case "ASH_175"://Wookiee Chieftain
     case "HMW_055"://Mae - Kill the Dream
+    case "HMW_069"://Imperial Venator
+    case "HMW_076"://Yanna - Sanctuary Elder
+    case "HMW_179"://Feisty Blurrg
+    case "TS26_65"://Bo-Katan Kryze - The Lawless
       return true;
     default: break;
   }

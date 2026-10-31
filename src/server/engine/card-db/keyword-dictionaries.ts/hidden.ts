@@ -95,6 +95,15 @@ export function HasHidden(cardId: string, playId?: string, player?: PlayerId, is
     case "ASH_244"://Remnant Trooper Corps
     case "HMW_134"://Zam Wesell - Not What She Seems
     case "HMW_056"://Yoda - Trickster in Exile
+    case "HMW_183"://Nightsister Prodigy
+    case "HMW_187"://Dathomiri Rancor
+    case "HMW_229"://Lurking Wampa
+    case "SEC_138"://Enforcer Squadron
+    case "SEC_146"://Rebellious Functionary
+    case "SEC_217"://Zenuas Shadow Fighter
+    case "TS26_21"://Gar Saxon - Sundari Pillager
+    case "TS26_65"://Bo-Katan Kryze - The Lawless
+    case "TS26_74"://Pre Vizsla - For Mandalore!
     case "ASH_249"://Covert Veteran
       return true;
     default: break;

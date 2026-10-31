@@ -36,6 +36,7 @@ export function HasCoordinate(cardId: string, playId?: string, player?: PlayerId
     case "TWI_213"://Sanctioner's Shuttle
     case "TWI_240"://332nd Stalwart
     case "TWI_243"://Republic Commando
+    case "TWI_147"://Anakin Skywalker - Maverick Mentor (the gated draw itself is in on-attack.ts)
       return true;
     default: return false;
   }

@@ -288,6 +288,13 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "HMW_048"://Vernestra Rwoh - We Should Handle This Ourselves
     case "HMW_010"://Tarfful (deployed leader unit) — printed Sentinel
     case "SEC_086"://Cruel Commandos
+    case "HMW_069"://Imperial Venator
+    case "HMW_075"://Wookiee Protector
+    case "HMW_089"://Territorial Mudhorn
+    case "HMW_226"://Gungan Battle Wagon
+    case "JTL_258"://Corellian Freighter
+    case "SEC_060"://Defense Fleet X-Wing
+    case "TS26_44"://Arena Reek - Lumbering Beast
       return true;
   }
 

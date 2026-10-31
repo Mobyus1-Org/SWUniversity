@@ -18,6 +18,7 @@ export function HasPlot(cardId: string, playId?: string, player?: PlayerId)
     case "SEC_082"://Chancellor Palpatine unit (SEC)
     case "SEC_084"://Mas Amedda (SEC)
     case "SEC_099"://Naboo Royal Starship
+    case "SEC_100"://Dressellian Commandos
     case "SEC_111"://Jar Jar Binks (SEC)
     case "SEC_123"://Unveiled Might
     case "SEC_152"://Strike Force X-Wing
