@@ -1947,6 +1947,11 @@ export function resolveWhenPlayed(
       return optionalReturnFromDiscard(cardId, player, playId,
         c => CardType(c) === "Unit" && TraitContains(c, "Republic", player),
         "Return a Republic unit from your discard pile to your hand?");
+    case "SHD_044": // Razor Crest — "When Played: You may return an upgrade from your discard pile
+                    // to your hand."
+      return optionalReturnFromDiscard(cardId, player, playId,
+        c => CardType(c) === "Upgrade",
+        "Return an upgrade from your discard pile to your hand?");
     case "SHD_260": // Street Gang Recruiter — "When Played: You may return an Underworld card from
     case "LAW_261": // your discard pile to your hand." Any card type.
       return optionalReturnFromDiscard(cardId, player, playId,

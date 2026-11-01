@@ -27,7 +27,16 @@ export const EXCLUDED_SETS = new Set([
  */
 export function IsInScopeBoardCard(cardId: string): boolean {
   if (cardId.includes("_T")) return false; // token printings
-  return CATALOG_SETS.has(cardId.split("_")[0]);
+  // The board endpoint validates incoming ids with this, so the prefix alone is not enough: a
+  // malformed id ("TS26_05 HMW_203", "HMW_9999") would pass and upsert a junk row.
+  return CATALOG_SETS.has(cardId.split("_")[0]) && allCardIds().has(cardId);
+}
+
+let allIds: Set<string> | null = null;
+
+function allCardIds(): Set<string> {
+  if (!allIds) allIds = new Set(GetAllCardIds());
+  return allIds;
 }
 
 let cached: string[] | null = null;

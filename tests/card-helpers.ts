@@ -396,6 +396,7 @@ export const Cards = {
       migsMayfeldTriggerman: "SHD_163",
       streetGangRecruiter: "SHD_260", // 4/4 Ground — WP: may return an Underworld card from discard
       criminalMuscle: "SHD_209", // 2/1 Ground — When Played: may return a non-unique upgrade to hand
+      razorCrest: "SHD_044", // 3/4 Space — Restore 2; WP: may return an upgrade from discard
       slaversFreighter: "SHD_189", // 4/5 Space — When Played: may ready another unit with power ≤ upgrades on enemy units
       omegaPartOfTheSquad: "SHD_198",
       toroCalican: "SHD_239",

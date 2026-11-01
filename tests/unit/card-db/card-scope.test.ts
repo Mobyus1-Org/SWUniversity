@@ -28,6 +28,14 @@ describe("in-scope board cards", () => {
     expect(IsInScopeBoardCard("P25_100")).toBe(false);
   });
 
+  it("excludes ids that are not real cards, even with an in-scope set prefix", () => {
+    // The board endpoint validates with this predicate. A prefix-only check let a malformed
+    // cardId (several ids joined by spaces) upsert a junk row into the status collection.
+    expect(IsInScopeBoardCard("TS26_05 HMW_203 HMW_209")).toBe(false);
+    expect(IsInScopeBoardCard("HMW_9999")).toBe(false);
+    expect(IsInScopeBoardCard("HMW_")).toBe(false);
+  });
+
   it("is sorted and free of duplicates", () => {
     const ids = InScopeBoardCardIds();
     expect([...ids].sort()).toEqual(ids);
