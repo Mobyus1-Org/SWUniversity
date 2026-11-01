@@ -103,7 +103,7 @@ import { collectBounties } from "@/server/engine/actions/bounty";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { resolveWhenDefeated, WhenDefeatedBaseDamage } from "@/server/engine/actions/when-defeated";
 import { UpgradeEligibleTargets, UpgradeDestinationsOnControlChange, PilotlessFighterOrTransportPlayIds } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { resolveWhenPlayed, shatterpointModeA, shatterpointModeB, anakinMortisAbility, buildPayForExperiencePrompt, buildKreiaHandPick, buildHunterChoice, buildMysteriousDisappearancePick, buildEndlessLegionsOffer, buildThirdSisterStep } from "@/server/engine/actions/when-played";
+import { resolveWhenPlayed, ATTACK_WITH_POWER_BUFF_EVENTS, shatterpointModeA, shatterpointModeB, anakinMortisAbility, buildPayForExperiencePrompt, buildKreiaHandPick, buildHunterChoice, buildMysteriousDisappearancePick, buildEndlessLegionsOffer, buildThirdSisterStep } from "@/server/engine/actions/when-played";
 import { executeRegroupDraw, finishRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
 import { resolveWhenPlayedTrigger, WhenPlayedHasAutoEffect } from "@/server/engine/actions/when-played-trigger";
 import { resolveOnAttackTrigger, buildTwinLaserTurretPending } from "@/server/engine/actions/on-attack";
@@ -3562,7 +3562,12 @@ function resolveAttack(
     const defPower = Math.max(0, defender.CurrentPower(false, true) + defendingBonus - (defenderIsGround212 ? 2 : 0));
 
     // SOR_071 Electrostaff: while attached unit is defending, attacker gets –1/–0.
-    const electrostaffModifier = defender.upgrades.some(u => u.cardId === "SOR_071") ? 1 : 0;
+    // JTL_054 Gold Leader / LAW_108 Lando Calrissian print the same clause on the unit itself;
+    // the two sources stack.
+    const defenderPrintsDefendingDebuff = (defender.cardId === "JTL_054" || defender.cardId === "LAW_108")
+      && !defender.LostAbilities();
+    const electrostaffModifier = (defender.upgrades.some(u => u.cardId === "SOR_071") ? 1 : 0)
+      + (defenderPrintsDefendingDebuff ? 1 : 0);
     // ASH_241 Marrok's Fiend Fighter — "This unit gets +2/+0 while attacking a damaged unit."
     // Defender-dependent, so it can't live in CurrentPower(); Support can grant it, so the check
     // runs over every ability source the attacker has for this attack.
@@ -5306,6 +5311,7 @@ function queueUnitEntryTriggers(
 function entersPlayReady(cardId: string, player: PlayerId): boolean {
   switch (cardId) {
     case "SOR_193": // Millennium Falcon — "This unit enters play ready."
+    case "HMW_203": // Victor Squadron — same clause (and nothing else).
       return true;
     case "LAW_210": // Salacious Crumb — "If you control Jabba the Hutt (as a leader or unit)…"
       // Matched by TITLE so every Jabba printing counts, and PlayerControlsCardWithTitle already
@@ -8488,10 +8494,10 @@ function handleChooseTarget(
       log.push(`${CardTitle("SHD_193")}: exhausted ${CardTitle(targetUnit.cardId)}.`);
     }
 
-    // ASH_228 Preparation: When Played — exhaust the attached unit.
-    if (pending.upgradeCardId === "ASH_228") {
+    // ASH_228 Preparation / LAW_127 Kill Switch: When Played — exhaust the attached unit.
+    if (pending.upgradeCardId === "ASH_228" || pending.upgradeCardId === "LAW_127") {
       targetUnit.ready = false;
-      log.push(`${CardTitle("ASH_228")}: exhausted ${CardTitle(targetUnit.cardId)}.`);
+      log.push(`${CardTitle(pending.upgradeCardId)}: exhausted ${CardTitle(targetUnit.cardId)}.`);
     }
 
     // ASH_182 Unfettered Ambition: When Played — give an Advantage token to the attached unit for each
@@ -8862,6 +8868,15 @@ function handleChooseTarget(
         if (!CardIsPlayable(game, pending.player, cardId, pending.costReduction ?? 0))
           return { response: invalidResponse(`Not enough resources to play ${CardTitle(cardId)}.`), pending, stateChanged: false };
         log.push(`Player ${pending.player} is playing ${CardTitle(cardId)} via ${CardTitle("JTL_155")} (-${pending.costReduction ?? 0} cost).`);
+        return playCardFromHand(game, log, pending.player, cardId, pending.costReduction ?? 0);
+      }
+      case "TWI_225": { // Now There Are Two of Them — the offer already narrowed the hand to
+                        // trait-sharing non-Vehicle units affordable at 5 less; re-check both.
+        if (!pending.eligibleHandIndices?.includes(idx))
+          return { response: invalidResponse(`${CardTitle("TWI_225")}: that unit doesn't share a Trait with the unit you control.`), pending, stateChanged: false };
+        if (!CardIsPlayable(game, pending.player, cardId, pending.costReduction ?? 0))
+          return { response: invalidResponse(`Not enough resources to play ${CardTitle(cardId)}.`), pending, stateChanged: false };
+        log.push(`Player ${pending.player} is playing ${CardTitle(cardId)} via ${CardTitle("TWI_225")} (-${pending.costReduction ?? 0} cost).`);
         return playCardFromHand(game, log, pending.player, cardId, pending.costReduction ?? 0);
       }
       case "SOR_093": { // Alliance Dispatcher — play a unit from hand at -1 cost
@@ -10121,7 +10136,8 @@ function paidResourceFollowUp(
         if (game010) CreateBeast(game010.currentGameState, player, game010.gameLog, "HMW_010");
       }
       return pending.continuation ?? null;
-    case "LAW_214": { // Boba Fett — "…deal 3 damage to a ground unit."
+    case "LAW_214": // Boba Fett — "…deal 3 damage to a ground unit."
+    case "LAW_198": { // Dogged Pursuers — "…deal 2 damage to a ground unit."
       const grounds214 = AllGroundUnits().map(u => u.playId);
       if (grounds214.length === 0) return pending.continuation ?? null;
       return mandatoryTarget(cardId, player, grounds214, pending.continuation ?? null);
@@ -10358,11 +10374,12 @@ function applyAbilityOptionEffect(
       if (others057.length === 0) return pending.continuation ?? null;
       return mandatoryTarget("SHD_057", pending.player!, others057.map(u => u.playId), pending.continuation ?? null);
     }
-    case "SHD_199": { // Coruscant Dissident — ready one exhausted resource. Exactly one.
+    case "SHD_199": // Coruscant Dissident — ready one exhausted resource. Exactly one.
+    case "HMW_209": { // Corona Squadron X-Wing — same On Attack.
       const res199 = GetPlayer(game, pending.player!).resources.find(r => !r.ready);
       if (res199) {
         res199.ready = true;
-        log.push(`${CardTitle("SHD_199")}: readied a resource.`);
+        log.push(`${CardTitle(pending.cardId)}: readied a resource.`);
       }
       return pending.continuation ?? null;
     }
@@ -15856,12 +15873,13 @@ function applyAbilityEffect(
       }
       break;
     }
-    case "SOR_108": { // Vanguard Infantry when-defeated: give Experience token to chosen unit
+    case "SOR_108": // Vanguard Infantry when-defeated: give Experience token to chosen unit
+    case "LOF_095": { // Lor San Tekka — same, its target list narrowed to unique units in when-defeated.ts
       if (!targetPlayId) break;
       const target108 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target108) {
         GiveTokenUpgrade(game.currentGameState, target108, "SOR_T01", pending.player!);
-        game.gameLog.push(`${CardTitle("SOR_108")}: gave an Experience token to ${CardTitle(target108.cardId)}.`);
+        game.gameLog.push(`${CardTitle(pending.cardId)}: gave an Experience token to ${CardTitle(target108.cardId)}.`);
       }
       break;
     }
@@ -16067,9 +16085,10 @@ function applyAbilityEffect(
       if (target238) GiveAdvantageTokens(game.currentGameState, target238, 2, game.gameLog, pending.player!, "ASH_238");
       break;
     }
-    case "ASH_259": { // LEP Ratcatcher — deal 1 damage to the chosen ground unit.
+    case "ASH_259": // LEP Ratcatcher — deal 1 damage to the chosen ground unit.
+    case "LOF_259": { // Ravening Gundark — same effect (its prompt is mandatory, see when-played.ts).
       if (!targetPlayId) break;
-      DealDamageToUnit(game.currentGameState, "ASH_259", targetPlayId, 1, game.gameLog);
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 1, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "ASH_167": { // Flarestar Attack Shuttle — give an Advantage token to the chosen unit.
@@ -16703,7 +16722,8 @@ function applyAbilityEffect(
       game.gameLog.push(`${CardTitle(pending.cardId)}: dealt 1 damage to player ${basePlayer006}'s base.`);
       break;
     }
-    case "IBH_053_onAttack": { // Darth Vader (deployed) On Attack: deal 2 to the chosen base.
+    case "IBH_053_onAttack": // Darth Vader (deployed) On Attack: deal 2 to the chosen base.
+    case "LAW_181_onAttack": { // Cloud-Rider Veteran — same On Attack.
       const owner53a = pending.player!;
       let base53a: PlayerId | null = null;
       if (targetPlayId === "player1.base") base53a = 1;
@@ -16711,7 +16731,7 @@ function applyAbilityEffect(
       else if (targetIsBase) base53a = targetBasePlayer ?? (owner53a === 1 ? 2 : 1);
       if (base53a !== null) {
         dealBaseDamage(game.currentGameState, base53a, 2, owner53a);
-        game.gameLog.push(`${CardTitle("IBH_053")}: dealt 2 damage to player ${base53a}'s base.`);
+        game.gameLog.push(`${CardTitle(pending.cardId.replace(/_onAttack$/, ""))}: dealt 2 damage to player ${base53a}'s base.`);
       }
       return pending.continuation; // resume combat (the On Attack continuation is the resolve-attack)
     }
@@ -17591,6 +17611,7 @@ function applyAbilityEffect(
       return pending.continuation;
     }
     case "SOR_078": // Vanquish — defeat a non-leader unit.
+    case "LOF_264": // It's Worse — same text.
     case "TWI_077": { // reprint of SOR_078
       if (!targetPlayId) break;
       const target078 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -18093,9 +18114,10 @@ function applyAbilityEffect(
       }
       break;
     }
-    case "SOR_059": { // 2-1B Surgical Droid OA: Heal 2 from chosen unit, then proceed to combat.
+    case "SOR_059": // 2-1B Surgical Droid OA: Heal 2 from chosen unit, then proceed to combat.
+    case "LOF_250": { // Medical Frigate — same On Attack.
       if (!targetPlayId) return pending.continuation;
-      healTarget(game.currentGameState, targetPlayId, 2, game.gameLog, "SOR_059");
+      healTarget(game.currentGameState, targetPlayId, 2, game.gameLog, pending.cardId);
       return pending.continuation;
     }
     case "SHD_046": { // Rey (Keeping the Past) OA: heal 2 from the chosen unit; a non-Heroism unit
@@ -18289,11 +18311,13 @@ function applyAbilityEffect(
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
     case "IBH_021": // Improvised Detonation — the chosen unit attacks with +2/+0 for this attack.
-    case "IBH_030": {
+    case "IBH_030":
+    case "LOF_224": // Pounce — the chosen Creature attacks with +4/+0 for this attack.
+    case "HMW_239": {
       if (!targetPlayId) break;
       const unit021 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (!unit021) break;
-      GivePowerMod(pending.cardId, unit021, 2, "ForAttack", game.gameLog);
+      GivePowerMod(pending.cardId, unit021, ATTACK_WITH_POWER_BUFF_EVENTS[pending.cardId].power, "ForAttack", game.gameLog);
       return {
         type: "attack-target",
         attackerPlayId: targetPlayId,
@@ -18578,12 +18602,13 @@ function applyAbilityEffect(
       healTarget(game.currentGameState, ownBaseId076, 2, game.gameLog, "SOR_076");
       break;
     }
-    case "SOR_124": { // Tactical Advantage: +2/+2 Phase to chosen unit.
+    case "SOR_124": // Tactical Advantage: +2/+2 Phase to chosen unit.
+    case "TWI_124": { // Tactical Advantage (TWI reprint)
       if (!targetPlayId) break;
       const target124 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target124) {
-        game.currentGameState.currentEffects.push({ cardId: "SOR_124", duration: "Phase", affectedPlayer: target124.controller, targetPlayId });
-        game.gameLog.push(`${CardTitle("SOR_124")}: gave +2/+2 to ${CardTitle(target124.cardId)} for this phase.`);
+        game.currentGameState.currentEffects.push({ cardId: pending.cardId, duration: "Phase", affectedPlayer: target124.controller, targetPlayId });
+        game.gameLog.push(`${CardTitle(pending.cardId)}: gave +2/+2 to ${CardTitle(target124.cardId)} for this phase.`);
       }
       break;
     }
@@ -18693,6 +18718,10 @@ function applyAbilityEffect(
     }
     case "LAW_214": { // Boba Fett — the paid-for half: deal 3 damage to the chosen ground unit.
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog);
+      break;
+    }
+    case "LAW_198": { // Dogged Pursuers — the paid-for half: deal 2 damage to the chosen ground unit.
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog);
       break;
     }
     case "JTL_125": { // Air Superiority — deal 4 damage to the chosen enemy ground unit.
@@ -19236,14 +19265,15 @@ function applyAbilityEffect(
       }
       break;
     }
-    case "SOR_202": { // Cantina Bouncer: Return chosen non-leader unit to owner's hand.
+    case "SOR_202": // Cantina Bouncer: Return chosen non-leader unit to owner's hand.
+    case "LAW_241": { // The Blade Wing — same When Played.
       if (!targetPlayId) break;
       const gs202 = game.currentGameState;
       const bounced202 = removeFromArena(gs202, targetPlayId);
       if (bounced202) {
         if (!bounced202.unit.IsTokenUnit()) {
           GetPlayer(gs202, bounced202.unit.owner).hand.push({ cardId: bounced202.unit.cardId });
-          game.gameLog.push(`${CardTitle("SOR_202")}: returned ${CardTitle(bounced202.unit.cardId)} to hand.`);
+          game.gameLog.push(`${CardTitle(pending.cardId)}: returned ${CardTitle(bounced202.unit.cardId)} to hand.`);
         }
       }
       break;
@@ -19381,12 +19411,13 @@ function applyAbilityEffect(
       }
       break;
     }
-    case "SOR_086": { // Gladiator Star Destroyer When Played: give chosen unit Sentinel for this phase.
+    case "SOR_086": // Gladiator Star Destroyer When Played: give chosen unit Sentinel for this phase.
+    case "HMW_246": { // Pyke Sarisa — same When Played.
       if (!targetPlayId) break;
       const target086 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (target086) {
-        game.currentGameState.currentEffects.push({ cardId: "SOR_086", duration: "Phase", affectedPlayer: target086.controller, targetPlayId });
-        game.gameLog.push(`${CardTitle("SOR_086")}: ${CardTitle(target086.cardId)} gains Sentinel for this phase.`);
+        game.currentGameState.currentEffects.push({ cardId: pending.cardId, duration: "Phase", affectedPlayer: target086.controller, targetPlayId });
+        game.gameLog.push(`${CardTitle(pending.cardId)}: ${CardTitle(target086.cardId)} gains Sentinel for this phase.`);
       }
       break;
     }

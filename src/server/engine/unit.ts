@@ -241,7 +241,8 @@ export class Unit implements UnitInterface {
           if (currentEffect.targetPlayId === this.playId) power += 2;
           break;
         case "JTL_106": power += 1; break; // Unity of Purpose
-        case "SOR_124": power += 2; break; // Tactical Advantage +2/+2 Phase
+        case "SOR_124": // Tactical Advantage +2/+2 Phase
+        case "TWI_124": power += 2; break; // Tactical Advantage (TWI reprint)
         case "SOR_051": power -= (currentEffect.value ?? 3); break; // Luke Skywalker –3/–3 or –6/–6 Phase
         case "SOR_076": power -= 2; break; // Make an Opening –2/–2 Phase
         case "SOR_054": power -= 2; break; // Jedi Lightsaber –2/–2 Phase (conditional Force On Attack)
@@ -333,10 +334,13 @@ export class Unit implements UnitInterface {
     }
 
     if (!this.LostAbilities()) {
-      // Seasoned Shoretrooper — SOR_081 and its SHD_083 reprint are the same card.
-      if ((this.cardId === "SOR_081" || this.cardId === "SHD_083") && GetResources(this.controller).length >= 6) power += 2;
+      // Seasoned Shoretrooper — SOR_081 and its SHD_083 reprint are the same card; HMW_256 Jedi
+      // Interceptor prints the same text.
+      if ((this.cardId === "SOR_081" || this.cardId === "SHD_083" || this.cardId === "HMW_256") && GetResources(this.controller).length >= 6) power += 2;
       if (this.cardId === "SOR_118") power += GetResources(this.controller).length; // 97th Legion
-      if (this.cardId === "SOR_161" && InitiativePlayer() === this.controller) power += 2; // Ardent Sympathizer
+      // "While you have the initiative, this unit gets +2/+0." — Ardent Sympathizer, Warbird Stowaway,
+      // Senator's Aide.
+      if ((this.cardId === "SOR_161" || this.cardId === "SHD_086" || this.cardId === "SEC_108") && InitiativePlayer() === this.controller) power += 2;
       if (this.cardId === "TWI_142" && GetBaseDamage(this.controller) >= 15) power += 2; // Anakin's Interceptor
       if (this.cardId === "TWI_012") power += Math.floor(GetBaseDamage(this.controller) / 5); // Anakin Skywalker (leader unit)
       if (this.cardId === "TWI_010" && GetHand(this.controller).length >= 6) power += 2; // Pre Vizsla (leader unit)
@@ -505,7 +509,8 @@ export class Unit implements UnitInterface {
         case "SOR_092": // Overwhelming Barrage
           if (effect.targetPlayId === this.playId) hp += 2;
           break;
-        case "SOR_124": hp += 2; break; // Tactical Advantage +2/+2 Phase
+        case "SOR_124": // Tactical Advantage +2/+2 Phase
+        case "TWI_124": hp += 2; break; // Tactical Advantage (TWI reprint)
         case "SOR_051": hp -= (effect.value ?? 3); break; // Luke Skywalker –3/–3 or –6/–6 Phase
         case "SOR_076": hp -= 2; break; // Make an Opening –2/–2 Phase
         case "SOR_054": hp -= 2; break; // Jedi Lightsaber –2/–2 Phase

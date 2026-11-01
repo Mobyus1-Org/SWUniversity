@@ -321,6 +321,7 @@ export const Cards = {
       battlefieldMarine: "SOR_095",
       vigilantHonorGuards: "SOR_048",
       tieLnFighter: "SOR_225",
+      allianceXWing: "SOR_237", // 2/3 Space Rebel/Vehicle/Fighter, cost 2, no text
       echoBaseDefender: "SOR_098",
       brightHope: "SOR_099",
       homeOne: "SOR_102",
@@ -393,6 +394,7 @@ export const Cards = {
     },
     shd: {
       migsMayfeldTriggerman: "SHD_163",
+      streetGangRecruiter: "SHD_260", // 4/4 Ground — WP: may return an Underworld card from discard
       criminalMuscle: "SHD_209", // 2/1 Ground — When Played: may return a non-unique upgrade to hand
       slaversFreighter: "SHD_189", // 4/5 Space — When Played: may ready another unit with power ≤ upgrades on enemy units
       omegaPartOfTheSquad: "SHD_198",
@@ -456,6 +458,8 @@ export const Cards = {
     },
     jtl: {
       annihilator: "JTL_041", // Tagge's Flagship — 12/12 Space, WP/WD: defeat + discard by name
+      tieBomber: "JTL_237", // -/4 Space — On Attack: 3 indirect damage (reprint of JTL_149)
+      goldLeader: "JTL_054", // 5/5 Space — Shielded; attacker gets -1/-0 while it defends
       firstOrderStormtrooper: "JTL_132",
       specialForcesTieFighter: "JTL_135",
       massassiTacticalOfficer: "JTL_146",
@@ -525,6 +529,11 @@ export const Cards = {
     },
     lof: {
       armyOfTheDead: "LOF_236", // 7/6 Ground Villainy, no abilities
+      lorSanTekka: "LOF_095", // 3/2 Ground, unique — WD: may give Experience to a unique unit
+      huntingNexu: "LOF_162", // reprint of SHD_168 — Raid 2 with another Aggression unit
+      medicalFrigate: "LOF_250", // reprint of SOR_059 — On Attack: may heal 2 from another unit
+      raveningGundark: "LOF_259", // 5/4 Ground — When Played: deal 1 to a ground unit (mandatory)
+      jTypeNubianStarship: "LOF_194", // 2/4 Space — WP: draw; WD: discard a card from your hand
       maceWinduLeaping: "LOF_149", // 6/6 Ground Force Jedi Republic, Overwhelm + When Played
       rey: "LOF_148", // With Palpatine's Power — 5/5 Ground, "when you draw this card" reveal
       curiousFlock: "LOF_255", // 1/1/1 Ground Creature — When Played: pay up to 6 for that many XP
@@ -566,6 +575,9 @@ export const Cards = {
       awakenedSpecters: "LOF_066", // 4/5 Ground Night — no card text, a plain Night body
     },
     twi: {
+      patrollingVWing: "TWI_107", // reprint of SOR_111 — When Played: draw a card
+      volunteerSoldier: "TWI_254", // reprint of SOR_248 — Raid 1; costs 1 less with a Trooper
+      favorableDelegate: "TWI_208", // 1/5 Ground — WP: draw; WD: discard a card from your hand
       generalGrievousTrophyCollector: "TWI_034",
       obiWansAethersprite: "TWI_048",
       poggleTheLesser: "TWI_080",
@@ -613,6 +625,10 @@ export const Cards = {
     },
     sec: {
       cruelCommandos: "SEC_086", // 5/5 Ground Republic Clone Trooper, Sentinel + Overwhelm
+      coronet: "SEC_047", // 4/6 Space, unique — Restore 1; each other friendly unit gains Restore 1
+      rotundaSenateGuards: "SEC_063", // 4/5 Ground — Sentinel while undamaged (as SOR_048)
+      senatorsAide: "SEC_108", // -/3 Ground — +2/+0 while you have the initiative
+      hondoOhnakaYouBetterHurry: "SEC_140", // 6/5 Ground, unique — others gain Raid 1; Plot
       skyhopperCanyonRunner: "SEC_214", // 1/4 Ground, cost 1 — Fringe, Vehicle, Speeder; no text
       strikeForceXWing: "SEC_152", // 3/2 Space Rebel Vehicle Fighter, When Played + Plot
       furtiveHandmaiden: "SEC_197", // 2/2 Ground Naboo, cost 1
@@ -642,6 +658,11 @@ export const Cards = {
     },
     law: {
       millenniumFalconDodgingPatrols: "LAW_068", // same title as JTL_249, different subtitle
+      landoCalrissianEyesOpen: "LAW_108", // 4/5 Ground — Sentinel; attacker gets -1/-0 while it defends
+      cloudRiderVeteran: "LAW_181", // 1/4 Ground — On Attack: deal 2 damage to a base
+      streetGangRecruiter: "LAW_261", // reprint of SHD_260 — WP: may return an Underworld card from discard
+      doggedPursuers: "LAW_198", // 5/5 Ground — WP: may pay 1 to deal 2 damage to a ground unit
+      theBladeWing: "LAW_241", // reprint of SOR_202 — WP: may return a non-leader unit
       mercenaryFleet: "LAW_164", // 10/10 Space Vehicle, no abilities — a legal Pilot host
       bWingSkirmisher: "LAW_183", // 4/4 Space Rebel Vehicle Fighter, When Played
       beilertValance: "LAW_051", // 3/6 Ground Underworld Bounty Hunter, On Attack
@@ -843,6 +864,10 @@ export const Cards = {
     hmw: {
       nightbrotherMaulsGauntlet: "HMW_204",
       ewokBrigade: "HMW_116", // 2/4 Ground, cost 2, no abilities — clean "costs 3 or less" fixture
+      victorSquadron: "HMW_203", // 5/5 Space — enters play ready
+      coronaSquadronXWing: "HMW_209", // reprint of SHD_199 — On Attack: may ready a resource
+      pykeSarisa: "HMW_246", // reprint of SOR_086 — WP: give a unit Sentinel for this phase
+      jediInterceptor: "HMW_256", // reprint of SHD_083 — +2/+0 with 6+ resources
       coastalCatamarans: "HMW_093", // 8/8 Ground, cost 7, Vigilance, no abilities
       mae: "HMW_055",               // 2/4 Ground — Ambush + Shielded + Grit, nothing else
       peppiBow: "HMW_073",          // 2/3 Ground — Restore 1 + "+1/+1 while upgraded"
@@ -969,6 +994,7 @@ export const Cards = {
     },
     law: {
       shadowOfStygeonPrime: "LAW_077", // Condition — attached unit can't ready
+      killSwitch: "LAW_127", // -1/-1 Condition — When Played: exhaust attached unit
     },
     hmw: {
       allianceShieldGenerator: "HMW_081", // Fortify — prevents a 5+ damage hit on your base
@@ -980,6 +1006,7 @@ export const Cards = {
       heavyIonCannon: "HMW_172",         // Fortify — draw on play; base Action [discard]: 2 damage to a unit, once per phase
       tarkinDoctrine: "HMW_206",         // unique Fortify — base gains "play a Fortification: exhaust an enemy"
       direProwess: "HMW_097",            // +1/+1 Learned — When Played: may give a Weakness token
+      devotion: "HMW_096",               // +1/+1 Innate — attached unit gains Restore 2
     },
   },
   events: {
@@ -1071,6 +1098,9 @@ export const Cards = {
       cunning: "SOR_203",
     },
     twi: {
+      tacticalAdvantage: "TWI_124", // reprint of SOR_124
+      resupply: "TWI_127", // reprint of SOR_126
+      nowThereAreTwoOfThem: "TWI_225", // play a trait-sharing non-Vehicle unit for 5 less
       lethalCrackdown: "TWI_041",
       pyrrhicAssault: "TWI_103",
       cornerThePrey: "TWI_139",
@@ -1099,6 +1129,7 @@ export const Cards = {
     },
     jtl: {
       jumpToLightspeed: "JTL_232",
+      prepareForTakeoff: "JTL_128", // reprint of SOR_125
       noDisintegrations: "JTL_144",
       theyHateThatShip: "JTL_155",
       fightFireWithFire: "JTL_173",
@@ -1195,6 +1226,8 @@ export const Cards = {
     },
     lof: {
       cureWounds: "LOF_075",
+      itsWorse: "LOF_264", // reprint of SOR_078 Vanquish
+      pounce: "LOF_224", // attack with a Creature unit, +4/+0
       directedByTheForce: "LOF_123",
       sorcerousBlast: "LOF_172",
       shatterpoint: "LOF_079",
@@ -1222,6 +1255,7 @@ export const Cards = {
       dragonsMight: "HMW_102",      // Defeat a non-leader unit with 4 or less power
       breach: "HMW_114",            // A friendly unit deals its power; Overwhelm spills to a base
       alwaysABiggerFish: "HMW_099", // Defeat a friendly Creature, play a bigger one free
+      pounce: "HMW_239", // reprint of LOF_224 — attack with a Creature unit, +4/+0
       seismicDetonation: "HMW_054",  // Choose an arena; 3 to each enemy there at regroup start
       lowAltitudeCombat: "HMW_050", // Move a space unit to the ground arena, then maybe attack
       logTrap: "HMW_149",           // Attack with a friendly unit, then again (exhausted), not a base

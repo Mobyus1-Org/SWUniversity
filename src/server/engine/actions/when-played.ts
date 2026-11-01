@@ -7,7 +7,7 @@ import { IsTokenUpgrade, PilotlessVehiclePlayIds, UpgradeDestinationsOnControlCh
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending, BudgetSelectPending, PlayFromHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateBeast, CreateCloneTrooper, CreateXWing, CreateTieFighter, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens, GiveWeaknessToken } from "@/server/engine/token-helpers";
-import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardIsUnique, CardArena } from "@/server/engine/card-db/generated";
+import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardIsUnique, CardArena, CardTraits } from "@/server/engine/card-db/generated";
 
 /**
  * SHD_091 Jabba's Rancor — "Deal 3 damage to another friendly ground unit and 3 damage to an
@@ -310,6 +310,52 @@ export function buildMysteriousDisappearancePick(
       continuation,
     } satisfies AbilityOptionPending,
   } satisfies AbilityTargetPending;
+}
+
+/**
+ * "Attack with a [<trait>] unit. It gets +N/+0 for this attack." events: the trait the attacker
+ * must have (none = any unit) and N. The When Played offer and the dispatch handler both read it.
+ */
+export const ATTACK_WITH_POWER_BUFF_EVENTS: Record<string, { trait?: string; power: number }> = {
+  IBH_021: { power: 2 },                    // Improvised Detonation
+  IBH_030: { power: 2 },                    // Improvised Detonation (alt printing)
+  LOF_224: { trait: "Creature", power: 4 }, // Pounce
+  HMW_239: { trait: "Creature", power: 4 }, // Pounce (HMW reprint)
+};
+
+/**
+ * "When Played: You may return a <kind of> card from your discard pile to your hand." — the
+ * yes/no offer, or null when nothing in the discard qualifies. `eligible` picks the kind.
+ */
+function optionalReturnFromDiscard(
+  cardId: string,
+  player: PlayerId,
+  playId: string | undefined,
+  eligible: (discardCardId: string) => boolean,
+  helperText: string,
+): AbilityOptionPending | null {
+  const game = GetGame();
+  if (!game) return null;
+  const eligibleCards = GetPlayer(game.currentGameState, player).discard.filter(c => eligible(c.cardId));
+  if (eligibleCards.length === 0) return null;
+  return {
+    type: "ability-option",
+    cardId,
+    player,
+    sourcePlayId: playId,
+    helperText,
+    yesLabel: "Return",
+    noLabel: "Skip",
+    onYes: {
+      type: "return-from-discard",
+      cardId,
+      player,
+      maxCount: 1,
+      eligiblePlayIds: eligibleCards.map(c => c.playId),
+      continuation: null,
+    },
+    continuation: null,
+  };
 }
 
 export function resolveWhenPlayed(
@@ -1507,6 +1553,12 @@ export function resolveWhenPlayed(
       return optionalTarget("ASH_259", player, groundUnits259.map(u => u.playId),
         "Deal 1 damage to a ground unit?", { yesLabel: "Deal 1", sourcePlayId: playId });
     }
+    case "LOF_259": { // Ravening Gundark — "When Played: Deal 1 damage to a ground unit." ASH_259's
+                      // effect without the "may": straight to the target, itself included.
+      const groundUnits259m = AllGroundUnits();
+      if (groundUnits259m.length === 0) return null;
+      return mandatoryTarget("LOF_259", player, groundUnits259m.map(u => u.playId));
+    }
     case "ASH_197": { // Executor — "When Played: Give an Advantage token to each other friendly unit."
       const gs197 = game.currentGameState;
       const friendly197 = GetUnitsForPlayer(player).filter(u => u.playId !== playId);
@@ -1890,32 +1942,16 @@ export function resolveWhenPlayed(
       return optionalTarget(cardId, player, forceUnits133.map(u => u.playId),
         "Deal 2 damage to a Force unit?", { yesLabel: "Deal 2", sourcePlayId: playId });
     }
-    case "TWI_246": { // Tranquility — "When Played: You may return a Republic unit from your
-                      // discard pile to your hand."
-      const game246 = GetGame();
-      if (!game246) return null;
-      const eligible246 = GetPlayer(game246.currentGameState, player).discard.filter(c =>
-        CardType(c.cardId) === "Unit" && TraitContains(c.cardId, "Republic", player));
-      if (eligible246.length === 0) return null;
-      return {
-        type: "ability-option",
-        cardId,
-        player,
-        sourcePlayId: playId,
-        helperText: "Return a Republic unit from your discard pile to your hand?",
-        yesLabel: "Return",
-        noLabel: "Skip",
-        onYes: {
-          type: "return-from-discard",
-          cardId,
-          player,
-          maxCount: 1,
-          eligiblePlayIds: eligible246.map(c => c.playId),
-          continuation: null,
-        },
-        continuation: null,
-      };
-    }
+    case "TWI_246": // Tranquility — "When Played: You may return a Republic unit from your
+                    // discard pile to your hand."
+      return optionalReturnFromDiscard(cardId, player, playId,
+        c => CardType(c) === "Unit" && TraitContains(c, "Republic", player),
+        "Return a Republic unit from your discard pile to your hand?");
+    case "SHD_260": // Street Gang Recruiter — "When Played: You may return an Underworld card from
+    case "LAW_261": // your discard pile to your hand." Any card type.
+      return optionalReturnFromDiscard(cardId, player, playId,
+        c => TraitContains(c, "Underworld", player),
+        "Return an Underworld card from your discard pile to your hand?");
     case "JTL_125": { // Air Superiority — "If you control more space units than an opponent, deal
                       // 4 damage to a ground unit that opponent controls." The comparison is a
                       // condition, not a cost: failing it plays the event for no effect.
@@ -1936,6 +1972,13 @@ export function resolveWhenPlayed(
       if (AllGroundUnits().length === 0) return null;
       return optionalPayResource("LAW_214", player,
         "Pay 1 resource to deal 3 damage to a ground unit?", { sourcePlayId: playId });
+    }
+    case "LAW_198": { // Dogged Pursuers — "When Played: You may pay 1 resource. If you do, deal 2
+                      // damage to a ground unit." Boba Fett's When Played for 2; it is itself a
+                      // legal target.
+      if (AllGroundUnits().length === 0) return null;
+      return optionalPayResource("LAW_198", player,
+        "Pay 1 resource to deal 2 damage to a ground unit?", { sourcePlayId: playId });
     }
     case "SOR_073": { // Moment of Peace — "Give a Shield token to a unit."
       const allUnits073 = AllUnits();
@@ -2326,6 +2369,36 @@ export function resolveWhenPlayed(
         eligibleHandIndices: eligible155,
       };
     }
+    case "TWI_225": { // Now There Are Two of Them — "If you control exactly one unit, play a
+                      // non-Vehicle unit from your hand that shares a Trait with the unit you
+                      // control. It costs 5 resources less." Offered only when something qualifies
+                      // and is affordable at the discount; declinable like any play from hand.
+      const gs225 = game.currentGameState;
+      const units225 = GetUnitsForPlayer(player);
+      if (units225.length !== 1) return null;
+      // Traits as they stand now: the unit's may be granted (upgrades) or suppressed, so each
+      // candidate trait is re-checked on both cards rather than read off the printed lists.
+      const sole225 = units225[0];
+      const shares225 = (handCardId: string) =>
+        [...new Set([...UnitTraits(sole225), ...CardTraits(handCardId)])].some(t =>
+          TraitContains(sole225.cardId, t, player, sole225.playId) && TraitContains(handCardId, t, player));
+      const eligible225 = GetPlayer(gs225, player).hand
+        .map((c, i) => ({ c, i }))
+        .filter(({ c }) => CardType(c.cardId) === "Unit"
+          && !IsVehicleUnitCard(c.cardId, player)
+          && shares225(c.cardId)
+          && CardIsPlayable(gs225, player, c.cardId, 5))
+        .map(({ i }) => i);
+      if (eligible225.length === 0) return null;
+      return {
+        type: "play-from-hand",
+        cardId,
+        player,
+        costReduction: 5,
+        eligibleHandIndices: eligible225,
+        optional: true,
+      };
+    }
     case "SOR_219": { // Sneak Attack — "Play a unit from your hand. It costs 3 less and enters play ready. At the start of the regroup phase, defeat it."
       const pState219 = player === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
       const hasUnit219 = pState219.hand.some(c => CardType(c.cardId) === "Unit");
@@ -2579,11 +2652,13 @@ export function resolveWhenPlayed(
       return pending245;
     }
     case "SOR_125": // Prepare for Takeoff — Search top 8 for up to 2 Vehicle units, reveal and draw.
+    case "JTL_128": // Prepare for Takeoff (JTL reprint)
       return searchDeck(cardId, player, 8, "draw", { filter: { type: "Unit", trait: "Vehicle" }, maxChoices: 2 });
-    case "SOR_126": { // Resupply — "Put this event into play as a resource."
+    case "SOR_126": // Resupply — "Put this event into play as a resource."
+    case "TWI_127": { // Resupply (TWI reprint)
       const gs126 = game.currentGameState;
       const pState126 = player === 1 ? gs126.player1 : gs126.player2;
-      const discardIdx126 = pState126.discard.findIndex(d => d.cardId === "SOR_126");
+      const discardIdx126 = pState126.discard.findIndex(d => d.cardId === cardId);
       if (discardIdx126 >= 0) {
         const discarded = pState126.discard.splice(discardIdx126, 1)[0];
         pState126.resources.push({
@@ -2594,7 +2669,7 @@ export function resolveWhenPlayed(
           ready: false,
           stolen: false,
         });
-        game.gameLog.push(`${CardTitle("SOR_126")} entered play as an exhausted resource.`);
+        game.gameLog.push(`${CardTitle(cardId)} entered play as an exhausted resource.`);
       }
       return null;
     }
@@ -3081,6 +3156,7 @@ export function resolveWhenPlayed(
       return mandatoryTarget(cardId, player, eligible102.map(u => u.playId));
     }
     case "SOR_078": // Vanquish — "Defeat a non-leader unit."
+    case "LOF_264": // It's Worse — same text.
     case "TWI_077": { // reprint of SOR_078
       const eligible078 = AllUnits().filter(u =>
         !Unit.FromInterface(u).IsLeader()
@@ -3281,6 +3357,9 @@ export function resolveWhenPlayed(
     case "SOR_039": // AT-AT Suppressor — When Played: Exhaust all ground units. (auto-resolves in when-played-trigger)
       return null;
     case "SOR_111": // Patrolling V-Wing — When Played: Draw a card. (auto-resolves in when-played-trigger)
+    case "TWI_107": // Patrolling V-Wing (TWI reprint)
+    case "LOF_194": // J-Type Nubian Starship
+    case "TWI_208": // Favorable Delegate
       return null;
     case "SOR_132": { // Imperial Interceptor — When Played: You may deal 3 damage to a space unit.
       const spaceUnits132 = AllSpaceUnits();
@@ -3403,7 +3482,8 @@ export function resolveWhenPlayed(
         } : null,
       };
     }
-    case "SOR_202": { // Cantina Bouncer — When Played: You may return a non-leader unit to its owner's hand.
+    case "SOR_202": // Cantina Bouncer — When Played: You may return a non-leader unit to its owner's hand.
+    case "LAW_241": { // The Blade Wing — same text.
       const nonLeaders202 = AllUnits().filter(u => !IsLeaderUnit(u));
       if (nonLeaders202.length === 0) return null;
       return optionalTarget(cardId, player, nonLeaders202.map(u => u.playId),
@@ -3553,8 +3633,12 @@ export function resolveWhenPlayed(
       return { type: "ability-target", cardId: "IBH_005_a", player, fromPlayIds: enemies005.map(u => u.playId), continuation: null };
     }
     case "IBH_021": // Improvised Detonation — "Attack with a unit. It gets +2/+0 for this attack."
-    case "IBH_030": {
-      const ready021 = GetUnitsForPlayer(player, true);
+    case "IBH_030":
+    case "LOF_224": // Pounce — "Attack with a Creature unit. It gets +4/+0 for this attack."
+    case "HMW_239": { // Pounce (HMW reprint)
+      const { trait: trait021 } = ATTACK_WITH_POWER_BUFF_EVENTS[cardId];
+      const ready021 = GetUnitsForPlayer(player, true)
+        .filter(u => !trait021 || TraitContains(u.cardId, trait021, u.controller, u.playId));
       if (ready021.length === 0) return null;
       return { type: "ability-target", cardId, player, fromPlayIds: ready021.map(u => u.playId), continuation: null };
     }
@@ -3582,7 +3666,8 @@ export function resolveWhenPlayed(
       if (allUnits076.length === 0) return null;
       return mandatoryTarget(cardId, player, allUnits076.map(u => u.playId));
     }
-    case "SOR_124": { // Tactical Advantage — Give a unit +2/+2 for this phase.
+    case "SOR_124": // Tactical Advantage — Give a unit +2/+2 for this phase.
+    case "TWI_124": { // Tactical Advantage (TWI reprint)
       const allUnits124 = AllUnits();
       if (allUnits124.length === 0) return null;
       return mandatoryTarget(cardId, player, allUnits124.map(u => u.playId));
@@ -4261,7 +4346,8 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies ReturnFromDiscardPending;
     }
-    case "SOR_086": { // Gladiator Star Destroyer — Give a unit Sentinel for this phase.
+    case "SOR_086": // Gladiator Star Destroyer — Give a unit Sentinel for this phase.
+    case "HMW_246": { // Pyke Sarisa — same text.
       const all086 = AllUnits();
       if (all086.length === 0) return null;
       return mandatoryTarget(cardId, player, all086.map(u => u.playId));

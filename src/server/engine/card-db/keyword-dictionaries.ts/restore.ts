@@ -46,6 +46,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
         // lost its abilities.
         case "SOR_102": //Home One
         case "HMW_039": //Mother Talzin (Pledged to the Sisterhood)
+        case "SEC_047": //Coronet - Stately Vessel
           if(u.playId !== playId && !Unit.FromInterface(u).LostAbilities()) amount += 1;
           break;
         default: break;
@@ -59,6 +60,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
       const upgradeCardID = u.cardId;
       switch(upgradeCardID) {
         case "SOR_070": //Devotion
+        case "HMW_096": //Devotion (HMW reprint)
           amount += 2;
           break;
         case "TWI_051"://For The Republic
@@ -151,6 +153,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "IBH_090": amount += 1; break;
     case "SEC_005": amount += 4; break;//Satine Kryze
     case "SEC_043": amount += 2; break;//Chandrilan Sponsor
+    case "SEC_047": amount += 1; break;//Coronet - Stately Vessel
     case "SEC_094": amount += 1; break;//Mina Bonteri
     case "SEC_103": amount += 3; break;//Mon Mothma
     case "LAW_050": amount += 2; break;//Honnah

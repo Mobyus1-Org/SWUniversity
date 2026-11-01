@@ -63,7 +63,8 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
           if(playId !== u.playId && CardAspects(cardId).includes("Heroism")) amount += 1;
           break;
         case "SOR_012"://IG-88 Leader Unit
-          if(playId !== u.playId) amount += 1;
+        case "SEC_140"://Hondo Ohnaka (You Better Hurry) — same aura
+          if(playId !== u.playId && !Unit.FromInterface(u).LostAbilities()) amount += 1;
           break;
         case "HMW_007"://Darth Vader (Might of the Empire) Leader Unit — "OTHER friendly units that cost 3 or more gain Raid 1"
           if (playId !== u.playId && (CardCost(cardId) ?? 0) >= 3 && !Unit.FromInterface(u).LostAbilities()) amount += 1;
@@ -128,6 +129,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
       case "SOR_131": amount += unit.TotalHP() - unit.CurrentHP(); break;//Fifth Brother
       case "SOR_188": // Chopper (SOR)
       case "SEC_147": amount += PlayerHasUnitWithTraitInPlay(player, "Spectre", true, playId) ? 1 : 0; break;//Chopper
+      case "LOF_162": //Hunting Nexu (LOF reprint)
       case "SHD_168": amount += PlayerHasUnitWithAspectInPlay(player, "Aggression", true, playId) ? 2 : 0; break;//Hunting Nexu
       case "TWI_164": amount += IsCoordinateActive(player) ? 2 : 0; break;//Hevy
       case "TWI_196": amount += IsCoordinateActive(player) ? 3 : 0; break;//Plo Koon
@@ -172,6 +174,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "SHD_005": amount += !LeaderAbilitiesIgnored() ? 1 : 0; break; //Hondo Ohnaka Leader Unit
     case "HMW_007": amount += !LeaderAbilitiesIgnored() ? 1 : 0; break; //Darth Vader (Might of the Empire) Leader Unit
     case "HMW_018": amount += !LeaderAbilitiesIgnored() ? 1 : 0; break; //The Warrior (Deft Duelist) Leader Unit
+    case "TS26_05": amount += !LeaderAbilitiesIgnored() ? 3 : 0; break; //Savage Opress (You Must Have Your Revenge) Leader Unit
     //non-Leader Units
     case "SOR_194": amount += 2; break; //Rogue Operative
     case "SOR_157": amount += 2; break; //Cantina Braggart
@@ -179,7 +182,8 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "SOR_209": amount += 1; break; //Pirated Starfighter
     case "SOR_144": amount += 1; break; //Red Three
     case "SOR_208": amount += 1; break; //Outer Rim Headhunter
-    case "SOR_248": amount += 1; break; //Volunteer Soldier
+    case "SOR_248": //Volunteer Soldier
+    case "TWI_254": amount += 1; break; //Volunteer Soldier (TWI reprint)
     case "HMW_039": amount += 1; break; //Mother Talzin (Pledged to the Sisterhood)
     case "HMW_167": amount += 3; break; //Dune Sea Nomads
     case "HMW_106": amount += 1; break; //Secessionist Convert

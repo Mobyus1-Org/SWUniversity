@@ -2304,6 +2304,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SHD_057": //Rickety Quadjumper — On Attack: may reveal top card, conditional Experience
     case "SHD_183": //Kintan Intimidator — On Attack: exhaust the defender
     case "SHD_199": //Coruscant Dissident — On Attack: may ready a resource
+    case "HMW_209": //Corona Squadron X-Wing — same On Attack as SHD_199
     case "HMW_061": //Director Krennic (The Work Has Stalled) — On Attack: draw if your base is upgraded
     case "HMW_064": //Scorch — On Attack: may deal 1 damage to an upgraded unit
     case "HMW_210": //Sol — On Attack: gains Sentinel for this phase
@@ -2351,6 +2352,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "JTL_132": //First Order Stormtrooper — On Attack/When Defeated: 1 indirect damage to a player
     case "JTL_133": //Allegiant General Pryde — On Attack: if you have initiative, 2 indirect damage
     case "JTL_149": //Red Squadron Y-Wing — On Attack: 3 indirect damage to the defending player
+    case "JTL_237": //TIE Bomber — same On Attack as JTL_149
     case "SHD_153": //Poe Dameron — On Attack: discard up to 3, then one different option per discard
     case "SHD_064": //Survivors' Gauntlet — When Played/On Attack: may move an upgrade between units of the same controller
     case "SHD_150": //Koska Reeves — On Attack: if upgraded, may deal 2 damage to a ground unit
@@ -2366,6 +2368,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_050": //The Ghost - Spectre Home Base
     case "SOR_119": //Reinforcement Walker
     case "SOR_059": //2-1B Surgical Droid
+    case "LOF_250": //Medical Frigate — same On Attack as SOR_059
     case "SOR_116": //Steadfast Battalion (General Grievous)
     case "SOR_158": //Jedha Agitator (Cassian Andor)
     case "SOR_208": //Outer Rim Headhunter (Swoop Racer)
@@ -2432,6 +2435,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "IBH_060": //Admiral Piett — On Attack: if you control an Aggression unit, draw a card
     case "IBH_065":
     case "IBH_053": //Darth Vader (deployed) — On Attack: deal 2 damage to a base
+    case "LAW_181": //Cloud-Rider Veteran — same On Attack as IBH_053 (deployed)
     case "IBH_001": //Leia Organa (deployed) — On Attack: heal 1 from a friendly unit and 1 from another
       return true;
     default: break;

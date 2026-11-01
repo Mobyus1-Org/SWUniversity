@@ -19,7 +19,7 @@ import { GiveTokenUpgrade, CreateSpy, CreateTieFighter, CreateBattleDroid, Creat
 const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "HMW_111", // Invasion Lander — each other friendly unit +2/+2 this phase
   "SHD_066", // Cargo Juggernaut — conditional base heal
-  "SOR_039", "SOR_111", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
+  "SOR_039", "SOR_111", "TWI_107", "LOF_194", "TWI_208", "SHD_160", "JTL_082", "TWI_229", "SOR_134", "SEC_082",
   "SEC_083", "SOR_190", "SOR_191", "SOR_037", "SOR_068", "SOR_148", "TWI_112",
   "SHD_197", "ASH_218", "ASH_112", "ASH_124", "ASH_149", "ASH_179", "ASH_251",
   "ASH_237", "ASH_248", "SEC_119", "JTL_087", "HMW_121", "ASH_079", "ASH_111", "ASH_064", "TWI_144", "TWI_097", "TWI_084", "TWI_137", "TWI_160", "ASH_065", "ASH_221",
@@ -74,6 +74,9 @@ export function resolveWhenPlayedTrigger(
       break;
     }
     case "SOR_111": // Patrolling V-Wing — When Played: Draw a card.
+    case "TWI_107": // Patrolling V-Wing (TWI reprint)
+    case "LOF_194": // J-Type Nubian Starship — same When Played
+    case "TWI_208": // Favorable Delegate — same When Played
       DrawCardForPlayer(gs, log, trigger.fromPlayer);
       break;
     case "HMW_121": { // Hijacked AT-ST — "This unit doesn't ready during the next regroup phase."

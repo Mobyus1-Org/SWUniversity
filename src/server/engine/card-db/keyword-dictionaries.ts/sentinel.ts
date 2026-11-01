@@ -42,7 +42,8 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
         case "ASH_007_sentinel": hasSentinel = true; break;//Grand Admiral Sloane leader Action
         case "ASH_003_sentinel": hasSentinel = true; break;//Baylan Skoll (deployed) On Attack
         case "SEC_048": hasSentinel = true; break;//Captain Rex — this unit AND an enemy unit, for the phase
-        case "SOR_086": hasSentinel = true; break;//Gladiator Star Destroyer
+        case "SOR_086": //Gladiator Star Destroyer
+        case "HMW_246": hasSentinel = true; break;//Pyke Sarisa (same When Played)
         case "SOR_003": hasSentinel = true; break;//Chewbacca (Walking Carpet)
         case "SHD_103": hasSentinel = true; break;//General Rieekan
         case "TWI_074": hasSentinel = true; break;//Guarding The Way
@@ -117,6 +118,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
       case "JTL_113"://Homestead Militia (JTL)
         return GetResources(player).length >= 6;
       case "SOR_048"://Vigilant Honor Guards
+      case "SEC_063"://Rotunda Senate Guards (same text)
         return !unit.IsDamaged();
       case "SOR_065"://Baze Melbus
         return InitiativePlayer() === player;
@@ -272,6 +274,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "LAW_118"://Droid Laser Turret
     case "LAW_251"://Night Wind Assailants
     case "LAW_263"://Kessel Hulk
+    case "LAW_108"://Lando Calrissian - Eyes Open
     case "ASH_065"://Home One - Heart of the Fleet
     case "ASH_073"://Palace Chef Droid
     case "ASH_029"://Scorpenek Annihilator Droid

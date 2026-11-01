@@ -510,9 +510,10 @@ function resolveInnateOnAttack(
       return continuation;
     }
     case "IBH_053": // Darth Vader (deployed) — On Attack: Deal 2 damage to a base. (Mandatory, either base.)
+    case "LAW_181": // Cloud-Rider Veteran — same text.
       return {
         type: "ability-target",
-        cardId: "IBH_053_onAttack",
+        cardId: `${sourceCardId}_onAttack`,
         player: attacker.controller,
         fromPlayIds: [],
         fromZones: ["Base"],
@@ -638,7 +639,8 @@ function resolveInnateOnAttack(
       }
       return continuation;
     }
-    case "SHD_199": { // Coruscant Dissident — "You may ready a resource."
+    case "SHD_199": // Coruscant Dissident — "You may ready a resource."
+    case "HMW_209": { // Corona Squadron X-Wing — same text.
                       // Not offered with nothing exhausted: an offer that cannot do anything is
                       // just a click.
       const game199 = GetGame();
@@ -647,7 +649,7 @@ function resolveInnateOnAttack(
       if (!exhausted199) return continuation;
       return {
         type: "ability-option",
-        cardId: "SHD_199",
+        cardId: sourceCardId,
         player: attacker.controller,
         helperText: "Ready a resource?",
         yesLabel: "Ready",
@@ -764,14 +766,15 @@ function resolveInnateOnAttack(
         continuation,
       } satisfies ChooseIndirectTargetPending;
     }
-    case "JTL_149": { // Red Squadron Y-Wing — "On Attack: Deal 3 indirect damage to the DEFENDING
-                      // PLAYER." That is whoever owns the attack's target, not simply the opponent.
+    case "JTL_149": // Red Squadron Y-Wing — "On Attack: Deal 3 indirect damage to the DEFENDING PLAYER."
+    case "JTL_237": { // TIE Bomber — same text. The defending player is whoever owns the attack's
+                      // target, not simply the opponent.
       const target149 = continuation.target;
       const defender149: PlayerId = target149.type === "base"
         ? target149.player
         : (AllUnits().find(u => u.playId === target149.playId)?.controller
            ?? (attacker.controller === 1 ? 2 : 1));
-      return buildIndirectDamage("JTL_149", attacker.controller, defender149, 3, continuation, attacker.playId);
+      return buildIndirectDamage(sourceCardId, attacker.controller, defender149, 3, continuation, attacker.playId);
     }
     case "SHD_064": // Survivors' Gauntlet — "On Attack: You may attach an upgrade on a unit to
                     // another eligible unit controlled by the same player." (Same as When Played.)
@@ -2052,7 +2055,8 @@ function resolveInnateOnAttack(
       const units141 = AllUnits();
       return mandatoryTarget("SHD_141", attacker.controller, units141.map(u => u.playId), continuation);
     }
-    case "SOR_059": { // 2-1B Surgical Droid — On Attack: You may heal 2 damage from another unit.
+    case "SOR_059": // 2-1B Surgical Droid — On Attack: You may heal 2 damage from another unit.
+    case "LOF_250": { // Medical Frigate — same text.
       const damagedOthers059 = AllUnits()
         .filter(u => u.playId !== attacker.playId && u.damage > 0);
       if (damagedOthers059.length === 0) return continuation;

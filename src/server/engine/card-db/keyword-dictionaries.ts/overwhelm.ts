@@ -1,4 +1,4 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasUnitWithTraitInPlay, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetLeaderForPlayer, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasUnitWithTraitInPlay, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
 import { CardCost } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
@@ -45,6 +45,7 @@ export function HasOverwhelm(cardId: string,
           if (attackingUnit && CardCost(unit.cardId) <= 3) return true;
           break;
         case "TWI_009"://Maul Leader Unit
+        case "TS26_05"://Savage Opress Leader Unit — same "each other friendly unit gains Overwhelm"
           if(u.playId !== playId && !LeaderAbilitiesIgnored()) return true;
           break;
         case "TWI_114"://Clone Commander Cody
@@ -74,6 +75,14 @@ export function HasOverwhelm(cardId: string,
           return true;
         default: break;
       }
+    }
+    // TS26_05 Savage Opress, front — from the LEADER ZONE: "Each friendly unit with the most power
+    // among friendly units gains Overwhelm." Every unit tied for the most has it. Deployed, the unit
+    // side's "each other friendly unit" aura above takes over.
+    const leaderSavage = GetLeaderForPlayer(player);
+    if (leaderSavage.cardId === "TS26_05" && !leaderSavage.deployed && !LeaderAbilitiesIgnored()
+        && unit.CurrentPower() >= Math.max(...units.map(u => Unit.FromInterface(u).CurrentPower()))) {
+      return true;
     }
     // ASH_007 Grand Admiral Sloane (deployed) — "Each OTHER friendly unit gains Overwhelm and
     // Sentinel." Board-wide from a unit, so it is checked for everyone rather than listed per card.
@@ -138,6 +147,7 @@ export function HasOverwhelm(cardId: string,
     case "TWI_012"://Anakin Skywalker Leader Unit
     case "TWI_005"://Count Dooku Leader Unit
     case "TWI_009"://Maul Leader Unit
+    case "TS26_05"://Savage Opress Leader Unit
       return !LeaderAbilitiesIgnored();
     //non-leader units
     case "LAW_034"://Chewbacca - Mighty Rescuer

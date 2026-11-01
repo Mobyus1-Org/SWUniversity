@@ -171,6 +171,12 @@ function resolveOwnWhenDefeated(
   }
 
   switch (unit.cardId) {
+    case "LOF_194": // J-Type Nubian Starship — "When Defeated: Discard a card from your hand."
+    case "TWI_208": { // Favorable Delegate — same text. Mandatory; nothing to do with an empty hand.
+      const game194 = GetGame();
+      if (!game194 || GetPlayer(game194.currentGameState, player).hand.length === 0) return null;
+      return { type: "discard-from-hand", targetPlayer: player, count: 1, continuation: null };
+    }
     case "SEC_132": { // Imperial Occupier — "When Defeated: Create a Spy token."
                       // Mandatory and targetless, so it resolves with no prompt.
       const game132 = GetGame();
@@ -553,6 +559,13 @@ function resolveOwnWhenDefeated(
       if (units108.length === 0) return null;
       return optionalTarget("SOR_108", player, units108.map(u => u.playId),
         "Give an Experience token to a unit?");
+    }
+    case "LOF_095": { // Lor San Tekka — "When Defeated: You may give an Experience token to a UNIQUE
+                      // unit." SOR_108's ability with a narrower target list; same resolver.
+      const unique095 = AllUnits().filter(u => CardIsUnique(u.cardId));
+      if (unique095.length === 0) return null;
+      return optionalTarget("LOF_095", player, unique095.map(u => u.playId),
+        "Give an Experience token to a unique unit?");
     }
     case "SOR_226": { // Admiral Motti — "When Defeated: You may ready a [Villainy] unit."
       const villainyUnits = UnitsWithAspect("Villainy");

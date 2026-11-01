@@ -425,6 +425,16 @@ function jabbasRancorDiscount(game: GameState, player: PlayerId, cardId: string)
   return hasJabbaUnit ? 1 : 0;
 }
 
+// SOR_248 Volunteer Soldier and its TWI_254 reprint: "If you control a Trooper unit, this unit
+// costs 1 resource less to play." The card being played is not in play yet, so it can't count itself.
+function volunteerSoldierDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (cardId !== "SOR_248" && cardId !== "TWI_254") return 0;
+  const p = player === 1 ? game.player1 : game.player2;
+  const hasTrooper = [...p.groundArena, ...p.spaceArena]
+    .some(u => TraitContains(u.cardId, "Trooper", player, u.playId));
+  return hasTrooper ? 1 : 0;
+}
+
 // TS26_60 Take Charge: costs 1 resource less to play for each friendly LEADER unit. IsLeader()
 // also counts a Vehicle carrying a pilot leader, matching Admiral Motti's aura.
 function takeChargeDiscount(game: GameState, player: PlayerId, cardId: string): number {
@@ -536,6 +546,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - redLeaderPilotDiscount(game, player, cardId)
     - reputableHunterDiscount(game, player, cardId)
     - jabbasRancorDiscount(game, player, cardId)
+    - volunteerSoldierDiscount(game, player, cardId)
     - takeChargeDiscount(game, player, cardId)
     - originTreeShyyyoDiscount(game, player, cardId)
   ;

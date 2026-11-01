@@ -21,6 +21,7 @@ export function HasPlot(cardId: string, playId?: string, player?: PlayerId)
     case "SEC_100"://Dressellian Commandos
     case "SEC_111"://Jar Jar Binks (SEC)
     case "SEC_123"://Unveiled Might
+    case "SEC_140"://Hondo Ohnaka (You Better Hurry)
     case "SEC_152"://Strike Force X-Wing
     case "SEC_149"://Kaydel Connix
     case "SEC_183"://Topple the Summit
