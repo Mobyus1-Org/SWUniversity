@@ -38,6 +38,7 @@ export function UpgradeEligibleTargets(
 
   switch (upgradeCardId) {
     // "Attach to a non-Vehicle unit."
+    case "IC27_085": // reprint of SHD_104
     case "SOR_053": //Luke's Lightsaber
     case "SOR_054": //Jedi Lightsaber
     case "SOR_071": //Electrostaff

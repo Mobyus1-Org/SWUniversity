@@ -1,1 +1,89 @@
-{}
+{
+  "IC27_007": {
+    "title": "Asajj Ventress",
+    "subtitle": "Bald and Beautiful",
+    "type": "Leader",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 6,
+    "power": 5,
+    "hp": 6,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Cunning",
+      "Villainy"
+    ],
+    "traits": [
+      "Force",
+      "Separatist",
+      "Sith"
+    ],
+    "text": "Action [Exhaust]: Attack with a unit. After completing this attack, if the attacker survived, you may ready a resource.",
+    "epicAction": "Epic Action: If you control 6 or more resources, deploy this leader.",
+    "leaderUnitText": "Saboteur (When this unit attacks, ignore Sentinel and defeat the defender's Shields.)\nOn Attack: You may ready a resource.",
+    "unique": true,
+    "rarity": "Common",
+    "set": "IC27",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/IC27/007.png",
+    "imageUrlBack": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/IC27/007-back.png"
+  },
+  "IC27_147": {
+    "title": "Asajj Ventress",
+    "subtitle": "Death From Above",
+    "type": "Unit",
+    "type2": "",
+    "arena": "Ground",
+    "cost": 6,
+    "power": 5,
+    "hp": 7,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Cunning",
+      "Villainy"
+    ],
+    "traits": [
+      "Force",
+      "Separatist",
+      "Sith"
+    ],
+    "text": "If a friendly non-leader ground unit would deal combat damage while attacking a base, you may reveal this unit from your hand and pay [5 resources]CunningVillainy. If you do, return the attacker to its owner's hand and put this unit into play as the attacker. She deals combat damage to that base instead.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": true,
+    "rarity": "Legendary",
+    "set": "IC27",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/IC27/147.png",
+    "imageUrlBack": ""
+  },
+  "IC27_149": {
+    "title": "The Invisible Hand",
+    "subtitle": "Confederate Might",
+    "type": "Unit",
+    "type2": "",
+    "arena": "Space",
+    "cost": 10,
+    "power": 9,
+    "hp": 9,
+    "upgradePower": null,
+    "upgradeHp": null,
+    "aspects": [
+      "Cunning",
+      "Villainy"
+    ],
+    "traits": [
+      "Separatist",
+      "Vehicle",
+      "Capital Ship"
+    ],
+    "text": "When Played/When Defeated: The next card you play this phase costs [9 resources] less.",
+    "epicAction": "",
+    "leaderUnitText": "",
+    "unique": true,
+    "rarity": "Rare",
+    "set": "IC27",
+    "imageUrl": "https://swudb.com/cdn-cgi/image/quality=95/images/cards/IC27/149.png",
+    "imageUrlBack": ""
+  }
+}

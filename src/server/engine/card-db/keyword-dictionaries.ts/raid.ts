@@ -232,9 +232,11 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "IBH_078": //Surface Assault Bomber — Raid 1
     case "IBH_093":
     case "IBH_094": amount += 1; break;
+    case "IC27_161": // reprint of IBH_010
     case "IBH_010": //Han Solo — Raid 2
     case "IBH_042": amount += 2; break;
     case "SEC_T01": amount += 2; break; //Spy token
+    case "IC27_169": // reprint of SEC_213
     case "SEC_213": amount += 1; break; //A-Wing
     case "LAW_050": amount += 2; break; //Honnah
     case "LAW_082": amount += 4; break; //Urrr'k

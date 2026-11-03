@@ -26,12 +26,33 @@ export function resolveWhenDefeated(
   if (pyrrhicActive) {
     const enemies103 = GetUnitsForPlayer(player === 1 ? 2 : 1);
     if (enemies103.length > 0) {
-      const own = resolveWhenDefeatedInner(unit, player, causedByCombatDamage);
+      const own = withInspiringMentor(unit, player, resolveWhenDefeatedInner(unit, player, causedByCombatDamage));
       return mandatoryTarget("TWI_103", player, enemies103.map(u => u.playId), own);
     }
   }
 
-  return resolveWhenDefeatedInner(unit, player, causedByCombatDamage);
+  return withInspiringMentor(unit, player, resolveWhenDefeatedInner(unit, player, causedByCombatDamage));
+}
+
+/**
+ * SHD_104 Inspiring Mentor (and its IC27_085 reprint): attached unit gains "When Defeated: Give an
+ * Experience token to another friendly unit." Mandatory. The host is already out of the arena, so
+ * every friendly unit left is "another"; they are read after the host's inline When Defeated
+ * effects, so a token one of those created can take it. One prompt per Mentor, ahead of `rest`.
+ */
+function withInspiringMentor(
+  unit: Unit,
+  player: PlayerId,
+  rest: PendingResolution | null,
+): PendingResolution | null {
+  let chain = rest;
+  const mentors = unit.upgrades.filter(u => u.cardId === "SHD_104" || u.cardId === "IC27_085").length;
+  for (let i = 0; i < mentors; i++) {
+    const friendly = GetUnitsForPlayer(player);
+    if (friendly.length === 0) break;
+    chain = mandatoryTarget("SHD_104", player, friendly.map(u => u.playId), chain);
+  }
+  return chain;
 }
 
 function resolveWhenDefeatedInner(
@@ -353,6 +374,7 @@ function resolveOwnWhenDefeated(
         continuation: null,
       } satisfies SpreadDamagePending;
     }
+    case "IC27_015": // reprint of JTL_033
     case "JTL_033": { // Onyx Squadron Brute — When Defeated: Heal 2 damage from a base.
       return mandatoryTarget("JTL_033", player, ["player1.base", "player2.base"]);
     }
@@ -413,6 +435,17 @@ function resolveOwnWhenDefeated(
       if (units060.length === 0) return null;
       return optionalTarget("JTL_060", player, units060.map(u => u.playId),
         "Give a unit –1/–1 for this phase?");
+    }
+    case "LOF_235": // HK-87 Assassin Droid — "When Defeated: Deal 2 damage to each ground unit."
+    case "IC27_182": { // reprint of LOF_235. Automatic, but queued rather than dealt here: the units
+                       // it defeats must be swept, and the trigger bag's drain is where that happens.
+      GetGame()?.currentGameState.triggerBag.push({
+        triggerType: "when-defeated",
+        cardId: "LOF_235_blast",
+        fromPlayer: player,
+        playId: unit.playId,
+      });
+      return null;
     }
     case "SEC_119": { // Crucible — Give an Experience token to each other friendly unit. She is
                       // already out of the arena by now, so every remaining friendly unit is

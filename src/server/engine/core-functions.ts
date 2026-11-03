@@ -1465,14 +1465,15 @@ export function HealBaseForPlayer(
 
 /**
  * True when `unit` has a "When Defeated" ability that another card could use (Chimaera JTL_039).
- * Covers the three ways a unit can have one: printed on the card, granted by a Droid Cohort
- * (TWI_218) upgrade, or granted to every other friendly unit by General Krell (SOR_105).
+ * Covers the three ways a unit can have one: printed on the card, granted by an upgrade (Droid
+ * Cohort TWI_218, Second Chance SHD_053, Inspiring Mentor SHD_104), or granted to every other
+ * friendly unit by General Krell (SOR_105).
  */
 export function UnitHasWhenDefeatedAbility(unit: Unit): boolean {
   if (unit.LostAbilities()) return false;
   if (CardText(unit.cardId).includes("When Defeated")) return true;
   // Upgrades whose text grants the attached unit a When Defeated.
-  if (unit.upgrades.some(u => u.cardId === "TWI_218" || u.cardId === "SHD_053")) return true;
+  if (unit.upgrades.some(u => ["TWI_218", "SHD_053", "SHD_104", "IC27_085"].includes(u.cardId))) return true;
   return GetUnitsForPlayer(unit.controller)
     .some(u => u.cardId === "SOR_105" && u.playId !== unit.playId);
 }
@@ -2273,6 +2274,12 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
 
   //cards with innate on-attack abilities
   switch (cardId) {
+    case "SOR_238": //C-3PO — On Attack: choose a number, look at the top card
+    case "IC27_188": // reprint of SOR_238
+    case "IC27_020": // reprint of IBH_060
+    case "IC27_161": // reprint of IBH_010
+    case "IC27_186": // reprint of SOR_236
+    case "IC27_191": // reprint of LOF_250
     case "ASH_006": //Sabine Wren (deployed) — On Attack: next unit you play gains Shielded
     case "ASH_011": //Cad Bane (deployed) — On Attack: may deal 1 to a unit with 2+ remaining HP
     case "ASH_015": //Emperor Palpatine (deployed) — On Attack: may buff another exhausted unit
@@ -2480,6 +2487,8 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
   switch (cardId) {
     case "JTL_008": //Wedge Antilles piloting — grants "On Attack: next Pilot card costs 1 less."
     case "JTL_046": //Paige Tico piloting — grants "On Attack: XP to this unit, then 1 damage to it."
+    case "SHD_104": //Inspiring Mentor — grants "On Attack/When Defeated: XP to another friendly unit."
+    case "IC27_085": // reprint of SHD_104
     case "SHD_175": //Armed to the Teeth — grants "On Attack: Give another friendly unit +2/+0 for this phase."
     case "SHD_126": //The Darksaber
     case "SHD_177": //Vambrace Flamethrower

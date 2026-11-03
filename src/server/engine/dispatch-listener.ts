@@ -516,6 +516,26 @@ function resolveChooseOne(
       log.push(`${CardTitle("TWI_004")}: put ${CardTitle(heldCardId)} on the ${optionId} of the deck.`);
       break;
     }
+    case "SOR_238": // C-3PO — look at the top card; on a cost match, offer to reveal and draw it.
+    case "IC27_188": { // reprint of SOR_238
+      const deck238 = GetPlayer(game, pending.player).deck;
+      const top238 = deck238[deck238.length - 1]; // deck.pop() draws from the top
+      log.push(`${CardTitle(pending.cardId)}: chose ${optionId}.`);
+      if (top238 && (CardCost(top238.cardId) ?? 0) === Number(optionId)) {
+        next = {
+          type: "ability-option",
+          cardId: pending.cardId,
+          player: pending.player,
+          helperText: `Reveal and draw ${CardTitle(top238.cardId)}?`,
+          yesLabel: "Reveal and draw",
+          noLabel: "Leave it on top",
+          continuation: null,
+        } satisfies AbilityOptionPending;
+      } else {
+        log.push(`${CardTitle(pending.cardId)}: no match, so the top card stays where it is.`);
+      }
+      break;
+    }
     case "SHD_001": { // Gar Saxon — the player picked which upgrade to return to its owner's hand.
       const cardId001 = String(pending.data?.[optionId] ?? "");
       const owner001 = Number(pending.data?.[`${optionId}_owner`] ?? pending.player) as PlayerId;
@@ -1961,11 +1981,12 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
       }
       return null;
     }
-    if (trigger.cardId === "IBH_072") { // Avenger (Hunting the Rebels) — "Deal 1 damage to each other
-                                        // unit (including friendly units)." Sweeps, like ASH_112.
+    if (trigger.cardId === "IBH_072" || trigger.cardId === "IC27_028") { // Avenger (Hunting the
+                                        // Rebels) — "Deal 1 damage to each other unit (including
+                                        // friendly units)." Sweeps, like ASH_112.
       const others072 = GetAllUnits(game).filter(u => u.playId !== trigger.playId).map(u => u.playId);
-      for (const id of others072) DealDamageToUnit(game, "IBH_072", id, 1, log, trigger.fromPlayer);
-      log.push(`${CardTitle("IBH_072")}: dealt 1 damage to each other unit.`);
+      for (const id of others072) DealDamageToUnit(game, trigger.cardId, id, 1, log, trigger.fromPlayer);
+      log.push(`${CardTitle(trigger.cardId)}: dealt 1 damage to each other unit.`);
       return sweepDeadUnits(game, log, null);
     }
     resolveWhenPlayedTrigger(trigger, game, log);
@@ -2652,6 +2673,17 @@ function drainTriggerBag(game: GameState, log: string[]): PendingResolution | nu
     game.triggerBag.splice(i, 1);
     if (t.cardId === "ASH_127_heal") {
       HealBaseForPlayer(game, t.fromPlayer, 1, log, "ASH_127");
+      continue;
+    }
+    if (t.cardId === "LOF_235_blast") {
+      // HK-87 Assassin Droid — "When Defeated: Deal 2 damage to each ground unit." Both sides. Queued
+      // by resolveOwnWhenDefeated so that the units it defeats are swept here, which the inline
+      // defeat path can't guarantee.
+      for (const u of [...game.player1.groundArena, ...game.player2.groundArena]) {
+        DealDamageToUnit(game, "LOF_235", u.playId, 2, log, t.fromPlayer);
+      }
+      const swept235 = sweepDeadUnits(game, log, null);
+      if (swept235) return swept235;
       continue;
     }
     if (t.cardId === "HMW_113_heal") { // Sinister War Memorial — no input, so it resolves here.
@@ -10819,6 +10851,15 @@ function applyAbilityOptionEffect(
         continuation: pending.continuation ?? null,
       } satisfies AbilityTargetPending;
     }
+    case "SOR_238": // C-3PO Yes — reveal the matching top card and draw it.
+    case "IC27_188": { // reprint of SOR_238
+      const deck238 = GetPlayer(game, pending.player!).deck;
+      const top238 = deck238[deck238.length - 1];
+      if (top238) log.push(`${CardTitle(pending.cardId)}: revealed ${CardTitle(top238.cardId)}.`);
+      DrawCardForPlayer(game, log, pending.player!);
+      return pending.continuation ?? null;
+    }
+    case "IC27_185": // reprint of SOR_233
     case "SOR_233": { // I Am Your Father Yes — deal 7 damage to the targeted unit.
       if (pending.sourcePlayId) {
         DealDamageToUnit(game, "I Am Your Father", pending.sourcePlayId, 7, log);
@@ -11038,6 +11079,7 @@ function applyAbilityOptionDeclineEffect(
       updateDefeatedPlayers(game);
       return nextPending;
     }
+    case "IC27_185": // reprint of SOR_233
     case "SOR_233": { // I Am Your Father No — casting player (the other player) draws 3 cards.
       const caster233 = GetOtherPlayer(pending.player!);
       DrawCardsForPlayer(game, log, caster233, 3);
@@ -13539,6 +13581,7 @@ function resolveActionAbility(
       if (upgrades001.length === 0) return null;
       return mandatoryTarget("ASH_001_from_resources", player, upgrades001);
     }
+    case "IC27_154": // reprint of SHD_196
     case "SHD_196": { // Grogu (Irresistible) — Action [exhaust]: Exhaust an enemy unit.
                       // "An enemy unit" names no arena, so space units are legal too.
       const enemies196 = GetUnitsForPlayer(GetOtherPlayer(player));
@@ -14624,6 +14667,7 @@ function applyAbilityEffect(
       ResourceTopCardOfDeck(gs001, pending.player, game.gameLog, "ASH_001");
       return sweepDeadUnits(gs001, game.gameLog, pending.continuation ?? null);
     }
+    case "IC27_154": // reprint of SHD_196
     case "SHD_196": { // Grogu — exhaust the chosen enemy unit.
       if (!targetPlayId) break;
       const victim196 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -15037,6 +15081,7 @@ function applyAbilityEffect(
       healTarget(game.currentGameState, targetPlayId, 3, game.gameLog, pending.cardId);
       break;
     }
+    case "IC27_017": // reprint of SOR_033
     case "SOR_033": //Death Trooper: Deal 2 damage to a friendly ground unit and 2 damage to an enemy ground unit.
     case "SHD_030": // reprint of SOR_033
     case "SEC_030": {
@@ -16339,6 +16384,13 @@ function applyAbilityEffect(
       }
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
+    case "SHD_104": { // Inspiring Mentor (its granted On Attack or When Defeated) — Experience to the
+                      // chosen other friendly unit. The IC27_085 reprint prompts under this id too.
+      if (!targetPlayId || pending.player === undefined) break;
+      const target104 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target104) GiveExperienceTokens(game.currentGameState, target104, 1, game.gameLog, pending.player, "SHD_104");
+      return pending.continuation ?? null;
+    }
     case "SHD_175": { // Armed to the Teeth — +2/+0 (power only, so GivePowerMod not the
                       // +X/+X GiveStatModForPhase) to the chosen other friendly unit.
       if (!targetPlayId) break;
@@ -17588,6 +17640,7 @@ function applyAbilityEffect(
       HealBaseForPlayer(game.currentGameState, pending.player!, 3, game.gameLog, pending.cardId);
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation);
     }
+    case "IC27_025": // reprint of IBH_099
     case "IBH_099": { // Blizzard One When Played: defeat the chosen non-leader ground unit (≤3 remaining HP).
       if (!targetPlayId) break;
       const target099 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -17985,6 +18038,8 @@ function applyAbilityEffect(
       dealPowerToEnemy(game.currentGameState, game.gameLog, "Haymaker", pending.sourcePlayId, targetPlayId);
       break;
     }
+    case "LOF_155": // DRK-1 Probe Droid — the offer already narrowed it to non-unique upgrades.
+    case "IC27_129": // reprint of LOF_155
     case "SOR_162": //Disabling Fang Fighter — "You may defeat an upgrade." Nothing more: the 1
     case "SHD_166": //reprint of SOR_162      damage below is System Shock's text alone.
     {
@@ -18114,6 +18169,7 @@ function applyAbilityEffect(
       }
       break;
     }
+    case "IC27_191": // reprint of LOF_250
     case "SOR_059": // 2-1B Surgical Droid OA: Heal 2 from chosen unit, then proceed to combat.
     case "LOF_250": { // Medical Frigate — same On Attack.
       if (!targetPlayId) return pending.continuation;
@@ -18494,6 +18550,7 @@ function applyAbilityEffect(
       game.gameLog.push(`${CardTitle("SOR_051")}: gave –${debuff051}/–${debuff051} to ${CardTitle(target051.cardId)} for this phase.`);
       break;
     }
+    case "IC27_015": // reprint of JTL_033
     case "JTL_033": { // Onyx Squadron Brute When Defeated: heal 2 from the chosen base ("a base" — either one).
       const owner033 = pending.player!;
       let basePlayer033: PlayerId | null = null;
@@ -19026,6 +19083,7 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, "TWI_048", targetPlayId, 2, game.gameLog, pending.player);
       break;
     }
+    case "IC27_030": // reprint of TWI_041
     case "TWI_041": { // Lethal Crackdown — "Defeat a non-leader unit. Deal damage to YOUR base
                       // equal to that unit's power." The power is read BEFORE the defeat, and it is
                       // CURRENT power, so upgrades and buffs on the victim count.
@@ -19095,6 +19153,7 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, "TWI_171", targetPlayId, 1, game.gameLog, pending.player);
       break;
     }
+    case "IC27_016": // reprint of TWI_031
     case "TWI_031": { // Rune Haako — give the chosen unit -1/-1 for this phase.
       if (!targetPlayId) break;
       const victim031 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -19186,6 +19245,7 @@ function applyAbilityEffect(
       }
       break;
     }
+    case "IC27_185": // reprint of SOR_233
     case "SOR_233": { // I Am Your Father — opponent chose unit; present them with take-7 or say-no option.
       if (!targetPlayId || !pending.player) break;
       const target233 = GetUnitByPlayId(game.currentGameState, targetPlayId);
@@ -19302,6 +19362,21 @@ function applyAbilityEffect(
       const gs090d = game.currentGameState;
       const resourceCount090 = (pending.player === 1 ? gs090d.player1 : gs090d.player2).resources.length;
       DealDamageToUnit(gs090d, "SOR_090", targetPlayId, resourceCount090, game.gameLog);
+      break;
+    }
+    case "IBH_020": // Luke Skywalker (Do You Read Me?) When Played: deal 3 to the chosen ground unit.
+    case "IC27_082": { // reprint of IBH_020
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 3, game.gameLog, pending.player);
+      break;
+    }
+    case "LOF_239": // Consumed by the Dark Side — 2 Experience, THEN 2 damage, to the chosen unit.
+    case "IC27_184": { // reprint of LOF_239
+      if (!targetPlayId || pending.player === undefined) break;
+      const target239 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target239) break;
+      GiveExperienceTokens(game.currentGameState, target239, 2, game.gameLog, pending.player, pending.cardId);
+      DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 2, game.gameLog, pending.player);
       break;
     }
     case "LAW_045": { // Zeb Orellios When Played: deal 3 (or 5 if you control a Command or Cunning unit) to the chosen ground unit.
@@ -19580,6 +19655,7 @@ function applyAbilityEffect(
       }
       break;
     }
+    case "IC27_175": // reprint of SOR_217
     case "SOR_217": { // Shoot First: +1/+0 ForAttack + first-strike effect, then attack
       if (!targetPlayId) break;
       const unit217 = GetUnitByPlayId(game.currentGameState, targetPlayId);

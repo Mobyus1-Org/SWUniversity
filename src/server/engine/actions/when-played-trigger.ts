@@ -26,6 +26,8 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "IBH_031", "IBH_072", "JTL_067",
   "JTL_099", "JTL_117",
   "JTL_135", "JTL_158", "JTL_248",
+  // IC27 reprints of SOR_039, TWI_137, IBH_031, IBH_072 and JTL_248.
+  "IC27_027", "IC27_108", "IC27_164", "IC27_028", "IC27_190",
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -60,6 +62,7 @@ export function resolveWhenPlayedTrigger(
       }
       break;
     }
+    case "IC27_027": // reprint of SOR_039
     case "SOR_039": // AT-AT Suppressor — When Played: Exhaust all ground units.
       for (const u of [...player.groundArena, ...otherPlayer.groundArena]) u.ready = false;
       log.push(`${CardTitle(trigger.cardId)}: all ground units exhausted.`);
@@ -153,6 +156,7 @@ export function resolveWhenPlayedTrigger(
       }
       break;
     }
+    case "IC27_108": // reprint of TWI_137
     case "TWI_137": { // Savage Opress (Monster) — "If you control FEWER units (including this one)
                       // than an opponent, ready this unit." He is already in play here, so a tie
                       // is not "fewer" and leaves him exhausted.
@@ -314,6 +318,7 @@ export function resolveWhenPlayedTrigger(
       log.push(`${CardTitle(trigger.cardId)}: healed 4 damage from your base.`);
       break;
     }
+    case "IC27_164": // reprint of IBH_031
     case "IBH_031": { // Millennium Falcon (Bucket of Bolts) — "If your base has more damage on it
                       // than an enemy base, ready this unit." Strictly more: a tie leaves it exhausted.
       if (player.base.damage <= otherPlayer.base.damage) break;
@@ -355,6 +360,7 @@ export function resolveWhenPlayedTrigger(
       DealDamageToUnit(gs, trigger.cardId, trigger.playId, 1, log, trigger.fromPlayer);
       break;
     }
+    case "IC27_190": // reprint of JTL_248
     case "JTL_248": // Dilapidated Ski Speeder — "When Played: Deal 3 damage to this unit." It has
                     // 7 HP, so it survives and no sweep is needed.
       if (trigger.playId) DealDamageToUnit(gs, trigger.cardId, trigger.playId, 3, log, trigger.fromPlayer);

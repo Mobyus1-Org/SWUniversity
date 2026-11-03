@@ -92,6 +92,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
 
   switch(cardId)
   {
+    case "IC27_173": // reprint of TWI_214
     case "SOR_213"://Syndicate Lackeys
     case "SOR_117"://Mercenary Company
     case "SOR_195"://Auzituck Liberator Gunship

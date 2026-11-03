@@ -7,7 +7,7 @@ import { IsTokenUpgrade, PilotlessVehiclePlayIds, UpgradeDestinationsOnControlCh
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending, BudgetSelectPending, PlayFromHandPending } from "@/server/engine/pending-resolution";
 import { Unit } from "@/server/engine/unit";
 import { CreateBattleDroid, CreateBeast, CreateCloneTrooper, CreateXWing, CreateTieFighter, CreateSpy, CreateCreditToken, CreateMandalorianToken, GiveAdvantageTokens, GiveWeaknessToken } from "@/server/engine/token-helpers";
-import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardIsUnique, CardArena, CardTraits } from "@/server/engine/card-db/generated";
+import { AllCardTitles, CardTitle, CardType, CardCost, CardAspects, CardIsUnique, CardArena, CardTraits, GetAllCardIds } from "@/server/engine/card-db/generated";
 
 /**
  * SHD_091 Jabba's Rancor — "Deal 3 damage to another friendly ground unit and 3 damage to an
@@ -323,6 +323,35 @@ export const ATTACK_WITH_POWER_BUFF_EVENTS: Record<string, { trait?: string; pow
   HMW_239: { trait: "Creature", power: 4 }, // Pounce (HMW reprint)
 };
 
+let costNumberOptions: { id: string; label: string }[] | null = null;
+
+/**
+ * The numbers a "Choose a number" ability offers: 0 up to the highest printed cost, so every card
+ * a deck can hold is nameable.
+ */
+export function CostNumberOptions(): { id: string; label: string }[] {
+  if (!costNumberOptions) {
+    const max = Math.max(...GetAllCardIds().map(id => CardCost(id) ?? 0));
+    costNumberOptions = Array.from({ length: max + 1 }, (_, n) => ({ id: String(n), label: String(n) }));
+  }
+  return costNumberOptions;
+}
+
+/**
+ * C-3PO (SOR_238) — "When Played/On Attack: Choose a number, then look at the top card of your
+ * deck. If its cost is the chosen number, you may reveal and draw it." The number is picked first;
+ * resolveChooseOne then looks at the top card. An empty deck has nothing to look at: no prompt.
+ */
+export function buildC3poNumberChoice(
+  cardId: string,
+  player: PlayerId,
+  continuation: PendingResolution | null,
+): ChooseOnePending | null {
+  const game = GetGame();
+  if (!game || GetPlayer(game.currentGameState, player).deck.length === 0) return null;
+  return { type: "choose-one", cardId, player, options: CostNumberOptions(), continuation };
+}
+
 /**
  * "When Played: You may return a <kind of> card from your discard pile to your hand." — the
  * yes/no offer, or null when nothing in the discard qualifies. `eligible` picks the kind.
@@ -466,7 +495,7 @@ export function resolveWhenPlayed(
         type: "choose-one",
         cardId: "ASH_235",
         player,
-        options: Array.from({ length: 9 }, (_, n) => ({ id: String(n), label: String(n) })),
+        options: CostNumberOptions(),
         continuation: null,
       } satisfies ChooseOnePending;
     }
@@ -676,6 +705,7 @@ export function resolveWhenPlayed(
       if (allUnits158.length === 0) return null;
       return mandatoryTarget("ASH_158", player, allUnits158.map(u => u.playId));
     }
+    case "IC27_190": // reprint of JTL_248
     case "JTL_135": // Special Forces TIE Fighter — automatic; see resolveWhenPlayedTrigger.
     case "JTL_158": // Crackshot V-Wing — automatic; see resolveWhenPlayedTrigger.
     case "JTL_248": // Dilapidated Ski Speeder — automatic; see resolveWhenPlayedTrigger (this runs
@@ -847,6 +877,7 @@ export function resolveWhenPlayed(
                       // ground unit and 3 damage to an enemy ground unit." (On Attack in on-attack.ts.)
       return jabbasRancorDamage(player, playId, null);
     }
+    case "IC27_017": // reprint of SOR_033
     case "SOR_033": //Death Trooper "Deal 2 damage to a friendly ground unit and 2 damage to an enemy ground unit."
     case "SHD_030": // reprint of SOR_033
     case "SEC_030": {// reprint of SOR_033
@@ -992,6 +1023,16 @@ export function resolveWhenPlayed(
       if (allUpgradePlayIds162.length === 0) return null;
       return optionalTarget(cardId, player, allUpgradePlayIds162,
         "Defeat an upgrade?", { yesLabel: "Defeat", sourcePlayId: playId });
+    case "LOF_155": // DRK-1 Probe Droid — "When Played: You may defeat a non-unique upgrade."
+    case "IC27_129": { // reprint of LOF_155. Tokens are non-unique upgrades, so they qualify.
+      const eligible155 = DefeatableUpgradePlayIds(player).filter(id => {
+        const upgrade = FindUpgradeByPlayId(id);
+        return !!upgrade && !CardIsUnique(upgrade.cardId);
+      });
+      if (eligible155.length === 0) return null;
+      return optionalTarget(cardId, player, eligible155,
+        "Defeat a non-unique upgrade?", { yesLabel: "Defeat", sourcePlayId: playId });
+    }
     case "SOR_168": //Precision Fire "Attack with a unit. It gains Saboteur for this attack. If it's a Trooper, it also gets +2/+0 for this attack. (Ignore Sentinel and defeat the defender's Shields.)"
       return {
         type: "ability-target",
@@ -1095,6 +1136,13 @@ export function resolveWhenPlayed(
       return optionalTarget(cardId, player, groundUnits045.map(u => u.playId),
         `Deal ${amount045} damage to a ground unit?`);
     }
+    case "IBH_020": // Luke Skywalker (Do You Read Me?) — "When Played: You may deal 3 damage to a
+    case "IC27_082": { // ground unit." reprint of IBH_020. Either side's ground units qualify.
+      const ground020 = AllGroundUnits();
+      if (ground020.length === 0) return null;
+      return optionalTarget(cardId, player, ground020.map(u => u.playId),
+        "Deal 3 damage to a ground unit?", { yesLabel: "Deal 3", sourcePlayId: playId });
+    }
     case "LAW_233": { // Galen Erso — "When Played: You may have an opponent take control of this unit."
       if (!playId) return null;
       return {
@@ -1185,6 +1233,7 @@ export function resolveWhenPlayed(
         "Ready another unit? If you do, heal damage from a base equal to its cost.",
         { yesLabel: "Ready", sourcePlayId: playId });
     }
+    case "IC27_105": // reprint of IBH_068
     case "IBH_068": // General Veers — "When Played: If you control a Vigilance unit, deal 2 damage to an
     case "IBH_088": { // enemy base and heal 2 damage from your base." Mandatory + conditional, no target.
       const game068 = GetGame();
@@ -1213,6 +1262,7 @@ export function resolveWhenPlayed(
       return optionalTarget(cardId, player, eligible068.map(u => u.playId),
         "Defeat a non-leader unit with 4 or less power?", { yesLabel: "Defeat" });
     }
+    case "IC27_025": // reprint of IBH_099
     case "IBH_099": { // Blizzard One — "When Played: You may defeat a non-leader ground unit with 3 or
                       // less remaining HP."
       const targets099 = AllGroundUnits().filter(u => {
@@ -1241,6 +1291,7 @@ export function resolveWhenPlayed(
     }
     case "HMW_121": //Hijacked AT-ST — auto effect, see resolveWhenPlayedTrigger.
       return null;
+    case "IC27_016": // reprint of TWI_031
     case "TWI_031": { // Rune Haako — "When Played: If a friendly unit was defeated this phase, you
                       // may give a unit -1/-1 for this phase." Any unit is a legal target.
       if (!UnitWasDefeatedThisPhase(player)) return null;
@@ -1401,6 +1452,7 @@ export function resolveWhenPlayed(
       }
       return null;
     }
+    case "IC27_030": // reprint of TWI_041
     case "TWI_041": { // Lethal Crackdown — "Defeat a non-leader unit. Deal damage to YOUR base
                       // equal to that unit's power." Either player's non-leader unit is a target;
                       // the base damage always lands on the caster.
@@ -1933,6 +1985,13 @@ export function resolveWhenPlayed(
       return optionalTarget(cardId, player, nightUnits036.map(u => u.playId),
         "Defeat a friendly Night unit, then replay it from your discard pile for free?",
         { yesLabel: "Defeat", sourcePlayId: playId });
+    }
+    case "LOF_239": // Consumed by the Dark Side — "Give 2 Experience tokens to a unit, then deal 2
+    case "IC27_184": { // damage to it." reprint of LOF_239. Any unit, either side. The tokens land
+                       // first, so a unit on its last 2 HP survives at +2/+2.
+      const units239 = AllUnits();
+      if (units239.length === 0) return null;
+      return mandatoryTarget(cardId, player, units239.map(u => u.playId));
     }
     case "LOF_133": { // Purge Trooper — "When Played: You may deal 2 damage to a Force unit."
                       // The FORCE trait, not the aspect, and either side's units qualify.
@@ -3359,6 +3418,7 @@ export function resolveWhenPlayed(
       return searchDeck(cardId, player, 10, "play", { filter: { type: "Unit", maxCost: 7 }, maxChoices: 3, maxCombinedCost: 7, costModifier: "free" });
     case "SOR_123": // Recruit — Search top 5 of deck for a unit, reveal it, and draw it.
       return searchDeck(cardId, player, 5, "draw", { filter: { type: "Unit" }, maxChoices: 1 });
+    case "IC27_027": // reprint of SOR_039
     case "SOR_039": // AT-AT Suppressor — When Played: Exhaust all ground units. (auto-resolves in when-played-trigger)
       return null;
     case "SOR_111": // Patrolling V-Wing — When Played: Draw a card. (auto-resolves in when-played-trigger)
@@ -3888,6 +3948,7 @@ export function resolveWhenPlayed(
       if (allUnits223.length === 0) return null;
       return mandatoryTarget(cardId, player, allUnits223.map(u => u.playId));
     }
+    case "IC27_175": // reprint of SOR_217
     case "SOR_217": { // Shoot First — Attack with a unit. It gets +1/+0 and deals damage first.
       const readyFriendly217 = GetUnitsForPlayer(player, true);
       if (readyFriendly217.length === 0) return null;
@@ -3988,8 +4049,12 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "IC27_186": // reprint of SOR_236
     case "SOR_236": // R2-D2 — When Played/On Attack: Scry 1.
       return searchDeck(cardId, player, 1, "scry");
+    case "SOR_238": // C-3PO — When Played/On Attack: choose a number, then look at the top card.
+    case "IC27_188": // reprint of SOR_238
+      return buildC3poNumberChoice(cardId, player, null);
     case "SOR_031": // Inferno Four — When Played/When Defeated: Look at top 2, put any on bottom, rest on top.
       return searchDeck(cardId, player, 2, "scry");
     case "LOF_100": // Kelleran Beq — Search the top 7 cards of your deck for a unit, reveal it, and play it. It costs 3 resources less.
@@ -4150,6 +4215,7 @@ export function resolveWhenPlayed(
         continuation: null,
       };
     }
+    case "IC27_185": // reprint of SOR_233
     case "SOR_233": { // I Am Your Father — Deal 7 damage to an enemy unit unless its controller says 'no.'
       const enemies233 = GetUnitsForPlayer(player === 1 ? 2 : 1);
       if (enemies233.length === 0) return null;

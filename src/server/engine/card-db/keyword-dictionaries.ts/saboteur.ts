@@ -146,6 +146,7 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
     case "SEC_160"://Reckless Rebel
     case "SEC_250"://Rebel Pathfinder
     case "TS26_74"://Pre Vizsla - For Mandalore!
+    case "IC27_098"://Commander Pyre - Golden Menace
       return true;
     default: break;
   }

@@ -5,8 +5,9 @@ import { InScopeBoardCardIds, IsInScopeBoardCard } from "@/server/engine/card-db
 // filtering, so routing through the Cards helper would hide the very strings under test.
 describe("in-scope board cards", () => {
   // 2549 since 2026-09-18: HMW moved from 128 mocked cards to its full official 272.
-  it("totals 2549 cards", () => {
-    expect(InScopeBoardCardIds()).toHaveLength(2549);
+  // 2603 since 2026-11-02: IC27 added (54 cards; its P26 promo copies stay excluded).
+  it("totals 2603 cards", () => {
+    expect(InScopeBoardCardIds()).toHaveLength(2603);
   });
 
   it("includes official cards", () => {

@@ -527,6 +527,7 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "IBH_027":
         if (AllSpaceUnits().length > 0) abilities.push(cardId);
         break;
+      case "IC27_154": // reprint of SHD_196
       case "SHD_196": // Grogu (Irresistible) — Action [exhaust]: Exhaust an enemy unit.
         if (GetUnitsForPlayer(player === 1 ? 2 : 1).length > 0) abilities.push(cardId);
         break;

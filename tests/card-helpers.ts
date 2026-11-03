@@ -277,6 +277,7 @@ export const Cards = {
     },
     sor: {
       consularSecurityForce: "SOR_046", // 3/7 Ground, no abilities — a durable test defender
+      c3po: "SOR_238", // 1/4 Ground — WP/OA: choose a number, draw the top card on a cost match
       infernoFour: "SOR_031",
       lieutenantChildsen: "SOR_035",
       gideonHask: "SOR_036",
@@ -530,6 +531,8 @@ export const Cards = {
     },
     lof: {
       armyOfTheDead: "LOF_236", // 7/6 Ground Villainy, no abilities
+      drk1ProbeDroid: "LOF_155", // 2/3 Ground — WP: may defeat a non-unique upgrade
+      hk87AssassinDroid: "LOF_235", // 4/4 Ground — WD: 2 damage to each ground unit
       lorSanTekka: "LOF_095", // 3/2 Ground, unique — WD: may give Experience to a unique unit
       huntingNexu: "LOF_162", // reprint of SHD_168 — Raid 2 with another Aggression unit
       medicalFrigate: "LOF_250", // reprint of SOR_059 — On Attack: may heal 2 from another unit
@@ -834,6 +837,7 @@ export const Cards = {
       ahsokaTano: "TS26_08",
     },
     ibh: {
+      lukeSkywalker: "IBH_020", // Do You Read Me? — Restore 2; WP: may deal 3 to a ground unit
       tauntaunMount: "IBH_015",
       tauntaunMount2: "IBH_028",
       tauntaunMount3: "IBH_051",
@@ -909,6 +913,36 @@ export const Cards = {
       vernestraRwoh: "HMW_048",     // 5/5 Ground, cost 6 — Sentinel; recycle up to 2 cost-≤5 units, gains their When Played
       hijackedAtSt: "HMW_121",      // 7/7 Ground, cost 5 — Overwhelm; When Played: this unit doesn't ready next regroup
     },
+    ic27: {
+      // Keyword-only (new and reprinted).
+      redLeader: "IC27_075",            // 2/4 Space — Sentinel, Restore 2
+      commanderPyre: "IC27_098",        // 3/3 Ground — Saboteur
+      brightHope: "IC27_080",           // reprint of IBH_014
+      aWing: "IC27_169",                // reprint of SEC_213
+      hiddenSharpshooter: "IC27_173",   // reprint of TWI_214
+      rogueClassStarfighter: "IC27_181", // reprint of JTL_241
+      eta2LightInterceptor: "IC27_192", // reprint of TWI_244
+      // Reprints with abilities.
+      onyxSquadronBrute: "IC27_015",    // reprint of JTL_033
+      runeHaako: "IC27_016",            // reprint of TWI_031
+      deathTrooper: "IC27_017",         // reprint of SOR_033
+      admiralPiett: "IC27_020",         // reprint of IBH_060
+      blizzardOne: "IC27_025",          // reprint of IBH_099
+      atAtSuppressor: "IC27_027",       // reprint of SOR_039
+      avenger: "IC27_028",              // reprint of IBH_072
+      generalVeers: "IC27_105",         // reprint of IBH_068
+      savageOpress: "IC27_108",         // reprint of TWI_137
+      grogu: "IC27_154",                // reprint of SHD_196
+      hanSolo: "IC27_161",              // reprint of IBH_010
+      millenniumFalcon: "IC27_164",     // reprint of IBH_031
+      r2d2: "IC27_186",                 // reprint of SOR_236
+      dilapidatedSkiSpeeder: "IC27_190", // reprint of JTL_248
+      medicalFrigate: "IC27_191",       // reprint of LOF_250
+      lukeSkywalker: "IC27_082",        // reprint of IBH_020
+      drk1ProbeDroid: "IC27_129",       // reprint of LOF_155
+      hk87AssassinDroid: "IC27_182",    // reprint of LOF_235
+      c3po: "IC27_188",                 // reprint of SOR_238
+    },
   },
   upgrades: {
     token: {
@@ -930,6 +964,7 @@ export const Cards = {
       fallenLightsaber: "SOR_137",
     },
     shd: {
+      inspiringMentor: "SHD_104", // grants On Attack/When Defeated: XP to another friendly unit
       legalAuthority: "SHD_124",
       publicEnemy: "SHD_068",
       guildTarget: "SHD_173",
@@ -1008,6 +1043,9 @@ export const Cards = {
       tarkinDoctrine: "HMW_206",         // unique Fortify — base gains "play a Fortification: exhaust an enemy"
       direProwess: "HMW_097",            // +1/+1 Learned — When Played: may give a Weakness token
       devotion: "HMW_096",               // +1/+1 Innate — attached unit gains Restore 2
+    },
+    ic27: {
+      inspiringMentor: "IC27_085",       // reprint of SHD_104
     },
   },
   events: {
@@ -1226,6 +1264,7 @@ export const Cards = {
       holdForQuestioning: "LAW_217", // Exhaust an enemy unit, then peek + aspect-matched discard
     },
     lof: {
+      consumedByTheDarkSide: "LOF_239", // Give 2 Experience to a unit, then deal 2 damage to it
       cureWounds: "LOF_075",
       itsWorse: "LOF_264", // reprint of SOR_078 Vanquish
       pounce: "LOF_224", // attack with a Creature unit, +4/+0
@@ -1261,6 +1300,12 @@ export const Cards = {
       lowAltitudeCombat: "HMW_050", // Move a space unit to the ground arena, then maybe attack
       logTrap: "HMW_149",           // Attack with a friendly unit, then again (exhausted), not a base
       mysteriousDisappearance: "HMW_058", // A player picks their non-leader unit; may defeat → Beast
+    },
+    ic27: {
+      lethalCrackdown: "IC27_030",  // reprint of TWI_041
+      shootFirst: "IC27_175",       // reprint of SOR_217
+      iAmYourFather: "IC27_185",    // reprint of SOR_233
+      consumedByTheDarkSide: "IC27_184", // reprint of LOF_239
     },
   },
 }

@@ -249,6 +249,7 @@ export class Unit implements UnitInterface {
         case "SOR_116": power += 2; break; // Steadfast Battalion +2/+2 Phase
         case "SOR_216": power -= 4; break; // Disarm –4/+0 Phase
         case "SOR_028": power -= 4; break; // Jedha City base Epic Action –4/–0 Phase
+        case "IC27_175": // reprint of SOR_217
         case "SOR_217": power += 1; break; // Shoot First +1/+0 ForAttack
         case "TWI_014": power += 1; break; // Asajj Ventress +1/+0 ForAttack (event played this phase)
         case "SOR_220": // Surprise Strike (SOR)

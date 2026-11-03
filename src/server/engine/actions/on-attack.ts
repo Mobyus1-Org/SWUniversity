@@ -9,7 +9,7 @@ import { applyDarksaberOnAttack } from "../on-attack-helper";
 import { IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CreateCloneTrooper, CreateBattleDroid, GiveAdvantageTokens, GiveExperienceTokens, CreateSpy, PlayerGaveTokenUpgradeThisPhase } from "@/server/engine/token-helpers";
 import { CreateMandalorianToken, CreateXWing, CreateBeast, UnitsWithTokenUpgrade } from "@/server/engine/token-helpers";
-import { jabbasRancorDamage, buildTraskWalkerChoice, buildAethersprite, buildTwinsSentinel, buildPreVizslaOffer } from "@/server/engine/actions/when-played";
+import { jabbasRancorDamage, buildTraskWalkerChoice, buildAethersprite, buildTwinsSentinel, buildPreVizslaOffer, buildC3poNumberChoice } from "@/server/engine/actions/when-played";
 
 /**
  * On Attack abilities — called after the attack target is chosen.
@@ -234,6 +234,16 @@ export function resolveOnAttackTrigger(
             count: 1,
             continuation,
           } satisfies DiscardFromHandPending);
+        }
+        break;
+      }
+      case "SHD_104": // Inspiring Mentor — "On Attack: Give an Experience token to another friendly
+      case "IC27_085": { // unit." Mandatory; "another" excludes the attacker wearing it.
+        const others104 = GetUnitsForPlayer(attacker.controller)
+          .filter(u => u.playId !== attacker.playId);
+        if (others104.length > 0) {
+          deferredPending = queueDeferred(deferredPending, continuation, mandatoryTarget("SHD_104",
+            attacker.controller, others104.map(u => u.playId), continuation));
         }
         break;
       }
@@ -541,6 +551,7 @@ function resolveInnateOnAttack(
         fromZones: ["Base"],
         continuation,
       };
+    case "IC27_161": // reprint of IBH_010
     case "IBH_010": // Han Solo — On Attack: The defender gets -2/-0 for this attack. (Same as LOF_014.)
     case "IBH_042": {
       if (continuation.target.type === "unit") {
@@ -553,6 +564,7 @@ function resolveInnateOnAttack(
       }
       return continuation;
     }
+    case "IC27_020": // reprint of IBH_060
     case "IBH_060": // Admiral Piett — On Attack: If you control an Aggression unit, draw a card. (Mandatory.)
     case "IBH_065": {
       const game060 = GetGame();
@@ -1534,8 +1546,12 @@ function resolveInnateOnAttack(
         continuation,
       };
     }
+    case "IC27_186": // reprint of SOR_236
     case "SOR_236": // R2-D2 — On Attack: Scry 1.
       return searchDeck("SOR_236", attacker.controller, 1, "scry", { continuation }) ?? continuation;
+    case "SOR_238": // C-3PO — same as his When Played; the number prompt hands back to combat.
+    case "IC27_188": // reprint of SOR_238
+      return buildC3poNumberChoice(attacker.cardId, attacker.controller, continuation) ?? continuation;
     case "SOR_040": { // Avenger On Attack — opponent chooses a non-leader unit they control to defeat.
       return chooseAndDefeatUnit("SOR_040", attacker.controller, false, continuation);
     }
@@ -2055,6 +2071,7 @@ function resolveInnateOnAttack(
       const units141 = AllUnits();
       return mandatoryTarget("SHD_141", attacker.controller, units141.map(u => u.playId), continuation);
     }
+    case "IC27_191": // reprint of LOF_250
     case "SOR_059": // 2-1B Surgical Droid — On Attack: You may heal 2 damage from another unit.
     case "LOF_250": { // Medical Frigate — same text.
       const damagedOthers059 = AllUnits()

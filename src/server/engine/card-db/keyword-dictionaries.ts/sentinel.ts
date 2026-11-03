@@ -199,6 +199,9 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
 
   //Self Sentinel
   switch(cardId) {
+    case "IC27_080": // reprint of IBH_014
+    case "IC27_181": // reprint of JTL_241
+    case "IC27_075"://Red Leader - Wait For My Signal
     case "ASH_028"://Paz Vizsla - For a Brighter Future
     case "SOR_003"://Chewbacca - Walking Carpet
     case "SOR_035"://Lieutenant Childsen

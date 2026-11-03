@@ -126,6 +126,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "TWI_035": amount += 1; break;//Morgan Elsbeth
     case "TWI_039": amount += 2; break;//Malevolence
     case "TWI_092": amount += 1; break;//Admiral Yularen
+    case "IC27_192": // reprint of TWI_244
     case "TWI_244": amount += 2; break;//ETA-2 Light Interceptor
     case "TWI_247": amount += 3; break;//AT-TE Vanguard
     case "JTL_038": amount += 2; break;//Corvus
@@ -147,6 +148,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "LOF_121": amount += 4; break;//The Purrgil King
     case "LOF_247": amount += 1; break;//Gungan Warrior
     case "LOF_253": amount += 1; break;//Longbeam Cruiser
+    case "IC27_082": // reprint of IBH_020
     case "IBH_020": amount += 2; break;//Luke Skywalker
     case "IBH_058": //Lambda Shuttle
     case "IBH_084":
@@ -179,6 +181,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "SEC_259": amount += 1; break; //ASP Laborer
     case "TS26_17": amount += 2; break; //Rush Clovis - Trapped by Authority
     case "TS26_21": amount += 2; break; //Gar Saxon - Sundari Pillager
+    case "IC27_075": amount += 2; break; //Red Leader - Wait For My Signal
     case "HMW_066": {//Carrion Spike — "For each upgrade on your base, ... gains Restore 1." Scales,
                      //so it is a count rather than a flat grant; 0 upgrades means no Restore at all.
       const gs066 = GetGame()?.currentGameState;
