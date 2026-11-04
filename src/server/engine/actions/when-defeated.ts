@@ -1,7 +1,8 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildAnnihilatorOffer, UnitTraits, AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains } from "@/server/engine/core-functions";
+import { buildAnnihilatorOffer, UnitTraits, AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains, buildThrawnExperience } from "@/server/engine/core-functions";
+import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -709,6 +710,22 @@ function resolveOwnWhenDefeated(
       }
       game058.gameLog.push(`${CardTitle("LAW_058")}: the next unit you play this phase costs 1 resource less.`);
       return null;
+    }
+    case "IC27_149": { // The Invisible Hand — When Defeated half of "the next card you play this
+                       // phase costs 9 less"; the When Played half is in when-played-trigger.ts.
+      const game149 = GetGame();
+      if (game149) ArmInvisibleHandDiscount(game149.currentGameState, player, game149.gameLog);
+      return null;
+    }
+    case "IC27_024": // Grand Admiral Thrawn — the When Defeated third of his Experience + Sentinel.
+      return buildThrawnExperience(player, unit.playId);
+    case "IC27_099": { // Eighth Brother — "When Defeated: You may ready an Imperial unit." Any
+                       // player's; only exhausted ones are offered, as readying a ready unit is moot.
+      const exhausted099 = AllUnits().filter(u =>
+        !u.ready && TraitContains(u.cardId, "Imperial", u.controller, u.playId));
+      if (exhausted099.length === 0) return null;
+      return optionalTarget("IC27_099", player, exhausted099.map(u => u.playId),
+        "Ready an Imperial unit?", { yesLabel: "Ready" });
     }
     case "LOF_129": { // Acolyte of the Beyond — "On Attack/When Defeated: The Force is with you."
       const game129 = GetGame();

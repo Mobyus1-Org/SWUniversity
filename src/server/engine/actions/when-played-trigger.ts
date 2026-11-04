@@ -3,6 +3,7 @@ import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
 import { BaseHealingPrevented, DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
+import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { GiveTokenUpgrade, CreateSpy, CreateTieFighter, CreateBattleDroid, CreateCloneTrooper, CreateMandalorianToken, GiveAdvantageTokens, CreateXWing } from "@/server/engine/token-helpers";
 
@@ -28,6 +29,7 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "JTL_135", "JTL_158", "JTL_248",
   // IC27 reprints of SOR_039, TWI_137, IBH_031, IBH_072 and JTL_248.
   "IC27_027", "IC27_108", "IC27_164", "IC27_028", "IC27_190",
+  "IC27_149", // The Invisible Hand — next card costs 9 less
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -214,6 +216,9 @@ export function resolveWhenPlayedTrigger(
                     // 1 resource less. Read by imperialNextUnitDiscount, consumed in completePlayCard.
       gs.currentEffects.push({ cardId: "ASH_237", duration: "Phase", affectedPlayer: trigger.fromPlayer });
       log.push(`${CardTitle(trigger.cardId)}: the next Imperial unit you play this phase costs 1 resource less.`);
+      break;
+    case "IC27_149": // The Invisible Hand — When Played half; the When Defeated half is in when-defeated.ts.
+      ArmInvisibleHandDiscount(gs, trigger.fromPlayer, log);
       break;
     case "ASH_248": // Neel — When Played/On Attack: The next unit you play this phase with 1 or less
                     // power enters play ready. Consumed in completePlayCard by the qualifying unit.

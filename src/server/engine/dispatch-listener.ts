@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueSelfDamagedSurvivesReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases, UpgradeLeavesPlay, BaseUpgradeHolder, BaseUpgradeDefeatReplacer, RemoveUpgradeFromBase } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueSelfDamagedSurvivesReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, buildBadFeelingShield, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases, UpgradeLeavesPlay, BaseUpgradeHolder, BaseUpgradeDefeatReplacer, RemoveUpgradeFromBase } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -5361,6 +5361,10 @@ function consumeNextPlayMarker(game: GameState, player: PlayerId, effectCardId: 
   return true;
 }
 
+function consumeInvisibleHandDiscounts(game: GameState, player: PlayerId): void {
+  game.currentEffects = game.currentEffects.filter(e => !(e.cardId === "IC27_149" && e.affectedPlayer === player));
+}
+
 /**
  * JTL_133 Allegiant General Pryde — "When indirect damage is dealt to a unit: You may defeat a
  * non-unique upgrade on it."
@@ -5534,6 +5538,10 @@ function completePlayCard(
   if (TraitContains(cardId, "Pilot", player)) {
     consumeNextPlayMarker(game, player, "JTL_008_next_pilot");
   }
+
+  // IC27_149 The Invisible Hand: "the next CARD you play this phase" — any card spends every
+  // pending discount (they all went into this card's cost).
+  consumeInvisibleHandDiscounts(game, player);
 
   // JTL_232 Jump to Lightspeed: the free copy is used up by this play.
   const jump232 = JumpToLightspeedMarkerIndex(game, player, cardId);
@@ -8314,6 +8322,11 @@ function handleChooseTarget(
     // discount. A leader attaching here was DEPLOYED, not played — it must not consume it.
     if (!CardIsLeader(pending.upgradeCardId) && TraitContains(pending.upgradeCardId, "Pilot", pending.player)) {
       consumeNextPlayMarker(game, pending.player, "JTL_008_next_pilot");
+    }
+    // IC27_149 The Invisible Hand: a Pilot PLAYED as an upgrade is the next card played too. It
+    // never passed through completePlayCard, so its discount is spent here.
+    if (isPilot && !CardIsLeader(pending.upgradeCardId)) {
+      consumeInvisibleHandDiscounts(game, pending.player);
     }
 
     // SOR_061 / LOF_058 Guardian of the Whills: mark first-upgrade-used for this round.
@@ -18929,6 +18942,44 @@ function applyAbilityEffect(
       if (target161) {
         GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(target161), 3, game.gameLog, pending.player!, "ASH_161");
       }
+      break;
+    }
+    case "IC27_024": { // Grand Admiral Thrawn — an Experience token, then Sentinel for this phase.
+      if (!targetPlayId) break;
+      const target024 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target024) {
+        GiveExperienceTokens(game.currentGameState, target024, 1, game.gameLog, pending.player!, "IC27_024");
+        GrantKeywordForPhase("IC27_024", Unit.FromInterface(target024), game.gameLog, "Sentinel");
+      }
+      break;
+    }
+    case "IC27_079": { // Qui-Gon Jinn — the chosen friendly unit gets +2/+2 for this phase.
+      if (!targetPlayId) break;
+      const target079 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target079) GiveStatModForPhase("IC27_079", Unit.FromInterface(target079), 2, game.gameLog);
+      break;
+    }
+    case "IC27_099": { // Eighth Brother — ready the chosen Imperial unit, whoever controls it.
+      if (!targetPlayId) break;
+      const target099 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target099 && ReadyUnit(game.currentGameState, target099)) {
+        game.gameLog.push(`${CardTitle("IC27_099")}: readied ${CardTitle(target099.cardId)}.`);
+      }
+      break;
+    }
+    case "IC27_166": { // I've Got A Bad Feeling — return the unit, THEN offer the Shield, so the
+                       // returned unit is no longer a friendly choice.
+      if (!targetPlayId) break;
+      const bounce166 = bounceUnitToHand(game.currentGameState, game.gameLog, targetPlayId, "IC27_166", null);
+      const shield166 = buildBadFeelingShield(pending.player!, pending.continuation ?? null);
+      if (bounce166?.pending) return injectContinuation(bounce166.pending, shield166);
+      if (shield166 && shield166 !== pending.continuation) return shield166;
+      break;
+    }
+    case "IC27_166_shield": { // I've Got A Bad Feeling — the Shield token.
+      if (!targetPlayId) break;
+      const target166 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target166) GiveTokenUpgrade(game.currentGameState, target166, "SOR_T02", pending.player!);
       break;
     }
     case "ASH_127": { // The Twins — grant the chosen friendly unit Sentinel for this phase.

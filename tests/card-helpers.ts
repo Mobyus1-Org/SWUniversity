@@ -942,6 +942,13 @@ export const Cards = {
       drk1ProbeDroid: "IC27_129",       // reprint of LOF_155
       hk87AssassinDroid: "IC27_182",    // reprint of LOF_235
       c3po: "IC27_188",                 // reprint of SOR_238
+      // New cards.
+      moffGideon: "IC27_022",           // 3/6 Ground, cost 5 — Cold Calling
+      grandAdmiralThrawn: "IC27_024",   // 4/4 Ground, cost 6 — Listen to Me Carefully
+      quiGonJinn: "IC27_079",           // 5/5 Ground, cost 5 — Unwavering Belief
+      eighthBrother: "IC27_099",        // 3/1 Ground, cost 2 — Ill-Fated Escape
+      theInvisibleHand: "IC27_149",     // 9/9 Space, cost 10 — Confederate Might
+      jarJarBinks: "IC27_187",          // 1/5 Ground, cost 2 — Bumbling Representative
     },
   },
   upgrades: {
@@ -1305,6 +1312,7 @@ export const Cards = {
       lethalCrackdown: "IC27_030",  // reprint of TWI_041
       shootFirst: "IC27_175",       // reprint of SOR_217
       iAmYourFather: "IC27_185",    // reprint of SOR_233
+      iveGotABadFeeling: "IC27_166", // cost 4 — new
       consumedByTheDarkSide: "IC27_184", // reprint of LOF_239
     },
   },

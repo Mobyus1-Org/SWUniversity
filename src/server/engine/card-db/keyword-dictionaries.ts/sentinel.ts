@@ -39,6 +39,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
 
       switch(currentEffect.cardId) {
         case "ASH_127": hasSentinel = true; break;//The Twins — granted for the phase
+        case "IC27_024": hasSentinel = true; break;//Grand Admiral Thrawn — granted with his Experience token
         case "ASH_007_sentinel": hasSentinel = true; break;//Grand Admiral Sloane leader Action
         case "ASH_003_sentinel": hasSentinel = true; break;//Baylan Skoll (deployed) On Attack
         case "SEC_048": hasSentinel = true; break;//Captain Rex — this unit AND an enemy unit, for the phase
@@ -202,6 +203,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "IC27_080": // reprint of IBH_014
     case "IC27_181": // reprint of JTL_241
     case "IC27_075"://Red Leader - Wait For My Signal
+    case "IC27_079"://Qui-Gon Jinn - Unwavering Belief
     case "ASH_028"://Paz Vizsla - For a Brighter Future
     case "SOR_003"://Chewbacca - Walking Carpet
     case "SOR_035"://Lieutenant Childsen

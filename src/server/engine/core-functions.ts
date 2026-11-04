@@ -1008,6 +1008,34 @@ export function buildPhasmaOnMyCommandOffer(
 }
 
 /**
+ * IC27_024 Grand Admiral Thrawn — "When Played/On Attack/When Defeated: You may give an Experience
+ * token to another friendly unit. It gains Sentinel for this phase." One builder for all three
+ * triggers; on the When Defeated pass Thrawn has already left play, so every friendly unit is
+ * "another". The token and the Sentinel go to the same unit, applied in the ability-target handler.
+ */
+export function buildThrawnExperience(
+  player: PlayerId,
+  selfPlayId: string | undefined,
+  continuation: PendingResolution | null = null,
+): PendingResolution | null {
+  const others = GetUnitsForPlayer(player).filter(u => u.playId !== selfPlayId);
+  if (others.length === 0) return continuation;
+  return optionalTarget("IC27_024", player, others.map(u => u.playId),
+    "Give another friendly unit an Experience token and Sentinel for this phase?",
+    { yesLabel: "Give Experience", continuation });
+}
+
+/** IC27_166 I've Got A Bad Feeling — the second half: "Give a Shield token to a friendly unit." */
+export function buildBadFeelingShield(
+  player: PlayerId,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const friendly = GetUnitsForPlayer(player);
+  if (friendly.length === 0) return continuation;
+  return mandatoryTarget("IC27_166_shield", player, friendly.map(u => u.playId), continuation);
+}
+
+/**
  * JTL_089 The Invisible Hand — "When Played/When this unit completes an attack (and survives): You
  * may search the top 8 cards of your deck for a Droid unit, reveal it, and draw it. If it costs 2
  * or less, you may play it for free." The "may" comes first and the search is built only once it's
@@ -2285,6 +2313,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_015": //Emperor Palpatine (deployed) — On Attack: may buff another exhausted unit
     case "ASH_010": //Bo-Katan Kryze (deployed) — On Attack: create a Mandalorian token
     case "ASH_127": //The Twins — On Attack: may give another friendly unit Sentinel
+    case "IC27_024": //Grand Admiral Thrawn — On Attack: may give another friendly unit Experience + Sentinel
+    case "IC27_187": //Jar Jar Binks — On Attack: discard top of deck; cost 6+ gives +4/+0
     case "TWI_034": //General Grievous (Trophy Collector) — On Attack: 4+ Lightsabers, defeat 4 enemy units
     case "TWI_048": //Obi-Wan's Aethersprite — On Attack: 1 to self, 2 to another space unit
     case "TWI_154": //Mister Bones — On Attack: with an empty hand, may deal 3 to a ground unit

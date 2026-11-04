@@ -392,6 +392,29 @@ function imperialNextUnitDiscount(game: GameState, player: PlayerId, cardId: str
   return game.currentEffects.some(e => e.cardId === "ASH_237" && e.affectedPlayer === player) ? 1 : 0;
 }
 
+// IC27_149 The Invisible Hand — "When Played/When Defeated: The next CARD you play this phase costs
+// 9 resources less." Any card type, Pilot upgrades included. Each trigger leaves its own effect with
+// the amount in `value`, so two pending discounts stack onto the same next card; completePlayCard
+// (and the Pilot attach) spends them all.
+export function ArmInvisibleHandDiscount(game: GameState, player: PlayerId, log: string[]): void {
+  game.currentEffects.push({ cardId: "IC27_149", duration: "Phase", affectedPlayer: player, value: 9 });
+  log.push(`${CardTitle("IC27_149")}: the next card you play this phase costs 9 resources less.`);
+}
+
+export function invisibleHandNextCardDiscount(game: GameState, player: PlayerId): number {
+  return game.currentEffects
+    .filter(e => e.cardId === "IC27_149" && e.affectedPlayer === player)
+    .reduce((sum, e) => sum + (e.value ?? 0), 0);
+}
+
+// IC27_022 Moff Gideon: "If a friendly unit was defeated this phase, this unit costs 2 resources
+// less to play." Tokens count — a defeated token unit is still a unit.
+function moffGideonDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (cardId !== "IC27_022") return 0;
+  return game.roundState.cardsLeftPlayThisPhase.some(d =>
+    d.fromPlayer === player && (d.reason === "defeated" || d.reason === "token-defeated")) ? 2 : 0;
+}
+
 // JTL_005 Admiral Piett (deployed): each Capital Ship unit you play costs 2 resources less.
 function piettCapitalShipDiscount(game: GameState, player: PlayerId, cardId: string): number {
   if (CardType(cardId) !== "Unit" || !TraitContains(cardId, "Capital Ship", player)) return 0;
@@ -525,7 +548,8 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
   // Free means free: nothing is owed, aspect penalty included. Never worse than paying, so it is
   // applied without asking.
   if (JumpToLightspeedMarkerIndex(game, player, cardId) !== -1) return 0;
-  return CardCost(cardId)
+  // A cost can't go below 0 — The Invisible Hand's 9 off outstrips most cards on its own.
+  return Math.max(0, CardCost(cardId)
     + aspectPenalty(game, player, cardId)
     + delMeekoEventTax(game, player, cardId)
     - guardianOfTheWhillsDiscount(game, player, cardId)
@@ -549,7 +573,9 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - volunteerSoldierDiscount(game, player, cardId)
     - takeChargeDiscount(game, player, cardId)
     - originTreeShyyyoDiscount(game, player, cardId)
-  ;
+    - moffGideonDiscount(game, player, cardId)
+    - invisibleHandNextCardDiscount(game, player)
+  );
 }
 
 /**
@@ -567,8 +593,9 @@ export function palpatinesReturnCost(game: GameState, player: PlayerId, cardId: 
  * aspect penalty. Card-cost discounts (Bendu, GNK, …) key off the printed cost and do not apply.
  */
 export function pilotPlayCost(game: GameState, player: PlayerId, cardId: string): number {
-  return PilotingCost(cardId) + aspectPenalty(game, player, cardId)
-    - wedgeNextPilotDiscount(game, player, cardId); // "This includes Piloting costs."
+  return Math.max(0, PilotingCost(cardId) + aspectPenalty(game, player, cardId)
+    - wedgeNextPilotDiscount(game, player, cardId) // "This includes Piloting costs."
+    - invisibleHandNextCardDiscount(game, player)); // "the next CARD you play"
 }
 
 /** SOR_062 Regional Governor: while in play, opponents can't play the card named on entry. */
