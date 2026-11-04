@@ -226,6 +226,12 @@ export interface ResolveAttackPending {
    * attack off to combat, so without this the second one would ask again after the first answer.
    */
   wicketOffered?: boolean;
+  /**
+   * Set once the attacker's Restore has healed for this attack (restoreBeforeCombat). Restore is
+   * applied at the hand-off to combat so that reactions to the heal (IC27_026 Darth Sidious) can
+   * prompt and still resolve before combat damage; every resume re-enters that hand-off.
+   */
+  restoreApplied?: boolean;
 }
 
 export interface OnAttackTriggerEntry {

@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildAnnihilatorOffer, UnitTraits, AllUnits, BaseHealingPrevented, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains, buildThrawnExperience } from "@/server/engine/core-functions";
+import { buildAnnihilatorOffer, UnitTraits, AllUnits, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains, buildThrawnExperience } from "@/server/engine/core-functions";
 import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardType } from "@/server/engine/card-db/generated";
@@ -89,13 +89,8 @@ function resolveWhenDefeatedInner(
   // found in GetUnitsForPlayer is a surviving source.
   if (unit.isClone || UnitTraits(unit).includes("Clone")) {
     const gameNala = GetGame();
-    if (gameNala && !BaseHealingPrevented() && GetUnitsForPlayer(player).some(u => u.cardId === "TWI_001")) { // TWI_132 Confederate Tri-Fighter
-      const pStateNala = GetPlayer(gameNala.currentGameState, player);
-      const healed = Math.min(2, pStateNala.base.damage);
-      if (healed > 0) {
-        pStateNala.base.damage -= healed;
-        gameNala.gameLog.push(`${CardTitle("TWI_001")}: ${CardTitle(unit.cardId)} was defeated — healed ${healed} damage from your base.`);
-      }
+    if (gameNala && GetUnitsForPlayer(player).some(u => u.cardId === "TWI_001")) {
+      HealBaseForPlayer(gameNala.currentGameState, player, 2, gameNala.gameLog, "TWI_001");
     }
   }
 

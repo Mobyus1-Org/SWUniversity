@@ -182,6 +182,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "TS26_17": amount += 2; break; //Rush Clovis - Trapped by Authority
     case "TS26_21": amount += 2; break; //Gar Saxon - Sundari Pillager
     case "IC27_075": amount += 2; break; //Red Leader - Wait For My Signal
+    case "IC27_026": amount += 3; break; //Darth Sidious - Move Against the Jedi
     case "HMW_066": {//Carrion Spike — "For each upgrade on your base, ... gains Restore 1." Scales,
                      //so it is a count rather than a flat grant; 0 upgrades means no Restore at all.
       const gs066 = GetGame()?.currentGameState;

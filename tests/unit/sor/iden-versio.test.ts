@@ -54,6 +54,25 @@ describe("Iden Versio — Leader: Action [Exhaust]: If an enemy unit was defeate
     expect(g.state.player1.leader.ready).toBe(false);
   });
 
+  it("heals nothing while bases can't be healed (TWI_132 Confederate Tri-Fighter)", async () => {
+    const g = new GameTestAdapter();
+    g.loadNewState(
+      baseSetup()
+        .WithCardInHandForPlayer(1, Cards.events.sor.takedown)
+        .WithGroundUnitForPlayer(2, Cards.units.sor.battlefieldMarine)
+        .WithSpaceUnitForPlayer(2, Cards.units.twi.confederateTriFighter)
+        .WithInitiativePlayerBeing(2)
+        .WithInitiativeClaimed()
+        .Build()
+    );
+    await g.playCardFromHandAsync(1, 0);
+    await g.chooseGroundUnitAsync(2, 0);
+    const damageAfterKill = g.state.player1.base.damage;
+    await g.useLeaderAbilityAsync(1);
+    expect(g.state.player1.leader.ready).toBe(false);
+    expect(g.state.player1.base.damage).toBe(damageAfterKill);
+  });
+
   it("soft-passes (no heal) but still exhausts the leader when no enemy unit was defeated", async () => {
     const g = new GameTestAdapter();
     g.loadNewState(baseSetup().Build());

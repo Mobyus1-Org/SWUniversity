@@ -1,7 +1,7 @@
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { BaseHealingPrevented, DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase } from "@/server/engine/core-functions";
+import { DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
@@ -317,10 +317,7 @@ export function resolveWhenPlayedTrigger(
     }
     case "SOR_068": { // Cargo Juggernaut — If you control another Vigilance unit, heal 4 from base.
       if (!PlayerHasUnitWithAspectInPlay(trigger.fromPlayer, "Vigilance", true, trigger.playId)) break;
-      if (BaseHealingPrevented()) break; // TWI_132 Confederate Tri-Fighter
-      const base068 = trigger.fromPlayer === 1 ? gs.player1.base : gs.player2.base;
-      base068.damage = Math.max(0, base068.damage - 4);
-      log.push(`${CardTitle(trigger.cardId)}: healed 4 damage from your base.`);
+      HealBaseForPlayer(gs, trigger.fromPlayer, 4, log, trigger.cardId);
       break;
     }
     case "IC27_164": // reprint of IBH_031

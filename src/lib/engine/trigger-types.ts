@@ -26,6 +26,7 @@ export type TriggerType =
   | "base-upgrade-defeat"  // a base upgrade's defeat held back from a synchronous site so HMW_060 Rampart can be offered
   | "dealt-heavy-damage"  // reaction to dealing one instance of N+ damage (e.g. HMW_011 Darth Sidious)
   | "when-unit-healed"  // reaction to 1+ damage being healed from a unit (e.g. JTL_062 Silver Angel)
+  | "when-base-healed"  // reaction to 1+ damage being healed from your base (e.g. IC27_026 Darth Sidious)
   | "regroup-start"  // "When the regroup phase starts" (e.g. HMW_004 deployed as The Death Star)
   | "non-combat-damage"  // reaction to non-combat damage landing on your unit or base (HMW_013 Cham Syndulla)
 
@@ -44,6 +45,11 @@ export interface TriggerEntry {
   orderable?: boolean;
 }
 
+/** How much was healed from the base — IC27_026 Darth Sidious deals "that much" damage. */
+export interface BaseHealedContext {
+  amount: number;
+}
+
 /** What the non-combat damage landed on — one of the two is set (HMW_013 Cham Syndulla). */
 export interface NonCombatDamageContext {
   damagedPlayId?: string;
@@ -51,6 +57,7 @@ export interface NonCombatDamageContext {
 }
 
 export type TriggerContext =
+  | BaseHealedContext
   | NonCombatDamageContext
   | WhenDefeatedContext
   | WhenUnitDealsDamageContext

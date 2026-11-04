@@ -954,6 +954,7 @@ export const Cards = {
       eighthBrother: "IC27_099",        // 3/1 Ground, cost 2 — Ill-Fated Escape
       theInvisibleHand: "IC27_149",     // 9/9 Space, cost 10 — Confederate Might
       jarJarBinks: "IC27_187",          // 1/5 Ground, cost 2 — Bumbling Representative
+      darthSidious: "IC27_026",         // 5/8 Ground, cost 7 — Move Against the Jedi
     },
   },
   upgrades: {

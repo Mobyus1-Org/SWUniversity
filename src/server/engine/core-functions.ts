@@ -1491,20 +1491,34 @@ export function DealDamageToBase(
  * Heals `amount` damage from a player's base, floored at 0. Shared by every card that
  * heals a base (Grassroots Resistance, Lost and Forgotten, …).
  */
+/**
+ * The ONLY way damage is healed from a base (a guard test bans direct writes). Applies TWI_132
+ * Confederate Tri-Fighter's "Bases can't be healed", caps the heal at the base's damage, and queues
+ * "When you heal damage from your base" reactions with the amount actually healed (IC27_026 Darth
+ * Sidious). Returns that amount.
+ */
 export function HealBaseForPlayer(
   gs: GameState,
   player: PlayerId,
   amount: number,
   gameLog: string[],
   fromCardId?: string,
-): void {
-  if (BaseHealingPrevented()) return; // TWI_132 Confederate Tri-Fighter
+): number {
+  if (BaseHealingPrevented()) return 0; // TWI_132 Confederate Tri-Fighter
   const playerObj = player === 1 ? gs.player1 : gs.player2;
   const healed = Math.min(amount, playerObj.base.damage);
-  if (healed <= 0) return;
+  if (healed <= 0) return 0;
   playerObj.base.damage -= healed;
   const prefix = fromCardId ? `${CardTitle(fromCardId)}: ` : "";
   gameLog.push(`${prefix}healed ${healed} damage from Player ${player}'s base.`);
+  for (const u of [...playerObj.groundArena, ...playerObj.spaceArena]) {
+    if (u.cardId !== "IC27_026" || Unit.FromInterface(u).LostAbilities()) continue;
+    gs.triggerBag.push({
+      triggerType: "when-base-healed", cardId: "IC27_026", fromPlayer: player, playId: u.playId,
+      context: { amount: healed }, nested: true,
+    });
+  }
+  return healed;
 }
 
 /**

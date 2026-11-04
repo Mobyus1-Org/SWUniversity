@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueSelfDamagedSurvivesReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, buildBadFeelingShield, buildLeiaDrawAndReturn, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases, UpgradeLeavesPlay, BaseUpgradeHolder, BaseUpgradeDefeatReplacer, RemoveUpgradeFromBase } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, AllCaptives, QueueRancorKeeperReaction, QueueSelfDamagedSurvivesReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, buildBadFeelingShield, buildLeiaDrawAndReturn, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases, UpgradeLeavesPlay, BaseUpgradeHolder, BaseUpgradeDefeatReplacer, RemoveUpgradeFromBase } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -98,7 +98,7 @@ import type {
   BamboozleAltCostDiscardPending,
   BudgetSelectPending,
 } from "@/server/engine/pending-resolution";
-import type { TriggerEntry, CardPlayedContext, DamagePreventionContext } from "@/lib/engine/trigger-types";
+import type { TriggerEntry, CardPlayedContext, DamagePreventionContext, BaseHealedContext } from "@/lib/engine/trigger-types";
 import { collectBounties } from "@/server/engine/actions/bounty";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { resolveWhenDefeated, WhenDefeatedBaseDamage } from "@/server/engine/actions/when-defeated";
@@ -2071,10 +2071,7 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
         } satisfies AbilityOptionPending;
       }
       case "SOR_002": { //Iden Versio - When an enemy unit is defeated: Heal 1 damage from your base.
-        if (!BaseHealingPrevented()) { // TWI_132 Confederate Tri-Fighter
-          const base = trigger.fromPlayer === 1 ? game.player1.base : game.player2.base;
-          base.damage = Math.max(0, base.damage - 1);
-        }
+        HealBaseForPlayer(game, trigger.fromPlayer, 1, log, "SOR_002");
         return null;
       }
       case "LOF_130": { // HK-47 — When an enemy unit is defeated: Deal 1 damage to its controller's
@@ -2501,6 +2498,26 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
       if (space062.length === 0) return null;
       return optionalTarget("JTL_062", trigger.fromPlayer, space062.map(u => u.playId),
         `${CardTitle("JTL_062")} was healed: deal 1 damage to a space unit?`, { yesLabel: "Deal 1" });
+    }
+    return null;
+  }
+
+  if (trigger.triggerType === "when-base-healed") {
+    if (trigger.cardId === "IC27_026") { // Darth Sidious — "Deal that much damage to an enemy unit."
+                                         // Mandatory. Triggered when the heal happened, so it
+                                         // resolves even if Sidious has left play since.
+      const amount026 = (trigger.context as BaseHealedContext | undefined)?.amount ?? 0;
+      const enemies026 = GetUnitsForPlayer(GetOtherPlayer(trigger.fromPlayer));
+      if (amount026 <= 0 || enemies026.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "IC27_026",
+        player: trigger.fromPlayer,
+        helperText: `${CardTitle("IC27_026")}: deal ${amount026} damage to an enemy unit.`,
+        fromPlayIds: enemies026.map(u => u.playId),
+        amount: amount026,
+        continuation: null,
+      } satisfies AbilityTargetPending;
     }
     return null;
   }
@@ -3463,14 +3480,7 @@ function resolveAttack(
     CreateForceToken(attacker.controller, log, controllerBaseId);
   }
 
-  // Restore fires as an On Attack trigger before combat damage
-  // EffectiveRestore folds in HMW_001 Asajj Ventress's replacement — see EffectiveRaid.
-  const restoreAmount = EffectiveRestore(attacker.cardId, attacker.playId, attacker.controller);
-  if (restoreAmount > 0 && !BaseHealingPrevented()) { // TWI_132 Confederate Tri-Fighter
-    const controllerBase = GetPlayer(game, attacker.controller).base;
-    controllerBase.damage = Math.max(0, controllerBase.damage - restoreAmount);
-    log.push(`Restore ${restoreAmount}: healed ${restoreAmount} damage from Player ${attacker.controller}'s base.`);
-  }
+  // Restore has already healed by now — see restoreBeforeCombat.
 
   attacker.ready = false;
   // "On Attack: Ready this unit" (JTL_157). The On Attack resolved before this exhaust, so it only
@@ -5171,10 +5181,8 @@ function queueUnitEntryTriggers(
   // Colonel Yularen (SOR_109): when a Command unit is played, heal 1 from base.
   const yularenUnit = [...GetPlayer(game, player).groundArena, ...GetPlayer(game, player).spaceArena]
     .find(u => u.cardId === "SOR_109" && !Unit.FromInterface(u).LostAbilities());
-  if (yularenUnit && CardAspects(cardId).includes("Command") && !BaseHealingPrevented()) { // TWI_132 Confederate Tri-Fighter
-    const yularenBase = GetPlayer(game, player).base;
-    yularenBase.damage = Math.max(0, yularenBase.damage - 1);
-    log.push(`${CardTitle("SOR_109")}: healed 1 damage from your base.`);
+  if (yularenUnit && CardAspects(cardId).includes("Command")) {
+    HealBaseForPlayer(game, player, 1, log, "SOR_109");
   }
 
   // Any triggers pushed while the bag is already non-empty are nested (CR 7.6.11).
@@ -6980,6 +6988,11 @@ function handleChooseTarget(
         return { response: stateResponse(game), pending: null, stateChanged: true };
       }
       return { response: resolutionResponse(pendingToResolution(onAttackTriggerPending, game)), pending: onAttackTriggerPending, stateChanged: false };
+    }
+
+    const restoreDirect = restoreBeforeCombat(game, log, resolveAttackPending);
+    if (restoreDirect) {
+      return { response: resolutionResponse(pendingToResolution(restoreDirect, game)), pending: restoreDirect, stateChanged: true };
     }
 
     const wicketDirect = wicketDrawOffer(game, resolveAttackPending);
@@ -11099,10 +11112,7 @@ function applyAbilityOptionDeclineEffect(
       if (top119No) {
         QueueWhenDiscardedTrigger(game, pending.player!, top119No.cardId, pushEventToDiscard(game, pending.player!, top119No.cardId), "Deck");
         log.push(`${CardTitle(pending.cardId)}: discarded ${CardTitle(top119No.cardId)}.`);
-        if (!BaseHealingPrevented()) { // TWI_132 Confederate Tri-Fighter
-          pState119No.base.damage = Math.max(0, pState119No.base.damage - 3);
-          log.push(`${CardTitle(pending.cardId)}: healed 3 damage from player ${pending.player!}'s base.`);
-        }
+        HealBaseForPlayer(game, pending.player!, 3, log, pending.cardId);
       }
       return pending.continuation;
     }
@@ -12088,11 +12098,43 @@ function wicketDrawOffer(game: GameState, next: ResolveAttackPending): AbilityOp
   } satisfies AbilityOptionPending;
 }
 
+/**
+ * Restore — "When this unit attacks, heal N damage from your base." Applied once per attack at the
+ * hand-off to combat (after the attacker's On Attack abilities, as before), so that a reaction to
+ * the heal — IC27_026 Darth Sidious, "When you heal damage from your base: Deal that much damage to
+ * an enemy unit" — resolves BEFORE combat damage. Such reactions are pulled out of the trigger bag
+ * and chained in front of the attack; null when there is nothing to ask.
+ *
+ * EffectiveRestore folds in HMW_001 Asajj Ventress's replacement — see EffectiveRaid.
+ */
+function restoreBeforeCombat(game: GameState, log: string[], next: ResolveAttackPending): PendingResolution | null {
+  if (next.restoreApplied) return null;
+  next.restoreApplied = true;
+  const attacker = GetUnitByPlayId(game, next.attackerPlayId);
+  if (!attacker) return null;
+  const restoreAmount = EffectiveRestore(attacker.cardId, attacker.playId, attacker.controller);
+  if (restoreAmount > 0) HealBaseForPlayer(game, attacker.controller, restoreAmount, log, attacker.cardId);
+
+  const reactions = game.triggerBag.filter(t => t.triggerType === "when-base-healed");
+  if (reactions.length === 0) return null;
+  game.triggerBag = game.triggerBag.filter(t => t.triggerType !== "when-base-healed");
+  let chain: PendingResolution = next;
+  for (let i = reactions.length - 1; i >= 0; i--) {
+    const prompt = processSingleTrigger(reactions[i], game, log);
+    if (prompt) chain = injectContinuation(prompt, chain);
+  }
+  return chain === next ? null : chain;
+}
+
 function handleResolveAttack(
   game: GameState,
   log: string[],
   pending: ResolveAttackPending,
 ): HandlerResult {
+  const restorePrompt = restoreBeforeCombat(game, log, pending);
+  if (restorePrompt) {
+    return { response: resolutionResponse(pendingToResolution(restorePrompt, game)), pending: restorePrompt, stateChanged: true };
+  }
   const wicketOffer = wicketDrawOffer(game, pending);
   if (wicketOffer) {
     return { response: resolutionResponse(pendingToResolution(wicketOffer, game)), pending: wicketOffer, stateChanged: true };
@@ -12989,9 +13031,7 @@ function resolveActionAbility(
         log.push(`${CardTitle("SOR_002")}: no enemy unit defeated this phase — soft pass.`);
         return null;
       }
-      const base002 = GetPlayer(game, player).base;
-      base002.damage = Math.max(0, base002.damage - 1);
-      log.push(`${CardTitle("SOR_002")}: healed 1 damage from your base.`);
+      HealBaseForPlayer(game, player, 1, log, "SOR_002");
       return null;
     }
     case "HMW_002": { // Maz Kanata — both sides: "Play a Fringe or Underworld unit from your hand.
@@ -14398,10 +14438,9 @@ function processMillResult(game: GameState, log: string[], pending: MillResultPe
     case "SOR_047": { // Kanan Jarrus — heal base by number of distinct aspects among milled cards
       const distinctAspects = new Set(pending.milledCardIds.flatMap((id: string) => CardAspects(id)));
       const healAmount = distinctAspects.size;
-      if (healAmount > 0 && !BaseHealingPrevented()) { // TWI_132 Confederate Tri-Fighter
-        const healPlayer = GetPlayer(game, pending.player);
-        healPlayer.base.damage = Math.max(0, healPlayer.base.damage - healAmount);
-        log.push(`${CardTitle(pending.cardId)}: healed ${healAmount} damage from player ${pending.player}'s base (${healAmount} distinct aspect(s)).`);
+      if (healAmount > 0) {
+        log.push(`${CardTitle(pending.cardId)}: ${healAmount} distinct aspect(s) among the milled cards.`);
+        HealBaseForPlayer(game, pending.player, healAmount, log, pending.cardId);
       }
       break;
     }
@@ -14422,11 +14461,7 @@ function healTarget(
 ): void {
   const baseMatch = targetPlayId.match(/^player([12])\.base$/);
   if (baseMatch) {
-    if (BaseHealingPrevented()) return; // TWI_132 Confederate Tri-Fighter
-    const playerNum = Number(baseMatch[1]) as PlayerId;
-    const playerState = GetPlayer(game, playerNum);
-    playerState.base.damage = Math.max(0, playerState.base.damage - amount);
-    log.push(`${CardTitle(sourceCardId)}: healed ${amount} damage from player ${playerNum}'s base.`);
+    HealBaseForPlayer(game, Number(baseMatch[1]) as PlayerId, amount, log, sourceCardId);
   } else {
     const unit = GetUnitByPlayId(game, targetPlayId);
     if (unit) {
@@ -18998,6 +19033,11 @@ function applyAbilityEffect(
       if (target161) {
         GiveAdvantageTokens(game.currentGameState, Unit.FromInterface(target161), 3, game.gameLog, pending.player!, "ASH_161");
       }
+      break;
+    }
+    case "IC27_026": { // Darth Sidious — the healed amount, as damage to the chosen enemy unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "IC27_026", targetPlayId, pending.amount ?? 0, game.gameLog, pending.player);
       break;
     }
     case "IC27_024": { // Grand Admiral Thrawn — an Experience token, then Sentinel for this phase.
