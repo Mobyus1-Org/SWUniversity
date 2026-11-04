@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
-import { GetUnitByPlayId, GetOtherPlayer, ReadyUnit, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage, FriendlyUnitsWithTrait, DiscardFromTopOfDeck, buildThrawnExperience } from "@/server/engine/core-functions";
+import { GetUnitByPlayId, GetOtherPlayer, ReadyUnit, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage, FriendlyUnitsWithTrait, DiscardFromTopOfDeck, buildThrawnExperience, buildLeiaDrawAndReturn } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles, AllCardTraits } from "@/server/engine/card-db/generated";
@@ -651,6 +651,7 @@ function resolveInnateOnAttack(
       }
       return continuation;
     }
+    case "IC27_007": // Asajj Ventress (deployed) — "On Attack: You may ready a resource."
     case "SHD_199": // Coruscant Dissident — "You may ready a resource."
     case "HMW_209": { // Corona Squadron X-Wing — same text.
                       // Not offered with nothing exhausted: an offer that cannot do anything is
@@ -1922,6 +1923,20 @@ function resolveInnateOnAttack(
       });
       game.gameLog.push(`${CardTitle(attacker.cardId)}: The next Separatist card you play this phase gains Exploit 3.`);
       return continuation;
+    }
+    case "IC27_001": { // Darth Vader (deployed) — "On Attack: You may defeat another friendly unit.
+                       // If you do, draw a card and heal 2 damage from your base."
+      const others001 = GetUnitsForPlayer(attacker.controller).filter(u => u.playId !== attacker.playId);
+      if (others001.length === 0) return continuation;
+      return optionalTarget("IC27_001_OA", attacker.controller, others001.map(u => u.playId),
+        "Defeat another friendly unit to draw a card and heal 2 damage from your base?",
+        { yesLabel: "Defeat", continuation });
+    }
+    case "IC27_008": { // Princess Leia (deployed) — "On Attack: Draw a card, then put a card from
+                       // your hand on the top or bottom of your deck." Same as her leader Action.
+      const game008L = GetGame();
+      if (!game008L) return continuation;
+      return buildLeiaDrawAndReturn(game008L.currentGameState, game008L.gameLog, attacker.controller, continuation);
     }
     case "SOR_006": { // Emperor Palpatine — "On Attack: You may defeat another friendly unit. If you do, deal 1 damage to a unit and draw a card."
       const friendlies006 = GetUnitsForPlayer(attacker.controller)

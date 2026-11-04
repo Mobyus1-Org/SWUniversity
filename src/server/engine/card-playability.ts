@@ -401,7 +401,9 @@ export function ArmInvisibleHandDiscount(game: GameState, player: PlayerId, log:
   log.push(`${CardTitle("IC27_149")}: the next card you play this phase costs 9 resources less.`);
 }
 
-export function invisibleHandNextCardDiscount(game: GameState, player: PlayerId): number {
+export function invisibleHandNextCardDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  // A leader is deployed, never played — and deployLeader reads playCost as its threshold.
+  if (CardType(cardId) === "Leader") return 0;
   return game.currentEffects
     .filter(e => e.cardId === "IC27_149" && e.affectedPlayer === player)
     .reduce((sum, e) => sum + (e.value ?? 0), 0);
@@ -574,7 +576,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - takeChargeDiscount(game, player, cardId)
     - originTreeShyyyoDiscount(game, player, cardId)
     - moffGideonDiscount(game, player, cardId)
-    - invisibleHandNextCardDiscount(game, player)
+    - invisibleHandNextCardDiscount(game, player, cardId)
   );
 }
 
@@ -595,7 +597,7 @@ export function palpatinesReturnCost(game: GameState, player: PlayerId, cardId: 
 export function pilotPlayCost(game: GameState, player: PlayerId, cardId: string): number {
   return Math.max(0, PilotingCost(cardId) + aspectPenalty(game, player, cardId)
     - wedgeNextPilotDiscount(game, player, cardId) // "This includes Piloting costs."
-    - invisibleHandNextCardDiscount(game, player)); // "the next CARD you play"
+    - invisibleHandNextCardDiscount(game, player, cardId)); // "the next CARD you play"
 }
 
 /** SOR_062 Regional Governor: while in play, opponents can't play the card named on entry. */

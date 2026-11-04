@@ -306,7 +306,15 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         abilities.push(cardId);
         break;
       case "TWI_004": // Yoda — Action [Exhaust]: draw + top/bottom, if a unit left play this phase.
+      case "IC27_008": // Princess Leia — Action [1 resource, Exhaust]: draw + top/bottom, unconditional.
         abilities.push(cardId);
+        break;
+      case "IC27_001": // Darth Vader — Action [1 resource, Exhaust, defeat a friendly unit]: the
+                       // friendly unit is part of the cost, so it gates availability.
+        if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
+        break;
+      case "IC27_007": // Asajj Ventress — Action [Exhaust]: Attack with a unit (needs a ready unit).
+        if (GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
         break;
       case "TWI_002": // Nute Gunray — Action [Exhaust]: create a Battle Droid if 2+ units defeated this phase (soft-pass condition, not a cost gate).
       case "TWI_006": // Wat Tambor — Action [Exhaust]: if a friendly unit was defeated this phase, give a unit +2/+2 (soft-pass condition).
@@ -829,6 +837,9 @@ export function ActionAbilityCost(cardId: string): number {
     case "SOR_013"://Cassian Andor
       return 1;
     case "SOR_006"://Emperor Palpatine
+      return 1;
+    case "IC27_001"://Darth Vader - No One to Stop Us: his deployed side has no Action
+    case "IC27_008"://Princess Leia - On a Diplomatic Mission: her deployed side has no Action
       return 1;
     case "LAW_013"://Chewbacca - Hero of Kessel
       return 1;

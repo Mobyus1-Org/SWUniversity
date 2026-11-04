@@ -8,7 +8,7 @@ import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smu
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
-import { AbilityOptionPending, AbilityTargetPending, DeckSearchPending, PendingResolution } from "@/server/engine/pending-resolution";
+import { AbilityOptionPending, AbilityTargetPending, DeckSearchPending, HandToDeckPending, PendingResolution } from "@/server/engine/pending-resolution";
 import { UpgradeEligibleTargets, IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { UpgradeGrantsHostAction } from "@/server/engine/actions/action-ability";
 
@@ -1023,6 +1023,22 @@ export function buildThrawnExperience(
   return optionalTarget("IC27_024", player, others.map(u => u.playId),
     "Give another friendly unit an Experience token and Sentinel for this phase?",
     { yesLabel: "Give Experience", continuation });
+}
+
+/**
+ * IC27_008 Princess Leia — "Draw a card, then put a card from your hand on the top or bottom of
+ * your deck." Shared by her leader Action and her deployed On Attack. Any card in hand may go back,
+ * the drawn one included; the top/bottom choice follows the hand pick (the TWI_004 Yoda flow).
+ */
+export function buildLeiaDrawAndReturn(
+  gs: GameState,
+  log: string[],
+  player: PlayerId,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  DrawCardForPlayer(gs, log, player);
+  if (GetPlayer(gs, player).hand.length === 0) return continuation;
+  return { type: "hand-to-deck", cardId: "IC27_008", player, continuation } satisfies HandToDeckPending;
 }
 
 /** IC27_166 I've Got A Bad Feeling — the second half: "Give a Shield token to a friendly unit." */
@@ -2315,6 +2331,9 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_127": //The Twins — On Attack: may give another friendly unit Sentinel
     case "IC27_024": //Grand Admiral Thrawn — On Attack: may give another friendly unit Experience + Sentinel
     case "IC27_187": //Jar Jar Binks — On Attack: discard top of deck; cost 6+ gives +4/+0
+    case "IC27_001": //Darth Vader (deployed) — On Attack: may defeat another friendly unit to draw + heal 2
+    case "IC27_007": //Asajj Ventress (deployed) — On Attack: may ready a resource
+    case "IC27_008": //Princess Leia (deployed) — On Attack: draw, then a hand card to top/bottom of deck
     case "TWI_034": //General Grievous (Trophy Collector) — On Attack: 4+ Lightsabers, defeat 4 enemy units
     case "TWI_048": //Obi-Wan's Aethersprite — On Attack: 1 to self, 2 to another space unit
     case "TWI_154": //Mister Bones — On Attack: with an empty hand, may deal 3 to a ground unit

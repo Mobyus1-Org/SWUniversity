@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueSelfDamagedSurvivesReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, buildBadFeelingShield, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases, UpgradeLeavesPlay, BaseUpgradeHolder, BaseUpgradeDefeatReplacer, RemoveUpgradeFromBase } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, BaseHealingPrevented, AllCaptives, QueueRancorKeeperReaction, QueueSelfDamagedSurvivesReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, buildBadFeelingShield, buildLeiaDrawAndReturn, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases, UpgradeLeavesPlay, BaseUpgradeHolder, BaseUpgradeDefeatReplacer, RemoveUpgradeFromBase } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -506,6 +506,7 @@ function resolveChooseOne(
       next = anakinMortisAbility(first, pending.player, anakinMortisAbility(second, pending.player, null));
       break;
     }
+    case "IC27_008": // Princess Leia — same top/bottom placement as Yoda's.
     case "TWI_004": { // Yoda — put the held card on the top or bottom of the deck.
       const heldCardId = String(pending.data?.heldCardId ?? "");
       if (!heldCardId) break;
@@ -513,7 +514,7 @@ function resolveChooseOne(
       // The top of the deck is the END of the array (drawing pops).
       if (optionId === "top") deck004.push({ cardId: heldCardId });
       else deck004.unshift({ cardId: heldCardId });
-      log.push(`${CardTitle("TWI_004")}: put ${CardTitle(heldCardId)} on the ${optionId} of the deck.`);
+      log.push(`${CardTitle(pending.cardId)}: put ${CardTitle(heldCardId)} on the ${optionId} of the deck.`);
       break;
     }
     case "SOR_238": // C-3PO — look at the top card; on a cost match, offer to reveal and draw it.
@@ -3989,6 +3990,15 @@ function attackerOwnWhenAttackEnds(
   combatDamagedPlayId: string | null = null,
   abilitySources: string[] | null = null,
 ): PendingResolution | null {
+  // IC27_007 Asajj Ventress leader Action — "After completing this attack, if the attacker
+  // survived, you may ready a resource." Spent by this attack whether or not the attacker lived.
+  // Queued after the attacker's own attack-end abilities: the Action finishes after the attack does.
+  const asajjIdx = game.currentEffects.findIndex(e => e.cardId === ASAJJ_AFTER_ATTACK && e.targetPlayId === attacker.playId);
+  if (asajjIdx !== -1) {
+    const [asajj] = game.currentEffects.splice(asajjIdx, 1);
+    if (GetUnitByPlayId(game, attacker.playId)) continuation = buildReadyResourceOffer(game, "IC27_007", asajj.affectedPlayer, continuation);
+  }
+
   // If attacker was defeated, no trigger fires
   if (!GetUnitByPlayId(game, attacker.playId)) return continuation;
 
@@ -5359,6 +5369,33 @@ function consumeNextPlayMarker(game: GameState, player: PlayerId, effectCardId: 
   if (idx === -1) return false;
   game.currentEffects.splice(idx, 1);
   return true;
+}
+
+/** Marker for IC27_007 Asajj Ventress's leader Action, on the unit it sent to attack. */
+const ASAJJ_AFTER_ATTACK = "IC27_007_after_attack";
+
+/**
+ * "You may ready a resource" (SHD_199, HMW_209, IC27_007). Not offered with nothing exhausted —
+ * an offer that can do nothing is just a click. Yes is resolved by the SHD_199 case of the
+ * ability-option handler.
+ */
+function buildReadyResourceOffer(
+  game: GameState,
+  cardId: string,
+  player: PlayerId,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  if (!GetPlayer(game, player).resources.some(r => !r.ready)) return continuation;
+  return {
+    type: "ability-option",
+    cardId,
+    player,
+    helperText: "Ready a resource?",
+    yesLabel: "Ready",
+    noLabel: "Skip",
+    onYes: null,
+    continuation,
+  } satisfies AbilityOptionPending;
 }
 
 function consumeInvisibleHandDiscounts(game: GameState, player: PlayerId): void {
@@ -10419,6 +10456,7 @@ function applyAbilityOptionEffect(
       if (others057.length === 0) return pending.continuation ?? null;
       return mandatoryTarget("SHD_057", pending.player!, others057.map(u => u.playId), pending.continuation ?? null);
     }
+    case "IC27_007": // Asajj Ventress — both sides' "you may ready a resource".
     case "SHD_199": // Coruscant Dissident — ready one exhausted resource. Exactly one.
     case "HMW_209": { // Corona Squadron X-Wing — same On Attack.
       const res199 = GetPlayer(game, pending.player!).resources.find(r => !r.ready);
@@ -12311,6 +12349,7 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
     case "ASH_004": // Grand Admiral Thrawn (ASH) — If you control 8 or more resources.
       return p.resources.length >= 8;
     case "ASH_005": // Luke Skywalker (I Can Save Him) — If you control 7 or more resources.
+    case "IC27_001": // Darth Vader (No One to Stop Us) — If you control 7 or more resources.
     case "ASH_015": // Emperor Palpatine — If you control 7 or more resources.
     case "ASH_008": // Moff Gideon — If you control 7 or more resources.
       return p.resources.length >= 7;
@@ -12394,6 +12433,8 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
     case "TWI_016": // Jango Fett — If you control 5 or more resources.
       return p.resources.length >= 5;
     case "SOR_008": // Hera Syndulla — If you control 6 or more resources.
+    case "IC27_007": // Asajj Ventress (Bald and Beautiful) — If you control 6 or more resources.
+    case "IC27_008": // Princess Leia (On a Diplomatic Mission) — If you control 6 or more resources.
     case "SHD_001": // Gar Saxon — If you control 6 or more resources.
     case "TWI_002": // Nute Gunray — If you control 6 or more resources.
       return p.resources.length >= 6;
@@ -13215,6 +13256,21 @@ function resolveActionAbility(
       DrawCardForPlayer(game, log, player);
       if (GetPlayer(game, player).hand.length === 0) return null;
       return { type: "hand-to-deck", cardId: "TWI_004", player, continuation: null };
+    }
+    case "IC27_008": // Princess Leia — Action [1 resource, Exhaust]: Yoda's draw + top/bottom with
+                     // no condition. The deployed On Attack builds the same thing (on-attack.ts).
+      return buildLeiaDrawAndReturn(game, log, player, null);
+    case "IC27_001": { // Darth Vader — Action [1 resource, Exhaust, defeat a friendly unit]: Draw a
+                       // card and heal 2 damage from your base. The unit is chosen first (cost).
+      const friendly001 = GetUnitsForPlayer(player);
+      if (friendly001.length === 0) return null;
+      return mandatoryTarget("IC27_001_action", player, friendly001.map(u => u.playId));
+    }
+    case "IC27_007": { // Asajj Ventress — Action [Exhaust]: Attack with a unit. After completing
+                       // this attack, if the attacker survived, you may ready a resource.
+      const ready007 = GetUnitsForPlayer(player).filter(u => u.ready);
+      if (ready007.length === 0) return null;
+      return mandatoryTarget("IC27_007_leader", player, ready007.map(u => u.playId));
     }
     case "TWI_007": { // Captain Rex — Action [2 resources, Exhaust]: If a friendly unit attacked
                       // this phase, create a Clone Trooper token.
@@ -19944,6 +20000,34 @@ function applyAbilityEffect(
       if (!targetPlayId || !pending.sourcePlayId) break;
       dealPowerToEnemy(game.currentGameState, game.gameLog, "Director Krennic", pending.sourcePlayId, targetPlayId);
       break;
+    }
+    case "IC27_001_action": // Darth Vader leader Action — the friendly unit chosen as the cost.
+    case "IC27_001_OA": { // Darth Vader deployed On Attack — "if you do" is the chosen unit.
+      // Draw and heal BEFORE the defeat: defeatUnit resolves an automatic When Defeated inline,
+      // and the victim's When Defeated must wait until this ability has finished.
+      if (!targetPlayId) break;
+      const sacrifice001 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!sacrifice001) break;
+      DrawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
+      HealBaseForPlayer(game.currentGameState, pending.player!, 2, game.gameLog, "IC27_001");
+      const defeated001 = defeatUnit(game.currentGameState, game.gameLog, sacrifice001);
+      updateDefeatedPlayers(game.currentGameState);
+      game.gameLog.push(`${CardTitle("IC27_001")}: defeated ${CardTitle(sacrifice001.cardId)}.`);
+      if (defeated001) return injectContinuation(defeated001, pending.continuation ?? null);
+      break;
+    }
+    case "IC27_007_leader": { // Asajj Ventress leader Action — the chosen unit attacks; the marker
+                             // is read when THIS attack ends (attackerOwnWhenAttackEnds).
+      if (!targetPlayId) break;
+      game.currentGameState.currentEffects.push({
+        cardId: ASAJJ_AFTER_ATTACK, duration: "Phase", affectedPlayer: pending.player!, targetPlayId,
+      });
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "IC27_007",
+        continuation: null,
+      };
     }
     case "SOR_006": { // Action step 1: defeat the chosen friendly unit, then pick a unit to damage.
       if (!targetPlayId) break;

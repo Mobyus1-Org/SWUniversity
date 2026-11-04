@@ -263,6 +263,11 @@ export const Cards = {
       asajjVentress: "TS26_07",
       ahsokaTano: "TS26_08",
     },
+    ic27: {
+      darthVader: "IC27_001",    // No One to Stop Us — unit side 5/7 Ground
+      asajjVentress: "IC27_007", // Bald and Beautiful — unit side 5/6 Ground
+      princessLeia: "IC27_008",  // On a Diplomatic Mission — unit side 4/7 Ground
+    },
   },
   units: {
     token: {

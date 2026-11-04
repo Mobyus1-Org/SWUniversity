@@ -42,6 +42,17 @@ describe("IC27_149 The Invisible Hand — When Played", () => {
     expect(playCost(g.state, 1, MARINE)).toBe(0);
   });
 
+  it("a leader's deploy threshold is untouched — deploying is not playing a card", async () => {
+    const g = new GameTestAdapter();
+    g.loadNewState(board().WithCardInHandForPlayer(1, HAND).Build());
+    const leader = g.state.player1.leader.cardId;
+    const threshold = playCost(g.state, 1, leader);
+
+    await g.playCardFromHandAsync(1, 0);
+
+    expect(playCost(g.state, 1, leader)).toBe(threshold);
+  });
+
   it("control: it does not discount itself", () => {
     const g = new GameTestAdapter();
     g.loadNewState(board().WithCardInHandForPlayer(1, HAND).Build());
