@@ -955,6 +955,7 @@ export const Cards = {
       theInvisibleHand: "IC27_149",     // 9/9 Space, cost 10 — Confederate Might
       jarJarBinks: "IC27_187",          // 1/5 Ground, cost 2 — Bumbling Representative
       darthSidious: "IC27_026",         // 5/8 Ground, cost 7 — Move Against the Jedi
+      asajjVentress: "IC27_147",        // 5/7 Ground, cost 6 — Death From Above
     },
   },
   upgrades: {
@@ -1036,6 +1037,7 @@ export const Cards = {
       squadSupport: "TWI_122",
     },
     sec: {
+      condemn: "SEC_038", // while attacking: defender may disclose VigilanceVillainy for –6/–0; loses all other abilities
       clandestineConnections: "SEC_264",
       disciplesDevotion: "SEC_071",
       moralAuthority: "SEC_256", // +2/+0 on a friendly unique unit; When Played it captures
@@ -1108,6 +1110,7 @@ export const Cards = {
       asteroidSanctuary: "SOR_218",
       medalCeremony: "SOR_245",
       heroicSacrifice: "SOR_150",
+      precisionFire: "SOR_168",
       waylay: "SOR_222",
       changeOfHeart: "SOR_224",
       confiscate: "SOR_251",
@@ -1263,6 +1266,7 @@ export const Cards = {
       chooseYourPath: "ASH_257",
     },
     law: {
+      commenceTheFestivities: "LAW_202", // attack: Saboteur; +2/+0 if you control fewer resources
       collateralDamage: "LAW_208", // Deal 2, then deal 2 to a base or another unit in same arena
       thatsARock: "LAW_206", // Deal 1; when discarded from hand or deck, may deal 1
       improvise: "LAW_242",

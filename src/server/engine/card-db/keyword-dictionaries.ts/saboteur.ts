@@ -23,6 +23,7 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
       switch(currentEffect.cardId) {
         case "SHD_230": return true;//Swoop Down
         case "SOR_168": return true;//Precision Fire
+        case "LAW_202": return true;//Commence the Festivities
         case "TWI_224": return true;//Breaking In
         case "TWI_249": return true;//Heroes on Both Sides
         //Jump to Lightspeed

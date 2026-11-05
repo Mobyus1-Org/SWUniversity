@@ -1040,6 +1040,13 @@ export function resolveWhenPlayed(
         fromPlayIds: GetUnitsForPlayer(player, true).map((u) => u.playId),
         continuation: null,
       }
+    case "LAW_202": { // Commence the Festivities — "Attack with a unit. It gains Saboteur for this
+                      // attack. If you control fewer resources than an opponent, it gets +2/+0 for
+                      // this attack." Both riders are applied as the unit is sent in.
+      const ready202 = GetUnitsForPlayer(player, true);
+      if (ready202.length === 0) return null;
+      return mandatoryTarget(cardId, player, ready202.map(u => u.playId));
+    }
     case "TWI_224": //Breaking In "Attack with a unit. It gets +2/+0 and gains Saboteur for this attack. (Ignore Sentinel and defeat the defender's Shields.)"
       return {
         type: "ability-target",

@@ -232,6 +232,18 @@ export interface ResolveAttackPending {
    * prompt and still resolve before combat damage; every resume re-enters that hand-off.
    */
   restoreApplied?: boolean;
+  /**
+   * Set once IC27_147 Asajj Ventress (Death From Above) has been offered for this attack — one
+   * replacement per attack, and every resume re-enters the hand-off that asks.
+   */
+  asajjOffered?: boolean;
+  /**
+   * The attacker's attack-scoped effects as the attack target was chosen — what the ability that
+   * started the attack put on it ("+2/+0 for this attack", abilities granted for this attack,
+   * after-attack riders). Captured BEFORE any On Attack resolves. If IC27_147 Asajj Ventress
+   * replaces the attacker, exactly these move to her; anything applied later stays (attackRiderKey).
+   */
+  attackRiders?: string[];
 }
 
 export interface OnAttackTriggerEntry {

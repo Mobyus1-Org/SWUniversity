@@ -59,7 +59,7 @@ import { aspectPenalty, CardIsPlayable, PlayableUnitHandIndices, discountedPlayC
 import type { Game, GameState } from "@/lib/engine/game";
 import type { CardInPlay, CurrentEffect, DiscardedCard, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import type { DealtHeavyDamageContext } from "@/lib/engine/trigger-types";
-import { PHASE_STAT_MOD } from "@/lib/engine/core-models";
+import { CONDEMN_BLANK, PHASE_STAT_MOD } from "@/lib/engine/core-models";
 import type {
   AbilityOptionPending,
   AbilityTargetPending,
@@ -3494,12 +3494,7 @@ function resolveAttack(
     playId: attacker.playId,
     ...(target.type === "base" ? { attackedBasePlayer: target.player } : {}),
   });
-  // Babu Frik (LOF_206): for this attack the unit deals damage equal to its remaining HP instead
-  // of its power. The ForAttack effect is set when Babu Frik sends it in.
-  const dealsHpAsDamage = game.currentEffects.some(
-    e => e.cardId === "LOF_206_hp_as_damage" && e.targetPlayId === attacker.playId && e.duration === "ForAttack",
-  );
-  const atkPower = dealsHpAsDamage ? Math.max(0, attacker.CurrentHP()) : attacker.CurrentPower(true);
+  const atkPower = attackerCombatDamage(game, attacker);
   const attackerName = CardTitle(attacker.cardId);
 
   if (target.type === "base") {
@@ -3778,6 +3773,12 @@ function resolveAttack(
       e => e.cardId === "SOR_150_sacrifice" && e.targetPlayId === attacker.playId,
     );
     const atkDefeated = atkKilledByCombat || willSacrificeUnit;
+    // SEC_038 Condemn — an attacker that dies during the attack dies blanked: its When Defeated is
+    // one of the "other abilities" it lost. The ForAttack blank is cleared just below, so a
+    // phase-long copy carries it past the defeat; it is keyed to a play id that is now gone.
+    if (atkDefeated && Unit.FromInterface(attacker).HasCondemnBlank()) {
+      game.currentEffects.push({ cardId: CONDEMN_BLANK, duration: "Phase", affectedPlayer: attacker.controller, targetPlayId: attacker.playId });
+    }
 
     // Clear ForAttack effects scoped to this attack — on the attacker, and on the defender (an
     // attacker's ability can debuff it "while this unit is attacking", e.g. ASH_046 Scion Shuttle).
@@ -6958,11 +6959,22 @@ function handleChooseTarget(
       }
     }
 
+    // SEC_038 Condemn — "While attached unit is attacking, it … loses all other abilities." In force
+    // from here, once the target is declared: Saboteur has already let it past a Sentinel, but it
+    // no longer defeats the defender's Shields. Pushed after the On Attack trigger is queued, which
+    // a blanked unit would otherwise never get — and Condemn's own grant is in that trigger.
+    if (attacker?.upgrades.some(u => u.cardId === "SEC_038")) {
+      game.currentEffects.push({ cardId: CONDEMN_BLANK, duration: "ForAttack", affectedPlayer: attacker.controller, targetPlayId: attacker.playId });
+      log.push(`${CardTitle("SEC_038")}: ${CardTitle(attacker.cardId)} loses all other abilities while attacking.`);
+    }
+
     const resolveAttackPending: ResolveAttackPending = {
       type: "resolve-attack",
       attackerPlayId: pending.attackerPlayId,
       target,
       continuation: pending.continuation ?? null,
+      // Before any On Attack resolves — see ResolveAttackPending.attackRiders.
+      attackRiders: attackRiderKeys(game, pending.attackerPlayId),
     };
 
     const onAttackTriggerIndex = game.triggerBag.findIndex(t => t.triggerType === "on-attack");
@@ -6993,6 +7005,10 @@ function handleChooseTarget(
     const restoreDirect = restoreBeforeCombat(game, log, resolveAttackPending);
     if (restoreDirect) {
       return { response: resolutionResponse(pendingToResolution(restoreDirect, game)), pending: restoreDirect, stateChanged: true };
+    }
+    const asajjDirect = deathFromAboveOffer(game, resolveAttackPending);
+    if (asajjDirect) {
+      return { response: resolutionResponse(pendingToResolution(asajjDirect, game)), pending: asajjDirect, stateChanged: true };
     }
 
     const wicketDirect = wicketDrawOffer(game, resolveAttackPending);
@@ -8280,6 +8296,9 @@ function handleChooseTarget(
       const chained = injectContinuation(uniquenessBag, cont);
       return { response: resolutionResponse(pendingToResolution(chained, game)), pending: chained, stateChanged: true };
     }
+    // A paused attack (IC27_147 Asajj entering as the attacker) resumes into combat — a bare
+    // resolve-attack is never rendered.
+    if (cont?.type === "resolve-attack") return handleResolveAttack(game, log, cont);
     if (cont) return { response: resolutionResponse(pendingToResolution(cont, game)), pending: cont, stateChanged: true };
     return { response: stateResponse(game), pending: null, stateChanged: true };
   }
@@ -10469,6 +10488,16 @@ function applyAbilityOptionEffect(
       if (others057.length === 0) return pending.continuation ?? null;
       return mandatoryTarget("SHD_057", pending.player!, others057.map(u => u.playId), pending.continuation ?? null);
     }
+    case "SEC_038": { // Condemn — the defending player disclosed: the attacker gets –6/–0 for this attack.
+      const attacker038 = GetUnitByPlayId(game, pending.sourcePlayId!);
+      if (attacker038) GivePowerMod("SEC_038", attacker038, -6, "ForAttack", log);
+      return pending.continuation ?? null;
+    }
+    case "IC27_147": { // Asajj Ventress (Death From Above) — revealed: she takes over the attack.
+      const next147 = pending.continuation;
+      if (next147?.type !== "resolve-attack") return next147 ?? null;
+      return deathFromAboveSwap(game, log, pending.player!, next147);
+    }
     case "IC27_007": // Asajj Ventress — both sides' "you may ready a resource".
     case "SHD_199": // Coruscant Dissident — ready one exhausted resource. Exactly one.
     case "HMW_209": { // Corona Squadron X-Wing — same On Attack.
@@ -12099,6 +12128,117 @@ function wicketDrawOffer(game: GameState, next: ResolveAttackPending): AbilityOp
 }
 
 /**
+ * The combat damage `attacker` deals in this attack: its power — or, when LOF_206 Babu Frik sent it
+ * in, its remaining HP instead (a ForAttack effect set as Babu Frik starts the attack).
+ */
+function attackerCombatDamage(game: GameState, attacker: Unit): number {
+  const dealsHpAsDamage = game.currentEffects.some(
+    e => e.cardId === "LOF_206_hp_as_damage" && e.targetPlayId === attacker.playId && e.duration === "ForAttack",
+  );
+  return dealsHpAsDamage ? Math.max(0, attacker.CurrentHP()) : attacker.CurrentPower(true);
+}
+
+/**
+ * An attack-scoped effect on `playId` — one that lasts only for this attack, or an after-attack
+ * rider keyed to the attacker (IC27_007's ready-a-resource). These are what IC27_147 Asajj Ventress
+ * takes over when she replaces the attacker. Identified by card + value, since effects carry no id.
+ */
+function attackRiderKey(e: CurrentEffect, playId: string): string | null {
+  if (e.targetPlayId !== playId) return null;
+  if (e.duration !== "ForAttack" && e.cardId !== ASAJJ_AFTER_ATTACK) return null;
+  if (e.cardId === CONDEMN_BLANK) return null; // the upgrade's, not the attack's — it stays with it
+  return `${e.cardId}|${e.value ?? ""}`;
+}
+
+function attackRiderKeys(game: GameState, playId: string): string[] {
+  return game.currentEffects.map(e => attackRiderKey(e, playId)).filter((k): k is string => k !== null);
+}
+
+/** IC27_147 Asajj Ventress (Death From Above) — "[5 resources Cunning Villainy]": 5 plus her aspect penalty. */
+function deathFromAboveCost(game: GameState, player: PlayerId): number {
+  return 5 + aspectPenalty(game, player, "IC27_147");
+}
+
+/**
+ * IC27_147 Asajj Ventress — Death From Above: "If a friendly non-leader ground unit would deal combat
+ * damage while attacking a base, you may reveal this unit from your hand and pay [5 resources Cunning
+ * Villainy]. If you do, return the attacker to its owner's hand and put this unit into play as the
+ * attacker. She deals combat damage to that base instead."
+ *
+ * Asked once, at the hand-off to combat: every On Attack has resolved by now, so "would deal combat
+ * damage" is read from the attacker as it will actually strike — an On Attack that drops it to 0
+ * power (Condemn's –6/–0) means no offer. Overwhelm spill is never "attacking a base".
+ */
+function deathFromAboveOffer(game: GameState, next: ResolveAttackPending): AbilityOptionPending | null {
+  if (next.asajjOffered || next.target.type !== "base") return null;
+  const attacker = GetUnitByPlayId(game, next.attackerPlayId);
+  if (!attacker || IsLeaderUnit(attacker) || UnitArenaOf(game, attacker.playId) !== "Ground") return null;
+  if (attackerCombatDamage(game, attacker) <= 0) return null;
+  const holder = attacker.controller;
+  if (!GetPlayer(game, holder).hand.some(c => c.cardId === "IC27_147")) return null;
+  const cost = deathFromAboveCost(game, holder);
+  if (spendableFor(game, holder) < cost) return null;
+  return {
+    type: "ability-option",
+    cardId: "IC27_147",
+    player: holder,
+    sourcePlayId: attacker.playId,
+    helperText: `Reveal ${CardTitle("IC27_147")} and pay ${cost} to have her deal this attack's damage instead?`,
+    yesLabel: "Reveal and pay",
+    noLabel: "Attack normally",
+    onYes: null,
+    continuation: { ...next, asajjOffered: true },
+  } satisfies AbilityOptionPending;
+}
+
+/**
+ * IC27_147 — the swap, once she is revealed. Pays, returns the attacker to its OWNER's hand
+ * (bounceUnitToHand: upgrades go, a token is set aside), puts Asajj into play exhausted under the
+ * revealing player's control, and resumes the same attack with her as the attacker.
+ *
+ * Only the attacker's attack riders move to her — what the ability that started the attack put on it,
+ * captured before any On Attack (ResolveAttackPending.attackRiders). Effects applied during the attack
+ * (Condemn's –6/–0, an On Attack's own power double), phase buffs and printed keywords like Raid stay
+ * with the returned unit. The uniqueness rule resolves before she deals damage; if the player keeps
+ * an older copy, the new one is gone and the base takes nothing.
+ */
+function deathFromAboveSwap(game: GameState, log: string[], player: PlayerId, next: ResolveAttackPending): PendingResolution {
+  const attacker = GetUnitByPlayId(game, next.attackerPlayId);
+  const hand = GetPlayer(game, player).hand;
+  const handIdx = hand.findIndex(c => c.cardId === "IC27_147");
+  if (!attacker || handIdx === -1) return next;
+
+  log.push(`Player ${player} revealed ${CardTitle("IC27_147")} from their hand.`);
+  payResources(game, player, deathFromAboveCost(game, player), log, "IC27_147");
+  hand.splice(handIdx, 1);
+
+  // Lift the riders off the attacker before it leaves play (leaving would not clear them all).
+  const riders: CurrentEffect[] = [];
+  for (const key of next.attackRiders ?? []) {
+    const idx = game.currentEffects.findIndex(e => attackRiderKey(e, attacker.playId) === key);
+    if (idx !== -1) riders.push(...game.currentEffects.splice(idx, 1));
+  }
+  // What is left on it for this attack (Condemn's blanking and –6/–0, an On Attack's own buff) ends
+  // as it leaves play.
+  game.currentEffects = game.currentEffects.filter(e => !(e.duration === "ForAttack" && e.targetPlayId === attacker.playId));
+  const bounce = bounceUnitToHand(game, log, attacker.playId, "IC27_147", null);
+
+  const asajj = addToArena(game, player, "IC27_147", false);
+  game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId: "IC27_147", playId: asajj.playId, reason: "other" });
+  for (const rider of riders) game.currentEffects.push({ ...rider, affectedPlayer: player, targetPlayId: asajj.playId });
+  log.push(`${CardTitle("IC27_147")} entered play as the attacker.`);
+
+  const resumed: ResolveAttackPending = { ...next, attackerPlayId: asajj.playId, asajjOffered: true };
+  let chain: PendingResolution = resumed;
+  const conflict = uniquenessDefeatPending(game, player);
+  if (conflict) {
+    conflict.continuation = resumed;
+    chain = conflict;
+  }
+  return bounce?.pending ? injectContinuation(bounce.pending, chain) : chain;
+}
+
+/**
  * Restore — "When this unit attacks, heal N damage from your base." Applied once per attack at the
  * hand-off to combat (after the attacker's On Attack abilities, as before), so that a reaction to
  * the heal — IC27_026 Darth Sidious, "When you heal damage from your base: Deal that much damage to
@@ -12134,6 +12274,10 @@ function handleResolveAttack(
   const restorePrompt = restoreBeforeCombat(game, log, pending);
   if (restorePrompt) {
     return { response: resolutionResponse(pendingToResolution(restorePrompt, game)), pending: restorePrompt, stateChanged: true };
+  }
+  const asajjOffer = deathFromAboveOffer(game, pending);
+  if (asajjOffer) {
+    return { response: resolutionResponse(pendingToResolution(asajjOffer, game)), pending: asajjOffer, stateChanged: true };
   }
   const wicketOffer = wicketDrawOffer(game, pending);
   if (wicketOffer) {
@@ -17339,6 +17483,24 @@ function applyAbilityEffect(
         type: "attack-target",
         attackerPlayId: targetPlayId,
         source: "SOR_168",
+        continuation: pending.continuation,
+      };
+    }
+    case "LAW_202": { // Commence the Festivities — "It gains Saboteur for this attack. If you control
+                      // fewer resources than an opponent, it gets +2/+0 for this attack."
+      if (!targetPlayId) break;
+      const unit202 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!unit202) break;
+      const gs202 = game.currentGameState;
+      gs202.currentEffects.push({ cardId: "LAW_202", duration: "ForAttack", affectedPlayer: unit202.controller, targetPlayId });
+      game.gameLog.push(`${CardTitle("LAW_202")}: ${CardTitle(unit202.cardId)} gains Saboteur for this attack.`);
+      const mine202 = GetPlayer(gs202, pending.player!).resources.length;
+      const theirs202 = GetPlayer(gs202, GetOtherPlayer(pending.player!)).resources.length;
+      if (mine202 < theirs202) GivePowerMod("LAW_202", unit202, 2, "ForAttack", game.gameLog);
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "LAW_202",
         continuation: pending.continuation,
       };
     }

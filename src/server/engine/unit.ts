@@ -1,4 +1,4 @@
-import { CardInPlay, HP_MOD, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
+import { CardInPlay, CONDEMN_BLANK, HP_MOD, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
 import { GetCurrentEffectsForPlayer, EffectiveRaid, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard, UnitArenaOf, GetGame, UnitHasNoAbilities } from "@/server/engine/core-functions";
 import { CardArena, CardAspects, CardCost, CardHp, CardPower, CardTitle } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
@@ -85,6 +85,12 @@ export class Unit implements UnitInterface {
     return this.damage > 0;
   }
 
+  /** SEC_038 Condemn's "while attacking, loses all other abilities" is in force on this unit. */
+  HasCondemnBlank(): boolean {
+    return GetCurrentEffectsForPlayer(this.controller)
+      .some(e => e.cardId === CONDEMN_BLANK && e.targetPlayId === this.playId);
+  }
+
   LostAbilities(ignoreFirstCardId: string = ""): boolean {
     const currentEffects = GetCurrentEffectsForPlayer(this.controller);
 
@@ -98,6 +104,7 @@ export class Unit implements UnitInterface {
         case "JTL_244": //There Is No Escape
         case "LOF_202": //Mind Trick
         case "LAW_132": //The Tree Remembers
+        case CONDEMN_BLANK: //Condemn — while attacking (granted abilities too: it can't gain any)
           return true;
         default: break;
       }

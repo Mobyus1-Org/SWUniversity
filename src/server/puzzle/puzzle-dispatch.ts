@@ -503,6 +503,11 @@ function resolveAutoOption(
   // do, this unit captures that unit. If they don't, ready this unit." Both halves are P2's call.
   // Giving up a unit is strictly worse for the solver than letting Thrawn ready, so P2 always
   // gives one up when they can — the engine already readies Thrawn outright when they cannot.
+  // SEC_038 Condemn on the solver's attacker: P2 is the defending player, and disclosing gives the
+  // attacker –6/–0. Offered only when P2 can disclose, and never worse for them, so they always do.
+  if (pending.type === "ability-option" && pending.cardId === "SEC_038" && pending.player === 2) {
+    return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };
+  }
   if (pending.type === "ability-option" && pending.cardId === "SEC_193" && pending.player === 2) {
     return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };
   }

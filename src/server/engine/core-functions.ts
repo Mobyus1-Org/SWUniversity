@@ -2550,6 +2550,7 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
   switch (cardId) {
     case "JTL_008": //Wedge Antilles piloting — grants "On Attack: next Pilot card costs 1 less."
     case "JTL_046": //Paige Tico piloting — grants "On Attack: XP to this unit, then 1 damage to it."
+    case "SEC_038": //Condemn — grants "On Attack: the defending player may disclose for –6/–0" while attacking
     case "SHD_104": //Inspiring Mentor — grants "On Attack/When Defeated: XP to another friendly unit."
     case "IC27_085": // reprint of SHD_104
     case "SHD_175": //Armed to the Teeth — grants "On Attack: Give another friendly unit +2/+0 for this phase."

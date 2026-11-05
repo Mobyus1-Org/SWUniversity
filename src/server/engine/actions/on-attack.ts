@@ -72,7 +72,11 @@ export function resolveOnAttackTrigger(
   continuation: ResolveAttackPending,
   opts: { skipOrderingPrompt?: boolean } = {},
 ): PendingResolution | null {
-  const activeUpgrades = attacker.upgrades.filter(u => UpgradeGrantsOnAttack(u.cardId, u.controller, u.playId));
+  // SEC_038 Condemn — while attacking, the unit "loses all OTHER abilities": every On Attack it has
+  // or was granted is gone except Condemn's own.
+  const condemned = attacker.HasCondemnBlank();
+  const activeUpgrades = attacker.upgrades.filter(u =>
+    UpgradeGrantsOnAttack(u.cardId, u.controller, u.playId) && (!condemned || u.cardId === "SEC_038"));
   const unitHasOnAttack = HasOnAttack(attacker.cardId, attacker.controller, attacker.playId);
   const hasOtherTrigger = activeUpgrades.length > 0 || unitHasOnAttack;
 
@@ -111,8 +115,8 @@ export function resolveOnAttackTrigger(
     }
   }
 
-  // Effect-granted On Attack abilities
-  for(const currentEffect of GetCurrentEffectsForPlayer(attacker.controller)) {
+  // Effect-granted On Attack abilities (none while Condemned — it can't gain abilities)
+  for(const currentEffect of condemned ? [] : GetCurrentEffectsForPlayer(attacker.controller)) {
     if (currentEffect.targetPlayId && currentEffect.targetPlayId !== attacker.playId) continue;
     switch (currentEffect.cardId) {
       case "JTL_156": { // Trench Run grants the attacker: "On Attack: Discard 2 cards from the
@@ -174,6 +178,27 @@ export function resolveOnAttackTrigger(
   let deferredPending: PendingResolution | null = null;
   for (const upgrade of activeUpgrades) {
     switch (upgrade.cardId) {
+      case "SEC_038": { // Condemn — "On Attack: The defending player may disclose [Vigilance,
+                        // Villainy]. If they do, this unit gets –6/–0 for this attack." Each Condemn
+                        // grants its own. Not offered when that player can't disclose both.
+        const target038 = continuation.target;
+        const defender038: PlayerId = target038.type === "base"
+          ? target038.player
+          : (AllUnits().find(u => u.playId === target038.playId)?.controller ?? GetOtherPlayer(attacker.controller));
+        if (!CanDisclose(defender038, ["Vigilance", "Villainy"])) break;
+        deferredPending = queueDeferred(deferredPending, continuation, {
+          type: "ability-option",
+          cardId: "SEC_038",
+          player: defender038,
+          sourcePlayId: attacker.playId,
+          helperText: `Disclose Vigilance and Villainy to give ${CardTitle(attacker.cardId)} –6/–0 for this attack?`,
+          yesLabel: "Disclose",
+          noLabel: "Skip",
+          onYes: null,
+          continuation,
+        } satisfies AbilityOptionPending);
+        break;
+      }
       case "JTL_018": // Kazuda Xiono piloting — same On Attack as his deployed side.
         deferredPending = queueDeferred(deferredPending, continuation, kazudaSilencePending(attacker, continuation));
         break;

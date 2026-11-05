@@ -17,6 +17,11 @@ export function resolveWhenDefeated(
   player: PlayerId,
   causedByCombatDamage: boolean = false,
 ): PendingResolution | null {
+  // A unit that had lost its abilities when it was defeated has no When Defeated — printed or
+  // granted (SEC_038 Condemn's attacker dying mid-attack, Force Lightning, Imprisoned).
+  // UnitHasWhenDefeatedAbility, which the deferred path uses, makes the same check.
+  if (unit.LostAbilities()) return null;
+
   // TWI_103 Pyrrhic Assault: "For this phase, each friendly unit gains 'When Defeated: Deal 2
   // damage to an enemy unit.'" A granted trigger, so it is checked ahead of the unit's own printed
   // When Defeated and chains that ability on as its continuation.

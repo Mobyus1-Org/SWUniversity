@@ -111,6 +111,14 @@ export const POWER_MOD = "power-mod";
 /** Generic HP-only modifier (+0/+X or –0/–X). The counterpart of POWER_MOD: leaves power alone. */
 export const HP_MOD = "hp-mod";
 
+/**
+ * SEC_038 Condemn — "While attached unit is attacking, it … loses all other abilities." A ForAttack
+ * effect on the attacker, pushed once its attack target is declared (Saboteur has already let it
+ * past a Sentinel) and cleared with the attack's other ForAttack effects. Read by Unit.LostAbilities;
+ * Condemn's own granted On Attack is the one ability that still resolves.
+ */
+export const CONDEMN_BLANK = "SEC_038_blank";
+
 export interface CurrentEffect {
   cardId: string;
   duration: EffectDuration;
