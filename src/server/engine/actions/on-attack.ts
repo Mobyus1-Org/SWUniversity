@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
-import { GetUnitByPlayId, GetOtherPlayer, ReadyUnit, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage, FriendlyUnitsWithTrait, DiscardFromTopOfDeck, buildThrawnExperience, buildLeiaDrawAndReturn } from "@/server/engine/core-functions";
+import { GetUnitByPlayId, GetOtherPlayer, ReadyUnit, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage, FriendlyUnitsWithTrait, DiscardFromTopOfDeck, buildThrawnExperience, buildLeiaDrawAndReturn, buildHanTokenDefeat, buildMaulChoice, OtherFriendlyUnitsThatEnteredPlayThisPhase } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles, AllCardTraits } from "@/server/engine/card-db/generated";
@@ -1638,6 +1638,44 @@ function resolveInnateOnAttack(
       }
       return continuation;
     }
+    case "LAW_005": // Jyn Erso (deployed) — "On Attack: If a friendly Rebel unit was defeated this
+                    // phase, search the top 3 cards of your deck for a card and draw it."
+      if (!UnitWasDefeatedThisPhase(attacker.controller, "Rebel")) return continuation;
+      return searchDeck("LAW_005", attacker.controller, 3, "draw", { continuation }) ?? continuation;
+    case "TS26_02": { // Anakin Skywalker (deployed) — "On Attack: Give a Shield token to another
+                      // friendly unit that entered play this phase."
+      const others02 = OtherFriendlyUnitsThatEnteredPlayThisPhase(attacker.controller, attacker.playId);
+      if (others02.length === 0) return continuation;
+      return mandatoryTarget("TS26_02_OA", attacker.controller, others02.map(u => u.playId), continuation);
+    }
+    case "TS26_06": { // Rex (deployed) — "On Attack: You may ready an exhausted enemy unit. If you do,
+                      // the next event you play this phase costs 2 resources less."
+      const exhausted06 = GetUnitsForPlayer(GetOtherPlayer(attacker.controller)).filter(u => !u.ready);
+      if (exhausted06.length === 0) return continuation;
+      return optionalTarget("TS26_06_OA", attacker.controller, exhausted06.map(u => u.playId),
+        "Ready an exhausted enemy unit? (Your next event this phase costs 2 less.)", { yesLabel: "Ready", continuation });
+    }
+    case "TS26_03": // Maul (deployed) — the same choice as his Action and When Deployed.
+      return buildMaulChoice(attacker.controller, continuation);
+    case "TS26_01": { // Count Dooku (deployed) — "On Attack: Create 2 Battle Droid tokens."
+      const game01 = GetGame();
+      if (!game01) return continuation;
+      CreateBattleDroid(game01.currentGameState, attacker.controller, game01.gameLog, "TS26_01");
+      CreateBattleDroid(game01.currentGameState, attacker.controller, game01.gameLog, "TS26_01");
+      return continuation;
+    }
+    case "LAW_017": { // Han Solo (deployed) — "On Attack: Defeat any number of friendly tokens. Deal
+                      // damage to a unit equal to the number of tokens defeated this way."
+      const game017 = GetGame();
+      if (!game017) return continuation;
+      return buildHanTokenDefeat(game017.currentGameState, attacker.controller, continuation);
+    }
+    case "LAW_012": { // Sebulba (deployed) — "On Attack: Discard a card from your deck."
+      const game012 = GetGame();
+      if (!game012) return continuation;
+      DiscardFromTopOfDeck(game012.currentGameState, attacker.controller, 1, game012.gameLog, "LAW_012");
+      return continuation;
+    }
     case "TWI_034": { // General Grievous (Trophy Collector) — "On Attack: If this unit has 4 or
                       // more Lightsaber upgrades attached to him, defeat 4 enemy units." Not a
                       // "may": exactly 4 must be picked, or every enemy unit when there are fewer.
@@ -1956,6 +1994,12 @@ function resolveInnateOnAttack(
       return optionalTarget("IC27_001_OA", attacker.controller, others001.map(u => u.playId),
         "Defeat another friendly unit to draw a card and heal 2 damage from your base?",
         { yesLabel: "Defeat", continuation });
+    }
+    case "LAW_006": { // Vel Sartha (deployed) — "On Attack: You may give an Experience token to a
+                      // unit. If you do, an opponent creates a Credit token." Vel herself is a unit.
+      return optionalTarget("LAW_006_OA", attacker.controller, AllUnits().map(u => u.playId),
+        "Give an Experience token to a unit? (An opponent creates a Credit token.)",
+        { yesLabel: "Give XP", continuation });
     }
     case "IC27_008": { // Princess Leia (deployed) — "On Attack: Draw a card, then put a card from
                        // your hand on the top or bottom of your deck." Same as her leader Action.

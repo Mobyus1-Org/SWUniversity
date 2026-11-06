@@ -134,18 +134,21 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   //Jump to Lightspeed
   "JTL_004", "JTL_005", "JTL_006", "JTL_008", "JTL_010", "JTL_012", "JTL_013", "JTL_014", "JTL_018",
   //Legends of the Underworld
-  "LAW_002", "LAW_003", "LAW_008", "LAW_010", "LAW_011", "LAW_013", "LAW_015",
+  "LAW_001", "LAW_002", "LAW_003", "LAW_004", "LAW_005", "LAW_006", "LAW_008", "LAW_010", "LAW_011",
+  "LAW_012", "LAW_013", "LAW_015", "LAW_017",
   //Legacy of the Force
   "LOF_002", "LOF_003", "LOF_004", "LOF_005", "LOF_007", "LOF_009", "LOF_011", "LOF_012", "LOF_013",
   "LOF_014", "LOF_015", "LOF_016", "LOF_018",
   //Secrets of Power
-  "SEC_004", "SEC_005", "SEC_006", "SEC_007", "SEC_011", "SEC_015",
+  "SEC_002", "SEC_003", "SEC_004", "SEC_005", "SEC_006", "SEC_007", "SEC_011", "SEC_015",
   //ASH
   "ASH_003", "ASH_004", "ASH_009", "ASH_012",
   //IBH
   "IBH_053", "IBH_001",
   //IC27
   "IC27_001", "IC27_007", "IC27_008",
+  //TS26
+  "TS26_01", "TS26_02", "TS26_03", "TS26_04", "TS26_06", "TS26_07",
 ]);
 
 // Non-leader units with an Action ability. Maps cardId → the modal button(s).

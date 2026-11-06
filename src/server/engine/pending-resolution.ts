@@ -277,6 +277,14 @@ export interface UpgradeTargetPending {
    * `waived` or `full` is charged when it is attached.
    */
   deferredCost?: { full: number; waived: number; waivedHostPlayIds: string[] };
+  /** SEC_003 Lama Su — "If you do, deal 1 damage to that unit": dealt to the host on attach. */
+  thenDamageHost?: { amount: number; sourceCardId: string };
+  /**
+   * What resumes once the upgrade is attached and its reactions have drained (SEC_003 Lama Su's
+   * deployed side plays one mid-attack). Honoured on the ordinary exit; an upgrade whose own When
+   * Played raises a prompt hands that prompt back instead.
+   */
+  continuation?: PendingResolution | null;
 }
 
 /** Uniqueness rule: player must defeat one copy when a duplicate unique enters play. */

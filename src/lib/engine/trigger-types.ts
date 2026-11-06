@@ -56,8 +56,14 @@ export interface NonCombatDamageContext {
   damagedBasePlayer?: PlayerId;
 }
 
+/** How much damage a unit was dealt and survived — SEC_002 Jabba the Hutt deals "that much". */
+export interface SurvivedDamageContext {
+  amount: number;
+}
+
 export type TriggerContext =
   | BaseHealedContext
+  | SurvivedDamageContext
   | NonCombatDamageContext
   | WhenDefeatedContext
   | WhenUnitDealsDamageContext

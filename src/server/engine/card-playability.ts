@@ -34,7 +34,10 @@ export function spendableFor(game: GameState, player: PlayerId): number {
 const LEADER_ASPECT_WAIVERS: Record<
   string,
   // `trait` matches by trait; `fortifyUpgrade` matches upgrades with the Fortify KEYWORD instead.
-  { trait?: string; fortifyUpgrade?: boolean; unitOnly?: boolean; excludeAspect?: string }
+  // `aspect` matches cards with that aspect; `minUnits` needs that many units under your control;
+  // `notPiloting` excludes a unit played as a Pilot upgrade.
+  { trait?: string; fortifyUpgrade?: boolean; unitOnly?: boolean; excludeAspect?: string;
+    aspect?: string; minUnits?: number; notPiloting?: boolean }
 > = {
   SOR_008: { trait: "Spectre" },
   TWI_001: { trait: "Clone", unitOnly: true },
@@ -46,6 +49,9 @@ const LEADER_ASPECT_WAIVERS: Record<
   //   Also printed on his deployed side (The Death Star). Keyed on the keyword, not the
   //   "Fortification" trait: HMW_206 The Tarkin Doctrine has Fortify with the trait "Law".
   HMW_004: { fortifyUpgrade: true },
+  //   LAW_009 Hera Syndulla — "While you control 2 or more units, ignore the aspect penalties on
+  //   Heroism units you play." Both sides. A unit played with Piloting is played as an upgrade.
+  LAW_009: { aspect: "Heroism", unitOnly: true, minUnits: 2, notPiloting: true },
 };
 
 /**
@@ -59,12 +65,15 @@ function leaderAbilitiesActive(game: GameState, player: PlayerId): boolean {
   return unit ? !Unit.FromInterface(unit).LostAbilities() : !LeaderAbilitiesIgnored();
 }
 
-function leaderWaivesAspectPenalty(game: GameState, player: PlayerId, cardId: string): boolean {
+function leaderWaivesAspectPenalty(game: GameState, player: PlayerId, cardId: string, asPilot: boolean): boolean {
   const p = player === 1 ? game.player1 : game.player2;
   const waiver = LEADER_ASPECT_WAIVERS[p.leader.cardId];
   if (!waiver) return false;
   if (!leaderAbilitiesActive(game, player)) return false;
   if (waiver.unitOnly && CardType(cardId) !== "Unit") return false;
+  if (waiver.notPiloting && asPilot) return false;
+  if (waiver.minUnits !== undefined && p.groundArena.length + p.spaceArena.length < waiver.minUnits) return false;
+  if (waiver.aspect !== undefined) return CardAspects(cardId).includes(waiver.aspect);
   if (waiver.excludeAspect && CardAspects(cardId)?.includes(waiver.excludeAspect)) return false;
   if (waiver.fortifyUpgrade) return CardType(cardId) === "Upgrade" && HasFortify(cardId);
   return waiver.trait !== undefined && TraitContains(cardId, waiver.trait, player);
@@ -92,9 +101,9 @@ function controlsCardWithTitle(game: GameState, player: PlayerId, title: string)
     || units.some(u => UnitTitle(u) === title || (u.upgrades ?? []).some(up => CardTitle(up.cardId) === title));
 }
 
-export function aspectPenalty(game: GameState, player: PlayerId, cardId: string): number {
+export function aspectPenalty(game: GameState, player: PlayerId, cardId: string, opts: { asPilot?: boolean } = {}): number {
   // Leader waivers (Hera / Nala Se): matching trait → no aspect penalty.
-  if (leaderWaivesAspectPenalty(game, player, cardId)) return 0;
+  if (leaderWaivesAspectPenalty(game, player, cardId, !!opts.asPilot)) return 0;
 
   // SHD_198 Omega — "Ignore the aspect penalty on the FIRST Clone unit you play each round."
   // The marker is consumed by completePlayCard, not here: this function is also called to REPORT
@@ -401,6 +410,25 @@ export function ArmInvisibleHandDiscount(game: GameState, player: PlayerId, log:
   log.push(`${CardTitle("IC27_149")}: the next card you play this phase costs 9 resources less.`);
 }
 
+/**
+ * "The next EVENT you play this phase costs N resources less" (TS26_06 Rex, both sides). Each
+ * source leaves its own effect with N in `value`, so two pending discounts stack onto the same next
+ * event; completePlayCard spends them all on it.
+ */
+export const NEXT_EVENT_DISCOUNT = "next-event-discount";
+
+export function ArmNextEventDiscount(game: GameState, player: PlayerId, amount: number, sourceCardId: string, log: string[]): void {
+  game.currentEffects.push({ cardId: NEXT_EVENT_DISCOUNT, duration: "Phase", affectedPlayer: player, value: amount });
+  log.push(`${CardTitle(sourceCardId)}: the next event you play this phase costs ${amount} resource${amount > 1 ? "s" : ""} less.`);
+}
+
+function nextEventDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Event") return 0;
+  return game.currentEffects
+    .filter(e => e.cardId === NEXT_EVENT_DISCOUNT && e.affectedPlayer === player)
+    .reduce((sum, e) => sum + (e.value ?? 0), 0);
+}
+
 export function invisibleHandNextCardDiscount(game: GameState, player: PlayerId, cardId: string): number {
   // A leader is deployed, never played — and deployLeader reads playCost as its threshold.
   if (CardType(cardId) === "Leader") return 0;
@@ -576,6 +604,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - takeChargeDiscount(game, player, cardId)
     - originTreeShyyyoDiscount(game, player, cardId)
     - moffGideonDiscount(game, player, cardId)
+    - nextEventDiscount(game, player, cardId)
     - invisibleHandNextCardDiscount(game, player, cardId)
   );
 }
@@ -595,7 +624,7 @@ export function palpatinesReturnCost(game: GameState, player: PlayerId, cardId: 
  * aspect penalty. Card-cost discounts (Bendu, GNK, …) key off the printed cost and do not apply.
  */
 export function pilotPlayCost(game: GameState, player: PlayerId, cardId: string): number {
-  return Math.max(0, PilotingCost(cardId) + aspectPenalty(game, player, cardId)
+  return Math.max(0, PilotingCost(cardId) + aspectPenalty(game, player, cardId, { asPilot: true })
     - wedgeNextPilotDiscount(game, player, cardId) // "This includes Piloting costs."
     - invisibleHandNextCardDiscount(game, player, cardId)); // "the next CARD you play"
 }

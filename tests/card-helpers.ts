@@ -282,6 +282,7 @@ export const Cards = {
     },
     sor: {
       consularSecurityForce: "SOR_046", // 3/7 Ground, no abilities — a durable test defender
+      cantinaBraggart: "SOR_157",       // Raid 2
       c3po: "SOR_238", // 1/4 Ground — WP/OA: choose a number, draw the top card on a cost match
       infernoFour: "SOR_031",
       lieutenantChildsen: "SOR_035",
@@ -399,6 +400,7 @@ export const Cards = {
       seventhSister: "SOR_133",
     },
     shd: {
+      maul: "SHD_090",        // 7/6 Ground — Ambush, Overwhelm
       migsMayfeldTriggerman: "SHD_163",
       streetGangRecruiter: "SHD_260", // 4/4 Ground — WP: may return an Underworld card from discard
       criminalMuscle: "SHD_209", // 2/1 Ground — When Played: may return a non-unique upgrade to hand
@@ -967,6 +969,7 @@ export const Cards = {
     sor: {
       entrenched: "SOR_072",
       protector: "SOR_057",
+      resilient: "SOR_069",     // cost 1 Vigilance, +0/+3, no text
       academyTraining: "SOR_120",
       traitorous: "SOR_122",
       hardpointHeavyBlaster: "SOR_121",
@@ -1065,6 +1068,7 @@ export const Cards = {
   },
   events: {
     shd: {
+      outflank: "SHD_128",       // Attack with 2 units (one at a time)
       theChaosOfWar: "SHD_159",
       spareTheTarget: "SHD_206",
       aNewAdventure: "SHD_207",

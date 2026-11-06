@@ -103,6 +103,9 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
         case "LOF_152"://Focus Determines Reality
           amount += TraitContains(cardId, "Force", player, playId) ? 1 : 0;
           break;
+        case "LAW_012"://Sebulba leader Action — a friendly unit gains Raid 1 for this phase
+          amount += 1;
+          break;
         default: break;
       }
     }
@@ -175,6 +178,11 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "HMW_007": amount += !LeaderAbilitiesIgnored() ? 1 : 0; break; //Darth Vader (Might of the Empire) Leader Unit
     case "HMW_018": amount += !LeaderAbilitiesIgnored() ? 1 : 0; break; //The Warrior (Deft Duelist) Leader Unit
     case "TS26_05": amount += !LeaderAbilitiesIgnored() ? 3 : 0; break; //Savage Opress (You Must Have Your Revenge) Leader Unit
+    case "LAW_012": //Sebulba (Especially Dangerous Dug) Leader Unit
+    case "LAW_007": //Boba Fett (Krayt's Claw Commander) Leader Unit
+    case "SEC_017": //Sabé (Queen's Shadow) Leader Unit
+    case "TS26_08": //Ahsoka Tano (I Have an Idea) Leader Unit
+      amount += !LeaderAbilitiesIgnored() ? 1 : 0; break;
     //non-Leader Units
     case "SOR_194": amount += 2; break; //Rogue Operative
     case "SOR_157": amount += 2; break; //Cantina Braggart

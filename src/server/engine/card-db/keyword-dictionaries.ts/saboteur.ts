@@ -149,6 +149,7 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
     case "TS26_74"://Pre Vizsla - For Mandalore!
     case "IC27_098"://Commander Pyre - Golden Menace
     case "IC27_007"://Asajj Ventress (Bald and Beautiful) Leader Unit
+    case "LAW_017"://Han Solo (I Got a Really Good Feeling) Leader Unit
       return true;
     default: break;
   }

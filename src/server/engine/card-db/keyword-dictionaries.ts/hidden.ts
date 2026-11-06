@@ -72,6 +72,7 @@ export function HasHidden(cardId: string, playId?: string, player?: PlayerId, is
     case "LOF_159"://Jedi In Hiding
       return true;
     case "LOF_010"://Third Sister Leader Unit
+    case "TS26_07"://Asajj Ventress (Ambitious Apprentice) Leader Unit
       return !LeaderAbilitiesIgnored();
 
     //Secrets of Power

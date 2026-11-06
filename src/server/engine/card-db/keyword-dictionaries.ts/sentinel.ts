@@ -295,6 +295,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "HMW_107"://Stormtrooper Patrol
     case "HMW_048"://Vernestra Rwoh - We Should Handle This Ourselves
     case "HMW_010"://Tarfful (deployed leader unit) — printed Sentinel
+    case "TS26_02"://Anakin Skywalker (Protect Her At All Costs) — deployed leader unit, printed Sentinel
     case "SEC_086"://Cruel Commandos
     case "HMW_069"://Imperial Venator
     case "HMW_075"://Wookiee Protector

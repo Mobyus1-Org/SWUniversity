@@ -29,6 +29,11 @@ export function HasWhenAttackEnds(cardId: string): boolean {
       return true;
     case "LOF_016": //Qui-Gon Jinn — completes an attack (and survives): may return a unit and play a cheaper non-Villainy unit free
       return true;
+    case "TS26_04": //Padmé Amidala (deployed) — may attack with another friendly unit that entered play this phase
+    case "LAW_001": //Saw Gerrera (deployed) — if he survived, may attack with another unit (+2/+0, Overwhelm, then defeat it)
+    case "SEC_003": //Lama Su (deployed) — completes an attack: may play an upgrade from discard on a non-Vehicle unit, 1 less
+    case "TS26_08": //Ahsoka Tano (deployed) — look at the top card: play it for 1 less, discard it, or leave it (even if she died)
+      return true;
     default: return false;
   }
 }

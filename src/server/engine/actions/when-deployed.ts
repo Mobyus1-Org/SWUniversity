@@ -1,6 +1,6 @@
 import { PendingResolution } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, IsLeaderUnit, AfterNonCombatUnitDamage, AllUnits, DealDamageToUnit, HealUnit } from "@/server/engine/core-functions";
+import { GetGame, IsLeaderUnit, AfterNonCombatUnitDamage, AllUnits, DealDamageToUnit, HealUnit, DefeatableNonLeaderUnitsAtOrBelowHp, optionalTarget, buildMaulChoice } from "@/server/engine/core-functions";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -162,6 +162,14 @@ export function resolveWhenDeployed(
         fromPlayIds: eligible.map(u => u.playId),
         continuation: null,
       };
+    }
+    case "TS26_03": // Maul — When Deployed: the same choice as his Action and On Attack.
+      return buildMaulChoice(player, null);
+    case "LAW_004": { // Aurra Sing — "When Deployed: You may defeat a non-leader unit with 5 or less remaining HP."
+      const doomed004 = DefeatableNonLeaderUnitsAtOrBelowHp(player, 5);
+      if (doomed004.length === 0) return null;
+      return optionalTarget("LAW_004_wd", player, doomed004.map(u => u.playId),
+        "Defeat a non-leader unit with 5 or less remaining HP?", { yesLabel: "Defeat" });
     }
     case "LAW_008": { // Director Krennic — When Deployed: Another friendly unit deals damage equal to its power to an enemy unit.
       const leader008 = (player === 1 ? game.currentGameState.player1 : game.currentGameState.player2).leader;

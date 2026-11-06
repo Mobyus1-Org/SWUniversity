@@ -72,6 +72,7 @@ export function HasOverwhelm(cardId: string,
         case "LOF_114"://Kaadu
         case "LOF_126"://Overpower
         case "ASH_007_overwhelm"://Grand Admiral Sloane leader Action — for this phase
+        case "LAW_001"://Saw Gerrera — Overwhelm for this attack
           return true;
         default: break;
       }

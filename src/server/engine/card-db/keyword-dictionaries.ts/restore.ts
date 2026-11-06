@@ -104,6 +104,8 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
 
   switch (cardId) {
     case "SOR_001": amount += !LeaderAbilitiesIgnored() ? 2 : 0; break;//Director Krennic - Aspiring To Authority
+    case "LAW_009": amount += !LeaderAbilitiesIgnored() ? 1 : 0; break;//Hera Syndulla - Not Fighting Alone (Leader Unit)
+    case "TS26_01": amount += !LeaderAbilitiesIgnored() ? 2 : 0; break;//Count Dooku - Offering Aid (Leader Unit)
     case "SOR_034": amount += 1; break;//Del Meeko
     case "SOR_044": amount += 1; break;//Restored Arc 170
     case "SOR_045": amount += 2; break;//Yoda - Old Master

@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { AllGroundUnits, AllUnits, GetPlayer, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, IsLeaderUnit, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains, UpgradesYouControl } from "@/server/engine/core-functions";
+import { AllGroundUnits, AllUnits, GetPlayer, AttackedThisPhasePlayIds, CanUnitAttack, CanDiscloseAnyOf, IsLeaderUnit, GetGame, GetHand, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasCardsToSmuggle, PlayerHasUnitsInHand, SEC_004_ASPECTS, TraitContains, UpgradesYouControl, FriendlyTokenCardIds } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { CardCost, CardType, CardAspects } from "@/server/engine/card-db/generated";
 import { HasFortify } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
@@ -315,6 +315,52 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
         break;
       case "IC27_007": // Asajj Ventress — Action [Exhaust]: Attack with a unit (needs a ready unit).
         if (GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
+        break;
+      case "LAW_004": // Aurra Sing — Action [Exhaust]: defeat a non-leader unit with 1 or less
+                      // remaining HP. A targeting restriction, not a cost: no target is a soft pass.
+      case "LAW_006": // Vel Sartha — Action [Exhaust]: Experience token + opponent's Credit, unconditional.
+        abilities.push(cardId);
+        break;
+      case "SEC_003": // Lama Su — Action [Exhaust]: needs an upgrade in hand and a non-Vehicle friendly unit.
+        if (GetHand(player).some(c => CardType(c.cardId) === "Upgrade")
+          && GetUnitsForPlayer(player).some(u => !TraitContains(u.cardId, "Vehicle", u.controller, u.playId))) {
+          abilities.push(cardId);
+        }
+        break;
+      case "LAW_005": // Jyn Erso — Action [1 resource, Exhaust]: the Rebel-defeated condition soft-passes.
+        abilities.push(cardId);
+        break;
+      case "LAW_001": // Saw Gerrera — Action [Exhaust]: Attack with a unit (needs a ready one).
+        if (GetUnitsForPlayer(player).some(u => u.ready && CanUnitAttack(u))) abilities.push(cardId);
+        break;
+      case "TS26_02": // Anakin Skywalker — Action [Exhaust]: "If 2 or more friendly units entered play
+      case "TS26_04": // Padmé Amidala      this phase…" — a soft-pass condition, not a cost.
+        abilities.push(cardId);
+        break;
+      case "TS26_07": // Asajj Ventress — Action [Exhaust]: Attack with a token unit (needs a ready one).
+        if (GetUnitsForPlayer(player).some(u => u.ready && Unit.FromInterface(u).IsTokenUnit())) abilities.push(cardId);
+        break;
+      case "TS26_06": // Rex — Action [Exhaust, ready an exhausted enemy unit]: the enemy unit is a cost.
+        if (GetUnitsForPlayer(player === 1 ? 2 : 1).some(u => !u.ready)) abilities.push(cardId);
+        break;
+      case "TS26_03": // Maul — Action [Exhaust]: "Choose a unit. If…" — a soft pass with nothing eligible.
+      case "TS26_01": // Count Dooku — Action [Exhaust]: heal + Battle Droid for both players, unconditional.
+        abilities.push(cardId);
+        break;
+      case "SEC_002": // Jabba the Hutt — Action [1 resource, Exhaust]: "a friendly damaged unit" is a
+                      // target, not a cost — no such unit is a soft pass.
+        abilities.push(cardId);
+        break;
+      case "LAW_017": { // Han Solo — Action [Exhaust, defeat a friendly token]: the token is a cost.
+        const gs017 = GetGame()!.currentGameState;
+        if (FriendlyTokenCardIds(gs017, player).length > 0 || (GetPlayer(gs017, player).supplemental.creditTokens ?? 0) > 0) {
+          abilities.push(cardId);
+        }
+        break;
+      }
+      case "LAW_012": // Sebulba — Action [Exhaust, discard a card from your deck]: the deck discard
+                      // is a cost, so an empty deck gates it.
+        if (GetPlayer(GetGame()!.currentGameState, player).deck.length > 0) abilities.push(cardId);
         break;
       case "TWI_002": // Nute Gunray — Action [Exhaust]: create a Battle Droid if 2+ units defeated this phase (soft-pass condition, not a cost gate).
       case "TWI_006": // Wat Tambor — Action [Exhaust]: if a friendly unit was defeated this phase, give a unit +2/+2 (soft-pass condition).
@@ -837,6 +883,9 @@ export function ActionAbilityCost(cardId: string): number {
     case "SOR_013"://Cassian Andor
       return 1;
     case "SOR_006"://Emperor Palpatine
+      return 1;
+    case "SEC_002"://Jabba the Hutt - Wonderful Human Being: his deployed side has no Action
+    case "LAW_005"://Jyn Erso - Time to Fight: her deployed side has no Action
       return 1;
     case "IC27_001"://Darth Vader - No One to Stop Us: his deployed side has no Action
     case "IC27_008"://Princess Leia - On a Diplomatic Mission: her deployed side has no Action

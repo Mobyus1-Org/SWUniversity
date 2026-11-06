@@ -1,5 +1,5 @@
 import { CardInPlay, CONDEMN_BLANK, HP_MOD, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, EffectiveRaid, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard, UnitArenaOf, GetGame, UnitHasNoAbilities } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, EffectiveRaid, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard, UnitArenaOf, GetGame, UnitHasNoAbilities, TokenUnitAttackedThisPhase } from "@/server/engine/core-functions";
 import { CardArena, CardAspects, CardCost, CardHp, CardPower, CardTitle } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
@@ -66,7 +66,12 @@ export class Unit implements UnitInterface {
   // missing from this list is treated as a real card, so it wrongly goes to a hand/discard and
   // can be held captive.
   IsTokenUnit(): boolean {
-    switch(this.cardId) {
+    return Unit.CardIsTokenUnit(this.cardId);
+  }
+
+  /** Whether `cardId` is a token unit — for ledgers that keep only the cardId (TS26_07 Asajj). */
+  static CardIsTokenUnit(cardId: string): boolean {
+    switch(cardId) {
       case "TWI_T01": //Battle Drod
       case "TWI_T02": //Clone Trooper
       case "JTL_T01": //TIE Fighter
@@ -352,6 +357,8 @@ export class Unit implements UnitInterface {
       if (this.cardId === "TWI_142" && GetBaseDamage(this.controller) >= 15) power += 2; // Anakin's Interceptor
       if (this.cardId === "TWI_012") power += Math.floor(GetBaseDamage(this.controller) / 5); // Anakin Skywalker (leader unit)
       if (this.cardId === "TWI_010" && GetHand(this.controller).length >= 6) power += 2; // Pre Vizsla (leader unit)
+      // TS26_07 Asajj Ventress (leader unit) — "While you've attacked with a token unit this phase".
+      if (this.cardId === "TS26_07" && TokenUnitAttackedThisPhase(this.controller)) power += 2;
     }
 
     power += kananSurvivalBonus(this);

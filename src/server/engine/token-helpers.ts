@@ -72,6 +72,9 @@ function spawnToken(game: GameState, player: PlayerId, cardId: string): Unit {
   const pState = player === 1 ? game.player1 : game.player2;
   if (arena === "Ground") pState.groundArena.push(unit);
   else pState.spaceArena.push(unit);
+  // A token unit enters play like any other — TS26_02 Anakin / TS26_04 Padmé count "units that
+  // entered play this phase (including tokens and leaders)".
+  game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId, playId, reason: "token-created" });
   // "including token units" — HMW_171 Trap Field fires on tokens, which never reach addToArena.
   QueueUnitEnteredPlayReaction(game, unit);
   return unit;
@@ -258,6 +261,19 @@ export function DefeatAdvantageTokensAfterCombat(
  * supplemental state. While paying resources you may defeat any number of your
  * Credits, each granting a {1R} discount.
  */
+/**
+ * Defeats up to `count` of `player`'s Credit tokens as an ability's effect or cost (LAW_017 Han
+ * Solo). Returns how many were actually defeated.
+ */
+export function DefeatCreditTokens(game: GameState, player: PlayerId, count: number, gameLog: string[], fromCardId: string): number {
+  const pState = player === 1 ? game.player1 : game.player2;
+  const defeated = Math.max(0, Math.min(count, pState.supplemental.creditTokens ?? 0));
+  if (defeated === 0) return 0;
+  pState.supplemental.creditTokens = (pState.supplemental.creditTokens ?? 0) - defeated;
+  gameLog.push(`${CardTitle(fromCardId)}: defeated ${defeated} Credit token${defeated > 1 ? "s" : ""}.`);
+  return defeated;
+}
+
 export function CreateCreditToken(game: GameState, player: PlayerId, gameLog: string[], fromCardId?: string): void {
   const pState = player === 1 ? game.player1 : game.player2;
   pState.supplemental.creditTokens = (pState.supplemental.creditTokens ?? 0) + 1;

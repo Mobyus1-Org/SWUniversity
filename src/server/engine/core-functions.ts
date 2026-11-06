@@ -8,7 +8,8 @@ import { SmuggleCost } from "@/server/engine/card-db/keyword-dictionaries.ts/smu
 import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
-import { AbilityOptionPending, AbilityTargetPending, DeckSearchPending, HandToDeckPending, PendingResolution } from "@/server/engine/pending-resolution";
+import { DistinctKeywordCount } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
+import { AbilityOptionPending, AbilityTargetPending, ChooseOnePending, DeckSearchPending, HandToDeckPending, PendingResolution } from "@/server/engine/pending-resolution";
 import { UpgradeEligibleTargets, IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { UpgradeGrantsHostAction } from "@/server/engine/actions/action-ability";
 
@@ -1041,6 +1042,112 @@ export function buildLeiaDrawAndReturn(
   return { type: "hand-to-deck", cardId: "IC27_008", player, continuation } satisfies HandToDeckPending;
 }
 
+/**
+ * LAW_017 Han Solo's "friendly tokens" that are CARDS: token units `player` controls and token
+ * upgrades they control (a token upgrade follows its host's controller). Credit tokens are friendly
+ * tokens too, but they are a counter, not a card, so they are counted separately.
+ */
+export function FriendlyTokenCardIds(gs: GameState, player: PlayerId): string[] {
+  const units = GetUnitsForPlayer(player).filter(u => Unit.FromInterface(u).IsTokenUnit()).map(u => u.playId);
+  const upgrades = UpgradeEntriesYouControl(gs, player).filter(e => IsTokenUpgrade(e.cardId)).map(e => e.playId);
+  return [...units, ...upgrades];
+}
+
+/**
+ * TS26_03 Maul — "If it has more different keywords than it has Experience tokens on it". Granted
+ * keywords count, and a numeric keyword counts once (DistinctKeywordCount).
+ */
+export function MaulCanEmpower(unit: UnitInterface): boolean {
+  const experience = unit.upgrades.filter(u => u.cardId === "SOR_T01").length;
+  return DistinctKeywordCount(unit) > experience;
+}
+
+/**
+ * TS26_03 Maul — "Choose a unit. If it has more different keywords than it has Experience tokens on
+ * it, give an Experience token to it and deal 1 damage to it." Shared by his leader Action, When
+ * Deployed and On Attack. Any unit may be chosen; with none that qualifies there is no choice to make.
+ */
+export function buildMaulChoice(player: PlayerId, continuation: PendingResolution | null): PendingResolution | null {
+  const units = AllUnits();
+  if (!units.some(MaulCanEmpower)) return continuation;
+  return {
+    type: "ability-target",
+    cardId: "TS26_03",
+    player,
+    helperText: "Choose a unit. If it has more different keywords than Experience tokens, it gets an Experience token and 1 damage.",
+    fromPlayIds: units.map(u => u.playId),
+    continuation,
+  } satisfies AbilityTargetPending;
+}
+
+/** LAW_017 Han Solo — "Deal `amount` damage to a unit." Nothing to do at 0, or with no unit. */
+export function buildHanDamage(
+  player: PlayerId,
+  amount: number,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const units = AllUnits();
+  if (amount <= 0 || units.length === 0) return continuation;
+  return {
+    type: "ability-target",
+    cardId: "LAW_017_damage",
+    player,
+    helperText: `Deal ${amount} damage to a unit.`,
+    fromPlayIds: units.map(u => u.playId),
+    amount,
+    continuation,
+  } satisfies AbilityTargetPending;
+}
+
+/**
+ * LAW_017 Han Solo (deployed) On Attack, Credit step — how many Credit tokens to defeat on top of
+ * the `alreadyDefeated` token cards. Skipped with no Credits.
+ */
+export function buildHanCreditCount(
+  gs: GameState,
+  player: PlayerId,
+  alreadyDefeated: number,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const credits = GetPlayer(gs, player).supplemental.creditTokens ?? 0;
+  if (credits === 0) return buildHanDamage(player, alreadyDefeated, continuation);
+  return {
+    type: "choose-one",
+    cardId: "LAW_017_credits",
+    player,
+    options: Array.from({ length: credits + 1 }, (_, n) => ({
+      id: String(n),
+      label: n === 0 ? "No Credit tokens" : `${n} Credit token${n > 1 ? "s" : ""}`,
+    })),
+    data: { alreadyDefeated },
+    continuation,
+  } satisfies ChooseOnePending;
+}
+
+/**
+ * LAW_017 Han Solo (deployed) — "On Attack: Defeat any number of friendly tokens. Deal damage to a
+ * unit equal to the number of tokens defeated this way." Token cards first (any number, zero
+ * included), then Credits, then the damage.
+ */
+export function buildHanTokenDefeat(
+  gs: GameState,
+  player: PlayerId,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const cards = FriendlyTokenCardIds(gs, player);
+  if (cards.length === 0) return buildHanCreditCount(gs, player, 0, continuation);
+  return {
+    type: "ability-target",
+    cardId: "LAW_017_OA",
+    player,
+    helperText: "Defeat any number of friendly tokens.",
+    fromPlayIds: cards,
+    needsMultiple: true,
+    maxTargets: cards.length,
+    continuation,
+  } satisfies AbilityTargetPending;
+}
+
 /** IC27_166 I've Got A Bad Feeling — the second half: "Give a Shield token to a friendly unit." */
 export function buildBadFeelingShield(
   player: PlayerId,
@@ -1415,8 +1522,8 @@ function preventBigBaseHit(gs: GameState, player: PlayerId, amount: number): boo
  * may defeat this upgrade. If you do, deal 3 damage to that unit."
  *
  * Queued from the two places a unit reaches an arena (`addToArena` for played/returned units and
- * `spawnToken` for tokens) rather than from the cardsEnteredPlayThisPhase ledger, because tokens
- * are deliberately absent from that ledger and this ability explicitly includes them.
+ * `spawnToken` for tokens) at the moment of entry, rather than read back from the
+ * cardsEnteredPlayThisPhase ledger afterwards.
  *
  * "A ground unit" is unqualified, so a player's own Trap Field can fire on their own unit; the
  * trigger is queued for every player holding one.
@@ -1788,6 +1895,40 @@ export function UnitsDefeatedThisPhaseCount(player: PlayerId): number {
   return game.currentGameState.roundState.cardsLeftPlayThisPhase.filter(
     d => d.fromPlayer === player && (d.reason === "defeated" || d.reason === "token-defeated"),
   ).length;
+}
+
+/**
+ * TS26_02 Anakin Skywalker / TS26_04 Padmé Amidala (leader side) — "If 2 or more friendly units
+ * entered play this phase (including tokens and leaders)". Counted by who controlled each unit AS
+ * IT ENTERED, so one that has since changed sides still counts, and one that has left play too.
+ * Returns the distinct playIds; the caller filters for the ones still in play.
+ */
+export function FriendlyUnitsEnteredPlayThisPhase(player: PlayerId): string[] {
+  const game = GetGame();
+  if (!game) return [];
+  const entered = game.currentGameState.roundState.cardsEnteredPlayThisPhase
+    .filter(e => e.fromPlayer === player)
+    .map(e => e.playId);
+  return [...new Set(entered)];
+}
+
+/**
+ * TS26_02 Anakin / TS26_04 Padmé (deployed) — "another friendly unit that entered play this phase":
+ * friendly NOW, whoever it entered under, and not the leader unit itself.
+ */
+export function OtherFriendlyUnitsThatEnteredPlayThisPhase(player: PlayerId, selfPlayId: string): UnitInterface[] {
+  const game = GetGame();
+  if (!game) return [];
+  const entered = new Set(game.currentGameState.roundState.cardsEnteredPlayThisPhase.map(e => e.playId));
+  return GetUnitsForPlayer(player).filter(u => u.playId !== selfPlayId && entered.has(u.playId));
+}
+
+/** Whether `player` has attacked with a token unit this phase (TS26_07 Asajj Ventress). */
+export function TokenUnitAttackedThisPhase(player: PlayerId): boolean {
+  const game = GetGame();
+  if (!game) return false;
+  return game.currentGameState.roundState.unitsAttackedThisPhase
+    .some(a => a.fromPlayer === player && Unit.CardIsTokenUnit(a.cardId));
 }
 
 export function UnitAttackedThisPhase(player: PlayerId, trait?: string, another?: boolean, playId?: string): boolean {
@@ -2348,6 +2489,14 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "IC27_001": //Darth Vader (deployed) — On Attack: may defeat another friendly unit to draw + heal 2
     case "IC27_007": //Asajj Ventress (deployed) — On Attack: may ready a resource
     case "IC27_008": //Princess Leia (deployed) — On Attack: draw, then a hand card to top/bottom of deck
+    case "LAW_006": //Vel Sartha (deployed) — On Attack: may give an Experience token; opponent gets a Credit
+    case "LAW_012": //Sebulba (deployed) — On Attack: discard a card from your deck
+    case "LAW_017": //Han Solo (deployed) — On Attack: defeat any number of friendly tokens for damage
+    case "TS26_01": //Count Dooku (deployed) — On Attack: create 2 Battle Droid tokens
+    case "TS26_03": //Maul (deployed) — On Attack: Experience + 1 damage to a unit with more keywords than XP
+    case "TS26_06": //Rex (deployed) — On Attack: may ready an exhausted enemy unit; next event 2 less
+    case "TS26_02": //Anakin Skywalker (deployed) — On Attack: Shield to another friendly unit that entered play
+    case "LAW_005": //Jyn Erso (deployed) — On Attack: if a friendly Rebel was defeated, search 3 and draw one
     case "TWI_034": //General Grievous (Trophy Collector) — On Attack: 4+ Lightsabers, defeat 4 enemy units
     case "TWI_048": //Obi-Wan's Aethersprite — On Attack: 1 to self, 2 to another space unit
     case "TWI_154": //Mister Bones — On Attack: with an empty hand, may deal 3 to a ground unit
@@ -2787,6 +2936,15 @@ export function UnitRemainingHp(unit: UnitInterface): number {
   return Math.max(0, Unit.FromInterface(unit).CurrentHP());
 }
 
+/**
+ * Either player's non-leader units with `maxHp` or less remaining HP that `player`'s ability can
+ * defeat (LAW_004 Aurra Sing). An enemy unit immune to enemy defeat is left out.
+ */
+export function DefeatableNonLeaderUnitsAtOrBelowHp(player: PlayerId, maxHp: number): Unit[] {
+  return AllUnits().filter(u => !IsLeaderUnit(u) && UnitRemainingHp(u) <= maxHp
+    && (u.controller === player || !UnitImmuneToEnemyDefeat(u)));
+}
+
 export function ApplyDamagePrevention(gs: GameState, targetPlayId: string, amount: number, log?: string[]): number {
   if (amount <= 0) return amount;
 
@@ -3028,6 +3186,35 @@ export function buildAnnihilatorOffer(player: PlayerId): PendingResolution | nul
  * discard pile, firing each one's when-discarded trigger. A short deck discards what it has.
  * Returns the discarded card ids.
  */
+/**
+ * Discards the card `fromTop` places below the top of `player`'s deck (0 = the top card) — for
+ * "look at the top N cards … discard 1 of them" (SEC_017 Sabé). Returns its cardId, or null.
+ */
+export function DiscardCardFromDeck(
+  gs: GameState,
+  player: PlayerId,
+  fromTop: number,
+  gameLog: string[],
+  sourceCardId: string,
+): string | null {
+  const pState = GetPlayer(gs, player);
+  const index = pState.deck.length - 1 - fromTop; // the top of the deck is the END of the array
+  if (index < 0 || index >= pState.deck.length) return null;
+  const [card] = pState.deck.splice(index, 1);
+  const discardPlayId = String(gs.nextPlayId++);
+  pState.discard.unshift({
+    cardId: card.cardId,
+    playId: discardPlayId,
+    owner: player,
+    controller: player,
+    turnDiscarded: gs.currentRound,
+    discardEffect: "",
+  });
+  QueueWhenDiscardedTrigger(gs, player, card.cardId, discardPlayId, "Deck");
+  gameLog.push(`${CardTitle(sourceCardId)}: discarded ${CardTitle(card.cardId)} from player ${player}'s deck.`);
+  return card.cardId;
+}
+
 export function DiscardFromTopOfDeck(
   gs: GameState,
   player: PlayerId,
@@ -3159,8 +3346,9 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
     if (sourceUnit) QueueJangoDamageReaction(gs, sourceUnit.controller, target.playId);
   }
 
-  // Rancor Keeper (ASH_032): "When a friendly unit is dealt damage and survives" — ability damage path.
-  QueueRancorKeeperReaction(gs, target);
+  // Rancor Keeper (ASH_032), Jabba (SEC_002): "When a friendly unit is dealt damage and survives" —
+  // ability damage path.
+  QueueFriendlyDamagedSurvivesReactions(gs, target, amount);
   QueueSelfDamagedSurvivesReaction(gs, target);
   QueueLograyReaction(gs, target);
 
@@ -3247,6 +3435,38 @@ export function QueueSelfDamagedSurvivesReaction(gs: GameState, damaged: Unit): 
     nested: true,
   });
 }
+
+/**
+ * Every "when a friendly unit is dealt damage and survives" reaction, queued once per damage
+ * instance from each site where damage lands on a unit (both combat hits, DealDamageToUnit,
+ * AfterNonCombatUnitDamage). `amount` is the damage that landed — SEC_002 deals "that much".
+ */
+export function QueueFriendlyDamagedSurvivesReactions(gs: GameState, damaged: Unit, amount: number): void {
+  QueueRancorKeeperReaction(gs, damaged);
+  QueueJabbaDamagedReaction(gs, damaged, amount);
+}
+
+/**
+ * SEC_002 Jabba the Hutt (deployed) — "When ANOTHER friendly unit is dealt damage and survives: You
+ * may have that unit deal that much damage to an enemy unit. Use this ability only once each round."
+ * The once-per-round marker is set when the ability is used, so a decline leaves it available.
+ */
+function QueueJabbaDamagedReaction(gs: GameState, damaged: Unit, amount: number): void {
+  if (amount <= 0 || damaged.CurrentHP() <= 0) return;
+  const controller = damaged.controller;
+  const leader = GetPlayer(gs, controller).leader;
+  if (leader.cardId !== "SEC_002" || !leader.deployed || damaged.playId === leader.deployedPlayId) return;
+  const jabba = GetUnitByPlayId(gs, leader.deployedPlayId ?? "");
+  if (!jabba || Unit.FromInterface(jabba).LostAbilities()) return;
+  if (gs.currentEffects.some(e => e.cardId === JABBA_USED_THIS_ROUND && e.affectedPlayer === controller)) return;
+  gs.triggerBag.push({
+    triggerType: "when-unit-takes-damage", cardId: "SEC_002", fromPlayer: controller,
+    playId: damaged.playId, nested: true, context: { amount },
+  });
+}
+
+/** SEC_002 Jabba the Hutt (deployed) — his once-each-round reaction has been used. */
+export const JABBA_USED_THIS_ROUND = "SEC_002_usedThisRound";
 
 export function QueueRancorKeeperReaction(gs: GameState, damaged: Unit): void {
   if (damaged.CurrentHP() <= 0) return; // must survive
@@ -3355,7 +3575,7 @@ export function AfterNonCombatUnitDamage(
   sourcePlayer?: PlayerId,
 ): void {
   MarkUnitDamaged(gs, target.playId);
-  QueueRancorKeeperReaction(gs, Unit.FromInterface(target));
+  QueueFriendlyDamagedSurvivesReactions(gs, Unit.FromInterface(target), amount);
   QueueSelfDamagedSurvivesReaction(gs, Unit.FromInterface(target));
   QueueLograyReaction(gs, Unit.FromInterface(target));
   QueueHeavyDamageReaction(gs, sourcePlayer, amount, { damagedPlayId: target.playId });

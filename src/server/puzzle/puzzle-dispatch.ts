@@ -508,6 +508,20 @@ function resolveAutoOption(
   if (pending.type === "ability-option" && pending.cardId === "SEC_038" && pending.player === 2) {
     return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };
   }
+  // SEC_002 Jabba the Hutt (deployed) controlled by the opponent (P2): when the solver's attack
+  // damages one of P2's units and it survives, it may deal that much damage to one of the solver's
+  // units. Free and never worse for P2, so always taken; the target is picked like Karis's below.
+  if (pending.type === "ability-option" && pending.cardId === "SEC_002" && pending.player === 2) {
+    return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };
+  }
+  if (pending.type === "ability-target" && pending.cardId === "SEC_002_deployed" && pending.player === 2) {
+    const targetPlayId = pickOpponentTargetAmongMyUnits(pending.fromPlayIds, gameState, {
+      preferUnguardedArena: true,
+    });
+    return targetPlayId
+      ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
+      : NOTHING_TO_DO;
+  }
   if (pending.type === "ability-option" && pending.cardId === "SEC_193" && pending.player === 2) {
     return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };
   }
