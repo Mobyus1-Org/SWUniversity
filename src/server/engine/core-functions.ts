@@ -3106,6 +3106,19 @@ export function RemoveResourcePreservingReady(
   return removed;
 }
 
+/**
+ * SEC_008 Bail Organa (deployed) — "When you play a card from your resources: Heal 1 damage from
+ * your base." Called from every place a card is played out of the resource row: Smuggle, Plot,
+ * HMW_017 Osha, ASH_001 The Armorer and SHD_109 Endless Legions. A new one must call it too.
+ */
+export function PlayedFromResources(gs: GameState, player: PlayerId, gameLog: string[]): void {
+  const leader = GetPlayer(gs, player).leader;
+  if (leader.cardId !== "SEC_008" || !leader.deployed) return;
+  const bail = GetUnitByPlayId(gs, leader.deployedPlayId ?? "");
+  if (!bail || Unit.FromInterface(bail).LostAbilities()) return;
+  HealBaseForPlayer(gs, player, 1, gameLog, "SEC_008");
+}
+
 export function ResourceTopCardOfDeck(
   gs: GameState,
   player: PlayerId,

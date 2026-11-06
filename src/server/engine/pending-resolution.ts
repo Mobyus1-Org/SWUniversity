@@ -30,6 +30,14 @@ export interface AbilityOptionPending {
    * whatever onYes then does. Set by every disclose that is a plain yes/no (SEC_038, SEC_065…).
    */
   revealsFromHand?: PlayerId;
+  /**
+   * Where "No" goes, when it isn't `continuation` (which Yes uses). LAW_014 Enfys Nest reacts only to
+   * an On Attack ability that was USED — a declined "may" is not (CR 32.3) — so her offer is spliced
+   * onto the Yes route of such an option while No keeps its original route.
+   */
+  declineContinuation?: PendingResolution | null;
+  /** LAW_014 Enfys Nest's offer: the On Attack ability to use again, on the unit `sourcePlayId`. */
+  reuseOnAttack?: { kind: "innate" | "upgrade" | "effect"; cardId: string; upgradePlayId?: string };
   /** HMW_060 Vice Admiral Rampart's offer: the base upgrade whose defeat he would replace. */
   replacedUpgradePlayId?: string;
   /**
@@ -152,6 +160,8 @@ export interface DiscardFromHandPending {
   thenDrawForPlayer?: PlayerId;
   /** HMW_010 Tarfful: after the discard COST is paid, this player creates a Beast token. */
   thenCreateBeastFor?: PlayerId;
+  /** SEC_008 Bail Organa: once both discards (his deploy cost) are paid, this player's leader deploys. */
+  thenDeployLeader?: PlayerId;
   /** ASH_172 Razor Crest: after the discard, give the named unit a ForAttack power buff ("if you do, this unit gets +X/+0 for this attack"). */
   thenAttackBuff?: { cardId: string; playId: string; amount: number };
   /**

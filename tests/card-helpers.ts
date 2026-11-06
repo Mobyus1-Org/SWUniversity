@@ -659,6 +659,7 @@ export const Cards = {
       chancellorPalpatine: "SEC_082",
       isbShuttle: "SEC_083",
       viceAdmiralRampart: "SEC_085",
+      dogmaticShockSquad: "SEC_036", // 4/6 Ground, Vigilance/Villainy — Sentinel, Plot, no When Played
       bardottanOrnithopter: "SEC_062", // 3/4 Space, Vigilance — When Played: may disclose Vigilance, draw
       nalaSe: "SEC_065",
       gnkPowerDroid: "SEC_110",

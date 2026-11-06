@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, AllCaptives, QueueFriendlyDamagedSurvivesReactions, JABBA_USED_THIS_ROUND, QueueSelfDamagedSurvivesReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, DefeatableNonLeaderUnitsAtOrBelowHp, DiscardFromTopOfDeck, DiscardCardFromDeck, FriendlyTokenCardIds, buildHanDamage, buildHanCreditCount, MaulCanEmpower, buildMaulChoice, RevealFromHand, FriendlyUnitsEnteredPlayThisPhase, OtherFriendlyUnitsThatEnteredPlayThisPhase, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, buildBadFeelingShield, buildLeiaDrawAndReturn, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases, UpgradeLeavesPlay, BaseUpgradeHolder, BaseUpgradeDefeatReplacer, RemoveUpgradeFromBase } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, AllCaptives, QueueFriendlyDamagedSurvivesReactions, JABBA_USED_THIS_ROUND, QueueSelfDamagedSurvivesReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, DefeatableNonLeaderUnitsAtOrBelowHp, DiscardFromTopOfDeck, DiscardCardFromDeck, FriendlyTokenCardIds, buildHanDamage, buildHanCreditCount, MaulCanEmpower, buildMaulChoice, RevealFromHand, PlayedFromResources, FriendlyUnitsEnteredPlayThisPhase, OtherFriendlyUnitsThatEnteredPlayThisPhase, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, buildBadFeelingShield, buildLeiaDrawAndReturn, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases, UpgradeLeavesPlay, BaseUpgradeHolder, BaseUpgradeDefeatReplacer, RemoveUpgradeFromBase } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -106,7 +106,7 @@ import { UpgradeEligibleTargets, UpgradeDestinationsOnControlChange, PilotlessFi
 import { resolveWhenPlayed, ATTACK_WITH_POWER_BUFF_EVENTS, shatterpointModeA, shatterpointModeB, anakinMortisAbility, buildPayForExperiencePrompt, buildKreiaHandPick, buildHunterChoice, buildMysteriousDisappearancePick, buildEndlessLegionsOffer, buildThirdSisterStep } from "@/server/engine/actions/when-played";
 import { executeRegroupDraw, finishRegroupDraw, tryRegroupResource, tryPassResource } from "@/server/engine/actions/regroup";
 import { resolveWhenPlayedTrigger, WhenPlayedHasAutoEffect } from "@/server/engine/actions/when-played-trigger";
-import { resolveOnAttackTrigger, buildTwinLaserTurretPending } from "@/server/engine/actions/on-attack";
+import { resolveOnAttackTrigger, buildTwinLaserTurretPending, ReuseOnAttack, ENFYS_USED_THIS_ROUND } from "@/server/engine/actions/on-attack";
 import { chooseEnemyForPowerDamage, chooseFriendlyForPowerDamage, dealPowerToEnemy, dealRemainingHpToEnemy } from "@/server/engine/actions/deal-power-damage";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
@@ -6747,6 +6747,7 @@ function performSmugglePlay(
 
   log.push(`Player ${player} played ${CardTitle(cardId)} via Smuggle.`);
   queueSmugglePlayReactions(game, player);
+  PlayedFromResources(game, player, log);
   return completePlayCard(game, log, cardId, player, { viaSmuggle: true });
 }
 
@@ -8015,6 +8016,7 @@ function handleChooseTarget(
       playerState.resources.push({ cardId: topCard.cardId, playId: nextPlayId(game), owner: pending.player, controller: pending.player, ready: false, stolen: false });
     }
     log.push(`Player ${pending.player} played ${CardTitle(resource.cardId)} from resources via Plot.`);
+    PlayedFromResources(game, pending.player, log);
     const newUnit = addToArena(game, pending.player, resource.cardId, false);
 
     // CR 19d: only cards already in resources when the leader deployed may be played.
@@ -9053,8 +9055,13 @@ function handleChooseTarget(
         : afterUpToDiscard(game, pending, discardedSoFar);
     } else {
       nextPending = remaining > 0
-        ? { type: "discard-from-hand", targetPlayer: pending.targetPlayer, count: remaining, continuation: pending.continuation }
+        ? { type: "discard-from-hand", targetPlayer: pending.targetPlayer, count: remaining, continuation: pending.continuation,
+            ...(pending.thenDeployLeader !== undefined ? { thenDeployLeader: pending.thenDeployLeader } : {}) }
         : (pending.continuation ?? null);
+    }
+    // SEC_008 Bail Organa — both discards are paid: now he deploys.
+    if (remaining === 0 && pending.thenDeployLeader !== undefined) {
+      return deployLeader(game, log, pending.thenDeployLeader, { costPaid: true });
     }
 
     // SHD_099 Echo (Restored): "Give 2 Experience tokens to a unit in play with the same name as
@@ -10917,6 +10924,17 @@ function applyAbilityOptionEffect(
       if (units016.length === 0) return pending.continuation ?? null;
       return mandatoryTarget("SEC_016_deal", pending.player!, units016.map(u => u.playId), pending.continuation ?? null);
     }
+    case "LAW_014": { // Enfys Nest — pay for "use that ability again", then use it.
+      const enfys014 = GetPlayer(game, pending.player!).leader;
+      if (enfys014.deployed) {
+        game.currentEffects.push({ cardId: ENFYS_USED_THIS_ROUND, duration: "Round", affectedPlayer: pending.player! });
+      } else {
+        if (!enfys014.ready || spendableFor(game, pending.player!) < 2) return pending.continuation ?? null;
+        payResources(game, pending.player!, 2, log, "LAW_014");
+        enfys014.ready = false;
+      }
+      return ReuseOnAttack(pending);
+    }
     case "SEC_017": { // Sabé (front) — exhaust her, then choose which of the top 2 to discard.
       const sabe017 = GetPlayer(game, pending.player!).leader;
       if (!sabe017.ready) return pending.continuation ?? null;
@@ -11909,8 +11927,10 @@ function handleChooseOption(
       updateDefeatedPlayers(game);
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
-    // "No" — apply decline effect
-    const nextPending = applyAbilityOptionDeclineEffect(pending, game, log);
+    // "No" — apply decline effect. A declined "may" can have its own route (declineContinuation):
+    // LAW_014 Enfys Nest's offer sits only on the Yes route, since declining is not using it.
+    const declined = pending.declineContinuation !== undefined ? { ...pending, continuation: pending.declineContinuation } : pending;
+    const nextPending = applyAbilityOptionDeclineEffect(declined, game, log);
     if (nextPending?.type === "resolve-attack") {
       return handleResolveAttack(game, log, nextPending);
     }
@@ -13252,6 +13272,9 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
     case "LAW_001": // Saw Gerrera — If you control 6 or more resources.
     case "LAW_006": // Vel Sartha — If you control 6 or more resources.
     case "SEC_003": // Lama Su — If you control 6 or more resources.
+    case "SEC_008": // Bail Organa — "Action [Exhaust, discard 2 cards from your hand]: If you control 4
+                    // or more resources, deploy this leader." See deployLeader for the cost.
+      return p.resources.length >= 4;
     case "SEC_016": // Padmé Amidala (What Do You Have to Hide?) — If you control 6 or more resources.
     case "SEC_018": // DJ (Need a Lift?) — If you control 6 or more resources.
     case "TS26_04": // Padmé Amidala (Follow My Lead) — If you control 6 or more resources.
@@ -13259,6 +13282,7 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
       return p.resources.length >= 6;
     case "LAW_005": // Jyn Erso — If you control 5 or more resources.
     case "LAW_007": // Boba Fett (Krayt's Claw Commander) — If you control 5 or more resources.
+    case "LAW_014": // Enfys Nest (Until We Can Go No Higher) — If you control 5 or more resources.
     case "LAW_009": // Hera Syndulla (Not Fighting Alone) — If you control 5 or more resources.
     case "LAW_017": // Han Solo (I Got a Really Good Feeling) — If you control 5 or more resources.
     case "SEC_002": // Jabba the Hutt (Wonderful Human Being) — If you control 5 or more resources.
@@ -13306,12 +13330,30 @@ function recordLeaderUnitEnteredPlay(game: GameState, player: PlayerId, unit: Un
   game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId: unit.cardId, playId: unit.playId, reason: "deployed" });
 }
 
-function deployLeader(game: GameState, log: string[], player: PlayerId): HandlerResult {
+/**
+ * `costPaid`: SEC_008 Bail Organa's deploy is an ordinary Action — "[Exhaust, discard 2 cards from
+ * your hand]" — not an Epic Action, so it can be used again after he is defeated. The first call
+ * pays the exhaust and asks for the two discards; the discard step calls back with costPaid.
+ */
+function deployLeader(game: GameState, log: string[], player: PlayerId, opts: { costPaid?: boolean } = {}): HandlerResult {
   const leader = GetPlayer(game, player).leader;
+  const bailDeploy = leader.cardId === "SEC_008";
   if (leader.deployed)
     return { response: invalidResponse("Leader is already deployed."), pending: null, stateChanged: false };
-  if (leader.epicActionUsed)
+  if (leader.epicActionUsed && !bailDeploy)
     return { response: invalidResponse("Leader epic action already used this round."), pending: null, stateChanged: false };
+  if (bailDeploy && !opts.costPaid) {
+    if (!leader.ready)
+      return { response: invalidResponse(`${CardTitle("SEC_008")} is exhausted.`), pending: null, stateChanged: false };
+    if (GetPlayer(game, player).hand.length < 2)
+      return { response: invalidResponse(`${CardTitle("SEC_008")}: discard 2 cards from your hand to deploy him.`), pending: null, stateChanged: false };
+    if (!LeaderEpicDeployCondition(game, player, leader.cardId))
+      return { response: invalidResponse("Deploy condition not met."), pending: null, stateChanged: false };
+    leader.ready = false;
+    log.push(`Player ${player} exhausted ${CardTitle("SEC_008")} to deploy him.`);
+    const discard008: DiscardFromHandPending = { type: "discard-from-hand", targetPlayer: player, count: 2, thenDeployLeader: player, continuation: null };
+    return { response: resolutionResponse(pendingToResolution(discard008, game)), pending: discard008, stateChanged: true };
+  }
 
   // A double-sided leader (TWI_017) has no unit side at all — no cost, power or HP — so it can
   // never deploy. Without this it falls through to the generic path below, where a missing cost
@@ -13360,7 +13402,7 @@ function deployLeader(game: GameState, log: string[], player: PlayerId): Handler
 
   // Normal deploy path
   leader.deployed = true;
-  leader.epicActionUsed = true;
+  if (!bailDeploy) leader.epicActionUsed = true;
   const unit = addToArena(game, player, leader.cardId, true);
   leader.deployedPlayId = unit.playId;
   recordLeaderUnitEnteredPlay(game, player, unit);
@@ -14191,6 +14233,16 @@ function resolveActionAbility(
         .filter(u => u.ready && Unit.FromInterface(u).IsTokenUnit()).map(u => u.playId));
     case "TS26_06": // Rex — Action [Exhaust, ready an exhausted enemy unit]: the readied unit is the cost.
       return mandatoryTarget("TS26_06", player, GetUnitsForPlayer(GetOtherPlayer(player)).filter(u => !u.ready).map(u => u.playId));
+    case "SEC_008": { // Bail Organa — Action [1 resource, Exhaust]: If a friendly unit was defeated this
+                      // phase, return a friendly resource to its owner's hand. If you do, put the top
+                      // card of your deck into play as a resource. Unmet: paid for, no effect.
+      const resources008 = GetPlayer(game, player).resources;
+      if (!UnitWasDefeatedThisPhase(player) || resources008.length === 0) {
+        log.push(`${CardTitle("SEC_008")}: no friendly unit was defeated this phase — no effect.`);
+        return null;
+      }
+      return mandatoryTarget("SEC_008", player, resources008.map(r => r.playId));
+    }
     case "SEC_018": { // DJ — Action [Exhaust]: Choose a friendly unit. If you do, play a unit from your
                       // hand for 1 less; the chosen unit captures it. Nothing to choose, or nothing
                       // playable at 1 less: a soft pass.
@@ -15655,6 +15707,7 @@ function applyAbilityEffect(
       RemoveResourcePreservingReady(gs017, player017, targetPlayId);
       payResources(gs017, player017, cost017, game.gameLog, unitCardId017);
       game.gameLog.push(`${CardTitle("HMW_017")}: played ${CardTitle(unitCardId017)} from resources for ${cost017}.`);
+      PlayedFromResources(gs017, player017, game.gameLog);
 
       // Her own "If you do, you may resource a card from your hand" is part of THIS ability, so it
       // resolves before the played unit's entry triggers. deferEntryTriggers leaves those in the
@@ -15689,6 +15742,7 @@ function applyAbilityEffect(
         controller: pending.player,
       });
       game.gameLog.push(`${CardTitle("ASH_001")}: played ${CardTitle(upgradeCardId)} from resources onto ${CardTitle(host001.cardId)}.`);
+      PlayedFromResources(gs001, pending.player, game.gameLog);
 
       // "If you do, resource the top card of your deck."
       ResourceTopCardOfDeck(gs001, pending.player, game.gameLog, "ASH_001");
@@ -21072,6 +21126,17 @@ function applyAbilityEffect(
       ArmNextEventDiscount(game.currentGameState, pending.player!, pending.cardId === "TS26_06" ? 1 : 2, "TS26_06", game.gameLog);
       break;
     }
+    case "SEC_008": { // Bail Organa — the chosen resource goes to its OWNER's hand (a stolen one goes
+                      // home); then the top card of the deck becomes a resource, if there is one.
+      if (!targetPlayId) break;
+      const gs008 = game.currentGameState;
+      const returned008 = RemoveResourcePreservingReady(gs008, pending.player!, targetPlayId);
+      if (!returned008) break;
+      GetPlayer(gs008, returned008.owner as PlayerId).hand.push({ cardId: returned008.cardId });
+      game.gameLog.push(`${CardTitle("SEC_008")}: returned ${CardTitle(returned008.cardId)} to Player ${returned008.owner}'s hand.`);
+      ResourceTopCardOfDeck(gs008, pending.player!, game.gameLog, "SEC_008");
+      break;
+    }
     case "SEC_018": { // DJ — the captor is chosen; now the unit to play from hand.
       if (!targetPlayId) break;
       const indices018 = djPlayableHandIndices(game.currentGameState, pending.player!);
@@ -21271,6 +21336,7 @@ function applyAbilityEffect(
       const revealed109 = RemoveResourcePreservingReady(gs109, pending.player, targetPlayId);
       if (!revealed109) break;
       game.gameLog.push(`${CardTitle("SHD_109")}: revealed ${CardTitle(revealed109.cardId)} and played it for free.`);
+      PlayedFromResources(gs109, pending.player!, game.gameLog);
       const next109 = buildEndlessLegionsOffer(pending.player, pending.fromPlayIds.filter(id => id !== targetPlayId), pending.continuation ?? null);
       const played109 = completePlayCard(gs109, game.gameLog, revealed109.cardId, pending.player);
       return played109.pending ? injectContinuation(played109.pending, next109) : next109;

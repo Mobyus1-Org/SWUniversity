@@ -347,6 +347,7 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "TS26_01": // Count Dooku — Action [Exhaust]: heal + Battle Droid for both players, unconditional.
         abilities.push(cardId);
         break;
+      case "SEC_008": // Bail Organa — Action [1 resource, Exhaust]: the defeat condition soft-passes.
       case "SEC_018": // DJ — Action [Exhaust]: "Choose a friendly unit. If you do…" — a soft pass.
         abilities.push(cardId);
         break;
@@ -887,6 +888,7 @@ export function ActionAbilityCost(cardId: string): number {
       return 1;
     case "SOR_006"://Emperor Palpatine
       return 1;
+    case "SEC_008"://Bail Organa - Doing Everything He Can: [1 resource] on the resource Action only
     case "SEC_002"://Jabba the Hutt - Wonderful Human Being: his deployed side has no Action
     case "LAW_005"://Jyn Erso - Time to Fight: her deployed side has no Action
       return 1;
