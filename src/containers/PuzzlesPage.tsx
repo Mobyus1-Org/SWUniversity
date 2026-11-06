@@ -140,7 +140,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "LOF_002", "LOF_003", "LOF_004", "LOF_005", "LOF_007", "LOF_009", "LOF_011", "LOF_012", "LOF_013",
   "LOF_014", "LOF_015", "LOF_016", "LOF_018",
   //Secrets of Power
-  "SEC_002", "SEC_003", "SEC_004", "SEC_005", "SEC_006", "SEC_007", "SEC_011", "SEC_015",
+  "SEC_002", "SEC_003", "SEC_004", "SEC_005", "SEC_006", "SEC_007", "SEC_011", "SEC_015", "SEC_018",
   //ASH
   "ASH_003", "ASH_004", "ASH_009", "ASH_012",
   //IBH

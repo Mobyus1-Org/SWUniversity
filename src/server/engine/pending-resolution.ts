@@ -25,6 +25,11 @@ export interface AbilityOptionPending {
   onYes?: PendingResolution | null;
   /** A value carried to the Yes-effect (e.g. the played card's cost for TWI_018 Quinlan Vos). */
   amount?: number;
+  /**
+   * A "may disclose" offer: answering Yes reveals cards from this player's hand (RevealFromHand),
+   * whatever onYes then does. Set by every disclose that is a plain yes/no (SEC_038, SEC_065…).
+   */
+  revealsFromHand?: PlayerId;
   /** HMW_060 Vice Admiral Rampart's offer: the base upgrade whose defeat he would replace. */
   replacedUpgradePlayId?: string;
   /**
@@ -305,6 +310,8 @@ export interface DefeatCopyPending {
    * copy itself, in which case there is nothing left to defeat).
    */
   enteringDefeatAfter?: { sourceCardId: string };
+  /** SEC_018 DJ — "The chosen unit captures it", carried across the uniqueness prompt the same way. */
+  enteringCaptureAfter?: { captorPlayId: string; sourceCardId: string };
   /** HMW_048 Vernestra Rwoh — When Played abilities the entering unit gained as it was played. */
   enteringGrantedWhenPlayed?: string[];
   // Downstream resolution to run once uniqueness (and the entering unit's triggers) is
@@ -350,6 +357,8 @@ export interface PlayFromHandPending {
   sharesKeywordWithPlayer?: PlayerId;
   /** LOF_005 Morgan Elsbeth: play the chosen unit for this many resources less. */
   costReduction?: number;
+  /** SEC_018 DJ: the friendly unit that captures the unit played this way. */
+  captorPlayId?: string;
   /** Hand indices that may be chosen, when only some cards qualify (JTL_155: Vehicle units). */
   eligibleHandIndices?: number[];
   /** An empty selection declines ("Choose nothing") instead of being rejected. */

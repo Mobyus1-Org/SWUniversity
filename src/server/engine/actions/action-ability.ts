@@ -347,6 +347,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "TS26_01": // Count Dooku — Action [Exhaust]: heal + Battle Droid for both players, unconditional.
         abilities.push(cardId);
         break;
+      case "SEC_018": // DJ — Action [Exhaust]: "Choose a friendly unit. If you do…" — a soft pass.
+        abilities.push(cardId);
+        break;
       case "SEC_002": // Jabba the Hutt — Action [1 resource, Exhaust]: "a friendly damaged unit" is a
                       // target, not a cost — no such unit is a soft pass.
         abilities.push(cardId);

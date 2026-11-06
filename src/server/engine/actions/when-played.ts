@@ -3071,6 +3071,9 @@ export function resolveWhenPlayed(
     case "SHD_120": { // Discerning Veteran — "When Played: This unit captures an enemy non-leader
                       // ground unit." The captor is fixed (itself), so only the victim is chosen.
       const gs120 = game.currentGameState;
+      // No captor, no capture: the Veteran may already be out of play when this resolves (a SEC_018
+      // DJ play captures it before its When Played does).
+      if (!GetUnitByPlayId(gs120, playId ?? "")) return null;
       const enemy120 = GetUnitsForPlayer(GetOtherPlayer(player))
         .filter(u => UnitArenaOf(gs120, u.playId) === "Ground"
           && !IsLeaderUnit(u)

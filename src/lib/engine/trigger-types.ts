@@ -27,6 +27,7 @@ export type TriggerType =
   | "dealt-heavy-damage"  // reaction to dealing one instance of N+ damage (e.g. HMW_011 Darth Sidious)
   | "when-unit-healed"  // reaction to 1+ damage being healed from a unit (e.g. JTL_062 Silver Angel)
   | "when-base-healed"  // reaction to 1+ damage being healed from your base (e.g. IC27_026 Darth Sidious)
+  | "hand-revealed-or-discarded"  // reaction to revealing or discarding 1+ cards from your hand (SEC_016 Padmé Amidala)
   | "regroup-start"  // "When the regroup phase starts" (e.g. HMW_004 deployed as The Death Star)
   | "non-combat-damage"  // reaction to non-combat damage landing on your unit or base (HMW_013 Cham Syndulla)
 

@@ -537,6 +537,7 @@ export const Cards = {
       darthVaderScourgeOfSquadrons: "JTL_142", // Piloting 3 — grants the host an On Attack
     },
     lof: {
+      aurraSingPatientAndDeadly: "LOF_179", // 1/4 Ground, Cunning/Villainy, Hidden + Raid
       armyOfTheDead: "LOF_236", // 7/6 Ground Villainy, no abilities
       drk1ProbeDroid: "LOF_155", // 2/3 Ground — WP: may defeat a non-unique upgrade
       hk87AssassinDroid: "LOF_235", // 4/4 Ground — WD: 2 damage to each ground unit
@@ -586,6 +587,7 @@ export const Cards = {
       awakenedSpecters: "LOF_066", // 4/5 Ground Night — no card text, a plain Night body
     },
     twi: {
+      jarJarBinks: "TWI_202",     // Foolish Gungan — 2/3 Ground, cost 2 Cunning×2, unique
       patrollingVWing: "TWI_107", // reprint of SOR_111 — When Played: draw a card
       volunteerSoldier: "TWI_254", // reprint of SOR_248 — Raid 1; costs 1 less with a Trooper
       favorableDelegate: "TWI_208", // 1/5 Ground — WP: draw; WD: discard a card from your hand
@@ -657,6 +659,7 @@ export const Cards = {
       chancellorPalpatine: "SEC_082",
       isbShuttle: "SEC_083",
       viceAdmiralRampart: "SEC_085",
+      bardottanOrnithopter: "SEC_062", // 3/4 Space, Vigilance — When Played: may disclose Vigilance, draw
       nalaSe: "SEC_065",
       gnkPowerDroid: "SEC_110",
       outerRimConstable: "SEC_163",

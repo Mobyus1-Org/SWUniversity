@@ -2264,6 +2264,28 @@ export function GrantPlayFromDiscardThisPhase(
  *
  * The record (roundState.cardsDiscardedThisPhase) is what SHD_135 Kylo's TIE Silencer reads.
  */
+/**
+ * SEC_016 Padmé Amidala — "When you reveal or discard 1 or more cards from your hand". Queued by
+ * RevealFromHand and by every hand discard (QueueWhenDiscardedTrigger). `owner` is whose hand the
+ * cards came from, whoever's effect it was. "1 or more" is one batch: while an offer for that
+ * player is still waiting in the bag, a further reveal or discard joins it instead of adding another.
+ */
+function QueueHandRevealedOrDiscardedReaction(gs: GameState, owner: PlayerId): void {
+  if (GetPlayer(gs, owner).leader.cardId !== "SEC_016") return;
+  if (gs.triggerBag.some(t => t.triggerType === "hand-revealed-or-discarded" && t.fromPlayer === owner)) return;
+  gs.triggerBag.push({ triggerType: "hand-revealed-or-discarded", cardId: "SEC_016", fromPlayer: owner, nested: true });
+}
+
+/**
+ * THE call for "`owner` revealed 1 or more cards from their hand" — every disclose, every "reveal a
+ * card from your hand", and every "reveals their hand". `sourceCardId` is the ability doing it; a
+ * guard test checks every implemented reveal card passes through here.
+ */
+export function RevealFromHand(gs: GameState, owner: PlayerId, sourceCardId: string): void {
+  void sourceCardId;
+  QueueHandRevealedOrDiscardedReaction(gs, owner);
+}
+
 export function QueueWhenDiscardedTrigger(
   gs: GameState,
   owner: PlayerId,
@@ -2272,6 +2294,7 @@ export function QueueWhenDiscardedTrigger(
   from: "Hand" | "Deck",
 ): void {
   gs.roundState.cardsDiscardedThisPhase.push({ player: owner, cardId, playId: discardPlayId, from });
+  if (from === "Hand") QueueHandRevealedOrDiscardedReaction(gs, owner);
   if (!WHEN_DISCARDED_CARDS.has(cardId)) return;
   gs.triggerBag.push({
     triggerType: "when-discarded",

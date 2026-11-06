@@ -522,6 +522,18 @@ function resolveAutoOption(
       ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
       : NOTHING_TO_DO;
   }
+  // SEC_016 Padmé Amidala controlled by the opponent (P2): the solver revealed or discarded cards
+  // from P2's hand (Condemn's disclose, a Pillage). Her 1 damage is always taken — the exhaust
+  // doesn't matter in a one-turn puzzle — and aimed at a solver unit.
+  if (pending.type === "ability-option" && (pending.cardId === "SEC_016" || pending.cardId === "SEC_016_deal") && pending.player === 2) {
+    return { dispatchType: "choose-option", dispatchData: { option: solverHasAnyUnit(gameState) ? "Yes" : "No" } };
+  }
+  if (pending.type === "ability-target" && pending.cardId === "SEC_016_deal" && pending.player === 2) {
+    const targetPlayId = pickOpponentTargetAmongMyUnits(pending.fromPlayIds, gameState, { preferUnguardedArena: true });
+    return targetPlayId
+      ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
+      : NOTHING_TO_DO;
+  }
   if (pending.type === "ability-option" && pending.cardId === "SEC_193" && pending.player === 2) {
     return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };
   }

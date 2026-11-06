@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, AllCaptives, QueueFriendlyDamagedSurvivesReactions, JABBA_USED_THIS_ROUND, QueueSelfDamagedSurvivesReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, DefeatableNonLeaderUnitsAtOrBelowHp, DiscardFromTopOfDeck, DiscardCardFromDeck, FriendlyTokenCardIds, buildHanDamage, buildHanCreditCount, MaulCanEmpower, buildMaulChoice, FriendlyUnitsEnteredPlayThisPhase, OtherFriendlyUnitsThatEnteredPlayThisPhase, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, buildBadFeelingShield, buildLeiaDrawAndReturn, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases, UpgradeLeavesPlay, BaseUpgradeHolder, BaseUpgradeDefeatReplacer, RemoveUpgradeFromBase } from "@/server/engine/core-functions";
+import { GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, AllCaptives, QueueFriendlyDamagedSurvivesReactions, JABBA_USED_THIS_ROUND, QueueSelfDamagedSurvivesReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, DefeatableNonLeaderUnitsAtOrBelowHp, DiscardFromTopOfDeck, DiscardCardFromDeck, FriendlyTokenCardIds, buildHanDamage, buildHanCreditCount, MaulCanEmpower, buildMaulChoice, RevealFromHand, FriendlyUnitsEnteredPlayThisPhase, OtherFriendlyUnitsThatEnteredPlayThisPhase, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, buildBadFeelingShield, buildLeiaDrawAndReturn, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases, UpgradeLeavesPlay, BaseUpgradeHolder, BaseUpgradeDefeatReplacer, RemoveUpgradeFromBase } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -651,8 +651,14 @@ function captureInto(
   target.upgrades = [];
   held.push(target);
   log.push(`${CardTitle(captorCardId)} captured ${CardTitle(target.cardId)}.`);
-  game.roundState.cardsPlayedThisPhase = game.roundState.cardsPlayedThisPhase.filter(e => e.playId !== target.playId);
-  game.roundState.cardsEnteredPlayThisPhase = game.roundState.cardsEnteredPlayThisPhase.filter(e => e.playId !== target.playId);
+  // The captive leaves play (CR 33.1), and a rescue brings it back as a unit that entered play but
+  // was not played (33.3) — so Hidden ("played/deployed/created this phase") must not follow it out.
+  // Its play still happened this phase, though, and counts ("if you played a unit this phase", "2 or
+  // more friendly units entered play") must still see it. So the records stay; only their link to
+  // the unit is cut, to an id no unit in play can have.
+  const leftPlayId = `${target.playId}~captured`;
+  for (const e of game.roundState.cardsPlayedThisPhase) if (e.playId === target.playId) e.playId = leftPlayId;
+  for (const e of game.roundState.cardsEnteredPlayThisPhase) if (e.playId === target.playId) e.playId = leftPlayId;
 
   updateDefeatedPlayers(game);
   return bounty ?? continuation;
@@ -1060,7 +1066,8 @@ function releaseCaptives(game: GameState, unit: Unit, log: string[]): void {
     const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
     // Reset controller to owner: a take-control effect on the captive (or a stale stored value)
     // must not survive the rescue, the same way pushToDiscard restores ownership.
-    const rescued = Unit.FromInterface({ ...captive, controller: captive.owner, ready: false });
+    const ready = rescuedUnitEntersReady(game, captive.owner, captive.cardId);
+    const rescued = Unit.FromInterface({ ...captive, controller: captive.owner, ready });
     if (arena === "Ground") GetPlayer(game, captive.owner).groundArena.push(rescued);
     else GetPlayer(game, captive.owner).spaceArena.push(rescued);
     game.roundState.cardsEnteredPlayThisPhase.push({
@@ -1069,7 +1076,7 @@ function releaseCaptives(game: GameState, unit: Unit, log: string[]): void {
       playId: captive.playId,
       reason: "returned-to-play",
     });
-    log.push(`${CardTitle(captive.cardId)} was rescued and returned to Player ${captive.owner}'s arena exhausted.`);
+    log.push(`${CardTitle(captive.cardId)} was rescued and returned to Player ${captive.owner}'s arena ${ready ? "ready" : "exhausted"}.`);
   }
   unit.captives = [];
 }
@@ -2561,6 +2568,32 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
     return null;
   }
 
+  if (trigger.triggerType === "hand-revealed-or-discarded") {
+    // SEC_016 Padmé Amidala — front: "You may exhaust this leader. If you do, deal 1 damage to a
+    // unit." Deployed: "You may deal 1 damage to a unit." Re-checked now: the exhaust must still be
+    // payable, and a deployed Padmé must still be in play with her abilities.
+    const leader016 = GetPlayer(game, trigger.fromPlayer).leader;
+    const units016 = AllUnits();
+    if (leader016.cardId !== "SEC_016" || units016.length === 0) return null;
+    if (leader016.deployed) {
+      const padme016 = GetUnitByPlayId(game, leader016.deployedPlayId ?? "");
+      if (!padme016 || Unit.FromInterface(padme016).LostAbilities()) return null;
+      return optionalTarget("SEC_016_deal", trigger.fromPlayer, units016.map(u => u.playId),
+        "Deal 1 damage to a unit?", { yesLabel: "Deal 1" });
+    }
+    if (!leader016.ready || LeaderAbilitiesIgnored()) return null;
+    return {
+      type: "ability-option",
+      cardId: "SEC_016",
+      player: trigger.fromPlayer,
+      helperText: `Exhaust ${CardTitle("SEC_016")} to deal 1 damage to a unit?`,
+      yesLabel: "Exhaust",
+      noLabel: "Skip",
+      onYes: null,
+      continuation: null,
+    } satisfies AbilityOptionPending;
+  }
+
   if (trigger.triggerType === "when-base-healed") {
     if (trigger.cardId === "IC27_026") { // Darth Sidious — "Deal that much damage to an enemy unit."
                                          // Mandatory. Triggered when the heal happened, so it
@@ -3541,6 +3574,14 @@ function lamaSuHosts(game: GameState, player: PlayerId, upgradeCardId: string): 
   return GetUnitsForPlayer(player)
     .filter(u => legal.has(u.playId) && !TraitContains(u.cardId, "Vehicle", u.controller, u.playId))
     .map(u => u.playId);
+}
+
+/** SEC_018 DJ — hand units playable at 1 resource less. */
+function djPlayableHandIndices(game: GameState, player: PlayerId): number[] {
+  return GetPlayer(game, player).hand
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => CardType(c.cardId) === "Unit" && CardIsPlayable(game, player, c.cardId, 1))
+    .map(({ i }) => i);
 }
 
 /** SEC_003 Lama Su — "It costs 1 resource less." */
@@ -5886,6 +5927,12 @@ function completePlayCard(
      */
     defeatAfterEntry?: { sourceCardId: string };
     /**
+     * SEC_018 DJ — "Play a unit from your hand… The chosen unit captures it. (When Played abilities
+     * resolve after the unit is captured.)" Played in full, then captured by `captorPlayId`; its
+     * entry triggers wait in the bag, the same way defeatAfterEntry's do.
+     */
+    captureAfterEntry?: { captorPlayId: string; sourceCardId: string };
+    /**
      * HMW_017 Osha — the ability that plays this unit has more of its own text left to resolve
      * ("If you do, you may resource a card from your hand"). A unit's entry triggers are NEW
      * triggers and wait for the ability that played it to finish, so they are left in the bag and
@@ -6034,6 +6081,7 @@ function completePlayCard(
           enteringPlayer: player,
           enteringInjectEffect: opts?.injectEffect,
           enteringDefeatAfter: opts?.defeatAfterEntry,
+          enteringCaptureAfter: opts?.captureAfterEntry,
           enteringGrantedWhenPlayed: opts?.grantedWhenPlayed,
         };
         return { response: resolutionResponse(pendingToResolution(defeatCopyPending, game)), pending: defeatCopyPending, stateChanged: false };
@@ -6052,6 +6100,14 @@ function completePlayCard(
       if (bagDefeat) {
         return { response: resolutionResponse(pendingToResolution(bagDefeat, game)), pending: bagDefeat, stateChanged: true };
       }
+      return { response: stateResponse(game), pending: null, stateChanged: true };
+    }
+
+    if (opts?.captureAfterEntry) {
+      queueUnitEntryTriggers(game, log, unit, cardId, player, opts, true);
+      const captured = captureEnteringUnit(game, log, unit, opts.captureAfterEntry);
+      const next = captured ? injectContinuation(captured, drainTriggerBag(game, log)) : drainTriggerBag(game, log);
+      if (next) return { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: true };
       return { response: stateResponse(game), pending: null, stateChanged: true };
     }
 
@@ -9097,6 +9153,8 @@ function handleChooseTarget(
   if (pending.type === "reveal-from-hand") {
     const chosenIndices = (data.targetIndices ?? []).filter(i => pending.eligibleIndices.includes(i)).slice(0, pending.maxCount);
     const unit035 = GetUnitByPlayId(game, pending.sourcePlayId);
+    // SOR_035 Lieutenant Childsen — the cards are revealed whether or not he is still there to grow.
+    if (chosenIndices.length > 0) RevealFromHand(game, pending.player, "SOR_035");
     if (unit035 && chosenIndices.length > 0) {
       const pHand035 = GetPlayer(game, pending.player).hand;
       const revealedNames = chosenIndices.map(i => CardTitle(pHand035[i]?.cardId ?? "")).filter(Boolean);
@@ -9157,6 +9215,14 @@ function handleChooseTarget(
           defeatUnit(game, log, entering, false, false, { deferWhenDefeated: true });
           log.push(`${CardTitle(pending.enteringDefeatAfter.sourceCardId)}: defeated ${CardTitle(pending.enteringCardId)}.`);
           updateDefeatedPlayers(game);
+        }
+        // SEC_018 DJ — likewise the capture: the new copy survived uniqueness, so it is captured now.
+        if (pending.enteringCaptureAfter) {
+          const captured018 = captureEnteringUnit(game, log, entering, pending.enteringCaptureAfter);
+          if (captured018) {
+            const tail018 = injectContinuation(captured018, pending.continuation ?? null);
+            return { response: resolutionResponse(pendingToResolution(tail018, game)), pending: tail018, stateChanged: true };
+          }
         }
       } else {
         // The player defeated the just-played copy itself. Per CR 8.29.3, abilities that
@@ -9638,6 +9704,17 @@ function handleChooseTarget(
         log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("TWI_120")} (1 resource less).`);
         return completePlayCard(game, log, cardId, pending.player);
       }
+      case "SEC_018": { // DJ — play the unit for 1 less; the chosen friendly unit then captures it.
+        if (!pending.eligibleHandIndices?.includes(idx) || CardType(cardId) !== "Unit"
+          || !CardIsPlayable(game, pending.player, cardId, pending.costReduction ?? 0) || !pending.captorPlayId)
+          return { response: invalidResponse(`${CardTitle("SEC_018")}: that unit can't be played for 1 less.`), pending, stateChanged: false };
+        payResources(game, pending.player, Math.max(0, playCost(game, pending.player, cardId) - (pending.costReduction ?? 0)), log, cardId);
+        hand.splice(idx, 1);
+        log.push(`Player ${pending.player} played ${CardTitle(cardId)} via ${CardTitle("SEC_018")} (1 resource less).`);
+        return completePlayCard(game, log, cardId, pending.player, {
+          captureAfterEntry: { captorPlayId: pending.captorPlayId, sourceCardId: "SEC_018" },
+        });
+      }
       case "SEC_003": { // Lama Su — an upgrade on a friendly non-Vehicle unit, 1 less, then 1 damage to it.
         if (!pending.eligibleHandIndices?.includes(idx) || !lamaSuCanPlay(game, pending.player, cardId))
           return { response: invalidResponse(`${CardTitle("SEC_003")}: that upgrade can't be played on a friendly non-Vehicle unit.`), pending, stateChanged: false };
@@ -9743,6 +9820,7 @@ function handleChooseTarget(
         if (!CardsCanDisclose([cardId], ["Vigilance"]))
           return { response: invalidResponse("Disclose: revealed card does not have a Vigilance aspect."), pending, stateChanged: false };
         log.push(`${CardTitle(pending.cardId)}: disclosed ${CardTitle(cardId)} (Vigilance).`);
+        RevealFromHand(game, pending.player, "SEC_062");
         DrawCardForPlayer(game, log, pending.player);
         const bag062 = drainTriggerBag(game, log);
         if (bag062) return { response: resolutionResponse(pendingToResolution(bag062, game)), pending: bag062, stateChanged: true };
@@ -9752,6 +9830,7 @@ function handleChooseTarget(
         if (!CardsCanDisclose([cardId], ["Command"]))
           return { response: invalidResponse("Disclose: revealed card does not have a Command aspect."), pending, stateChanged: false };
         log.push(`${CardTitle(pending.cardId)}: disclosed ${CardTitle(cardId)} (Command).`);
+        RevealFromHand(game, pending.player, "SEC_109");
         // Arm the grant. It carries no targetPlayId — the unit it applies to has not been played
         // yet — so it MUST use its own effect id; a bare "SEC_109" with no target would read as
         // Ambush for every unit this player controls.
@@ -9764,6 +9843,7 @@ function handleChooseTarget(
         if (!CardsCanDisclose([cardId], ["Aggression"]))
           return { response: invalidResponse("Disclose: revealed card does not have an Aggression aspect."), pending, stateChanged: false };
         log.push(`${CardTitle(pending.cardId)}: disclosed ${CardTitle(cardId)} (Aggression).`);
+        RevealFromHand(game, pending.player, "SEC_181");
         CreateSpy(game, pending.player, log, pending.cardId);
         const bag181 = drainTriggerBag(game, log);
         if (bag181) return { response: resolutionResponse(pendingToResolution(bag181, game)), pending: bag181, stateChanged: true };
@@ -9774,6 +9854,7 @@ function handleChooseTarget(
           return { response: invalidResponse("Disclose: revealed card has none of Vigilance, Command, Aggression, Cunning or Heroism."), pending, stateChanged: false };
         }
         log.push(`${CardTitle("SEC_004")}: disclosed ${CardTitle(cardId)}.`);
+        RevealFromHand(game, pending.player, "SEC_004");
         // "a unit that doesn't share an aspect with the disclosed card"
         const eligible004 = UnitsNotSharingAspectWith(cardId);
         if (eligible004.length === 0) {
@@ -9798,7 +9879,9 @@ function handleChooseTarget(
           return { response: invalidResponse("Disclose: revealed card has neither an Aggression nor a Heroism aspect."), pending, stateChanged: false };
         log.push(`${CardTitle("SEC_148")}: disclosed ${CardTitle(cardId)}.`);
         if (has148A && has148H) {
-          // One card covered both icons — the disclose is complete.
+          // One card covered both icons — the disclose is complete. Only a met disclose counts as
+          // having revealed anything (CR 38.3), so the reveal is recorded here, not on a partial pick.
+          RevealFromHand(game, pending.player, "SEC_148");
           createReadySpy(game, pending.player, log);
           const bag148 = drainTriggerBag(game, log);
           if (bag148) return { response: resolutionResponse(pendingToResolution(bag148, game)), pending: bag148, stateChanged: true };
@@ -9821,6 +9904,7 @@ function handleChooseTarget(
         if (!CardsCanDisclose([cardId], [needed148]))
           return { response: invalidResponse(`Disclose: revealed card does not have a ${needed148} aspect.`), pending, stateChanged: false };
         log.push(`${CardTitle("SEC_148")}: disclosed ${CardTitle(cardId)} (${needed148}) — requirement met.`);
+        RevealFromHand(game, pending.player, "SEC_148");
         createReadySpy(game, pending.player, log);
         const bag148b = drainTriggerBag(game, log);
         if (bag148b) return { response: resolutionResponse(pendingToResolution(bag148b, game)), pending: bag148b, stateChanged: true };
@@ -9832,6 +9916,8 @@ function handleChooseTarget(
         const aggrCount = CardAspects(cardId).filter(a => a === "Aggression").length;
         log.push(`${CardTitle(pending.cardId)}: disclosed ${CardTitle(cardId)} (Aggression ×${aggrCount}).`);
         if (aggrCount >= 2) {
+          // Met with one card. A partial pick reveals nothing yet (CR 38.3) — pick 2 records it.
+          RevealFromHand(game, pending.player, "SEC_182");
           // Requirement met — proceed to damage targeting
           const allUnits182 = [...game.player1.groundArena, ...game.player1.spaceArena, ...game.player2.groundArena, ...game.player2.spaceArena];
           if (allUnits182.length === 0) return { response: stateResponse(game), pending: null, stateChanged: true };
@@ -9846,6 +9932,7 @@ function handleChooseTarget(
         if (!CardsCanDisclose([cardId], ["Aggression"]))
           return { response: invalidResponse("Disclose: revealed card does not have an Aggression aspect."), pending, stateChanged: false };
         log.push(`${CardTitle("SEC_182")}: disclosed ${CardTitle(cardId)} (Aggression) — requirement met.`);
+        RevealFromHand(game, pending.player, "SEC_182");
         const allUnits182b = [...game.player1.groundArena, ...game.player1.spaceArena, ...game.player2.groundArena, ...game.player2.spaceArena];
         if (allUnits182b.length === 0) return { response: stateResponse(game), pending: null, stateChanged: true };
         const dmgPending2: AbilityTargetPending = { type: "ability-target", cardId: "SEC_182", player: pending.player, fromPlayIds: allUnits182b.map(u => u.playId), continuation: null };
@@ -9910,6 +9997,7 @@ function handleChooseTarget(
         if (CardType(cardId) !== "Unit")
           return { response: invalidResponse("Queen Soruna: chosen card is not a Unit."), pending, stateChanged: false };
         log.push(`${CardTitle("ASH_132")}: revealed ${CardTitle(cardId) ?? cardId}.`);
+        RevealFromHand(game, pending.player, "ASH_132");
         const revealedCost132 = CardCost(cardId) ?? 0;
         const matching132 = [
           ...game.player1.groundArena, ...game.player1.spaceArena,
@@ -9936,6 +10024,7 @@ function handleChooseTarget(
         if (CardType(cardId) !== "Event")
           return { response: invalidResponse("ISB Agent: chosen card is not an Event."), pending, stateChanged: false };
         log.push(`${CardTitle(pending.cardId)}: revealed ${CardTitle(cardId) ?? cardId}.`);
+        RevealFromHand(game, pending.player, pending.cardId === "SEC_184" ? "SEC_184" : "SOR_176");
         const allUnitsIsb = [
           ...game.player1.groundArena, ...game.player1.spaceArena,
           ...game.player2.groundArena, ...game.player2.spaceArena,
@@ -10650,6 +10739,37 @@ function thrawnsReveal(game: GameState, log: string[], deckOwner: PlayerId, thra
 }
 
 /**
+ * SEC_018 DJ — the unit his Action just played is captured by the friendly unit chosen first.
+ * Goes through captureInto, so IG-11's "can't be captured" and Bounties apply as for any capture.
+ */
+function captureEnteringUnit(
+  game: GameState,
+  log: string[],
+  unit: Unit,
+  capture: { captorPlayId: string; sourceCardId: string },
+): PendingResolution | null {
+  const captor = GetUnitByPlayId(game, capture.captorPlayId);
+  if (!captor || !GetUnitByPlayId(game, unit.playId)) return null;
+  log.push(`${CardTitle(capture.sourceCardId)}: ${CardTitle(captor.cardId)} captures ${CardTitle(unit.cardId)}.`);
+  captor.captives ??= [];
+  return captureInto(game, log, captor.captives, captor.cardId, unit, null);
+}
+
+/**
+ * Whether a rescued unit enters play ready. A rescue is the unit entering play, so whatever makes a
+ * unit enter play ready applies — its own text (SOR_193 Millennium Falcon, HMW_203 Victor Squadron),
+ * HMW_234 Ritual Dragon — plus SEC_018 DJ (deployed): "Friendly units that are rescued enter play
+ * ready." Per-play grants ("It enters play ready" on Sneak Attack) belong to that play, not here.
+ */
+function rescuedUnitEntersReady(game: GameState, owner: PlayerId, cardId: string): boolean {
+  if (entersPlayReady(cardId, owner) || UnitsEnterPlayReady(game, owner, cardId)) return true;
+  const leader = GetPlayer(game, owner).leader;
+  if (leader.cardId !== "SEC_018" || !leader.deployed) return false;
+  const dj = GetUnitByPlayId(game, leader.deployedPlayId ?? "");
+  return !!dj && !Unit.FromInterface(dj).LostAbilities();
+}
+
+/**
  * Rescue a captured card (CR 34.4): remove it from whichever unit is guarding it and return it to
  * its owner's arena exhausted. Rescued units do NOT regain Hidden protection (reason
  * "returned-to-play"). Shared entry point for cards that rescue on demand (L3-37 SHD_197).
@@ -10663,13 +10783,14 @@ function rescueCaptiveByPlayId(game: GameState, log: string[], captivePlayId: st
       const [captive] = u.captives.splice(idx, 1);
       const arena = (CardArena(captive.cardId) ?? "Ground") as "Ground" | "Space";
       // Control reverts to the owner — see releaseCaptives.
-      const rescued = Unit.FromInterface({ ...captive, controller: captive.owner, ready: false });
+      const ready = rescuedUnitEntersReady(game, captive.owner, captive.cardId);
+      const rescued = Unit.FromInterface({ ...captive, controller: captive.owner, ready });
       if (arena === "Ground") GetPlayer(game, captive.owner).groundArena.push(rescued);
       else GetPlayer(game, captive.owner).spaceArena.push(rescued);
       game.roundState.cardsEnteredPlayThisPhase.push({
         fromPlayer: captive.owner, cardId: captive.cardId, playId: captive.playId, reason: "returned-to-play",
       });
-      log.push(`${CardTitle(fromCardId)}: rescued ${CardTitle(captive.cardId)} — returned to Player ${captive.owner}'s arena exhausted.`);
+      log.push(`${CardTitle(fromCardId)}: rescued ${CardTitle(captive.cardId)} — returned to Player ${captive.owner}'s arena ${ready ? "ready" : "exhausted"}.`);
       return true;
     }
   }
@@ -10787,6 +10908,14 @@ function applyAbilityOptionEffect(
       if (!ahsoka08.ready) return pending.continuation ?? null;
       ahsoka08.ready = false;
       return buildAhsokaTopCardChoice(game, pending.player!, 0, pending.continuation ?? null) ?? pending.continuation ?? null;
+    }
+    case "SEC_016": { // Padmé Amidala (front) — exhaust her, then 1 damage to a unit.
+      const padme016 = GetPlayer(game, pending.player!).leader;
+      if (!padme016.ready) return pending.continuation ?? null;
+      padme016.ready = false;
+      const units016 = AllUnits();
+      if (units016.length === 0) return pending.continuation ?? null;
+      return mandatoryTarget("SEC_016_deal", pending.player!, units016.map(u => u.playId), pending.continuation ?? null);
     }
     case "SEC_017": { // Sabé (front) — exhaust her, then choose which of the top 2 to discard.
       const sabe017 = GetPlayer(game, pending.player!).leader;
@@ -11743,6 +11872,8 @@ function handleChooseOption(
 
   if (pending?.type === "ability-option") {
     if (option === "Yes") {
+      // A "may disclose" offer: saying Yes reveals cards from that player's hand (SEC_016 Padmé).
+      if (pending.revealsFromHand) RevealFromHand(game, pending.revealsFromHand, pending.cardId);
       // SOR_246 You're My Only Hope — playing the revealed top card runs the full play pipeline
       // (any card type, its own When Played, uniqueness…), which returns a HandlerResult rather
       // than a pending, so it cannot go through applyAbilityOptionEffect below.
@@ -12708,6 +12839,7 @@ function deathFromAboveSwap(game: GameState, log: string[], player: PlayerId, ne
   if (!attacker || handIdx === -1) return next;
 
   log.push(`Player ${player} revealed ${CardTitle("IC27_147")} from their hand.`);
+  RevealFromHand(game, player, "IC27_147");
   payResources(game, player, deathFromAboveCost(game, player), log, "IC27_147");
   hand.splice(handIdx, 1);
 
@@ -13120,6 +13252,8 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
     case "LAW_001": // Saw Gerrera — If you control 6 or more resources.
     case "LAW_006": // Vel Sartha — If you control 6 or more resources.
     case "SEC_003": // Lama Su — If you control 6 or more resources.
+    case "SEC_016": // Padmé Amidala (What Do You Have to Hide?) — If you control 6 or more resources.
+    case "SEC_018": // DJ (Need a Lift?) — If you control 6 or more resources.
     case "TS26_04": // Padmé Amidala (Follow My Lead) — If you control 6 or more resources.
     case "TS26_06": // Rex (No Other Option) — If you control 6 or more resources.
       return p.resources.length >= 6;
@@ -14057,6 +14191,16 @@ function resolveActionAbility(
         .filter(u => u.ready && Unit.FromInterface(u).IsTokenUnit()).map(u => u.playId));
     case "TS26_06": // Rex — Action [Exhaust, ready an exhausted enemy unit]: the readied unit is the cost.
       return mandatoryTarget("TS26_06", player, GetUnitsForPlayer(GetOtherPlayer(player)).filter(u => !u.ready).map(u => u.playId));
+    case "SEC_018": { // DJ — Action [Exhaust]: Choose a friendly unit. If you do, play a unit from your
+                      // hand for 1 less; the chosen unit captures it. Nothing to choose, or nothing
+                      // playable at 1 less: a soft pass.
+      const friendly018 = GetUnitsForPlayer(player);
+      if (friendly018.length === 0 || djPlayableHandIndices(game, player).length === 0) {
+        log.push(`${CardTitle("SEC_018")}: no friendly unit to capture with, or no unit to play — no effect.`);
+        return null;
+      }
+      return mandatoryTarget("SEC_018", player, friendly018.map(u => u.playId));
+    }
     case "TS26_03": // Maul — Action [Exhaust]: Experience + 1 damage to a unit with more keywords than XP.
       return buildMaulChoice(player, null);
     case "TS26_01": { // Count Dooku — Action [Exhaust]: "Choose 2 players. They each heal 1 damage from
@@ -15852,6 +15996,7 @@ function applyAbilityEffect(
     case "LOF_148": { // Rey — revealed: 2 damage to the chosen unit, then 2 to a chosen base.
       if (!targetPlayId) break;
       game.gameLog.push(`${CardTitle("LOF_148")}: revealed from hand.`);
+      RevealFromHand(game.currentGameState, pending.player!, "LOF_148");
       DealDamageToUnit(game.currentGameState, "LOF_148", targetPlayId, 2, game.gameLog);
       return sweepDeadUnits(game.currentGameState, game.gameLog, {
         type: "ability-target",
@@ -17949,6 +18094,8 @@ function applyAbilityEffect(
         CreateSpy(game.currentGameState, pending.player!, game.gameLog, "SEC_210");
       }
       if (hand210.length === 0) break;
+      // "The defending player reveals their hand" — their reveal, triggered by an enemy effect.
+      RevealFromHand(game.currentGameState, victim210, "SEC_210");
       return {
         type: "peek-hand",
         peekingPlayer: pending.player!,
@@ -19686,6 +19833,11 @@ function applyAbilityEffect(
       DealDamageToUnit(game.currentGameState, pending.cardId, targetPlayId, 4, game.gameLog);
       break;
     }
+    case "SEC_016_deal": { // Padmé Amidala — 1 damage to the chosen unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "SEC_016", targetPlayId, 1, game.gameLog, pending.player);
+      break;
+    }
     case "SEC_013_deal": { // Luthen Rael — the damage (1 front, 2 deployed) to the chosen unit or base.
       let basePlayer013: PlayerId | null = null;
       if (targetPlayId === "player1.base") basePlayer013 = 1;
@@ -20920,6 +21072,15 @@ function applyAbilityEffect(
       ArmNextEventDiscount(game.currentGameState, pending.player!, pending.cardId === "TS26_06" ? 1 : 2, "TS26_06", game.gameLog);
       break;
     }
+    case "SEC_018": { // DJ — the captor is chosen; now the unit to play from hand.
+      if (!targetPlayId) break;
+      const indices018 = djPlayableHandIndices(game.currentGameState, pending.player!);
+      if (indices018.length === 0) break;
+      return {
+        type: "play-from-hand", cardId: "SEC_018", player: pending.player!, costReduction: 1,
+        eligibleHandIndices: indices018, captorPlayId: targetPlayId,
+      } satisfies PlayFromHandPending;
+    }
     case "TS26_03": { // Maul — the chosen unit, if it still qualifies: Experience first, then the
                       // damage, so a unit at 1 remaining HP survives with its new token.
       const chosen03 = targetPlayId ? GetUnitByPlayId(game.currentGameState, targetPlayId) : undefined;
@@ -21728,6 +21889,14 @@ function runDispatch(
       if (!result.response.invalidAction && !result.pending) {
         const sawPending = applyDueAfterAttackDefeats(gs, log);
         if (sawPending) result = { response: resolutionResponse(pendingToResolution(sawPending, gs)), pending: sawPending, stateChanged: true };
+      }
+
+      // A handler that ends its chain without draining leaves its triggers waiting in the bag
+      // (SEC_016 Padmé's reaction to a reveal whose ability then found nothing to do). With nothing
+      // left to answer, they resolve now rather than leaking into the next action.
+      if (!result.response.invalidAction && !result.pending && gs.triggerBag.length > 0) {
+        const leftover = drainTriggerBag(gs, log);
+        if (leftover) result = { response: resolutionResponse(pendingToResolution(leftover, gs)), pending: leftover, stateChanged: true };
       }
 
       // After a successful top-level action, advance the turn.

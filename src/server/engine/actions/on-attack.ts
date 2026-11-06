@@ -190,6 +190,7 @@ export function resolveOnAttackTrigger(
           type: "ability-option",
           cardId: "SEC_038",
           player: defender038,
+          revealsFromHand: defender038,
           sourcePlayId: attacker.playId,
           helperText: `Disclose Vigilance and Villainy to give ${CardTitle(attacker.cardId)} –6/–0 for this attack?`,
           yesLabel: "Disclose",
@@ -2115,6 +2116,7 @@ function resolveInnateOnAttack(
         type: "ability-option",
         cardId: attacker.cardId,
         player: attacker.controller,
+        revealsFromHand: attacker.controller, // SEC_065 disclose
         helperText: "Disclose Vigilance×Vigilance to heal up to 4 damage from other units?",
         yesLabel: "Disclose",
         noLabel: "Skip",
@@ -2137,6 +2139,7 @@ function resolveInnateOnAttack(
         type: "ability-option",
         cardId: attacker.cardId,
         player: attacker.controller,
+        revealsFromHand: attacker.controller, // SEC_085 disclose
         helperText: "Disclose CommandCommandVillainy to give an Experience token to each of up to 2 other units?",
         yesLabel: "Disclose",
         noLabel: "Skip",
