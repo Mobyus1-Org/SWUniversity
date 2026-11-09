@@ -151,6 +151,7 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "LAW_239"://Guild Ambush Team
     case "LAW_255"://Circuit Challenger
     case "ASH_106"://Pathfinder Sergeant
+    case "IC27_091": // reprint of ASH_129
     case "ASH_129"://Defenders of the Forest
     case "ASH_192"://Fennec Shand
     case "ASH_194"://Snub Fighter Squadron

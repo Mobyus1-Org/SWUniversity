@@ -204,6 +204,10 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "IC27_181": // reprint of JTL_241
     case "IC27_075"://Red Leader - Wait For My Signal
     case "IC27_079"://Qui-Gon Jinn - Unwavering Belief
+    case "IC27_032"://Kaydel Connix - Keep Going!
+    case "IC27_041"://Captain Rex - Staunch Advocate
+    case "IC27_065"://Darth Maul - Mindful Apprentice
+    case "IC27_170": // reprint of TWI_207
     case "ASH_028"://Paz Vizsla - For a Brighter Future
     case "SOR_003"://Chewbacca - Walking Carpet
     case "SOR_035"://Lieutenant Childsen

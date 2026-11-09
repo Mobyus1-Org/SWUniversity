@@ -106,6 +106,9 @@ export function HasHidden(cardId: string, playId?: string, player?: PlayerId, is
     case "TS26_65"://Bo-Katan Kryze - The Lawless
     case "TS26_74"://Pre Vizsla - For Mandalore!
     case "ASH_249"://Covert Veteran
+    case "IC27_112": // reprint of SEC_146
+    case "IC27_114"://Cassian Andor - Blending In
+    case "IC27_141": // reprint of LOF_181
       return true;
     default: break;
   }

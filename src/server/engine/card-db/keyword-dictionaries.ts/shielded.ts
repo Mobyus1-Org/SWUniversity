@@ -109,6 +109,7 @@ export function HasShielded(cardId: string, playId?: string, player?: PlayerId, 
     case "HMW_066"://Carrion Spike - Harbinger of Tyranny
     case "HMW_213"://Tribubble Bongo Sub
     case "HMW_254"://Captain Tarpals - Grand Army Captain
+    case "IC27_041"://Captain Rex - Staunch Advocate
       return true;
 
     default: break;

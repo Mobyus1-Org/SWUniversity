@@ -229,6 +229,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "LOF_179": amount += 2; break; //Aurra Sing
     case "LOF_182": amount += 3; break; //Nihil Marauder
     case "LOF_251": amount += 1; break; //Blue Suqadron Assault Wing
+    case "IC27_130": // reprint of LOF_157
     case "LOF_157": amount += 2; break; //Cartel Interceptor
     case "LOF_132": amount += 1; break; //Grand Inquisitor LOF
     case "LOF_209": amount += 2; break; //Tusken Tracker
@@ -258,6 +259,8 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "LAW_234": amount += 2; break; //Kage Elite
     case "ASH_154": amount += 1; break; //Honorable Nite Owl
     case "ASH_237": amount += 1; break; //Mouse Droid
+    case "IC27_065": amount += 3; break; //Darth Maul - Mindful Apprentice
+    case "IC27_153": amount += 3; break; //Greef Karga - I Celebrate Your Success
     default: break;
   }
 

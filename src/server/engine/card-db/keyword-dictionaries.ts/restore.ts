@@ -116,6 +116,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "SHD_004": amount += 3; break;//Rey - More Than A Scavenger
     case "SHD_041": amount += 1; break;//Kuiil - I Have Spoken
     case "SHD_044": amount += 2; break;//Razor Crest
+    case "IC27_047": // reprint of SHD_055
     case "SHD_055": amount += 2; break;//Moisture Farmer
     case "SHD_095": amount += 1; break;//Clone Deserter
     case "SHD_098": amount += 2; break;//Sundari Peacekeeper
@@ -137,6 +138,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "JTL_097": amount += 1; break;//Leia Organa
     case "JTL_114": amount += 2; break;//Adept ARC-170
     case "LOF_017": amount += 1; break;//Darth Revan
+    case "IC27_018": // reprint of LOF_032
     case "LOF_032": amount += 2; break;//Magistrate's Scout
     case "LOF_039": amount += 2; break;//Darth Sidious
     case "ASH_102": amount += 2; break;//Ravager - Final Imperial Command
@@ -185,6 +187,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "TS26_21": amount += 2; break; //Gar Saxon - Sundari Pillager
     case "IC27_075": amount += 2; break; //Red Leader - Wait For My Signal
     case "IC27_026": amount += 3; break; //Darth Sidious - Move Against the Jedi
+    case "IC27_041": amount += 3; break; //Captain Rex - Staunch Advocate
     case "HMW_066": {//Carrion Spike — "For each upgrade on your base, ... gains Restore 1." Scales,
                      //so it is a count rather than a flat grant; 0 upgrades means no Restore at all.
       const gs066 = GetGame()?.currentGameState;

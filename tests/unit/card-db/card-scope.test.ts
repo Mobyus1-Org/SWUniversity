@@ -6,8 +6,9 @@ import { InScopeBoardCardIds, IsInScopeBoardCard } from "@/server/engine/card-db
 describe("in-scope board cards", () => {
   // 2549 since 2026-09-18: HMW moved from 128 mocked cards to its full official 272.
   // 2603 since 2026-11-02: IC27 added (54 cards; its P26 promo copies stay excluded).
-  it("totals 2603 cards", () => {
-    expect(InScopeBoardCardIds()).toHaveLength(2603);
+  // 2743 since 2026-11-08: IC27 moved from 3 mocks + partial data to its full official 194.
+  it("totals 2743 cards", () => {
+    expect(InScopeBoardCardIds()).toHaveLength(2743);
   });
 
   it("includes official cards", () => {

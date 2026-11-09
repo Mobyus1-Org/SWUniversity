@@ -222,6 +222,12 @@ export function HasOverwhelm(cardId: string,
     case "SEC_113"://Daro Commando
     case "SEC_173"://Republic War Walker
     case "TS26_21"://Gar Saxon - Sundari Pillager
+    case "IC27_058"://General Veers - Prepared
+    case "IC27_059": // reprint of LOF_080
+    case "IC27_065"://Darth Maul - Mindful Apprentice
+    case "IC27_074": // reprint of TWI_093
+    case "IC27_091": // reprint of ASH_129
+    case "IC27_183": // reprint of SOR_232
       return true;
     default: break;
   }

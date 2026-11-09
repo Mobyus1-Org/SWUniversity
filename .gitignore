@@ -30,3 +30,6 @@ out
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code per-machine settings
+.claude/settings.local.json
