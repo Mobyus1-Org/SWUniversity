@@ -7,6 +7,8 @@ import type { GameDispatch, ResolutionRequest } from "@/lib/engine/message-types
 import type { EngineContext } from "@/server/engine/pending-resolution";
 import { getTopLevelActions, getResolutionActions } from "./actions";
 import { formatStep } from "./format";
+import { DEFAULT_WIN_CONDITION, puzzleOutcome } from "@/util/puzzle-win-condition";
+import type { PuzzleWinCondition } from "@/util/puzzle-win-condition";
 
 const MAX_DISPATCHES = 500;
 const DEFAULT_TIMEOUT_MS = 55_000; // 5s buffer before the API-level 60s deadline
@@ -25,14 +27,6 @@ function buildInitialContext(gs: GameState): EngineContext {
     gameLog: [],
   };
   return { game, pending: null };
-}
-
-function isWon(gs: GameState): boolean {
-  return gs.defeatedPlayers.includes(2);
-}
-
-function isLost(gs: GameState): boolean {
-  return gs.defeatedPlayers.includes(1);
 }
 
 /**
@@ -75,18 +69,20 @@ function dfs(
   visited: Set<string>,
   deadline: number,
   depth: number,
+  winCondition: PuzzleWinCondition,
 ): boolean {
   if (Date.now() > deadline) return false;
   if (depth > MAX_DISPATCHES) return false;
 
   const gs = context.game.currentGameState;
 
-  if (isWon(gs)) {
+  const outcome = puzzleOutcome(gs, winCondition, resolution !== null);
+  if (outcome === "won") {
     solutionPaths.push(path.map(({ dispatch, snapshot }) => formatStep(dispatch, snapshot)));
     return true;
   }
 
-  if (isLost(gs)) return false;
+  if (outcome !== "playing") return false;
 
   // Stop exploring when the action phase ends without a win. Puzzles are
   // solved within a single action phase — continuing across round boundaries
@@ -128,6 +124,7 @@ function dfs(
         visited,
         deadline,
         depth + 1,
+        winCondition,
       )
     ) {
       return true;
@@ -137,7 +134,11 @@ function dfs(
   return false;
 }
 
-export function solve(rawPuzzle: RawPuzzleGameState, timeoutMs = DEFAULT_TIMEOUT_MS): SolverResult {
+export function solve(
+  rawPuzzle: RawPuzzleGameState,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  winCondition: PuzzleWinCondition = DEFAULT_WIN_CONDITION,
+): SolverResult {
   const deadline = Date.now() + timeoutMs;
   const gs = hydratePuzzleGame(rawPuzzle);
   const context = buildInitialContext(gs);
@@ -145,7 +146,7 @@ export function solve(rawPuzzle: RawPuzzleGameState, timeoutMs = DEFAULT_TIMEOUT
   const solutionPaths: string[][] = [];
   const visited = new Set<string>([stateKey(gs, null)]);
 
-  dfs(context, null, [], solutionPaths, visited, deadline, 0);
+  dfs(context, null, [], solutionPaths, visited, deadline, 0, winCondition);
 
   const timedOut = Date.now() > deadline;
 

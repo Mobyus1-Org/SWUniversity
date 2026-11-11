@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { processDispatch } from "@/server/engine/dispatch-listener";
 import { CardCost, CardHp, CardRarity, CardTitle, CardSubtitle } from "@/server/engine/card-db/generated";
-import { SetGame, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage } from "@/server/engine/core-functions";
+import { SetGame, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, CardsCanDisclose } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { WhenDefeatedBaseDamage } from "@/server/engine/actions/when-defeated";
@@ -533,6 +533,27 @@ function resolveAutoOption(
     return targetPlayId
       ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
       : NOTHING_TO_DO;
+  }
+  // SEC_148 Karis Nemik controlled by the opponent (P2): "When Defeated: You may disclose
+  // Aggression + Heroism. If you do, create a Spy token and ready it." Offered only when P2 can
+  // disclose, and a free unit is never worse for them, so they always do — one card carrying both
+  // icons when they hold one, otherwise an Aggression card first and a Heroism card second.
+  if (pending.type === "ability-option" && pending.cardId === "SEC_148" && pending.player === 2) {
+    return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };
+  }
+  if (pending.type === "play-from-hand" && pending.player === 2 &&
+      (pending.cardId === "SEC_148" || pending.cardId === "SEC_148_A" || pending.cardId === "SEC_148_H")) {
+    const hand = gameState.player2.hand.map(c => c.cardId);
+    const pick = (aspects: string[], skip?: number) =>
+      hand.findIndex((cardId, i) => i !== skip && CardsCanDisclose([cardId], aspects));
+    const index = pending.cardId === "SEC_148"
+      ? (pick(["Aggression", "Heroism"]) !== -1 ? pick(["Aggression", "Heroism"]) : pick(["Aggression"]))
+      : pick([pending.cardId === "SEC_148_A" ? "Aggression" : "Heroism"], pending.excludeHandIndex);
+    if (index === -1) return NOTHING_TO_DO;
+    return {
+      dispatchType: "choose-target",
+      dispatchData: { targetZones: ["Hand"], targetPlayers: [2], targetIndices: [index] },
+    };
   }
   if (pending.type === "ability-option" && pending.cardId === "SEC_193" && pending.player === 2) {
     return { dispatchType: "choose-option", dispatchData: { option: "Yes" } };

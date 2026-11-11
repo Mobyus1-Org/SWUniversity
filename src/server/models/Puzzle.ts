@@ -2,6 +2,8 @@ import { Schema, model, models, type Model } from "mongoose";
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
 import type { PuzzleStatus } from "@/server/puzzle/puzzle-status";
 import { DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
+import { DEFAULT_WIN_CONDITION, PUZZLE_WIN_CONDITIONS } from "@/util/puzzle-win-condition";
+import type { PuzzleWinCondition } from "@/util/puzzle-win-condition";
 
 export type PuzzleDocument = {
   name: string;
@@ -21,6 +23,8 @@ export type PuzzleDocument = {
    * Authored per-puzzle; there is deliberately no default — see the regroup-failure spec.
    */
   alternateFailExplanation?: string;
+  /** What the player must do to win. Docs saved before goals existed read as "deal-lethal". */
+  winCondition?: PuzzleWinCondition;
   /** Select-menu thumbnail, relative to public/assets/ (e.g. "puzzles/mandalore.png"). */
   assetPath: string;
 };
@@ -39,6 +43,7 @@ const puzzleSchema = new Schema<PuzzleDocument>(
     intendedSolution: { type: [String], default: [] },
     hints: { type: [String], default: [] },
     alternateFailExplanation: { type: String, default: "" },
+    winCondition: { type: String, enum: PUZZLE_WIN_CONDITIONS, default: DEFAULT_WIN_CONDITION },
     assetPath: { type: String, default: DEFAULT_PUZZLE_IMAGE },
   },
   { timestamps: true },

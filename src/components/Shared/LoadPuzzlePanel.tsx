@@ -4,8 +4,10 @@ import { puzzleImageSrc, DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
 import { statusFilterOptionsFor } from "@/server/puzzle/puzzle-status";
 import type { PuzzleStatus, PuzzleAccessLevel, PuzzleStatusFilter } from "@/server/puzzle/puzzle-status";
+import { asWinCondition, DEFAULT_WIN_CONDITION, PUZZLE_WIN_CONDITIONS, WIN_CONDITION_INFO } from "@/util/puzzle-win-condition";
+import type { PuzzleWinCondition } from "@/util/puzzle-win-condition";
 
-type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints: string[]; alternateFailExplanation?: string; status: PuzzleStatus; assetPath?: string; initialGamestate: RawPuzzleGameState };
+type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints: string[]; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition; status: PuzzleStatus; assetPath?: string; initialGamestate: RawPuzzleGameState };
 
 type Props = {
   onPuzzleLoaded: (id: string, meta: PuzzleEntry) => void;
@@ -37,6 +39,7 @@ function DifficultyDots({ value, max = 5 }: { value: number; max?: number }) {
 type SortKey = "title" | "difficulty";
 type SortDir = "asc" | "desc";
 type SolvedFilter = "all" | "solved" | "unsolved";
+type ModeFilter = "all" | PuzzleWinCondition;
 // Filter the list by visibility status. Which options are offered depends on access level.
 
 const DIFFICULTIES = [1, 2, 3, 4, 5] as const;
@@ -88,6 +91,7 @@ export function LoadPuzzlePanel(props: Props) {
   const [sortDir, setSortDir] = React.useState<SortDir>("asc");
   const [solvedFilter, setSolvedFilter] = React.useState<SolvedFilter>("all");
   const [statusFilter, setStatusFilter] = React.useState<PuzzleStatusFilter>("all");
+  const [modeFilter, setModeFilter] = React.useState<ModeFilter>("all");
   // Empty = no difficulty filtering (every tier shows). See DifficultyFilter.
   const [diffSelected, setDiffSelected] = React.useState<Set<number>>(() => new Set());
 
@@ -173,6 +177,7 @@ export function LoadPuzzlePanel(props: Props) {
     // Status filter; a viewer with no status options can never move it off "all".
     if (statusOptions.length > 0 && statusFilter !== "all" && p.status !== statusFilter) return false;
     if (diffSelected.size > 0 && !diffSelected.has(p.difficulty)) return false;
+    if (modeFilter !== "all" && asWinCondition(p.winCondition) !== modeFilter) return false;
     return true;
   });
 
@@ -222,6 +227,15 @@ export function LoadPuzzlePanel(props: Props) {
           ))}
         </div>
         <DifficultyFilter selected={diffSelected} onToggle={toggleDifficulty} />
+        <select
+          value={modeFilter}
+          onChange={(e) => setModeFilter(e.target.value as ModeFilter)}
+          aria-label="Filter by puzzle mode"
+          className="rounded-lg border border-white/10 bg-black/40 px-2 py-1 text-xs font-medium text-white/80 outline-none"
+        >
+          <option value="all">All Modes</option>
+          {PUZZLE_WIN_CONDITIONS.map((wc) => <option key={wc} value={wc}>{WIN_CONDITION_INFO[wc].title}</option>)}
+        </select>
         {statusOptions.length > 0 ? (
           <div
             className="flex items-center gap-1 rounded-lg border border-emerald-400/20 bg-emerald-500/5 p-0.5 text-xs"
@@ -286,6 +300,13 @@ export function LoadPuzzlePanel(props: Props) {
                 Testing
               </span>
             ) : null;
+            // Find Lethal is the norm, so only the other modes carry a chip.
+            const winCondition = asWinCondition(entry.winCondition);
+            const modeChip = winCondition !== DEFAULT_WIN_CONDITION ? (
+              <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-500/15 px-2 py-0.5 text-3xs font-semibold text-sky-200">
+                {WIN_CONDITION_INFO[winCondition].title}
+              </span>
+            ) : null;
             const renderAuthor = (cls: string) => (entry.author || entry.inspiredBy) ? (
               <div className={cls}>
                 {entry.author ? <span>By {entry.author}</span> : null}
@@ -340,6 +361,7 @@ export function LoadPuzzlePanel(props: Props) {
                   <div className="flex items-center gap-2 min-w-0">
                     {renderImg("h-12 w-12 shrink-0 rounded border-2 border-white/80 bg-black/30 object-cover")}
                     <span className="min-w-0 flex-1 font-semibold break-words text-xs">{name}</span>
+                    {modeChip}
                     {testingChip}
                     {solvedChip}
                   </div>
@@ -357,6 +379,7 @@ export function LoadPuzzlePanel(props: Props) {
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <div className="flex items-start gap-2 min-w-0">
                       <span className="font-semibold break-words text-base">{name}</span>
+                      {modeChip}
                       {testingChip}
                       {solvedChip}
                     </div>

@@ -5,6 +5,7 @@ import type { RawPuzzleGameState } from "./puzzle-runtime";
 import { DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 import { puzzleStatusOf, isPuzzleVisibleTo } from "@/server/puzzle/puzzle-status";
 import type { PuzzleAccessLevel } from "@/server/puzzle/puzzle-status";
+import { asWinCondition } from "@/util/puzzle-win-condition";
 
 export class MongoDBPuzzleRepository implements PuzzleRepository {
   private async connect() {
@@ -28,6 +29,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
         intendedSolution: doc.intendedSolution ?? [],
         hints: doc.hints ?? [],
         alternateFailExplanation: doc.alternateFailExplanation ?? "",
+        winCondition: asWinCondition(doc.winCondition),
         assetPath: doc.assetPath || DEFAULT_PUZZLE_IMAGE,
       }))
       .filter((p) => isPuzzleVisibleTo(p.status, level));
@@ -57,6 +59,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
           intendedSolution: puzzle.intendedSolution ?? [],
           hints: puzzle.hints ?? [],
           alternateFailExplanation: puzzle.alternateFailExplanation ?? "",
+          winCondition: asWinCondition(puzzle.winCondition),
           assetPath: puzzle.assetPath || DEFAULT_PUZZLE_IMAGE,
         },
         { new: true, lean: true },
@@ -76,6 +79,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
       intendedSolution: puzzle.intendedSolution ?? [],
       hints: puzzle.hints ?? [],
       alternateFailExplanation: puzzle.alternateFailExplanation ?? "",
+      winCondition: asWinCondition(puzzle.winCondition),
       assetPath: puzzle.assetPath || DEFAULT_PUZZLE_IMAGE,
     });
     return { ...puzzle, id: doc._id.toString() };

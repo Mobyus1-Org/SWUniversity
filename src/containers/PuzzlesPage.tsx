@@ -9,6 +9,8 @@ import { LoadPuzzlePanel } from "@/components/Shared/LoadPuzzlePanel";
 import type { PuzzleAccessLevel } from "@/server/puzzle/puzzle-status";
 import { PuzzleBuilderPanel } from "@/components/Shared/PuzzleBuilderPanel";
 import { DEFAULT_ALTERNATE_FAIL_EXPLANATION } from "@/components/Shared/puzzle-builder-state";
+import { asWinCondition, lossExplanation, puzzleOutcome, WIN_CONDITION_INFO } from "@/util/puzzle-win-condition";
+import type { PuzzleOutcome, PuzzleWinCondition } from "@/util/puzzle-win-condition";
 import { CardLinkText, PuzzleText } from "@/components/Shared/CardLink";
 import {
   CardPreviewOverlay, getPreviewImageId, leaderFaceImageId, useCardPreview, useLongPress,
@@ -42,8 +44,6 @@ function isOwnHandTarget(resolution: { handOwner?: PlayerId }): boolean {
 const LS_TEST_RAW = "puzzle_builder_test_raw";
 const LS_TEST_META = "puzzle_builder_test_meta";
 
-type GameStatus = "playing" | "won" | "lost" | "draw" | "failed-regroup";
-
 function createDispatch(type: DispatchType, data: DispatchData): GameDispatch {
   return {
     dispatchId: globalThis.crypto.randomUUID(),
@@ -53,20 +53,11 @@ function createDispatch(type: DispatchType, data: DispatchData): GameDispatch {
   };
 }
 
-function deriveStatus(gameState: GameState): GameStatus {
-  if (gameState.defeatedPlayers.includes(1) && gameState.defeatedPlayers.includes(2)) return "draw";
-  if (gameState.defeatedPlayers.includes(2)) return "won";
-  if (gameState.defeatedPlayers.includes(1)) return "lost";
-  // Puzzle mode is a single action phase: reaching the "Choose a resource" step means the player
-  // passed without winning, and the opponent would take the next turn. Deliberately checked AFTER
-  // the defeat cases — the empty-deck draw damage (2 draws x 3 = 6) is applied inside
-  // executeRegroupDraw BEFORE it sets this phase, so a lethal draw is already "lost" here and the
-  // two never race. This branch is only reached by a player who SURVIVED their regroup draw.
-  if (gameState.gamePhase === "RegroupResource") return "failed-regroup";
-  return "playing";
-}
-
-function formatStatus(status: GameStatus, resolutionNeeded: ResolutionRequest | null): string {
+// Win/loss is judged against the puzzle's goal (its win condition) — see puzzleOutcome. The
+// regroup-failure check there is deliberately AFTER the defeat cases: the empty-deck draw damage
+// (2 draws x 3 = 6) is applied inside executeRegroupDraw BEFORE it sets "RegroupResource", so a
+// lethal draw is already a defeat and the two never race.
+function formatStatus(status: PuzzleOutcome, resolutionNeeded: ResolutionRequest | null): string {
   if (status === "won") return "Puzzle complete!";
   if (status === "lost") return "Puzzle failed.";
   if (status === "failed-regroup") return "Puzzle failed.";
@@ -750,7 +741,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   const [spreadDmgMap, setSpreadDmgMap] = React.useState<Record<string, number>>({});
   const [selectedPuzzleFilename, setSelectedPuzzleFilename] = React.useState<string | null>(null);
   const [puzzleName, setPuzzleName] = React.useState<string | null>(null);
-  const [puzzleMeta, setPuzzleMeta] = React.useState<{ name: string; author: string; inspiredBy?: string; intendedSolution: string[]; infoText?: string; description?: string; hints?: string[]; alternateFailExplanation?: string } | null>(null);
+  const [puzzleMeta, setPuzzleMeta] = React.useState<{ name: string; author: string; inspiredBy?: string; intendedSolution: string[]; infoText?: string; description?: string; hints?: string[]; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition } | null>(null);
   const [showInfoModal, setShowInfoModal] = React.useState(false);
   const [showSolutionModal, setShowSolutionModal] = React.useState(false);
   const [loggedIn, setLoggedIn] = React.useState(false);
@@ -773,8 +764,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   const [showFailModal, setShowFailModal] = React.useState(false);
   const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
   const [lastTestRaw, setLastTestRaw] = React.useState<any | null>(null);
-  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; assetPath?: string } | null>(null);
-  const [editState, setEditState] = React.useState<{ id: string; raw: unknown; meta: { name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints?: string[]; alternateFailExplanation?: string; assetPath?: string } } | null>(null);
+  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition; assetPath?: string } | null>(null);
+  const [editState, setEditState] = React.useState<{ id: string; raw: unknown; meta: { name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints?: string[]; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition; assetPath?: string } } | null>(null);
   const [puzzleListRefresh, setPuzzleListRefresh] = React.useState(0);
   // Read from localStorage only on the client to avoid SSR hydration mismatch.
   React.useEffect(() => {
@@ -1169,9 +1160,11 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     }
   }, []);
 
+  const winCondition = asWinCondition(puzzleMeta?.winCondition);
+
   // Show solution modal and mark solved when puzzle is won
   React.useEffect(() => {
-    if (gameState && deriveStatus(gameState) === "won" && puzzleMeta) {
+    if (gameState && puzzleOutcome(gameState, winCondition, !!resolutionNeeded) === "won" && puzzleMeta) {
       setSolutionReason("solved");
       setShowSolutionModal(true);
       if (selectedPuzzleFilename) {
@@ -1183,15 +1176,15 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
         });
       }
     }
-  }, [gameState, puzzleMeta, selectedPuzzleFilename]);
+  }, [gameState, puzzleMeta, selectedPuzzleFilename, winCondition, resolutionNeeded]);
 
   // Show failure modal when the puzzle is lost, ends in a draw, or reaches the regroup phase.
   React.useEffect(() => {
     if (gameState) {
-      const s = deriveStatus(gameState);
+      const s = puzzleOutcome(gameState, winCondition, !!resolutionNeeded);
       if (s === "lost" || s === "draw" || s === "failed-regroup") setShowFailModal(true);
     }
-  }, [gameState]);
+  }, [gameState, winCondition, resolutionNeeded]);
 
   // Auto-scroll game log to bottom when entries change
   React.useEffect(() => {
@@ -1236,7 +1229,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
             // remember raw for editing
             const raw = payload.rawInitial ?? null;
             setLastTestRaw(raw);
-            setLastTestMeta({ name: payload.name ?? undefined, description: payload.description ?? undefined, infoText: payload.infoText ?? undefined, difficulty: payload.difficulty ?? undefined, author: payload.author ?? undefined, inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? undefined, hints: payload.hints ?? undefined, alternateFailExplanation: payload.alternateFailExplanation ?? undefined, assetPath: payload.assetPath ?? undefined });
+            setLastTestMeta({ name: payload.name ?? undefined, description: payload.description ?? undefined, infoText: payload.infoText ?? undefined, difficulty: payload.difficulty ?? undefined, author: payload.author ?? undefined, inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? undefined, hints: payload.hints ?? undefined, alternateFailExplanation: payload.alternateFailExplanation ?? undefined, winCondition: payload.winCondition ?? undefined, assetPath: payload.assetPath ?? undefined });
 
             setIsResolving(true);
             setActionError(null);
@@ -1281,7 +1274,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
               setShowBuilderPanelOpen(false);
               const title = payload.name ?? lastTestMeta?.name ?? "Tested Puzzle";
               setPuzzleName(title);
-              setPuzzleMeta({ name: title, author: payload.author ?? "", inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? [], infoText: payload.infoText ?? undefined, description: payload.description ?? undefined, hints: payload.hints ?? [], alternateFailExplanation: payload.alternateFailExplanation ?? undefined });
+              setPuzzleMeta({ name: title, author: payload.author ?? "", inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? [], infoText: payload.infoText ?? undefined, description: payload.description ?? undefined, hints: payload.hints ?? [], alternateFailExplanation: payload.alternateFailExplanation ?? undefined, winCondition: payload.winCondition ?? undefined });
               setShowInfoModal(Boolean(payload.infoText && String(payload.infoText).trim()));
             } catch (err) {
               setActionError(err instanceof Error ? err.message : "Test failed.");
@@ -1317,7 +1310,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
             onPuzzleLoaded={(filename, meta) => {
               setSelectedPuzzleFilename(filename);
               setPuzzleName(meta.name);
-              setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description, hints: meta.hints ?? [], alternateFailExplanation: meta.alternateFailExplanation });
+              setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description, hints: meta.hints ?? [], alternateFailExplanation: meta.alternateFailExplanation, winCondition: meta.winCondition });
               setShowSolutionModal(false);
               setShowInfoModal(Boolean(meta.infoText && meta.infoText.trim()));
               void loadPuzzle(filename);
@@ -1336,6 +1329,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                   intendedSolution: entry.intendedSolution,
                   hints: entry.hints,
                   alternateFailExplanation: entry.alternateFailExplanation,
+                  winCondition: entry.winCondition,
                   assetPath: entry.assetPath,
                 },
               });
@@ -1354,7 +1348,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
 
   const player = gameState.player1;
   const opponent = gameState.player2;
-  const status = deriveStatus(gameState);
+  const status = puzzleOutcome(gameState, winCondition, !!resolutionNeeded);
   const isGameOver = status !== "playing";
 
   const selectablePlayIds = resolutionNeeded?.type === "Target"
@@ -1509,7 +1503,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
           onPuzzleLoaded={(filename, meta) => {
             setSelectedPuzzleFilename(filename);
             setPuzzleName(meta.name);
-            setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description, hints: meta.hints ?? [], alternateFailExplanation: meta.alternateFailExplanation });
+            setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description, hints: meta.hints ?? [], alternateFailExplanation: meta.alternateFailExplanation, winCondition: meta.winCondition });
             setShowSolutionModal(false);
             setShowInfoModal(Boolean(meta.infoText && meta.infoText.trim()));
             void loadPuzzle(filename);
@@ -1530,6 +1524,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                 // so editing via this panel silently blanked them on the next save.
                 hints: entry.hints,
                 alternateFailExplanation: entry.alternateFailExplanation,
+                winCondition: entry.winCondition,
                 assetPath: entry.assetPath,
               },
             });
@@ -1553,6 +1548,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       <div>
         <h1 className="text-2xl font-black uppercase tracking-[0.24em] text-white sm:text-3xl">{puzzleName ?? "Puzzle Mode"}</h1>
         {!puzzleName ? <p className="mt-1 text-xs text-white/65 sm:text-sm">Board-first tactical sandbox. Opponent already has initiative.</p> : null}
+        {puzzleMeta ? <p className="mt-1 text-xs font-semibold text-sky-200/90">{WIN_CONDITION_INFO[winCondition].title}: <span className="font-normal text-white/70">{WIN_CONDITION_INFO[winCondition].goal}.</span></p> : null}
         {puzzleMeta?.author ? <p className="mt-0.5 text-xs text-white/45">By {puzzleMeta.author}{puzzleMeta.inspiredBy ? <span className="ml-2 text-white/30">· Inspired by {puzzleMeta.inspiredBy}</span> : null}</p> : null}
       </div>
       {showClosePuzzleConfirm ? (
@@ -2853,15 +2849,16 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     {showFailModal ? <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowFailModal(false)}>
       <div className="w-[min(90vw,35rem)] rounded-xl border border-rose-400/40 bg-[rgba(8,12,26,0.94)] p-10 shadow-2xl" onClick={e => e.stopPropagation()}>
         <h3 className="mb-2 text-base font-bold text-rose-300">Puzzle failed</h3>
-        {/* Two ways to fail: your base was destroyed, or you passed to regroup without winning.
-            The second cannot be narrated by the engine — the opponent's winning turn is never
-            simulated — so it uses the puzzle's authored explanation, falling back to the
-            report-it-on-Discord default for puzzles that never authored one. */}
+        {/* Two ways to fail: the game ended some way other than the puzzle's goal (your base was
+            destroyed, or the wrong base was), or you passed to regroup without winning. The second
+            cannot be narrated by the engine — the opponent's winning turn is never simulated — so
+            it uses the puzzle's authored explanation, falling back to the report-it-on-Discord
+            default for puzzles that never authored one. */}
         <p className="mb-6 whitespace-pre-line text-sm text-white/70">
           <PuzzleText
-            text={gameState && deriveStatus(gameState) === "failed-regroup"
+            text={gameState && status === "failed-regroup"
               ? (puzzleMeta?.alternateFailExplanation?.trim() || DEFAULT_ALTERNATE_FAIL_EXPLANATION)
-              : "Your base was defeated. Reset to try again, or head back to the puzzles menu."}
+              : gameState ? lossExplanation(gameState, winCondition) : ""}
             onPreviewStart={handlePreviewStart}
             onPreviewEnd={handlePreviewEnd}
           />

@@ -20,6 +20,8 @@ import { CardTraits } from "@/server/engine/card-db/generated";
 import { LeaderBackSideOf } from "@/server/engine/card-db/double-sided-leaders";
 import { HasFortify } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
+import { asWinCondition, PUZZLE_WIN_CONDITIONS, WIN_CONDITION_INFO } from "@/util/puzzle-win-condition";
+import type { PuzzleWinCondition } from "@/util/puzzle-win-condition";
 
 export type CardCatalogEntry = {
   cardId: string;
@@ -1023,10 +1025,10 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
 type Props = {
   onClose: () => void;
   onSaved: (id: string) => void;
-  onTest?: (data: { rawInitial?: unknown; gameState: unknown; alternateFailExplanation?: string; sentinelPlayIds?: string[]; unitBuffs?: Record<string, { power: number; hp: number }> }) => void;
+  onTest?: (data: { rawInitial?: unknown; gameState: unknown; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition; sentinelPlayIds?: string[]; unitBuffs?: Record<string, { power: number; hp: number }> }) => void;
   initialRaw?: unknown;
   initialId?: string;
-  initialMeta?: { name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; assetPath?: string };
+  initialMeta?: { name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition; assetPath?: string };
 };
 
 export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initialMeta, initialId }: Props) {
@@ -1056,7 +1058,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
     if (initialRaw) {
       try {
         const meta = initialMeta ?? { name: "Tested Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [], hints: [], alternateFailExplanation: "", assetPath: "" };
-        setState(fromRaw(initialRaw as Record<string, unknown>, { name: String(meta.name ?? ""), description: String(meta.description ?? ""), infoText: String(meta.infoText ?? ""), difficulty: Number(meta.difficulty ?? 1), author: String(meta.author ?? ""), inspiredBy: String(meta.inspiredBy ?? ""), intendedSolution: meta.intendedSolution ?? [], hints: meta.hints ?? [], alternateFailExplanation: String(meta.alternateFailExplanation ?? ""), assetPath: String(meta.assetPath ?? "") }));
+        setState(fromRaw(initialRaw as Record<string, unknown>, { name: String(meta.name ?? ""), description: String(meta.description ?? ""), infoText: String(meta.infoText ?? ""), difficulty: Number(meta.difficulty ?? 1), author: String(meta.author ?? ""), inspiredBy: String(meta.inspiredBy ?? ""), intendedSolution: meta.intendedSolution ?? [], hints: meta.hints ?? [], alternateFailExplanation: String(meta.alternateFailExplanation ?? ""), winCondition: meta.winCondition, assetPath: String(meta.assetPath ?? "") }));
       } catch {
         // ignore invalid initial raw
       }
@@ -1089,6 +1091,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       intendedSolution: state.intendedSolution ?? [],
       hints: state.hints ?? [],
       alternateFailExplanation: state.alternateFailExplanation ?? "",
+      winCondition: asWinCondition(state.winCondition),
       difficulty: state.difficulty,
       assetPath: normalizePuzzleAssetPath(state.assetPath),
       initialGamestate: toRaw(state),
@@ -1121,7 +1124,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Test failed");
       const data = await res.json();
-      if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, infoText: state.infoText, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, hints: state.hints, alternateFailExplanation: state.alternateFailExplanation, assetPath: normalizePuzzleAssetPath(state.assetPath), ...data });
+      if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, infoText: state.infoText, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, hints: state.hints, alternateFailExplanation: state.alternateFailExplanation, winCondition: state.winCondition, assetPath: normalizePuzzleAssetPath(state.assetPath), ...data });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Test failed.");
     } finally {
@@ -1175,6 +1178,26 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                     placeholder="Puzzle name…"
                     className="w-full rounded-lg border border-white/15 bg-black/30 px-2 py-1 text-xs text-white outline-none placeholder:text-white/30"
                   />
+                </FieldRow>
+                <FieldRow label="Mode">
+                  <div role="radiogroup" aria-label="Puzzle mode" className="grid gap-1 sm:grid-cols-2">
+                    {PUZZLE_WIN_CONDITIONS.map((wc) => (
+                      <label key={wc} className="flex cursor-pointer items-start gap-2 rounded-lg border border-white/10 bg-black/20 px-2 py-1.5 text-xs text-white hover:bg-white/5">
+                        <input
+                          type="radio"
+                          name="puzzle-win-condition"
+                          value={wc}
+                          checked={asWinCondition(state.winCondition) === wc}
+                          onChange={() => patchGlobal({ winCondition: wc })}
+                          className="mt-0.5 accent-primary"
+                        />
+                        <span>
+                          <span className="font-semibold">{WIN_CONDITION_INFO[wc].title}</span>
+                          <span className="block text-2xs text-white/50">{WIN_CONDITION_INFO[wc].goal}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 </FieldRow>
                 <FieldRow label="Description">
                   <input

@@ -10,6 +10,7 @@ import { devFixturePuzzles } from "@/server/puzzle/dev-fixtures";
 import { SetGame } from "@/server/engine/core-functions";
 import { hydrateGame, computeSentinelPlayIds, computeSilencedPlayIds, computeUnitBuffs } from "@/server/engine/dispatch-listener";
 import type { PuzzleData } from "@/server/puzzle/puzzle-repository";
+import { asWinCondition, winConditionSetupError } from "@/util/puzzle-win-condition";
 import type { GameState, Game } from "@/lib/engine/game";
 
 const repo = new MongoDBPuzzleRepository();
@@ -71,6 +72,8 @@ export default async function handler(
       if (!puzzle || typeof puzzle !== "object" || !puzzle.initialGamestate) {
         return response.status(400).json({ error: "Missing or invalid puzzle in request body." });
       }
+      const setupError = winConditionSetupError(hydratePuzzleGame(puzzle.initialGamestate), asWinCondition(puzzle.winCondition));
+      if (setupError) return response.status(400).json({ error: setupError });
       const saved = await repo.save(puzzle);
       return response.status(200).json(saved);
     } catch (error) {

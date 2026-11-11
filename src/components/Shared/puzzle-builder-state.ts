@@ -1,6 +1,8 @@
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
 import type { GamePhase } from "@/lib/engine/core-models";
 import { CardType } from "@/server/engine/card-db/generated";
+import { asWinCondition, DEFAULT_WIN_CONDITION } from "@/util/puzzle-win-condition";
+import type { PuzzleWinCondition } from "@/util/puzzle-win-condition";
 
 // ---------------------------------------------------------------------------
 // Pure puzzle-builder state: the shapes the builder UI edits, and the two
@@ -92,6 +94,8 @@ export type BuilderState = {
    *  {@link DEFAULT_ALTERNATE_FAIL_EXPLANATION}; author a real one when surviving the regroup
    *  draw is an intended way to lose the puzzle. */
   alternateFailExplanation?: string;
+  /** What the player must do to win; absent reads as {@link DEFAULT_WIN_CONDITION}. */
+  winCondition?: PuzzleWinCondition;
   hints: string[];
   assetPath: string;
   activePlayer: 1 | 2;
@@ -152,6 +156,7 @@ export function initialBuilderState(): BuilderState {
     inspiredBy: "",
     intendedSolution: [],
     alternateFailExplanation: DEFAULT_ALTERNATE_FAIL_EXPLANATION,
+    winCondition: DEFAULT_WIN_CONDITION,
     hints: [],
     assetPath: "",
     activePlayer: 1,
@@ -250,7 +255,7 @@ function parseRawPlayer(p: Record<string, unknown>, playerId: 1 | 2): PlayerBuil
   };
 }
 
-export function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; infoText?: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; assetPath?: string }): BuilderState {
+export function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; infoText?: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition; assetPath?: string }): BuilderState {
   return {
     name: meta.name,
     description: meta.description,
@@ -264,6 +269,7 @@ export function fromRaw(raw: Record<string, unknown>, meta: { name: string; desc
     alternateFailExplanation: meta.alternateFailExplanation?.trim()
       ? meta.alternateFailExplanation
       : DEFAULT_ALTERNATE_FAIL_EXPLANATION,
+    winCondition: asWinCondition(meta.winCondition),
     hints: meta.hints ?? [],
     assetPath: meta.assetPath ?? "",
     activePlayer: Number(raw.activePlayer) === 2 ? 2 : 1,

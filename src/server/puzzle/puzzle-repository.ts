@@ -1,5 +1,6 @@
 import type { RawPuzzleGameState } from "./adapters/puzzle-runtime";
 import type { PuzzleStatus, PuzzleAccessLevel } from "@/server/puzzle/puzzle-status";
+import type { PuzzleWinCondition } from "@/util/puzzle-win-condition";
 
 export type PuzzleData = {
   id: string;
@@ -15,6 +16,8 @@ export type PuzzleData = {
   hints: string[];
   /** Why the puzzle is lost once it reaches the regroup phase (see regroup-failure spec). */
   alternateFailExplanation?: string;
+  /** What the player must do to win; absent means "deal-lethal". */
+  winCondition?: PuzzleWinCondition;
   /** Select-menu thumbnail, relative to public/assets/ (e.g. "puzzles/mandalore.png"). */
   assetPath?: string;
 };
