@@ -1,7 +1,7 @@
 import { PendingResolution } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, IsLeaderUnit, AfterNonCombatUnitDamage, AllUnits, DealDamageToUnit, HealUnit, DefeatableNonLeaderUnitsAtOrBelowHp, optionalTarget, buildMaulChoice } from "@/server/engine/core-functions";
-import { CardTitle } from "@/server/engine/card-db/generated";
+import { GetGame, GetPlayer, ResourceTopCardOfDeck, IsLeaderUnit, AfterNonCombatUnitDamage, AllUnits, DealDamageToUnit, HealUnit, DefeatableNonLeaderUnitsAtOrBelowHp, optionalTarget, buildMaulChoice } from "@/server/engine/core-functions";
+import { CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { CreateBeast, CreateCloneTrooper } from "@/server/engine/token-helpers";
@@ -75,6 +75,24 @@ export function resolveWhenDeployed(
         continuation: null,
       };
     }
+    case "IC27_003": { // Kylo Ren — "When Deployed: You may return a unit from your discard pile
+                       // to your hand." Optional, so the pick can be left empty.
+      const units003 = GetPlayer(game.currentGameState, player).discard
+        .filter(d => CardType(d.cardId) === "Unit");
+      if (units003.length === 0) return null;
+      return {
+        type: "return-from-discard",
+        cardId: "IC27_003",
+        player,
+        maxCount: 1,
+        eligiblePlayIds: units003.map(d => d.playId),
+        optional: true,
+        continuation: null,
+      };
+    }
+    case "IC27_004": // Mace Windu — "When Deployed: Resource the top card of your deck."
+      ResourceTopCardOfDeck(game.currentGameState, player, log, "IC27_004");
+      return null;
     case "HMW_012": { // Poggle the Lesser — When Deployed: Create a Beast token.
       CreateBeast(game.currentGameState, player, log, "HMW_012");
       return null;

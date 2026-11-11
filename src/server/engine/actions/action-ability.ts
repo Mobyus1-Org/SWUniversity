@@ -52,6 +52,8 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "SOR_010": //Darth Vader - Dark Lord of the Sith
       case "SOR_011": //Grand Inquisitor - Hunting the Jedi
       case "ASH_004": //Grand Admiral Thrawn - Victory is Mine
+      case "IC27_004": //Mace Windu - Here With Backup
+      case "IC27_005": //Darth Maul - Mechanism of Menace
       case "SOR_012": //IG-88 - Ruthless Bounty Hunter
       case "SOR_013": //Cassian Andor - Dedicated to the Rebellion
       case "SOR_014": //Sabine Wren - Galvanized Revolutionary
@@ -60,6 +62,7 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "SHD_002": //Qi'Ra - I Alone Survived
       case "SHD_003": //Finn - This is a Rescue
       case "SHD_004": //Rey - More Than a Scavenger
+      case "IC27_002": //Rey - In Balance
       case "SHD_006": //Jabba the Hutt - His High Exaltedness
       case "SHD_007": //Moff Gideon - Formidable Commander
       case "SHD_009": //Hunter - Outcast Sergeant
@@ -120,9 +123,11 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
           abilities.push(cardId);
         }
         break;
-      // SHD_011 Kylo Ren and LAW_011 Darth Vader (Unstoppable) both cost "[Exhaust, discard a card
-      // from your hand]". The discard is part of the cost, so neither is available on an empty hand.
+      // SHD_011 / IC27_003 Kylo Ren and LAW_011 Darth Vader (Unstoppable) all cost "[Exhaust,
+      // discard a card from your hand]". The discard is part of the cost, so none is available on
+      // an empty hand.
       case "SHD_011":
+      case "IC27_003":
       case "LAW_011":
         if (GetHand(player).length > 0) abilities.push(cardId);
         break;
@@ -904,6 +909,9 @@ export function ActionAbilityCost(cardId: string): number {
     case "SHD_002"://Qi'Ra
       return 1;
     case "SHD_004"://Rey
+    case "IC27_002"://Rey - In Balance: her deployed side has no Action
+    case "IC27_004"://Mace Windu - Here With Backup: his deployed side has no Action
+    case "IC27_005"://Darth Maul - Mechanism of Menace: his deployed side has no Action
       return 1;
     case "HMW_006"://Omega - Close Your Eyes and Focus: Action [1 resource, Exhaust]. Her deployed
                    //side has no Action, so the two sides share no ability cost.

@@ -265,6 +265,11 @@ export const Cards = {
     },
     ic27: {
       darthVader: "IC27_001",    // No One to Stop Us — unit side 5/7 Ground
+      rey: "IC27_002",           // In Balance — unit side 3/6 Ground
+      kyloRen: "IC27_003",       // Supreme Leader — unit side 5/3 Ground
+      maceWindu: "IC27_004",     // Here With Backup — unit side 4/7 Ground, Restore 2
+      darthMaul: "IC27_005",     // Mechanism of Menace — unit side 4/5 Ground
+      lukeSkywalker: "IC27_006", // I Have to Face Him — unit side 4/6 Ground, Overwhelm
       asajjVentress: "IC27_007", // Bald and Beautiful — unit side 5/6 Ground
       princessLeia: "IC27_008",  // On a Diplomatic Mission — unit side 4/7 Ground
     },
@@ -637,6 +642,7 @@ export const Cards = {
       kalani: "TWI_085",
     },
     sec: {
+      queenAmidala: "SEC_101", // Championing Her People — 5/3 Ground, Naboo/Official
       cruelCommandos: "SEC_086", // 5/5 Ground Republic Clone Trooper, Sentinel + Overwhelm
       coronet: "SEC_047", // 4/6 Space, unique — Restore 1; each other friendly unit gains Restore 1
       rotundaSenateGuards: "SEC_063", // 4/5 Ground — Sentinel while undamaged (as SOR_048)
@@ -878,6 +884,7 @@ export const Cards = {
       scoutingTieFighter: "IBH_075", // 2/2 Space Villainy, no abilities — cheap discard-replay fodder
     },
     hmw: {
+      infernoSquad: "HMW_202", // We Can Grieve Later — 3/6 Ground, WP/WD: may deal 1 + Weakness
       nightbrotherMaulsGauntlet: "HMW_204",
       ewokBrigade: "HMW_116", // 2/4 Ground, cost 2, no abilities — clean "costs 3 or less" fixture
       victorSquadron: "HMW_203", // 5/5 Space — enters play ready
@@ -933,6 +940,7 @@ export const Cards = {
       hiddenSharpshooter: "IC27_173",   // reprint of TWI_214
       rogueClassStarfighter: "IC27_181", // reprint of JTL_241
       eta2LightInterceptor: "IC27_192", // reprint of TWI_244
+      magistratesScout: "IC27_018",     // reprint of LOF_032 — 2/4 Ground, Restore 2
       // Reprints with abilities.
       onyxSquadronBrute: "IC27_015",    // reprint of JTL_033
       runeHaako: "IC27_016",            // reprint of TWI_031

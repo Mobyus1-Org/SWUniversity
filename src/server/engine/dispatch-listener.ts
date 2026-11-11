@@ -125,7 +125,7 @@ import { QueueUnitEnteredPlayReaction, AfterNonCombatUnitDamage, buildJarJarDama
 import { CreateBeast, GiveTokenUpgrade, PlayerGaveTokenUpgradeThisPhase, GiveWeaknessToken, UnitsWithoutWeaknessToken, WEAKNESS_TOKEN } from "@/server/engine/token-helpers";
 import { CreateSpy, CreateCreditToken, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateXWing, CreateMandalorianToken, DefeatAdvantageTokensAfterCombat, GiveAdvantageTokens, GiveExperienceTokens, DefeatCreditTokens } from "@/server/engine/token-helpers";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, UnitImmuneToEnemyBounce, UnitImmuneToEnemyDefeat, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueOpponentDrewReaction, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget, MandoProtector, SpendMandoShield, ArenasWhereYouControlTheMostUnits, FriendlyUnitsWithTrait, ReadyUnitThenDealDamage, DefeatableNonLeadersWithPowerAtMost, ReadyableUnitsWithPowerAtMost, UpgradesOnEnemyUnits } from "@/server/engine/core-functions";
+import { DamageProtectors, DamagePreventionArmed, ArmAmidalaPrevention, type DamageProtector, InitiativePlayer, MarkCardDrawn, CardsDrawnThisPhase, UpgradeImmuneToEnemyAbilities, UnitImmuneToEnemyCapture, UnitImmuneToEnemyBounce, UnitImmuneToEnemyDefeat, PlayerAssignsOwnIndirectDamage, UnitAssignsOwnIndirectDamage, buildIndirectDamage, LeaderAbilitiesIgnored, CanUnitAttack, DefeatResource, optionalTarget, searchDeck, AllUnits, FriendlyLeaderUnitCount, FriendlyLeaderUnits, QueueWhenDrawnTrigger, QueueOpponentDrewReaction, QueueWhenDiscardedTrigger, repeatTargetPrompt, repeatOptionalTargetPrompt, LeaderHasUnitSide, LeaderSideTitle, LeaderSideAspects, UnitWithAspectWasDefeatedThisPhase, CardWithAspectWasPlayedThisPhase, PlayerControlsCardWithTitle, mandatoryTarget, SpendMandoShield, ArenasWhereYouControlTheMostUnits, FriendlyUnitsWithTrait, ReadyUnitThenDealDamage, DefeatableNonLeadersWithPowerAtMost, ReadyableUnitsWithPowerAtMost, UpgradesOnEnemyUnits } from "@/server/engine/core-functions";
 
 // ---------------------------------------------------------------------------
 // Helpers: hydration (plain objects → Unit class instances)
@@ -1935,17 +1935,26 @@ function thrawnReplayPending(game: GameState, unit: Unit, player: PlayerId, caus
 }
 
 /**
- * ASH_062's ability-damage offer has to survive the round trip to the client as an
- * AbilityOptionPending, which carries no free-form payload. The held-back instance is therefore
- * packed into the option's cardId; `sourcePlayId` and `amount` carry the rest.
+ * A damage-prevention offer for ability damage (ASH_062, SEC_101) has to survive the round trip to
+ * the client as an AbilityOptionPending / AbilityTargetPending, which carry no free-form payload.
+ * The held-back instance is therefore packed into the cardId (`<prefix><source>|<sourcePlayer>`);
+ * `sourcePlayId` (the covered unit) and `amount` carry the rest.
  */
-const MANDO_ABILITY_OFFER = "ASH_062_ability|";
+const PREVENTION_KINDS: DamageProtector["kind"][] = ["ASH_062", "SEC_101"];
+const ABILITY_OFFER = "_ability|";
+/** SEC_101's second step: which trait-sharing friendly unit to defeat. */
+const AMIDALA_SACRIFICE = "SEC_101_sacrifice|";
 
-function encodeMandoAbilityOffer(ctx: DamagePreventionContext): string {
-  return `${MANDO_ABILITY_OFFER}${ctx.sourceCardId}|${ctx.sourcePlayer ?? ""}`;
+function encodePreventionOffer(prefix: string, ctx: DamagePreventionContext): string {
+  return `${prefix}${ctx.sourceCardId}|${ctx.sourcePlayer ?? ""}`;
 }
 
-function decodeMandoAbilityOffer(pending: AbilityOptionPending): DamagePreventionContext {
+/** Which protector an ability-damage offer belongs to, or null when `cardId` is not one. */
+function preventionOfferKind(cardId: string): DamageProtector["kind"] | null {
+  return PREVENTION_KINDS.find(kind => cardId.startsWith(`${kind}${ABILITY_OFFER}`)) ?? null;
+}
+
+function decodePreventionOffer(pending: { cardId: string; sourcePlayId?: string; amount?: number }): DamagePreventionContext {
   const [, sourceCardId, sourcePlayer] = pending.cardId.split("|");
   return {
     sourceCardId,
@@ -1956,8 +1965,63 @@ function decodeMandoAbilityOffer(pending: AbilityOptionPending): DamagePreventio
 }
 
 /**
+ * The next prevention offer for a held-back instance: the first protector still able to pay that
+ * comes after `after` in offer order (all of them when `after` is null). Declining one protector
+ * moves on to the next, so a unit covered twice is asked twice.
+ */
+function abilityPreventionOffer(
+  game: GameState,
+  ctx: DamagePreventionContext,
+  after: DamageProtector["kind"] | null,
+): AbilityOptionPending | null {
+  const covered = GetUnitByPlayId(game, ctx.targetPlayId);
+  if (!covered) return null;
+  const from = after === null ? 0 : PREVENTION_KINDS.indexOf(after) + 1;
+  const protector = DamageProtectors(game, ctx.targetPlayId)
+    .find(p => PREVENTION_KINDS.indexOf(p.kind) >= from);
+  if (!protector) return null;
+  const amidala = protector.kind === "SEC_101";
+  return {
+    type: "ability-option",
+    cardId: encodePreventionOffer(`${protector.kind}${ABILITY_OFFER}`, ctx),
+    player: protector.controller,
+    sourcePlayId: ctx.targetPlayId,
+    amount: ctx.amount,
+    helperText: amidala
+      ? `Defeat another friendly unit that shares a trait with ${CardTitle("SEC_101")} to prevent ${ctx.amount} damage to her?`
+      : `Defeat a Shield token on ${CardTitle("ASH_062")} to prevent ${ctx.amount} damage to ${CardTitle(covered.cardId)}?`,
+    yesLabel: amidala ? "Defeat a unit" : "Defeat Shield",
+    noLabel: "Skip",
+    onYes: null,
+    continuation: null,
+  } satisfies AbilityOptionPending;
+}
+
+/**
+ * SEC_101 Queen Amidala — "you may defeat another friendly unit that shares a trait with this
+ * unit. If you do, prevent that damage." The prevention is armed only once the sacrifice has
+ * actually left play; its When Defeated resolves after the prevented damage, chained ahead of
+ * `continuation`.
+ */
+function amidalaSacrifice(
+  game: GameState,
+  log: string[],
+  amidalaPlayId: string,
+  sacrificePlayId: string | undefined,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const amidala = GetUnitByPlayId(game, amidalaPlayId);
+  const victim = sacrificePlayId ? GetUnitByPlayId(game, sacrificePlayId) : undefined;
+  if (!amidala || !victim) return continuation;
+  log.push(`${CardTitle("SEC_101")}: defeated ${CardTitle(victim.cardId)} to prevent the damage to her.`);
+  const chain = defeatUnitsInOrder(game, log, [victim.playId], continuation);
+  if (!GetUnitByPlayId(game, victim.playId)) ArmAmidalaPrevention(game, amidalaPlayId, amidala.controller);
+  return chain;
+}
+
+/**
  * Re-issues a held-back damage instance, this time bypassing the interception. Whether it lands
- * depends on what happened in between: an armed ASH_062 prevention swallows it, otherwise it goes
+ * depends on what happened in between: an armed ASH_062 / SEC_101 prevention swallows it, otherwise it goes
  * through the target's own Shield and damage as any other hit would.
  */
 function reissueDeferredDamage(game: GameState, log: string[], ctx: DamagePreventionContext): void {
@@ -1972,28 +2036,17 @@ function processSingleTrigger(trigger: TriggerEntry, game: GameState, log: strin
   }
 
   if (trigger.triggerType === "damage-prevention") {
-    // ASH_062 The Mandalorian — an instance of ability damage held back by DealDamageToUnit.
+    // ASH_062 / SEC_101 — an instance of ability damage held back by DealDamageToUnit. The target
+    // or every protector may have left play between the deferral and this point. Either way the
+    // offer is void; the damage is re-issued so it is never silently lost.
     const ctx = trigger.context as DamagePreventionContext | undefined;
     if (!ctx) return null;
-    const covered = GetUnitByPlayId(game, ctx.targetPlayId);
-    // The target or the protector may have left play between the deferral and this point. Either
-    // way the offer is void; the damage is re-issued so it is never silently lost.
-    if (!covered || !MandoProtector(game, ctx.targetPlayId)) {
+    const offer = abilityPreventionOffer(game, ctx, null);
+    if (!offer) {
       reissueDeferredDamage(game, log, ctx);
       return sweepDeadUnits(game, log, null);
     }
-    return {
-      type: "ability-option",
-      cardId: encodeMandoAbilityOffer(ctx),
-      player: covered.controller,
-      sourcePlayId: ctx.targetPlayId,
-      amount: ctx.amount,
-      helperText: `Defeat a Shield token on ${CardTitle("ASH_062")} to prevent ${ctx.amount} damage to ${CardTitle(covered.cardId)}?`,
-      yesLabel: "Defeat Shield",
-      noLabel: "Skip",
-      onYes: null,
-      continuation: null,
-    } satisfies AbilityOptionPending;
+    return offer;
   }
 
   if (trigger.triggerType === "when-defeated") {
@@ -4964,6 +5017,7 @@ function pendingToResolution(pending: PendingResolution, game: GameState): Resol
         fromZones: ["Discard"],
         maxTargets: pending.maxCount,
         needsMultiple: pending.maxCount > 1,
+        ...(pending.optional ? { optional: true } : {}),
       } satisfies NeedsTarget;
     case "budget-select":
       return {
@@ -7968,7 +8022,7 @@ function handleChooseTarget(
       return { response: resolutionResponse(pendingToResolution(wicketDirect, game)), pending: wicketDirect, stateChanged: true };
     }
 
-    const mandoDirect = mandoCombatOffer(game, resolveAttackPending);
+    const mandoDirect = preventionCombatOffer(game, resolveAttackPending);
     if (mandoDirect) {
       return { response: resolutionResponse(pendingToResolution(mandoDirect, game)), pending: mandoDirect, stateChanged: true };
     }
@@ -10856,11 +10910,31 @@ function applyAbilityOptionEffect(
   // a card can never take the resource without delivering the effect.
   // ASH_062 The Mandalorian — Yes: spend a Shield, arming the one-shot prevention, then re-issue
   // the held-back instance so it is consumed by that prevention.
-  if (pending.cardId.startsWith(MANDO_ABILITY_OFFER)) {
-    const ctx = decodeMandoAbilityOffer(pending);
+  const preventionKind = preventionOfferKind(pending.cardId);
+  if (preventionKind === "ASH_062") {
+    const ctx = decodePreventionOffer(pending);
     SpendMandoShield(game, ctx.targetPlayId, log);
     reissueDeferredDamage(game, log, ctx);
     return sweepDeadUnits(game, log, pending.continuation ?? null);
+  }
+  // SEC_101 Queen Amidala — Yes: choose the trait-sharing friendly unit to defeat. The instance
+  // stays held back until that choice is made.
+  if (preventionKind === "SEC_101") {
+    const ctx = decodePreventionOffer(pending);
+    const sacrifices = DamageProtectors(game, ctx.targetPlayId).find(p => p.kind === "SEC_101");
+    if (!sacrifices || sacrifices.kind !== "SEC_101") {
+      reissueDeferredDamage(game, log, ctx);
+      return sweepDeadUnits(game, log, pending.continuation ?? null);
+    }
+    return {
+      type: "ability-target",
+      cardId: encodePreventionOffer(AMIDALA_SACRIFICE, ctx),
+      player: pending.player,
+      sourcePlayId: ctx.targetPlayId,
+      amount: ctx.amount,
+      fromPlayIds: sacrifices.sacrificePlayIds,
+      continuation: pending.continuation ?? null,
+    } satisfies AbilityTargetPending;
   }
 
   // SHD_207 A New Adventure — the returned unit's owner replays it for free. The card id rides in
@@ -11751,10 +11825,15 @@ function applyAbilityOptionDeclineEffect(
   game: GameState,
   log: string[],
 ): PendingResolution | null {
-  // ASH_062 The Mandalorian — No: the instance resumes untouched in the target's own frame, where
-  // its own Shield (if any) absorbs it exactly as it would have without the offer.
-  if (pending.cardId.startsWith(MANDO_ABILITY_OFFER)) {
-    reissueDeferredDamage(game, log, decodeMandoAbilityOffer(pending));
+  // ASH_062 / SEC_101 — No: the next protector able to pay is asked; with none left, the instance
+  // resumes untouched in the target's own frame, where its own Shield (if any) absorbs it exactly
+  // as it would have without the offer.
+  const declinedKind = preventionOfferKind(pending.cardId);
+  if (declinedKind) {
+    const ctx = decodePreventionOffer(pending);
+    const nextOffer = abilityPreventionOffer(game, ctx, declinedKind);
+    if (nextOffer) return { ...nextOffer, continuation: pending.continuation ?? null };
+    reissueDeferredDamage(game, log, ctx);
     return sweepDeadUnits(game, log, pending.continuation ?? null);
   }
 
@@ -12681,25 +12760,25 @@ function refreshPostAttackTargets(game: GameState, next: PendingResolution | nul
 }
 
 /**
- * ASH_062 The Mandalorian (Devoted Rescuer) — the combat half of "If damage would be dealt to
- * another friendly unit, you may defeat a Shield token on this unit. If you do, prevent that
- * damage."
+ * The combat half of the "if damage would be dealt to … prevent that damage" replacements:
+ * ASH_062 The Mandalorian (defeat a Shield on him to cover another friendly unit) and SEC_101
+ * Queen Amidala (defeat a trait-sharing friendly unit to cover herself).
  *
  * Both decisions are taken BEFORE the attack runs rather than at each damage application, because
  * resolveAttack is not re-entrant: Restore, the Force-base token and the attacked-this-phase
  * ledger all fire at its head, so suspending mid-combat and resuming would apply them twice.
  * Combat damage is simultaneous anyway, so deciding up front is the same window.
  *
- * Both combatants can be covered — each by their own controller's Mandalorian — so the answer
- * resumes the same attack with the asked-for playId recorded and this is consulted again.
+ * Both combatants can be covered, and a unit by more than one protector, so the answer resumes
+ * the same attack with the asked-for protector:playId recorded and this is consulted again.
  */
-function mandoCombatOffer(game: GameState, next: ResolveAttackPending): AbilityOptionPending | null {
+function preventionCombatOffer(game: GameState, next: ResolveAttackPending): AbilityOptionPending | null {
   if (next.target.type !== "unit") return null; // a base is not a unit
   const attacker = GetUnitByPlayId(game, next.attackerPlayId);
   const defender = GetUnitByPlayId(game, next.target.playId);
   if (!attacker || !defender) return null;
 
-  const asked = next.mandoOffered ?? [];
+  const asked = next.preventionOffered ?? [];
   const attackerPower = attacker.CurrentPower(true);
   // Shoot First: a defender defeated before it can strike back deals no counter-damage, so no
   // damage "would be dealt" to the attacker and no offer is made for it.
@@ -12716,22 +12795,46 @@ function mandoCombatOffer(game: GameState, next: ResolveAttackPending): AbilityO
   if (counters) covered.push(attacker.playId);
 
   for (const coveredPlayId of covered) {
-    if (asked.includes(coveredPlayId)) continue;
-    const protector = MandoProtector(game, coveredPlayId);
-    if (!protector) continue;
     const unit = GetUnitByPlayId(game, coveredPlayId);
     if (!unit) continue;
-    return {
-      type: "ability-option",
-      cardId: "ASH_062",
-      player: protector.controller,
-      sourcePlayId: coveredPlayId,
-      helperText: `Defeat a Shield token on ${CardTitle("ASH_062")} to prevent the damage to ${CardTitle(unit.cardId)}?`,
-      yesLabel: "Defeat Shield",
-      noLabel: "Skip",
-      onYes: null,
-      continuation: { ...next, mandoOffered: [...asked, coveredPlayId] },
-    } satisfies AbilityOptionPending;
+    // One prevention per instance: once a cost has been paid for this unit, nothing else is asked.
+    if (DamagePreventionArmed(game, coveredPlayId)) continue;
+    for (const protector of DamageProtectors(game, coveredPlayId)) {
+      const key = `${protector.kind}:${coveredPlayId}`;
+      if (asked.includes(key)) continue;
+      const resume: ResolveAttackPending = { ...next, preventionOffered: [...asked, key] };
+      if (protector.kind === "SEC_101") {
+        return {
+          type: "ability-option",
+          cardId: "SEC_101",
+          player: protector.controller,
+          sourcePlayId: coveredPlayId,
+          helperText: `Defeat another friendly unit that shares a trait with ${CardTitle("SEC_101")} to prevent the damage to her?`,
+          yesLabel: "Defeat a unit",
+          noLabel: "Skip",
+          onYes: {
+            type: "ability-target",
+            cardId: "SEC_101_combat",
+            player: protector.controller,
+            sourcePlayId: coveredPlayId,
+            fromPlayIds: protector.sacrificePlayIds,
+            continuation: resume,
+          },
+          continuation: resume,
+        } satisfies AbilityOptionPending;
+      }
+      return {
+        type: "ability-option",
+        cardId: "ASH_062",
+        player: protector.controller,
+        sourcePlayId: coveredPlayId,
+        helperText: `Defeat a Shield token on ${CardTitle("ASH_062")} to prevent the damage to ${CardTitle(unit.cardId)}?`,
+        yesLabel: "Defeat Shield",
+        noLabel: "Skip",
+        onYes: null,
+        continuation: resume,
+      } satisfies AbilityOptionPending;
+    }
   }
   return null;
 }
@@ -12743,7 +12846,7 @@ function mandoCombatOffer(game: GameState, next: ResolveAttackPending): AbilityO
  * A controller-level watcher on every friendly attack, so it cannot live in the attacker's own On
  * Attack switch: `resolveOnAttackTrigger` is only reached when the ATTACKER itself has an On Attack
  * ability, and a plain attacker punching up is exactly the common case. It is checked instead at
- * the two points an attack hands off to combat — the same pair `mandoCombatOffer` covers — which
+ * the two points an attack hands off to combat — the same pair `preventionCombatOffer` covers — which
  * also picks up ability-initiated attacks that never go through handleAttack.
  *
  * Only the leader side has this reaction; once deployed Wicket reads his unit side instead, which
@@ -12943,7 +13046,7 @@ function handleResolveAttack(
   if (wicketOffer) {
     return { response: resolutionResponse(pendingToResolution(wicketOffer, game)), pending: wicketOffer, stateChanged: true };
   }
-  const mandoOffer = mandoCombatOffer(game, pending);
+  const mandoOffer = preventionCombatOffer(game, pending);
   if (mandoOffer) {
     return { response: resolutionResponse(pendingToResolution(mandoOffer, game)), pending: mandoOffer, stateChanged: true };
   }
@@ -13164,6 +13267,8 @@ function leaderHasWhenDeployed(cardId: string): boolean {
     case "LOF_012": return true; // Rey — may discard your hand to draw 2
     case "HMW_016": return true; // Maul (Old Master) — may replay a unit defeated this phase for 5 less
     case "HMW_012": return true; // Poggle the Lesser — create a Beast token
+    case "IC27_003": return true; // Kylo Ren — may return a unit from your discard pile to hand
+    case "IC27_004": return true; // Mace Windu — resource the top card of your deck
     default: return false;
   }
 }
@@ -13304,12 +13409,17 @@ function LeaderEpicDeployCondition(game: GameState, player: PlayerId, cardId: st
     case "TWI_001": // Nala Se — If you control 4 or more resources.
     case "TWI_014": // Asajj Ventress — If you control 4 or more resources.
       return p.resources.length >= 4;
+    case "IC27_002": // Rey (In Balance) — If you control 5 or more resources.
+    case "IC27_003": // Kylo Ren (Supreme Leader) — If you control 5 or more resources.
+    case "IC27_005": // Darth Maul (Mechanism of Menace) — If you control 5 or more resources.
     case "SOR_015": // Boba Fett — If you control 5 or more resources.
     case "SHD_015": // Doctor Aphra — If you control 5 or more resources.
     case "TWI_006": // Wat Tambor — If you control 5 or more resources.
     case "TWI_016": // Jango Fett — If you control 5 or more resources.
       return p.resources.length >= 5;
     case "SOR_008": // Hera Syndulla — If you control 6 or more resources.
+    case "IC27_004": // Mace Windu (Here With Backup) — If you control 6 or more resources.
+    case "IC27_006": // Luke Skywalker (I Have to Face Him) — If you control 6 or more resources.
     case "IC27_007": // Asajj Ventress (Bald and Beautiful) — If you control 6 or more resources.
     case "IC27_008": // Princess Leia (On a Diplomatic Mission) — If you control 6 or more resources.
     case "SHD_001": // Gar Saxon — If you control 6 or more resources.
@@ -13617,6 +13727,23 @@ function resolveActionAbility(
         } satisfies AbilityTargetPending,
       } satisfies DiscardFromHandPending;
     }
+    case "IC27_003": { // Kylo Ren (leader) — Action [Exhaust, discard a card from your hand]: Give
+                       // an Experience token to a unit. The discard is the cost, so it is paid even
+                       // when no unit is in play to receive the token.
+      const all003 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      return {
+        type: "discard-from-hand",
+        targetPlayer: player,
+        count: 1,
+        continuation: all003.length === 0 ? null : {
+          type: "ability-target",
+          cardId: "IC27_003",
+          player,
+          fromPlayIds: all003.map(u => u.playId),
+          continuation: null,
+        } satisfies AbilityTargetPending,
+      } satisfies DiscardFromHandPending;
+    }
     case "SOR_018": { // Jyn Erso (leader) — Action [Exhaust]: Attack with a unit. The defender gets
                       // -1/-0 for this attack.
       const ready018 = GetUnitsForPlayer(player).filter(u => u.ready && CanUnitAttack(u as Unit));
@@ -13729,6 +13856,21 @@ function resolveActionAbility(
         cardId: "SHD_004",
         player,
         fromPlayIds: eligible004.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "IC27_002": { // Rey (leader) — Action [1 resource, Exhaust]: Give an Experience token to a
+                       // damaged unit (either side's).
+      const damaged002 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)].filter(u => u.damage > 0);
+      if (damaged002.length === 0) {
+        log.push(`${CardTitle("IC27_002")}: no damaged unit — soft pass.`);
+        return null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "IC27_002",
+        player,
+        fromPlayIds: damaged002.map(u => u.playId),
         continuation: null,
       } satisfies AbilityTargetPending;
     }
@@ -14896,6 +15038,32 @@ function resolveActionAbility(
         continuation: null,
       } satisfies AbilityTargetPending;
     }
+    case "IC27_004": { // Mace Windu (leader) — Action [1 resource, Exhaust]: Attack with a unit. It
+                       // gains Restore 2 for this attack. Unconditional, unlike ASH_004 Thrawn.
+      const ready004 = GetUnitsForPlayer(player).filter(u => u.ready && CanUnitAttack(u as Unit));
+      if (ready004.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "IC27_004_leader",
+        player,
+        fromPlayIds: ready004.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
+    case "IC27_005": { // Darth Maul (leader) — Action [1 resource, Exhaust]: Deal 1 damage to a unit.
+      const all005 = [...GetUnitsForPlayer(1), ...GetUnitsForPlayer(2)];
+      if (all005.length === 0) {
+        log.push(`${CardTitle("IC27_005")}: no unit in play — soft pass.`);
+        return null;
+      }
+      return {
+        type: "ability-target",
+        cardId: "IC27_005",
+        player,
+        fromPlayIds: all005.map(u => u.playId),
+        continuation: null,
+      } satisfies AbilityTargetPending;
+    }
     case "SHD_012": { // Bo-Katan Kryze - Princess in Exile: If a Mandalorian attacked this phase, deal 1 damage to a unit.
       if (!UnitAttackedThisPhase(player, "Mandalorian")) {
         log.push(`${CardTitle(cardId)}: no Mandalorian attacked this phase — soft pass.`);
@@ -15483,6 +15651,20 @@ function applyAbilityEffect(
   const game = GetGame();
   if(!game) throw new Error("Game not found in applyAbilityEffect.");
 
+  // SEC_101 Queen Amidala — the chosen sacrifice for a held-back instance of ability damage: defeat
+  // it, then re-issue the instance so the armed prevention swallows it.
+  if (pending.cardId.startsWith(AMIDALA_SACRIFICE)) {
+    const ctx = decodePreventionOffer(pending);
+    const chain = amidalaSacrifice(game.currentGameState, game.gameLog, ctx.targetPlayId, targetPlayId, pending.continuation ?? null);
+    reissueDeferredDamage(game.currentGameState, game.gameLog, ctx);
+    return sweepDeadUnits(game.currentGameState, game.gameLog, chain);
+  }
+  // …and the combat half: the attack has not started, so arming the prevention is all it takes.
+  if (pending.cardId === "SEC_101_combat") {
+    const chain = amidalaSacrifice(game.currentGameState, game.gameLog, pending.sourcePlayId!, targetPlayId, pending.continuation ?? null);
+    return sweepDeadUnits(game.currentGameState, game.gameLog, chain);
+  }
+
   // "When Defeated: Deal N damage to a base." Matched off the shared table rather than a case per
   // card, since the pending is keyed by the source card so everything else can name it.
   if (WhenDefeatedBaseDamage(pending.cardId) !== undefined) {
@@ -15951,6 +16133,17 @@ function applyAbilityEffect(
     case "HMW_045": { // Logray — the 1 damage to the chosen enemy unit.
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, "HMW_045", targetPlayId, 1, game.gameLog, pending.player);
+      return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
+    }
+    case "HMW_202": { // Inferno Squad (both triggers) — 1 damage and a Weakness token, together. A
+                      // Shield absorbing the damage does not stop the token; a target the damage
+                      // defeats has no host left for it.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "HMW_202", targetPlayId, 1, game.gameLog, pending.player);
+      const target202 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target202 && target202.damage < Unit.FromInterface(target202).TotalHP()) {
+        GiveWeaknessToken(game.currentGameState, target202, game.gameLog, pending.player!, "HMW_202");
+      }
       return sweepDeadUnits(game.currentGameState, game.gameLog, pending.continuation ?? null);
     }
     case "HMW_097":          // Dire Prowess — the upgrade's own When Played Weakness token.
@@ -16601,6 +16794,24 @@ function applyAbilityEffect(
       }
       break;
     }
+    case "IC27_003": { // Kylo Ren (leader) — Experience token to the chosen unit.
+      if (!targetPlayId) break;
+      const t003 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (t003) {
+        GiveTokenUpgrade(game.currentGameState, t003, "SOR_T01", pending.player!);
+        game.gameLog.push(`${CardTitle("IC27_003")}: gave an Experience token to ${CardTitle(t003.cardId)}.`);
+      }
+      break;
+    }
+    case "IC27_002": { // Rey (both sides) — Experience token to the chosen damaged unit.
+      if (!targetPlayId) break;
+      const t002 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (t002) {
+        GiveTokenUpgrade(game.currentGameState, t002, "SOR_T01", pending.player!);
+        game.gameLog.push(`${CardTitle("IC27_002")}: gave an Experience token to ${CardTitle(t002.cardId)}.`);
+      }
+      break;
+    }
     case "SOR_011": // Grand Inquisitor (leader side) — 2 damage to the chosen unit, then ready it.
     case "SOR_011_onattack": { // …deployed side deals 1 instead.
       if (!targetPlayId) break;
@@ -17064,6 +17275,11 @@ function applyAbilityEffect(
     case "SHD_012_2": { // Bo-Katan deployed on-attack: second 1-damage shot (another Mandalorian attacked)
       if (!targetPlayId) break;
       DealDamageToUnit(game.currentGameState, "SHD_012", targetPlayId, 1, game.gameLog);
+      break;
+    }
+    case "IC27_005": { // Darth Maul (both sides) — 1 damage to the chosen unit.
+      if (!targetPlayId) break;
+      DealDamageToUnit(game.currentGameState, "IC27_005", targetPlayId, 1, game.gameLog);
       break;
     }
     case "SOR_010": { // Darth Vader (deployed) On Attack: deal 2 damage to chosen unit
@@ -20946,6 +21162,17 @@ function applyAbilityEffect(
         type: "attack-target",
         attackerPlayId: targetPlayId,
         source: "ASH_004",
+        continuation: null,
+      };
+    }
+    case "IC27_004_leader": { // Mace Windu leader Action: the chosen unit attacks with Restore 2.
+      if (!targetPlayId) break;
+      game.currentGameState.currentEffects.push({ cardId: "IC27_004_restore", duration: "ForAttack", affectedPlayer: pending.player!, targetPlayId });
+      game.gameLog.push(`${CardTitle("IC27_004")}: chosen unit gains Restore 2 for this attack.`);
+      return {
+        type: "attack-target",
+        attackerPlayId: targetPlayId,
+        source: "IC27_004",
         continuation: null,
       };
     }

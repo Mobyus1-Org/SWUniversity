@@ -228,6 +228,7 @@ export function HasOverwhelm(cardId: string,
     case "IC27_074": // reprint of TWI_093
     case "IC27_091": // reprint of ASH_129
     case "IC27_183": // reprint of SOR_232
+    case "IC27_006"://Luke Skywalker - I Have to Face Him (deployed side)
       return true;
     default: break;
   }

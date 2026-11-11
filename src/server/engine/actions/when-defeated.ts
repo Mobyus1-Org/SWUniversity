@@ -717,6 +717,13 @@ function resolveOwnWhenDefeated(
       if (game149) ArmInvisibleHandDiscount(game149.currentGameState, player, game149.gameLog);
       return null;
     }
+    case "HMW_202": { // Inferno Squad — When Defeated half of "You may deal 1 damage to a unit and
+                      // give a Weakness token to it"; the When Played half is in when-played.ts.
+      const units202 = AllUnits();
+      if (units202.length === 0) return null;
+      return optionalTarget("HMW_202", player, units202.map(u => u.playId),
+        "Deal 1 damage to a unit and give it a Weakness token?", { yesLabel: "Deal 1 + Weakness" });
+    }
     case "IC27_024": // Grand Admiral Thrawn — the When Defeated third of his Experience + Sentinel.
       return buildThrawnExperience(player, unit.playId);
     case "IC27_099": { // Eighth Brother — "When Defeated: You may ready an Imperial unit." Any

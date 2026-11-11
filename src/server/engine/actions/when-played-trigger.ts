@@ -30,6 +30,7 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   // IC27 reprints of SOR_039, TWI_137, IBH_031, IBH_072 and JTL_248.
   "IC27_027", "IC27_108", "IC27_164", "IC27_028", "IC27_190",
   "IC27_149", // The Invisible Hand — next card costs 9 less
+  "SEC_101", // Queen Amidala — create 2 Spy tokens
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -246,6 +247,9 @@ export function resolveWhenPlayedTrigger(
       log.push(`${CardTitle(trigger.cardId)}: dealt 5 damage to your base.`);
       break;
     }
+    case "SEC_101": // Queen Amidala — When Played: Create 2 Spy tokens.
+      for (let i = 0; i < 2; i++) CreateSpy(gs, trigger.fromPlayer, log, trigger.cardId);
+      break;
     case "SEC_082": { // Chancellor Palpatine — When Played: If you control a leader unit, create 2 Spy tokens and give those tokens Sentinel for this phase.
       const leader082 = trigger.fromPlayer === 1 ? gs.player1.leader : gs.player2.leader;
       if (!leader082.deployed) break;

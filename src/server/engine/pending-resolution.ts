@@ -230,11 +230,11 @@ export interface ResolveAttackPending {
   /** Set when Saboteur was already resolved before combat (prevents double-stripping). */
   saboteurApplied?: boolean;
   /**
-   * playIds already offered ASH_062's Shield-spend prevention for this attack. Both combatants can
-   * be covered (each by their own controller's Mandalorian), and every answer resumes the same
-   * attack, so without this the same player would be asked again on each resume.
+   * `<protector>:<playId>` pairs already offered a damage prevention (ASH_062, SEC_101) for this
+   * attack. Both combatants can be covered, a unit can be covered twice, and every answer resumes
+   * the same attack, so without this the same player would be asked again on each resume.
    */
-  mandoOffered?: string[];
+  preventionOffered?: string[];
   /**
    * Set once HMW_014 Wicket's "when a friendly unit attacks a unit that costs more than it"
    * reaction has been offered for this attack. The offer is consulted at both points that hand an
@@ -598,6 +598,8 @@ export interface ReturnFromDiscardPending {
    * already out of hand; this is the resource cost still to pay once they are chosen.
    */
   playCost?: number;
+  /** "You may return…" (IC27_003): an empty selection declines ("Choose nothing"). */
+  optional?: boolean;
   continuation: PendingResolution | null;
 }
 

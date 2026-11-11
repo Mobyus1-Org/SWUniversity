@@ -3230,6 +3230,14 @@ export function resolveWhenPlayed(
       return optionalTarget("HMW_063", player, targets063,
         "Heal 1 damage from another unit or base?", { yesLabel: "Heal" });
     }
+    case "HMW_202": { // Inferno Squad — "When Played/When Defeated: You may deal 1 damage to a unit
+                      // and give a Weakness token to it." Any unit, itself included. The When
+                      // Defeated half is in when-defeated.ts.
+      const units202 = AllUnits();
+      if (units202.length === 0) return null;
+      return optionalTarget("HMW_202", player, units202.map(u => u.playId),
+        "Deal 1 damage to a unit and give it a Weakness token?", { yesLabel: "Deal 1 + Weakness" });
+    }
     case "HMW_062": { // Nuvo Vindi — "When Played: You may give a Weakness token to a unit."
                       // "A unit", not "an enemy unit", so his own side is fair game — himself
                       // included, since he is already in play by the time this resolves.

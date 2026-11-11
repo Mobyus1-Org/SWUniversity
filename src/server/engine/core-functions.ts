@@ -1,4 +1,4 @@
-import { CardArena, CardAspects, CardCost, CardHp, CardIsUnique, CardPower, CardSubtitle, CardText, CardTitle, CardTraits, CardType, CardType2 } from "@/server/engine/card-db/generated";
+import { CardArena, CardAspects, CardCost, CardHp, CardIsUnique, CardPower, CardSubtitle, CardText, CardTitle, CardTraits, CardType, CardType2, GetAllCardIds } from "@/server/engine/card-db/generated";
 import { LeaderBackSideOf, LeaderFrontAspectsOf, LeaderUnitSideOf } from "@/server/engine/card-db/double-sided-leaders";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { Card, CardInPlay, CardTypes, CurrentEffect, EffectDuration, HP_MOD, Leader, PHASE_STAT_MOD, POWER_MOD, PlayerId, Resource, Unit as UnitInterface } from "@/lib/engine/core-models";
@@ -2626,6 +2626,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "SOR_011": //Grand Inquisitor - Hunting the Jedi (deployed)
     case "SHD_003": //Finn - This is a Rescue (deployed)
     case "SHD_004": //Rey - More Than a Scavenger (deployed)
+    case "IC27_002": //Rey - In Balance (deployed)
+    case "IC27_005": //Darth Maul - Mechanism of Menace (deployed)
     case "SOR_010": //Darth Vader - Dark Lord of the Sith
     case "SOR_014": //Sabine Wren - Galvanized Revolutionary
     case "SHD_012": //Bo-Katan Kryze - Princess in Exile
@@ -2669,6 +2671,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_149": //Eviscerator — On Attack: give 2 Advantage tokens to each other friendly unit
     case "ASH_157": //Danger Squadron Wingmen — On Attack: may give an Advantage token to another unit
     case "ASH_172": //Razor Crest — On Attack: may discard a card from hand for +2/+0 this attack
+    case "IC27_006": //Luke Skywalker - I Have to Face Him (deployed) — the same On Attack
     case "IBH_006": //Rebellion Y-Wing — On Attack: deal 1 damage to a base
     case "IBH_024":
     case "IBH_032":
@@ -2853,6 +2856,59 @@ export function MandoProtector(gs: GameState, protectedPlayId: string) {
 /** Marks one instance of damage to `playId` as prevented by ASH_062. Consumed on the next hit. */
 export const MANDO_PREVENT = "ASH_062_prevent";
 
+/** The same one-shot prevention, armed by SEC_101 Queen Amidala's sacrifice. */
+export const AMIDALA_PREVENT = "SEC_101_prevent";
+
+let allTraits: string[] | null = null;
+
+/**
+ * "Shares a trait" (SEC_101). Read through TraitContains so granted and suppressed traits count —
+ * those are hand-coded per card rather than listed anywhere — by testing every trait in the card
+ * database against both units.
+ */
+export function UnitsShareATrait(a: UnitInterface, b: UnitInterface): boolean {
+  allTraits ??= [...new Set(GetAllCardIds().flatMap(id => CardTraits(id)))];
+  return allTraits.some(t =>
+    TraitContains(a.cardId, t, a.controller, a.playId) && TraitContains(b.cardId, t, b.controller, b.playId));
+}
+
+/**
+ * Every optional "if damage would be dealt to this unit … prevent that damage" replacement that
+ * could cover `protectedPlayId` right now, in the order they are offered. Each one costs something
+ * different to accept:
+ *  - ASH_062 The Mandalorian — defeat a Shield token on him (covers ANOTHER friendly unit);
+ *  - SEC_101 Queen Amidala — defeat another friendly unit sharing a trait with her (covers herself).
+ */
+export type DamageProtector =
+  | { kind: "ASH_062"; controller: PlayerId }
+  | { kind: "SEC_101"; controller: PlayerId; sacrificePlayIds: string[] };
+
+export function DamageProtectors(gs: GameState, protectedPlayId: string): DamageProtector[] {
+  const protectedUnit = GetUnitByPlayId(gs, protectedPlayId);
+  if (!protectedUnit) return [];
+  const protectors: DamageProtector[] = [];
+  const mando = MandoProtector(gs, protectedPlayId);
+  if (mando) protectors.push({ kind: "ASH_062", controller: mando.controller });
+  if (protectedUnit.cardId === "SEC_101" && !Unit.FromInterface(protectedUnit).LostAbilities()) {
+    const sacrifices = GetUnitsForPlayer(protectedUnit.controller)
+      .filter(u => u.playId !== protectedPlayId && UnitsShareATrait(protectedUnit, u));
+    if (sacrifices.length > 0) {
+      protectors.push({ kind: "SEC_101", controller: protectedUnit.controller, sacrificePlayIds: sacrifices.map(u => u.playId) });
+    }
+  }
+  return protectors;
+}
+
+/** True when a one-shot prevention (ASH_062 / SEC_101) is already armed on `playId`. */
+export function DamagePreventionArmed(gs: GameState, playId: string): boolean {
+  return gs.currentEffects.some(e => (e.cardId === MANDO_PREVENT || e.cardId === AMIDALA_PREVENT) && e.targetPlayId === playId);
+}
+
+/** Arms SEC_101's one-shot prevention on Amidala, once her sacrifice has been defeated. */
+export function ArmAmidalaPrevention(gs: GameState, amidalaPlayId: string, controller: PlayerId): void {
+  gs.currentEffects.push({ cardId: AMIDALA_PREVENT, duration: "ForAttack", affectedPlayer: controller, targetPlayId: amidalaPlayId });
+}
+
 /**
  * Spends one of the protector's Shield tokens and arms the one-shot prevention on the unit it is
  * covering. Returns false when the Shield vanished between the offer and the answer.
@@ -2971,17 +3027,19 @@ export function DefeatableNonLeaderUnitsAtOrBelowHp(player: PlayerId, maxHp: num
 export function ApplyDamagePrevention(gs: GameState, targetPlayId: string, amount: number, log?: string[]): number {
   if (amount <= 0) return amount;
 
-  // ASH_062 The Mandalorian — a Shield was spent to prevent THIS instance. One-shot: unlike
-  // JTL_193 below it covers a single hit, so it is consumed the moment it fires rather than
-  // waiting for the ForAttack cleanup (an ability could damage the same unit later in the attack).
-  const mandoIdx = gs.currentEffects.findIndex(
-    e => e.cardId === MANDO_PREVENT && e.targetPlayId === targetPlayId,
+  // ASH_062 The Mandalorian / SEC_101 Queen Amidala — a cost was paid to prevent THIS instance.
+  // One-shot: unlike JTL_193 below it covers a single hit, so it is consumed the moment it fires
+  // rather than waiting for the ForAttack cleanup (an ability could damage the same unit later in
+  // the attack).
+  const oneShotIdx = gs.currentEffects.findIndex(
+    e => (e.cardId === MANDO_PREVENT || e.cardId === AMIDALA_PREVENT) && e.targetPlayId === targetPlayId,
   );
-  if (mandoIdx !== -1) {
-    gs.currentEffects.splice(mandoIdx, 1);
+  if (oneShotIdx !== -1) {
+    const [oneShot] = gs.currentEffects.splice(oneShotIdx, 1);
     if (log) {
       const covered = GetUnitByPlayId(gs, targetPlayId);
-      log.push(`${CardTitle("ASH_062")}: prevented ${amount} damage to ${covered ? CardTitle(covered.cardId) : "a unit"}.`);
+      const source = oneShot.cardId === MANDO_PREVENT ? "ASH_062" : "SEC_101";
+      log.push(`${CardTitle(source)}: prevented ${amount} damage to ${covered ? CardTitle(covered.cardId) : "a unit"}.`);
     }
     return 0;
   }
@@ -3336,15 +3394,17 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
   }
   // ASH_196: damage from a friendly Underworld card bypasses all prevention, including Shields.
   const unpreventable = sourcePlayer !== undefined && DamageIsUnpreventable(cardId, sourcePlayer);
-  // ASH_062 The Mandalorian — the replacement must be offered BEFORE the damage lands, but this
-  // function is synchronous and called from ~150 sites. So the instance is held back verbatim in a
-  // trigger and re-issued (with bypassMandoPrevention) once its controller has answered. Nothing
-  // is applied on this pass: a caller that reads the target's HP straight afterwards sees it
-  // undamaged, which only ever happens on a board that actually contains an armed Mandalorian.
-  if (!bypassMandoPrevention && !unpreventable && MandoProtector(gs, targetPlayId)) {
+  // ASH_062 The Mandalorian / SEC_101 Queen Amidala — the replacement must be offered BEFORE the
+  // damage lands, but this function is synchronous and called from ~150 sites. So the instance is
+  // held back verbatim in a trigger and re-issued (with bypassMandoPrevention) once its controller
+  // has answered. Nothing is applied on this pass: a caller that reads the target's HP straight
+  // afterwards sees it undamaged, which only ever happens on a board that actually contains a
+  // protector able to pay.
+  const protectors = bypassMandoPrevention || unpreventable ? [] : DamageProtectors(gs, targetPlayId);
+  if (protectors.length > 0) {
     gs.triggerBag.push({
       triggerType: "damage-prevention",
-      cardId: "ASH_062",
+      cardId: protectors[0].kind,
       fromPlayer: target.controller,
       playId: targetPlayId,
       nested: gs.triggerBag.length > 0,

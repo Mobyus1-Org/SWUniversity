@@ -887,12 +887,14 @@ function resolveInnateOnAttack(
       }
       return continuation;
     }
-    case "ASH_172": { // Razor Crest — On Attack: may discard a card from hand; if you do, this
-                      // unit gets +2/+0 for this attack.
+    // ASH_172 Razor Crest and IC27_006 Luke Skywalker (deployed), word for word: "On Attack: You
+    // may discard a card from your hand. If you do, this unit gets +2/+0 for this attack."
+    case "ASH_172":
+    case "IC27_006": {
       if (GetHand(attacker.controller).length === 0) return continuation;
       return {
         type: "ability-option",
-        cardId: "ASH_172",
+        cardId: sourceCardId,
         player: attacker.controller,
         helperText: "Discard a card from hand for +2/+0 this attack?",
         yesLabel: "Discard",
@@ -902,7 +904,7 @@ function resolveInnateOnAttack(
           targetPlayer: attacker.controller,
           count: 1,
           continuation,
-          thenAttackBuff: { cardId: "ASH_172", playId: attacker.playId, amount: 2 },
+          thenAttackBuff: { cardId: sourceCardId, playId: attacker.playId, amount: 2 },
         },
         continuation,
       };
@@ -2036,6 +2038,19 @@ function resolveInnateOnAttack(
       if (eligible004.length === 0) return continuation;
       return optionalTarget("SHD_004", attacker.controller, eligible004.map(u => u.playId),
         "You may give an Experience token to a unit with 2 or less power.",
+        { yesLabel: "Give Experience", continuation });
+    }
+    case "IC27_005": { // Darth Maul (deployed) "On Attack: You may deal 1 damage to a unit." Any
+                       // unit, Maul himself included.
+      return optionalTarget("IC27_005", attacker.controller, AllUnits().map(u => u.playId),
+        "You may deal 1 damage to a unit.", { yesLabel: "Deal 1 damage", continuation });
+    }
+    case "IC27_002": { // Rey (deployed) "On Attack: You may give an Experience token to a damaged
+                       // unit." No "another" clause — a damaged Rey is legal.
+      const damaged002 = AllUnits().filter(u => u.damage > 0);
+      if (damaged002.length === 0) return continuation;
+      return optionalTarget("IC27_002", attacker.controller, damaged002.map(u => u.playId),
+        "You may give an Experience token to a damaged unit.",
         { yesLabel: "Give Experience", continuation });
     }
     case "SHD_003": { // Finn (deployed) "On Attack: You may defeat a friendly upgrade on a unit.
