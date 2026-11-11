@@ -584,6 +584,7 @@ export const Cards = {
       lukeSkywalker: "LOF_249", // A Hero's Beginning — 3/5 Ground, unique
       eethKoth: "LOF_097",
       talzinsAssassin: "LOF_035",
+      deceptiveShade: "LOF_180", // 2/3 Ground Sith/Undead (not Night), Villainy, cost 2
       oldDaka: "LOF_036", // 6/6 Ground Force/Night, When Played defeat-and-replay a Night unit
       acolyteOfTheBeyond: "LOF_129", // 2/3 Ground Sith, On Attack/When Defeated create the Force
       purgeTrooper: "LOF_133", // 4/2 Ground Imperial/Trooper, When Played 2 dmg to a Force unit
@@ -643,6 +644,8 @@ export const Cards = {
     },
     sec: {
       queenAmidala: "SEC_101", // Championing Her People — 5/3 Ground, Naboo/Official
+      populistChampion: "SEC_044", // 3/5 Ground New Republic/Official, cost 3, no text
+      supremeCouncilAide: "SEC_237", // 2/2 Ground First Order/Official, cost 1, no text
       cruelCommandos: "SEC_086", // 5/5 Ground Republic Clone Trooper, Sentinel + Overwhelm
       coronet: "SEC_047", // 4/6 Space, unique — Restore 1; each other friendly unit gains Restore 1
       rotundaSenateGuards: "SEC_063", // 4/5 Ground — Sentinel while undamaged (as SOR_048)
@@ -970,6 +973,25 @@ export const Cards = {
       jarJarBinks: "IC27_187",          // 1/5 Ground, cost 2 — Bumbling Representative
       darthSidious: "IC27_026",         // 5/8 Ground, cost 7 — Move Against the Jedi
       asajjVentress: "IC27_147",        // 5/7 Ground, cost 6 — Death From Above
+      admiralHoldo: "IC27_038",         // 3/7 Ground, cost 5 — We Are the Spark
+      ahsokaTano: "IC27_039",           // 4/5 Ground, cost 5 — Not on My Death Watch
+      obiWanKenobi: "IC27_042",         // 5/9 Ground, cost 8 — I Sense a Trap
+      raddus: "IC27_043",               // 8/9 Space, cost 9 — Hope of the Resistance
+      qira: "IC27_045",                 // 1/1 Ground, cost 3 — Survivor
+      allegiantGeneralPryde: "IC27_056", // 2/2 Ground, cost 1 — Heartless Efficiency
+      directorKrennic: "IC27_057",      // 0/4 Ground, cost 2 — Architect of Annihilation
+      jabbaTheHutt: "IC27_060",         // 0/8 Ground, cost 3 — Bounties Left and Right
+      motherTalzin: "IC27_066",         // 5/5 Ground, cost 7 — The Time Has Come
+      darthVader: "IC27_067",           // 8/8 Ground, cost 8 — Useless to Resist
+      devastator: "IC27_068",           // 9/9 Space, cost 10 — Lord Vader's Flagship
+      c3poImpulseBuy: "IC27_070",       // 1/3 Ground, cost 1 — Impulse Buy
+      avarKriss: "IC27_071",            // 0/5 Ground, cost 2 — For Light and Life
+      cloneCommanderCody: "IC27_076",   // 4/4 Ground, cost 4 — Loyal to the Republic
+      monMothma: "IC27_077",            // 3/6 Ground, cost 4 — Truth is an Abyss
+      anakinSkywalker: "IC27_078",      // 7/4 Ground, cost 5 — Destined for Darkness
+      maceWindu: "IC27_081",            // 5/5 Ground, cost 6 — Dropping By
+      padmeAmidala: "IC27_083",         // 5/7 Ground, cost 8 — With Great Pleasure
+      negotiator: "IC27_084",           // 9/7 Space, cost 9 — Prepare the Troops
     },
   },
   upgrades: {
@@ -1340,6 +1362,7 @@ export const Cards = {
       iAmYourFather: "IC27_185",    // reprint of SOR_233
       iveGotABadFeeling: "IC27_166", // cost 4 — new
       consumedByTheDarkSide: "IC27_184", // reprint of LOF_239
+      vigilantDefense: "IC27_046",  // cost 4 — +0/+3 & Sentinel, heal 3, defeat ≤3 HP enemy
     },
   },
 }

@@ -2508,6 +2508,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "ASH_010": //Bo-Katan Kryze (deployed) — On Attack: create a Mandalorian token
     case "ASH_127": //The Twins — On Attack: may give another friendly unit Sentinel
     case "IC27_024": //Grand Admiral Thrawn — On Attack: may give another friendly unit Experience + Sentinel
+    case "IC27_081": //Mace Windu (Dropping By) — On Attack: give an Experience token to this unit
+    case "IC27_084": //Negotiator — On Attack: resource the top card, may return a friendly resource
     case "IC27_187": //Jar Jar Binks — On Attack: discard top of deck; cost 6+ gives +4/+0
     case "IC27_001": //Darth Vader (deployed) — On Attack: may defeat another friendly unit to draw + heal 2
     case "IC27_007": //Asajj Ventress (deployed) — On Attack: may ready a resource
@@ -3200,6 +3202,26 @@ export function ResourceTopCardOfDeck(
   });
   gameLog.push(`${CardTitle(sourceCardId)}: put ${CardTitle(top.cardId)} into play as a${opts.ready ? " ready" : "n exhausted"} resource.`);
   return true;
+}
+
+/**
+ * IC27_084 Negotiator — "On Attack/When Defeated: Resource the top card of your deck. Then, you may
+ * return a friendly resource to its owner's hand." Shared by both triggers. The resource lands
+ * first, unconditionally, so it is itself a legal pick for the return; the return is offered even
+ * when the deck was empty.
+ */
+export function negotiatorResourceShuffle(
+  player: PlayerId,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const game = GetGame();
+  if (!game) return continuation;
+  const gs = game.currentGameState;
+  ResourceTopCardOfDeck(gs, player, game.gameLog, "IC27_084");
+  const resources = GetPlayer(gs, player).resources;
+  if (resources.length === 0) return continuation;
+  return optionalTarget("IC27_084", player, resources.map(r => r.playId),
+    "Return a friendly resource to its owner's hand?", { yesLabel: "Return", continuation });
 }
 
 /**
@@ -4023,6 +4045,8 @@ export interface SearchDeckFilter {
   trait?: string;
   keyword?: string;
   maxCost?: number;
+  /** "a card named X" — matched on title alone, so every printing counts. */
+  title?: string;
 }
 
 export interface SearchDeckOpts {
@@ -4068,6 +4092,7 @@ export function searchDeck(
         if (filter.trait && !TraitContains(c.cardId, filter.trait, player)) return false;
         if (filter.keyword && !HasKeyword(c.cardId, filter.keyword)) return false;
         if (filter.maxCost !== undefined && (CardCost(c.cardId) ?? 0) > filter.maxCost) return false;
+        if (filter.title !== undefined && CardTitle(c.cardId) !== filter.title) return false;
         return true;
       })
       .map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));

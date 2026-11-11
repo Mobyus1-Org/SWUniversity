@@ -186,6 +186,64 @@ function pickOpponentOwnUnit(
 }
 
 /**
+ * Whether the damage a P2 damage-prevention offer is about (SEC_101 Queen Amidala, ASH_062 The
+ * Mandalorian) would defeat the covered unit. P2 only pays a prevention cost to save a unit; damage
+ * it survives is simply taken.
+ *
+ * Ability damage carries its amount on the offer. Combat offers are made before the attack, with
+ * the attack to resume as the continuation, so the amount is the other combatant's power. A Shield
+ * on the covered unit already absorbs the hit, so it is never lethal.
+ */
+function preventedDamageIsLethal(
+  pending: { sourcePlayId?: string; amount?: number; continuation?: PendingResolution | null },
+  gameState: GameState,
+): boolean {
+  const all = [...gameState.player1.groundArena, ...gameState.player1.spaceArena,
+    ...gameState.player2.groundArena, ...gameState.player2.spaceArena];
+  const covered = all.find(u => u.playId === pending.sourcePlayId);
+  if (!covered) return false;
+  if (covered.upgrades.some(u => u.cardId === "SOR_T02")) return false;
+
+  let amount = pending.amount;
+  const attack = pending.continuation;
+  if (amount === undefined && attack?.type === "resolve-attack" && attack.target.type === "unit") {
+    const attacker = all.find(u => u.playId === attack.attackerPlayId);
+    const defender = all.find(u => u.playId === (attack.target as { playId: string }).playId);
+    if (!attacker || !defender) return false;
+    amount = covered.playId === defender.playId
+      ? Unit.FromInterface(attacker).CurrentPower(true)
+      : Unit.FromInterface(defender).CurrentPower(false, true);
+  }
+  return (amount ?? 0) >= Unit.FromInterface(covered).CurrentHP();
+}
+
+/**
+ * Which of P2's units Queen Amidala (SEC_101) defeats to prevent lethal damage to herself, per QA:
+ * a non-Sentinel first, then the least remaining HP, then the least power, then the lowest cost.
+ * Ties keep the earliest `fromPlayIds` entry (arena order), so a puzzle replays identically.
+ */
+function pickAmidalaSacrifice(fromPlayIds: string[], gameState: GameState): string | null {
+  const theirUnits = [...gameState.player2.groundArena, ...gameState.player2.spaceArena];
+  const ranked = fromPlayIds
+    .map(playId => theirUnits.find(u => u.playId === playId))
+    .filter((u): u is NonNullable<typeof u> => !!u)
+    .map(u => {
+      const unit = Unit.FromInterface(u);
+      return {
+        playId: u.playId,
+        key: [HasSentinel(u.cardId, u.playId, 2) ? 1 : 0, unit.CurrentHP(), unit.CurrentPower(), CardCost(u.cardId) ?? 0],
+      };
+    });
+  if (ranked.length === 0) return null;
+  let best = ranked[0];
+  for (const c of ranked.slice(1)) {
+    const i = c.key.findIndex((v, k) => v !== best.key[k]);
+    if (i !== -1 && c.key[i] < best.key[i]) best = c;
+  }
+  return best.playId;
+}
+
+/**
  * Puzzle-mode dispatch wrapper.
  *
  * Calls processDispatch normally, then automatically resolves any Player 2
@@ -652,6 +710,23 @@ function resolveAutoOption(
   // best placed to survive, which is the most annoying place for the solver to find a Shield.
   if (pending.type === "ability-target" && pending.cardId === "SHD_068" && pending.player === 2) {
     const targetPlayId = pickOpponentOwnUnit(pending.fromPlayIds, gameState, "soak");
+    return targetPlayId
+      ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
+      : NOTHING_TO_DO;
+  }
+
+  // Damage-prevention replacements on P2's side. SEC_101 Queen Amidala ("defeat another friendly
+  // unit that shares a trait with this unit") and ASH_062 The Mandalorian ("defeat a Shield token
+  // on him") are both paid only when the damage would otherwise defeat the covered unit. Ability
+  // damage offers are `<kind>_ability|…`; combat offers use the bare card id.
+  if (pending.type === "ability-option" && pending.player === 2
+      && (pending.cardId === "SEC_101" || pending.cardId.startsWith("SEC_101_ability|")
+        || pending.cardId === "ASH_062" || pending.cardId.startsWith("ASH_062_ability|"))) {
+    return { dispatchType: "choose-option", dispatchData: { option: preventedDamageIsLethal(pending, gameState) ? "Yes" : "No" } };
+  }
+  if (pending.type === "ability-target" && pending.player === 2
+      && (pending.cardId === "SEC_101_combat" || pending.cardId.startsWith("SEC_101_sacrifice|"))) {
+    const targetPlayId = pickAmidalaSacrifice(pending.fromPlayIds, gameState);
     return targetPlayId
       ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }
       : NOTHING_TO_DO;

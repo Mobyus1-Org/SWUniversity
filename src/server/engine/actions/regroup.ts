@@ -1,8 +1,10 @@
 import type { GameState, PlayerState } from "@/lib/engine/game";
 import type { PlayerId } from "@/lib/engine/core-models";
 import type { PendingResolution } from "@/server/engine/pending-resolution";
-import { CardArena, CardTitle, CardHp, CardUpgradeHp } from "@/server/engine/card-db/generated";
+import { CardArena, CardTitle } from "@/server/engine/card-db/generated";
 import { AfterNonCombatUnitDamage, DealDamageToBase, DefeatResource, DrawCardForPlayer, QueueWhenDiscardedTrigger, ReadyUnit, DealDamageToUnit } from "@/server/engine/core-functions";
+import { Unit } from "@/server/engine/unit";
+import { RecordEnteredPlay } from "@/server/engine/token-helpers";
 
 function ps(gs: GameState, player: PlayerId): PlayerState {
   return player === 1 ? gs.player1 : gs.player2;
@@ -56,9 +58,8 @@ function resolveRegroupStartBaseAbilities(gs: GameState, log: string[]): void {
 }
 
 /**
- * Fires every unit-scoped "when the regroup phase starts" ability, before the draw.
- * Damage is applied first and dead units swept once, so a unit that kills itself here does not
- * linger at 0 HP into the new round.
+ * Fires every unit-scoped "when the regroup phase starts" ability, before the draw. A unit that
+ * kills itself here is swept by the start-of-regroup step that follows, before the draw.
  */
 /**
  * SEC_195 Arrest — "At the start of the regroup phase, its owner rescues it."
@@ -81,12 +82,12 @@ function releaseBaseCaptives(gs: GameState, log: string[]): void {
       const ownerState = ps(gs, captive.owner);
       if (arena === "Ground") ownerState.groundArena.push(rescued);
       else ownerState.spaceArena.push(rescued);
-      gs.roundState.cardsEnteredPlayThisPhase.push({
+      RecordEnteredPlay(gs, {
         fromPlayer: captive.owner,
         cardId: captive.cardId,
         playId: captive.playId,
         reason: "returned-to-play",
-      });
+      }, log);
       log.push(`${CardTitle(captive.cardId)} was rescued from Player ${player}'s base and returned to Player ${captive.owner}'s arena exhausted.`);
     }
     base.captives = [];
@@ -112,31 +113,10 @@ function resolveRegroupStartUnitAbilities(gs: GameState, log: string[]): void {
       }
     }
   }
-
-  // Sweep anything the self-damage killed.
-  for (const player of [1, 2] as PlayerId[]) {
-    const p = ps(gs, player);
-    for (const zone of ["groundArena", "spaceArena"] as const) {
-      for (let i = p[zone].length - 1; i >= 0; i--) {
-        const u = p[zone][i];
-        const maxHp = CardHp(u.cardId) || 0;
-        const upgradeHp = u.upgrades.reduce((sum, up) => sum + (CardUpgradeHp(up.cardId) || 0), 0);
-        if (u.damage >= maxHp + upgradeHp) {
-          const [dead] = p[zone].splice(i, 1);
-          const ownerState = ps(gs, dead.owner as PlayerId);
-          ownerState.discard.unshift({
-            cardId: dead.cardId,
-            playId: dead.playId,
-            owner: dead.owner,
-            controller: dead.owner,
-            turnDiscarded: gs.currentRound,
-            discardEffect: "",
-          });
-          log.push(`${CardTitle(dead.cardId)} was defeated at the start of regroup.`);
-        }
-      }
-    }
-  }
+  // No sweep here: the dispatcher's start-of-regroup step (ResolveStartOfRegroup) sweeps right
+  // after, through the real defeat path, against each unit's CURRENT HP. A local sweep on printed +
+  // upgrade HP ignored auras and lasting effects (it discarded a unit kept alive by an aura) and
+  // skipped When Defeated, token set-aside and leader handling.
 }
 
 /**
@@ -250,11 +230,21 @@ export function executeRegroupDraw(
   return null;
 }
 
+/**
+ * IC27_038 Admiral Holdo — "Draw 1 more card during the regroup phase." One extra card per Holdo
+ * in play with her abilities; an extra card the deck can't give costs 3 base damage like any other.
+ */
+function extraRegroupDraws(p: PlayerState): number {
+  return [...p.groundArena, ...p.spaceArena]
+    .filter(u => u.cardId === "IC27_038" && !Unit.FromInterface(u).LostAbilities())
+    .length;
+}
+
 /** The regroup draw step: 2 cards each (3 base damage per card an empty deck can't give). */
 export function finishRegroupDraw(gs: GameState, log: string[]): void {
   for (const player of [1, 2] as PlayerId[]) {
     const p = ps(gs, player);
-    const toDraw = 2;
+    const toDraw = 2 + extraRegroupDraws(p);
     const drawn = Math.min(toDraw, p.deck.length);
     for (let i = 0; i < drawn; i++) {
       const card = p.deck.pop()!;
@@ -288,7 +278,8 @@ function executeRegroupReady(gs: GameState, log: string[]): void {
     }
   }
 
-  // Clear Phase- and Round-scoped effects at end of regroup
+  // CR 5.1.e — end of the regroup phase: "for this round" effects, and any "for this phase" effect
+  // created DURING regroup (the action phase's own expired when it ended — see startRegroupPhase).
   gs.currentEffects = gs.currentEffects.filter(
     e => e.duration !== "Phase" && e.duration !== "Round"
   );

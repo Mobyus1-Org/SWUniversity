@@ -3,6 +3,7 @@ import { PlayerId, Zones } from "@/lib/engine/core-models";
 import { CardCost, CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { EnemyUnitsLoseAmbushAndSupport } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardIsUnique } from "@/server/engine/card-db/generated";
+import { Unit } from "@/server/engine/unit";
 
 export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, player?: PlayerId, isRecursion = false): boolean
 {
@@ -47,6 +48,9 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
           break;
         case "SHD_188"://4-LOM
           if(CardTitle(cardId) === "Zuckuss") return true;
+          break;
+        case "IC27_067"://Darth Vader (Useless to Resist) — "Each other friendly unit gains Ambush."
+          if(u.playId !== playId && !Unit.FromInterface(u).LostAbilities()) return true;
           break;
         default: break;
       }
@@ -169,6 +173,8 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "SEC_121"://Shadow Crawler
     case "SEC_222"://Loan Shark
     case "TS26_17"://Rush Clovis - Trapped by Authority
+    case "IC27_067"://Darth Vader - Useless to Resist
+    case "IC27_081"://Mace Windu - Dropping By
       return true;
   }
   //JTL_053: The Ghost - Heart of the Family

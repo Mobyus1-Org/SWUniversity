@@ -614,6 +614,18 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "JTL_146": // Massassi Tactical Officer — Action [Exhaust]: Attack with a Fighter unit (+2/+0).
         if (FightersReadyToAttack(player).length > 0) abilities.push(cardId);
         break;
+      case "IC27_057": // Director Krennic — Action [Exhaust]: Play a unit that costs 7 or more from
+                       // your hand. It costs 2 resources less. Offered only when one is affordable.
+        if (KrennicPlayableHandIndices(player).length > 0) abilities.push(cardId);
+        break;
+      case "IC27_060": // Jabba the Hutt — Action [Exhaust]: Choose an enemy unit… The [Exhaust] cost
+                       // changes the game on its own, so it is usable with no enemy unit to choose.
+        abilities.push(cardId);
+        break;
+      case "IC27_070": // C-3PO (Impulse Buy) — Action [Exhaust]: Give an Experience token to another
+                       // unit, either side.
+        if (AllUnits().some(u => u.playId !== playId)) abilities.push(cardId);
+        break;
       case "IBH_062": // Imperial Deck Officer — Action [Exhaust]: Heal 2 damage from a Villainy unit.
       case "IBH_100":
         if (AllUnits().some(u => CardAspects(u.cardId)?.includes("Villainy") ?? false)) {
@@ -630,6 +642,16 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
   }
 
   return abilities;
+}
+
+/**
+ * IC27_057 Director Krennic — hand indices of the units costing 7 or more (printed) that `player`
+ * can afford at 2 less. The offer and the play-from-hand prompt both read this.
+ */
+export function KrennicPlayableHandIndices(player: PlayerId): number[] {
+  const game = GetGame();
+  if (!game) return [];
+  return PlayableUnitHandIndices(game.currentGameState, player, 2, c => (CardCost(c) ?? 0) >= 7);
 }
 
 /**

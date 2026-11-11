@@ -600,6 +600,8 @@ export interface ReturnFromDiscardPending {
   playCost?: number;
   /** "You may return…" (IC27_003): an empty selection declines ("Choose nothing"). */
   optional?: boolean;
+  /** The unit whose ability this is, when its own text acts on it afterwards (IC27_066 Talzin). */
+  sourcePlayId?: string;
   continuation: PendingResolution | null;
 }
 

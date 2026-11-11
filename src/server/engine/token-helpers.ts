@@ -1,6 +1,6 @@
 import { CardArena, CardTitle } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
-import { GetUnitsForPlayer, QueueUnitEnteredPlayReaction, UnitsEnterPlayReady } from "@/server/engine/core-functions";
+import { GetUnitsForPlayer, QueueUnitEnteredPlayReaction, TraitContains, UnitsEnterPlayReady } from "@/server/engine/core-functions";
 import type { GameState } from "@/lib/engine/game";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import type { CardInPlay, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
@@ -53,7 +53,31 @@ function tokensEnterReadyFor(game: GameState, player: PlayerId): boolean {
   );
 }
 
-function spawnToken(game: GameState, player: PlayerId, cardId: string): Unit {
+type EnteredPlayEntry = GameState["roundState"]["cardsEnteredPlayThisPhase"][number];
+
+/**
+ * THE way a unit's entry into play is recorded — played, created, deployed, rescued or returned.
+ * Writes the entered-play ledger and resolves what reacts to ANY unit entering play, so every
+ * route into the arena gets the same treatment. Call it once the unit is in the arena.
+ *
+ * IC27_076 Clone Commander Cody — "When another friendly Republic unit enters play: Give an
+ * Experience token to it." Mandatory and targetless, so it is applied here rather than bagged;
+ * Clone Trooper tokens and deployed Republic leaders count. One token per Cody.
+ */
+export function RecordEnteredPlay(game: GameState, entry: EnteredPlayEntry, gameLog?: string[]): void {
+  game.roundState.cardsEnteredPlayThisPhase.push(entry);
+  const pState = entry.fromPlayer === 1 ? game.player1 : game.player2;
+  const unit = [...pState.groundArena, ...pState.spaceArena].find(u => u.playId === entry.playId);
+  if (!unit || !TraitContains(unit.cardId, "Republic", unit.controller, unit.playId)) return;
+  const codys = [...pState.groundArena, ...pState.spaceArena]
+    .filter(u => u.cardId === "IC27_076" && u.playId !== unit.playId && !Unit.FromInterface(u).LostAbilities());
+  for (let i = 0; i < codys.length; i++) {
+    GiveTokenUpgrade(game, unit, EXPERIENCE_TOKEN, unit.controller);
+    gameLog?.push(`${CardTitle("IC27_076")}: gave an Experience token to ${CardTitle(unit.cardId)}.`);
+  }
+}
+
+function spawnToken(game: GameState, player: PlayerId, cardId: string, gameLog: string[]): Unit {
   const playId = String(game.nextPlayId++);
   const unit = Unit.FromInterface({
     cardId,
@@ -74,7 +98,7 @@ function spawnToken(game: GameState, player: PlayerId, cardId: string): Unit {
   else pState.spaceArena.push(unit);
   // A token unit enters play like any other — TS26_02 Anakin / TS26_04 Padmé count "units that
   // entered play this phase (including tokens and leaders)".
-  game.roundState.cardsEnteredPlayThisPhase.push({ fromPlayer: player, cardId, playId, reason: "token-created" });
+  RecordEnteredPlay(game, { fromPlayer: player, cardId, playId, reason: "token-created" }, gameLog);
   // "including token units" — HMW_171 Trap Field fires on tokens, which never reach addToArena.
   QueueUnitEnteredPlayReaction(game, unit);
   return unit;
@@ -87,7 +111,7 @@ export function CreateBattleDroid(game: GameState, player: PlayerId, gameLog: st
     gameLog.push("Created Battle Droid token.");
   }
 
-  return spawnToken(game, player, "TWI_T01");
+  return spawnToken(game, player, "TWI_T01", gameLog);
 }
 
 export function CreateCloneTrooper(game: GameState, player: PlayerId, gameLog: string[], fromCardId?: string): Unit {
@@ -97,7 +121,7 @@ export function CreateCloneTrooper(game: GameState, player: PlayerId, gameLog: s
     gameLog.push("Created Clone Trooper token.");
   }
 
-  return spawnToken(game, player, "TWI_T02");
+  return spawnToken(game, player, "TWI_T02", gameLog);
 }
 
 export function CreateTieFighter(game: GameState, player: PlayerId, gameLog: string[], fromCardId?: string): Unit {
@@ -107,7 +131,7 @@ export function CreateTieFighter(game: GameState, player: PlayerId, gameLog: str
     gameLog.push("Created TIE Fighter token.");
   }
 
-  return spawnToken(game, player, "JTL_T01");
+  return spawnToken(game, player, "JTL_T01", gameLog);
 }
 
 export function CreateXWing(game: GameState, player: PlayerId, gameLog: string[], fromCardId?: string): Unit {
@@ -117,12 +141,12 @@ export function CreateXWing(game: GameState, player: PlayerId, gameLog: string[]
     gameLog.push("Created X-Wing token.");
   }
 
-  return spawnToken(game, player, "JTL_T02");
+  return spawnToken(game, player, "JTL_T02", gameLog);
 }
 
 /** ASH_T01 Mandalorian token — Shielded, so it enters play with a Shield token attached. */
 export function CreateMandalorianToken(game: GameState, player: PlayerId, gameLog: string[], fromCardId?: string): Unit {
-  const unit = spawnToken(game, player, "ASH_T01");
+  const unit = spawnToken(game, player, "ASH_T01", gameLog);
   GiveTokenUpgrade(game, unit, SHIELD_TOKEN, player); // Shielded: its creator gives the Shield
   if (fromCardId) {
     gameLog.push(`${CardTitle(fromCardId)}: created Mandalorian token.`);
@@ -140,7 +164,7 @@ export function CreateBeast(game: GameState, player: PlayerId, gameLog: string[]
     gameLog.push("Created a Beast token.");
   }
 
-  return spawnToken(game, player, "HMW_T03");
+  return spawnToken(game, player, "HMW_T03", gameLog);
 }
 
 export function CreateSpy(gamestate: GameState, player: PlayerId, gameLog: string[], fromCardId?: string): Unit {
@@ -150,7 +174,7 @@ export function CreateSpy(gamestate: GameState, player: PlayerId, gameLog: strin
     gameLog.push("Created a Spy token.");
   }
 
-  return spawnToken(gamestate, player, "SEC_T01");
+  return spawnToken(gamestate, player, "SEC_T01", gameLog);
 }
 
 export const ADVANTAGE_TOKEN = "ASH_T02";

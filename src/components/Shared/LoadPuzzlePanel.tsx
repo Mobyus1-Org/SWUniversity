@@ -4,7 +4,8 @@ import { puzzleImageSrc, DEFAULT_PUZZLE_IMAGE } from "@/util/puzzle-image";
 import type { RawPuzzleGameState } from "@/server/puzzle/adapters/puzzle-runtime";
 import { statusFilterOptionsFor } from "@/server/puzzle/puzzle-status";
 import type { PuzzleStatus, PuzzleAccessLevel, PuzzleStatusFilter } from "@/server/puzzle/puzzle-status";
-import { asWinCondition, DEFAULT_WIN_CONDITION, PUZZLE_WIN_CONDITIONS, WIN_CONDITION_INFO } from "@/util/puzzle-win-condition";
+import { asWinCondition, PUZZLE_WIN_CONDITIONS, WIN_CONDITION_INFO } from "@/util/puzzle-win-condition";
+import { WinConditionChip } from "@/components/Shared/WinConditionChip";
 import type { PuzzleWinCondition } from "@/util/puzzle-win-condition";
 
 type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints: string[]; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition; status: PuzzleStatus; assetPath?: string; initialGamestate: RawPuzzleGameState };
@@ -300,13 +301,7 @@ export function LoadPuzzlePanel(props: Props) {
                 Testing
               </span>
             ) : null;
-            // Find Lethal is the norm, so only the other modes carry a chip.
-            const winCondition = asWinCondition(entry.winCondition);
-            const modeChip = winCondition !== DEFAULT_WIN_CONDITION ? (
-              <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-sky-400/30 bg-sky-500/15 px-2 py-0.5 text-3xs font-semibold text-sky-200">
-                {WIN_CONDITION_INFO[winCondition].title}
-              </span>
-            ) : null;
+            const modeChip = <WinConditionChip winCondition={asWinCondition(entry.winCondition)} />;
             const renderAuthor = (cls: string) => (entry.author || entry.inspiredBy) ? (
               <div className={cls}>
                 {entry.author ? <span>By {entry.author}</span> : null}

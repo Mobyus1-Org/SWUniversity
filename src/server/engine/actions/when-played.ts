@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, IsLeaderUnit, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits, CanUnitReady, buildThrawnExperience, buildBadFeelingShield } from "@/server/engine/core-functions";
-import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost, CardIsPlayable, DiscardUnitsPlayableAtDiscount } from "@/server/engine/card-playability";
+import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost, CardIsPlayable, DiscardUnitsPlayableAtDiscount, DefeatedThisPhaseDiscardUnitsAtDiscount } from "@/server/engine/card-playability";
 import { DrawCardForPlayer, DrawCardsForPlayer, DefeatableNonLeadersWithPowerAtMost, ReadyableUnitsWithPowerAtMost, UpgradesOnEnemyUnits } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds, UpgradeDestinationsOnControlChange, PilotlessFighterOrTransportPlayIds, PilotlessEnemyVehiclePlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
@@ -270,6 +270,62 @@ export function buildHunterChoice(
     data: { remaining },
     continuation,
   } satisfies ChooseOnePending;
+}
+
+/**
+ * IC27_046 Vigilant Defense — "Heal 3 damage from a friendly unit or base." The buff step before it
+ * changes no damage, so the list can be taken up front; the unit that step buffs is a legal pick.
+ * Only damaged targets are offered; with none the step is skipped.
+ */
+export function buildVigilantDefenseHeal(
+  player: PlayerId,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const game = GetGame();
+  if (!game) return continuation;
+  const damagedUnits = GetUnitsForPlayer(player).filter(u => u.damage > 0).map(u => u.playId);
+  const baseDamaged = GetPlayer(game.currentGameState, player).base.damage > 0;
+  if (damagedUnits.length === 0 && !baseDamaged) return continuation;
+  return {
+    type: "ability-target",
+    cardId: "IC27_046_heal",
+    player,
+    fromPlayIds: baseDamaged ? [...damagedUnits, `player${player}.base`] : damagedUnits,
+    ...(baseDamaged && { fromZones: ["Base" as const] }),
+    continuation,
+  } satisfies AbilityTargetPending;
+}
+
+/**
+ * IC27_042 Obi-Wan Kenobi — units that entered play this phase (either player's, tokens and
+ * leaders included) and are still in play: the targets of his –5/–5 mode.
+ */
+export function UnitsThatEnteredPlayThisPhase(): Unit[] {
+  const game = GetGame();
+  if (!game) return [];
+  const entered = new Set(game.currentGameState.roundState.cardsEnteredPlayThisPhase.map(e => e.playId));
+  return AllUnits().filter(u => entered.has(u.playId));
+}
+
+/**
+ * IC27_042 Obi-Wan Kenobi — "When Played: You may choose one: Play a unit that was defeated this
+ * phase from your discard pile. It costs 5 resources less. / Choose a unit that entered play this
+ * phase. It gets –5/–5 for this phase." Only the modes that can do something are listed, alongside
+ * a decline; with neither possible there is nothing to ask.
+ */
+export function buildObiWanChoice(player: PlayerId): ChooseOnePending | null {
+  const game = GetGame();
+  if (!game) return null;
+  const options: { id: string; label: string }[] = [];
+  if (DefeatedThisPhaseDiscardUnitsAtDiscount(game.currentGameState, player, 5).length > 0) {
+    options.push({ id: "replay", label: "Play a unit defeated this phase from your discard (5 less)" });
+  }
+  if (UnitsThatEnteredPlayThisPhase().length > 0) {
+    options.push({ id: "shrink", label: "Give a unit that entered play this phase –5/–5" });
+  }
+  if (options.length === 0) return null;
+  options.push({ id: "none", label: "Choose nothing" });
+  return { type: "choose-one", cardId: "IC27_042", player, options, continuation: null };
 }
 
 /**
@@ -1996,6 +2052,64 @@ export function resolveWhenPlayed(
         onYes: null,
         continuation: null,
       } satisfies AbilityOptionPending;
+    }
+    case "IC27_046": { // Vigilant Defense (Event) — "Give a friendly unit +0/+3 and Sentinel for this
+                       // phase. Heal 3 damage from a friendly unit or base. Defeat an enemy unit
+                       // with 3 or less remaining HP." Three mandatory steps in printed order, each
+                       // skipped when it has no target. The first two only touch friendly cards, so
+                       // the enemy list for the third can be taken now.
+      const enemies046 = GetUnitsForPlayer(GetOtherPlayer(player))
+        .filter(u => UnitRemainingHp(u) <= 3 && !UnitImmuneToEnemyDefeat(u));
+      const defeat046 = enemies046.length > 0
+        ? mandatoryTarget("IC27_046_defeat", player, enemies046.map(u => u.playId))
+        : null;
+      const heal046 = buildVigilantDefenseHeal(player, defeat046);
+      const friendly046 = GetUnitsForPlayer(player);
+      return friendly046.length > 0
+        ? mandatoryTarget("IC27_046_buff", player, friendly046.map(u => u.playId), heal046)
+        : heal046;
+    }
+    case "IC27_077": { // Mon Mothma (Truth is an Abyss) — "When Played: You may attack with another
+                       // unit, even if it's exhausted. For this attack, it gains Overwhelm and can't
+                       // attack bases." Not ready-filtered; the attack itself is set up on the pick.
+      const attackers077 = GetUnitsForPlayer(player).filter(u => u.playId !== playId && CanUnitAttack(u));
+      if (attackers077.length === 0) return null;
+      return optionalTarget(cardId, player, attackers077.map(u => u.playId),
+        "Attack with another unit (even if exhausted) with Overwhelm? It can't attack bases.",
+        { yesLabel: "Attack", sourcePlayId: playId });
+    }
+    case "IC27_042": // Obi-Wan Kenobi (I Sense a Trap) — "When Played: You may choose one: …"
+      return buildObiWanChoice(player);
+    case "IC27_066": { // Mother Talzin (The Time Has Come) — "When Played: You may play a Villainy
+                       // unit that costs 4 or less from your discard pile for free. If it's not a
+                       // Night or Undead unit, deal damage equal to its cost to this unit." Free, so
+                       // every such unit is affordable; an empty pick declines.
+      const eligible066 = GetPlayer(game.currentGameState, player).discard
+        .filter(d => CardType(d.cardId) === "Unit"
+          && CardAspects(d.cardId).includes("Villainy")
+          && (CardCost(d.cardId) ?? 0) <= 4)
+        .map(d => d.playId);
+      if (eligible066.length === 0) return null;
+      return {
+        type: "return-from-discard",
+        cardId,
+        player,
+        maxCount: 1,
+        eligiblePlayIds: eligible066,
+        optional: true,
+        sourcePlayId: playId,
+        continuation: null,
+      } satisfies ReturnFromDiscardPending;
+    }
+    case "IC27_039": { // Ahsoka Tano (Not on My Death Watch) — "When Played: You may defeat a unit
+                       // that costs 3 or less." Either side; an enemy that can't be defeated by
+                       // enemy abilities is left off.
+      const eligible039 = AllUnits().filter(u =>
+        (CardCost(u.cardId) ?? 0) <= 3
+        && !(UnitImmuneToEnemyDefeat(u) && u.controller !== player));
+      if (eligible039.length === 0) return null;
+      return optionalTarget(cardId, player, eligible039.map(u => u.playId),
+        "Defeat a unit that costs 3 or less?", { yesLabel: "Defeat", sourcePlayId: playId });
     }
     case "LOF_036": { // Old Daka — "When Played: You may defeat a friendly Night unit not named Old
                       // Daka. Then, you may play that unit from your discard pile for free."
@@ -4091,6 +4205,9 @@ export function resolveWhenPlayed(
       return buildC3poNumberChoice(cardId, player, null);
     case "SOR_031": // Inferno Four — When Played/When Defeated: Look at top 2, put any on bottom, rest on top.
       return searchDeck(cardId, player, 2, "scry");
+    case "IC27_068": // Devastator — "When Played: Search the top 5 cards of your deck for a Villainy
+                     // unit that costs 12 or less and play it for free."
+      return searchDeck(cardId, player, 5, "play", { filter: { type: "Unit", aspect: "Villainy", maxCost: 12 }, maxChoices: 1, costModifier: "free" });
     case "LOF_100": // Kelleran Beq — Search the top 7 cards of your deck for a unit, reveal it, and play it. It costs 3 resources less.
       return searchDeck(cardId, player, 7, "play", { filter: { type: "Unit" }, maxChoices: 1, costModifier: -3 });
     case "SOR_228": // Viper Probe Droid — When Played: Look at an opponent's hand.
@@ -4417,13 +4534,7 @@ export function resolveWhenPlayed(
     case "TWI_189": { // Unnatural Life — "Play a unit that was defeated this phase from your discard
                       // pile. It costs 2 resources less and enters play ready. At the start of the
                       // regroup phase, defeat it."
-      const gs189 = game.currentGameState;
-      const defeatedThisPhase189 = new Set(
-        gs189.roundState.cardsLeftPlayThisPhase
-          .filter(c => c.fromPlayer === player && (c.reason === "defeated" || c.reason === "token-defeated"))
-          .map(c => c.playId),
-      );
-      const eligible189 = DiscardUnitsPlayableAtDiscount(gs189, player, 2, d => defeatedThisPhase189.has(d.playId));
+      const eligible189 = DefeatedThisPhaseDiscardUnitsAtDiscount(game.currentGameState, player, 2);
       if (eligible189.length === 0) return null;
       return {
         type: "return-from-discard",

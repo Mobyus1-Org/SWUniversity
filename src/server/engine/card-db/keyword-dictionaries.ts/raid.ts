@@ -147,6 +147,9 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
       case "SEC_134"://Hunting Assassin Droid — while an enemy unit is damaged, gains Raid 2.
         amount += GetUnitsForPlayer(otherPlayer).some(u => u.damage > 0) ? 2 : 0;
         break;
+      case "IC27_071"://Avar Kriss — "gains Raid 1 for each other friendly unit" (printed Raid 1 below)
+        amount += units.filter(u => u.playId !== playId).length;
+        break;
       case "LOF_105"://Oppo Rancisis
         if(isRecursion) return 0; //Prevent recursion
         for(const u of units) {
@@ -261,6 +264,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "ASH_237": amount += 1; break; //Mouse Droid
     case "IC27_065": amount += 3; break; //Darth Maul - Mindful Apprentice
     case "IC27_153": amount += 3; break; //Greef Karga - I Celebrate Your Success
+    case "IC27_071": amount += 1; break; //Avar Kriss - For Light and Life
     default: break;
   }
 

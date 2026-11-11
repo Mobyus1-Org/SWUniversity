@@ -1,12 +1,12 @@
 import { Unit } from "@/server/engine/unit";
-import { DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
+import { AbilityTargetPending, DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildAnnihilatorOffer, UnitTraits, AllUnits, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains, buildThrawnExperience } from "@/server/engine/core-functions";
+import { buildAnnihilatorOffer, UnitTraits, AllUnits, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains, buildThrawnExperience, negotiatorResourceShuffle } from "@/server/engine/core-functions";
 import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { GiveTokenUpgrade, CreateBattleDroid, CreateTieFighter, CreateSpy, CreateMandalorianToken } from "@/server/engine/token-helpers";
+import { GiveTokenUpgrade, CreateBattleDroid, CreateTieFighter, CreateSpy, CreateMandalorianToken, GiveExperienceTokens } from "@/server/engine/token-helpers";
 
 /**
  * When Defeated abilities — called immediately after the unit is removed from
@@ -193,6 +193,37 @@ function resolveOwnWhenDefeated(
   }
 
   switch (unit.cardId) {
+    case "IC27_078": // Anakin Skywalker (Destined for Darkness) — "When Defeated: Search your deck
+                     // for a card named Darth Vader, reveal it, and draw it." Any printing, any type.
+      return searchDeck("IC27_078", player, -1, "draw", { filter: { title: "Darth Vader" }, maxChoices: 1 });
+    case "IC27_084": // Negotiator — shared with his On Attack.
+      return negotiatorResourceShuffle(player, null);
+    case "IC27_056": { // Allegiant General Pryde — "When Defeated: Give an Experience token to the
+                       // friendly unit with the most power. (If multiple units are tied, choose
+                       // one.)" Mandatory. A single strongest unit gets it without a prompt.
+      const game056 = GetGame();
+      const friendly056 = GetUnitsForPlayer(player);
+      if (!game056 || friendly056.length === 0) return null;
+      const power056 = (u: typeof friendly056[number]) => Unit.FromInterface(u).CurrentPower();
+      const most056 = Math.max(...friendly056.map(power056));
+      const tied056 = friendly056.filter(u => power056(u) === most056);
+      if (tied056.length === 1) {
+        GiveExperienceTokens(game056.currentGameState, tied056[0], 1, game056.gameLog, player, "IC27_056");
+        return null;
+      }
+      return mandatoryTarget("IC27_056", player, tied056.map(u => u.playId));
+    }
+    case "IC27_045": { // Qi'ra (Survivor) — "When Defeated: Choose a unit. You may give an Experience
+                       // token to it for each Experience token that was on this unit." The count is
+                       // what she carried as she left play — her upgrades ride on `unit`.
+      const xp045 = unit.upgrades.filter(u => u.cardId === "SOR_T01").length;
+      const units045 = AllUnits();
+      if (xp045 === 0 || units045.length === 0) return null;
+      const offer045 = optionalTarget("IC27_045", player, units045.map(u => u.playId),
+        `Give ${xp045} Experience token${xp045 > 1 ? "s" : ""} to a unit?`, { yesLabel: "Give" });
+      (offer045.onYes as AbilityTargetPending).amount = xp045;
+      return offer045;
+    }
     case "LOF_194": // J-Type Nubian Starship — "When Defeated: Discard a card from your hand."
     case "TWI_208": { // Favorable Delegate — same text. Mandatory; nothing to do with an empty hand.
       const game194 = GetGame();

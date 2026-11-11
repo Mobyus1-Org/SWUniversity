@@ -31,6 +31,7 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "IC27_027", "IC27_108", "IC27_164", "IC27_028", "IC27_190",
   "IC27_149", // The Invisible Hand — next card costs 9 less
   "SEC_101", // Queen Amidala — create 2 Spy tokens
+  "IC27_045", // Qi'ra (Survivor) — 2 Experience tokens on herself
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -62,6 +63,15 @@ export function resolveWhenPlayedTrigger(
       }
       if (others111.length > 0) {
         log.push(`${CardTitle("HMW_111")}: gave +2/+2 to ${others111.length} other friendly unit(s) this phase.`);
+      }
+      break;
+    }
+    case "IC27_045": { // Qi'ra (Survivor) — "When Played: Give 2 Experience tokens to this unit."
+      const self045 = trigger.playId ? GetUnitByPlayId(gs, trigger.playId) : undefined;
+      if (self045) {
+        GiveTokenUpgrade(gs, self045, "SOR_T01", trigger.fromPlayer);
+        GiveTokenUpgrade(gs, self045, "SOR_T01", trigger.fromPlayer);
+        log.push(`${CardTitle("IC27_045")}: gave 2 Experience tokens to herself.`);
       }
       break;
     }

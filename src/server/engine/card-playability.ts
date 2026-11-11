@@ -110,6 +110,11 @@ export function aspectPenalty(game: GameState, player: PlayerId, cardId: string,
   // a cost, and consuming it on a report would spend the waiver on a card never actually played.
   if (omegaWaivesAspectPenalty(game, player, cardId)) return 0;
 
+  // IC27_078 Anakin Skywalker — "While this unit is in your discard pile, ignore the aspect
+  // penalties on cards you play named Darth Vader." Any Vader printing, however it is played.
+  if (CardTitle(cardId) === "Darth Vader"
+      && (player === 1 ? game.player1 : game.player2).discard.some(d => d.cardId === "IC27_078")) return 0;
+
   const partner = PARTNER_ASPECT_WAIVERS[cardId];
   if (partner && controlsCardWithTitle(game, player, partner.partnerTitle)) {
     return aspectPenaltyForAspects(game, player, CardAspects(cardId).filter(a => a !== partner.aspect));
@@ -251,6 +256,17 @@ function delMeekoEventTax(game: GameState, player: PlayerId, cardId: string): nu
   const oppState = player === 1 ? game.player2 : game.player1;
   const oppUnits = [...oppState.groundArena, ...oppState.spaceArena];
   return oppUnits.some(u => u.cardId === "SOR_034" && !Unit.FromInterface(u).LostAbilities()) ? 1 : 0;
+}
+
+// IC27_043 Raddus — "While this unit is exhausted, cards your opponents play cost 3 resources more."
+// Every card type and every way of playing it (hand, discard, Smuggle, Piloting); a leader is
+// deployed, never played. Each exhausted Raddus taxes separately.
+export function raddusTax(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) === "Leader") return 0;
+  const opp = player === 1 ? game.player2 : game.player1;
+  return [...opp.groundArena, ...opp.spaceArena]
+    .filter(u => u.cardId === "IC27_043" && !u.ready && !Unit.FromInterface(u).LostAbilities())
+    .length * 3;
 }
 
 // SOR_061 / LOF_058 Guardian of the Whills: first upgrade played on this unit each round costs 1 less.
@@ -582,6 +598,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
   return Math.max(0, CardCost(cardId)
     + aspectPenalty(game, player, cardId)
     + delMeekoEventTax(game, player, cardId)
+    + raddusTax(game, player, cardId)
     - guardianOfTheWhillsDiscount(game, player, cardId)
     - traitAttachUpgradeDiscount(game, player, cardId)
     - forceChokeDiscount(game, player, cardId)
@@ -625,6 +642,7 @@ export function palpatinesReturnCost(game: GameState, player: PlayerId, cardId: 
  */
 export function pilotPlayCost(game: GameState, player: PlayerId, cardId: string): number {
   return Math.max(0, PilotingCost(cardId) + aspectPenalty(game, player, cardId, { asPilot: true })
+    + raddusTax(game, player, cardId) // a cost increase on the CARD, however it is played
     - wedgeNextPilotDiscount(game, player, cardId) // "This includes Piloting costs."
     - invisibleHandNextCardDiscount(game, player, cardId)); // "the next CARD you play"
 }
@@ -693,7 +711,7 @@ export function effectiveSmuggleCost(
     best = best === null ? techCost : Math.min(best, techCost);
   }
 
-  return best;
+  return best === null ? null : best + raddusTax(game, player, cardId);
 }
 
 export function ResourceIsSmuggleable(
@@ -763,6 +781,20 @@ export function DiscardUnitsPlayableAtDiscount(
     .filter(d => !extraFilter || extraFilter(d))
     .filter(d => discountedPlayCost(game, player, d.cardId, discount) <= spendable)
     .map(d => d.playId);
+}
+
+/**
+ * "Play a unit that was defeated this phase from your discard pile. It costs N resources less" —
+ * TWI_189 Unnatural Life, HMW_016 Maul, IC27_042 Obi-Wan Kenobi. "Defeated this phase" is read off
+ * the left-play ledger, so a unit discarded from hand or deck never qualifies: it was never in play.
+ */
+export function DefeatedThisPhaseDiscardUnitsAtDiscount(game: GameState, player: PlayerId, discount: number): string[] {
+  const defeated = new Set(
+    game.roundState.cardsLeftPlayThisPhase
+      .filter(c => c.fromPlayer === player && (c.reason === "defeated" || c.reason === "token-defeated"))
+      .map(c => c.playId),
+  );
+  return DiscardUnitsPlayableAtDiscount(game, player, discount, d => defeated.has(d.playId));
 }
 
 /**

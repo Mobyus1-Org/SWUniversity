@@ -712,6 +712,12 @@ function friendlyAuraBonus(unit: Unit): number {
   const rexes = friendly.filter(u => u.cardId === "HMW_141" && active(u)).length;
   if (rexes > 0 && UnitHasNoAbilities(unit)) bonus += rexes;
 
+  // Padmé Amidala (IC27_083): "Other friendly Heroism units get +3/+3." The aspect is printed, so
+  // it is read off the card.
+  if (CardAspects(unit.cardId).includes("Heroism")) {
+    bonus += friendly.filter(u => u.cardId === "IC27_083" && u.playId !== unit.playId && active(u)).length * 3;
+  }
+
   return bonus;
 }
 

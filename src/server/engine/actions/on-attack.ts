@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
-import { GetUnitByPlayId, GetOtherPlayer, ReadyUnit, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage, FriendlyUnitsWithTrait, DiscardFromTopOfDeck, buildThrawnExperience, buildLeiaDrawAndReturn, buildHanTokenDefeat, buildMaulChoice, OtherFriendlyUnitsThatEnteredPlayThisPhase, LeaderAbilitiesIgnored } from "@/server/engine/core-functions";
+import { GetUnitByPlayId, GetOtherPlayer, ReadyUnit, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage, FriendlyUnitsWithTrait, DiscardFromTopOfDeck, buildThrawnExperience, buildLeiaDrawAndReturn, buildHanTokenDefeat, buildMaulChoice, OtherFriendlyUnitsThatEnteredPlayThisPhase, LeaderAbilitiesIgnored, negotiatorResourceShuffle } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles, AllCardTraits } from "@/server/engine/card-db/generated";
@@ -664,6 +664,15 @@ function resolveInnateOnAttack(
   continuation: ResolveAttackPending,
 ): PendingResolution | null {
   switch (sourceCardId) {
+    case "IC27_081": { // Mace Windu (Dropping By) — "On Attack: Give an Experience token to this unit."
+                       // Lands before damage, so the token's +1/+1 counts in this attack.
+      const game081 = GetGame();
+      if (game081) GiveExperienceTokens(game081.currentGameState, attacker, 1, game081.gameLog, attacker.controller, "IC27_081");
+      return continuation;
+    }
+    case "IC27_084": // Negotiator — "On Attack/When Defeated: Resource the top card of your deck.
+                     // Then, you may return a friendly resource to its owner's hand."
+      return negotiatorResourceShuffle(attacker.controller, continuation);
     case "ASH_189": { // Emperor's Messenger — "On Attack: Ready a resource." Mandatory and
                       // targetless: resources are interchangeable, so ready the first exhausted one.
       const game189 = GetGame();

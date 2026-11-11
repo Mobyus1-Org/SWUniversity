@@ -233,3 +233,26 @@ memory system (see `MEMORY.md`), not just here.
   counter-damage, so the *second* attacker's arena index shifts from 1 to 0 — an index computed
   from the initial board is wrong the moment anything trades. Sibling of the standing "account for
   what the engine does to the fixture before your assertion" rule.
+
+## 2026-11-11
+
+- **Repeated, 5th time — the zsh glob lesson, and the logged fix is wrong.** The first grep this
+  session died on `--include=*.ts` again, and this skill's `ls *-implement.md 2>/dev/null` still
+  printed `zsh: no matches found`. The 2026-09-22 advice ("append `2>/dev/null || true`") can't work:
+  in zsh, a no-match glob is a *shell* error raised before the command runs, so redirecting the
+  command's stderr never sees it. Working fixes are to quote the glob, use `find`/the Grep tool, or
+  use the `(N)` null-glob qualifier (`ls *-implement.md(N)`).
+- **Confirmed working — [[feedback-flip-board-after-push]], extended to a prod DB write.** The user
+  said "pushed" but the commit was still 1 ahead. `git fetch && git status -sb` before the backfill
+  caught it, and nothing was written ahead of the deploy. The `fetch` matters: without it the
+  local `origin/main` ref is stale and the check passes falsely.
+- **Confirmed working — "when the user enumerates scenarios, encode ALL of them as tests"
+  (2026-08-09).** The boss's Karis Nemik example looked already covered by the open-prompt check.
+  Turning it into a real puzzle-dispatch test showed the puzzle couldn't even get there: the
+  opponent's SEC_148 disclose had no automatic answer and threw. Reasoning from the code would have
+  reported "already handled".
+- **What worked well: put the rule in one pure function before any UI plumbing.** Requirements
+  changed twice mid-build (wrong endings went from a "report it" panel to a plain fail, and the
+  dropdown became radio buttons). Because `puzzleOutcome` was shared by client and solver and
+  tested red first, each pivot was a small edit to one module plus its tests, not a hunt through
+  PuzzlesPage.

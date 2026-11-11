@@ -5,7 +5,7 @@ import { CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { CreateBeast, CreateCloneTrooper } from "@/server/engine/token-helpers";
-import { DiscardUnitsPlayableAtDiscount } from "@/server/engine/card-playability";
+import { DefeatedThisPhaseDiscardUnitsAtDiscount } from "@/server/engine/card-playability";
 
 export function resolveWhenDeployed(
   cardId: string,
@@ -57,13 +57,7 @@ export function resolveWhenDeployed(
                       // this phase from your discard pile. It costs 5 resources less." The
                       // defeated-this-phase test is the left-play ledger, so a unit discarded from
                       // hand or deck never qualifies — it was never in play to be defeated.
-      const gs016 = game.currentGameState;
-      const defeatedThisPhase016 = new Set(
-        gs016.roundState.cardsLeftPlayThisPhase
-          .filter(c => c.fromPlayer === player && (c.reason === "defeated" || c.reason === "token-defeated"))
-          .map(c => c.playId),
-      );
-      const eligible016 = DiscardUnitsPlayableAtDiscount(gs016, player, 5, d => defeatedThisPhase016.has(d.playId));
+      const eligible016 = DefeatedThisPhaseDiscardUnitsAtDiscount(game.currentGameState, player, 5);
       if (eligible016.length === 0) return null;
       return {
         type: "return-from-discard",

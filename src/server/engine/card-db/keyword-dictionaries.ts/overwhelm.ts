@@ -73,6 +73,7 @@ export function HasOverwhelm(cardId: string,
         case "LOF_126"://Overpower
         case "ASH_007_overwhelm"://Grand Admiral Sloane leader Action — for this phase
         case "LAW_001"://Saw Gerrera — Overwhelm for this attack
+        case "IC27_077"://Mon Mothma — Overwhelm for this attack
           return true;
         default: break;
       }
@@ -229,6 +230,7 @@ export function HasOverwhelm(cardId: string,
     case "IC27_091": // reprint of ASH_129
     case "IC27_183": // reprint of SOR_232
     case "IC27_006"://Luke Skywalker - I Have to Face Him (deployed side)
+    case "IC27_068"://Devastator - Lord Vader's Flagship
       return true;
     default: break;
   }

@@ -10,6 +10,7 @@ import type { PuzzleAccessLevel } from "@/server/puzzle/puzzle-status";
 import { PuzzleBuilderPanel } from "@/components/Shared/PuzzleBuilderPanel";
 import { DEFAULT_ALTERNATE_FAIL_EXPLANATION } from "@/components/Shared/puzzle-builder-state";
 import { asWinCondition, lossExplanation, puzzleOutcome, WIN_CONDITION_INFO } from "@/util/puzzle-win-condition";
+import { WinConditionChip } from "@/components/Shared/WinConditionChip";
 import type { PuzzleOutcome, PuzzleWinCondition } from "@/util/puzzle-win-condition";
 import { CardLinkText, PuzzleText } from "@/components/Shared/CardLink";
 import {
@@ -193,6 +194,9 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
   "JTL_146": "Attack w/ a Fighter (+2/+0)", // Massassi Tactical Officer
   "IBH_062": "Heal 2 from a Villainy unit", // Imperial Deck Officer
   "IBH_100": "Heal 2 from a Villainy unit",
+  "IC27_057": "Play a 7+ cost unit for 2 less", // Director Krennic — Architect of Annihilation
+  "IC27_060": "Mark an enemy unit: its attackers +4/+0", // Jabba the Hutt — Bounties Left and Right
+  "IC27_070": "XP to another unit; draw if 6+ power", // C-3PO — Impulse Buy
   // Deployed leaders are units in the arena, so their Action button comes from this list too.
   "LAW_015": "Play an Underworld unit", // Jabba the Hutt (Crime Boss), deployed
 };
@@ -1546,9 +1550,12 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     ) : null}
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/35 px-4 py-3 backdrop-blur-sm">
       <div>
-        <h1 className="text-2xl font-black uppercase tracking-[0.24em] text-white sm:text-3xl">{puzzleName ?? "Puzzle Mode"}</h1>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h1 className="text-2xl font-black uppercase tracking-[0.24em] text-white sm:text-3xl">{puzzleName ?? "Puzzle Mode"}</h1>
+          {puzzleMeta ? <WinConditionChip winCondition={winCondition} className="text-xs" /> : null}
+        </div>
         {!puzzleName ? <p className="mt-1 text-xs text-white/65 sm:text-sm">Board-first tactical sandbox. Opponent already has initiative.</p> : null}
-        {puzzleMeta ? <p className="mt-1 text-xs font-semibold text-sky-200/90">{WIN_CONDITION_INFO[winCondition].title}: <span className="font-normal text-white/70">{WIN_CONDITION_INFO[winCondition].goal}.</span></p> : null}
+        {puzzleMeta ? <p className="mt-1 text-xs font-semibold text-white/80">Goal: <span className="font-normal text-white/70">{WIN_CONDITION_INFO[winCondition].goal}.</span></p> : null}
         {puzzleMeta?.author ? <p className="mt-0.5 text-xs text-white/45">By {puzzleMeta.author}{puzzleMeta.inspiredBy ? <span className="ml-2 text-white/30">· Inspired by {puzzleMeta.inspiredBy}</span> : null}</p> : null}
       </div>
       {showClosePuzzleConfirm ? (
