@@ -175,6 +175,8 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "TS26_17"://Rush Clovis - Trapped by Authority
     case "IC27_067"://Darth Vader - Useless to Resist
     case "IC27_081"://Mace Windu - Dropping By
+    case "IC27_142"://Greedo - Big-Timer
+    case "IC27_144"://Jango Fett - Straight Shooter
       return true;
   }
   //JTL_053: The Ghost - Heart of the Family

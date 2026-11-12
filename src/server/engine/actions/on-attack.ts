@@ -670,6 +670,43 @@ function resolveInnateOnAttack(
       if (game081) GiveExperienceTokens(game081.currentGameState, attacker, 1, game081.gameLog, attacker.controller, "IC27_081");
       return continuation;
     }
+    case "IC27_106": { // Kylo Ren (Relentless) — "On Attack: If this is the first time this unit has
+                       // attacked this phase, ready him." The attack ledger is written after On Attack
+                       // resolves, so no entry for him yet means this is his first. The ready itself
+                       // must follow the attack's exhaust: it rides the same marker as JTL_157.
+      const game106 = GetGame();
+      if (!game106) return continuation;
+      const gs106 = game106.currentGameState;
+      if (!gs106.roundState.unitsAttackedThisPhase.some(e => e.playId === attacker.playId)) {
+        gs106.currentEffects.push({ cardId: "JTL_157_ready", duration: "ForAttack", affectedPlayer: attacker.controller, targetPlayId: attacker.playId });
+      }
+      return continuation;
+    }
+    case "IC27_113": { // Ezra Bridger (Down With the Freedom) — "On Attack: Give another friendly
+                       // Heroism unit Raid 2 for this phase." Mandatory; either arena.
+      const heroes113 = GetUnitsForPlayer(attacker.controller)
+        .filter(u => u.playId !== attacker.playId && CardAspects(u.cardId).includes("Heroism"));
+      if (heroes113.length === 0) return continuation;
+      return mandatoryTarget("IC27_113", attacker.controller, heroes113.map(u => u.playId), continuation);
+    }
+    case "IC27_126": { // Saw Gerrera (For the Cause) — "On Attack: You may double another friendly
+                       // unit's power for this phase."
+      const others126 = GetUnitsForPlayer(attacker.controller).filter(u => u.playId !== attacker.playId);
+      if (others126.length === 0) return continuation;
+      return optionalTarget("IC27_126", attacker.controller, others126.map(u => u.playId),
+        "Double another friendly unit's power for this phase?", { yesLabel: "Double", continuation });
+    }
+    case "IC27_145": { // Poggle the Lesser (Secret Designs) — "On Attack: You may pay 1 resource and
+                       // discard a card from your hand. If you do, the next card you play this phase
+                       // costs 3 resources less." Both halves are costs: no card in hand, no offer.
+      const game145 = GetGame();
+      if (!game145 || GetPlayer(game145.currentGameState, attacker.controller).hand.length === 0) return continuation;
+      return optionalPayResource("IC27_145", attacker.controller,
+        "Pay 1 resource and discard a card so the next card you play this phase costs 3 less?",
+        { continuation }) ?? continuation;
+    }
+    case "IC27_151": // R2-D2 (The First Protagonist) — "On Attack: Choose one: …"
+      return buildR2D2FirstProtagonistChoice(attacker.controller, continuation);
     case "IC27_084": // Negotiator — "On Attack/When Defeated: Resource the top card of your deck.
                      // Then, you may return a friendly resource to its owner's hand."
       return negotiatorResourceShuffle(attacker.controller, continuation);
@@ -2600,4 +2637,70 @@ function kazudaSilencePending(attacker: Unit, continuation: ResolveAttackPending
     maxTargets: friendly.length,
     continuation,
   };
+}
+
+/**
+ * IC27_151 R2-D2 (The First Protagonist) — "On Attack: Choose one: Ready a resource. / Deal 1
+ * damage to a ground unit. / Look at the top card of your deck. You may discard it."
+ *
+ * Only the modes that can do something are offered, and a lone viable mode skips the menu.
+ */
+function buildR2D2FirstProtagonistChoice(
+  player: PlayerId,
+  continuation: ResolveAttackPending,
+): PendingResolution | null {
+  const game = GetGame();
+  if (!game) return continuation;
+  const pState = GetPlayer(game.currentGameState, player);
+  const options: { id: string; label: string }[] = [];
+  if (pState.resources.some(r => !r.ready)) options.push({ id: "ready", label: "Ready a resource" });
+  if (AllGroundUnits().length > 0) options.push({ id: "deal", label: "Deal 1 damage to a ground unit" });
+  if (pState.deck.length > 0) options.push({ id: "look", label: "Look at the top card of your deck" });
+  if (options.length === 0) return continuation;
+  if (options.length === 1) return R2D2FirstProtagonistMode(player, options[0].id, continuation);
+  return { type: "choose-one", cardId: "IC27_151", player, options, continuation };
+}
+
+/** Resolves the chosen IC27_151 R2-D2 mode; `continuation` follows it. */
+export function R2D2FirstProtagonistMode(
+  player: PlayerId,
+  mode: string,
+  continuation: PendingResolution | null,
+): PendingResolution | null {
+  const game = GetGame();
+  if (!game) return continuation;
+  const pState = GetPlayer(game.currentGameState, player);
+  switch (mode) {
+    case "ready": {
+      // Resources are interchangeable, so the first exhausted one is readied.
+      const resource = pState.resources.find(r => !r.ready);
+      if (resource) {
+        resource.ready = true;
+        game.gameLog.push(`${CardTitle("IC27_151")}: readied a resource.`);
+      }
+      return continuation;
+    }
+    case "deal": {
+      const grounds = AllGroundUnits();
+      if (grounds.length === 0) return continuation;
+      return mandatoryTarget("IC27_151", player, grounds.map(u => u.playId), continuation);
+    }
+    case "look": {
+      // "Look at" moves nothing: leaving it keeps the card on top. The END of the deck is the top.
+      const top = pState.deck[pState.deck.length - 1];
+      if (!top) return continuation;
+      return {
+        type: "ability-option",
+        cardId: "IC27_151_look",
+        player,
+        helperText: `Top card: ${CardTitle(top.cardId)}. Discard it?`,
+        yesLabel: "Discard",
+        noLabel: "Leave it",
+        onYes: null,
+        continuation,
+      } satisfies AbilityOptionPending;
+    }
+    default:
+      return continuation;
+  }
 }

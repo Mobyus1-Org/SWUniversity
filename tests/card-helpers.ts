@@ -643,6 +643,7 @@ export const Cards = {
       kalani: "TWI_085",
     },
     sec: {
+      craitVeteran: "SEC_251", // 4/3 Ground Resistance/Trooper, cost 3, no text
       queenAmidala: "SEC_101", // Championing Her People — 5/3 Ground, Naboo/Official
       populistChampion: "SEC_044", // 3/5 Ground New Republic/Official, cost 3, no text
       supremeCouncilAide: "SEC_237", // 2/2 Ground First Order/Official, cost 1, no text
@@ -992,6 +993,31 @@ export const Cards = {
       maceWindu: "IC27_081",            // 5/5 Ground, cost 6 — Dropping By
       padmeAmidala: "IC27_083",         // 5/7 Ground, cost 8 — With Great Pleasure
       negotiator: "IC27_084",           // 9/7 Space, cost 9 — Prepare the Troops
+      grandInquisitor: "IC27_103",      // 3/6 Ground, cost 4 — damaged: Raid 3 + Saboteur
+      kyloRenRelentless: "IC27_106",    // 5/5 Ground, cost 5 — Hidden; first attack readies him
+      aurraSing: "IC27_107",            // 1/7 Ground, cost 6 — Hidden; Action [Exhaust]: 4 damage
+      snoke: "IC27_109",                // 8/6 Ground, cost 8 — Overwhelm; 4 to each other unit
+      supremacy: "IC27_110",            // 10/10 Space, cost 10 — half a base's remaining HP
+      ezraBridger: "IC27_113",          // 1/3 Ground, cost 2 — Raid 2; grants Raid 2
+      poeDameron: "IC27_115",           // 2/4 Ground, cost 2 — +1/+0 per Resistance card played
+      blackOne: "IC27_116",             // 2/2 Space, cost 3 — WP/WD: draw
+      heraSyndulla: "IC27_117",         // 4/3 Ground, cost 3 — 1 to a base per Rebel card played
+      reyEmbracingDestiny: "IC27_120",  // 6/6 Ground, cost 5 — Action [1, discard]: attack +2/+0
+      jynErso: "IC27_123",              // 8/7 Ground, cost 8 — Saboteur; ready ≤3 units (≤7 cost)
+      k2so: "IC27_124",                 // 10/5 Ground, cost 9 — WD: 5 to each enemy unit and base
+      sawGerrera: "IC27_126",           // 6/5 Ground, cost 5 — On Attack: double another's power
+      greedo: "IC27_142",               // 5/3 Ground, cost 3 — Ambush; deals combat damage second
+      jangoFett: "IC27_144",            // 4/4 Ground, cost 4 — Ambush; WD discard → return event
+      poggle: "IC27_145",               // 3/5 Ground, cost 4 — On Attack: next card costs 3 less
+      bobaFett: "IC27_146",             // 4/7 Ground, cost 5 — WAE: defender defeated → ready 2
+      r2d2FirstProtagonist: "IC27_151", // 1/3 Ground, cost 1 — On Attack: choose one of three
+      millenniumFalconYaHoo: "IC27_158", // 4/4 Space, cost 4 — WAE: pay 1, bounce ≤3, replay free
+      tantiveIV: "IC27_160",            // 3/5 Space, cost 5 — other Rebels: Raid 2 + Saboteur
+      chewbacca: "IC27_162",            // 4/6 Ground, cost 6 — Sentinel; damaged: +4/+0
+      boKatanKryze: "IC27_163",         // 7/6 Ground, cost 7 — Shielded; enemies –7/–0
+      lukeOverplaying: "IC27_165",      // 9/9 Ground, cost 8 — WP: bottom an enemy unit, owner draws 2
+      landoCalrissian: "IC27_167",      // 4/4 Ground, cost 3 — WP: return 3 resources, resource ≤3
+      razorCrest: "IC27_172",           // 2/5 Space, cost 3 — each unit loses When Defeated
     },
   },
   upgrades: {
@@ -1066,6 +1092,7 @@ export const Cards = {
       theWayOfTheMandalor: "ASH_263",
     },
     twi: {
+      droidCohort: "TWI_218",        // +1/+1 — attached unit gains "When Defeated: Create a Battle Droid token"
       rogerRoger: "TWI_069",
       perilousPosition: "TWI_070",   // -2/-2, no attach restriction
       twiceThePride: "TWI_155",      // +4/+0
@@ -1081,6 +1108,7 @@ export const Cards = {
       stolenStarpathUnit: "SEC_210", // +1/+1; grants On Attack "name a card" → Spy tokens
     },
     law: {
+      fulcrum: "LAW_150", // +2/+2 Rebel upgrade, cost 5 — attached unit gains Rebel + a Rebel aura
       shadowOfStygeonPrime: "LAW_077", // Condition — attached unit can't ready
       killSwitch: "LAW_127", // -1/-1 Condition — When Played: exhaust attached unit
     },
@@ -1363,6 +1391,10 @@ export const Cards = {
       iveGotABadFeeling: "IC27_166", // cost 4 — new
       consumedByTheDarkSide: "IC27_184", // reprint of LOF_239
       vigilantDefense: "IC27_046",  // cost 4 — +0/+3 & Sentinel, heal 3, defeat ≤3 HP enemy
+      actOfAggression: "IC27_127",  // cost 4 — draw; may deal 3; +3/+0 & Overwhelm
+      openFire: "IC27_136",         // reprint of SOR_172
+      cunningPloy: "IC27_168",      // cost 4 — opp hand discard; exhaust enemy; attack +3/+0
+      youreMyOnlyHope: "IC27_194",  // reprint of SOR_246
     },
   },
 }

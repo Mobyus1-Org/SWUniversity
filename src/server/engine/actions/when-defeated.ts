@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { AbilityTargetPending, DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildAnnihilatorOffer, UnitTraits, AllUnits, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains, buildThrawnExperience, negotiatorResourceShuffle } from "@/server/engine/core-functions";
+import { WhenDefeatedAbilitiesSuppressed, buildAnnihilatorOffer, UnitTraits, AllUnits, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains, buildThrawnExperience, negotiatorResourceShuffle } from "@/server/engine/core-functions";
 import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardType } from "@/server/engine/card-db/generated";
@@ -20,7 +20,7 @@ export function resolveWhenDefeated(
   // A unit that had lost its abilities when it was defeated has no When Defeated — printed or
   // granted (SEC_038 Condemn's attacker dying mid-attack, Force Lightning, Imprisoned).
   // UnitHasWhenDefeatedAbility, which the deferred path uses, makes the same check.
-  if (unit.LostAbilities()) return null;
+  if (unit.LostAbilities() || WhenDefeatedAbilitiesSuppressed()) return null;
 
   // TWI_103 Pyrrhic Assault: "For this phase, each friendly unit gains 'When Defeated: Deal 2
   // damage to an enemy unit.'" A granted trigger, so it is checked ahead of the unit's own printed
@@ -468,6 +468,39 @@ function resolveOwnWhenDefeated(
       return optionalTarget("JTL_060", player, units060.map(u => u.playId),
         "Give a unit –1/–1 for this phase?");
     }
+    case "IC27_144": { // Jango Fett (Straight Shooter) — "You may discard a card from your hand. If you
+                       // do, return an event from your discard pile to your hand." The card discarded
+                       // may itself be that event, so an event in hand OR discard makes it worth asking.
+      const game144 = GetGame();
+      if (!game144) return null;
+      const pState144 = GetPlayer(game144.currentGameState, player);
+      if (pState144.hand.length === 0) return null;
+      if (![...pState144.hand, ...pState144.discard].some(c => CardType(c.cardId) === "Event")) return null;
+      return {
+        type: "ability-option",
+        cardId: "IC27_144",
+        player,
+        helperText: "Discard a card from your hand to return an event from your discard pile to your hand?",
+        yesLabel: "Discard",
+        noLabel: "Skip",
+        onYes: { type: "discard-from-hand", targetPlayer: player, count: 1, thenReturnEventFor: "IC27_144", continuation: null },
+        continuation: null,
+      };
+    }
+    case "IC27_116": { // Black One (Draw Fire, Twice) — "When Played/When Defeated: Draw a card."
+      const game116 = GetGame();
+      if (game116) DrawCardForPlayer(game116.currentGameState, game116.gameLog, player);
+      return null;
+    }
+    case "IC27_124": // K-2SO (Evacuate the Vault Door) — "When Defeated: Deal 5 damage to each enemy
+                     // unit and each enemy base." Queued like HK-87 below, so what it defeats is swept.
+      GetGame()?.currentGameState.triggerBag.push({
+        triggerType: "when-defeated",
+        cardId: "IC27_124_blast",
+        fromPlayer: player,
+        playId: unit.playId,
+      });
+      return null;
     case "LOF_235": // HK-87 Assassin Droid — "When Defeated: Deal 2 damage to each ground unit."
     case "IC27_182": { // reprint of LOF_235. Automatic, but queued rather than dealt here: the units
                        // it defeats must be swept, and the trigger bag's drain is where that happens.

@@ -197,6 +197,8 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
   "IC27_057": "Play a 7+ cost unit for 2 less", // Director Krennic — Architect of Annihilation
   "IC27_060": "Mark an enemy unit: its attackers +4/+0", // Jabba the Hutt — Bounties Left and Right
   "IC27_070": "XP to another unit; draw if 6+ power", // C-3PO — Impulse Buy
+  "IC27_107": "Deal 4 damage to a unit", // Aurra Sing — Getting Even
+  "IC27_120": "Pay 1, discard: attack +2/+0", // Rey — Embracing Destiny
   // Deployed leaders are units in the arena, so their Action button comes from this list too.
   "LAW_015": "Play an Underworld unit", // Jabba the Hutt (Crime Boss), deployed
 };

@@ -1,7 +1,7 @@
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase } from "@/server/engine/core-functions";
+import { DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase, GivePowerMod, WhenPlayedLostWithWhenDefeated } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
@@ -32,6 +32,9 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "IC27_149", // The Invisible Hand — next card costs 9 less
   "SEC_101", // Queen Amidala — create 2 Spy tokens
   "IC27_045", // Qi'ra (Survivor) — 2 Experience tokens on herself
+  "IC27_109", // Supreme Leader Snoke (Darkness Rising) — 4 to each other unit; resolved in dispatch-listener
+  "IC27_116", // Black One (Draw Fire, Twice) — draw a card
+  "IC27_163", // Bo-Katan Kryze (Right Place, Right Time) — each enemy unit –7/–0 this phase
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -52,6 +55,7 @@ export function resolveWhenPlayedTrigger(
 ): void {
   const player = trigger.fromPlayer === 1 ? gs.player1 : gs.player2;
   const otherPlayer = trigger.fromPlayer === 1 ? gs.player2 : gs.player1;
+  if (WhenPlayedLostWithWhenDefeated(trigger.cardId)) return; // IC27_172 Razor Crest
   switch (trigger.cardId) {
     case "HMW_111": { // Invasion Lander — "When Played: Give each OTHER friendly unit +2/+2 for
                       // this phase." Automatic, so it lives HERE rather than in resolveWhenPlayed,
@@ -66,6 +70,15 @@ export function resolveWhenPlayedTrigger(
       }
       break;
     }
+    case "IC27_116": // Black One (Draw Fire, Twice) — "When Played/When Defeated: Draw a card."
+      DrawCardForPlayer(gs, log, trigger.fromPlayer);
+      break;
+    case "IC27_163": // Bo-Katan Kryze (Right Place, Right Time) — "When Played: Give each enemy unit
+                     // –7/–0 for this phase." Only the units in play now; a later arrival is spared.
+      for (const foe of [...otherPlayer.groundArena, ...otherPlayer.spaceArena]) {
+        GivePowerMod("IC27_163", foe, -7, "Phase", log);
+      }
+      break;
     case "IC27_045": { // Qi'ra (Survivor) — "When Played: Give 2 Experience tokens to this unit."
       const self045 = trigger.playId ? GetUnitByPlayId(gs, trigger.playId) : undefined;
       if (self045) {

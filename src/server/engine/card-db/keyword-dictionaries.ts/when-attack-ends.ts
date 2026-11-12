@@ -25,6 +25,9 @@ export function HasWhenAttackEnds(cardId: string): boolean {
       return true;
     case "LAW_034": //Chewbacca — if the defending unit was defeated, give him an XP token and heal 3
       return true;
+    case "IC27_146": //Boba Fett (Compensated If He Dies) — if the defending unit was defeated, may ready 2 resources
+    case "IC27_158": //Millennium Falcon (Ya-Hoo!) — may pay 1: return a friendly unit costing 3 or less, replay it free
+      return true;
     case "SEC_048": //Captain Rex — completes an attack: give this unit and an enemy unit Sentinel
       return true;
     case "LOF_016": //Qui-Gon Jinn — completes an attack (and survives): may return a unit and play a cheaper non-Villainy unit free

@@ -622,6 +622,14 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
                        // changes the game on its own, so it is usable with no enemy unit to choose.
         abilities.push(cardId);
         break;
+      case "IC27_107": // Aurra Sing (Getting Even) — Action [Exhaust]: Deal 4 damage to a unit. She
+                       // is a unit herself, so a target always exists while she is in play.
+        abilities.push(cardId);
+        break;
+      case "IC27_120": // Rey (Embracing Destiny) — Action [1 resource, discard a card from your hand]:
+                       // Attack with a unit. The discard is a cost, so an empty hand can't pay it.
+        if (GetHand(player).length > 0) abilities.push(cardId);
+        break;
       case "IC27_070": // C-3PO (Impulse Buy) — Action [Exhaust]: Give an Experience token to another
                        // unit, either side.
         if (AllUnits().some(u => u.playId !== playId)) abilities.push(cardId);
@@ -873,6 +881,7 @@ export function ActionAbilityExhausts(abilityId: string): boolean {
     case "HMW_009":   // Chewbacca (deployed) — plain "Action:", limited once each round
     case "SHD_017":   // Lando Calrissian (deployed) — plain "Action:", limited once each round
     case "SHD_087-1": // Crosshair — "Action [2 resources]", no exhaust in the cost
+    case "IC27_120":  // Rey (Embracing Destiny) — "[1 resource, discard a card]", no exhaust
     case "LAW_015":   // Jabba the Hutt (deployed) — plain "Action:"; the undeployed side's
                       // "[1 resource, Exhaust, …]" is charged on the leader path instead, which
                       // exhausts the leader itself rather than consulting this.
@@ -996,6 +1005,8 @@ export function ActionAbilityCost(cardId: string): number {
       return 2;
     case "SHD_087-1"://Crosshair
       return 2;
+    case "IC27_120"://Rey (Embracing Destiny) — plus a discard, paid in resolveActionAbility
+      return 1;
       case "SHD_256"://Mercenary Gunship
       return 4;
     case "TWI_105"://Steadfast Senator

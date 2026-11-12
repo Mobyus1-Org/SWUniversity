@@ -432,7 +432,11 @@ export class Unit implements UnitInterface {
 
     // A unit's power can never be reduced below 0. Without this, a debuffed unit (e.g. Nowhere
     // to Hide on a 1-power unit) attacking a base would HEAL it — dealBaseDamage does `+= amount`.
-    return Math.max(0, power);
+    // IC27_126 Saw Gerrera — "double another friendly unit's power for this phase". A multiplier,
+    // so it applies after every +/- above (Raid included), and two doubles make ×4.
+    const doublings = GetCurrentEffectsForPlayer(this.controller)
+      .filter(e => e.cardId === "IC27_126" && e.targetPlayId === this.playId).length;
+    return Math.max(0, power) * 2 ** doublings;
   }
 
   CurrentHP(): number {
@@ -670,6 +674,9 @@ function selfPowerOnlyBonus(unit: Unit): number {
     // HMW_164 Chief Chirpa — "+1/+0 for each OTHER friendly Ewok unit."
     case "HMW_164":
       return bonus + otherFriendlyUnitsWithTrait(unit, "Ewok");
+    // IC27_162 Chewbacca (Cool Backpack) — "While this unit is damaged, he gets +4/+0."
+    case "IC27_162":
+      return bonus + (unit.IsDamaged() ? 4 : 0);
     default:
       return bonus;
   }

@@ -1,7 +1,7 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, IsLeaderUnit, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits, CanUnitReady, buildThrawnExperience, buildBadFeelingShield } from "@/server/engine/core-functions";
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost, CardIsPlayable, DiscardUnitsPlayableAtDiscount, DefeatedThisPhaseDiscardUnitsAtDiscount } from "@/server/engine/card-playability";
-import { DrawCardForPlayer, DrawCardsForPlayer, DefeatableNonLeadersWithPowerAtMost, ReadyableUnitsWithPowerAtMost, UpgradesOnEnemyUnits } from "@/server/engine/core-functions";
+import { WhenPlayedLostWithWhenDefeated, buildActOfAggressionBuff, DrawCardForPlayer, DrawCardsForPlayer, DefeatableNonLeadersWithPowerAtMost, ReadyableUnitsWithPowerAtMost, UpgradesOnEnemyUnits } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { IsTokenUpgrade, PilotlessVehiclePlayIds, UpgradeDestinationsOnControlChange, PilotlessFighterOrTransportPlayIds, PilotlessEnemyVehiclePlayIds, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { PendingResolution, ChooseOnePending, AbilityOptionPending, AbilityTargetPending, ReturnFromDiscardPending, SpreadDamagePending, SpreadTokensPending, SpreadHealPending, GiveXpMultiplePending, ChooseIndirectTargetPending, PeekHandPending, RevealFromHandPending, DiscardFromHandPending, RevealDiscardPending, ChooseAspectEffectPending, BudgetSelectPending, PlayFromHandPending } from "@/server/engine/pending-resolution";
@@ -450,6 +450,7 @@ export function resolveWhenPlayed(
 ): PendingResolution | null {
   const game = GetGame();
   if (!game) throw new Error("Game not found in resolveWhenPlayedAbility");
+  if (WhenPlayedLostWithWhenDefeated(cardId)) return null; // IC27_172 Razor Crest
   switch (cardId) {
     case "LAW_242": { // Improvise (Event) — "Look at the top card of your deck. You may play it.
                       // It costs 1 resource less. If you don't, you may discard it."
@@ -1817,6 +1818,81 @@ export function resolveWhenPlayed(
       GiveWeaknessToken(gs237, theirBeast237, game.gameLog, player, cardId);
       return null;
     }
+    case "IC27_123": { // Jyn Erso (Her Father's Revenge) — "Ready up to 3 units with combined cost 7 or
+                       // less. They each gain Saboteur for this phase." Unqualified: either side. The
+                       // budget is printed cost, so Jyn (8) is never a legal pick.
+      const eligible123 = AllUnits().filter(u => (CardCost(u.cardId) ?? 0) <= 7);
+      if (eligible123.length === 0) return null;
+      return {
+        type: "budget-select",
+        cardId: "IC27_123",
+        player,
+        eligiblePlayIds: eligible123.map(u => u.playId),
+        maxCount: 3,
+        maxTotalCost: 7,
+        continuation: null,
+      } satisfies BudgetSelectPending;
+    }
+    case "IC27_165": { // Luke Skywalker (Overplaying His Hand) — "You may put an enemy non-leader unit
+                       // on the bottom of its owner's deck. Its owner draws 2 cards."
+      const enemies165 = GetUnitsForPlayer(GetOtherPlayer(player)).filter(u => !IsLeaderUnit(u));
+      if (enemies165.length === 0) return null;
+      return optionalTarget(cardId, player, enemies165.map(u => u.playId),
+        "Put an enemy non-leader unit on the bottom of its owner's deck? Its owner draws 2.",
+        { yesLabel: "Put on bottom" });
+    }
+    case "IC27_167": { // Lando Calrissian (Check This Out) — "Return 3 friendly resources to their
+                       // owners' hands. Then, you may resource up to 3 cards from your hand." The
+                       // return is mandatory (all of them, with fewer than 3); the cards matter, so
+                       // the player picks which. The resourcing pick follows on the new hand.
+      const resources167 = GetPlayer(game.currentGameState, player).resources;
+      const resourceStep167: DiscardFromHandPending = {
+        type: "discard-from-hand", targetPlayer: player, count: 3, upTo: true, resourceInstead: cardId, continuation: null,
+      };
+      if (resources167.length === 0) return GetHand(player).length > 0 ? resourceStep167 : null;
+      return {
+        type: "give-xp-multiple",
+        cardId,
+        player,
+        maxCount: Math.min(3, resources167.length),
+        eligiblePlayIds: resources167.map(r => r.playId),
+        continuation: resourceStep167,
+      } satisfies GiveXpMultiplePending;
+    }
+    case "IC27_127": { // Act of Aggression (Event) — "Draw a card. You may deal 3 damage to a unit.
+                       // Give a friendly unit +3/+0 and Overwhelm for this phase." The buff's pool is
+                       // rebuilt after the damage (it may have defeated a friendly unit).
+      DrawCardForPlayer(game.currentGameState, game.gameLog, player);
+      const buff127 = buildActOfAggressionBuff(player);
+      const units127 = AllUnits();
+      if (units127.length === 0) return buff127;
+      return optionalTarget(cardId, player, units127.map(u => u.playId), "Deal 3 damage to a unit?",
+        { yesLabel: "Deal 3", continuation: buff127 });
+    }
+    case "IC27_168": { // Cunning Ploy (Event) — three independent clauses, in printed order: look at an
+                       // opponent's hand and maybe discard from it (they draw if you do); exhaust an
+                       // enemy unit; you may attack with a unit at +3/+0. A clause with nothing to
+                       // act on is skipped and the rest still resolve.
+      const opponent168 = GetOtherPlayer(player);
+      const attackers168 = GetUnitsForPlayer(player).filter(u => CanUnitAttack(u));
+      const attack168 = attackers168.length > 0
+        ? optionalTarget(cardId, player, attackers168.map(u => u.playId), "Attack with a unit? It gets +3/+0 for this attack.", { yesLabel: "Attack" })
+        : null;
+      const enemies168 = GetUnitsForPlayer(opponent168);
+      const exhaust168 = enemies168.length > 0
+        ? mandatoryTarget("IC27_168_exhaust", player, enemies168.map(u => u.playId), attack168)
+        : attack168;
+      if (GetHand(opponent168).length === 0) return exhaust168;
+      return {
+        type: "peek-hand",
+        peekingPlayer: player,
+        targetPlayer: opponent168,
+        mustDiscard: true,
+        optionalDiscard: true,
+        thenDrawForTarget: true,
+        continuation: exhaust168,
+      } satisfies PeekHandPending;
+    }
     case "TWI_187": { // Cad Bane (Hostage Taker) — "captures up to 3 enemy non-leader units with a
                       // total of 8 or less remaining HP." Same budget-select as ASH_053, with a
                       // count cap as well. "Enemy" is by CONTROLLER, not owner.
@@ -2019,10 +2095,15 @@ export function resolveWhenPlayed(
         continuation: null,
       } satisfies AbilityOptionPending;
     }
+    case "IC27_110": // Supremacy — "When Played: Deal damage to a base equal to half its remaining HP,
+                     // rounded down." Unqualified "a base": your own is legal. The amount is read
+                     // off the chosen base when it resolves.
+      return mandatoryTarget(cardId, player, ["player1.base", "player2.base"]);
     case "HMW_159": { // General Grievous, Scourge of Dathomir — "When Played: Deal 4 damage to a
                       // base." Same unqualified "a base" as LAW_058, so your own is a legal choice.
       return mandatoryTarget(cardId, player, ["player1.base", "player2.base"]);
     }
+    case "IC27_194": // reprint of SOR_246
     case "SOR_246": { // You're My Only Hope — "Look at the top card of your deck. You may play it.
                       // It costs 5 resources less. If your base has 5 or less remaining HP, you may
                       // play it for free instead."
@@ -4042,6 +4123,7 @@ export function resolveWhenPlayed(
     }
     case "ASH_133": // Trask Walker — the same ability on both its triggers.
       return buildTraskWalkerChoice(player);
+    case "IC27_136": // reprint of SOR_172
     case "SOR_172": { // Open Fire — Deal 4 damage to a unit.
       const allUnits172 = AllUnits();
       if (allUnits172.length === 0) return null;

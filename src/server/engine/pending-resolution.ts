@@ -162,6 +162,18 @@ export interface DiscardFromHandPending {
   thenCreateBeastFor?: PlayerId;
   /** SEC_008 Bail Organa: once both discards (his deploy cost) are paid, this player's leader deploys. */
   thenDeployLeader?: PlayerId;
+  /**
+   * IC27_167 Lando Calrissian — "resource up to N cards from your hand": the same hand pick as an
+   * up-to discard, but each chosen card goes to the resource zone instead. Holds the source card id.
+   */
+  resourceInstead?: string;
+  /**
+   * IC27_144 Jango Fett: "If you do, return an event from your discard pile to your hand." Picked
+   * after the discard, so the card just discarded is itself a legal choice. Holds the source card id.
+   */
+  thenReturnEventFor?: string;
+  /** IC27_145 Poggle the Lesser: after the discard, the next card this player plays this phase costs `amount` less. */
+  thenNextCardDiscount?: { amount: number; sourceCardId: string };
   /** ASH_172 Razor Crest: after the discard, give the named unit a ForAttack power buff ("if you do, this unit gets +X/+0 for this attack"). */
   thenAttackBuff?: { cardId: string; playId: string; amount: number };
   /**
@@ -656,9 +668,12 @@ export interface BudgetSelectPending {
   cardId: string;
   player: PlayerId;
   eligiblePlayIds: string[];
-  /** Omitted means "any number" — only the HP budget limits the selection. */
+  /** Omitted means "any number" — only the budget limits the selection. */
   maxCount?: number;
-  maxTotalRemainingHp: number;
+  /** Budget on the chosen units' combined LIVE remaining HP (ASH_053, TWI_187). */
+  maxTotalRemainingHp?: number;
+  /** Budget on the chosen units' combined PRINTED cost (IC27_123 Jyn Erso). */
+  maxTotalCost?: number;
   continuation: PendingResolution | null;
 }
 

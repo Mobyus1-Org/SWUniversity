@@ -210,6 +210,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
     case "IC27_065"://Darth Maul - Mindful Apprentice
     case "IC27_083"://Padmé Amidala - With Great Pleasure
     case "IC27_084"://Negotiator - Prepare the Troops
+    case "IC27_162"://Chewbacca - Cool Backpack
     case "IC27_170": // reprint of TWI_207
     case "ASH_028"://Paz Vizsla - For a Brighter Future
     case "SOR_003"://Chewbacca - Walking Carpet

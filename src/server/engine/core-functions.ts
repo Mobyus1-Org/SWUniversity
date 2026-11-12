@@ -1629,13 +1629,45 @@ export function HealBaseForPlayer(
 }
 
 /**
+ * Marks one simultaneous defeat (a sweep, a wipe, a combat trade) that began with an active
+ * IC27_172 Razor Crest in play. See WhenDefeatedAbilitiesSuppressed.
+ */
+export const RAZOR_CREST_DEFEAT_BATCH = "IC27_172_defeat_batch";
+
+/**
+ * IC27_172 Razor Crest — "Each unit (including friendly units) loses all 'When Defeated'
+ * abilities." Printed, upgrade-granted and field-granted alike. Read as last-known information: a
+ * Razor Crest leaving play in the SAME defeat as another unit still applies to it, which the
+ * defeat-batch marker carries once the Crest itself is gone. A blanked Razor Crest takes nothing.
+ */
+export function WhenDefeatedAbilitiesSuppressed(): boolean {
+  const game = GetGame();
+  if (!game) return false;
+  if (game.currentGameState.currentEffects.some(e => e.cardId === RAZOR_CREST_DEFEAT_BATCH)) return true;
+  return RazorCrestActive();
+}
+
+/** An IC27_172 Razor Crest with its abilities is in play, on either side. */
+export function RazorCrestActive(): boolean {
+  return AllUnits().some(u => u.cardId === "IC27_172" && !Unit.FromInterface(u).LostAbilities());
+}
+
+/**
+ * A "When Played/When Defeated" ability is one ability that is BOTH, so losing When Defeated
+ * abilities takes its When Played half with it (IC27_172 Razor Crest).
+ */
+export function WhenPlayedLostWithWhenDefeated(cardId: string): boolean {
+  return CardText(cardId).includes("When Played/When Defeated") && WhenDefeatedAbilitiesSuppressed();
+}
+
+/**
  * True when `unit` has a "When Defeated" ability that another card could use (Chimaera JTL_039).
  * Covers the three ways a unit can have one: printed on the card, granted by an upgrade (Droid
  * Cohort TWI_218, Second Chance SHD_053, Inspiring Mentor SHD_104), or granted to every other
  * friendly unit by General Krell (SOR_105).
  */
 export function UnitHasWhenDefeatedAbility(unit: Unit): boolean {
-  if (unit.LostAbilities()) return false;
+  if (unit.LostAbilities() || WhenDefeatedAbilitiesSuppressed()) return false;
   if (CardText(unit.cardId).includes("When Defeated")) return true;
   // Upgrades whose text grants the attached unit a When Defeated.
   if (unit.upgrades.some(u => ["TWI_218", "SHD_053", "SHD_104", "IC27_085"].includes(u.cardId))) return true;
@@ -2510,6 +2542,11 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "IC27_024": //Grand Admiral Thrawn — On Attack: may give another friendly unit Experience + Sentinel
     case "IC27_081": //Mace Windu (Dropping By) — On Attack: give an Experience token to this unit
     case "IC27_084": //Negotiator — On Attack: resource the top card, may return a friendly resource
+    case "IC27_106": //Kylo Ren (Relentless) — On Attack: first attack this phase readies him
+    case "IC27_113": //Ezra Bridger (Down With the Freedom) — On Attack: another friendly Heroism unit gains Raid 2
+    case "IC27_126": //Saw Gerrera (For the Cause) — On Attack: may double another friendly unit's power
+    case "IC27_145": //Poggle the Lesser (Secret Designs) — On Attack: may pay 1 + discard; next card 3 less
+    case "IC27_151": //R2-D2 (The First Protagonist) — On Attack: choose one of three
     case "IC27_187": //Jar Jar Binks — On Attack: discard top of deck; cost 6+ gives +4/+0
     case "IC27_001": //Darth Vader (deployed) — On Attack: may defeat another friendly unit to draw + heal 2
     case "IC27_007": //Asajj Ventress (deployed) — On Attack: may ready a resource
@@ -3866,6 +3903,16 @@ export function repeatOptionalTargetPrompt(
     chain = optionalTarget(cardId, player, fromPlayIds, helperText, { ...opts, continuation: chain });
   }
   return chain;
+}
+
+/**
+ * IC27_127 Act of Aggression — "Give a friendly unit +3/+0 and Overwhelm for this phase." Built
+ * once the optional damage has resolved, so a friendly unit that damage defeated is never offered.
+ */
+export function buildActOfAggressionBuff(player: PlayerId): AbilityTargetPending | null {
+  const friendly = GetUnitsForPlayer(player).filter(u => Unit.FromInterface(u).CurrentHP() > 0);
+  if (friendly.length === 0) return null;
+  return mandatoryTarget("IC27_127_buff", player, friendly.map(u => u.playId));
 }
 
 export function mandatoryTarget(

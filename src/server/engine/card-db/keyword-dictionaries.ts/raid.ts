@@ -72,6 +72,10 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
         case "JTL_134"://General Hux
           if(playId != u.playId && TraitContains(cardId, "First Order", player, playId)) amount += 1;
           break;
+        case "IC27_160"://Tantive IV — "Each other friendly Rebel unit gains Raid 2 and Saboteur."
+          if (playId !== u.playId && TraitContains(cardId, "Rebel", player, playId)
+              && !Unit.FromInterface(u).LostAbilities()) amount += 2;
+          break;
         case "LOF_169"://Invasion Control Ship
           if(TraitContains(cardId, "Droid", player, playId)) amount +=2;
           break;
@@ -106,6 +110,9 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
         case "LAW_012"://Sebulba leader Action — a friendly unit gains Raid 1 for this phase
           amount += 1;
           break;
+        case "IC27_113"://Ezra Bridger (Down With the Freedom) On Attack — Raid 2 for this phase; grants stack
+          amount += 2;
+          break;
         default: break;
       }
     }
@@ -130,6 +137,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
       case "ASH_093": amount += LeaderUnitWasDefeatedThisPhase() ? 3 : 0; break;//Captain Pellaeon (Plotting from the Shadows)
       case "SOR_159": amount += PlayerHasUnitWithAspectInPlay(player, "Aggression", true, playId) ? 2 : 0; break;//Partisan Insurgent
       case "SOR_131": amount += unit.TotalHP() - unit.CurrentHP(); break;//Fifth Brother
+      case "IC27_103": amount += unit.IsDamaged() ? 3 : 0; break;//Grand Inquisitor — while damaged
       case "SOR_188": // Chopper (SOR)
       case "SEC_147": amount += PlayerHasUnitWithTraitInPlay(player, "Spectre", true, playId) ? 1 : 0; break;//Chopper
       case "LOF_162": //Hunting Nexu (LOF reprint)
@@ -265,6 +273,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "IC27_065": amount += 3; break; //Darth Maul - Mindful Apprentice
     case "IC27_153": amount += 3; break; //Greef Karga - I Celebrate Your Success
     case "IC27_071": amount += 1; break; //Avar Kriss - For Light and Life
+    case "IC27_113": amount += 2; break; //Ezra Bridger - Down With the Freedom
     default: break;
   }
 

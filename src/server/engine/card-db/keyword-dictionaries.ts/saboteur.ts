@@ -2,6 +2,7 @@ import { PlayerId } from "@/lib/engine/core-models";
 import { GetCurrentEffectsForPlayer, GetHand, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, PlayerHasUnitWithTraitInPlay, TraitContains, UnitWasDefeatedThisPhase , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
+import { Unit } from "@/server/engine/unit";
 
 export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, isRecursion = false): boolean
 {
@@ -24,6 +25,7 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
         case "SHD_230": return true;//Swoop Down
         case "SOR_168": return true;//Precision Fire
         case "LAW_202": return true;//Commence the Festivities
+        case "IC27_123": return true;//Jyn Erso (Her Father's Revenge) — for this phase
         case "TWI_224": return true;//Breaking In
         case "TWI_249": return true;//Heroes on Both Sides
         //Jump to Lightspeed
@@ -55,6 +57,10 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
         case "SHD_190"://Zuckuss
           if(CardTitle(cardId) == "4-LOM") return true;
           break;
+        case "IC27_160"://Tantive IV — each other friendly Rebel unit gains Saboteur
+          if (u.playId !== playId && TraitContains(cardId, "Rebel", player, playId)
+              && !Unit.FromInterface(u).LostAbilities()) return true;
+          break;
         default: break;
       }
     }
@@ -73,6 +79,8 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
         return PlayerHasUnitWithTraitInPlay(player, "Mandalorian", true, playId);
       case "TWI_143"://Jyn Erso - Stardust
         return UnitWasDefeatedThisPhase(otherPlayer);
+      case "IC27_103"://Grand Inquisitor — while damaged
+        return unit.IsDamaged();
       case "ASH_030"://Marrok — while upgraded, loses Sentinel and gains Saboteur instead.
         return upgrades.length > 0;
       case "LOF_105"://Oppo Rancisis
@@ -148,6 +156,7 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
     case "SEC_250"://Rebel Pathfinder
     case "TS26_74"://Pre Vizsla - For Mandalore!
     case "IC27_098"://Commander Pyre - Golden Menace
+    case "IC27_123"://Jyn Erso - Her Father's Revenge
     case "IC27_128": // reprint of SEC_160
     case "IC27_152": // reprint of SEC_199
     case "IC27_007"://Asajj Ventress (Bald and Beautiful) Leader Unit

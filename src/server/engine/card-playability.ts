@@ -417,13 +417,23 @@ function imperialNextUnitDiscount(game: GameState, player: PlayerId, cardId: str
   return game.currentEffects.some(e => e.cardId === "ASH_237" && e.affectedPlayer === player) ? 1 : 0;
 }
 
-// IC27_149 The Invisible Hand — "When Played/When Defeated: The next CARD you play this phase costs
-// 9 resources less." Any card type, Pilot upgrades included. Each trigger leaves its own effect with
-// the amount in `value`, so two pending discounts stack onto the same next card; completePlayCard
-// (and the Pilot attach) spends them all.
+/**
+ * "The next CARD you play this phase costs N resources less" (IC27_149 The Invisible Hand,
+ * IC27_145 Poggle the Lesser). Any card type, Pilot upgrades included. Each source leaves its own
+ * effect with N in `value`, so two pending discounts stack onto the same next card; completePlayCard
+ * (and the Pilot attach) spends them all.
+ */
+export const NEXT_CARD_DISCOUNT = "next-card-discount";
+
+export function ArmNextCardDiscount(game: GameState, player: PlayerId, amount: number, sourceCardId: string, log: string[]): void {
+  game.currentEffects.push({ cardId: NEXT_CARD_DISCOUNT, duration: "Phase", affectedPlayer: player, value: amount });
+  log.push(`${CardTitle(sourceCardId)}: the next card you play this phase costs ${amount} resource${amount > 1 ? "s" : ""} less.`);
+}
+
+// IC27_149 The Invisible Hand — "When Played/When Defeated: The next card you play this phase costs
+// 9 resources less."
 export function ArmInvisibleHandDiscount(game: GameState, player: PlayerId, log: string[]): void {
-  game.currentEffects.push({ cardId: "IC27_149", duration: "Phase", affectedPlayer: player, value: 9 });
-  log.push(`${CardTitle("IC27_149")}: the next card you play this phase costs 9 resources less.`);
+  ArmNextCardDiscount(game, player, 9, "IC27_149", log);
 }
 
 /**
@@ -445,11 +455,11 @@ function nextEventDiscount(game: GameState, player: PlayerId, cardId: string): n
     .reduce((sum, e) => sum + (e.value ?? 0), 0);
 }
 
-export function invisibleHandNextCardDiscount(game: GameState, player: PlayerId, cardId: string): number {
+export function nextCardDiscount(game: GameState, player: PlayerId, cardId: string): number {
   // A leader is deployed, never played — and deployLeader reads playCost as its threshold.
   if (CardType(cardId) === "Leader") return 0;
   return game.currentEffects
-    .filter(e => e.cardId === "IC27_149" && e.affectedPlayer === player)
+    .filter(e => e.cardId === NEXT_CARD_DISCOUNT && e.affectedPlayer === player)
     .reduce((sum, e) => sum + (e.value ?? 0), 0);
 }
 
@@ -622,7 +632,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - originTreeShyyyoDiscount(game, player, cardId)
     - moffGideonDiscount(game, player, cardId)
     - nextEventDiscount(game, player, cardId)
-    - invisibleHandNextCardDiscount(game, player, cardId)
+    - nextCardDiscount(game, player, cardId)
   );
 }
 
@@ -644,7 +654,7 @@ export function pilotPlayCost(game: GameState, player: PlayerId, cardId: string)
   return Math.max(0, PilotingCost(cardId) + aspectPenalty(game, player, cardId, { asPilot: true })
     + raddusTax(game, player, cardId) // a cost increase on the CARD, however it is played
     - wedgeNextPilotDiscount(game, player, cardId) // "This includes Piloting costs."
-    - invisibleHandNextCardDiscount(game, player, cardId)); // "the next CARD you play"
+    - nextCardDiscount(game, player, cardId)); // "the next CARD you play"
 }
 
 /** SOR_062 Regional Governor: while in play, opponents can't play the card named on entry. */
