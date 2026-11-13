@@ -323,7 +323,7 @@ function CardVisual({
         className={`relative overflow-hidden rounded-2xl border border-white/15 bg-black/40 ${selectable ? `cursor-pointer ${customGlowClass ?? lightsaberGlow}` : "opacity-90"}`}
         {...hold.props}
         style={cardScale90 ? { ...hold.props.style, width: "90%", marginInline: "auto" } : hold.props.style}
-        onMouseEnter={() => onPreviewStart(previewState)}
+        onMouseEnter={(e) => onPreviewStart(previewState, { source: e.currentTarget })}
         onMouseLeave={onPreviewEnd}
       >
         <div className={`relative transition-transform duration-200 ${exhausted && rotateWhenExhausted ? "rotate-90" : ""}`}>
@@ -425,7 +425,7 @@ function FaceDownResource({
   return <div
     className={`overflow-hidden rounded-xl border border-white/10 bg-black/40 transition-transform duration-200 ${exhausted ? "rotate-90" : ""} ${selectable ? lightsaberGlow : ""} ${selectable ? "cursor-pointer" : ""}`}
     {...hold.props}
-    onMouseEnter={onPreviewStart ? () => onPreviewStart(previewState) : undefined}
+    onMouseEnter={onPreviewStart ? (e) => onPreviewStart(previewState, { source: e.currentTarget }) : undefined}
     onMouseLeave={onPreviewEnd}
     onClick={hold.guard(onClick)}
   >
@@ -471,7 +471,7 @@ function UpgradeStrip({
       className={`overflow-hidden rounded-b-xl border-x border-b border-white/15 bg-black/40${selected ? " ring-2 ring-amber-400/80 shadow-[0_0_14px_rgba(251,191,36,0.5)]" : selectable && onClick ? " ring-2 ring-rose-400/90 shadow-[0_0_10px_rgba(251,113,133,0.5)]" : ""}`}
       {...hold.props}
       style={{ ...hold.props.style, height: 18 }}
-      onMouseEnter={() => onPreviewStart(previewState)}
+      onMouseEnter={(e) => onPreviewStart(previewState, { source: e.currentTarget })}
       onMouseLeave={onPreviewEnd}
     >
       <img
@@ -512,7 +512,7 @@ function CaptiveStrip({
       className="overflow-hidden rounded-b-xl border-x border-b border-white/15 bg-gray-500/60"
       {...hold.props}
       style={{ ...hold.props.style, height: 18 }}
-      onMouseEnter={() => onPreviewStart(previewState)}
+      onMouseEnter={(e) => onPreviewStart(previewState, { source: e.currentTarget })}
       onMouseLeave={onPreviewEnd}
     >
       <span className="block w-full text-center text-4xs font-semibold uppercase leading-[1.125rem] tracking-wide text-white/70">
@@ -675,7 +675,7 @@ function CardRatioImage({
       className="overflow-hidden rounded-md border border-white/10 bg-black/40"
       {...hold.props}
       style={{ ...hold.props.style, aspectRatio: "716 / 1000" }}
-      onMouseEnter={onPreviewStart ? () => onPreviewStart() : undefined}
+      onMouseEnter={onPreviewStart ? (e) => onPreviewStart({ source: e.currentTarget }) : undefined}
       onMouseLeave={onPreviewEnd}
     >
       <img
@@ -2625,7 +2625,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                         ? void sendDispatch(createDispatch("choose-target", { targetIndices: [i] }))
                         : undefined}
                       className={`w-[5rem] text-left transition${resolutionNeeded.mustDiscard && eligible ? "" : " opacity-60 cursor-default"}`}
-                      onMouseEnter={() => handlePreviewStart({ imageId: card.cardId, cardId: card.cardId, label: CardTitle(card.cardId) })}
+                      onMouseEnter={(e) => handlePreviewStart({ imageId: card.cardId, cardId: card.cardId, label: CardTitle(card.cardId) }, { source: e.currentTarget })}
                       onMouseLeave={handlePreviewEnd}>
                       <CardVisual
                         cardId={card.cardId}
@@ -2710,7 +2710,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     }
                   }}
                   className={`w-24 text-left${!isSelectable && selectableDiscardPlayIds.size > 0 ? " opacity-40" : ""}`}
-                  onMouseEnter={() => handlePreviewStart({ imageId: d.cardId, cardId: d.cardId, label: CardTitle(d.cardId) })}
+                  onMouseEnter={(e) => handlePreviewStart({ imageId: d.cardId, cardId: d.cardId, label: CardTitle(d.cardId) }, { source: e.currentTarget })}
                   onMouseLeave={handlePreviewEnd}
                 >
                   <CardVisual
@@ -2952,7 +2952,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
               disabled={isResolving}
               onClick={() => void sendDispatch(createDispatch("choose-target", { targetPlayIds: [playId] }))}
               className="w-28 text-left"
-              onMouseEnter={() => handlePreviewStart({ imageId: resource.cardId, cardId: resource.cardId, label: CardTitle(resource.cardId) })}
+              onMouseEnter={(e) => handlePreviewStart({ imageId: resource.cardId, cardId: resource.cardId, label: CardTitle(resource.cardId) }, { source: e.currentTarget })}
               onMouseLeave={handlePreviewEnd}
             >
               <CardVisual

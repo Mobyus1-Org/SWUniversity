@@ -1,12 +1,13 @@
 import React from "react";
 
+import type { PreviewStart } from "@/components/Shared/CardPreview";
 import { CardSubtitle, CardTitle } from "@/server/engine/card-db/generated";
 import { type CardRef, isKnownCardId } from "@/util/card-ref";
 import { segmentByCardRefs } from "@/util/puzzle-text";
 import { renderInlineMarkup } from "@/util/func";
 
 type PreviewHandlers = {
-  onPreviewStart: (p: { imageId: string; cardId: string; label?: string }) => void;
+  onPreviewStart: PreviewStart;
   onPreviewEnd: () => void;
 };
 
@@ -31,7 +32,7 @@ export function CardLink({ cardRef, ...handlers }: { cardRef: CardRef } & Previe
   return (
     <span
       className="cursor-pointer underline decoration-dotted underline-offset-2 transition-colors hover:text-sky-300"
-      onMouseEnter={() => handlers.onPreviewStart({ imageId, cardId, label })}
+      onMouseEnter={(e) => handlers.onPreviewStart({ imageId, cardId, label }, { source: e.currentTarget })}
       onMouseLeave={handlers.onPreviewEnd}
     >
       {label}

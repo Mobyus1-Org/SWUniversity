@@ -256,3 +256,30 @@ memory system (see `MEMORY.md`), not just here.
   dropdown became radio buttons). Because `puzzleOutcome` was shared by client and solver and
   tested red first, each pivot was a small edit to one module plus its tests, not a hunt through
   PuzzlesPage.
+
+## 2026-11-12
+
+- **Repeated, 6th time — the zsh glob lesson, and the `(N)` fix logged on 2026-11-11 is ALSO wrong.**
+  The first grep died on unquoted `--include=*.ts` again. At close-out, `ls *-implement.md(N)` still
+  printed `no matches found`: the agent's Bash shell doesn't honour the `(N)` qualifier. The fix that
+  actually works here is `find . -maxdepth 1 -name '*-implement.md'` or a quoted pattern. Two
+  "fixes" have now been logged without being tested in this shell. Test a workaround once before
+  logging it as the fix.
+- **Repeated, "prefer actually running red first" (2026-08-09 → 09-22).** All 28 other cards went
+  test-first and were seen red, but Greedo's combat reorder was written before its tests. Recovered
+  with the logged mutation fallback: Greedo's branches disabled → the 3 core tests went red. The
+  same check on Razor Crest's defeat-batch marker turned exactly its 2 last-known-info tests red.
+  The slip happened on the most invasive card, where it matters most. Write that card's tests
+  first precisely because the code change is big.
+- **Repeated, the fixture-namespace lesson (2026-09-13: "grep card-helpers.ts for the exact key").**
+  `Cards.units.sor.underworldThug` lives under `.shd`. tsc doesn't flag the wrong path, so the unit
+  loaded with no cardId and looked like an engine damage bug until the game state was dumped. Two
+  other red cycles came from adapter targeting semantics, now memory'd as
+  [[feedback-test-adapter-target-gotchas]].
+- **What worked (keep doing):** grouped research → one approval of all 29 approaches → TDD in
+  mechanic groups of ~5, with a full `npm test` checkpoint at 24/29. That checkpoint caught nothing,
+  which made the final run low-risk. The flip-after-push gate (2026-11-11) fired correctly: `git
+  fetch` first, then checking each test file was on origin before writing to prod. Process gap: the
+  research phase was long and quiet enough that the user had to ask for status several times. On a
+  big batch, send a one-line progress note every few tool calls during research too, not only once
+  implementation starts.

@@ -27,8 +27,12 @@ export type PreviewState = {
  * a `sticky` one (long-press) opens immediately and stays until the player dismisses it, which
  * is the only way to read a card on a touch device — there is no hover there, and the hover
  * panel is desktop-only anyway.
+ *
+ * `source` is the element the pointer entered (the mouseenter's currentTarget). It lets the hook
+ * end a hover preview whose card left the board under the cursor — React never fires mouseleave
+ * for an element that unmounts.
  */
-export type PreviewOpts = { sticky?: boolean };
+export type PreviewOpts = { sticky?: boolean; source?: Element };
 export type PreviewStart = (preview: PreviewState, opts?: PreviewOpts) => void;
 
 /** Movement (px) past which a touch counts as a scroll rather than a press-and-hold. */
@@ -223,11 +227,17 @@ export function useCardPreview(): CardPreviewController {
   const previewStickyRef = React.useRef(false);
   React.useEffect(() => { previewStickyRef.current = previewSticky; }, [previewSticky]);
 
+  // The element whose hover started the pending/open hover preview. When a hovered card unmounts
+  // (the leader swapped for "Leader is deployed", a defeated unit) its mouseleave never fires, and
+  // the panel used to sit over the next choice prompt until HOVER_DISMISS_MS ran out.
+  const hoverSourceRef = React.useRef<Element | null>(null);
+
   const onPreviewStart = React.useCallback<PreviewStart>((nextPreview, opts) => {
     if (opts?.sticky) {
       // The hold itself was the delay, and it must not time out from under the player.
       clearPreviewTimer();
       clearPreviewDismissTimer();
+      hoverSourceRef.current = null;
       setPreview(nextPreview);
       setPreviewSticky(true);
       previewStickyRef.current = true;
@@ -240,7 +250,10 @@ export function useCardPreview(): CardPreviewController {
     clearPreviewDismissTimer();
     setPreview(null);
     setPreviewSticky(false);
+    hoverSourceRef.current = opts?.source ?? null;
     previewTimerRef.current = setTimeout(() => {
+      previewTimerRef.current = null;
+      if (hoverSourceRef.current && !hoverSourceRef.current.isConnected) return;
       setPreview(nextPreview);
       previewDismissTimerRef.current = setTimeout(() => {
         setPreview(null);
@@ -253,8 +266,26 @@ export function useCardPreview(): CardPreviewController {
     if (previewStickyRef.current) return;
     clearPreviewTimer();
     clearPreviewDismissTimer();
+    hoverSourceRef.current = null;
     setPreview(null);
   }, [clearPreviewTimer, clearPreviewDismissTimer, setPreview]);
+
+  // After every render of the owning page: a game update that removed the hovered card ends its
+  // preview at once, before the player has even moved the mouse.
+  React.useEffect(() => {
+    if (hoverSourceRef.current && !hoverSourceRef.current.isConnected) onPreviewEnd();
+  });
+
+  // A card still mounted but now covered (a choice panel opened over it) or swapped out by a
+  // re-render this page didn't own: drop the preview on the next pointer movement.
+  React.useEffect(() => {
+    const onMove = () => {
+      const source = hoverSourceRef.current;
+      if (source && (!source.isConnected || !source.matches(":hover"))) onPreviewEnd();
+    };
+    document.addEventListener("mousemove", onMove);
+    return () => document.removeEventListener("mousemove", onMove);
+  }, [onPreviewEnd]);
 
   const dismissSticky = React.useCallback(() => {
     previewStickyRef.current = false;

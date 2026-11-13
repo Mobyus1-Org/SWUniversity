@@ -250,7 +250,7 @@ function CardTile({
     <div className="rounded border border-white/10 bg-black/20 p-2">
       <div
         className="flex items-start gap-2"
-        onMouseEnter={() => onPreviewStart(previewState)}
+        onMouseEnter={(e) => onPreviewStart(previewState, { source: e.currentTarget })}
         onMouseLeave={onPreviewEnd}
         {...hold.props}
       >
