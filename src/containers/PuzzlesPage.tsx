@@ -747,7 +747,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   const [spreadDmgMap, setSpreadDmgMap] = React.useState<Record<string, number>>({});
   const [selectedPuzzleFilename, setSelectedPuzzleFilename] = React.useState<string | null>(null);
   const [puzzleName, setPuzzleName] = React.useState<string | null>(null);
-  const [puzzleMeta, setPuzzleMeta] = React.useState<{ name: string; author: string; inspiredBy?: string; intendedSolution: string[]; infoText?: string; description?: string; hints?: string[]; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition } | null>(null);
+  const [puzzleMeta, setPuzzleMeta] = React.useState<{ name: string; author: string; inspiredBy?: string; intendedSolution: string[]; infoText?: string; description?: string; hints?: string[]; alternateFailExplanation?: string; solutionComment?: string; winCondition?: PuzzleWinCondition } | null>(null);
   const [showInfoModal, setShowInfoModal] = React.useState(false);
   const [showSolutionModal, setShowSolutionModal] = React.useState(false);
   const [loggedIn, setLoggedIn] = React.useState(false);
@@ -770,8 +770,8 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   const [showFailModal, setShowFailModal] = React.useState(false);
   const [showBuilderPanelOpen, setShowBuilderPanelOpen] = React.useState(false);
   const [lastTestRaw, setLastTestRaw] = React.useState<any | null>(null);
-  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition; assetPath?: string } | null>(null);
-  const [editState, setEditState] = React.useState<{ id: string; raw: unknown; meta: { name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints?: string[]; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition; assetPath?: string } } | null>(null);
+  const [lastTestMeta, setLastTestMeta] = React.useState<{ name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; solutionComment?: string; winCondition?: PuzzleWinCondition; assetPath?: string } | null>(null);
+  const [editState, setEditState] = React.useState<{ id: string; raw: unknown; meta: { name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints?: string[]; alternateFailExplanation?: string; solutionComment?: string; winCondition?: PuzzleWinCondition; assetPath?: string } } | null>(null);
   const [puzzleListRefresh, setPuzzleListRefresh] = React.useState(0);
   // Read from localStorage only on the client to avoid SSR hydration mismatch.
   React.useEffect(() => {
@@ -1235,7 +1235,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
             // remember raw for editing
             const raw = payload.rawInitial ?? null;
             setLastTestRaw(raw);
-            setLastTestMeta({ name: payload.name ?? undefined, description: payload.description ?? undefined, infoText: payload.infoText ?? undefined, difficulty: payload.difficulty ?? undefined, author: payload.author ?? undefined, inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? undefined, hints: payload.hints ?? undefined, alternateFailExplanation: payload.alternateFailExplanation ?? undefined, winCondition: payload.winCondition ?? undefined, assetPath: payload.assetPath ?? undefined });
+            setLastTestMeta({ name: payload.name ?? undefined, description: payload.description ?? undefined, infoText: payload.infoText ?? undefined, difficulty: payload.difficulty ?? undefined, author: payload.author ?? undefined, inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? undefined, hints: payload.hints ?? undefined, alternateFailExplanation: payload.alternateFailExplanation ?? undefined, solutionComment: payload.solutionComment ?? undefined, winCondition: payload.winCondition ?? undefined, assetPath: payload.assetPath ?? undefined });
 
             setIsResolving(true);
             setActionError(null);
@@ -1280,7 +1280,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
               setShowBuilderPanelOpen(false);
               const title = payload.name ?? lastTestMeta?.name ?? "Tested Puzzle";
               setPuzzleName(title);
-              setPuzzleMeta({ name: title, author: payload.author ?? "", inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? [], infoText: payload.infoText ?? undefined, description: payload.description ?? undefined, hints: payload.hints ?? [], alternateFailExplanation: payload.alternateFailExplanation ?? undefined, winCondition: payload.winCondition ?? undefined });
+              setPuzzleMeta({ name: title, author: payload.author ?? "", inspiredBy: payload.inspiredBy ?? undefined, intendedSolution: payload.intendedSolution ?? [], infoText: payload.infoText ?? undefined, description: payload.description ?? undefined, hints: payload.hints ?? [], alternateFailExplanation: payload.alternateFailExplanation ?? undefined, solutionComment: payload.solutionComment ?? undefined, winCondition: payload.winCondition ?? undefined });
               setShowInfoModal(Boolean(payload.infoText && String(payload.infoText).trim()));
             } catch (err) {
               setActionError(err instanceof Error ? err.message : "Test failed.");
@@ -1316,7 +1316,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
             onPuzzleLoaded={(filename, meta) => {
               setSelectedPuzzleFilename(filename);
               setPuzzleName(meta.name);
-              setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description, hints: meta.hints ?? [], alternateFailExplanation: meta.alternateFailExplanation, winCondition: meta.winCondition });
+              setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description, hints: meta.hints ?? [], alternateFailExplanation: meta.alternateFailExplanation, solutionComment: meta.solutionComment, winCondition: meta.winCondition });
               setShowSolutionModal(false);
               setShowInfoModal(Boolean(meta.infoText && meta.infoText.trim()));
               void loadPuzzle(filename);
@@ -1335,6 +1335,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                   intendedSolution: entry.intendedSolution,
                   hints: entry.hints,
                   alternateFailExplanation: entry.alternateFailExplanation,
+                  solutionComment: entry.solutionComment,
                   winCondition: entry.winCondition,
                   assetPath: entry.assetPath,
                 },
@@ -1509,7 +1510,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
           onPuzzleLoaded={(filename, meta) => {
             setSelectedPuzzleFilename(filename);
             setPuzzleName(meta.name);
-            setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description, hints: meta.hints ?? [], alternateFailExplanation: meta.alternateFailExplanation, winCondition: meta.winCondition });
+            setPuzzleMeta({ name: meta.name, author: meta.author, inspiredBy: meta.inspiredBy, intendedSolution: meta.intendedSolution, infoText: meta.infoText, description: meta.description, hints: meta.hints ?? [], alternateFailExplanation: meta.alternateFailExplanation, solutionComment: meta.solutionComment, winCondition: meta.winCondition });
             setShowSolutionModal(false);
             setShowInfoModal(Boolean(meta.infoText && meta.infoText.trim()));
             void loadPuzzle(filename);
@@ -1530,6 +1531,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                 // so editing via this panel silently blanked them on the next save.
                 hints: entry.hints,
                 alternateFailExplanation: entry.alternateFailExplanation,
+                solutionComment: entry.solutionComment,
                 winCondition: entry.winCondition,
                 assetPath: entry.assetPath,
               },
@@ -2766,6 +2768,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
           <p className="text-sm font-semibold text-white">{puzzleMeta.name || puzzleName}</p>
           {puzzleMeta.author ? <p className="mt-0.5 text-xs text-white/50">By {puzzleMeta.author}</p> : null}
           {puzzleMeta.inspiredBy ? <p className="mt-0.5 text-xs text-white/40">Inspired by {puzzleMeta.inspiredBy}</p> : null}
+          {puzzleMeta.solutionComment?.trim() ? <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-white/75">
+            <PuzzleText text={puzzleMeta.solutionComment} onPreviewStart={handlePreviewStart} onPreviewEnd={handlePreviewEnd} />
+          </p> : null}
         </div>
         {puzzleMeta.intendedSolution.length > 0 ? <>
           <p className="mb-3 text-sm text-white/60">Here&apos;s the author&apos;s intended solution:</p>

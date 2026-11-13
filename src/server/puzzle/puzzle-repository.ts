@@ -16,6 +16,8 @@ export type PuzzleData = {
   hints: string[];
   /** Why the puzzle is lost once it reaches the regroup phase (see regroup-failure spec). */
   alternateFailExplanation?: string;
+  /** Optional author note shown under the byline in the solved/solution dialog. */
+  solutionComment?: string;
   /** What the player must do to win; absent means "deal-lethal". */
   winCondition?: PuzzleWinCondition;
   /** Select-menu thumbnail, relative to public/assets/ (e.g. "puzzles/mandalore.png"). */

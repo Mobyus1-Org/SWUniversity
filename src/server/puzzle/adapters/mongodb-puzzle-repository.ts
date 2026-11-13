@@ -29,6 +29,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
         intendedSolution: doc.intendedSolution ?? [],
         hints: doc.hints ?? [],
         alternateFailExplanation: doc.alternateFailExplanation ?? "",
+        solutionComment: doc.solutionComment ?? "",
         winCondition: asWinCondition(doc.winCondition),
         assetPath: doc.assetPath || DEFAULT_PUZZLE_IMAGE,
       }))
@@ -59,6 +60,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
           intendedSolution: puzzle.intendedSolution ?? [],
           hints: puzzle.hints ?? [],
           alternateFailExplanation: puzzle.alternateFailExplanation ?? "",
+          solutionComment: puzzle.solutionComment ?? "",
           winCondition: asWinCondition(puzzle.winCondition),
           assetPath: puzzle.assetPath || DEFAULT_PUZZLE_IMAGE,
         },
@@ -79,6 +81,7 @@ export class MongoDBPuzzleRepository implements PuzzleRepository {
       intendedSolution: puzzle.intendedSolution ?? [],
       hints: puzzle.hints ?? [],
       alternateFailExplanation: puzzle.alternateFailExplanation ?? "",
+      solutionComment: puzzle.solutionComment ?? "",
       winCondition: asWinCondition(puzzle.winCondition),
       assetPath: puzzle.assetPath || DEFAULT_PUZZLE_IMAGE,
     });

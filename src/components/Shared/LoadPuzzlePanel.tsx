@@ -8,7 +8,7 @@ import { asWinCondition, PUZZLE_WIN_CONDITIONS, WIN_CONDITION_INFO } from "@/uti
 import { WinConditionChip } from "@/components/Shared/WinConditionChip";
 import type { PuzzleWinCondition } from "@/util/puzzle-win-condition";
 
-type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints: string[]; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition; status: PuzzleStatus; assetPath?: string; initialGamestate: RawPuzzleGameState };
+type PuzzleEntry = { id: string; name: string; description: string; infoText: string; difficulty: number; author: string; inspiredBy?: string; intendedSolution: string[]; hints: string[]; alternateFailExplanation?: string; solutionComment?: string; winCondition?: PuzzleWinCondition; status: PuzzleStatus; assetPath?: string; initialGamestate: RawPuzzleGameState };
 
 type Props = {
   onPuzzleLoaded: (id: string, meta: PuzzleEntry) => void;

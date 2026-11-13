@@ -1025,10 +1025,10 @@ function UnitAdder({ playerId, unitCards, units, cards, leaderCardId, attachedLe
 type Props = {
   onClose: () => void;
   onSaved: (id: string) => void;
-  onTest?: (data: { rawInitial?: unknown; gameState: unknown; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition; sentinelPlayIds?: string[]; unitBuffs?: Record<string, { power: number; hp: number }> }) => void;
+  onTest?: (data: { rawInitial?: unknown; gameState: unknown; alternateFailExplanation?: string; solutionComment?: string; winCondition?: PuzzleWinCondition; sentinelPlayIds?: string[]; unitBuffs?: Record<string, { power: number; hp: number }> }) => void;
   initialRaw?: unknown;
   initialId?: string;
-  initialMeta?: { name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition; assetPath?: string };
+  initialMeta?: { name?: string; description?: string; infoText?: string; difficulty?: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; solutionComment?: string; winCondition?: PuzzleWinCondition; assetPath?: string };
 };
 
 export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initialMeta, initialId }: Props) {
@@ -1057,8 +1057,8 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
   React.useEffect(() => {
     if (initialRaw) {
       try {
-        const meta = initialMeta ?? { name: "Tested Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [], hints: [], alternateFailExplanation: "", assetPath: "" };
-        setState(fromRaw(initialRaw as Record<string, unknown>, { name: String(meta.name ?? ""), description: String(meta.description ?? ""), infoText: String(meta.infoText ?? ""), difficulty: Number(meta.difficulty ?? 1), author: String(meta.author ?? ""), inspiredBy: String(meta.inspiredBy ?? ""), intendedSolution: meta.intendedSolution ?? [], hints: meta.hints ?? [], alternateFailExplanation: String(meta.alternateFailExplanation ?? ""), winCondition: meta.winCondition, assetPath: String(meta.assetPath ?? "") }));
+        const meta = initialMeta ?? { name: "Tested Puzzle", description: "", infoText: "", difficulty: 1, author: "", inspiredBy: "", intendedSolution: [], hints: [], alternateFailExplanation: "", solutionComment: "", assetPath: "" };
+        setState(fromRaw(initialRaw as Record<string, unknown>, { name: String(meta.name ?? ""), description: String(meta.description ?? ""), infoText: String(meta.infoText ?? ""), difficulty: Number(meta.difficulty ?? 1), author: String(meta.author ?? ""), inspiredBy: String(meta.inspiredBy ?? ""), intendedSolution: meta.intendedSolution ?? [], hints: meta.hints ?? [], alternateFailExplanation: String(meta.alternateFailExplanation ?? ""), solutionComment: String(meta.solutionComment ?? ""), winCondition: meta.winCondition, assetPath: String(meta.assetPath ?? "") }));
       } catch {
         // ignore invalid initial raw
       }
@@ -1091,6 +1091,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       intendedSolution: state.intendedSolution ?? [],
       hints: state.hints ?? [],
       alternateFailExplanation: state.alternateFailExplanation ?? "",
+      solutionComment: state.solutionComment?.trim() ?? "",
       winCondition: asWinCondition(state.winCondition),
       difficulty: state.difficulty,
       assetPath: normalizePuzzleAssetPath(state.assetPath),
@@ -1124,7 +1125,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Test failed");
       const data = await res.json();
-      if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, infoText: state.infoText, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, hints: state.hints, alternateFailExplanation: state.alternateFailExplanation, winCondition: state.winCondition, assetPath: normalizePuzzleAssetPath(state.assetPath), ...data });
+      if (onTest) onTest({ rawInitial: payload.initialGamestate, name: state.name, description: state.description, infoText: state.infoText, difficulty: state.difficulty, author: state.author, inspiredBy: state.inspiredBy, intendedSolution: state.intendedSolution, hints: state.hints, alternateFailExplanation: state.alternateFailExplanation, solutionComment: state.solutionComment, winCondition: state.winCondition, assetPath: normalizePuzzleAssetPath(state.assetPath), ...data });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Test failed.");
     } finally {
@@ -1444,6 +1445,26 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Comment — optional author note shown under the byline in the solved/solution
+                  dialog (e.g. where the board state came from). Left blank, the dialog shows
+                  nothing. */}
+              <div className="rounded-lg bg-black/20 p-3 sm:p-4 space-y-3">
+                <div className="text-2xs font-semibold uppercase tracking-[0.2em] text-white/50">
+                  Comment
+                </div>
+                <p className="text-2xs leading-relaxed text-white/40">
+                  Optional. Shown under your name in the &ldquo;Congratulations&rdquo; dialog once
+                  the puzzle is solved — e.g. &ldquo;This was a real game state at a Sector
+                  Qualifier!&rdquo;
+                </p>
+                <CardRefField
+                  multiline
+                  rows={2}
+                  value={state.solutionComment ?? ""}
+                  onChange={(next) => patchGlobal({ solutionComment: next })}
+                />
               </div>
 
               {/* Alternate fail explanation — shown when the puzzle is lost by reaching the

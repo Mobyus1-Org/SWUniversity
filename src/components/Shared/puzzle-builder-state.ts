@@ -94,6 +94,8 @@ export type BuilderState = {
    *  {@link DEFAULT_ALTERNATE_FAIL_EXPLANATION}; author a real one when surviving the regroup
    *  draw is an intended way to lose the puzzle. */
   alternateFailExplanation?: string;
+  /** Optional author note shown under the byline in the solved/solution dialog. No default. */
+  solutionComment?: string;
   /** What the player must do to win; absent reads as {@link DEFAULT_WIN_CONDITION}. */
   winCondition?: PuzzleWinCondition;
   hints: string[];
@@ -156,6 +158,7 @@ export function initialBuilderState(): BuilderState {
     inspiredBy: "",
     intendedSolution: [],
     alternateFailExplanation: DEFAULT_ALTERNATE_FAIL_EXPLANATION,
+    solutionComment: "",
     winCondition: DEFAULT_WIN_CONDITION,
     hints: [],
     assetPath: "",
@@ -255,7 +258,7 @@ function parseRawPlayer(p: Record<string, unknown>, playerId: 1 | 2): PlayerBuil
   };
 }
 
-export function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; infoText?: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; winCondition?: PuzzleWinCondition; assetPath?: string }): BuilderState {
+export function fromRaw(raw: Record<string, unknown>, meta: { name: string; description: string; infoText?: string; difficulty: number; author?: string; inspiredBy?: string; intendedSolution?: string[]; hints?: string[]; alternateFailExplanation?: string; solutionComment?: string; winCondition?: PuzzleWinCondition; assetPath?: string }): BuilderState {
   return {
     name: meta.name,
     description: meta.description,
@@ -269,6 +272,7 @@ export function fromRaw(raw: Record<string, unknown>, meta: { name: string; desc
     alternateFailExplanation: meta.alternateFailExplanation?.trim()
       ? meta.alternateFailExplanation
       : DEFAULT_ALTERNATE_FAIL_EXPLANATION,
+    solutionComment: meta.solutionComment ?? "",
     winCondition: asWinCondition(meta.winCondition),
     hints: meta.hints ?? [],
     assetPath: meta.assetPath ?? "",

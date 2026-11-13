@@ -23,6 +23,8 @@ export type PuzzleDocument = {
    * Authored per-puzzle; there is deliberately no default — see the regroup-failure spec.
    */
   alternateFailExplanation?: string;
+  /** Optional author note shown under the byline in the solved/solution dialog. */
+  solutionComment?: string;
   /** What the player must do to win. Docs saved before goals existed read as "deal-lethal". */
   winCondition?: PuzzleWinCondition;
   /** Select-menu thumbnail, relative to public/assets/ (e.g. "puzzles/mandalore.png"). */
@@ -43,6 +45,7 @@ const puzzleSchema = new Schema<PuzzleDocument>(
     intendedSolution: { type: [String], default: [] },
     hints: { type: [String], default: [] },
     alternateFailExplanation: { type: String, default: "" },
+    solutionComment: { type: String, default: "" },
     winCondition: { type: String, enum: PUZZLE_WIN_CONDITIONS, default: DEFAULT_WIN_CONDITION },
     assetPath: { type: String, default: DEFAULT_PUZZLE_IMAGE },
   },
