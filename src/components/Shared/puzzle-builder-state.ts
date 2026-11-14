@@ -141,9 +141,9 @@ export const DEFAULT_ALTERNATE_FAIL_EXPLANATION =
 /** Starting Info Text for each mode — what the player reads on load until the author rewrites it. */
 export const DEFAULT_INFO_TEXT: Record<PuzzleWinCondition, string> = {
   "deal-lethal": "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nWin the game.",
-  "clear-board": "Your opponent has claimed the Initiative.\nRemove all of their units from play to solve the puzzle!",
-  "heal-full": "Your opponent has claimed the Initiative.\nHeal your base back to full HP to solve the puzzle!",
-  "self-lethal": "Your opponent has claimed the Initiative.\nReduce your own base to 0 HP to solve the puzzle!",
+  "clear-board": "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nRemove all of their units from play to solve the puzzle!",
+  "heal-full": "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nHeal your base back to full HP to solve the puzzle!",
+  "self-lethal": "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nReduce your own base to 0 HP to solve the puzzle!",
 };
 
 /**

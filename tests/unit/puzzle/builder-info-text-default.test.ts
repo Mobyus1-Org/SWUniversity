@@ -14,13 +14,13 @@ describe("info text default per win condition", () => {
 
   it("swaps an untouched default for the picked mode's default", () => {
     expect(infoTextForWinCondition(DEFAULT_INFO_TEXT["deal-lethal"], "clear-board")).toBe(
-      "Your opponent has claimed the Initiative.\nRemove all of their units from play to solve the puzzle!",
+      "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nRemove all of their units from play to solve the puzzle!",
     );
     expect(infoTextForWinCondition(DEFAULT_INFO_TEXT["clear-board"], "heal-full")).toBe(
-      "Your opponent has claimed the Initiative.\nHeal your base back to full HP to solve the puzzle!",
+      "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nHeal your base back to full HP to solve the puzzle!",
     );
     expect(infoTextForWinCondition(DEFAULT_INFO_TEXT["heal-full"], "self-lethal")).toBe(
-      "Your opponent has claimed the Initiative.\nReduce your own base to 0 HP to solve the puzzle!",
+      "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nReduce your own base to 0 HP to solve the puzzle!",
     );
     expect(infoTextForWinCondition(DEFAULT_INFO_TEXT["self-lethal"], "deal-lethal")).toBe(DEFAULT_INFO_TEXT["deal-lethal"]);
   });
