@@ -9,6 +9,7 @@ import { StaticBoard } from "./StaticBoard";
 import type { GamePhase } from "@/lib/engine/core-models";
 import {
   fromRaw,
+  infoTextForWinCondition,
   initialBuilderState,
   moveItem,
   toRaw,
@@ -1189,7 +1190,7 @@ export function PuzzleBuilderPanel({ onClose, onSaved, onTest, initialRaw, initi
                           name="puzzle-win-condition"
                           value={wc}
                           checked={asWinCondition(state.winCondition) === wc}
-                          onChange={() => patchGlobal({ winCondition: wc })}
+                          onChange={() => patchGlobal({ winCondition: wc, infoText: infoTextForWinCondition(state.infoText, wc) })}
                           className="mt-0.5 accent-primary"
                         />
                         <span>

@@ -138,6 +138,24 @@ export function moveItem<T>(list: T[], from: number, delta: number): T[] {
 export const DEFAULT_ALTERNATE_FAIL_EXPLANATION =
   "You somehow survived the Regroup phase unintentionally. Please report this solution on our Discord.";
 
+/** Starting Info Text for each mode — what the player reads on load until the author rewrites it. */
+export const DEFAULT_INFO_TEXT: Record<PuzzleWinCondition, string> = {
+  "deal-lethal": "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nWin the game.",
+  "clear-board": "Your opponent has claimed the Initiative.\nRemove all of their units from play to solve the puzzle!",
+  "heal-full": "Your opponent has claimed the Initiative.\nHeal your base back to full HP to solve the puzzle!",
+  "self-lethal": "Your opponent has claimed the Initiative.\nReduce your own base to 0 HP to solve the puzzle!",
+};
+
+/**
+ * The Info Text after the author picks a mode. Still one of the stock defaults means nobody has
+ * written their own yet, so it follows the mode; anything else — including a deliberately blank
+ * box — is the author's and stays put.
+ */
+export function infoTextForWinCondition(current: string, winCondition: PuzzleWinCondition): string {
+  const untouched = Object.values(DEFAULT_INFO_TEXT).some((text) => text === current.trim());
+  return untouched ? DEFAULT_INFO_TEXT[winCondition] : current;
+}
+
 export function emptyPlayer(): PlayerBuilderState {
   return {
     baseCardId: "", baseDamage: 0, baseEpicActionUsed: false, baseUpgrades: [], baseCaptives: [],
@@ -151,8 +169,7 @@ export function initialBuilderState(): BuilderState {
   return {
     name: "",
     description: "",
-    infoText:
-      "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nWin the game.",
+    infoText: DEFAULT_INFO_TEXT[DEFAULT_WIN_CONDITION],
     difficulty: 1,
     author: "",
     inspiredBy: "",
