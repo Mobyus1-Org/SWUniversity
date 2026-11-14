@@ -15,7 +15,7 @@ export const WIN_CONDITION_INFO: Record<PuzzleWinCondition, { title: string; goa
   "clear-board": { title: "Clear the Board", goal: "remove every unit from your opponent's side of the board" },
   "heal-full": { title: "Heal to Full", goal: "remove all damage from your base" },
   "self-lethal": { title: "On My Own Terms", goal: "defeat your own base" },
-  "mirror": { title: "Mirror", goal: "make your side of the table mirror your opponent's" },
+  "mirror": { title: "Mirror Match", goal: "make your side of the table mirror your opponent's" },
 };
 
 /**

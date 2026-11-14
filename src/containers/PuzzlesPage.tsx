@@ -1570,7 +1570,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
         </div>
         {!puzzleName ? <p className="mt-1 text-xs text-white/65 sm:text-sm">Board-first tactical sandbox. Opponent already has initiative.</p> : null}
         {puzzleMeta ? <p className="mt-1 text-xs font-semibold text-white/80">Goal: <span className="font-normal text-white/70">{WIN_CONDITION_INFO[winCondition].goal}.</span>
-          {winCondition === "mirror" && mirrorMatch ? <span className={`ml-2 rounded-full border px-2 py-0.5 text-3xs font-semibold ${mirrorMatched ? "border-emerald-400/40 bg-emerald-500/20 text-emerald-200" : "border-purple-400/40 bg-purple-500/15 text-purple-200"}`}>{mirrorMatch.matched} / {mirrorMatch.total} matched</span> : null}
+          {winCondition === "mirror" && mirrorMatch ? <span title={mirrorMatched ? "Everything matches" : `Not matching: ${mirrorMatch.mismatches.join(", ")}`} className={`ml-2 rounded-full border px-2 py-0.5 text-3xs font-semibold ${mirrorMatched ? "border-emerald-400/40 bg-emerald-500/20 text-emerald-200" : "border-purple-400/40 bg-purple-500/15 text-purple-200"}`}>{mirrorMatch.matched} / {mirrorMatch.total} matched</span> : null}
         </p> : null}
         {puzzleMeta?.author ? <p className="mt-0.5 text-xs text-white/45">By {puzzleMeta.author}{puzzleMeta.inspiredBy ? <span className="ml-2 text-white/30">· Inspired by {puzzleMeta.inspiredBy}</span> : null}</p> : null}
       </div>
