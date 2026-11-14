@@ -4,7 +4,7 @@ import {
   CardPreviewOverlay, PreviewImage, previewFaces, useCardPreview, useLongPress,
 } from "@/components/Shared/CardPreview";
 import {
-  CARD_IMPL_LANES, deriveLanes, isLegalTransition,
+  CARD_IMPL_LANES, deriveLanes, isLegalTransition, isRecentlyDone,
   type CardImplLane, type CardImplRow,
 } from "@/server/cards-impl/status-board";
 import { CardIsLeader } from "@/server/engine/core-functions";
@@ -56,6 +56,8 @@ export default function CardsImplPage() {
   const [statuses, setStatuses] = React.useState<CardImplRow[]>([]);
   const [search, setSearch] = React.useState("");
   const [setFilter, setSetFilter] = React.useState("");
+  // Done trends toward the whole card pool, so by default it shows only recent work.
+  const [recentsOnly, setRecentsOnly] = React.useState(true);
   const [laneLimits, setLaneLimits] = React.useState<LaneLimits>(initialLaneLimits);
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(true);
@@ -98,7 +100,7 @@ export default function CardsImplPage() {
 
   // Narrowing the view starts every lane over: a limit left from the previous query would show a
   // slice of the new results nobody asked for, and the counts under each heading would read oddly.
-  React.useEffect(() => { setLaneLimits(initialLaneLimits()); }, [search, setFilter]);
+  React.useEffect(() => { setLaneLimits(initialLaneLimits()); }, [search, setFilter, recentsOnly]);
 
   /** Title, subtitle or SET_NNN, case-insensitive. */
   const matches = React.useCallback((cardId: string) => {
@@ -175,12 +177,30 @@ export default function CardsImplPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
         {CARD_IMPL_LANES.map((lane) => {
-          const all = lanes[lane].filter(matches);
+          const now = new Date();
+          const recentFilter = lane === "done" && recentsOnly;
+          const all = lanes[lane].filter((cardId) =>
+            matches(cardId) && (!recentFilter || isRecentlyDone(rowByCard.get(cardId), now)));
           const shown = all.slice(0, laneLimits[lane]);
           const hidden = all.length - shown.length;
           return (
             <section key={lane} className={`rounded-lg border bg-black/30 p-4 ${LANE_ACCENT[lane]}`}>
-              <h2 className="text-xl font-semibold">{LANE_LABEL[lane]}</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-semibold">{LANE_LABEL[lane]}</h2>
+                {lane === "done" ? (
+                  <label className="flex items-center gap-1.5 text-sm text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={recentsOnly}
+                      onChange={(e) => setRecentsOnly(e.target.checked)}
+                    />
+                    Recents Only
+                  </label>
+                ) : null}
+              </div>
+              {lane === "done" ? (
+                <p className="text-xs text-gray-500">Recents Only shows cards moved to Done in the last 6 weeks.</p>
+              ) : null}
               <p className="mb-3 text-sm text-gray-400">
                 {hidden === 0
                   ? `${all.length.toLocaleString()} cards`

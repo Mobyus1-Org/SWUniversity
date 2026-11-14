@@ -6,7 +6,7 @@ import { connectToDatabase } from "@/server/db";
 import { assertRequiredEnv } from "@/server/env";
 import { CardImplStatusModel } from "@/server/models/CardImplStatus";
 import { validateStatusUpdate } from "@/server/cards-impl/validate-update";
-import { nextPriorityRank, type CardImplRow } from "@/server/cards-impl/status-board";
+import { nextDoneAt, nextPriorityRank, type CardImplRow } from "@/server/cards-impl/status-board";
 import { InScopeBoardCardIds, IsInScopeBoardCard } from "@/server/engine/card-db/card-scope";
 import { CardSubtitle, CardTitle, CardType } from "@/server/engine/card-db/generated";
 
@@ -17,6 +17,7 @@ async function readRows(): Promise<CardImplRow[]> {
     status: d.status,
     note: d.note || undefined,
     priorityRank: d.priorityRank,
+    doneAt: d.doneAt ? new Date(d.doneAt).toISOString() : undefined,
     updatedBy: d.updatedBy || "",
     updatedAt: new Date((d as { updatedAt?: Date }).updatedAt ?? Date.now()).toISOString(),
   }));
@@ -58,15 +59,19 @@ export default async function handler(request: NextApiRequest, response: NextApi
       rank = nextPriorityRank(await readRows());
     }
 
+    const previous = await CardImplStatusModel.findOne({ cardId }).lean();
+    const doneAt = nextDoneAt(previous, status, new Date());
+
     // $set and $unset are written explicitly rather than relying on Mongoose folding bare fields
     // into $set — mixing the two shapes in one object is easy to get subtly wrong.
-    const update = status === "priority"
-      ? { $set: { cardId, status, note: note ?? "", priorityRank: rank, updatedBy: session.user.username } }
-      : {
-          // Leaving Priority clears the rank so a later re-entry appends cleanly.
-          $set: { cardId, status, note: note ?? "", updatedBy: session.user.username },
-          $unset: { priorityRank: 1 },
-        };
+    const $set: Record<string, unknown> = { cardId, status, note: note ?? "", updatedBy: session.user.username };
+    const $unset: Record<string, 1> = {};
+    // Leaving Priority clears the rank so a later re-entry appends cleanly.
+    if (status === "priority") $set.priorityRank = rank;
+    else $unset.priorityRank = 1;
+    if (doneAt) $set.doneAt = doneAt;
+    else $unset.doneAt = 1;
+    const update = { $set, $unset };
 
     await CardImplStatusModel.findOneAndUpdate({ cardId }, update, { upsert: true, new: true });
 

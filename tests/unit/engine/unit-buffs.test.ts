@@ -101,9 +101,10 @@ describe("computeUnitBuffs", () => {
       expect(computeUnitBuffs(g.state)[playId]).toEqual({ power: -2, hp: -2 });
     });
 
-    // Reported on Captain Tarpals (0 power): power floors at 0, so subtracting the token's –1 from
-    // the floored power read as a phantom +1/+0. The badge shows the real change: power can't drop.
-    it("does not invent a power buff on a 0-power unit", () => {
+    // Reported on Captain Tarpals (0 power): the badge read +0/–1 next to every other Weakness
+    // unit's –1/–1, which looked like a +1 buff. The –1 is real even though his power is already 0 —
+    // it still offsets Raid when he attacks (0 + 2 – 1) — so the badge shows the modifier, unfloored.
+    it("shows the Weakness –1 on a 0-power unit", () => {
       const g = new GameTestAdapter();
       g.loadNewState(base()
         .WithGroundUnitForPlayer(1, Cards.units.hmw.captainTarpals)
@@ -111,7 +112,7 @@ describe("computeUnitBuffs", () => {
         .Build());
 
       const playId = g.state.player1.groundArena[0].playId;
-      expect(computeUnitBuffs(g.state)[playId]).toEqual({ power: 0, hp: -1 });
+      expect(computeUnitBuffs(g.state)[playId]).toEqual({ power: -1, hp: -1 });
     });
   });
 

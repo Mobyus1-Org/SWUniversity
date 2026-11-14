@@ -141,6 +141,16 @@ export class Unit implements UnitInterface {
   }
 
   CurrentPower(isAttacking: boolean = false, isDefending: boolean = false): number {
+    // A unit's power can never be reduced below 0. Without this, a debuffed unit (e.g. Nowhere
+    // to Hide on a 1-power unit) attacking a base would HEAL it — dealBaseDamage does `+= amount`.
+    return Math.max(0, this.UnflooredPower(isAttacking, isDefending));
+  }
+
+  /**
+   * Power with every modifier summed but before the 0 floor. Only the stat badge wants this: a
+   * Weakness –1 on a 0-power unit is still a real –1 (it offsets Raid), so the badge must show it.
+   */
+  UnflooredPower(isAttacking: boolean = false, isDefending: boolean = false): number {
     let power = CardPower(this.cardId) || 0;
     if (this.HasUpgrade("LOF_056")) { //Size Matters Not
       power = 5;
@@ -430,13 +440,12 @@ export class Unit implements UnitInterface {
       power += 2;
     }
 
-    // A unit's power can never be reduced below 0. Without this, a debuffed unit (e.g. Nowhere
-    // to Hide on a 1-power unit) attacking a base would HEAL it — dealBaseDamage does `+= amount`.
     // IC27_126 Saw Gerrera — "double another friendly unit's power for this phase". A multiplier,
-    // so it applies after every +/- above (Raid included), and two doubles make ×4.
+    // so it applies after every +/- above (Raid included), and two doubles make ×4. Doubling before
+    // CurrentPower's floor is the same as after it: a negative sum stays negative and floors to 0.
     const doublings = GetCurrentEffectsForPlayer(this.controller)
       .filter(e => e.cardId === "IC27_126" && e.targetPlayId === this.playId).length;
-    return Math.max(0, power) * 2 ** doublings;
+    return power * 2 ** doublings;
   }
 
   CurrentHP(): number {

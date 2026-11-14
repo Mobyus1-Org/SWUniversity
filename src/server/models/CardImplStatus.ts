@@ -15,6 +15,8 @@ export type CardImplStatusDocument = {
   note?: string;
   /** Ordering within the Priority lane; unset elsewhere. */
   priorityRank?: number;
+  /** When the card last entered Done; drives the board's "Recents Only" filter. Unset elsewhere. */
+  doneAt?: Date;
   updatedBy: string;
 };
 
@@ -24,6 +26,7 @@ const cardImplStatusSchema = new Schema<CardImplStatusDocument>(
     status: { type: String, enum: ["not-implemented", "todo", "priority", "done"], required: true },
     note: { type: String, default: "" },
     priorityRank: { type: Number },
+    doneAt: { type: Date },
     updatedBy: { type: String, default: "" },
   },
   { timestamps: true },

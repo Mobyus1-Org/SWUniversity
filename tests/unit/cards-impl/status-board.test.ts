@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  deriveLanes, nextPriorityRank, isLegalTransition,
+  deriveLanes, nextPriorityRank, isLegalTransition, nextDoneAt, isRecentlyDone,
   type CardImplRow,
 } from "@/server/cards-impl/status-board";
 
@@ -97,5 +97,58 @@ describe("isLegalTransition", () => {
 
   it("treats a no-op move as legal", () => {
     expect(isLegalTransition("done", "done")).toBe(true);
+  });
+});
+
+describe("nextDoneAt", () => {
+  const NOW = new Date("2026-11-14T15:00:00.000Z");
+
+  it("stamps a card the moment it enters Done", () => {
+    expect(nextDoneAt({ status: "priority" }, "done", NOW)).toEqual(NOW);
+  });
+
+  it("stamps a card that had no row at all (Not Implemented → Done)", () => {
+    expect(nextDoneAt(null, "done", NOW)).toEqual(NOW);
+  });
+
+  it("keeps the original stamp when a Done card is re-posted as Done", () => {
+    // Re-saving a note must not make a weeks-old card look recent.
+    const earlier = new Date("2026-10-19T12:00:00.000Z");
+    expect(nextDoneAt({ status: "done", doneAt: earlier }, "done", NOW)).toEqual(earlier);
+  });
+
+  it("leaves an unstamped Done card unstamped when it is re-posted as Done", () => {
+    // Pre-existing Done rows predate the field; touching one is not finishing it.
+    expect(nextDoneAt({ status: "done" }, "done", NOW)).toBeUndefined();
+  });
+
+  it("clears the stamp when a card leaves Done", () => {
+    const earlier = new Date("2026-10-19T12:00:00.000Z");
+    expect(nextDoneAt({ status: "done", doneAt: earlier }, "priority", NOW)).toBeUndefined();
+  });
+
+  it("re-stamps a card that went back to Priority and was finished again", () => {
+    expect(nextDoneAt({ status: "priority" }, "done", NOW)).toEqual(NOW);
+  });
+});
+
+describe("isRecentlyDone", () => {
+  const NOW = new Date("2026-11-14T15:00:00.000Z");
+
+  it("is false for a row with no doneAt — legacy Done rows are not recent", () => {
+    expect(isRecentlyDone(row("SOR_001", "done"), NOW)).toBe(false);
+  });
+
+  it("is false with no row at all", () => {
+    expect(isRecentlyDone(undefined, NOW)).toBe(false);
+  });
+
+  it("is true inside the 6-week window", () => {
+    expect(isRecentlyDone(row("SOR_001", "done", { doneAt: "2026-10-19T12:00:00.000Z" }), NOW)).toBe(true);
+  });
+
+  it("is true exactly 6 weeks back and false a day before that", () => {
+    expect(isRecentlyDone(row("SOR_001", "done", { doneAt: "2026-10-03T15:00:00.000Z" }), NOW)).toBe(true);
+    expect(isRecentlyDone(row("SOR_001", "done", { doneAt: "2026-10-02T15:00:00.000Z" }), NOW)).toBe(false);
   });
 });

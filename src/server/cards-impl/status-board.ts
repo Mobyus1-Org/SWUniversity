@@ -5,11 +5,41 @@ export type CardImplRow = {
   status: CardImplLane;
   note?: string;
   priorityRank?: number;
+  /** When the card last ENTERED Done (ISO). Absent on rows finished before it was tracked. */
+  doneAt?: string;
   updatedBy: string;
   updatedAt: string;
 };
 
 export const CARD_IMPL_LANES: CardImplLane[] = ["not-implemented", "todo", "priority", "done"];
+
+/** How far back the Done lane's "Recents Only" view reaches: 6 weeks. */
+export const RECENT_DONE_DAYS = 42;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The doneAt a row should hold after moving to `to`.
+ *
+ * Only ENTERING Done stamps it. A Done card re-posted as Done keeps what it had, so re-saving a
+ * note can't make an old card look recent — and a legacy unstamped row stays unstamped. Leaving
+ * Done clears it, so a card sent back to Priority and finished again is recent again.
+ */
+export function nextDoneAt(
+  previous: { status: string; doneAt?: Date } | null,
+  to: CardImplLane,
+  now: Date,
+): Date | undefined {
+  if (to !== "done") return undefined;
+  if (previous?.status === "done") return previous.doneAt;
+  return now;
+}
+
+/** True when the row entered Done within the last RECENT_DONE_DAYS. Rows with no doneAt never are. */
+export function isRecentlyDone(row: CardImplRow | undefined, now: Date): boolean {
+  if (!row?.doneAt) return false;
+  return now.getTime() - new Date(row.doneAt).getTime() <= RECENT_DONE_DAYS * DAY_MS;
+}
 
 /**
  * Which lanes a card can move to from each lane.

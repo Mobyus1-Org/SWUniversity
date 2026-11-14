@@ -3960,6 +3960,20 @@ export function resolveWhenPlayed(
       if (allUnits076.length === 0) return null;
       return mandatoryTarget(cardId, player, allUnits076.map(u => u.playId));
     }
+    case "SEC_075": { // Knowledge and Defense — Give a unit –2/–2 for this phase. Draw a card.
+                      // The draw is its own sentence, so it still happens with no unit to shrink.
+      const allUnits075 = AllUnits();
+      if (allUnits075.length === 0) {
+        DrawCardForPlayer(game.currentGameState, game.gameLog, player);
+        return null;
+      }
+      return mandatoryTarget(cardId, player, allUnits075.map(u => u.playId));
+    }
+    case "HMW_100": { // Torrent — Give a Weakness token to a unit (2 instead with a Naboo base).
+      const allUnits100 = AllUnits();
+      if (allUnits100.length === 0) return null;
+      return mandatoryTarget(cardId, player, allUnits100.map(u => u.playId));
+    }
     case "SOR_124": // Tactical Advantage — Give a unit +2/+2 for this phase.
     case "TWI_124": { // Tactical Advantage (TWI reprint)
       const allUnits124 = AllUnits();

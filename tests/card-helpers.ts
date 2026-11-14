@@ -70,7 +70,11 @@ export const Cards = {
       stygeonSpire: "LAW_027",
       cantoBight: "LAW_028",
       partisanHideout: "LAW_030",
-    }
+    },
+    hmw: {
+      duneSea: "HMW_019",          // Vigilance, Tatooine — no ability text
+      greatGrassPlains: "HMW_020", // Vigilance, Naboo — no ability text
+    },
   },
   leaders: {
     sor: {
@@ -1305,6 +1309,7 @@ export const Cards = {
       iAmTheSenate: "SEC_092",
       grassrootsResistance: "SEC_258",
       emergencyPowers: "SEC_040",
+      knowledgeAndDefense: "SEC_075", // Give a unit –2/–2 for this phase. Draw a card.
     },
     ash: {
       displayOfStrength: "ASH_136",
@@ -1386,6 +1391,7 @@ export const Cards = {
       lowAltitudeCombat: "HMW_050", // Move a space unit to the ground arena, then maybe attack
       logTrap: "HMW_149",           // Attack with a friendly unit, then again (exhausted), not a base
       mysteriousDisappearance: "HMW_058", // A player picks their non-leader unit; may defeat → Beast
+      torrent: "HMW_100",           // 1 Weakness to a unit; 2 instead with a Naboo base
     },
     ic27: {
       lethalCrackdown: "IC27_030",  // reprint of TWI_041

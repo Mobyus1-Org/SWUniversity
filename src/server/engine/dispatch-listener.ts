@@ -185,9 +185,10 @@ export function computeUnitBuffs(gs: GameState): Record<string, { power: number;
       const statUpgrades = u.upgrades.filter(upg => upg.cardId !== WEAKNESS_TOKEN);
       const upgPow = statUpgrades.reduce((sum, upg) => sum + UpgradePowerOf(upg.cardId), 0);
       const upgHp = statUpgrades.reduce((sum, upg) => sum + UpgradeHpOf(upg.cardId), 0);
-      // CurrentPower floors at 0, so the baseline must too: a 0-power unit with a –1 upgrade is at
-      // 0, not –1, and subtracting the unfloored sum invented a +1 (Captain Tarpals).
-      const powBuff = unit.CurrentPower() - Math.max(0, basePower + upgPow);
+      // Unfloored on both sides: the badge shows the modifier, not the change in floored power. A
+      // Weakness on 0-power Captain Tarpals is –1 (it still offsets his Raid); comparing floored
+      // power read +0 next to every other Weakness unit's –1, which looked like a +1 buff.
+      const powBuff = unit.UnflooredPower() - (basePower + upgPow);
       const hpBuff = unit.TotalHP() - baseHp - upgHp;
       // Debuffs count too: a –X/–X (Karis, Talzin's Assassin, Snoke's aura…) is exactly as
       // important to see on the board as a buff, and reporting only positives made them invisible.
@@ -20463,6 +20464,23 @@ function applyAbilityEffect(
       }
       const ownBaseId076 = `player${pending.player}.base`;
       healTarget(game.currentGameState, ownBaseId076, 2, game.gameLog, "SOR_076");
+      break;
+    }
+    case "SEC_075": { // Knowledge and Defense: –2/–2 Phase to chosen unit, then draw a card.
+      if (!targetPlayId) break;
+      const target075 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (target075) GiveStatModForPhase("SEC_075", Unit.FromInterface(target075), -2, game.gameLog);
+      DrawCardForPlayer(game.currentGameState, game.gameLog, pending.player!);
+      break;
+    }
+    case "HMW_100": { // Torrent: 1 Weakness token, or 2 "instead" (not 1 + 2) if the CASTER's base is Naboo.
+      if (!targetPlayId) break;
+      const target100 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!target100) break;
+      const naboo100 = TraitContains(GetPlayer(game.currentGameState, pending.player!).base.cardId, "Naboo", pending.player!);
+      for (let i = 0; i < (naboo100 ? 2 : 1); i++) {
+        GiveWeaknessToken(game.currentGameState, target100, game.gameLog, pending.player!, "HMW_100");
+      }
       break;
     }
     case "SOR_124": // Tactical Advantage: +2/+2 Phase to chosen unit.
