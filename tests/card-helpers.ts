@@ -889,6 +889,7 @@ export const Cards = {
     },
     hmw: {
       infernoSquad: "HMW_202", // We Can Grieve Later — 3/6 Ground, WP/WD: may deal 1 + Weakness
+      captainTarpals: "HMW_254", // 0/2 Ground — Shielded, Raid 2; a 0-power unit for the power floor
       nightbrotherMaulsGauntlet: "HMW_204",
       ewokBrigade: "HMW_116", // 2/4 Ground, cost 2, no abilities — clean "costs 3 or less" fixture
       victorSquadron: "HMW_203", // 5/5 Space — enters play ready

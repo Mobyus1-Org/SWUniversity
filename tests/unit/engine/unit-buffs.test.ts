@@ -71,6 +71,50 @@ describe("computeUnitBuffs", () => {
     expect(computeUnitBuffs(g.state)[playId]).toEqual({ power: -2, hp: 0 });
   });
 
+  // Weakness tokens used to be subtracted out like any other upgrade, so a –1/–1 left the badge
+  // blank (only the token strip showed it). They are a stat effect, so the badge now includes them.
+  describe("Weakness tokens", () => {
+    const WEAKNESS = Cards.units.token.weakness;
+
+    it("shows a Weakness token as –1/–1", () => {
+      const g = new GameTestAdapter();
+      g.loadNewState(base()
+        .WithGroundUnitForPlayer(1, Cards.units.sor.consularSecurityForce)
+        .WithUpgradesOnGroundUnitForPlayer(1, 0, [{ cardId: WEAKNESS, playId: "w1", owner: 2, controller: 2 }])
+        .Build());
+
+      const playId = g.state.player1.groundArena[0].playId;
+      expect(computeUnitBuffs(g.state)[playId]).toEqual({ power: -1, hp: -1 });
+    });
+
+    it("stacks two Weakness tokens", () => {
+      const g = new GameTestAdapter();
+      g.loadNewState(base()
+        .WithGroundUnitForPlayer(1, Cards.units.sor.consularSecurityForce)
+        .WithUpgradesOnGroundUnitForPlayer(1, 0, [
+          { cardId: WEAKNESS, playId: "w1", owner: 2, controller: 2 },
+          { cardId: WEAKNESS, playId: "w2", owner: 2, controller: 2 },
+        ])
+        .Build());
+
+      const playId = g.state.player1.groundArena[0].playId;
+      expect(computeUnitBuffs(g.state)[playId]).toEqual({ power: -2, hp: -2 });
+    });
+
+    // Reported on Captain Tarpals (0 power): power floors at 0, so subtracting the token's –1 from
+    // the floored power read as a phantom +1/+0. The badge shows the real change: power can't drop.
+    it("does not invent a power buff on a 0-power unit", () => {
+      const g = new GameTestAdapter();
+      g.loadNewState(base()
+        .WithGroundUnitForPlayer(1, Cards.units.hmw.captainTarpals)
+        .WithUpgradesOnGroundUnitForPlayer(1, 0, [{ cardId: WEAKNESS, playId: "w1", owner: 2, controller: 2 }])
+        .Build());
+
+      const playId = g.state.player1.groundArena[0].playId;
+      expect(computeUnitBuffs(g.state)[playId]).toEqual({ power: 0, hp: -1 });
+    });
+  });
+
   it("control: an unmodified unit has no entry", () => {
     const g = new GameTestAdapter();
     g.loadNewState(base().WithGroundUnitForPlayer(1, Cards.units.sor.consularSecurityForce).Build());

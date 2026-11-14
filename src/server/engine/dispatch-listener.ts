@@ -180,9 +180,14 @@ export function computeUnitBuffs(gs: GameState): Record<string, { power: number;
       const unit = Unit.FromInterface(u);
       const basePower = CardPower(u.cardId) || 0;
       const baseHp = CardHp(u.cardId) || 0;
-      const upgPow = u.upgrades.reduce((sum, upg) => sum + UpgradePowerOf(upg.cardId), 0);
-      const upgHp = u.upgrades.reduce((sum, upg) => sum + UpgradeHpOf(upg.cardId), 0);
-      const powBuff = unit.CurrentPower() - basePower - upgPow;
+      // Upgrades show their own stats on the strip under the card, so the badge leaves them out —
+      // except Weakness tokens, which read as a plain –1/–1 effect and belong in the badge.
+      const statUpgrades = u.upgrades.filter(upg => upg.cardId !== WEAKNESS_TOKEN);
+      const upgPow = statUpgrades.reduce((sum, upg) => sum + UpgradePowerOf(upg.cardId), 0);
+      const upgHp = statUpgrades.reduce((sum, upg) => sum + UpgradeHpOf(upg.cardId), 0);
+      // CurrentPower floors at 0, so the baseline must too: a 0-power unit with a –1 upgrade is at
+      // 0, not –1, and subtracting the unfloored sum invented a +1 (Captain Tarpals).
+      const powBuff = unit.CurrentPower() - Math.max(0, basePower + upgPow);
       const hpBuff = unit.TotalHP() - baseHp - upgHp;
       // Debuffs count too: a –X/–X (Karis, Talzin's Assassin, Snoke's aura…) is exactly as
       // important to see on the board as a buff, and reporting only positives made them invisible.
