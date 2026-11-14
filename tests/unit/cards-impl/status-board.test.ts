@@ -143,12 +143,12 @@ describe("isRecentlyDone", () => {
     expect(isRecentlyDone(undefined, NOW)).toBe(false);
   });
 
-  it("is true inside the 6-week window", () => {
-    expect(isRecentlyDone(row("SOR_001", "done", { doneAt: "2026-10-19T12:00:00.000Z" }), NOW)).toBe(true);
+  it("is true inside the 4-week window", () => {
+    expect(isRecentlyDone(row("SOR_001", "done", { doneAt: "2026-10-27T12:00:00.000Z" }), NOW)).toBe(true);
   });
 
-  it("is true exactly 6 weeks back and false a day before that", () => {
-    expect(isRecentlyDone(row("SOR_001", "done", { doneAt: "2026-10-03T15:00:00.000Z" }), NOW)).toBe(true);
-    expect(isRecentlyDone(row("SOR_001", "done", { doneAt: "2026-10-02T15:00:00.000Z" }), NOW)).toBe(false);
+  it("is true exactly 4 weeks back and false a day before that", () => {
+    expect(isRecentlyDone(row("SOR_001", "done", { doneAt: "2026-10-17T15:00:00.000Z" }), NOW)).toBe(true);
+    expect(isRecentlyDone(row("SOR_001", "done", { doneAt: "2026-10-16T15:00:00.000Z" }), NOW)).toBe(false);
   });
 });

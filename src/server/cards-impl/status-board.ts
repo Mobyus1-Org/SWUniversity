@@ -13,8 +13,8 @@ export type CardImplRow = {
 
 export const CARD_IMPL_LANES: CardImplLane[] = ["not-implemented", "todo", "priority", "done"];
 
-/** How far back the Done lane's "Recents Only" view reaches: 6 weeks. */
-export const RECENT_DONE_DAYS = 42;
+/** How far back the Done lane's "Recents Only" view reaches: 4 weeks. */
+export const RECENT_DONE_DAYS = 28;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

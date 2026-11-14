@@ -199,7 +199,7 @@ export default function CardsImplPage() {
                 ) : null}
               </div>
               {lane === "done" ? (
-                <p className="text-xs text-gray-500">Recents Only shows cards moved to Done in the last 6 weeks.</p>
+                <p className="text-xs text-gray-500">Recents Only shows cards moved to Done in the last 4 weeks.</p>
               ) : null}
               <p className="mb-3 text-sm text-gray-400">
                 {hidden === 0
