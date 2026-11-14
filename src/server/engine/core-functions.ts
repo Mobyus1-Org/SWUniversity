@@ -2606,6 +2606,7 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "TWI_203": //Chancellor Palpatine (Wartime Chancellor) — On Attack: create a Clone Trooper if a unit left play
     case "HMW_063": //Rho Medical Shuttle — On Attack: may heal 1 from another unit or base
     case "HMW_108": //The First Legion — On Attack: name a trait, enemy cards lose it this phase
+    case "HMW_077": //Boss Nass — On Attack: may swap a Gungan's Shield onto a new Beast
     case "HMW_065": //Clone of the Zillo Beast — On Attack: may give a Weakness token to a unit
     case "HMW_003": //Doctor Hemlock (deployed) — On Attack: may give a Weakness token to a unit
     case "HMW_012": //Poggle the Lesser (deployed) — On Attack: may ready a friendly Creature and deal 1 to it
@@ -3065,6 +3066,15 @@ export function DefeatableNonLeaderUnitsAtOrBelowHp(player: PlayerId, maxHp: num
 
 export function ApplyDamagePrevention(gs: GameState, targetPlayId: string, amount: number, log?: string[]): number {
   if (amount <= 0) return amount;
+
+  // HMW_088 Numa — "If this unit would be dealt damage, prevent 1 of that damage." Static and
+  // per-instance, so it applies first and the effects below see what is left of the instance.
+  const numa = GetUnitByPlayId(gs, targetPlayId);
+  if (numa?.cardId === "HMW_088" && !Unit.FromInterface(numa).LostAbilities()) {
+    amount -= 1;
+    if (log) log.push(`${CardTitle("HMW_088")}: prevented 1 damage.`);
+    if (amount <= 0) return 0;
+  }
 
   // ASH_062 The Mandalorian / SEC_101 Queen Amidala — a cost was paid to prevent THIS instance.
   // One-shot: unlike JTL_193 below it covers a single hit, so it is consumed the moment it fires
@@ -3796,6 +3806,19 @@ export function chooseAndDefeatUnit(
  * Only use when onYes is a target-selection step. Cases where onYes has inline effects
  * (no target needed) remain hand-written.
  */
+/**
+ * HMW_077 Boss Nass (When Played/On Attack) — "You may defeat a Shield token on a friendly Gungan
+ * unit. If you do, create a Beast token and give a Shield token to it." The player picks the
+ * Gungan; null when no friendly Gungan holds a Shield, so nothing is asked.
+ */
+export function BossNassOffer(player: PlayerId, continuation: PendingResolution | null): AbilityOptionPending | null {
+  const hosts = GetUnitsForPlayer(player).filter(u =>
+    u.upgrades.some(x => x.cardId === "SOR_T02") && TraitContains(u.cardId, "Gungan", player, u.playId));
+  if (hosts.length === 0) return null;
+  return optionalTarget("HMW_077", player, hosts.map(u => u.playId),
+    "Defeat a Shield token on a friendly Gungan to create a shielded Beast?", { yesLabel: "Swap", continuation });
+}
+
 export function optionalTarget(
   cardId: string,
   player: PlayerId,

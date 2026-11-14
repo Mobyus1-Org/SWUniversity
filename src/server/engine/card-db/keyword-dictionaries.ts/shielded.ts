@@ -111,6 +111,7 @@ export function HasShielded(cardId: string, playId?: string, player?: PlayerId, 
     case "HMW_254"://Captain Tarpals - Grand Army Captain
     case "IC27_041"://Captain Rex - Staunch Advocate
     case "IC27_163"://Bo-Katan Kryze - Right Place, Right Time
+    case "IC27_029"://Chimaera - Grand Admiral's Might
       return true;
 
     default: break;

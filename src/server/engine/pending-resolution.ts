@@ -674,6 +674,15 @@ export interface BudgetSelectPending {
   maxTotalRemainingHp?: number;
   /** Budget on the chosen units' combined PRINTED cost (IC27_123 Jyn Erso). */
   maxTotalCost?: number;
+  /** Budget on the chosen units' combined LIVE power (HMW_094 Sando Aqua Monster). */
+  maxTotalPower?: number;
+  /** The unit whose ability this is, when the resolution needs it (Sando damages himself). */
+  sourcePlayId?: string;
+  /**
+   * HMW_125 The Marauder — this selection is part of PAYING for `cardId` (already out of hand):
+   * its cost before the per-unit discount. Resolving it pays and plays the card.
+   */
+  playingFullCost?: number;
   continuation: PendingResolution | null;
 }
 

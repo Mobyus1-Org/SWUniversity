@@ -177,6 +177,7 @@ export function RestoreAmount(cardId: string, playId?: string, player?: PlayerId
     case "HMW_036": amount += 2; break;//Kelnacca - Solitary Master
     case "HMW_001": amount += 2; break;//Asajj Ventress - No Time For Regret (deployed side)
     case "HMW_073": amount += 1; break;//Peppi Bow - Shaak Herder
+    case "HMW_088": amount += 1; break;//Numa - Still Fighting
     case "HMW_076": amount += 1; break; //Yanna - Sanctuary Elder
     case "HMW_106": amount += 1; break; //Secessionist Convert
     case "HMW_120": amount += 2; break; //Auzituck Avenger

@@ -1,11 +1,11 @@
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase, GivePowerMod, WhenPlayedLostWithWhenDefeated } from "@/server/engine/core-functions";
+import { DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase, GivePowerMod, WhenPlayedLostWithWhenDefeated, UpgradesYouControl, FriendlyUnitsEnteredPlayThisPhase } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
-import { GiveTokenUpgrade, CreateSpy, CreateTieFighter, CreateBattleDroid, CreateCloneTrooper, CreateMandalorianToken, GiveAdvantageTokens, CreateXWing } from "@/server/engine/token-helpers";
+import { GiveTokenUpgrade, CreateSpy, CreateTieFighter, CreateBattleDroid, CreateCloneTrooper, CreateMandalorianToken, GiveAdvantageTokens, CreateXWing, GiveExperienceTokens, CreateBeast } from "@/server/engine/token-helpers";
 
 /**
  * Cards whose When Played does something without asking the player anything — i.e. the
@@ -35,6 +35,10 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "IC27_109", // Supreme Leader Snoke (Darkness Rising) — 4 to each other unit; resolved in dispatch-listener
   "IC27_116", // Black One (Draw Fire, Twice) — draw a card
   "IC27_163", // Bo-Katan Kryze (Right Place, Right Time) — each enemy unit –7/–0 this phase
+  "IC27_029", // Chimaera — Experience per upgrade, then heal per friendly upgrade
+  "HMW_080", // Fambaa Shield Team — Shield each unshielded friendly ground unit
+  "HMW_103", // Disposable B1 — draw if another friendly unit entered play this phase
+  "HMW_144", // Howler Pack — create a Beast token
 ]);
 
 export function WhenPlayedHasAutoEffect(cardId: string): boolean {
@@ -68,6 +72,31 @@ export function resolveWhenPlayedTrigger(
       if (others111.length > 0) {
         log.push(`${CardTitle("HMW_111")}: gave +2/+2 to ${others111.length} other friendly unit(s) this phase.`);
       }
+      break;
+    }
+    case "HMW_103": // Disposable B1 — "If another friendly unit entered play this phase (including
+                    // leader and token units), draw a card." The ledger already holds the B1 itself.
+      if (FriendlyUnitsEnteredPlayThisPhase(trigger.fromPlayer).some(id => id !== trigger.playId)) {
+        DrawCardForPlayer(gs, log, trigger.fromPlayer);
+      }
+      break;
+    case "HMW_144": // Howler Pack — "When Played/When Defeated: Create a Beast token."
+      CreateBeast(gs, trigger.fromPlayer, log, "HMW_144");
+      break;
+    case "HMW_080": { // Fambaa Shield Team — "Give a Shield token to each friendly ground unit without
+                      // a Shield token on it." Itself included; space and enemy units are not.
+      const bare080 = player.groundArena.filter(u => !u.upgrades.some(x => x.cardId === "SOR_T02"));
+      for (const u of bare080) GiveTokenUpgrade(gs, u, "SOR_T02", trigger.fromPlayer);
+      if (bare080.length > 0) log.push(`${CardTitle("HMW_080")}: gave a Shield token to ${bare080.length} friendly ground unit(s).`);
+      break;
+    }
+    case "IC27_029": { // Chimaera — "Give an Experience token to each friendly unit for each upgrade
+                       // on it. Then, heal 1 damage from your base for each friendly upgrade."
+                       // Every count is read BEFORE any token goes out, so the new Experience
+                       // can't feed its own count; the heal counts after ("Then"), tokens included.
+      const counts029 = [...player.groundArena, ...player.spaceArena].map(u => [u, u.upgrades.length] as const);
+      for (const [ally, n] of counts029) GiveExperienceTokens(gs, ally, n, log, trigger.fromPlayer, "IC27_029");
+      HealBaseForPlayer(gs, trigger.fromPlayer, UpgradesYouControl(gs, trigger.fromPlayer).length, log, "IC27_029");
       break;
     }
     case "IC27_116": // Black One (Draw Fire, Twice) — "When Played/When Defeated: Draw a card."

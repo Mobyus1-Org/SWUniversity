@@ -930,6 +930,23 @@ export const Cards = {
       chiefChirpa: "HMW_164",       // 1/5 Ground Ewok — +1/+0 for each other friendly Ewok unit
       duneSeaNomads: "HMW_167",     // 3/5 Ground — Raid 3, nothing else
       outerRimGarrison: "HMW_146",  // 6/6 Ground, cost 7 — Ambush + Overwhelm, nothing else
+      grandArmyMarine: "HMW_072",   // 2/2 Ground Gungan, cost 2, no abilities
+      fambaaShieldTeam: "HMW_080",  // 4/7 Ground — When Played: Shield each unshielded friendly ground unit
+      bossNass: "HMW_077",          // 4/6 Ground Gungan — WP/OA: swap a friendly Gungan's Shield for a shielded Beast
+      n1Patroller: "HMW_086",       // 2/2 Space — When Played: may defeat a non-leader with ≤1 remaining HP
+      venomousWyyyshokk: "HMW_087", // 3/4 Ground — When Defeated: may Weakness a damaged unit
+      numa: "HMW_088",              // 4/4 Ground — Restore 1; prevents 1 of each damage to her
+      opeeSeaKiller: "HMW_090",     // 5/6 Ground — Grit while you control a Naboo base
+      sandoAquaMonster: "HMW_094",  // 5/9 Ground, cost 8 — Grit; WP: Naboo base → defeat ground units by power budget
+      disposableB1: "HMW_103",      // 2/1 Ground, cost 1 — WP: draw if another friendly unit entered play this phase
+      tirelessMagnaguard: "HMW_109", // 5/3 Ground, cost 4 — WD: if 5+ power, replay from discard free with 2 Weakness
+      leiaOrganaTheseAreMyFriends: "HMW_115", // 2/3 Ground, cost 1 — you play another unit costing ≤3: heal 1 base
+      chewbaccaResourcefulWookiee: "HMW_117", // 0/5 Ground — Raid 1 per exhausted resource; Overwhelm if all exhausted
+      theMarauder: "HMW_125",       // 5/7 Space, cost 7 — while playing: damage friendly units for −1 cost each
+      wroshyrRebel: "HMW_133",      // 0/4 Ground — +1/+0 per 2 resources you control
+      howlerPack: "HMW_144",        // 3/3 Ground, cost 6 — When Played/When Defeated: create a Beast
+      poachersStarfighter: "HMW_153", // 3/1 Space, cost 2 — WP: may defeat itself → Beast with 1 damage
+      commandeeredTourShuttle: "HMW_165", // 2/2 Space, cost 3 — WP: may ready another unit with ≤3 power
       dookuCorruption: "HMW_042",   // 8/7 Ground — Overwhelm; When Played: may ready another unit, heal a base by its cost
       yodaTrickster: "HMW_056",     // 4/4 Ground — Hidden; When Defeated: may go discard → deck top, heal 2 from a base
 
@@ -958,6 +975,8 @@ export const Cards = {
       deathTrooper: "IC27_017",         // reprint of SOR_033
       admiralPiett: "IC27_020",         // reprint of IBH_060
       blizzardOne: "IC27_025",          // reprint of IBH_099
+      generalGrievousFourArmedMenace: "IC27_021", // 4/5 Ground — upgrade played on him: choose one (XP / heal 3 / draw)
+      chimaera: "IC27_029",             // 8/8 Space, cost 10 — Shielded; When Played: XP per upgrade, heal per upgrade
       atAtSuppressor: "IC27_027",       // reprint of SOR_039
       avenger: "IC27_028",              // reprint of IBH_072
       generalVeers: "IC27_105",         // reprint of IBH_068
@@ -1124,6 +1143,7 @@ export const Cards = {
       trapField: "HMW_171",              // Fortify — 3 damage to a ground unit entering play
       bestialBond: "HMW_038",            // +2/+2 Innate — Beast token on a Creature or Force host
       verdantFortress: "HMW_126",        // Fortify — attached base grants friendly units Raid 1
+      militaryAcademy: "HMW_112",        // Fortify — attached base grants friendly units Overwhelm
       sinisterWarMemorial: "HMW_113",    // Fortify — base heals 1 when a friendly unit is defeated
       bactaTank: "HMW_037",              // Fortify — Action [defeat this upgrade]: recur a unit to the deck
       heavyIonCannon: "HMW_172",         // Fortify — draw on play; base Action [discard]: 2 damage to a unit, once per phase
@@ -1392,6 +1412,7 @@ export const Cards = {
       logTrap: "HMW_149",           // Attack with a friendly unit, then again (exhausted), not a base
       mysteriousDisappearance: "HMW_058", // A player picks their non-leader unit; may defeat → Beast
       torrent: "HMW_100",           // 1 Weakness to a unit; 2 instead with a Naboo base
+      migrate: "HMW_150",           // Create a Beast per 3 resources you control
     },
     ic27: {
       lethalCrackdown: "IC27_030",  // reprint of TWI_041

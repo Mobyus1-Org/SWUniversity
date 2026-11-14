@@ -6,7 +6,7 @@ import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardIsUnique, CardPower, CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { GiveTokenUpgrade, CreateBattleDroid, CreateTieFighter, CreateSpy, CreateMandalorianToken, GiveExperienceTokens } from "@/server/engine/token-helpers";
+import { GiveTokenUpgrade, CreateBattleDroid, CreateTieFighter, CreateSpy, CreateMandalorianToken, GiveExperienceTokens, CreateBeast } from "@/server/engine/token-helpers";
 
 /**
  * When Defeated abilities — called immediately after the unit is removed from
@@ -257,6 +257,29 @@ function resolveOwnWhenDefeated(
       if (allUnits050.length === 0) return null;
       return optionalTarget("ASH_050", player, allUnits050.map(u => u.playId),
         "Give a unit –2/–2 for this phase?", { yesLabel: "Give –2/–2" });
+    }
+    case "HMW_109": { // Tireless Magnaguard — "If this unit had 5 or more power, for this phase you may
+                      // play this unit from your discard pile for free and give 2 Weakness tokens
+                      // to it." Power as it left play; the Weakness pair is attached by
+                      // playFromDiscard when the grant is spent.
+      const game109 = GetGame();
+      if (!game109 || unit.IsTokenUnit() || LastKnownPower(unit) < 5) return null;
+      GrantPlayFromDiscardThisPhase(game109.currentGameState, unit.owner as PlayerId, unit.playId, true, "HMW_109");
+      game109.gameLog.push(`${CardTitle("HMW_109")}: may be played from the discard pile for free this phase.`);
+      return null;
+    }
+    case "HMW_087": { // Venomous Wyyyshokk — "When Defeated: You may give a Weakness token to a
+                      // damaged unit." Either side's.
+      const damaged087 = AllUnits().filter(u => u.damage > 0);
+      if (damaged087.length === 0) return null;
+      return optionalTarget("HMW_087", player, damaged087.map(u => u.playId),
+        "Give a Weakness token to a damaged unit?", { yesLabel: "Give Weakness" });
+    }
+    case "HMW_144": { // Howler Pack — "When Played/When Defeated: Create a Beast token."
+      const game144 = GetGame();
+      if (!game144) return null;
+      CreateBeast(game144.currentGameState, player, game144.gameLog, "HMW_144");
+      return null;
     }
     case "HMW_059": { // Clone X Assassin — "When Defeated: You may give a Weakness token to a unit."
                       // "A unit" is unqualified, so either side's units qualify.

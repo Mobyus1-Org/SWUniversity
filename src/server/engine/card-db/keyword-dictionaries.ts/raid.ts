@@ -1,6 +1,6 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import type { GameState } from "@/lib/engine/game";
-import { GetCurrentEffectsForPlayer, GetHand, GetLeaderForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerControlsCardWithTitle, PlayerHasTokenUnitInPlay, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , LeaderUnitWasDefeatedThisPhase, GetGame, GetPlayer } from "@/server/engine/core-functions";
+import { GetCurrentEffectsForPlayer, GetHand, GetLeaderForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerControlsCardWithTitle, PlayerHasTokenUnitInPlay, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , LeaderUnitWasDefeatedThisPhase, GetGame, GetGameState, GetPlayer } from "@/server/engine/core-functions";
 import { CardAspects, CardCost } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
@@ -154,6 +154,9 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
         break;
       case "SEC_134"://Hunting Assassin Droid — while an enemy unit is damaged, gains Raid 2.
         amount += GetUnitsForPlayer(otherPlayer).some(u => u.damage > 0) ? 2 : 0;
+        break;
+      case "HMW_117"://Chewbacca - Resourceful Wookiee — "gains Raid 1 for each exhausted resource you control"
+        amount += GetPlayer(GetGameState(), player).resources.filter(r => !r.ready).length;
         break;
       case "IC27_071"://Avar Kriss — "gains Raid 1 for each other friendly unit" (printed Raid 1 below)
         amount += units.filter(u => u.playId !== playId).length;

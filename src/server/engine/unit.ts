@@ -325,6 +325,13 @@ export class Unit implements UnitInterface {
       }
     }
 
+    // Wroshyr Rebel — "This unit gets +1/+0 for every 2 resources you control." Ready or exhausted,
+    // rounded down.
+    if (this.cardId === "HMW_133" && !this.LostAbilities()) {
+      const gs133 = GetGame()?.currentGameState;
+      if (gs133) power += Math.floor((this.controller === 1 ? gs133.player1 : gs133.player2).resources.length / 2);
+    }
+
     // Black One — "While this unit is upgraded, it gets +1/+0."
     if (this.cardId === "JTL_147" && this.upgrades.length > 0 && !this.LostAbilities()) {
       power += 1;

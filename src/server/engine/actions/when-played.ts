@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, IsLeaderUnit, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits, CanUnitReady, buildThrawnExperience, buildBadFeelingShield } from "@/server/engine/core-functions";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, IsLeaderUnit, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits, CanUnitReady, buildThrawnExperience, buildBadFeelingShield, BossNassOffer, DefeatableNonLeaderUnitsAtOrBelowHp } from "@/server/engine/core-functions";
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost, CardIsPlayable, DiscardUnitsPlayableAtDiscount, DefeatedThisPhaseDiscardUnitsAtDiscount } from "@/server/engine/card-playability";
 import { WhenPlayedLostWithWhenDefeated, buildActOfAggressionBuff, DrawCardForPlayer, DrawCardsForPlayer, DefeatableNonLeadersWithPowerAtMost, ReadyableUnitsWithPowerAtMost, UpgradesOnEnemyUnits } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -3959,6 +3959,66 @@ export function resolveWhenPlayed(
       const allUnits076 = AllUnits();
       if (allUnits076.length === 0) return null;
       return mandatoryTarget(cardId, player, allUnits076.map(u => u.playId));
+    }
+    case "HMW_094": { // Sando Aqua Monster — "If you control a Naboo base, you may defeat any number of
+                      // ground units with combined power equal to or less than this unit's power."
+                      // Either side, leaders and Sando himself included; enemy units immune to
+                      // enemy defeat are left out. Choosing none declines. The budget is his power
+                      // now, as the offer is made.
+      const gs094 = game.currentGameState;
+      if (!playId || !TraitContains(GetPlayer(gs094, player).base.cardId, "Naboo", player)) return null;
+      const sando094 = GetUnitByPlayId(gs094, playId);
+      if (!sando094) return null;
+      const pool094 = AllGroundUnits().filter(u => u.controller === player || !UnitImmuneToEnemyDefeat(u));
+      return {
+        type: "budget-select",
+        cardId,
+        player,
+        eligiblePlayIds: pool094.map(u => u.playId),
+        maxTotalPower: Unit.FromInterface(sando094).CurrentPower(),
+        sourcePlayId: playId,
+        continuation: null,
+      } satisfies BudgetSelectPending;
+    }
+    case "HMW_086": { // N-1 Patroller — "When Played: You may defeat a non-leader unit with 1 or less
+                      // remaining HP." Either side; remaining HP, so damage counts.
+      const doomed086 = DefeatableNonLeaderUnitsAtOrBelowHp(player, 1);
+      if (doomed086.length === 0) return null;
+      return optionalTarget(cardId, player, doomed086.map(u => u.playId),
+        "Defeat a non-leader unit with 1 or less remaining HP?", { yesLabel: "Defeat" });
+    }
+    case "HMW_165": { // Commandeered Tour Shuttle — "When Played: You may ready another unit with 3 or
+                      // less power." Either side's, never the Shuttle itself.
+      const gs165 = GetGame()?.currentGameState;
+      if (!gs165) return null;
+      const readyable165 = ReadyableUnitsWithPowerAtMost(gs165, 3, playId);
+      if (readyable165.length === 0) return null;
+      return optionalTarget(cardId, player, readyable165.map(u => u.playId),
+        "Ready another unit with 3 or less power?", { yesLabel: "Ready", sourcePlayId: playId });
+    }
+    case "HMW_153": { // Poacher's Starfighter — "When Played: You may defeat this unit. If you do,
+                      // create a Beast token and deal 1 damage to it." Yes is resolved in
+                      // applyAbilityOptionEffect.
+      if (!playId) return null;
+      return {
+        type: "ability-option",
+        cardId,
+        sourcePlayId: playId,
+        player,
+        helperText: "Defeat this unit to create a Beast token (with 1 damage)?",
+        yesLabel: "Defeat",
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "HMW_150": { // Migrate (Event) — "For every 3 resources you control, create a Beast token."
+                      // Exhausted resources are still controlled.
+      const count150 = Math.floor(GetPlayer(game.currentGameState, player).resources.length / 3);
+      for (let i = 0; i < count150; i++) CreateBeast(game.currentGameState, player, game.gameLog, cardId);
+      return null;
+    }
+    case "HMW_077": { // Boss Nass — "When Played: You may defeat a Shield token on a friendly Gungan
+                      // unit." The offer; the swap itself is shared with his On Attack.
+      return BossNassOffer(player, null);
     }
     case "SEC_075": { // Knowledge and Defense — Give a unit –2/–2 for this phase. Draw a card.
                       // The draw is its own sentence, so it still happens with no unit to shrink.

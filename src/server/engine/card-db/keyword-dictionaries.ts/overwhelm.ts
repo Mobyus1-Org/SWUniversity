@@ -1,4 +1,4 @@
-import { GetCurrentEffectsForPlayer, GetLeaderForPlayer, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasUnitWithTraitInPlay, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
+import { GetGameState, GetPlayer, GetCurrentEffectsForPlayer, GetLeaderForPlayer, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, LeaderAbilitiesIgnored, PlayerHasUnitWithTraitInPlay, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
 import { CardCost } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
@@ -93,6 +93,9 @@ export function HasOverwhelm(cardId: string,
       u => u.cardId === "ASH_007" && u.playId !== playId && !Unit.FromInterface(u).LostAbilities(),
     )) return true;
 
+    // HMW_112 Military Academy — "Attached base gains: Friendly units gain Overwhelm."
+    if ((GetPlayer(GetGameState(), player).base.upgrades ?? []).some(u => u.cardId === "HMW_112")) return true;
+
     // Check upgrades
     const upgrades = unit.upgrades;
     for (const u of upgrades) {
@@ -122,6 +125,8 @@ export function HasOverwhelm(cardId: string,
         return GetUnitInPlay(defenderPlayId, defenderPlayer)?.HasBounty();
       case "HMW_118"://Ryyk Blademaster — same condition as its Ambush half (see ambush.ts)
         return GetResources(player).length >= 6;
+      case "HMW_117"://Chewbacca - Resourceful Wookiee — "While each resource you control is exhausted"
+        return GetPlayer(GetGameState(), player).resources.every(r => !r.ready);
       case "SHD_169"://Clan Challengers
         return upgrades.length > 0;
       case "TWI_130"://Bo-Katan Kryze

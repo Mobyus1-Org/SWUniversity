@@ -843,6 +843,26 @@ export function ResourceDefeatRange(
   return min <= max ? { min, max } : null;
 }
 
+/**
+ * HMW_125 The Marauder — "While playing this unit, you may choose any number of friendly units. Deal
+ * 1 damage to each of them. For each unit chosen this way, this unit costs 1 resource less." How
+ * many friendly units may be chosen while playing `cardId` at `fullCost`: `min` is the fewest that
+ * make it affordable, `max` every friendly unit. Null for any other card, or when even choosing
+ * them all leaves it unaffordable.
+ */
+export function FriendlyDamageDiscountRange(
+  game: GameState,
+  player: PlayerId,
+  cardId: string,
+  fullCost: number,
+): { min: number; max: number } | null {
+  if (cardId !== "HMW_125") return null;
+  const p = player === 1 ? game.player1 : game.player2;
+  const max = p.groundArena.length + p.spaceArena.length;
+  const min = Math.max(0, fullCost - spendableFor(game, player));
+  return min <= max ? { min, max } : null;
+}
+
 export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string, costDelta = 0): boolean {
   if (regionalGovernorBlocks(game, player, cardId)) return false;
 
@@ -873,6 +893,8 @@ export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string
 
   // HMW_049 Greater Sarlacc — affordable if some number of ready resources defeated covers it.
   if (ResourceDefeatRange(game, player, cardId, fullCost)) return true;
+  // HMW_125 The Marauder — affordable if damaging enough friendly units covers it.
+  if (FriendlyDamageDiscountRange(game, player, cardId, fullCost)) return true;
 
   if (readyResources < minUnitCost) return false;
 

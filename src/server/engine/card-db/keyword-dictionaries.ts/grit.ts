@@ -1,4 +1,4 @@
-import { GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
+import { GetGameState, GetPlayer, GetCurrentEffectsForPlayer, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, IsCoordinateActive, TraitContains , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 import { PlayerId } from "@/lib/engine/core-models";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { Unit } from "@/server/engine/unit";
@@ -76,6 +76,8 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
         break;
       case "SEC_029": //Zam Wesell - Inconspicuous Assassin
         return unit.upgrades.length > 0;
+      case "HMW_090": //Opee Sea Killer — "While you control a Naboo base, this unit gains Grit."
+        return TraitContains(GetPlayer(GetGameState(), player).base.cardId, "Naboo", player);
       default: break;
     }
   }
@@ -126,6 +128,7 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
     case "HMW_069"://Imperial Venator
     case "HMW_076"://Yanna - Sanctuary Elder
     case "HMW_179"://Feisty Blurrg
+    case "HMW_094"://Sando Aqua Monster
     case "TS26_65"://Bo-Katan Kryze - The Lawless
       return true;
     default: break;
