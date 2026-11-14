@@ -144,6 +144,7 @@ export const DEFAULT_INFO_TEXT: Record<PuzzleWinCondition, string> = {
   "clear-board": "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nRemove all of their units from play to solve the puzzle!",
   "heal-full": "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nHeal your base back to full HP to solve the puzzle!",
   "self-lethal": "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nReduce your own base to 0 HP to solve the puzzle!",
+  "mirror": "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nMake your side of the table mirror your opponent’s to solve the puzzle!",
 };
 
 /**

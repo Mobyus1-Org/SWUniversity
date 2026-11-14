@@ -7,6 +7,7 @@ import type { GameDispatch, ResolutionRequest } from "@/lib/engine/message-types
 import type { EngineContext } from "@/server/engine/pending-resolution";
 import { getTopLevelActions, getResolutionActions } from "./actions";
 import { formatStep } from "./format";
+import { mirrorMatched } from "@/server/puzzle/mirror-match";
 import { DEFAULT_WIN_CONDITION, puzzleOutcome } from "@/util/puzzle-win-condition";
 import type { PuzzleWinCondition } from "@/util/puzzle-win-condition";
 
@@ -76,7 +77,8 @@ function dfs(
 
   const gs = context.game.currentGameState;
 
-  const outcome = puzzleOutcome(gs, winCondition, resolution !== null);
+  // The mirror comparison runs the engine on a scratch copy, so only pay for it in Mirror puzzles.
+  const outcome = puzzleOutcome(gs, winCondition, resolution !== null, winCondition === "mirror" && mirrorMatched(gs));
   if (outcome === "won") {
     solutionPaths.push(path.map(({ dispatch, snapshot }) => formatStep(dispatch, snapshot)));
     return true;

@@ -11,12 +11,14 @@ import { SetGame } from "@/server/engine/core-functions";
 import { hydrateGame, computeSentinelPlayIds, computeSilencedPlayIds, computeUnitBuffs } from "@/server/engine/dispatch-listener";
 import type { PuzzleData } from "@/server/puzzle/puzzle-repository";
 import { asWinCondition, winConditionSetupError } from "@/util/puzzle-win-condition";
+import type { MirrorMatch } from "@/util/puzzle-win-condition";
+import { mirrorMatchForResponse, mirrorSetupError } from "@/server/puzzle/mirror-match";
 import type { GameState, Game } from "@/lib/engine/game";
 
 const repo = new MongoDBPuzzleRepository();
 
 type ListResponse = { puzzles: PuzzleData[] };
-type LoadResponse = { gameState: GameState; sentinelPlayIds: string[]; silencedPlayIds: string[]; unitBuffs: Record<string, { power: number; hp: number }> };
+type LoadResponse = { gameState: GameState; sentinelPlayIds: string[]; silencedPlayIds: string[]; unitBuffs: Record<string, { power: number; hp: number }>; mirror: MirrorMatch | null };
 type ErrorResponse = { error: string };
 type ResponseBody = ListResponse | LoadResponse | PuzzleData | ErrorResponse;
 
@@ -38,7 +40,7 @@ export default async function handler(
         const silencedPlayIds = computeSilencedPlayIds(tempGame.currentGameState);
         const unitBuffs = computeUnitBuffs(tempGame.currentGameState);
         SetGame(null);
-        return response.status(200).json({ gameState, sentinelPlayIds, silencedPlayIds, unitBuffs });
+        return response.status(200).json({ gameState, sentinelPlayIds, silencedPlayIds, unitBuffs, mirror: mirrorMatchForResponse(gameState) });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Not found.";
         return response.status(404).json({ error: msg });
@@ -72,7 +74,10 @@ export default async function handler(
       if (!puzzle || typeof puzzle !== "object" || !puzzle.initialGamestate) {
         return response.status(400).json({ error: "Missing or invalid puzzle in request body." });
       }
-      const setupError = winConditionSetupError(hydratePuzzleGame(puzzle.initialGamestate), asWinCondition(puzzle.winCondition));
+      const startState = hydratePuzzleGame(puzzle.initialGamestate);
+      const winCondition = asWinCondition(puzzle.winCondition);
+      const setupError = winConditionSetupError(startState, winCondition)
+        ?? (winCondition === "mirror" ? mirrorSetupError(startState) : null);
       if (setupError) return response.status(400).json({ error: setupError });
       const saved = await repo.save(puzzle);
       return response.status(200).json(saved);

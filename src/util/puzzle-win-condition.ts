@@ -4,7 +4,7 @@ import type { GameState } from "@/lib/engine/game";
  * What a puzzle asks the player to do. Shared by the client (status + modals) and the solver, so
  * the two can never disagree about what counts as a solution.
  */
-export const PUZZLE_WIN_CONDITIONS = ["deal-lethal", "clear-board", "heal-full", "self-lethal"] as const;
+export const PUZZLE_WIN_CONDITIONS = ["deal-lethal", "clear-board", "heal-full", "self-lethal", "mirror"] as const;
 export type PuzzleWinCondition = (typeof PUZZLE_WIN_CONDITIONS)[number];
 
 /** Every puzzle saved before goals existed is a Find Lethal puzzle. */
@@ -15,7 +15,14 @@ export const WIN_CONDITION_INFO: Record<PuzzleWinCondition, { title: string; goa
   "clear-board": { title: "Clear the Board", goal: "remove every unit from your opponent's side of the board" },
   "heal-full": { title: "Heal to Full", goal: "remove all damage from your base" },
   "self-lethal": { title: "On My Own Terms", goal: "defeat your own base" },
+  "mirror": { title: "Mirror", goal: "make your side of the table mirror your opponent's" },
 };
+
+/**
+ * How closely the two sides of the table match, for Mirror puzzles. Computed on the server (live
+ * power, HP and keywords need the engine) and shipped with every state the client receives.
+ */
+export type MirrorMatch = { matched: number; total: number; mismatches: string[] };
 
 export function asWinCondition(value: unknown): PuzzleWinCondition {
   return (PUZZLE_WIN_CONDITIONS as readonly unknown[]).includes(value)
@@ -44,8 +51,10 @@ function boardGoalMet(gs: BoardShape, winCondition: PuzzleWinCondition): boolean
 /**
  * @param promptOpen a resolution is still waiting on the player. Board goals are only judged once
  *   everything has resolved — the last enemy unit's When Defeated could still put a token back.
+ * @param mirrorMatched the two sides match (see MirrorMatch). Only read for Mirror puzzles; the
+ *   comparison needs the engine, so the caller supplies it.
  */
-export function puzzleOutcome(gs: GameState, winCondition: PuzzleWinCondition, promptOpen = false): PuzzleOutcome {
+export function puzzleOutcome(gs: GameState, winCondition: PuzzleWinCondition, promptOpen = false, mirrorMatched = false): PuzzleOutcome {
   const p1Defeated = gs.defeatedPlayers.includes(1);
   const p2Defeated = gs.defeatedPlayers.includes(2);
   const inActionPhase = gs.gamePhase === "ActionPhase";
@@ -65,6 +74,10 @@ export function puzzleOutcome(gs: GameState, winCondition: PuzzleWinCondition, p
     case "heal-full":
       if (p1Defeated || p2Defeated) return "lost";
       if (!promptOpen && inActionPhase && boardGoalMet(gs, winCondition)) return "won";
+      break;
+    case "mirror":
+      if (p1Defeated || p2Defeated) return "lost";
+      if (!promptOpen && inActionPhase && mirrorMatched) return "won";
       break;
   }
 

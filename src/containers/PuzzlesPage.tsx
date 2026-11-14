@@ -11,7 +11,7 @@ import { PuzzleBuilderPanel } from "@/components/Shared/PuzzleBuilderPanel";
 import { DEFAULT_ALTERNATE_FAIL_EXPLANATION } from "@/components/Shared/puzzle-builder-state";
 import { asWinCondition, lossExplanation, puzzleOutcome, WIN_CONDITION_INFO } from "@/util/puzzle-win-condition";
 import { WinConditionChip } from "@/components/Shared/WinConditionChip";
-import type { PuzzleOutcome, PuzzleWinCondition } from "@/util/puzzle-win-condition";
+import type { MirrorMatch, PuzzleOutcome, PuzzleWinCondition } from "@/util/puzzle-win-condition";
 import { CardLinkText, PuzzleText } from "@/components/Shared/CardLink";
 import {
   CardPreviewOverlay, getPreviewImageId, leaderFaceImageId, useCardPreview, useLongPress,
@@ -736,6 +736,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   const [sentinelPlayIds, setSentinelPlayIds] = React.useState<string[]>([]);
   const [silencedPlayIds, setSilencedPlayIds] = React.useState<string[]>([]);
   const [unitBuffs, setUnitBuffs] = React.useState<Record<string, { power: number; hp: number }>>({});
+  // How closely the two sides match, for Mirror puzzles. Shipped by the server with every state;
+  // null when it couldn't be computed (then a Mirror puzzle simply can't register as won).
+  const [mirrorMatch, setMirrorMatch] = React.useState<MirrorMatch | null>(null);
   const [gameLog, setGameLog] = React.useState<string[]>([]);
   const [resolutionNeeded, setResolutionNeeded] = React.useState<ResolutionRequest | null>(null);
   const [isResolving, setIsResolving] = React.useState(false);
@@ -854,11 +857,13 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
         gameLog: string[];
         currentGameState: GameState;
         historyLength: number;
+        mirror?: MirrorMatch | null;
         context?: EngineContext;
       };
 
       if (payload.context) roundTripCtxRef.current = payload.context;
       setResolutionNeeded(payload.response.resolutionNeeded ?? null);
+      setMirrorMatch(payload.mirror ?? null);
       // Always update from currentGameState so UI reflects card placement during pending resolutions
       setGameState(payload.currentGameState ?? payload.response.newGameState ?? null);
       if (payload.response.sentinelPlayIds !== undefined) setSentinelPlayIds(payload.response.sentinelPlayIds);
@@ -1093,6 +1098,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
         sentinelPlayIds: string[];
         silencedPlayIds?: string[];
         unitBuffs?: Record<string, { power: number; hp: number }>;
+        mirror?: MirrorMatch | null;
         context?: EngineContext;
       };
 
@@ -1101,6 +1107,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       setSentinelPlayIds(payload.sentinelPlayIds ?? []);
       setSilencedPlayIds(payload.silencedPlayIds ?? []);
       setUnitBuffs(payload.unitBuffs ?? {});
+      setMirrorMatch(payload.mirror ?? null);
       setGameLog(payload.gameLog);
       setHistoryLength(payload.historyLength);
       setResolutionNeeded(null);
@@ -1121,7 +1128,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
     try {
       const r = await fetch(`/api/puzzles?id=${encodeURIComponent(filename)}`);
       if (!r.ok) throw new Error(((await r.json()) as { error?: string }).error ?? "Load failed");
-      const { gameState: initialState, sentinelPlayIds: initialSentinelIds, silencedPlayIds: initialSilencedIds, unitBuffs: initialUnitBuffs } = await r.json() as { gameState: GameState; sentinelPlayIds: string[]; silencedPlayIds?: string[]; unitBuffs?: Record<string, { power: number; hp: number }> };
+      const { gameState: initialState, sentinelPlayIds: initialSentinelIds, silencedPlayIds: initialSilencedIds, unitBuffs: initialUnitBuffs, mirror: initialMirror } = await r.json() as { gameState: GameState; sentinelPlayIds: string[]; silencedPlayIds?: string[]; unitBuffs?: Record<string, { power: number; hp: number }>; mirror?: MirrorMatch | null };
 
       if (USE_HTTP_TRANSPORT) {
         // Round-trip mode: seed the initial context locally; no server registration needed
@@ -1152,6 +1159,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
       setSentinelPlayIds(initialSentinelIds ?? []);
       setSilencedPlayIds(initialSilencedIds ?? []);
       setUnitBuffs(initialUnitBuffs ?? {});
+      setMirrorMatch(initialMirror ?? null);
       setGameLog([`Puzzle loaded.`]);
       setResolutionNeeded(null);
       setActionError(null);
@@ -1167,10 +1175,11 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
   }, []);
 
   const winCondition = asWinCondition(puzzleMeta?.winCondition);
+  const mirrorMatched = mirrorMatch !== null && mirrorMatch.mismatches.length === 0;
 
   // Show solution modal and mark solved when puzzle is won
   React.useEffect(() => {
-    if (gameState && puzzleOutcome(gameState, winCondition, !!resolutionNeeded) === "won" && puzzleMeta) {
+    if (gameState && puzzleOutcome(gameState, winCondition, !!resolutionNeeded, mirrorMatched) === "won" && puzzleMeta) {
       setSolutionReason("solved");
       setShowSolutionModal(true);
       if (selectedPuzzleFilename) {
@@ -1182,15 +1191,15 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
         });
       }
     }
-  }, [gameState, puzzleMeta, selectedPuzzleFilename, winCondition, resolutionNeeded]);
+  }, [gameState, puzzleMeta, selectedPuzzleFilename, winCondition, resolutionNeeded, mirrorMatched]);
 
   // Show failure modal when the puzzle is lost, ends in a draw, or reaches the regroup phase.
   React.useEffect(() => {
     if (gameState) {
-      const s = puzzleOutcome(gameState, winCondition, !!resolutionNeeded);
+      const s = puzzleOutcome(gameState, winCondition, !!resolutionNeeded, mirrorMatched);
       if (s === "lost" || s === "draw" || s === "failed-regroup") setShowFailModal(true);
     }
-  }, [gameState, winCondition, resolutionNeeded]);
+  }, [gameState, winCondition, resolutionNeeded, mirrorMatched]);
 
   // Auto-scroll game log to bottom when entries change
   React.useEffect(() => {
@@ -1272,6 +1281,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
               setSentinelPlayIds(initialSentinelIds);
               setSilencedPlayIds(initialSilencedIds);
               setUnitBuffs(initialUnitBuffs);
+              setMirrorMatch(payload.mirror ?? null);
               setGameLog(["Puzzle test loaded."]);
               setResolutionNeeded(null);
               setActionError(null);
@@ -1355,7 +1365,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
 
   const player = gameState.player1;
   const opponent = gameState.player2;
-  const status = puzzleOutcome(gameState, winCondition, !!resolutionNeeded);
+  const status = puzzleOutcome(gameState, winCondition, !!resolutionNeeded, mirrorMatched);
   const isGameOver = status !== "playing";
 
   const selectablePlayIds = resolutionNeeded?.type === "Target"
@@ -1559,7 +1569,9 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
           {puzzleMeta ? <WinConditionChip winCondition={winCondition} className="text-xs" /> : null}
         </div>
         {!puzzleName ? <p className="mt-1 text-xs text-white/65 sm:text-sm">Board-first tactical sandbox. Opponent already has initiative.</p> : null}
-        {puzzleMeta ? <p className="mt-1 text-xs font-semibold text-white/80">Goal: <span className="font-normal text-white/70">{WIN_CONDITION_INFO[winCondition].goal}.</span></p> : null}
+        {puzzleMeta ? <p className="mt-1 text-xs font-semibold text-white/80">Goal: <span className="font-normal text-white/70">{WIN_CONDITION_INFO[winCondition].goal}.</span>
+          {winCondition === "mirror" && mirrorMatch ? <span className={`ml-2 rounded-full border px-2 py-0.5 text-3xs font-semibold ${mirrorMatched ? "border-emerald-400/40 bg-emerald-500/20 text-emerald-200" : "border-purple-400/40 bg-purple-500/15 text-purple-200"}`}>{mirrorMatch.matched} / {mirrorMatch.total} matched</span> : null}
+        </p> : null}
         {puzzleMeta?.author ? <p className="mt-0.5 text-xs text-white/45">By {puzzleMeta.author}{puzzleMeta.inspiredBy ? <span className="ml-2 text-white/30">· Inspired by {puzzleMeta.inspiredBy}</span> : null}</p> : null}
       </div>
       {showClosePuzzleConfirm ? (

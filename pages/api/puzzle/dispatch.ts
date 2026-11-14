@@ -28,6 +28,8 @@ import { getContext, setContext } from "@/server/engine/game-store";
 import type { EngineContext } from "@/server/engine/pending-resolution";
 import type { GameState } from "@/lib/engine/game";
 import type { GameDispatch, DispatchResponse } from "@/lib/engine/message-types";
+import { mirrorMatchForResponse } from "@/server/puzzle/mirror-match";
+import type { MirrorMatch } from "@/util/puzzle-win-condition";
 
 type RequestBody = {
   dispatch: GameDispatch;
@@ -40,6 +42,7 @@ type ResponseBody = {
   gameLog: string[];
   currentGameState: GameState;
   historyLength: number;
+  mirror: MirrorMatch | null;
   context?: EngineContext;
 };
 
@@ -87,6 +90,7 @@ export default function handler(
       gameLog: result.context.game.gameLog,
       currentGameState: result.context.game.currentGameState,
       historyLength: result.context.game.gameStateHistory.length,
+      mirror: mirrorMatchForResponse(result.context.game.currentGameState),
     };
 
     // Only return context in round-trip mode so the client can re-use it

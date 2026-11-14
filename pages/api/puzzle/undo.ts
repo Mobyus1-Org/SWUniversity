@@ -19,6 +19,8 @@ import { hydrateGame, computeSentinelPlayIds, computeSilencedPlayIds, computeUni
 import type { EngineContext } from "@/server/engine/pending-resolution";
 import type { GameState } from "@/lib/engine/game";
 import type { Game } from "@/lib/engine/game";
+import { mirrorMatchForResponse } from "@/server/puzzle/mirror-match";
+import type { MirrorMatch } from "@/util/puzzle-win-condition";
 
 type RequestBody = {
   gameId?: string;
@@ -32,6 +34,7 @@ type ResponseBody = {
   sentinelPlayIds: string[];
   silencedPlayIds: string[];
   unitBuffs: Record<string, { power: number; hp: number }>;
+  mirror: MirrorMatch | null;
   context?: EngineContext;
 };
 
@@ -96,6 +99,7 @@ export default function handler(
     sentinelPlayIds,
     silencedPlayIds,
     unitBuffs,
+    mirror: mirrorMatchForResponse(newCtx.game.currentGameState),
   };
 
   if (!serverManaged) {

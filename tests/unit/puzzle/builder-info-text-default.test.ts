@@ -22,7 +22,10 @@ describe("info text default per win condition", () => {
     expect(infoTextForWinCondition(DEFAULT_INFO_TEXT["heal-full"], "self-lethal")).toBe(
       "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nReduce your own base to 0 HP to solve the puzzle!",
     );
-    expect(infoTextForWinCondition(DEFAULT_INFO_TEXT["self-lethal"], "deal-lethal")).toBe(DEFAULT_INFO_TEXT["deal-lethal"]);
+    expect(infoTextForWinCondition(DEFAULT_INFO_TEXT["self-lethal"], "mirror")).toBe(
+      "Your opponent has claimed the Initiative.\nYou have zero cards remaining in your deck.\nMake your side of the table mirror your opponent’s to solve the puzzle!",
+    );
+    expect(infoTextForWinCondition(DEFAULT_INFO_TEXT["mirror"], "deal-lethal")).toBe(DEFAULT_INFO_TEXT["deal-lethal"]);
   });
 
   it("never overwrites authored info text", () => {
