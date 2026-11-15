@@ -123,16 +123,18 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "HMW_012", // Poggle the Lesser — Let the Executions Begin
   "HMW_015", // Bossk — Cruel Hunter
   "TWI_017", // Chancellor Palpatine // Darth Sidious — an Action on BOTH faces
+  "TWI_003", // Obi-Wan Kenobi — Patient Mentor
+  "TWI_009", // Maul — A Rival in Darkness
   //Jump to Lightspeed
-  "JTL_004", "JTL_005", "JTL_006", "JTL_008", "JTL_010", "JTL_012", "JTL_013", "JTL_014", "JTL_018",
+  "JTL_004", "JTL_005", "JTL_006", "JTL_007", "JTL_008", "JTL_010", "JTL_012", "JTL_013", "JTL_014", "JTL_016", "JTL_018",
   //Legends of the Underworld
   "LAW_001", "LAW_002", "LAW_003", "LAW_004", "LAW_005", "LAW_006", "LAW_008", "LAW_010", "LAW_011",
   "LAW_012", "LAW_013", "LAW_015", "LAW_017",
   //Legacy of the Force
-  "LOF_002", "LOF_003", "LOF_004", "LOF_005", "LOF_007", "LOF_009", "LOF_011", "LOF_012", "LOF_013",
+  "LOF_001", "LOF_002", "LOF_003", "LOF_004", "LOF_005", "LOF_006", "LOF_007", "LOF_008", "LOF_010", "LOF_009", "LOF_011", "LOF_012", "LOF_013",
   "LOF_014", "LOF_015", "LOF_016", "LOF_018",
   //Secrets of Power
-  "SEC_002", "SEC_003", "SEC_004", "SEC_008", "SEC_005", "SEC_006", "SEC_007", "SEC_011", "SEC_015", "SEC_018",
+  "SEC_001", "SEC_002", "SEC_003", "SEC_004", "SEC_008", "SEC_005", "SEC_006", "SEC_007", "SEC_011", "SEC_014", "SEC_015", "SEC_018",
   //ASH
   "ASH_003", "ASH_004", "ASH_009", "ASH_012",
   //IBH
@@ -173,6 +175,10 @@ const UPGRADE_GRANTED_UNIT_ACTIONS: Record<string, string> = {
 const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
   ASH_123: "Deal Damage", // Lang — deals damage equal to his power to a ground unit
   "SHD_028": "Draw a card",
+  "SHD_031": "Grant Bounty: heal 5", // The Client
+  "SOR_184": "Exhaust a non-unique unit", // Fett's Firespray
+  "SOR_177": "Play an event (1 less)", // Bib Fortuna
+  "JTL_134": "Draw (if you played First Order)", // General Hux
   "LOF_206": "Attack with a Droid",
   "ASH_109": "+2/+2 to a unit",
   "ASH_142": "1 dmg to up to 3 ground units",

@@ -9,6 +9,8 @@ import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { RaidAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/raid";
 import { RestoreAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/restore";
 import { DistinctKeywordCount } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
+import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
+import { GiveTokenUpgrade } from "@/server/engine/token-helpers";
 import { AbilityOptionPending, AbilityTargetPending, ChooseOnePending, DeckSearchPending, HandToDeckPending, PendingResolution } from "@/server/engine/pending-resolution";
 import { UpgradeEligibleTargets, IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { UpgradeGrantsHostAction } from "@/server/engine/actions/action-ability";
@@ -567,6 +569,27 @@ export function SuppressTraitForPlayer(
     affectedPlayer: player,
   });
   gameLog.push(`${CardTitle(sourceCardId)}: named ${trait} — Player ${player}'s cards lose that trait this phase.`);
+}
+
+/**
+ * LOF_006 Supreme Leader Snoke (both sides) — "the unit with the most power among friendly Villainy
+ * units". Every unit tied for the most; the caller gives the token outright to a lone leader and
+ * asks the player to break a tie.
+ */
+export function MostPowerfulFriendlyVillainyUnits(player: PlayerId): UnitInterface[] {
+  const villains = GetUnitsForPlayer(player).filter(u => CardAspects(u.cardId).includes("Villainy"));
+  if (villains.length === 0) return [];
+  const most = Math.max(...villains.map(u => Unit.FromInterface(u).CurrentPower()));
+  return villains.filter(u => Unit.FromInterface(u).CurrentPower() === most);
+}
+
+/**
+ * JTL_007 Admiral Holdo — "a Resistance unit or a unit with a Resistance upgrade on it": the unit's
+ * own trait, or a Resistance card (a Pilot, usually) attached to it.
+ */
+export function IsResistanceOrResistanceUpgraded(u: UnitInterface): boolean {
+  return TraitContains(u.cardId, "Resistance", u.controller, u.playId)
+    || u.upgrades.some(x => TraitContains(x.cardId, "Resistance", u.controller, x.playId));
 }
 
 export function TraitContains(cardId: string, trait: string, player?: PlayerId, playId?: string): boolean {
@@ -1298,10 +1321,21 @@ const BASE_HEALING_PREVENTERS = new Set([
  * this to skip the heal (unit healing is unaffected). Base healing is not centralized, so each site
  * guards itself — see the callers of this function.
  */
+/** SOR_160 Wolffe's phase-long "Bases can't be healed" — either player's bases, whoever armed it. */
+export const WOLFFE_NO_BASE_HEAL = "SOR_160_no_base_heal";
+
+/** Arms SOR_160 Wolffe's "Bases can't be healed for this phase" (his When Played and his On Attack). */
+export function PreventBaseHealingThisPhase(gs: GameState, player: PlayerId, log: string[]): void {
+  gs.currentEffects.push({ cardId: WOLFFE_NO_BASE_HEAL, duration: "Phase", affectedPlayer: player });
+  log.push(`${CardTitle("SOR_160")}: bases can't be healed for this phase.`);
+}
+
 export function BaseHealingPrevented(): boolean {
   const game = GetGame();
   if (!game) return false;
   const gs = game.currentGameState;
+  // SOR_160 Wolffe — "When Played/On Attack: Bases can't be healed for this phase."
+  if (gs.currentEffects.some(e => e.cardId === WOLFFE_NO_BASE_HEAL)) return true;
   for (const pState of [gs.player1, gs.player2]) {
     for (const u of [...pState.groundArena, ...pState.spaceArena]) {
       if (!BASE_HEALING_PREVENTERS.has(u.cardId)) continue;
@@ -1670,7 +1704,9 @@ export function UnitHasWhenDefeatedAbility(unit: Unit): boolean {
   if (unit.LostAbilities() || WhenDefeatedAbilitiesSuppressed()) return false;
   if (CardText(unit.cardId).includes("When Defeated")) return true;
   // Upgrades whose text grants the attached unit a When Defeated.
-  if (unit.upgrades.some(u => ["TWI_218", "SHD_053", "SHD_104", "IC27_085"].includes(u.cardId))) return true;
+  if (unit.upgrades.some(u => ["TWI_218", "TWI_169", "SHD_053", "SHD_104", "IC27_085"].includes(u.cardId))) return true;
+  // TWI_129 In Defense of Kamino — granted for the phase to each friendly Republic unit.
+  if (GetGame()?.currentGameState.currentEffects.some(e => e.cardId === "TWI_129" && e.targetPlayId === unit.playId)) return true;
   return GetUnitsForPlayer(unit.controller)
     .some(u => u.cardId === "SOR_105" && u.playId !== unit.playId);
 }
@@ -2186,6 +2222,15 @@ export function IndirectDamageBonus(sourcePlayer: PlayerId, targetPlayer: Player
  * Returns the pending the victim (or, with Devastator/Targeting Computer, the dealer) must answer,
  * or `continuation` when the damage was applied outright.
  */
+/** Phase marker: this player dealt indirect damage (JTL_138 Decimator of Dissidents reads it). */
+export const INDIRECT_DEALT_THIS_PHASE = "INDIRECT_DEALT";
+
+/** Records that `player` dealt indirect damage this phase — on every route, prompted or straight to base. */
+export function RecordIndirectDealt(game: GameState, player: PlayerId): void {
+  if (!game.currentEffects.some(e => e.cardId === INDIRECT_DEALT_THIS_PHASE && e.affectedPlayer === player))
+    game.currentEffects.push({ cardId: INDIRECT_DEALT_THIS_PHASE, duration: "Phase", affectedPlayer: player });
+}
+
 export function buildIndirectDamage(
   sourceCardId: string,
   sourcePlayer: PlayerId,
@@ -2201,6 +2246,7 @@ export function buildIndirectDamage(
   const units = GetUnitsForPlayer(targetPlayer);
   if (units.length === 0) {
     DealDamageToBase(gs, targetPlayer, total, sourcePlayer);
+    RecordIndirectDealt(gs, sourcePlayer);
     GetGame()?.gameLog.push(
       `${CardTitle(sourceCardId)}: ${total} indirect damage — Player ${targetPlayer} has no units, so it all hits their base.`,
     );
@@ -2402,6 +2448,7 @@ export function DrawCardsForPlayer(gs: GameState, log: string[], player: PlayerI
 /** Units with "When an opponent draws 1 or more cards during the action phase: …". */
 const OPPONENT_DREW_UNITS = new Set([
   "HMW_169", // Crosshair (I've Changed) — deal 2 damage to their base
+  "JTL_111", // Seasoned Fleet Admiral — may give an Experience token to a unit
 ]);
 
 /**
@@ -2464,7 +2511,13 @@ export function FightersReadyToAttack(player: PlayerId): UnitInterface[] {
     .filter(u => CanUnitAttack(u) && TraitContains(u.cardId, "Fighter", player, u.playId));
 }
 
+/** TWI_039 Malevolence — Phase marker on the unit that can't attack. */
+export const MALEVOLENCE_NO_ATTACK = "TWI_039_no_attack";
+
 export function CanUnitAttack(unit: UnitInterface): boolean {
+  // TWI_039 Malevolence — "It can't attack for this phase." An effect, so it holds even if the unit
+  // later loses its abilities.
+  if (GetGame()?.currentGameState.currentEffects.some(e => e.cardId === MALEVOLENCE_NO_ATTACK && e.targetPlayId === unit.playId)) return false;
   const asUnit = Unit.FromInterface(unit);
   if (asUnit.LostAbilities()) return true;
 
@@ -2606,6 +2659,43 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "TWI_203": //Chancellor Palpatine (Wartime Chancellor) — On Attack: create a Clone Trooper if a unit left play
     case "HMW_063": //Rho Medical Shuttle — On Attack: may heal 1 from another unit or base
     case "HMW_108": //The First Legion — On Attack: name a trait, enemy cards lose it this phase
+    case "TWI_003": //Obi-Wan Kenobi (deployed) — On Attack: heal 1 from a unit; if you do, 1 damage to a different unit
+    case "TWI_035": //Morgan Elsbeth — On Attack: may defeat another friendly unit → draw
+    case "TWI_038": //Providence Destroyer — On Attack: an enemy space unit –2/–2 this phase
+    case "TWI_046": //Captain Typho — On Attack: a unit gains Sentinel this phase
+    case "TWI_066": //Multi-Troop Transport — On Attack: create a Battle Droid
+    case "TWI_134": //Asajj Ventress — On Attack: +3/+0 this phase if another Separatist attacked
+    case "TWI_150": //Saw Gerrera — On Attack: with 15+ base damage, 1 to each enemy ground unit
+    case "TWI_183": //Rush Clovis — On Attack: Battle Droid if the defender has no ready resources
+    case "TWI_198": //Enfys Nest (Champion of Justice) — On Attack: may bounce a weaker enemy non-leader
+    case "JTL_007": //Admiral Holdo (deployed) — On Attack: may give another Resistance unit +2/+2
+    case "JTL_090": //Executor — On Attack: create 3 TIE Fighters
+    case "JTL_098": //Snap Wexley — On Attack: next Resistance card costs 1 less
+    case "JTL_168": //Insurgent Saboteurs — On Attack: may defeat an upgrade
+    case "JTL_187": //Bossk (Hunt By Instinct) — On Attack: exhaust the defender, 1 damage to it
+    case "LOF_008": //Obi-Wan Kenobi (deployed) — On Attack: may XP another unit without one
+    case "LOF_010": //Third Sister (deployed) — On Attack: the next unit you play gains Hidden
+    case "SHD_045": //Rose Tico — On Attack: may defeat a friendly Shield → 2 XP to that unit
+    case "SHD_048": //Gentle Giant — On Attack: may heal another unit by this unit's damage
+    case "SHD_090": //Maul (Shadow Collective Visionary) — On Attack: may redirect combat damage to an Underworld unit
+    case "SHD_097": //Freetown Backup — On Attack: another friendly unit +2/+2 this phase
+    case "SHD_103": //General Rieekan — On Attack: XP to a Sentinel friendly unit, else Sentinel this phase
+    case "SHD_118": //Kihraxz Heavy Fighter — On Attack: may exhaust another friendly unit → +3/+0
+    case "SHD_151": //Valiant Assault Ship — On Attack: +2/+0 if the defender controls more resources
+    case "SHD_171": //Covetous Rivals — On Attack: may deal 2 to a unit with a Bounty
+    case "SHD_191": //Xanadu Blood — On Attack: may bounce a friendly Underworld unit → exhaust an enemy
+    case "SHD_201": //Principled Outlaw — On Attack: may exhaust a ground unit
+    case "SHD_203": //Zorii Bliss — On Attack: draw; discard at regroup start
+    case "SHD_216": //Chain Code Collector — On Attack: a Bounty defender gets –4/–0
+    case "SHD_220": //Fennec Shand (Loyal Sharpshooter) — On Attack: 1 damage per distinct discard cost
+    case "SOR_185": //Chimaera (Flagship) — On Attack: name a card; the opponent discards one with that name
+    case "SHD_041": //Kuiil — On Attack: discard the top card; return it if it shares a base aspect
+    case "SHD_032": //Lom Pyke — On Attack: may Shield an enemy unit; if so, Shield a friendly unit
+    case "SOR_160": //Wolffe — On Attack: bases can't be healed this phase
+    case "SOR_156": //Benthic 'Two Tubes' — On Attack: another friendly Aggression unit gains Raid 2 this phase
+    case "SEC_014": //Sly Moore (deployed) — On Attack: may deal 2 damage to an exhausted unit
+    case "LOF_006": //Supreme Leader Snoke (deployed) — On Attack: XP to the most powerful friendly Villainy unit
+    case "JTL_016": //Admiral Ackbar (deployed) — On Attack: may exhaust a unit → its controller creates an X-Wing
     case "HMW_077": //Boss Nass — On Attack: may swap a Gungan's Shield onto a new Beast
     case "HMW_065": //Clone of the Zillo Beast — On Attack: may give a Weakness token to a unit
     case "HMW_003": //Doctor Hemlock (deployed) — On Attack: may give a Weakness token to a unit
@@ -2753,6 +2843,12 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
       return TraitContains(host.cardId, "Force", host.controller, host.playId);
     }
 
+    // TWI_121 General's Blade — "If attached unit is a Jedi, it gains: 'On Attack: …'"
+    if (cardId === "TWI_121") {
+      const host121 = AllUnits().find(u => u.upgrades.some(upg => upg.playId === playId));
+      return !!host121 && TraitContains(host121.cardId, "Jedi", host121.controller, host121.playId);
+    }
+
     // Luke Skywalker (Hero of Yavin) as a Pilot upgrade only grants the On Attack
     // "If it's a Fighter" — a piloted Transport or Capital Ship gains nothing.
     if (cardId === "JTL_012") {
@@ -2768,6 +2864,13 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
     case "SEC_038": //Condemn — grants "On Attack: the defending player may disclose for –6/–0" while attacking
     case "SHD_104": //Inspiring Mentor — grants "On Attack/When Defeated: XP to another friendly unit."
     case "IC27_085": // reprint of SHD_104
+    case "JTL_048": //Cassian Andor piloting — grants "On Attack: discard the defending player's top card; ≤3 cost → draw."
+    case "JTL_066": //Trace Martez piloting — grants "On Attack: may heal 2 total from any units."
+    case "JTL_139": //Dengar piloting — grants "On Attack: 2 indirect damage to a player (3 if Underworld)."
+    case "JTL_187": //Bossk piloting — grants "On Attack: exhaust the defender, 1 damage to it."
+    case "JTL_035": //Tam Ryvora piloting — grants "On Attack: an enemy unit in this arena –1/–1 this phase."
+    case "TWI_121": //General's Blade (conditional: only a Jedi host)
+    case "SHD_074": //Vambrace Grappleshot — grants "On Attack: Exhaust the defender."
     case "SHD_175": //Armed to the Teeth — grants "On Attack: Give another friendly unit +2/+0 for this phase."
     case "SHD_126": //The Darksaber
     case "SHD_177": //Vambrace Flamethrower
@@ -3066,6 +3169,16 @@ export function DefeatableNonLeaderUnitsAtOrBelowHp(player: PlayerId, maxHp: num
 
 export function ApplyDamagePrevention(gs: GameState, targetPlayId: string, amount: number, log?: string[]): number {
   if (amount <= 0) return amount;
+
+  // SHD_224 Boba Fett's Armor — "If attached unit is Boba Fett and damage would be dealt to him,
+  // prevent 2 of that damage." Read through his unit-side title, so any Boba Fett counts.
+  const armored = GetUnitByPlayId(gs, targetPlayId);
+  if (armored?.upgrades.some(u => u.cardId === "SHD_224") && UnitTitle(armored) === "Boba Fett") {
+    const prevented224 = Math.min(2, amount);
+    amount -= prevented224;
+    if (log) log.push(`${CardTitle("SHD_224")}: prevented ${prevented224} damage.`);
+    if (amount <= 0) return 0;
+  }
 
   // HMW_088 Numa — "If this unit would be dealt damage, prevent 1 of that damage." Static and
   // per-instance, so it applies first and the effects below see what is left of the instance.
@@ -3606,6 +3719,26 @@ export function QueueSelfDamagedSurvivesReaction(gs: GameState, damaged: Unit): 
  * instance from each site where damage lands on a unit (both combat hits, DealDamageToUnit,
  * AfterNonCombatUnitDamage). `amount` is the damage that landed — SEC_002 deals "that much".
  */
+/**
+ * Combat damage only, from both combat hits:
+ *   SHD_084 Phase-III Dark Trooper — "When combat damage is dealt to this unit: Give an Experience
+ *     token to this unit (if it survives the damage)."
+ *   SHD_250 Tarfful — "When a friendly Wookiee unit is dealt combat damage and isn't defeated: That
+ *     unit deals that much damage to an enemy ground unit."
+ */
+export function QueueCombatDamageSurvivesReactions(gs: GameState, damaged: Unit, amount: number): void {
+  if (amount <= 0 || damaged.CurrentHP() <= 0) return;
+  if (damaged.cardId === "SHD_084" && !damaged.LostAbilities()) {
+    GiveTokenUpgrade(gs, damaged, "SOR_T01", damaged.controller);
+    GetGame()?.gameLog.push(`${CardTitle("SHD_084")}: survived combat damage — gained an Experience token.`);
+  }
+  if (!TraitContains(damaged.cardId, "Wookiee", damaged.controller, damaged.playId)) return;
+  for (const tarfful of GetUnitsForPlayer(damaged.controller)) {
+    if (tarfful.cardId !== "SHD_250" || Unit.FromInterface(tarfful).LostAbilities()) continue;
+    gs.triggerBag.push({ triggerType: "when-unit-takes-damage", cardId: "SHD_250", fromPlayer: damaged.controller, playId: damaged.playId, nested: true, context: { amount } });
+  }
+}
+
 export function QueueFriendlyDamagedSurvivesReactions(gs: GameState, damaged: Unit, amount: number): void {
   QueueRancorKeeperReaction(gs, damaged);
   QueueJabbaDamagedReaction(gs, damaged, amount);
@@ -3806,6 +3939,64 @@ export function chooseAndDefeatUnit(
  * Only use when onYes is a target-selection step. Cases where onYes has inline effects
  * (no target needed) remain hand-written.
  */
+/**
+ * TWI_198 Enfys Nest (Champion of Justice) (When Played/On Attack) — "You may return an enemy
+ * non-leader unit with less power than this unit to its owner's hand."
+ */
+export function EnfysNest198Offer(player: PlayerId, selfPlayId: string | undefined, continuation: PendingResolution | null): AbilityOptionPending | null {
+  const self = selfPlayId ? AllUnits().find(u => u.playId === selfPlayId) : undefined;
+  if (!self) return null;
+  const myPower = Unit.FromInterface(self).CurrentPower();
+  const weaker = GetUnitsForPlayer(player === 1 ? 2 : 1).filter(u => !IsLeaderUnit(u) && !UnitImmuneToEnemyBounce(u)
+    && Unit.FromInterface(u).CurrentPower() < myPower);
+  if (weaker.length === 0) return null;
+  return optionalTarget("TWI_198", player, weaker.map(u => u.playId), "Return an enemy unit with less power to its owner's hand?", { yesLabel: "Return", continuation });
+}
+
+/**
+ * JTL_154 Profundity (When Played/When Defeated) — "Choose a player. They discard a card from their
+ * hand. Then, if they have more cards in their hand than you, they discard a card from their hand."
+ */
+export function ProfundityChoice(player: PlayerId, continuation: PendingResolution | null): PendingResolution | null {
+  return {
+    type: "choose-one", cardId: "JTL_154", player,
+    options: [{ id: "opponent", label: "Your opponent discards" }, { id: "self", label: "You discard" }],
+    continuation,
+  };
+}
+
+/**
+ * LOF_137 Savage Opress (When Played/When Defeated) — "You may use the Force. If you don't, deal 9
+ * damage to your base." With no Force token there is no choice: the 9 damage is dealt now.
+ */
+export function SavageOpressChoice(player: PlayerId, sourcePlayId: string | undefined, continuation: PendingResolution | null): PendingResolution | null {
+  if (!HasTheForce(player)) {
+    DealDamageToBase(GetGameState(), player, 9);
+    GetGame()?.gameLog.push(`${CardTitle("LOF_137")}: no Force — 9 damage to Player ${player}'s base.`);
+    return continuation;
+  }
+  return { type: "ability-option", cardId: "LOF_137", player, sourcePlayId, helperText: "Use the Force? If you don't, deal 9 damage to your base.", yesLabel: "Use the Force", noLabel: "Take 9", continuation };
+}
+
+/** SHD_171 Covetous Rivals (When Played/On Attack) — "You may deal 2 damage to a unit with a Bounty." */
+export function CovetousRivalsOffer(player: PlayerId, continuation: PendingResolution | null): AbilityOptionPending | null {
+  const bountied = AllUnits().filter(u => CountBounties(u.cardId, u.playId, u.controller) > 0);
+  if (bountied.length === 0) return null;
+  return optionalTarget("SHD_171", player, bountied.map(u => u.playId), "Deal 2 damage to a unit with a Bounty?", { yesLabel: "Deal 2", continuation });
+}
+
+/**
+ * SHD_191 Xanadu Blood (When Played/On Attack) — "You may return another friendly non-leader Underworld
+ * unit to its owner's hand. If you do, exhaust an enemy unit or resource." Step 1 is the bounce.
+ */
+export function XanaduBloodOffer(player: PlayerId, selfPlayId: string | undefined, continuation: PendingResolution | null): AbilityOptionPending | null {
+  const bounceable = GetUnitsForPlayer(player).filter(u => u.playId !== selfPlayId && !IsLeaderUnit(u)
+    && TraitContains(u.cardId, "Underworld", player, u.playId));
+  if (bounceable.length === 0) return null;
+  return optionalTarget("SHD_191", player, bounceable.map(u => u.playId),
+    "Return another friendly Underworld unit to hand to exhaust an enemy unit or resource?", { yesLabel: "Return", sourcePlayId: selfPlayId, continuation });
+}
+
 /**
  * HMW_077 Boss Nass (When Played/On Attack) — "You may defeat a Shield token on a friendly Gungan
  * unit. If you do, create a Beast token and give a Shield token to it." The player picks the
@@ -4117,6 +4308,10 @@ export interface SearchDeckFilter {
   maxCost?: number;
   /** "a card named X" — matched on title alone, so every printing counts. */
   title?: string;
+  /** "a non-unit card" (SHD_222 Enticing Reward). */
+  notType?: string;
+  /** "a Bounty Hunter, Item, or Transport card" — any one of these traits (SHD_127 Commission). */
+  anyTrait?: string[];
 }
 
 export interface SearchDeckOpts {
@@ -4163,6 +4358,8 @@ export function searchDeck(
         if (filter.keyword && !HasKeyword(c.cardId, filter.keyword)) return false;
         if (filter.maxCost !== undefined && (CardCost(c.cardId) ?? 0) > filter.maxCost) return false;
         if (filter.title !== undefined && CardTitle(c.cardId) !== filter.title) return false;
+        if (filter.notType && CardType(c.cardId) === filter.notType) return false;
+        if (filter.anyTrait && !filter.anyTrait.some(t => TraitContains(c.cardId, t, player))) return false;
         return true;
       })
       .map(c => ({ ...c, cost: CardCost(c.cardId) ?? 0 }));

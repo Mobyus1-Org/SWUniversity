@@ -1,7 +1,9 @@
 import { PlayerId } from "@/lib/engine/core-models";
 import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
-import { BossNassOffer, GetUnitByPlayId, GetOtherPlayer, ReadyUnit, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage, FriendlyUnitsWithTrait, DiscardFromTopOfDeck, buildThrawnExperience, buildLeiaDrawAndReturn, buildHanTokenDefeat, buildMaulChoice, OtherFriendlyUnitsThatEnteredPlayThisPhase, LeaderAbilitiesIgnored, negotiatorResourceShuffle } from "@/server/engine/core-functions";
+import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
+import { CreateTieFighter } from "@/server/engine/token-helpers";
+import { DefeatableUpgradePlayIds, EnfysNest198Offer, CovetousRivalsOffer, XanaduBloodOffer, PreventBaseHealingThisPhase, BossNassOffer, IsResistanceOrResistanceUpgraded, MostPowerfulFriendlyVillainyUnits, GetUnitByPlayId, GetOtherPlayer, ReadyUnit, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage, FriendlyUnitsWithTrait, DiscardFromTopOfDeck, buildThrawnExperience, buildLeiaDrawAndReturn, buildHanTokenDefeat, buildMaulChoice, OtherFriendlyUnitsThatEnteredPlayThisPhase, LeaderAbilitiesIgnored, negotiatorResourceShuffle } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles, AllCardTraits } from "@/server/engine/card-db/generated";
@@ -309,6 +311,46 @@ function resolveUpgradeOnAttack(
       if (allUnits012.length > 0) {
         return (optionalTarget("JTL_012_pilot",
           attacker.controller, allUnits012.map(u => u.playId), "Deal 3 damage to a unit?", { continuation }));
+      }
+      break;
+    }
+    case "TWI_121": { // General's Blade — a Jedi host gains "On Attack: The next unit you play this phase
+                      // costs 2 resources less." A valued next-unit discount.
+      GetGame()!.currentGameState.currentEffects.push({ cardId: "SHD_006_next_unit", duration: "Phase", affectedPlayer: attacker.controller, value: 2 });
+      GetGame()!.gameLog.push(`${CardTitle("TWI_121")}: the next unit you play this phase costs 2 less.`);
+      break;
+    }
+    case "JTL_048": { // Cassian Andor (piloting) — "On Attack: Discard a card from the defending player's deck.
+                      // If that card costs 3 or less, draw a card."
+      const defending048: PlayerId = continuation.target.type === "base" ? continuation.target.player : GetOtherPlayer(attacker.controller);
+      const [milled048] = DiscardFromTopOfDeck(GetGame()!.currentGameState, defending048, 1, GetGame()!.gameLog, "JTL_048");
+      if (milled048 && (CardCost(milled048) ?? 0) <= 3) DrawCardForPlayer(GetGame()!.currentGameState, GetGame()!.gameLog, attacker.controller);
+      break;
+    }
+    case "JTL_066": { // Trace Martez (piloting) — "On Attack: You may heal 2 total damage from any number of units."
+      const damaged066 = AllUnits().filter(u => u.damage > 0);
+      if (damaged066.length === 0) break;
+      return { type: "spread-heal", cardId: "JTL_066", player: attacker.controller, maxHeal: 2, eligiblePlayIds: damaged066.map(u => u.playId), continuation } satisfies SpreadHealPending;
+    }
+    case "JTL_139": { // Dengar (piloting) — "On Attack: Deal 2 indirect damage to a player. If this unit is an
+                      // Underworld unit, deal 3 indirect damage instead." Aimed at the opponent.
+      const amount139 = TraitContains(attacker.cardId, "Underworld", attacker.controller, attacker.playId) ? 3 : 2;
+      return buildIndirectDamage("JTL_139", attacker.controller, GetOtherPlayer(attacker.controller), amount139, continuation, attacker.playId) ?? continuation;
+    }
+    case "JTL_187": // Bossk (piloting) — resolved in applyAutoOnAttackEffects with his printed On Attack.
+      break;
+    case "JTL_035": { // Tam Ryvora (piloting) — "On Attack: Give an enemy unit in this arena –1/–1 for this phase."
+      const arena035 = UnitArenaOf(GetGame()!.currentGameState, attacker.playId);
+      const enemies035 = GetUnitsForPlayer(GetOtherPlayer(attacker.controller)).filter(u => UnitArenaOf(GetGame()!.currentGameState, u.playId) === arena035);
+      if (enemies035.length === 0) break;
+      return mandatoryTarget("JTL_035", attacker.controller, enemies035.map(u => u.playId), continuation);
+    }
+    case "SHD_074": { // Vambrace Grappleshot — attached unit gains "On Attack: Exhaust the defender."
+      if (continuation.target.type !== "unit") break;
+      const defender074 = GetUnitByPlayId(GetGame()!.currentGameState, continuation.target.playId);
+      if (defender074) {
+        defender074.ready = false;
+        GetGame()!.gameLog.push(`${CardTitle("SHD_074")}: exhausted ${CardTitle(defender074.cardId)}.`);
       }
       break;
     }
@@ -1177,6 +1219,231 @@ function resolveInnateOnAttack(
       ];
       return optionalTarget("HMW_063_OA", attacker.controller, targets063,
         "Heal 1 damage from another unit or base?", { yesLabel: "Heal", continuation });
+    }
+    case "JTL_090": // Executor — "On Attack: Create 3 TIE Fighter tokens."
+      for (let i = 0; i < 3; i++) CreateTieFighter(GetGame()!.currentGameState, attacker.controller, GetGame()!.gameLog, "JTL_090");
+      return continuation;
+    case "JTL_098": // Snap Wexley — "On Attack: The next Resistance card you play this phase costs 1 less."
+      GetGame()!.currentGameState.currentEffects.push({ cardId: "JTL_098_next_resistance", duration: "Phase", affectedPlayer: attacker.controller });
+      return continuation;
+    case "JTL_168": { // Insurgent Saboteurs — "On Attack: You may defeat an upgrade."
+      const upgrades168 = DefeatableUpgradePlayIds(attacker.controller);
+      if (upgrades168.length === 0) return continuation;
+      return optionalTarget("JTL_168", attacker.controller, upgrades168, "Defeat an upgrade?", { yesLabel: "Defeat", continuation });
+    }
+    case "JTL_187": // Bossk (Hunt By Instinct) — resolved in applyAutoOnAttackEffects (it can defeat the defender).
+      return continuation;
+    case "LOF_008": { // Obi-Wan Kenobi (deployed) — "On Attack: You may give an Experience token to another unit
+                      // without an Experience token on it."
+      const bare008 = AllUnits().filter(u => u.playId !== attacker.playId && !u.upgrades.some(x => x.cardId === "SOR_T01"));
+      if (bare008.length === 0) return continuation;
+      return optionalTarget("LOF_008_OA", attacker.controller, bare008.map(u => u.playId), "Give an Experience token to another unit without one?", { yesLabel: "Give XP", continuation });
+    }
+    case "LOF_010": // Third Sister (deployed) — "On Attack: The next unit you play this phase gains Hidden."
+      GetGame()!.currentGameState.currentEffects.push({ cardId: "LOF_010_armed", duration: "Phase", affectedPlayer: attacker.controller });
+      return continuation;
+    case "TWI_003": { // Obi-Wan Kenobi (deployed) — "On Attack: Heal 1 damage from a unit. If you do,
+                      // deal 1 damage to a different unit." Only a damaged unit can be healed.
+      const damaged003 = AllUnits().filter(u => u.damage > 0);
+      if (damaged003.length === 0) return continuation;
+      return mandatoryTarget("TWI_003_OA", attacker.controller, damaged003.map(u => u.playId), continuation);
+    }
+    case "TWI_035": { // Morgan Elsbeth — "On Attack: You may defeat another friendly unit. If you do,
+                      // draw a card."
+      const others035 = GetUnitsForPlayer(attacker.controller).filter(u => u.playId !== attacker.playId);
+      if (others035.length === 0) return continuation;
+      return optionalTarget("TWI_035", attacker.controller, others035.map(u => u.playId), "Defeat another friendly unit to draw a card?", { yesLabel: "Defeat", continuation });
+    }
+    case "TWI_038": { // Providence Destroyer — "On Attack: Give an enemy space unit –2/–2 for this phase."
+      const enemies038 = GetUnitsForPlayer(GetOtherPlayer(attacker.controller)).filter(u => UnitArenaOf(GetGame()!.currentGameState, u.playId) === "Space");
+      if (enemies038.length === 0) return continuation;
+      return mandatoryTarget("TWI_038", attacker.controller, enemies038.map(u => u.playId), continuation);
+    }
+    case "TWI_046": // Captain Typho — "On Attack: Give a unit Sentinel for this phase."
+      return mandatoryTarget("TWI_046", attacker.controller, AllUnits().map(u => u.playId), continuation);
+    case "TWI_066": // Multi-Troop Transport — "On Attack: Create a Battle Droid token."
+      CreateBattleDroid(GetGame()!.currentGameState, attacker.controller, GetGame()!.gameLog, "TWI_066");
+      return continuation;
+    case "TWI_134": { // Asajj Ventress (Count Dooku's Assassin) — "On Attack: If you've attacked with
+                      // another Separatist unit this phase, this unit gets +3/+0 for this phase."
+      const ledger134 = GetGame()!.currentGameState.roundState.unitsAttackedThisPhase;
+      if (ledger134.some(a => a.fromPlayer === attacker.controller && a.playId !== attacker.playId
+        && TraitContains(a.cardId, "Separatist", attacker.controller))) {
+        GivePowerMod("TWI_134", attacker, 3, "Phase", GetGame()!.gameLog);
+      }
+      return continuation;
+    }
+    case "TWI_150": // Saw Gerrera (Resistance is Not Terrorism) — resolved in applyAutoOnAttackEffects,
+                    // which sweeps the units it kills before combat.
+      return continuation;
+    case "TWI_183": { // Rush Clovis — "On Attack: If the defending player controls no ready resources,
+                      // create a Battle Droid token."
+      const defending183: PlayerId = continuation.target.type === "base" ? continuation.target.player : GetOtherPlayer(attacker.controller);
+      if (!GetPlayer(GetGame()!.currentGameState, defending183).resources.some(r => r.ready)) {
+        CreateBattleDroid(GetGame()!.currentGameState, attacker.controller, GetGame()!.gameLog, "TWI_183");
+      }
+      return continuation;
+    }
+    case "TWI_198": // Enfys Nest (Champion of Justice) — "On Attack: You may return an enemy non-leader
+                    // unit with less power than this unit to its owner's hand."
+      return EnfysNest198Offer(attacker.controller, attacker.playId, continuation) ?? continuation;
+    case "SHD_045": { // Rose Tico — "On Attack: You may defeat a Shield token on a friendly unit. If you
+                      // do, give 2 Experience tokens to that unit."
+      const shielded045 = GetUnitsForPlayer(attacker.controller).filter(u => u.upgrades.some(x => x.cardId === "SOR_T02"));
+      if (shielded045.length === 0) return continuation;
+      return optionalTarget("SHD_045", attacker.controller, shielded045.map(u => u.playId),
+        "Defeat a Shield on a friendly unit to give it 2 Experience tokens?", { yesLabel: "Swap", continuation });
+    }
+    case "SHD_048": { // Gentle Giant — "On Attack: You may heal damage from another unit equal to the
+                      // damage on this unit." Any other damaged unit, either side.
+      if (attacker.damage <= 0) return continuation;
+      const damaged048 = AllUnits().filter(u => u.playId !== attacker.playId && u.damage > 0);
+      if (damaged048.length === 0) return continuation;
+      return optionalTarget("SHD_048", attacker.controller, damaged048.map(u => u.playId),
+        `Heal ${attacker.damage} damage from another unit?`, { yesLabel: "Heal", sourcePlayId: attacker.playId, continuation });
+    }
+    case "SHD_090": { // Maul (Shadow Collective Visionary) — "On Attack: You may choose another friendly
+                      // Underworld unit. If you do, all combat damage that would be dealt to this unit
+                      // during this attack is dealt to the chosen unit instead."
+      const others090 = GetUnitsForPlayer(attacker.controller)
+        .filter(u => u.playId !== attacker.playId && TraitContains(u.cardId, "Underworld", attacker.controller, u.playId));
+      if (others090.length === 0) return continuation;
+      return optionalTarget("SHD_090", attacker.controller, others090.map(u => u.playId),
+        "Choose another friendly Underworld unit to take Maul's combat damage?", { yesLabel: "Choose", sourcePlayId: attacker.playId, continuation });
+    }
+    case "SHD_097": { // Freetown Backup — "On Attack: Give another friendly unit +2/+2 for this phase."
+      const others097 = GetUnitsForPlayer(attacker.controller).filter(u => u.playId !== attacker.playId);
+      if (others097.length === 0) return continuation;
+      return mandatoryTarget("SHD_097", attacker.controller, others097.map(u => u.playId), continuation);
+    }
+    case "SHD_103": { // General Rieekan — "On Attack: Choose a friendly unit. If it has Sentinel, give an
+                      // Experience token to it. Otherwise, it gains Sentinel for this phase."
+      return mandatoryTarget("SHD_103", attacker.controller, GetUnitsForPlayer(attacker.controller).map(u => u.playId), continuation);
+    }
+    case "SHD_118": { // Kihraxz Heavy Fighter — "On Attack: You may exhaust another friendly unit. If you
+                      // do, this unit gets +3/+0 for this attack." Only a ready unit can be exhausted.
+      const others118 = GetUnitsForPlayer(attacker.controller).filter(u => u.playId !== attacker.playId && u.ready);
+      if (others118.length === 0) return continuation;
+      return optionalTarget("SHD_118", attacker.controller, others118.map(u => u.playId),
+        "Exhaust another friendly unit for +3/+0 this attack?", { yesLabel: "Exhaust", sourcePlayId: attacker.playId, continuation });
+    }
+    case "SHD_151": { // Valiant Assault Ship — "On Attack: If the defending player controls more resources
+                      // than you, this unit gets +2/+0 for this attack."
+      const defending151: PlayerId = continuation.target.type === "base" ? continuation.target.player : GetOtherPlayer(attacker.controller);
+      const gs151 = GetGame()!.currentGameState;
+      if (GetPlayer(gs151, defending151).resources.length > GetPlayer(gs151, attacker.controller).resources.length) {
+        GivePowerMod("SHD_151", attacker, 2, "ForAttack", GetGame()!.gameLog);
+      }
+      return continuation;
+    }
+    case "SHD_171": // Covetous Rivals — "On Attack: You may deal 2 damage to a unit with a Bounty."
+      return CovetousRivalsOffer(attacker.controller, continuation) ?? continuation;
+    case "SHD_191": // Xanadu Blood — "On Attack: You may return another friendly non-leader Underworld
+                    // unit to its owner's hand. If you do, exhaust an enemy unit or resource."
+      return XanaduBloodOffer(attacker.controller, attacker.playId, continuation) ?? continuation;
+    case "SHD_201": { // Principled Outlaw — "On Attack: You may exhaust a ground unit."
+      const ground201 = AllGroundUnits();
+      if (ground201.length === 0) return continuation;
+      return optionalTarget("SHD_201", attacker.controller, ground201.map(u => u.playId),
+        "Exhaust a ground unit?", { yesLabel: "Exhaust", continuation });
+    }
+    case "SHD_203": { // Zorii Bliss — "On Attack: Draw a card. At the start of the regroup phase,
+                      // discard a card from your hand." The discard is a Round marker the regroup
+                      // start consumes (resolveStartOfRegroup).
+      const gs203 = GetGame()!.currentGameState;
+      DrawCardForPlayer(gs203, GetGame()!.gameLog, attacker.controller);
+      gs203.currentEffects.push({ cardId: "SHD_203_discard", duration: "Round", affectedPlayer: attacker.controller });
+      return continuation;
+    }
+    case "SHD_216": { // Chain Code Collector — "On Attack: If the defender has a Bounty, it gets –4/–0
+                      // for this attack."
+      if (continuation.target.type !== "unit") return continuation;
+      const defender216 = GetUnitByPlayId(GetGame()!.currentGameState, continuation.target.playId);
+      if (defender216 && CountBounties(defender216.cardId, defender216.playId, defender216.controller) > 0) {
+        GivePowerMod("SHD_216", defender216, -4, "ForAttack", GetGame()!.gameLog);
+      }
+      return continuation;
+    }
+    case "SHD_220": // Fennec Shand (Loyal Sharpshooter) — the damage is dealt in applyAutoOnAttackEffects,
+                    // which handles a defender it defeats before combat.
+      return continuation;
+    case "SOR_185": // Chimaera (Flagship of the Seventh Fleet) — "On Attack: Name a card. An opponent
+                    // reveals their hand and discards a card with that name from it."
+      return {
+        type: "ability-target",
+        cardId: "SOR_185",
+        sourcePlayId: attacker.playId,
+        player: attacker.controller,
+        helperText: "Name a card. Your opponent discards a card with that name.",
+        fromPlayIds: [],
+        fromChoices: AllCardTitles(),
+        continuation,
+      };
+    case "SHD_041": { // Kuiil — "On Attack: Discard a card from your deck. If it shares an aspect with
+                      // your base, return it to your hand." Automatic; an empty deck does nothing.
+      const gs041 = GetGame()!.currentGameState;
+      const log041 = GetGame()!.gameLog;
+      const [discarded041] = DiscardFromTopOfDeck(gs041, attacker.controller, 1, log041, "SHD_041");
+      if (!discarded041) return continuation;
+      const baseAspects041 = CardAspects(GetPlayer(gs041, attacker.controller).base.cardId);
+      if (CardAspects(discarded041).some(a => baseAspects041.includes(a))) {
+        const pile041 = GetPlayer(gs041, attacker.controller).discard;
+        const idx041 = pile041.findIndex(c => c.cardId === discarded041); // the discard pile's newest card is at index 0
+        if (idx041 !== -1) {
+          pile041.splice(idx041, 1);
+          GetPlayer(gs041, attacker.controller).hand.push({ cardId: discarded041 });
+          log041.push(`${CardTitle("SHD_041")}: ${CardTitle(discarded041)} shares an aspect with the base — returned to hand.`);
+        }
+      }
+      return continuation;
+    }
+    case "SHD_032": { // Lom Pyke — "On Attack: You may give a Shield token to an enemy unit. If you do,
+                      // give a Shield token to a friendly unit." Step 1 here; step 2 in the handler.
+      const enemies032 = GetUnitsForPlayer(GetOtherPlayer(attacker.controller));
+      if (enemies032.length === 0) return continuation;
+      return optionalTarget("SHD_032", attacker.controller, enemies032.map(u => u.playId),
+        "Give a Shield token to an enemy unit (then one to a friendly unit)?", { yesLabel: "Give Shields", continuation });
+    }
+    case "SOR_160": // Wolffe — "On Attack: Bases can't be healed for this phase." Automatic.
+      PreventBaseHealingThisPhase(GetGame()!.currentGameState, attacker.controller, GetGame()!.gameLog);
+      return continuation;
+    case "SOR_156": { // Benthic 'Two Tubes' — "On Attack: Another friendly [Aggression] unit gains Raid 2
+                      // for this phase." Mandatory; the raid dictionary reads the SOR_156 effect.
+      const others156 = GetUnitsForPlayer(attacker.controller)
+        .filter(u => u.playId !== attacker.playId && CardAspects(u.cardId).includes("Aggression"));
+      if (others156.length === 0) return continuation;
+      return mandatoryTarget("SOR_156", attacker.controller, others156.map(u => u.playId), continuation);
+    }
+    case "SEC_014": { // Sly Moore (deployed) — "On Attack: You may deal 2 damage to an exhausted unit."
+                      // Either side. She is still ready while her On Attack resolves.
+      const exhausted014 = AllUnits().filter(u => !u.ready);
+      if (exhausted014.length === 0) return continuation;
+      return optionalTarget("SEC_014_OA", attacker.controller, exhausted014.map(u => u.playId),
+        "Deal 2 damage to an exhausted unit?", { yesLabel: "Deal 2", continuation });
+    }
+    case "LOF_006": { // Supreme Leader Snoke (deployed) — "On Attack: Give an Experience token to the
+                      // unit with the most power among friendly Villainy units." Mandatory; a tie asks.
+      const top006 = MostPowerfulFriendlyVillainyUnits(attacker.controller);
+      if (top006.length === 0) return continuation;
+      if (top006.length === 1) {
+        GiveExperienceTokens(GetGame()!.currentGameState, top006[0], 1, GetGame()!.gameLog, attacker.controller, "LOF_006");
+        return continuation;
+      }
+      return mandatoryTarget("LOF_006", attacker.controller, top006.map(u => u.playId), continuation);
+    }
+    case "JTL_016": { // Admiral Ackbar (deployed) — "On Attack: You may exhaust a unit. If you do, its
+                      // controller creates an X-Wing token." Any unit, leaders included.
+      const units016 = AllUnits();
+      if (units016.length === 0) return continuation;
+      return optionalTarget("JTL_016_OA", attacker.controller, units016.map(u => u.playId),
+        "Exhaust a unit? Its controller creates an X-Wing token.", { yesLabel: "Exhaust", continuation });
+    }
+    case "JTL_007": { // Admiral Holdo (deployed) — "On Attack: You may give ANOTHER Resistance unit or
+                      // a unit with a Resistance upgrade on it +2/+2 for this phase." Either side.
+      const eligible007 = AllUnits().filter(u => u.playId !== attacker.playId && IsResistanceOrResistanceUpgraded(u));
+      if (eligible007.length === 0) return continuation;
+      return optionalTarget("JTL_007_OA", attacker.controller, eligible007.map(u => u.playId),
+        "Give another Resistance unit +2/+2 for this phase?", { yesLabel: "Give +2/+2", continuation });
     }
     case "HMW_077": // Boss Nass — "On Attack: You may defeat a Shield token on a friendly Gungan unit."
       return BossNassOffer(attacker.controller, continuation) ?? continuation;

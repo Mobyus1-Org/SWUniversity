@@ -1,5 +1,6 @@
+import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, IsLeaderUnit, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits, CanUnitReady, buildThrawnExperience, buildBadFeelingShield, BossNassOffer, DefeatableNonLeaderUnitsAtOrBelowHp } from "@/server/engine/core-functions";
+import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, IsLeaderUnit, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits, CanUnitReady, buildThrawnExperience, buildBadFeelingShield, BossNassOffer, DefeatableNonLeaderUnitsAtOrBelowHp, CovetousRivalsOffer, XanaduBloodOffer, PlayerControlsCardWithTitle, EnfysNest198Offer, ProfundityChoice, SavageOpressChoice } from "@/server/engine/core-functions";
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost, CardIsPlayable, DiscardUnitsPlayableAtDiscount, DefeatedThisPhaseDiscardUnitsAtDiscount } from "@/server/engine/card-playability";
 import { WhenPlayedLostWithWhenDefeated, buildActOfAggressionBuff, DrawCardForPlayer, DrawCardsForPlayer, DefeatableNonLeadersWithPowerAtMost, ReadyableUnitsWithPowerAtMost, UpgradesOnEnemyUnits } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -3959,6 +3960,252 @@ export function resolveWhenPlayed(
       const allUnits076 = AllUnits();
       if (allUnits076.length === 0) return null;
       return mandatoryTarget(cardId, player, allUnits076.map(u => u.playId));
+    }
+    case "JTL_072": { // Wing Guard Security Team — "When Played: Give a Shield token to each of up to 2 Fringe units."
+      const fringe072 = AllUnits().filter(u => TraitContains(u.cardId, "Fringe", u.controller, u.playId));
+      if (fringe072.length === 0) return null;
+      return { type: "budget-select", cardId, player, eligiblePlayIds: fringe072.map(u => u.playId), maxCount: 2, continuation: null } satisfies BudgetSelectPending;
+    }
+    case "JTL_097": { // Leia Organa (Pilots, To Your Stations) — "When Played: You may attack with a Pilot unit
+                      // or a unit with a Pilot on it. It gets +1/+0 and gains Restore 1 for this attack."
+      const pilots097 = GetUnitsForPlayer(player, true).filter(u => u.playId !== playId && CanUnitAttack(u)
+        && (TraitContains(u.cardId, "Pilot", player, u.playId) || u.upgrades.some(x => IsPilotUpgrade(x.cardId))));
+      if (pilots097.length === 0) return null;
+      return optionalTarget(cardId, player, pilots097.map(u => u.playId), "Attack with a Pilot unit or a unit with a Pilot on it?", { yesLabel: "Attack" });
+    }
+    case "JTL_154": // Profundity — "When Played: Choose a player. They discard a card from their hand. …"
+      return ProfundityChoice(player, null);
+    case "JTL_210": { // The Mandalorian (Weathered Pilot) — "When played as a unit: Exhaust up to 2 ground units."
+      const ground210 = AllGroundUnits().filter(u => u.playId !== playId);
+      if (ground210.length === 0) return null;
+      return { type: "budget-select", cardId, player, eligiblePlayIds: ground210.map(u => u.playId), maxCount: 2, continuation: null } satisfies BudgetSelectPending;
+    }
+    case "LOF_039": { // Darth Sidious (The Phantom Menace) — "When Played: You may use the Force. If you do,
+                      // defeat each non-Sith unit with 3 or less remaining HP."
+      if (!HasTheForce(player)) return null;
+      return { type: "ability-option", cardId, player, sourcePlayId: playId, helperText: "Use the Force to defeat each non-Sith unit with 3 or less remaining HP?", yesLabel: "Use the Force", continuation: null } satisfies AbilityOptionPending;
+    }
+    case "LOF_114": { // Kaadu — "When Played: You may give another friendly unit Overwhelm for this phase."
+      const others114 = GetUnitsForPlayer(player).filter(u => u.playId !== playId);
+      if (others114.length === 0) return null;
+      return optionalTarget(cardId, player, others114.map(u => u.playId), "Give another friendly unit Overwhelm for this phase?", { yesLabel: "Give Overwhelm" });
+    }
+    case "LOF_137": // Savage Opress (Imbued With Hate) — "When Played: You may use the Force. If you don't,
+                    // deal 9 damage to your base."
+      return SavageOpressChoice(player, playId, null);
+    case "JTL_130": { // Timely Reinforcements (Event) — "Choose an opponent. For every 2 resources they control,
+                      // create an X-Wing token and give it Sentinel for this phase."
+      const count130 = Math.floor(GetPlayer(game.currentGameState, player === 1 ? 2 : 1).resources.length / 2);
+      for (let i = 0; i < count130; i++) {
+        const x130 = CreateXWing(game.currentGameState, player, game.gameLog, cardId);
+        game.currentGameState.currentEffects.push({ cardId: "JTL_130", duration: "Phase", affectedPlayer: player, targetPlayId: x130.playId });
+      }
+      return null;
+    }
+    case "JTL_229": { // Diversion (Event) — "Give a unit Sentinel for this phase."
+      const units229 = AllUnits();
+      if (units229.length === 0) return null;
+      return mandatoryTarget(cardId, player, units229.map(u => u.playId));
+    }
+    case "LOF_126": { // Overpower (Event) — "Give a unit +3/+3 and Overwhelm for this phase."
+      const units126 = AllUnits();
+      if (units126.length === 0) return null;
+      return mandatoryTarget(cardId, player, units126.map(u => u.playId));
+    }
+    case "TWI_036": { // Devastating Gunship — "When Played: Defeat an enemy unit with 2 or less remaining HP."
+      const doomed036 = GetUnitsForPlayer(player === 1 ? 2 : 1).filter(u => UnitRemainingHp(u) <= 2 && !UnitImmuneToEnemyDefeat(u));
+      if (doomed036.length === 0) return null;
+      return mandatoryTarget(cardId, player, doomed036.map(u => u.playId));
+    }
+    case "TWI_039": { // Malevolence — "When Played: Give an enemy unit –4/–0 for this phase. It can't attack for this phase."
+      const enemies039 = GetUnitsForPlayer(player === 1 ? 2 : 1);
+      if (enemies039.length === 0) return null;
+      return mandatoryTarget(cardId, player, enemies039.map(u => u.playId));
+    }
+    case "TWI_044": { // Kashyyyk Defender — "When Played: Heal up to 2 damage from another unit and deal that
+                      // much damage to this unit." Only a damaged other unit gives anything to heal.
+      const damaged044 = AllUnits().filter(u => u.playId !== playId && u.damage > 0);
+      if (damaged044.length === 0 || !playId) return null;
+      return { ...mandatoryTarget(cardId, player, damaged044.map(u => u.playId)), sourcePlayId: playId };
+    }
+    case "TWI_046": // Captain Typho — "When Played: Give a unit Sentinel for this phase."
+      return mandatoryTarget(cardId, player, AllUnits().map(u => u.playId));
+    case "TWI_050": // Luminara Unduli (Soft-Spoken Master) — "When Played: Choose a base. Heal 1 damage from
+                    // it for each unit you control."
+      return { ...mandatoryTarget(cardId, player, ["player1.base", "player2.base"]), fromZones: ["Base"] };
+    case "TWI_115": { // Osi Sobeck — "When Played: This unit captures an enemy non-leader ground unit with cost
+                      // equal to or less than the number of resources paid to play this unit."
+      const paid115 = game.currentGameState.currentEffects.filter(e => e.cardId === "TWI_115_paid" && e.affectedPlayer === player).pop()?.value ?? 0;
+      const victims115 = GetUnitsForPlayer(player === 1 ? 2 : 1).filter(u => !IsLeaderUnit(u) && !UnitImmuneToEnemyCapture(u)
+        && UnitArenaOf(game.currentGameState, u.playId) === "Ground" && (CardCost(u.cardId) ?? 0) <= paid115);
+      if (victims115.length === 0 || !playId) return null;
+      return { ...mandatoryTarget(cardId, player, victims115.map(u => u.playId)), sourcePlayId: playId };
+    }
+    case "TWI_138": { // Count Dooku (Fallen Jedi) — "For each unit you exploited while playing this card, you
+                      // may deal damage to an enemy unit equal to the power of the exploited unit."
+                      // One optional prompt per exploited unit, in order.
+      const powers138 = game.currentGameState.currentEffects.filter(e => e.cardId === "TWI_138_exploited" && e.affectedPlayer === player).map(e => e.value ?? 0);
+      const enemies138 = GetUnitsForPlayer(player === 1 ? 2 : 1).map(u => u.playId);
+      if (powers138.length === 0 || enemies138.length === 0) return null;
+      let chain138: PendingResolution | null = null;
+      for (const p138 of [...powers138].reverse()) {
+        chain138 = { ...optionalTarget("TWI_138", player, enemies138, `Deal ${p138} damage to an enemy unit?`, { yesLabel: `Deal ${p138}`, continuation: chain138 }) };
+        (chain138 as AbilityOptionPending).amount = p138;
+        if ((chain138 as AbilityOptionPending).onYes) ((chain138 as AbilityOptionPending).onYes as AbilityTargetPending).amount = p138;
+      }
+      return chain138;
+    }
+    case "TWI_149": { // Low Altitude Gunship — "When Played: Choose an enemy unit. Deal 1 damage to it for each
+                      // friendly Republic unit."
+      const enemies149 = GetUnitsForPlayer(player === 1 ? 2 : 1);
+      if (enemies149.length === 0) return null;
+      return mandatoryTarget(cardId, player, enemies149.map(u => u.playId));
+    }
+    case "TWI_167": { // Heavy Persuader Tank — "When Played: You may deal 2 damage to a ground unit."
+      const ground167 = AllGroundUnits();
+      if (ground167.length === 0) return null;
+      return optionalTarget(cardId, player, ground167.map(u => u.playId), "Deal 2 damage to a ground unit?", { yesLabel: "Deal 2" });
+    }
+    case "TWI_198": // Enfys Nest (Champion of Justice) — "When Played: You may return a weaker enemy …"
+      return EnfysNest198Offer(player, playId, null);
+    case "TWI_215": { // Geonosis Patrol Fighter — "When Played: You may return a non-leader unit that costs 3
+                      // or less to its owner's hand." Either side.
+      const cheap215 = AllUnits().filter(u => !IsLeaderUnit(u) && (CardCost(u.cardId) ?? 0) <= 3
+        && (u.controller === player || !UnitImmuneToEnemyBounce(u)));
+      if (cheap215.length === 0) return null;
+      return optionalTarget(cardId, player, cheap215.map(u => u.playId), "Return a non-leader unit that costs 3 or less to its owner's hand?", { yesLabel: "Return" });
+    }
+    case "TWI_217": { // Tri-Droid Suppressor — "When Played: Exhaust an enemy ground unit."
+      const enemies217 = GetUnitsForPlayer(player === 1 ? 2 : 1).filter(u => UnitArenaOf(game.currentGameState, u.playId) === "Ground");
+      if (enemies217.length === 0) return null;
+      return mandatoryTarget(cardId, player, enemies217.map(u => u.playId));
+    }
+    case "JTL_038": { // Corvus — "When Played: You may attach a friendly Pilot unit or upgrade to this unit."
+                      // Not while he already carries a Pilot.
+      const corvus038 = playId ? GetUnitByPlayId(game.currentGameState, playId) : null;
+      if (!corvus038 || corvus038.upgrades.some(u => IsPilotUpgrade(u.cardId))) return null;
+      const pilotUnits038 = GetUnitsForPlayer(player).filter(u => u.playId !== playId && !IsLeaderUnit(u) && TraitContains(u.cardId, "Pilot", player, u.playId) && PilotingCost(u.cardId) >= 0);
+      const pilotUpgrades038 = GetUnitsForPlayer(player).filter(u => u.playId !== playId)
+        .flatMap(u => u.upgrades.filter(x => IsPilotUpgrade(x.cardId) && x.controller === player && !CardIsLeader(x.cardId)));
+      const options038 = [...pilotUnits038.map(u => u.playId), ...pilotUpgrades038.map(x => x.playId)];
+      if (options038.length === 0) return null;
+      return optionalTarget(cardId, player, options038, "Attach a friendly Pilot to Corvus?", { yesLabel: "Attach", sourcePlayId: playId });
+    }
+    case "TWI_074": { // Guarding the Way (Event) — "Give a unit Sentinel for this phase. If you have the
+                      // initiative, also give that unit +2/+2 for this phase."
+      const units074 = AllUnits();
+      if (units074.length === 0) return null;
+      return mandatoryTarget(cardId, player, units074.map(u => u.playId));
+    }
+    case "TWI_129": { // In Defense of Kamino (Event) — "For this phase, each friendly Republic unit gains
+                      // Restore 2 and: 'When Defeated: Create a Clone Trooper token.'" The units in play now.
+      for (const u of GetUnitsForPlayer(player).filter(x => TraitContains(x.cardId, "Republic", player, x.playId))) {
+        game.currentGameState.currentEffects.push({ cardId: "TWI_129", duration: "Phase", affectedPlayer: player, targetPlayId: u.playId });
+      }
+      game.gameLog.push(`${CardTitle(cardId)}: each friendly Republic unit gains Restore 2 and a Clone Trooper When Defeated for this phase.`);
+      return null;
+    }
+    case "TWI_249": { // Heroes on Both Sides (Event) — "Choose up to 1 Republic unit and up to 1 Separatist
+                      // unit. Give each chosen unit +2/+2 and Saboteur for this phase."
+      const rep249 = AllUnits().filter(u => TraitContains(u.cardId, "Republic", u.controller, u.playId)).map(u => u.playId);
+      const sep249 = AllUnits().filter(u => TraitContains(u.cardId, "Separatist", u.controller, u.playId)).map(u => u.playId);
+      const sepStep249 = sep249.length > 0 ? optionalTarget("TWI_249", player, sep249, "Give a Separatist unit +2/+2 and Saboteur?", { yesLabel: "Choose" }) : null;
+      if (rep249.length === 0) return sepStep249;
+      return optionalTarget("TWI_249", player, rep249, "Give a Republic unit +2/+2 and Saboteur?", { yesLabel: "Choose", continuation: sepStep249 });
+    }
+    case "TWI_250": { // Sword and Shield Maneuver (Event) — "Give each friendly Trooper unit Raid 1 for this
+                      // phase. Give each friendly Jedi unit Sentinel for this phase." One effect per
+                      // unit in play now; the Raid and Sentinel readers check the trait.
+      for (const u of GetUnitsForPlayer(player).filter(x => TraitContains(x.cardId, "Trooper", player, x.playId) || TraitContains(x.cardId, "Jedi", player, x.playId))) {
+        game.currentGameState.currentEffects.push({ cardId: "TWI_250", duration: "Phase", affectedPlayer: player, targetPlayId: u.playId });
+      }
+      game.gameLog.push(`${CardTitle(cardId)}: friendly Troopers gain Raid 1 and friendly Jedi gain Sentinel for this phase.`);
+      return null;
+    }
+    case "SHD_049": { // The Mandalorian (Wherever I Go, He Goes) — "When Played: You may heal all damage
+                      // from a unit that costs 2 or less and give 2 Shield tokens to it." Either side.
+      const cheap049 = AllUnits().filter(u => (CardCost(u.cardId) ?? 0) <= 2);
+      if (cheap049.length === 0) return null;
+      return optionalTarget(cardId, player, cheap049.map(u => u.playId),
+        "Heal all damage from a unit that costs 2 or less and give it 2 Shield tokens?", { yesLabel: "Heal + Shields" });
+    }
+    case "SHD_050": { // Chewbacca (Pykesbane) — "When Played: You may defeat a unit with 5 or less
+                      // remaining HP." Any unit, leaders included; enemy units immune to defeat out.
+      const doomed050 = AllUnits().filter(u => UnitRemainingHp(u) <= 5 && (u.controller === player || !UnitImmuneToEnemyDefeat(u)));
+      if (doomed050.length === 0) return null;
+      return optionalTarget(cardId, player, doomed050.map(u => u.playId), "Defeat a unit with 5 or less remaining HP?", { yesLabel: "Defeat" });
+    }
+    case "SHD_092": { // Finalizer — "When Played: Choose any number of friendly units. Each of those units
+                      // captures an enemy non-leader unit in the same arena." Only units with a capture
+                      // available are offered; choosing none declines.
+      const enemy092 = player === 1 ? 2 : 1;
+      const captors092 = GetUnitsForPlayer(player).filter(c => GetUnitsForPlayer(enemy092)
+        .some(v => !IsLeaderUnit(v) && !UnitImmuneToEnemyCapture(v) && UnitArenaOf(game.currentGameState, v.playId) === UnitArenaOf(game.currentGameState, c.playId)));
+      if (captors092.length === 0) return null;
+      return { type: "budget-select", cardId, player, eligiblePlayIds: captors092.map(u => u.playId), continuation: null } satisfies BudgetSelectPending;
+    }
+    case "SHD_103": // General Rieekan — "When Played: Choose a friendly unit. …" (himself included).
+      return mandatoryTarget(cardId, player, GetUnitsForPlayer(player).map(u => u.playId));
+    case "SHD_154": { // Wrecker (Boom!) — "When Played: You may defeat a friendly resource. If you do, deal
+                      // 5 damage to a ground unit."
+      if (GetPlayer(game.currentGameState, player).resources.length === 0) return null;
+      return {
+        type: "ability-option", cardId, player, sourcePlayId: playId,
+        helperText: "Defeat a friendly resource to deal 5 damage to a ground unit?", yesLabel: "Defeat a resource",
+        continuation: null,
+      } satisfies AbilityOptionPending;
+    }
+    case "SHD_171": // Covetous Rivals — "When Played: You may deal 2 damage to a unit with a Bounty."
+      return CovetousRivalsOffer(player, null);
+    case "SHD_191": // Xanadu Blood — "When Played: You may return another friendly … Underworld unit …"
+      return XanaduBloodOffer(player, playId, null);
+    case "SHD_192": { // Dryden Vos — "When Played: Choose a captured card guarded by a unit you control.
+                      // You may play it for free under your control."
+      const captives192 = GetUnitsForPlayer(player).flatMap(u => u.captives ?? []);
+      if (captives192.length === 0) return null;
+      return optionalTarget(cardId, player, captives192.map(c => c.playId), "Play a captured card you guard for free?", { yesLabel: "Play it" });
+    }
+    case "SHD_215": { // Smuggler's Starfighter — "When Played: If you control another Underworld unit,
+                      // give an enemy unit –3/–0 for this phase."
+      const hasUnderworld215 = GetUnitsForPlayer(player).some(u => u.playId !== playId && TraitContains(u.cardId, "Underworld", player, u.playId));
+      const enemies215 = GetUnitsForPlayer(player === 1 ? 2 : 1);
+      if (!hasUnderworld215 || enemies215.length === 0) return null;
+      return mandatoryTarget(cardId, player, enemies215.map(u => u.playId));
+    }
+    case "SHD_242": { // Gideon's Light Cruiser — "When Played: If you control Moff Gideon (as a leader or
+                      // unit), play a [Villainy] unit that costs 3 or less from your hand or discard
+                      // pile for free." Hand cards are played through play-from-hand; discard cards
+                      // are chosen by playId.
+      if (!PlayerControlsCardWithTitle(player, "Moff Gideon")) return null;
+      const fits242 = (id: string) => CardType(id) === "Unit" && CardAspects(id).includes("Villainy") && (CardCost(id) ?? 0) <= 3;
+      const handIdx242 = GetHand(player).map((c, i) => ({ c, i })).filter(({ c }) => fits242(c.cardId)).map(({ i }) => i);
+      const discard242 = GetPlayer(game.currentGameState, player).discard.filter(c => fits242(c.cardId));
+      if (handIdx242.length === 0 && discard242.length === 0) return null;
+      if (discard242.length === 0) return { type: "play-from-hand", cardId, player, eligibleHandIndices: handIdx242 } satisfies PlayFromHandPending;
+      if (handIdx242.length === 0) return mandatoryTarget("SHD_242_discard", player, discard242.map(c => c.playId));
+      return {
+        type: "choose-one", cardId, player,
+        options: [{ id: "hand", label: "Play one from your hand" }, { id: "discard", label: "Play one from your discard pile" }],
+        continuation: null,
+      } satisfies ChooseOnePending;
+    }
+    case "SHD_075": { // Covert Strength (Event) — "Heal 2 damage from a unit and give an Experience token to it."
+      const units075 = AllUnits();
+      if (units075.length === 0) return null;
+      return mandatoryTarget(cardId, player, units075.map(u => u.playId));
+    }
+    case "SHD_127": // Commission (Event) — "Search the top 10 cards of your deck for a Bounty Hunter,
+                    // Item, or Transport card, reveal it, and draw it."
+      return searchDeck(cardId, player, 10, "draw", { filter: { anyTrait: ["Bounty Hunter", "Item", "Transport"] }, maxChoices: 1 });
+    case "SHD_252": // Smuggler's Aid (Event) — "Heal 3 damage from your base."
+      HealBaseForPlayer(game.currentGameState, player, 3, game.gameLog, cardId);
+      return null;
+    case "SEC_111": { // Jar Jar Binks (Mesa Propose…) — "When Played: You may give another friendly
+                      // unit +2/+2 for this phase." Never himself, never an enemy.
+      const others111 = GetUnitsForPlayer(player).filter(u => u.playId !== playId);
+      if (others111.length === 0) return null;
+      return optionalTarget(cardId, player, others111.map(u => u.playId),
+        "Give another friendly unit +2/+2 for this phase?", { yesLabel: "Give +2/+2", sourcePlayId: playId });
     }
     case "HMW_094": { // Sando Aqua Monster — "If you control a Naboo base, you may defeat any number of
                       // ground units with combined power equal to or less than this unit's power."

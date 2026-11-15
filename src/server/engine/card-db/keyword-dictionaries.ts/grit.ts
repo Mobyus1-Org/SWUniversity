@@ -96,6 +96,7 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
     case "SHD_171"://Covetous Rivals
     case "SHD_061"://Wroshyr Tree Tender
     case "SEC_225"://Synara San
+    case "SHD_033"://Synara San - Loyal to Kragan
     case "SEC_088"://First Light
     case "SHD_002"://Qi'Ra Leader Unit
     case "SHD_249"://Wookiee Warrior

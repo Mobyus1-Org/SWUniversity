@@ -67,6 +67,15 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "SHD_007": //Moff Gideon - Formidable Commander
       case "SHD_009": //Hunter - Outcast Sergeant
       case "SHD_010": //Bossk - Hunting His Prey
+      case "SEC_001": //Chancellor Palpatine - How Liberty Dies: Action [1 resource, Exhaust]: search the top 5 for a Plot card and draw it
+      case "SEC_014": //Sly Moore - Cipher in the Dark: Action [1 resource, Exhaust]: with 4+ exhausted units in play, create a Spy (soft-passes otherwise)
+      case "LOF_006": //Supreme Leader Snoke - In the Seat of Power: Action [1 resource, Exhaust]: XP to the most powerful friendly Villainy unit
+      case "LOF_001": //Kylo Ren - We're Not Done Yet: Action [Exhaust]: discard a card; an upgrade → draw
+      case "LOF_010": //Third Sister - Seething With Ambition: Action [Exhaust]: play a unit; it gains Hidden this phase
+      case "TWI_003": //Obi-Wan Kenobi - Patient Mentor: Action [Exhaust]: heal 1 damage from a unit
+      case "TWI_009": //Maul - A Rival in Darkness: Action [Exhaust]: attack with a unit; it gains Overwhelm
+      case "JTL_016": //Admiral Ackbar - It's A Trap!: Action [1 resource, Exhaust]: exhaust a non-leader unit → its controller creates an X-Wing
+      case "JTL_007": //Admiral Holdo - We're Not Alone: Action [1 resource, Exhaust]: +2/+2 to a Resistance unit (soft-passes with none)
       case "LOF_011": //Kit Fisto - Focused Jedi Master: Action [1 resource, Exhaust]: if you attacked with a Jedi unit this phase, deal 2 damage to a unit. (Soft-passes if the condition isn't met.)
       case "SEC_015": //C-3PO - Human-Cyborg Relations: Action [1 resource, Exhaust]: if you control an exhausted unit, exhaust a unit. (Soft-passes if the condition isn't met.)
       case "HMW_016": //Maul - Old Master: Action [Exhaust]: play a unit from hand at -1, then defeat it. (Always usable; nothing playable = just the exhaust.)
@@ -454,6 +463,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "TWI_011": // Ahsoka Tano — Coordinate: gains the Action only while controlling 3+ units.
         if (IsCoordinateActive(player) && GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
         break;
+      case "LOF_008": // Obi-Wan Kenobi (Courage Makes Heroes) — Action [Exhaust, use the Force]: needs a Force token
+        if (HasTheForce(player)) abilities.push(cardId);
+        break;
       case "SEC_006": // Colonel Yularen — Action [Exhaust]: Attack with a unit, then optionally a cheaper one (needs a ready unit)
         if (GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
         break;
@@ -469,6 +481,10 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
     if(unit.LostAbilities()) return abilities;
 
     switch (cardId) {
+      case "JTL_134": //General Hux - No Terms, No Surrender: Action [Exhaust]: draw if you played a First Order card this phase
+      case "SOR_184": //Fett's Firespray - Action [2 resources]: exhaust a non-unique unit
+      case "SOR_177": //Bib Fortuna - Jabba's Majordomo: Action [Exhaust]: play an event for 1 less
+      case "SHD_031": //The Client - Dictated by Discretion: Action [Exhaust]: a unit gains "Bounty — heal 5 from a base"
       case "SHD_006": //Jabba the Hutt - His High Exaltedness
         abilities.push(cardId);
         break;
@@ -881,6 +897,7 @@ export function ActionAbilityExhausts(abilityId: string): boolean {
     case "HMW_009":   // Chewbacca (deployed) — plain "Action:", limited once each round
     case "SHD_017":   // Lando Calrissian (deployed) — plain "Action:", limited once each round
     case "SHD_087-1": // Crosshair — "Action [2 resources]", no exhaust in the cost
+    case "SOR_184":   // Fett's Firespray — "Action [2 resources]", no exhaust in the cost
     case "IC27_120":  // Rey (Embracing Destiny) — "[1 resource, discard a card]", no exhaust
     case "LAW_015":   // Jabba the Hutt (deployed) — plain "Action:"; the undeployed side's
                       // "[1 resource, Exhaust, …]" is charged on the leader path instead, which

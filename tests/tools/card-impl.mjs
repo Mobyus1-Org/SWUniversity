@@ -6,6 +6,7 @@
  *   node tests/tools/card-impl.mjs --list --status needs-work
  *   node tests/tools/card-impl.mjs --card HMW_035 --status done
  *   node tests/tools/card-impl.mjs --card SOR_042 --status priority --note "On Attack fires twice"
+ *   node tests/tools/card-impl.mjs --card SOR_042 --status priority --rank 1   # place it in the queue
  *
  * This is the ONLY write tool in this directory, and it is deliberately not a database client:
  * it talks to the app over HTTP as an admin and never opens a Mongo connection or reads
@@ -68,9 +69,12 @@ async function main() {
   const card = argValue("--card");
   const status = argValue("--status");
   const note = argValue("--note");
+  const rankArg = argValue("--rank");
+  const rank = rankArg === undefined ? undefined : Number(rankArg);
+  if (rank !== undefined && !Number.isFinite(rank)) die(`--rank must be a number, got "${rankArg}"`);
 
   if (!card || !status) {
-    die("Usage: --card SET_NNN --status not-implemented|todo|priority|done [--note '...']\n"
+    die("Usage: --card SET_NNN --status not-implemented|todo|priority|done [--note '...'] [--rank N]\n"
       + "       --list [--status <lane>]");
   }
   if (!VALID.includes(status)) {
@@ -80,13 +84,14 @@ async function main() {
   const res = await fetch(URL_PATH, {
     method: "POST",
     headers: { "content-type": "application/json", cookie: COOKIE },
-    body: JSON.stringify({ cardId: card, status, ...(note ? { note } : {}) }),
+    // Without --rank, a card entering Priority is appended to the end of the lane.
+    body: JSON.stringify({ cardId: card, status, ...(note ? { note } : {}), ...(rank !== undefined ? { priorityRank: rank } : {}) }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     die(`POST failed: ${res.status} ${body.error ?? ""}`);
   }
-  console.log(`${card} -> ${status}${note ? ` (${note})` : ""}`);
+  console.log(`${card} -> ${status}${rank !== undefined ? ` #${rank}` : ""}${note ? ` (${note})` : ""}`);
 }
 
 main().catch((err) => die(err.message));

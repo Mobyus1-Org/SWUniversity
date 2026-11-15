@@ -1,11 +1,12 @@
+import type { AbilityOptionPending } from "@/server/engine/pending-resolution";
 import type { GameState } from "@/lib/engine/game";
 import type { PlayerId, Resource, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { CardAspects, CardCost, CardHp, CardSubtitle, CardTitle, CardType } from "@/server/engine/card-db/generated";
+import { CardAspects, CardCost, CardHasWhenDefeated, CardHp, CardSubtitle, CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { UpgradeEligibleTargets, PilotingEligibleVehicles, IsPilotUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { ExploitAmount } from "@/server/engine/card-db/keyword-dictionaries.ts/exploit";
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { Unit } from "@/server/engine/unit";
-import { LeaderAbilitiesIgnored, LeaderSideAspects, LeaderSideTitle, TraitContains, UnitTitle, UnitTraits } from "@/server/engine/core-functions";
+import { INDIRECT_DEALT_THIS_PHASE, LeaderAbilitiesIgnored, LeaderSideAspects, LeaderSideTitle, TraitContains, UnitTitle, UnitTraits } from "@/server/engine/core-functions";
 import { HasFortify } from "@/server/engine/card-db/keyword-dictionaries.ts/fortify";
 import { SmuggleCost, SmuggleAspects } from "@/server/engine/card-db/keyword-dictionaries.ts/smuggle";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
@@ -178,6 +179,16 @@ export function HostDependentUpgradeCost(
   cardId: string,
 ): { full: number; waived: number; waivedHostPlayIds: string[] } | null {
   if (CardType(cardId) !== "Upgrade") return null;
+  // TWI_236 Grievous's Wheel Bike — "While playing this upgrade on General Grievous, it costs 2
+  // resources less to play." A host-dependent discount rather than a waived penalty.
+  if (cardId === "TWI_236") {
+    const all236 = [...game.player1.groundArena, ...game.player1.spaceArena, ...game.player2.groundArena, ...game.player2.spaceArena];
+    const grievous236 = UpgradeEligibleTargets(cardId, game, player)
+      .filter(id => { const h = all236.find(u => u.playId === id); return !!h && UnitTitle(h) === "General Grievous"; });
+    if (grievous236.length === 0) return null;
+    const full236 = playCost(game, player, cardId);
+    return { full: full236, waived: Math.max(0, full236 - 2), waivedHostPlayIds: grievous236 };
+  }
   const penalty = aspectPenalty(game, player, cardId);
   if (penalty === 0) return null;
   const units = [...game.player1.groundArena, ...game.player1.spaceArena, ...game.player2.groundArena, ...game.player2.spaceArena];
@@ -400,13 +411,18 @@ function honorBoundPartisanDiscount(game: GameState, player: PlayerId, cardId: s
   return game.currentEffects.some(e => e.cardId === "LAW_058" && e.affectedPlayer === player) ? 1 : 0;
 }
 
-// ASH_027 Enoch: the NEXT unit you play this phase costs 1 less for every 2 damage he dealt to your
-// base. Each Enoch's discount rides on its effect's `value`; two stack onto the same next unit, and
-// completePlayCard spends them all.
-function enochNextUnitDiscount(game: GameState, player: PlayerId, cardId: string): number {
+/**
+ * "The NEXT unit you play this phase costs N less", with N carried on the effect's `value`:
+ *   ASH_027 Enoch — 1 per 2 damage he dealt to your base;
+ *   SHD_006 Jabba the Hutt — the Bounty he grants, collected (1, or 2 from his deployed side).
+ * Several stack onto the same next unit, and completePlayCard spends them all.
+ */
+export const VALUED_NEXT_UNIT_DISCOUNTS = new Set(["ASH_027", "SHD_006_next_unit"]);
+
+function valuedNextUnitDiscount(game: GameState, player: PlayerId, cardId: string): number {
   if (CardType(cardId) !== "Unit") return 0;
   return game.currentEffects
-    .filter(e => e.cardId === "ASH_027" && e.affectedPlayer === player)
+    .filter(e => VALUED_NEXT_UNIT_DISCOUNTS.has(e.cardId) && e.affectedPlayer === player)
     .reduce((sum, e) => sum + (e.value ?? 0), 0);
 }
 
@@ -604,6 +620,20 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
   // Free means free: nothing is owed, aspect penalty included. Never worse than paying, so it is
   // applied without asking.
   if (JumpToLightspeedMarkerIndex(game, player, cardId) !== -1) return 0;
+  return starhawkHalves(game, player, rawPlayCost(game, player, cardId));
+}
+
+/**
+ * JTL_105 The Starhawk — "While paying costs, you pay half as many resources, rounded up." Applied
+ * last, to the cost after every other modifier; only while a Starhawk you control is in play.
+ */
+function starhawkHalves(game: GameState, player: PlayerId, cost: number): number {
+  const p = player === 1 ? game.player1 : game.player2;
+  const starhawk = [...p.groundArena, ...p.spaceArena].some(u => u.cardId === "JTL_105" && !Unit.FromInterface(u).LostAbilities());
+  return starhawk ? Math.ceil(cost / 2) : cost;
+}
+
+function rawPlayCost(game: GameState, player: PlayerId, cardId: string): number {
   // A cost can't go below 0 — The Invisible Hand's 9 off outstrips most cards on its own.
   return Math.max(0, CardCost(cardId)
     + aspectPenalty(game, player, cardId)
@@ -623,7 +653,7 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - imperialNextUnitDiscount(game, player, cardId)
     - tranquilityRepublicDiscount(game, player, cardId)
     - honorBoundPartisanDiscount(game, player, cardId)
-    - enochNextUnitDiscount(game, player, cardId)
+    - valuedNextUnitDiscount(game, player, cardId)
     - redLeaderPilotDiscount(game, player, cardId)
     - reputableHunterDiscount(game, player, cardId)
     - jabbasRancorDiscount(game, player, cardId)
@@ -633,7 +663,69 @@ export function playCost(game: GameState, player: PlayerId, cardId: string): num
     - moffGideonDiscount(game, player, cardId)
     - nextEventDiscount(game, player, cardId)
     - nextCardDiscount(game, player, cardId)
+    - republicDefenseCarrierDiscount(game, player, cardId)
+    - forTheRepublicDiscount(game, player, cardId)
+    - krennicFirstWhenDefeatedDiscount(game, player, cardId)
+    - jtlConditionalSelfDiscount(game, player, cardId)
+    - nextResistanceCardDiscount(game, player, cardId)
   );
+}
+
+/**
+ * Units that discount themselves:
+ *   JTL_138 Decimator of Dissidents — 1 less if you dealt indirect damage this phase;
+ *   JTL_163 AT-DP Occupier — 1 less per damaged ground unit;
+ *   JTL_204 Home One — 3 less if an opponent controls 3 or more space units.
+ */
+function jtlConditionalSelfDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  const opp = player === 1 ? game.player2 : game.player1;
+  switch (cardId) {
+    case "JTL_138":
+      return game.currentEffects.some(e => e.cardId === INDIRECT_DEALT_THIS_PHASE && e.affectedPlayer === player) ? 1 : 0;
+    case "JTL_163":
+      return [...game.player1.groundArena, ...game.player2.groundArena].filter(u => u.damage > 0).length;
+    case "JTL_204":
+      return opp.spaceArena.length >= 3 ? 3 : 0;
+    default:
+      return 0;
+  }
+}
+
+
+/** JTL_098 Snap Wexley — "The next Resistance card you play this phase costs 1 resource less." */
+export const NEXT_RESISTANCE_DISCOUNT = "JTL_098_next_resistance";
+function nextResistanceCardDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) === "Leader" || !TraitContains(cardId, "Resistance", player)) return 0;
+  return game.currentEffects.filter(e => e.cardId === NEXT_RESISTANCE_DISCOUNT && e.affectedPlayer === player).length;
+}
+
+/** TWI_098 Republic Defense Carrier — 1 less per unit the opponent with the most units controls. */
+function republicDefenseCarrierDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (cardId !== "TWI_098") return 0;
+  const opp = player === 1 ? game.player2 : game.player1;
+  return opp.groundArena.length + opp.spaceArena.length;
+}
+
+/** TWI_051 For The Republic — 2 less while you control 3 or more Republic units. */
+function forTheRepublicDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (cardId !== "TWI_051") return 0;
+  const p = player === 1 ? game.player1 : game.player2;
+  const republic = [...p.groundArena, ...p.spaceArena].filter(u => TraitContains(u.cardId, "Republic", player, u.playId)).length;
+  return republic >= 3 ? 2 : 0;
+}
+
+/**
+ * JTL_032 Director Krennic (On the Verge of Greatness) — "The first unit you play each round that has
+ * a 'When Defeated' ability costs 1 resource less." Once per Krennic; spent by the round ledger.
+ */
+function krennicFirstWhenDefeatedDiscount(game: GameState, player: PlayerId, cardId: string): number {
+  if (CardType(cardId) !== "Unit" || !CardHasWhenDefeated(cardId)) return 0;
+  const p = player === 1 ? game.player1 : game.player2;
+  const krennics = [...p.groundArena, ...p.spaceArena].filter(u => u.cardId === "JTL_032" && !Unit.FromInterface(u).LostAbilities()).length;
+  if (krennics === 0) return 0;
+  const alreadyPlayed = game.roundState.cardsPlayedThisRound
+    .some(c => c.fromPlayer === player && c.playedAs === "Unit" && CardHasWhenDefeated(c.cardId));
+  return alreadyPlayed ? 0 : krennics;
 }
 
 /**
@@ -903,4 +995,25 @@ export function CardIsPlayable(game: GameState, player: PlayerId, cardId: string
   }
 
   return true;
+}
+
+/**
+ * LOF_001 Kylo Ren (deployed) — "When Deployed: Play any number of upgrades from your discard pile on
+ * this unit (one at a time, paying their costs)." The next offer: upgrades in the discard that can go
+ * on him and that you can pay for. Null once there are none.
+ */
+export function KyloUpgradeFromDiscardOffer(game: GameState, player: PlayerId): AbilityOptionPending | null {
+  const p = player === 1 ? game.player1 : game.player2;
+  const kylo = p.leader.deployedPlayId;
+  if (p.leader.cardId !== "LOF_001" || !kylo) return null;
+  const options = p.discard.filter(c => CardType(c.cardId) === "Upgrade"
+    && UpgradeEligibleTargets(c.cardId, game, player).includes(kylo)
+    && spendableFor(game, player) >= playCost(game, player, c.cardId));
+  if (options.length === 0) return null;
+  return {
+    type: "ability-option", cardId: "LOF_001_wd", player,
+    helperText: "Play an upgrade from your discard pile on Kylo Ren?", yesLabel: "Play one", noLabel: "Done",
+    onYes: { type: "ability-target", cardId: "LOF_001_wd", player, fromPlayIds: options.map(c => c.playId), continuation: null },
+    continuation: null,
+  };
 }

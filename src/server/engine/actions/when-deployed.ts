@@ -1,11 +1,11 @@
 import { PendingResolution } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetGame, GetPlayer, ResourceTopCardOfDeck, IsLeaderUnit, AfterNonCombatUnitDamage, AllUnits, DealDamageToUnit, HealUnit, DefeatableNonLeaderUnitsAtOrBelowHp, optionalTarget, buildMaulChoice } from "@/server/engine/core-functions";
+import { GetGame, GetPlayer, GetUnitsForPlayer, UnitImmuneToEnemyCapture, ResourceTopCardOfDeck, IsLeaderUnit, AfterNonCombatUnitDamage, AllUnits, DealDamageToUnit, HealUnit, DefeatableNonLeaderUnitsAtOrBelowHp, optionalTarget, buildMaulChoice } from "@/server/engine/core-functions";
 import { CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
 import { CreateBeast, CreateCloneTrooper } from "@/server/engine/token-helpers";
-import { DefeatedThisPhaseDiscardUnitsAtDiscount } from "@/server/engine/card-playability";
+import { DefeatedThisPhaseDiscardUnitsAtDiscount, KyloUpgradeFromDiscardOffer } from "@/server/engine/card-playability";
 
 export function resolveWhenDeployed(
   cardId: string,
@@ -30,6 +30,30 @@ export function resolveWhenDeployed(
         continuation: null,
       };
     }
+    case "LOF_001": // Kylo Ren — "When Deployed: Play any number of upgrades from your discard pile on this unit
+                    // (one at a time, paying their costs)." An offer repeated after each play.
+      return KyloUpgradeFromDiscardOffer(game.currentGameState, player);
+    case "SHD_006": { // Jabba the Hutt — "When Deployed: Another friendly unit captures an enemy
+                      // non-leader unit." Mandatory; it does nothing without both a captor and a
+                      // capturable enemy. Step 1 picks the captor.
+      const self006 = GetPlayer(game.currentGameState, player).leader.deployedPlayId;
+      const captors006 = GetUnitsForPlayer(player).filter(u => u.playId !== self006);
+      const victims006 = GetUnitsForPlayer(player === 1 ? 2 : 1)
+        .filter(u => !IsLeaderUnit(u) && !UnitImmuneToEnemyCapture(u));
+      if (captors006.length === 0 || victims006.length === 0) return null;
+      return {
+        type: "ability-target",
+        cardId: "SHD_006_wd",
+        player,
+        fromPlayIds: captors006.map(u => u.playId),
+        continuation: null,
+      };
+    }
+    case "SEC_001": // Chancellor Palpatine — "When Deployed: The next card you play using Plot this
+                    // phase costs 3 resources less." Spent by the Plot payment in dispatch-listener.
+      game.currentGameState.currentEffects.push({ cardId: "SEC_001_next_plot", duration: "Phase", affectedPlayer: player });
+      log.push(`${CardTitle("SEC_001")}: the next card you play using Plot this phase costs 3 less.`);
+      return null;
     case "TWI_013": { // Mace Windu — "When Deployed: Deal 2 damage to each damaged enemy unit."
                       // Mandatory, targetless, and only DAMAGED enemies are hit.
       const damaged013 = AllUnits().filter(u => u.controller !== player && u.damage > 0);

@@ -1,12 +1,12 @@
 import { Unit } from "@/server/engine/unit";
 import { AbilityTargetPending, DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { WhenDefeatedAbilitiesSuppressed, buildAnnihilatorOffer, UnitTraits, AllUnits, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains, buildThrawnExperience, negotiatorResourceShuffle } from "@/server/engine/core-functions";
+import { WhenDefeatedAbilitiesSuppressed, buildAnnihilatorOffer, UnitTraits, AllUnits, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains, buildThrawnExperience, negotiatorResourceShuffle, ProfundityChoice, SavageOpressChoice } from "@/server/engine/core-functions";
 import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
-import { CardIsUnique, CardPower, CardTitle, CardType } from "@/server/engine/card-db/generated";
+import { CardCost, CardIsUnique, CardPower, CardTitle, CardType } from "@/server/engine/card-db/generated";
 import { UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
-import { GiveTokenUpgrade, CreateBattleDroid, CreateTieFighter, CreateSpy, CreateMandalorianToken, GiveExperienceTokens, CreateBeast } from "@/server/engine/token-helpers";
+import { GiveTokenUpgrade, CreateCloneTrooper, CreateBattleDroid, CreateTieFighter, CreateSpy, CreateMandalorianToken, GiveExperienceTokens, CreateBeast } from "@/server/engine/token-helpers";
 
 /**
  * When Defeated abilities — called immediately after the unit is removed from
@@ -66,6 +66,15 @@ function resolveWhenDefeatedInner(
   player: PlayerId,
   causedByCombatDamage: boolean = false,
 ): PendingResolution | null {
+  // TWI_169 Clone Cohort: attached unit gains "When Defeated: Create a Clone Trooper token." TWI_129
+  // In Defense of Kamino grants the same to Republic units for the phase.
+  {
+    const game169 = GetGame();
+    const grants169 = unit.upgrades.filter(u => u.cardId === "TWI_169").length
+      + (game169?.currentGameState.currentEffects.filter(e => e.cardId === "TWI_129" && e.targetPlayId === unit.playId).length ?? 0);
+    for (let i = 0; i < grants169 && game169; i++) CreateCloneTrooper(game169.currentGameState, player, game169.gameLog, "TWI_169");
+  }
+
   // TWI_218 Droid Cohort: attached unit gains "When Defeated: Create a Battle Droid token."
   const droidCohortCount = unit.upgrades.filter(u => u.cardId === "TWI_218").length;
   if (droidCohortCount > 0) {
@@ -257,6 +266,70 @@ function resolveOwnWhenDefeated(
       if (allUnits050.length === 0) return null;
       return optionalTarget("ASH_050", player, allUnits050.map(u => u.playId),
         "Give a unit –2/–2 for this phase?", { yesLabel: "Give –2/–2" });
+    }
+    case "JTL_040": { // Fleet Interdictor — "When Defeated: You may defeat a space unit that costs 3 or less."
+      const g040 = GetGame();
+      if (!g040) return null;
+      const cheap040 = AllUnits().filter(u => (CardCost(u.cardId) ?? 0) <= 3 && [...g040.currentGameState.player1.spaceArena, ...g040.currentGameState.player2.spaceArena].some(s => s.playId === u.playId));
+      if (cheap040.length === 0) return null;
+      return optionalTarget("JTL_040", player, cheap040.map(u => u.playId), "Defeat a space unit that costs 3 or less?", { yesLabel: "Defeat" });
+    }
+    case "JTL_071": // CR90 Relief Runner — "When Defeated: Heal up to 3 damage from a unit or base."
+      return { ...mandatoryTarget("JTL_071", player, [...AllUnits().map(u => u.playId), "player1.base", "player2.base"]), fromZones: ["Base"] };
+    case "JTL_090": { // Executor — "When Defeated: Create 3 TIE Fighter tokens."
+      const g090 = GetGame();
+      for (let i = 0; i < 3 && g090; i++) CreateTieFighter(g090.currentGameState, player, g090.gameLog, "JTL_090");
+      return null;
+    }
+    case "JTL_154": // Profundity — the same as its When Played.
+      return ProfundityChoice(player, null);
+    case "LOF_057": // Owen Lars — "When Defeated: Search the top 5 cards of your deck for a Force unit, reveal it, and draw it."
+      return searchDeck("LOF_057", player, 5, "draw", { filter: { type: "Unit", trait: "Force" }, maxChoices: 1 });
+    case "LOF_137": // Savage Opress — the same as his When Played.
+      return SavageOpressChoice(player, undefined, null);
+    case "TWI_043": { // Outspoken Representative — "When Defeated: Create a Clone Trooper token."
+      const g043 = GetGame();
+      if (g043) CreateCloneTrooper(g043.currentGameState, player, g043.gameLog, "TWI_043");
+      return null;
+    }
+    case "TWI_235": { // Battle Droid Legion — "When Defeated: Create 3 Battle Droid tokens."
+      const g235 = GetGame();
+      for (let i = 0; i < 3 && g235; i++) CreateBattleDroid(g235.currentGameState, player, g235.gameLog, "TWI_235");
+      return null;
+    }
+    case "TWI_247": { // AT-TE Vanguard — "When Defeated: Create 2 Clone Trooper tokens."
+      const g247 = GetGame();
+      for (let i = 0; i < 2 && g247; i++) CreateCloneTrooper(g247.currentGameState, player, g247.gameLog, "TWI_247");
+      return null;
+    }
+    case "TWI_104": { // Obedient Vanguard — "When Defeated: You may give a Trooper unit +2/+2 for this phase."
+      const troopers104 = AllUnits().filter(u => TraitContains(u.cardId, "Trooper", u.controller, u.playId));
+      if (troopers104.length === 0) return null;
+      return optionalTarget("TWI_104", player, troopers104.map(u => u.playId), "Give a Trooper unit +2/+2 for this phase?", { yesLabel: "Give +2/+2" });
+    }
+    case "TWI_148": { // Senatorial Corvette — "When Defeated: Each opponent discards a card from their hand."
+      const opp148: PlayerId = player === 1 ? 2 : 1;
+      const g148 = GetGame();
+      if (!g148 || GetPlayer(g148.currentGameState, opp148).hand.length === 0) return null;
+      return { type: "discard-from-hand", targetPlayer: opp148, count: 1, continuation: null };
+    }
+    case "TWI_164": // Hevy — resolved in dispatch-listener (resolveWhenDefeatedWithThrawn), which sweeps.
+      return null;
+    case "SHD_107": { // Enterprising Lackeys — "When Defeated: You may defeat a friendly resource. If you
+                      // do, put this unit into play as a resource." The card waits in the discard
+                      // under the playId it kept.
+      const game107 = GetGame();
+      if (!game107 || unit.IsTokenUnit() || GetPlayer(game107.currentGameState, player).resources.length === 0) return null;
+      return {
+        type: "ability-option", cardId: "SHD_107", player, sourcePlayId: unit.playId,
+        helperText: "Defeat a friendly resource to put Enterprising Lackeys into play as a resource?", yesLabel: "Defeat a resource",
+        continuation: null,
+      };
+    }
+    case "SHD_058": { // Val — "When Defeated: Give 2 Experience tokens to a friendly unit." Mandatory.
+      const friends058 = GetUnitsForPlayer(player);
+      if (friends058.length === 0) return null;
+      return mandatoryTarget("SHD_058_wd", player, friends058.map(u => u.playId));
     }
     case "HMW_109": { // Tireless Magnaguard — "If this unit had 5 or more power, for this phase you may
                       // play this unit from your discard pile for free and give 2 Weakness tokens

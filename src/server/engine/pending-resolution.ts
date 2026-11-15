@@ -158,6 +158,8 @@ export interface DiscardFromHandPending {
   minCost?: number;
   /** JTL_014 Admiral Trench: after the discard, draw a card for this player ("if you do, draw a card"). */
   thenDrawForPlayer?: PlayerId;
+  /** LOF_001 Kylo Ren: draw for this player only if the discarded card was an upgrade. */
+  thenDrawIfUpgradeFor?: PlayerId;
   /** HMW_010 Tarfful: after the discard COST is paid, this player creates a Beast token. */
   thenCreateBeastFor?: PlayerId;
   /** SEC_008 Bail Organa: once both discards (his deploy cost) are paid, this player's leader deploys. */
@@ -253,6 +255,11 @@ export interface ResolveAttackPending {
    * attack off to combat, so without this the second one would ask again after the first answer.
    */
   wicketOffered?: boolean;
+  /**
+   * Set once the defending unit's own "When this unit is attacked" ability (whenAttackedOffer) has
+   * been offered for this attack; like Wicket, it is consulted at both hand-offs to combat.
+   */
+  whenAttackedOffered?: boolean;
   /**
    * Set once the attacker's Restore has healed for this attack (restoreBeforeCombat). Restore is
    * applied at the hand-off to combat so that reactions to the heal (IC27_026 Darth Sidious) can

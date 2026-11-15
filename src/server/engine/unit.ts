@@ -1,5 +1,5 @@
 import { CardInPlay, CONDEMN_BLANK, HP_MOD, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, EffectiveRaid, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard, UnitArenaOf, GetGame, UnitHasNoAbilities, TokenUnitAttackedThisPhase } from "@/server/engine/core-functions";
+import { PlayerControlsCardWithTitle, GetCurrentEffectsForPlayer, EffectiveRaid, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard, UnitArenaOf, GetGame, UnitHasNoAbilities, TokenUnitAttackedThisPhase } from "@/server/engine/core-functions";
 import { CardArena, CardAspects, CardCost, CardHp, CardPower, CardTitle } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
@@ -204,7 +204,7 @@ export class Unit implements UnitInterface {
       }
     }
 
-    power += selfStatBonus(this);
+    power += selfStatBonus(this) + supremacyBonus(this);
     power += selfPowerOnlyBonus(this);
     power += friendlyAuraBonus(this);
     power -= enemyAuraDebuff(this);
@@ -323,6 +323,20 @@ export class Unit implements UnitInterface {
         const p066 = this.controller === 1 ? gs066.player1 : gs066.player2;
         power += (p066.base.upgrades ?? []).length;
       }
+    }
+
+    // JTL_141 IG-88 (Murderous Phlutdroid) — "While an enemy unit is damaged, this unit gets +3/+0."
+    // Printed on him, and granted to the Vehicle he pilots.
+    if ((this.cardId === "JTL_141" || this.upgrades.some(u => u.cardId === "JTL_141")) && !this.LostAbilities()
+      && GetUnitsForPlayer(this.controller === 1 ? 2 : 1).some(u => u.damage > 0)) {
+      power += 3;
+    }
+
+    // TWI_130 Bo-Katan Kryze (Death Watch Lieutenant) — "While you control another Trooper unit, this
+    // unit gets +1/+0."
+    if (this.cardId === "TWI_130" && !this.LostAbilities()
+      && GetUnitsForPlayer(this.controller).some(u => u.playId !== this.playId && TraitContains(u.cardId, "Trooper", this.controller, u.playId))) {
+      power += 1;
     }
 
     // Wroshyr Rebel — "This unit gets +1/+0 for every 2 resources you control." Ready or exhausted,
@@ -490,7 +504,7 @@ export class Unit implements UnitInterface {
        }
     }
 
-    hp += selfStatBonus(this);
+    hp += selfStatBonus(this) + supremacyBonus(this);
     hp += friendlyAuraBonus(this);
     hp -= enemyAuraDebuff(this);
     hp -= friendlyAuraDebuff(this);
@@ -508,6 +522,18 @@ export class Unit implements UnitInterface {
     }
 
     if (this.cardId === "SHD_056" && this.upgrades.length > 0) {
+      hp += 1;
+    }
+
+    // TWI_092 Admiral Yularen (Advising Caution) — "Each other friendly Heroism unit gets +0/+1."
+    if (CardAspects(this.cardId).includes("Heroism")) {
+      hp += GetUnitsForPlayer(this.controller).filter(u => u.cardId === "TWI_092" && u.playId !== this.playId
+        && !Unit.FromInterface(u).LostAbilities()).length;
+    }
+
+    // Emperor's Royal Guard — "While you control Emperor Palpatine (as a leader or unit), this unit
+    // gets +0/+1." Any printing with that title, in the leader zone or in play.
+    if (this.cardId === "SOR_082" && !this.LostAbilities() && PlayerControlsCardWithTitle(this.controller, "Emperor Palpatine")) {
       hp += 1;
     }
 
@@ -569,6 +595,7 @@ export class Unit implements UnitInterface {
 
       switch (effect.cardId) {
         case "SHD_006"://Jabba The Hutt - His High Exaltness's
+        case "SHD_031"://The Client - Dictated by Discretion
           return true;
         default: break;
       }
@@ -632,6 +659,13 @@ function otherFriendlyPilotCount(controller: PlayerId, selfPlayId: string): numb
  * to both power and HP. Kept in one helper called from CurrentPower and TotalHP so a +X/+X can
  * never end up applied to only one half.
  */
+/** LOF_089 Supremacy — "Other friendly Vehicle units get +6/+6." One +6/+6 per Supremacy out. */
+function supremacyBonus(unit: Unit): number {
+  if (!TraitContains(unit.cardId, "Vehicle", unit.controller, unit.playId)) return 0;
+  return 6 * GetUnitsForPlayer(unit.controller).filter(u => u.cardId === "LOF_089" && u.playId !== unit.playId
+    && !Unit.FromInterface(u).LostAbilities()).length;
+}
+
 function selfStatBonus(unit: Unit): number {
   if (unit.LostAbilities()) return 0;
   switch (unit.cardId) {
@@ -641,6 +675,9 @@ function selfStatBonus(unit: Unit): number {
     // TWI_240 332nd Stalwart — "Coordinate — This unit gets +1/+1."
     case "TWI_240":
       return IsCoordinateActive(unit.controller) ? 1 : 0;
+    // LOF_062 Axe Woves — "This unit gets +1/+1 for each upgrade on him."
+    case "LOF_062":
+      return unit.upgrades.length;
     // JTL_115 Clone Combat Squadron — "+1/+1 for each other friendly space unit."
     case "JTL_115":
       return otherFriendlySpaceUnitCount(unit);
@@ -648,6 +685,7 @@ function selfStatBonus(unit: Unit): number {
     // The upgrade half counts a Force upgrade attached anywhere on your board, including to a
     // unit that is not itself a Force unit.
     case "TWI_058":
+    case "LOF_060": // Padawan Starfighter (LOF printing) — same text
       return GetUnitsForPlayer(unit.controller).some(
         u => TraitContains(u.cardId, "Force", unit.controller, u.playId)
           || (u.upgrades ?? []).some(up => TraitContains(up.cardId, "Force", u.controller, up.playId)),

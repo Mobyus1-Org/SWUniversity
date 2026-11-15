@@ -71,6 +71,9 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
         return PlayerHasUnitWithTraitInPlay(player, "Vehicle", true, playId);
       case "JTL_249"://Millennium Falcon
         return playedFrom === "Hand";
+      case "SHD_204"://Millennium Falcon (Lando's Pride) — "If you play this unit from your hand, it gains Ambush."
+        if (playedFrom === "Hand") return true;
+        break;
       case "HMW_118"://Ryyk Blademaster — "while you control 6 or more resources"; control, not ready
         return GetResources(player).length >= 6;
       case "TWI_106"://Coruscant Guard

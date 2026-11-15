@@ -290,6 +290,15 @@ export const Cards = {
       weakness: "HMW_T02",    // -1/-1 upgrade token (Condition)
     },
     sor: {
+      fettsFirespray: "SOR_184",       // 5/6 Space — WP: ready if you control Boba/Jango; Action [2]: exhaust a non-unique unit
+      emperorsRoyalGuard: "SOR_082",   // 3/4 Ground — Sentinel with an Official; +0/+1 with Emperor Palpatine
+      agentKallus: "SOR_115",          // 4/4 Ground — Ambush; another unique unit defeated: may draw (once/round)
+      benthicTwoTubes: "SOR_156",      // 2/2 Ground — On Attack: another friendly Aggression unit gains Raid 2 this phase
+      wolffe: "SOR_160",               // 3/2 Ground — Saboteur; WP/OA: bases can't be healed this phase
+      bibFortuna: "SOR_177",           // 1/3 Ground — Shielded; Action [Exhaust]: play an event for 1 less
+      bosskDeadlyStalker: "SOR_182",   // 4/5 Ground — Ambush; you play an event: may deal 2 to a unit
+      chimaeraFlagship: "SOR_185",     // 8/7 Space — Shielded; On Attack: name a card, opponent discards it
+      hanSoloReluctantHero: "SOR_198", // 6/6 Ground — Ambush; deals combat damage first while attacking
       consularSecurityForce: "SOR_046", // 3/7 Ground, no abilities — a durable test defender
       cantinaBraggart: "SOR_157",       // Raid 2
       c3po: "SOR_238", // 1/4 Ground — WP/OA: choose a number, draw the top card on a cost match
@@ -409,6 +418,42 @@ export const Cards = {
       seventhSister: "SOR_133",
     },
     shd: {
+      roseTico: "SHD_045",             // 2/6 Ground — Shielded; OA: may defeat a friendly Shield → 2 XP to that unit
+      gentleGiant: "SHD_048",          // 2/8 Ground — Grit; OA: may heal another unit by this unit's damage
+      val: "SHD_058",                  // 2/4 Ground — Bounty: 3 damage to a unit; WD: 2 XP to a friendly unit
+      phaseIIIDarkTrooper: "SHD_084",  // 3/3 Ground — Sentinel; combat damage dealt & survives: XP to itself
+      finalizer: "SHD_092",            // 11/11 Space — Overwhelm; WP: chosen friendly units each capture in their arena
+      freetownBackup: "SHD_097",       // 1/4 Ground — OA: another friendly unit +2/+2 this phase; Smuggle
+      generalRieekan: "SHD_103",       // 5/7 Ground — WP/OA: friendly unit: XP if Sentinel, else Sentinel this phase
+      enterprisingLackeys: "SHD_107",  // 5/5 Ground — WD: may defeat a friendly resource → this becomes a resource
+      privateerCrew: "SHD_113",        // 2/2 Ground — played using Smuggle: 3 XP to itself
+      kihraxzHeavyFighter: "SHD_118",  // 3/3 Space — Overwhelm; OA: may exhaust another friendly unit → +3/+0
+      arquitensAssaultCruiser: "SHD_122", // 7/8 Space — Ambush; attacks & defeats a non-leader → it becomes your resource
+      jangoFettRenowned: "SHD_138",    // 3/6 Ground — +3/+0 & Overwhelm vs a Bounty unit; attacks & defeats: draw
+      trandoshanHunters: "SHD_140",    // 6/4 Ground — Overwhelm; WP: XP to itself if an enemy unit has a Bounty
+      cassianAndorRebellions: "SHD_148", // 3/5 Ground — played using Smuggle: ready
+      valiantAssaultShip: "SHD_151",   // 3/4 Space — Saboteur; OA: +2/+0 if the defender controls more resources
+      wreckerBoom: "SHD_154",          // 7/6 Ground — Overwhelm; WP: may defeat a friendly resource → 5 to a ground unit
+      wildRancor: "SHD_158",           // 6/8 Ground — Overwhelm; WP: 2 damage to each other ground unit
+      stolenLandspeeder: "SHD_161",    // 3/2 Ground — WP from hand: opponent takes it; Bounty: owner replays it
+      unlicensedHeadhunter: "SHD_165", // 3/2 Space — Saboteur; exhausted: Bounty — heal 5 from your base
+      covetousRivals: "SHD_171",       // 5/5 Ground — Grit; WP/OA: may deal 2 to a unit with a Bounty
+      xanaduBlood: "SHD_191",          // 4/6 Space — Raid 2; WP/OA: may bounce a friendly Underworld → exhaust enemy unit/resource
+      drydenVos: "SHD_192",            // 5/7 Ground — Shielded; WP: may play a captured card you guard, free
+      principledOutlaw: "SHD_201",     // 4/4 Ground — OA: may exhaust a ground unit; Smuggle
+      zoriiBliss: "SHD_203",           // 4/7 Ground — OA: draw; at regroup start, discard a card; Smuggle
+      smugglersStarfighter: "SHD_215", // 2/2 Space — WP: with another Underworld unit, an enemy unit –3/–0
+      chainCodeCollector: "SHD_216",   // 4/2 Ground — Ambush; OA: a Bounty defender gets –4/–0
+      enfysNestMarauder: "SHD_219",    // 5/4 Ground — Ambush; friendly Ambush attacks: defender –3/–0
+      fennecShandLoyal: "SHD_220",     // 4/6 Ground — Ambush; OA: 1 damage to the defender per distinct discard cost
+      gideonsLightCruiser: "SHD_242",  // 7/8 Space — Overwhelm; WP: with Moff Gideon, play a Villainy unit ≤3 free
+      wookieeWarrior: "SHD_249",       // 2/5 Ground — Grit; WP: draw if you control another Wookiee
+      tarfful: "SHD_250",              // 3/9 Ground — Restore 2; friendly Wookiee survives combat damage: it deals that to an enemy ground unit
+      theClient: "SHD_031",            // 2/5 Ground — Shielded; Action [Exhaust]: a unit gains "Bounty — heal 5 from a base"
+      lomPyke: "SHD_032",              // 4/6 Ground — On Attack: Shield an enemy, then a friendly unit; Smuggle
+      synaraSan: "SHD_033",            // 3/6 Ground — Grit; while exhausted: "Bounty — deal 5 damage to a base"
+      clanSaxonGauntlet: "SHD_035",    // 4/5 Space — Sentinel; when attacked: may give an XP token to a unit
+      kuiil: "SHD_041",                // 2/3 Ground — Restore 1; On Attack: discard top card, return if it shares a base aspect
       maul: "SHD_090",        // 7/6 Ground — Ambush, Overwhelm
       migsMayfeldTriggerman: "SHD_163",
       streetGangRecruiter: "SHD_260", // 4/4 Ground — WP: may return an Underworld card from discard
@@ -475,6 +520,10 @@ export const Cards = {
       ig11: "SHD_170",
     },
     jtl: {
+      directorKrennicVerge: "JTL_032",    // 2/2 Ground — Shielded; first WD unit each round costs 1 less
+      tamRyvora: "JTL_035",               // pilot — grants OA: enemy unit in this arena –1/–1
+      idenVersioAdapt: "JTL_036",         // pilot — when it attaches: Shield the host
+      corvus: "JTL_038",                  // 4/5 Space — Restore 2; WP: may attach a friendly Pilot
       annihilator: "JTL_041", // Tagge's Flagship — 12/12 Space, WP/WD: defeat + discard by name
       tieBomber: "JTL_237", // -/4 Space — On Attack: 3 indirect damage (reprint of JTL_149)
       goldLeader: "JTL_054", // 5/5 Space — Shielded; attacker gets -1/-0 while it defends
@@ -544,6 +593,32 @@ export const Cards = {
       phoenixSquadronAWing: "JTL_095", // 2-cost Space Vehicle, no abilities — a cheap pilot host
       chewbacca: "JTL_103", // Faithful First Mate — grants "can't be defeated/returned by enemy abilities"
       darthVaderScourgeOfSquadrons: "JTL_142", // Piloting 3 — grants the host an On Attack
+      fleetInterdictor: "JTL_040",
+      cassianAndor: "JTL_048",
+      theGhost: "JTL_053",
+      astromechPilot: "JTL_057",
+      traceMartez: "JTL_066",
+      cr90ReliefRunner: "JTL_071",
+      wingGuardSecurityTeam: "JTL_072",
+      executor: "JTL_090",
+      leiaOrgana: "JTL_097",
+      theStarhawk: "JTL_105",
+      seasonedFleetAdmiral: "JTL_111",
+      generalHux: "JTL_134",
+      decimatorOfDissidents: "JTL_138",
+      dengar: "JTL_139",
+      ig88: "JTL_141",
+      profundity: "JTL_154",
+      atDPOccupier: "JTL_163",
+      insurgentSaboteurs: "JTL_168",
+      bossk: "JTL_187",
+      bobaFett: "JTL_189",
+      hanSolo: "JTL_203",
+      homeOne: "JTL_204",
+      boshek: "JTL_215",
+      contractedHunter: "JTL_216",
+      tantiveIV: "JTL_252",
+      retrofittedAirspeeder: "JTL_259",
     },
     lof: {
       aurraSingPatientAndDeadly: "LOF_179", // 1/4 Ground, Cunning/Villainy, Hidden + Raid
@@ -595,8 +670,53 @@ export const Cards = {
       heavyMissileGunship: "LOF_134", // 4/3 Space Separatist/Droid, Action: 2 dmg to a ground unit
       scythe: "LOF_135", // 3/5 Space Imperial/Inquisitor, On Attack +2/+0 to another Inquisitor
       awakenedSpecters: "LOF_066", // 4/5 Ground Night — no card text, a plain Night body
+      pongKrell: "LOF_038",
+      darthSidious: "LOF_039",
+      owenLars: "LOF_057",
+      padawanStarfighter: "LOF_060",
+      axeWoves: "LOF_062",
+      chirrutImwe: "LOF_067",
+      drengirSpawn: "LOF_086",
+      eighthBrother: "LOF_087",
+      supremacy: "LOF_089",
+      kaadu: "LOF_114",
+      thePurrgilKing: "LOF_121",
+      savageOpress: "LOF_137",
     },
     twi: {
+      ahsokaTanoUnit: "TWI_194",           // Jedi unit — Ahsoka Tano by title
+      calculatingMagnaGuard: "TWI_033",   // 3/4 Ground — WP / friendly unit defeated: Sentinel this phase
+      morganElsbethKeeper: "TWI_035",     // 3/6 Ground — Restore 1; OA: may defeat another friendly unit → draw
+      devastatingGunship: "TWI_036",      // 3/5 Space — Grit; WP: defeat an enemy with ≤2 remaining HP
+      providenceDestroyer: "TWI_038",     // 5/7 Space — Exploit 2; OA: enemy space unit –2/–2
+      malevolence: "TWI_039",             // 7/7 Space — Exploit 4, Restore 2; WP: enemy –4/–0 and can't attack
+      outspokenRepresentative: "TWI_043", // 0/3 Ground — Sentinel w/ Republic; WD: Clone Trooper
+      kashyyykDefender: "TWI_044",        // 0/5 Ground — Grit; WP: heal ≤2 from another unit, take that much
+      captainTypho: "TWI_046",            // 2/4 Ground — WP/OA: a unit gains Sentinel this phase
+      luminaraUnduliSoftSpoken: "TWI_050", // 4/9 Ground — Coordinate Grit; WP: heal a base 1 per friendly unit
+      multiTroopTransport: "TWI_066",     // 3/6 Ground — Exploit 2; OA: Battle Droid
+      admiralYularenAdvising: "TWI_092",  // 2/5 Ground — Restore 1; other friendly Heroism units +0/+1
+      republicDefenseCarrier: "TWI_098",  // 6/7 Space — Sentinel; 1 less per enemy unit
+      obedientVanguard: "TWI_104",        // 1/1 Ground — Raid 1; WD: may give a Trooper +2/+2
+      osiSobeck: "TWI_115",               // 3/6 Ground — Exploit 3; WP: capture a ground unit costing ≤ resources paid
+      boKatanDeathWatch: "TWI_130",       // 2/3 Ground — +1/+0 with another Trooper
+      asajjVentressAssassin: "TWI_134",   // 2/4 Ground — Exploit 2; OA: +3/+0 if another Separatist attacked
+      countDookuFallenJedi: "TWI_138",    // 6/6 Ground — Exploit 2, Overwhelm; WP: exploited powers as damage
+      jesse: "TWI_145",                   // 4/4 Ground — Raid 1; WP: opponent creates 2 Battle Droids
+      senatorialCorvette: "TWI_148",      // 5/4 Space — Saboteur; WD: each opponent discards a card
+      lowAltitudeGunship: "TWI_149",      // 6/5 Ground — Overwhelm; WP: 1 damage per friendly Republic unit
+      sawGerreraResistance: "TWI_150",    // 4/8 Ground — Raid 2; OA: at 15+ base damage, 1 to each enemy ground unit
+      hevy: "TWI_164",                    // 4/4 Ground — Coordinate Raid 2; WD: 1 to each enemy ground unit
+      aurraSingCrackshot: "TWI_166",      // 7/6 Ground — Overwhelm; enemy ground unit attacks your base: ready
+      heavyPersuaderTank: "TWI_167",      // 6/5 Ground — Exploit 2; WP: may deal 2 to a ground unit
+      rushClovisScion: "TWI_183",         // 3/5 Ground — Raid 2; OA: Battle Droid if defender has no ready resources
+      tacticalDroidCommander: "TWI_184",  // 4/4 Ground — Exploit 2; play another Separatist: may exhaust a cheaper unit
+      enfysNestChampion: "TWI_198",       // 5/7 Ground — Saboteur; WP/OA: may bounce a weaker enemy non-leader
+      geonosisPatrolFighter: "TWI_215",   // 3/2 Space — Exploit 2; WP: may bounce a non-leader costing ≤3
+      fives: "TWI_216",                   // 5/5 Ground — Saboteur; you play an event: may recycle a Clone → draw
+      triDroidSuppressor: "TWI_217",      // 4/7 Ground — Exploit 2; WP: exhaust an enemy ground unit
+      battleDroidLegion: "TWI_235",       // 6/5 Ground — Exploit 2; WD: 3 Battle Droids
+      atteVanguard: "TWI_247",            // 6/9 Ground — Restore 3; WD: 2 Clone Troopers
       jarJarBinks: "TWI_202",     // Foolish Gungan — 2/3 Ground, cost 2 Cunning×2, unique
       patrollingVWing: "TWI_107", // reprint of SOR_111 — When Played: draw a card
       volunteerSoldier: "TWI_254", // reprint of SOR_248 — Raid 1; costs 1 less with a Trooper
@@ -648,6 +768,7 @@ export const Cards = {
     },
     sec: {
       craitVeteran: "SEC_251", // 4/3 Ground Resistance/Trooper, cost 3, no text
+      jarJarBinksMesaPropose: "SEC_111", // 2/1 Ground, cost 2 — WP: may give another friendly unit +2/+2; Plot
       queenAmidala: "SEC_101", // Championing Her People — 5/3 Ground, Naboo/Official
       populistChampion: "SEC_044", // 3/5 Ground New Republic/Official, cost 3, no text
       supremeCouncilAide: "SEC_237", // 2/2 Ground First Order/Official, cost 1, no text
@@ -1067,6 +1188,16 @@ export const Cards = {
       fallenLightsaber: "SOR_137",
     },
     shd: {
+      topTarget: "SHD_071",            // Bounty — heal 4 (6 if unique) from a unit or base
+      vambraceGrappleshot: "SHD_074",  // +2/+2 non-Vehicle — attached unit gains "On Attack: exhaust the defender"
+      bountyHuntersQuarry: "SHD_123",  // Bounty — search 5 (10 if unique) for a unit ≤3, play it free
+      priceOnYourHead: "SHD_125",      // Bounty — top card of your deck becomes a resource
+      deathMark: "SHD_176",            // Bounty — draw 2
+      enticingReward: "SHD_222",       // Bounty — search 10 for 2 non-units, draw; non-unique: discard 1
+      bobaFettsArmor: "SHD_224",       // +2/+2 — on Boba Fett, prevent 2 of each damage
+      jetpack: "SHD_225",              // +2/+0 — WP: a Shield, defeated at regroup start; Smuggle
+      theMandaloriansRifle: "SHD_251", // +3/+0 — WP: on The Mandalorian, capture an exhausted enemy non-leader
+      richReward: "SHD_261",           // Bounty — XP to each of up to 2 units
       inspiringMentor: "SHD_104", // grants On Attack/When Defeated: XP to another friendly unit
       legalAuthority: "SHD_124",
       publicEnemy: "SHD_068",
@@ -1099,6 +1230,8 @@ export const Cards = {
       sithHolocron: "LOF_138", // +1/+1, attaches to a Force unit, grants an On Attack
       battleFury: "LOF_139", // +3/+3, grants "On Attack: Discard a card from your hand."
       inquisitorsLightsaber: "LOF_090", // +1/+3 Lightsaber, attaches to any non-Vehicle unit
+      kyloRensLightsaber: "LOF_040",
+      pillioStarCompass: "LOF_122",
     },
     ash: {
       gravCharge: "ASH_085",
@@ -1118,6 +1251,13 @@ export const Cards = {
       theWayOfTheMandalor: "ASH_263",
     },
     twi: {
+      forTheRepublic: "TWI_051",          // +2/+2 — 2 less with 3 Republic units; grants Coordinate — Restore 2
+      namelessValor: "TWI_119",           // +2/+2 — attach to a token unit; Overwhelm
+      generalsBlade: "TWI_121",           // +3/+3 — Jedi host gains OA: next unit costs 2 less
+      cloneCohort: "TWI_169",             // +0/+0 — Raid 2 and WD: Clone Trooper
+      grievousWheelBike: "TWI_236",       // +3/+3 — 2 less on General Grievous; Overwhelm
+      ahsokasPadawanLightsaber: "TWI_248", // +2/+0 — WP on Ahsoka: may attack with a unit
+      holdOutBlaster: "TWI_256",          // +1/+0 — WP: may have the host deal 1 to a ground unit
       droidCohort: "TWI_218",        // +1/+1 — attached unit gains "When Defeated: Create a Battle Droid token"
       rogerRoger: "TWI_069",
       perilousPosition: "TWI_070",   // -2/-2, no attach restriction
@@ -1157,6 +1297,9 @@ export const Cards = {
   },
   events: {
     shd: {
+      covertStrength: "SHD_075",       // heal 2 from a unit + XP; Smuggle
+      commission: "SHD_127",           // search 10 for a Bounty Hunter / Item / Transport, draw it; Smuggle
+      smugglersAid: "SHD_252",         // heal 3 from your base; Smuggle
       outflank: "SHD_128",       // Attack with 2 units (one at a time)
       theChaosOfWar: "SHD_159",
       spareTheTarget: "SHD_206",
@@ -1246,6 +1389,10 @@ export const Cards = {
       cunning: "SOR_203",
     },
     twi: {
+      guardingTheWay: "TWI_074",          // Sentinel this phase; +2/+2 with the initiative
+      inDefenseOfKamino: "TWI_129",       // friendly Republic units: Restore 2 + WD Clone Trooper this phase
+      heroesOnBothSides: "TWI_249",       // up to 1 Republic + 1 Separatist: +2/+2 and Saboteur
+      swordAndShieldManeuver: "TWI_250",  // Troopers Raid 1, Jedi Sentinel this phase
       tacticalAdvantage: "TWI_124", // reprint of SOR_124
       resupply: "TWI_127", // reprint of SOR_126
       nowThereAreTwoOfThem: "TWI_225", // play a trait-sharing non-Vehicle unit for 5 less
@@ -1315,6 +1462,8 @@ export const Cards = {
       outTheAirlock: "JTL_079",
       scrambleFighters: "JTL_092",
       airSuperiority: "JTL_125", // cost 2 Command Tactic
+      timelyReinforcements: "JTL_130",
+      diversion: "JTL_229",
     },
     ts26: {
       backedByThePykes: "TS26_58",
@@ -1389,6 +1538,7 @@ export const Cards = {
       deathField: "LOF_141",
       drainEssence: "LOF_041",
       lightsaberThrow: "LOF_176",
+      overpower: "LOF_126",
     },
     ibh: {
       recovery: "IBH_013",

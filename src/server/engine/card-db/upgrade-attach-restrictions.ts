@@ -85,6 +85,8 @@ export function UpgradeEligibleTargets(
       return everyone.filter(u => !TraitContains(u.cardId, "Vehicle", u.controller, u.playId)).map(u => u.playId);
 
     // "Attach to a damaged unit."
+    case "TWI_119": //Nameless Valor — "Attach to a token unit."
+      return everyone.filter(u => /_T\d/.test(u.cardId)).map(u => u.playId);
     case "ASH_181": //Mark My Words
       return everyone.filter(u => u.damage > 0).map(u => u.playId);
 

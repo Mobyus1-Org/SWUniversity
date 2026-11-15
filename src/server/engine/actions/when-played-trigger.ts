@@ -1,11 +1,12 @@
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase, GivePowerMod, WhenPlayedLostWithWhenDefeated, UpgradesYouControl, FriendlyUnitsEnteredPlayThisPhase } from "@/server/engine/core-functions";
+import { DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase, GivePowerMod, WhenPlayedLostWithWhenDefeated, UpgradesYouControl, FriendlyUnitsEnteredPlayThisPhase, PreventBaseHealingThisPhase, PlayerControlsCardWithTitle, UnitRemainingHp as UnitRemainingHpOf } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
 import { GiveTokenUpgrade, CreateSpy, CreateTieFighter, CreateBattleDroid, CreateCloneTrooper, CreateMandalorianToken, GiveAdvantageTokens, CreateXWing, GiveExperienceTokens, CreateBeast } from "@/server/engine/token-helpers";
+import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 
 /**
  * Cards whose When Played does something without asking the player anything — i.e. the
@@ -37,6 +38,20 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "IC27_163", // Bo-Katan Kryze (Right Place, Right Time) — each enemy unit –7/–0 this phase
   "IC27_029", // Chimaera — Experience per upgrade, then heal per friendly upgrade
   "HMW_080", // Fambaa Shield Team — Shield each unshielded friendly ground unit
+  "SOR_160", // Wolffe — bases can't be healed this phase
+  "JTL_090", // Executor — 3 TIE Fighter tokens
+  "JTL_098", // Snap Wexley (as a unit) — the next Resistance card this phase costs 1 less
+  "JTL_252", // Tantive IV — an X-Wing token
+  "LOF_121", // The Purrgil King — draw per friendly unit with 7+ remaining HP
+  "TWI_033", // Calculating MagnaGuard — gains Sentinel for this phase
+  "TWI_145", // Jesse — an opponent creates 2 Battle Droid tokens
+  "SHD_140", // Trandoshan Hunters — Experience token if an enemy unit has a Bounty
+  "SHD_249", // Wookiee Warrior — draw if you control another Wookiee unit
+  "SHD_113", // Privateer Crew — 3 Experience tokens (played using Smuggle only)
+  "SHD_148", // Cassian Andor (Rebellions Are Built On Hope) — ready (played using Smuggle only)
+  "SHD_158", // Wild Rancor — 2 damage to each other ground unit; resolved in dispatch-listener
+  "SHD_161", // Stolen Landspeeder — an opponent takes control of it; resolved in dispatch-listener
+  "SOR_184", // Fett's Firespray — ready itself if you control Boba Fett or Jango Fett
   "HMW_103", // Disposable B1 — draw if another friendly unit entered play this phase
   "HMW_144", // Howler Pack — create a Beast token
 ]);
@@ -74,6 +89,59 @@ export function resolveWhenPlayedTrigger(
       }
       break;
     }
+    case "JTL_090": // Executor — "When Played: Create 3 TIE Fighter tokens."
+      for (let i = 0; i < 3; i++) CreateTieFighter(gs, trigger.fromPlayer, log, "JTL_090");
+      break;
+    case "JTL_098": // Snap Wexley — "When played as a unit: The next Resistance card you play this phase costs 1 less."
+      gs.currentEffects.push({ cardId: "JTL_098_next_resistance", duration: "Phase", affectedPlayer: trigger.fromPlayer });
+      break;
+    case "JTL_252": // Tantive IV — "When Played: Create an X-Wing token."
+      CreateXWing(gs, trigger.fromPlayer, log, "JTL_252");
+      break;
+    case "LOF_121": { // The Purrgil King — "When Played: Draw a card for each friendly unit with 7 or more remaining HP."
+      const big121 = [...player.groundArena, ...player.spaceArena].filter(u => UnitRemainingHpOf(u) >= 7).length;
+      for (let i = 0; i < big121; i++) DrawCardForPlayer(gs, log, trigger.fromPlayer);
+      break;
+    }
+    case "TWI_033": // Calculating MagnaGuard — "When Played: This unit gains Sentinel for this phase."
+      if (trigger.playId) gs.currentEffects.push({ cardId: "TWI_033", duration: "Phase", affectedPlayer: trigger.fromPlayer, targetPlayId: trigger.playId });
+      break;
+    case "TWI_145": // Jesse — "When Played: An opponent creates 2 Battle Droid tokens."
+      CreateBattleDroid(gs, trigger.fromPlayer === 1 ? 2 : 1, log, "TWI_145");
+      CreateBattleDroid(gs, trigger.fromPlayer === 1 ? 2 : 1, log, "TWI_145");
+      break;
+    case "SHD_140": { // Trandoshan Hunters — "When Played: If an enemy unit has a Bounty, give an
+                      // Experience token to this unit."
+      const self140 = trigger.playId ? GetUnitByPlayId(gs, trigger.playId) : null;
+      const bountied140 = [...otherPlayer.groundArena, ...otherPlayer.spaceArena]
+        .some(u => CountBounties(u.cardId, u.playId, u.controller) > 0);
+      if (self140 && bountied140) GiveExperienceTokens(gs, self140, 1, log, trigger.fromPlayer, "SHD_140");
+      break;
+    }
+    case "SHD_249": // Wookiee Warrior — "When Played: If you control another Wookiee unit, draw a card."
+      if ([...player.groundArena, ...player.spaceArena].some(u => u.playId !== trigger.playId
+        && TraitContains(u.cardId, "Wookiee", trigger.fromPlayer, u.playId))) DrawCardForPlayer(gs, log, trigger.fromPlayer);
+      break;
+    case "SHD_113": { // Privateer Crew — "When played using Smuggle: Give 3 Experience tokens to this unit."
+      const self113 = trigger.playId ? GetUnitByPlayId(gs, trigger.playId) : null;
+      if (self113) GiveExperienceTokens(gs, self113, 3, log, trigger.fromPlayer, "SHD_113");
+      break;
+    }
+    case "SHD_148": { // Cassian Andor — "When played using Smuggle: Ready this unit."
+      const self148 = trigger.playId ? GetUnitByPlayId(gs, trigger.playId) : null;
+      if (self148) ReadyUnit(gs, self148);
+      break;
+    }
+    case "SOR_184": { // Fett's Firespray — "When Played: If you control Boba Fett or Jango Fett (as a
+                      // leader or unit), ready this unit." By title, so any printing counts.
+      if (!PlayerControlsCardWithTitle(trigger.fromPlayer, "Boba Fett") && !PlayerControlsCardWithTitle(trigger.fromPlayer, "Jango Fett")) break;
+      const self184 = trigger.playId ? GetUnitByPlayId(gs, trigger.playId) : null;
+      if (self184 && ReadyUnit(gs, self184)) log.push(`${CardTitle("SOR_184")}: readied itself.`);
+      break;
+    }
+    case "SOR_160": // Wolffe — "When Played: Bases can't be healed for this phase."
+      PreventBaseHealingThisPhase(gs, trigger.fromPlayer, log);
+      break;
     case "HMW_103": // Disposable B1 — "If another friendly unit entered play this phase (including
                     // leader and token units), draw a card." The ledger already holds the B1 itself.
       if (FriendlyUnitsEnteredPlayThisPhase(trigger.fromPlayer).some(id => id !== trigger.playId)) {

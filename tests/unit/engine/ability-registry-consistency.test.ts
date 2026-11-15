@@ -97,7 +97,6 @@ const report = (ids: string[]) => ids.sort().map(label).join("\n  ");
 const KNOWN_GAPS: Record<"noExecution" | "noUiButton" | "deployedOnAttackUnregistered" | "onAttackNoHandler", string[]> = {
   // Leader Actions that still pay their cost and do nothing.
   noExecution: [
-    "SHD_006", // Jabba the Hutt — grant a Bounty that discounts your next unit
     "SOR_009", // Leia Organa — attack with a Rebel unit, then optionally another
   ],
   // Implemented in the engine but with no button in the Puzzles UI. Each is blocked on its
