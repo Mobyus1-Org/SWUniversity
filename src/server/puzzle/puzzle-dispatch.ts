@@ -708,7 +708,9 @@ function resolveAutoOption(
   }
   // SHD_068 Public Enemy's bounty gives a Shield to one of P2's own units. "soak" picks the one
   // best placed to survive, which is the most annoying place for the solver to find a Shield.
-  if (pending.type === "ability-target" && pending.cardId === "SHD_068" && pending.player === 2) {
+  // SHD_058 Val's When Defeated gives 2 Experience tokens to one of P2's own units — same reasoning.
+  if (pending.type === "ability-target" && pending.player === 2
+      && (pending.cardId === "SHD_068" || pending.cardId === "SHD_058_wd")) {
     const targetPlayId = pickOpponentOwnUnit(pending.fromPlayIds, gameState, "soak");
     return targetPlayId
       ? { dispatchType: "choose-target", dispatchData: { targetPlayIds: [targetPlayId] } }

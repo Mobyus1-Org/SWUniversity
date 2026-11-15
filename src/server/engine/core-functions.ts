@@ -4283,6 +4283,19 @@ export function mandatoryTarget(
 }
 
 /**
+ * mandatoryTarget over units in play. Use it for a prompt that can be queued behind another
+ * ability — a When Defeated waiting on a Bounty — which may defeat the units it was built from.
+ */
+export function mandatoryUnitTarget(
+  cardId: string,
+  player: PlayerId,
+  fromPlayIds: string[],
+  continuation: PendingResolution | null = null,
+): AbilityTargetPending {
+  return { ...mandatoryTarget(cardId, player, fromPlayIds, continuation), unitsInPlay: true };
+}
+
+/**
  * Darth Nihilus (SEC_244) "Deal 3 damage to the unit with the least remaining HP among other
  * units. (If multiple units are tied, choose one.) If it's a non-Vehicle unit, give an Experience
  * token to this unit." Shared by his When Played and his On Attack.

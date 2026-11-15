@@ -77,6 +77,13 @@ export interface AbilityTargetPending {
    * per-resource discount for each of the `defeated`, and put into play.
    */
   resourceDefeatPlay?: { fullCost: number; remaining: number; defeated: number };
+  /**
+   * `fromPlayIds` are units in play, snapshotted when the prompt was built. A prompt queued behind
+   * another ability (Val's When Defeated behind her own Bounty) can outlive some of them, so the
+   * dispatch exit drops any that have left play, and skips the prompt once none remain. See
+   * mandatoryUnitTarget.
+   */
+  unitsInPlay?: boolean;
   continuation: PendingResolution | null;
 }
 

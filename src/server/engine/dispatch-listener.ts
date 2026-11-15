@@ -25083,20 +25083,32 @@ function enforceUniqueness(game: GameState, actingPlayer: PlayerId, result: Hand
 function skipUnsatisfiableDiscards(game: GameState, log: string[], result: HandlerResult): HandlerResult {
   let current = result;
 
-  // A forced discard from an empty hand, or an HMW_008 offer with no unit left to pay for: neither
-  // can ever be answered, so it resolves as "nothing" and play moves on.
+  // A unit-target prompt built before something else resolved (Val's When Defeated, queued behind
+  // her Bounty) can list units that have since left play. Drop those before the prompt is shown.
+  const pruneLeftPlay = (p: PendingResolution | null) => {
+    if (p?.type !== "ability-target" || !p.unitsInPlay) return;
+    const inPlay = new Set(GetAllUnits(game).map(u => u.playId));
+    p.fromPlayIds = p.fromPlayIds.filter(id => inPlay.has(id));
+  };
+
+  // A forced discard from an empty hand, an HMW_008 offer with no unit left to pay for, or a
+  // unit-target prompt whose every unit has left play: none can ever be answered, so each resolves
+  // as "nothing" and play moves on.
   const unsatisfiable = (p: PendingResolution | null): string | null => {
     if (p?.type === "discard-from-hand" && GetPlayer(game, p.targetPlayer).hand.length === 0)
       return `Player ${p.targetPlayer} has no cards to discard.`;
     if (p?.type === "play-from-hand" && p.cardId === "HMW_008" && PlayableUnitHandIndices(game, p.player).length === 0)
       return `${CardTitle("HMW_008")}: no unit left to play.`;
+    pruneLeftPlay(p);
+    if (p?.type === "ability-target" && p.unitsInPlay && p.fromPlayIds.length === 0)
+      return `${CardTitle(p.cardId.match(/^[A-Z0-9]+_\d+/)?.[0] ?? p.cardId)}: no unit left to choose.`;
     return null;
   };
   for (let why = unsatisfiable(current.pending); why; why = unsatisfiable(current.pending)) {
     log.push(why);
 
-    // Both shapes that reach here carry an optional continuation.
-    const skipped = current.pending as DiscardFromHandPending | PlayFromHandPending;
+    // Every shape that reaches here carries an optional continuation.
+    const skipped = current.pending as DiscardFromHandPending | PlayFromHandPending | AbilityTargetPending;
     const next = skipped.continuation ?? null;
     if (next) {
       current = { response: resolutionResponse(pendingToResolution(next, game)), pending: next, stateChanged: current.stateChanged };
@@ -25111,6 +25123,11 @@ function skipUnsatisfiableDiscards(game: GameState, log: string[], result: Handl
 
     updateDefeatedPlayers(game);
     current = { response: stateResponse(game), pending: null, stateChanged: true };
+  }
+
+  // The prompt survived, but pruning may have shortened its list after the response was built.
+  if (current.pending?.type === "ability-target" && current.pending.unitsInPlay) {
+    current = { ...current, response: resolutionResponse(pendingToResolution(current.pending, game)) };
   }
 
   return current;

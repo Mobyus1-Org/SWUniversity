@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { AbilityTargetPending, DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { AhsokasLightsabersOffer, WhenDefeatedAbilitiesSuppressed, buildAnnihilatorOffer, UnitTraits, AllUnits, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains, buildThrawnExperience, negotiatorResourceShuffle, ProfundityChoice, SavageOpressChoice } from "@/server/engine/core-functions";
+import { AhsokasLightsabersOffer, WhenDefeatedAbilitiesSuppressed, buildAnnihilatorOffer, UnitTraits, AllUnits, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, mandatoryUnitTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains, buildThrawnExperience, negotiatorResourceShuffle, ProfundityChoice, SavageOpressChoice } from "@/server/engine/core-functions";
 import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardCost, CardIsUnique, CardPower, CardTitle, CardType } from "@/server/engine/card-db/generated";
@@ -381,7 +381,8 @@ function resolveOwnWhenDefeated(
     case "SHD_058": { // Val — "When Defeated: Give 2 Experience tokens to a friendly unit." Mandatory.
       const friends058 = GetUnitsForPlayer(player);
       if (friends058.length === 0) return null;
-      return mandatoryTarget("SHD_058_wd", player, friends058.map(u => u.playId));
+      // Collected first, her own Bounty can defeat the friendly units listed here.
+      return mandatoryUnitTarget("SHD_058_wd", player, friends058.map(u => u.playId));
     }
     case "HMW_109": { // Tireless Magnaguard — "If this unit had 5 or more power, for this phase you may
                       // play this unit from your discard pile for free and give 2 Weakness tokens
