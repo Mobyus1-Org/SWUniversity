@@ -323,6 +323,10 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
       case "IC27_008": // Princess Leia — Action [1 resource, Exhaust]: draw + top/bottom, unconditional.
         abilities.push(cardId);
         break;
+      case "ASH_002": // Fennec Shand — Action [1 resource, Exhaust, exhaust a friendly unit]: the friendly unit is
+                      // part of the cost, so a ready one gates availability.
+        if (GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
+        break;
       case "IC27_001": // Darth Vader — Action [1 resource, Exhaust, defeat a friendly unit]: the
                        // friendly unit is part of the cost, so it gates availability.
         if (GetUnitsForPlayer(player).length > 0) abilities.push(cardId);
@@ -481,6 +485,9 @@ export function ActionAbilities(cardId: string, player: PlayerId, playId?: strin
     if(unit.LostAbilities()) return abilities;
 
     switch (cardId) {
+      case "ASH_002": //Fennec Shand (deployed) - Action [1 resource, exhaust a friendly unit]: play a unit; it enters ready
+        if (GetUnitsForPlayer(player).some(u => u.ready)) abilities.push(cardId);
+        break;
       case "JTL_134": //General Hux - No Terms, No Surrender: Action [Exhaust]: draw if you played a First Order card this phase
       case "SOR_184": //Fett's Firespray - Action [2 resources]: exhaust a non-unique unit
       case "SOR_177": //Bib Fortuna - Jabba's Majordomo: Action [Exhaust]: play an event for 1 less
@@ -695,6 +702,7 @@ export function UpgradeGrantsHostAction(cardId: string): boolean {
   switch (cardId) {
     case "SHD_155": // Heroic Resolve — Action [2 resources, defeat a Heroic Resolve on this unit]
     case "TWI_120": // Strategic Acumen — Action [Exhaust]
+    case "LAW_126": // Adventurer Sniper Rifle — Action [Exhaust]
       return true;
     default:
       return false;
@@ -720,6 +728,9 @@ export function UpgradeGrantedUnitActions(player: PlayerId, playId: string): str
         break;
       case "TWI_120": // needs a unit in hand to play, and a ready host to exhaust
         if (unit.ready && GetHand(player).some(c => CardType(c.cardId) === "Unit")) ids.add(upg.cardId);
+        break;
+      case "LAW_126": // a ready host to exhaust
+        if (unit.ready) ids.add(upg.cardId);
         break;
       default:
         break;
@@ -898,6 +909,7 @@ export function ActionAbilityExhausts(abilityId: string): boolean {
     case "SHD_017":   // Lando Calrissian (deployed) — plain "Action:", limited once each round
     case "SHD_087-1": // Crosshair — "Action [2 resources]", no exhaust in the cost
     case "SOR_184":   // Fett's Firespray — "Action [2 resources]", no exhaust in the cost
+    case "ASH_002":   // Fennec Shand (deployed) — "[1 resource, exhaust a friendly unit]"; leader side exhausts inline
     case "IC27_120":  // Rey (Embracing Destiny) — "[1 resource, discard a card]", no exhaust
     case "LAW_015":   // Jabba the Hutt (deployed) — plain "Action:"; the undeployed side's
                       // "[1 resource, Exhaust, …]" is charged on the leader path instead, which
@@ -945,6 +957,7 @@ export function ActionAbilityCost(cardId: string): number {
     case "SEC_002"://Jabba the Hutt - Wonderful Human Being: his deployed side has no Action
     case "LAW_005"://Jyn Erso - Time to Fight: her deployed side has no Action
       return 1;
+    case "ASH_002"://Fennec Shand - Ready for War: [1 resource] on both sides
     case "IC27_001"://Darth Vader - No One to Stop Us: his deployed side has no Action
     case "IC27_008"://Princess Leia - On a Diplomatic Mission: her deployed side has no Action
       return 1;

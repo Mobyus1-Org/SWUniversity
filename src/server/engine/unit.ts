@@ -1,5 +1,5 @@
 import { CardInPlay, CONDEMN_BLANK, HP_MOD, PHASE_STAT_MOD, POWER_MOD, PlayerId, Unit as UnitInterface } from "@/lib/engine/core-models";
-import { PlayerControlsCardWithTitle, GetCurrentEffectsForPlayer, EffectiveRaid, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard, UnitArenaOf, GetGame, UnitHasNoAbilities, TokenUnitAttackedThisPhase } from "@/server/engine/core-functions";
+import { BD1GrantActive, PlayerControlsCardWithTitle, GetCurrentEffectsForPlayer, EffectiveRaid, GetHand, GetUnitsForPlayer, GetLeaderForPlayer, GetResources, GetBaseDamage, LeaderAbilitiesIgnored, TraitContains, CardIsLeader, IsCoordinateActive, InitiativePlayer, HasTheForce, DistinctCostsInDiscard, UnitArenaOf, GetGame, UnitHasNoAbilities, TokenUnitAttackedThisPhase } from "@/server/engine/core-functions";
 import { CardArena, CardAspects, CardCost, CardHp, CardPower, CardTitle } from "@/server/engine/card-db/generated";
 import { UpgradeHpOf, UpgradePowerOf } from "@/server/engine/card-db/upgrade-stats";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
@@ -204,7 +204,7 @@ export class Unit implements UnitInterface {
       }
     }
 
-    power += selfStatBonus(this) + supremacyBonus(this);
+    power += selfStatBonus(this) + supremacyBonus(this) + fulcrumBonus(this);
     power += selfPowerOnlyBonus(this);
     power += friendlyAuraBonus(this);
     power -= enemyAuraDebuff(this);
@@ -233,6 +233,10 @@ export class Unit implements UnitInterface {
           power += GetUnitsForPlayer(this.controller).some(
             u => u.cardId === "TWI_110" && !Unit.FromInterface(u).LostAbilities(),
           ) ? 2 : 0;
+          break;
+        // LOF_191 BD-1 — "While this unit is in play, the chosen unit gets +1/+0" (and Saboteur, in saboteur.ts).
+        case "LOF_191":
+          power += BD1GrantActive(currentEffect) ? 1 : 0;
           break;
         case POWER_MOD: // generic +X/+0 or –X/–0 (HP untouched — see TotalHP, which ignores it)
           power += currentEffect.value ?? 0;
@@ -478,6 +482,8 @@ export class Unit implements UnitInterface {
     if (this.HasUpgrade("LOF_056")) { //Size Matters Not
       hp = 5;
     }
+    // LAW_126 Adventurer Sniper Rifle — "Its printed HP is considered to be 1 for this phase."
+    if (GetGame()?.currentGameState.currentEffects.some(e => e.cardId === "LAW_126" && e.targetPlayId === this.playId)) hp = 1;
 
     for(const unit of GetUnitsForPlayer(this.controller)) {
       const isOtherUnit = unit.playId !== this.playId;
@@ -504,7 +510,7 @@ export class Unit implements UnitInterface {
        }
     }
 
-    hp += selfStatBonus(this) + supremacyBonus(this);
+    hp += selfStatBonus(this) + supremacyBonus(this) + fulcrumBonus(this);
     hp += friendlyAuraBonus(this);
     hp -= enemyAuraDebuff(this);
     hp -= friendlyAuraDebuff(this);
@@ -660,6 +666,17 @@ function otherFriendlyPilotCount(controller: PlayerId, selfPlayId: string): numb
  * never end up applied to only one half.
  */
 /** LOF_089 Supremacy — "Other friendly Vehicle units get +6/+6." One +6/+6 per Supremacy out. */
+/**
+ * LAW_150 Fulcrum — attached unit gains the Rebel trait and "Each other friendly Rebel unit gets +2/+2."
+ * +2/+2 per Fulcrum on each OTHER friendly unit, for a Rebel.
+ */
+function fulcrumBonus(unit: Unit): number {
+  if (!TraitContains(unit.cardId, "Rebel", unit.controller, unit.playId)) return 0;
+  return GetUnitsForPlayer(unit.controller)
+    .filter(u => u.playId !== unit.playId && !Unit.FromInterface(u).LostAbilities())
+    .reduce((n, u) => n + 2 * u.upgrades.filter(x => x.cardId === "LAW_150").length, 0);
+}
+
 function supremacyBonus(unit: Unit): number {
   if (!TraitContains(unit.cardId, "Vehicle", unit.controller, unit.playId)) return 0;
   return 6 * GetUnitsForPlayer(unit.controller).filter(u => u.cardId === "LOF_089" && u.playId !== unit.playId

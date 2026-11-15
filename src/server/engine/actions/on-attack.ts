@@ -3,7 +3,7 @@ import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { CreateTieFighter } from "@/server/engine/token-helpers";
-import { DefeatableUpgradePlayIds, EnfysNest198Offer, CovetousRivalsOffer, XanaduBloodOffer, PreventBaseHealingThisPhase, BossNassOffer, IsResistanceOrResistanceUpgraded, MostPowerfulFriendlyVillainyUnits, GetUnitByPlayId, GetOtherPlayer, ReadyUnit, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage, FriendlyUnitsWithTrait, DiscardFromTopOfDeck, buildThrawnExperience, buildLeiaDrawAndReturn, buildHanTokenDefeat, buildMaulChoice, OtherFriendlyUnitsThatEnteredPlayThisPhase, LeaderAbilitiesIgnored, negotiatorResourceShuffle } from "@/server/engine/core-functions";
+import { AhsokasLightsabersOffer, NuteGunrayOffer, DefeatableUpgradePlayIds, EnfysNest198Offer, CovetousRivalsOffer, XanaduBloodOffer, PreventBaseHealingThisPhase, BossNassOffer, IsResistanceOrResistanceUpgraded, MostPowerfulFriendlyVillainyUnits, GetUnitByPlayId, GetOtherPlayer, ReadyUnit, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage, FriendlyUnitsWithTrait, DiscardFromTopOfDeck, buildThrawnExperience, buildLeiaDrawAndReturn, buildHanTokenDefeat, buildMaulChoice, OtherFriendlyUnitsThatEnteredPlayThisPhase, LeaderAbilitiesIgnored, negotiatorResourceShuffle } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles, AllCardTraits } from "@/server/engine/card-db/generated";
@@ -339,6 +339,24 @@ function resolveUpgradeOnAttack(
     }
     case "JTL_187": // Bossk (piloting) — resolved in applyAutoOnAttackEffects with his printed On Attack.
       break;
+    case "LAW_186": { // Enfys Nest's Helmet — "On Attack: You may give another unit +3/+0 for this phase."
+      const others186 = AllUnits().filter(u => u.playId !== attacker.playId);
+      if (others186.length === 0) break;
+      return optionalTarget("LAW_186", attacker.controller, others186.map(u => u.playId), "Give another unit +3/+0 for this phase?", { yesLabel: "+3/+0", continuation });
+    }
+    case "TS26_52": { // Sith Traditions — "On Attack: Give an Experience token to this unit."
+      const g52 = GetGame()!;
+      GiveExperienceTokens(g52.currentGameState, attacker, 1, g52.gameLog, attacker.controller, "TS26_52");
+      break;
+    }
+    case "TS26_35": // Ahsoka's Lightsabers — may Shield an enemy unit; if so, the next event costs 2 less.
+      return AhsokasLightsabersOffer(attacker.controller, continuation) ?? continuation;
+    case "LOF_187": { // Corrupted Saber — Force host only: "On Attack: The defender gets –2/–0 for this attack."
+      if (continuation.target.type !== "unit") break;
+      const def187 = GetUnitByPlayId(GetGame()!.currentGameState, continuation.target.playId);
+      if (def187) GivePowerMod("LOF_187", def187, -2, "ForAttack", GetGame()!.gameLog);
+      break;
+    }
     case "JTL_035": { // Tam Ryvora (piloting) — "On Attack: Give an enemy unit in this arena –1/–1 for this phase."
       const arena035 = UnitArenaOf(GetGame()!.currentGameState, attacker.playId);
       const enemies035 = GetUnitsForPlayer(GetOtherPlayer(attacker.controller)).filter(u => UnitArenaOf(GetGame()!.currentGameState, u.playId) === arena035);
@@ -1247,6 +1265,24 @@ function resolveInnateOnAttack(
       const damaged003 = AllUnits().filter(u => u.damage > 0);
       if (damaged003.length === 0) return continuation;
       return mandatoryTarget("TWI_003_OA", attacker.controller, damaged003.map(u => u.playId), continuation);
+    }
+    case "SEC_031": // Nute Gunray — the same offer as his When Played.
+      return NuteGunrayOffer(attacker.controller, attacker.playId, continuation) ?? continuation;
+    case "SEC_225": { // Synara San (Harboring a Secret) — "On Attack: For each friendly unit, ready a friendly resource."
+      const g225 = GetGame()!;
+      const p225 = attacker.controller === 1 ? g225.currentGameState.player1 : g225.currentGameState.player2;
+      let toReady225 = p225.groundArena.length + p225.spaceArena.length;
+      for (const r of p225.resources) {
+        if (toReady225 <= 0) break;
+        if (!r.ready) { r.ready = true; toReady225--; }
+      }
+      g225.gameLog.push(`${CardTitle("SEC_225")}: readied resources for each friendly unit.`);
+      return continuation;
+    }
+    case "LAW_086": { // The Stranger — "While attacking, you may have the defending unit deal combat damage before this unit."
+      if (continuation.target.type !== "unit") return continuation;
+      return { type: "ability-option", cardId: "LAW_086", player: attacker.controller, sourcePlayId: attacker.playId,
+        helperText: "Have the defending unit deal its combat damage first?", yesLabel: "Defender first", noLabel: "Normal", continuation } as PendingResolution;
     }
     case "TWI_035": { // Morgan Elsbeth — "On Attack: You may defeat another friendly unit. If you do,
                       // draw a card."

@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetGame, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, InitiativePlayer, IsCoordinateActive, NumberOfUnitsInArena, PlayerControlsCardWithTrait, PlayerHasUnitInPlayWithMinimumPower, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , ImperialUnitInDiscardHasKeyword, GetBaseDamage } from "@/server/engine/core-functions";
+import { UnitTitle, GetCurrentEffectsForPlayer, GetGame, GetPlayIdForUniqueUnitInPlay, GetResources, GetUnitInPlay, GetUnitsForPlayer, HasTheForce, InitiativePlayer, IsCoordinateActive, NumberOfUnitsInArena, PlayerControlsCardWithTrait, PlayerHasUnitInPlayWithMinimumPower, PlayerHasUnitWithAspectInPlay, PlayerHasUnitWithTraitInPlay, TraitContains , ImperialUnitInDiscardHasKeyword, GetBaseDamage } from "@/server/engine/core-functions";
 import { CardAspects } from "@/server/engine/card-db/generated";
 import { Unit } from "@/server/engine/unit";
 
@@ -58,6 +58,7 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
           if(TraitContains(cardId, "Jedi", player)) hasSentinel = true;
           break;
         case "JTL_229": hasSentinel = true; break;//Diversion
+        case "SEC_031": hasSentinel = true; break;//Nute Gunray — another friendly Official, for the phase
         case "JTL_130": hasSentinel = true; break;//Timely Reinforcements
         //Legends of the Force
         case "LOF_008": hasSentinel = true; break;//Obi-Wan Kenobi (Protective Padawan)
@@ -89,6 +90,12 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
           hasSentinel ||= NumberOfUnitsInArena(player, "Ground") > 0
             && NumberOfUnitsInArena(player, "Space") > 0;
             break;
+        case "TS26_22"://The Darksaber (Only the Strongest Shall Rule)
+          hasSentinel = true;
+          break;
+        case "ASH_066"://Luke's Jedi Lightsaber — only on Luke Skywalker
+          hasSentinel ||= UnitTitle(unit) === "Luke Skywalker";
+          break;
         case "SEC_071"://Disciples' Devotion — while attached unit is exhausted, it gains Sentinel.
           hasSentinel ||= !unit.ready;
           break;

@@ -256,6 +256,7 @@ export const Cards = {
       ahsokaTano: "ASH_009",
       theMandalorian: "ASH_014",
       grandAdmiralThrawn: "ASH_004",
+      fennecShand: "ASH_002",
     },
     ts26: {
       countDooku: "TS26_01",
@@ -682,6 +683,15 @@ export const Cards = {
       kaadu: "LOF_114",
       thePurrgilKing: "LOF_121",
       savageOpress: "LOF_137",
+      kitFistosAethersprite: "LOF_147",
+      jediInHiding: "LOF_159",
+      blockadeRunner: "LOF_166",
+      baylanSkoll: "LOF_185",
+      marchionRo: "LOF_186",
+      bd1: "LOF_191",
+      quiGonJinn: "LOF_200",
+      tuskenTracker: "LOF_209",
+      dooku: "LOF_211",
     },
     twi: {
       ahsokaTanoUnit: "TWI_194",           // Jedi unit — Ahsoka Tano by title
@@ -805,6 +815,21 @@ export const Cards = {
       sithAssassin: "SEC_238",
       darthNihilus: "SEC_244",
       garindan: "SEC_186",
+      nuteGunray: "SEC_031",
+      slyMoore: "SEC_033",
+      escapePod: "SEC_056",
+      landoCalrissian: "SEC_068",
+      majorPartagaz: "SEC_081",
+      masAmedda: "SEC_084",
+      firstLight: "SEC_088",
+      minaBonteri: "SEC_094",
+      captainTypho: "SEC_098",
+      monMothma: "SEC_103",
+      theEliteSquad: "SEC_143",
+      chopper: "SEC_147",
+      kaydelConnix: "SEC_149",
+      theMandalorian: "SEC_209",
+      synaraSan: "SEC_225",
     },
     law: {
       millenniumFalconDodgingPatrols: "LAW_068", // same title as JTL_249, different subtitle
@@ -843,6 +868,7 @@ export const Cards = {
       honorBoundPartisan: "LAW_058", // 2/2 Ground Rebel/Twi'lek, When Played + When Defeated
       bobaFettForAPrice: "LAW_214", // 6/5 Ground Underworld/Bounty Hunter, pay 1 → 3 damage
       chewbaccaMightyRescuer: "LAW_034", // 4/4 Ground Rebel/Wookiee, Overwhelm + When Attack Ends
+      theStranger: "LAW_086",
     },
     ash: {
       deathTrooperSquad: "ASH_242", // 5/4 Ground Villainy, no abilities
@@ -961,6 +987,7 @@ export const Cards = {
       // Leader units (the deployed side of the ASH leaders)
       ahsokaTano: "ASH_009",
       theMandalorian: "ASH_014",
+      bothan5: "ASH_128",
     },
     ts26: {
       deployedDroideka: "TS26_77",
@@ -981,6 +1008,7 @@ export const Cards = {
       rex: "TS26_06",
       asajjVentress: "TS26_07",
       ahsokaTano: "TS26_08",
+      jediGeneral: "TS26_55",
     },
     ibh: {
       lukeSkywalker: "IBH_020", // Do You Read Me? — Restore 2; WP: may deal 3 to a ground unit
@@ -1232,6 +1260,10 @@ export const Cards = {
       inquisitorsLightsaber: "LOF_090", // +1/+3 Lightsaber, attaches to any non-Vehicle unit
       kyloRensLightsaber: "LOF_040",
       pillioStarCompass: "LOF_122",
+      darthMaulsLightsaber: "LOF_140",
+      heavyBlasterCannon: "LOF_171",
+      corruptedSaber: "LOF_187",
+      quiGonJinnsLightsaber: "LOF_201",
     },
     ash: {
       gravCharge: "ASH_085",
@@ -1249,6 +1281,7 @@ export const Cards = {
       preparation: "ASH_228",
       faithInTheEmpire: "ASH_262",
       theWayOfTheMandalor: "ASH_263",
+      lukesJediLightsaber: "ASH_066",
     },
     twi: {
       forTheRepublic: "TWI_051",          // +2/+2 — 2 less with 3 Republic units; grants Coordinate — Restore 2
@@ -1272,11 +1305,18 @@ export const Cards = {
       disciplesDevotion: "SEC_071",
       moralAuthority: "SEC_256", // +2/+0 on a friendly unique unit; When Played it captures
       stolenStarpathUnit: "SEC_210", // +1/+1; grants On Attack "name a card" → Spy tokens
+      nemiksManifesto: "SEC_156",
     },
     law: {
       fulcrum: "LAW_150", // +2/+2 Rebel upgrade, cost 5 — attached unit gains Rebel + a Rebel aura
       shadowOfStygeonPrime: "LAW_077", // Condition — attached unit can't ready
       killSwitch: "LAW_127", // -1/-1 Condition — When Played: exhaust attached unit
+      leiasDisguise: "LAW_111",
+      adventurerSniperRifle: "LAW_126",
+      veiledStrength: "LAW_128",
+      enfysNestsHelmet: "LAW_186",
+      staccatoLightningRepeater: "LAW_187",
+      thermalDetonator: "LAW_201",
     },
     hmw: {
       allianceShieldGenerator: "HMW_081", // Fortify — prevents a 5+ damage hit on your base
@@ -1293,6 +1333,12 @@ export const Cards = {
     },
     ic27: {
       inspiringMentor: "IC27_085",       // reprint of SHD_104
+    },
+    ts26: {
+      theDarksaber: "TS26_22",
+      ahsokasLightsabers: "TS26_35",
+      sithTraditions: "TS26_52",
+      rexsDC17s: "TS26_63",
     },
   },
   events: {
@@ -1480,6 +1526,7 @@ export const Cards = {
       emergencyPowers: "SEC_040",
       knowledgeAndDefense: "SEC_075", // Give a unit –2/–2 for this phase. Draw a card.
       withThunderousApplause: "SEC_129",
+      toppleTheSummit: "SEC_183",
     },
     ash: {
       displayOfStrength: "ASH_136",

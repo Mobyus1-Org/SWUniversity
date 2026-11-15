@@ -1,5 +1,5 @@
 import { PlayerId } from "@/lib/engine/core-models";
-import { GetCurrentEffectsForPlayer, GetHand, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, PlayerHasUnitWithTraitInPlay, TraitContains, UnitWasDefeatedThisPhase , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
+import { BD1GrantActive, GetCurrentEffectsForPlayer, GetHand, GetPlayIdForUniqueUnitInPlay, GetUnitInPlay, GetUnitsForPlayer, IsCoordinateActive, PlayerHasUnitWithTraitInPlay, TraitContains, UnitWasDefeatedThisPhase , ImperialUnitInDiscardHasKeyword } from "@/server/engine/core-functions";
 import { CardTitle } from "@/server/engine/card-db/generated";
 import { SupportGrantedCardId } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { Unit } from "@/server/engine/unit";
@@ -32,7 +32,7 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
         case "JTL_077": return false;//In The Heat of Battle
         case "JTL_015": return true;//Rio Durant leader
         //Legends of the Force
-        case "LOF_191": return true;//BD-1
+        case "LOF_191": if (BD1GrantActive(currentEffect)) return true; break;//BD-1 — only while BD-1 is in play
         case "LOF_152": //Focus Determines Reality
           return TraitContains(cardId, "Force", player);
         default: break;

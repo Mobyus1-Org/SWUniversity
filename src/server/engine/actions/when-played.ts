@@ -1,6 +1,6 @@
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { PlayerId } from "@/lib/engine/core-models";
-import { buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, IsLeaderUnit, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits, CanUnitReady, buildThrawnExperience, buildBadFeelingShield, BossNassOffer, DefeatableNonLeaderUnitsAtOrBelowHp, CovetousRivalsOffer, XanaduBloodOffer, PlayerControlsCardWithTitle, EnfysNest198Offer, ProfundityChoice, SavageOpressChoice } from "@/server/engine/core-functions";
+import { ReadyUnit, BaylanTargets, EliteSquadOffer, NuteGunrayOffer, buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, IsLeaderUnit, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits, CanUnitReady, buildThrawnExperience, buildBadFeelingShield, BossNassOffer, DefeatableNonLeaderUnitsAtOrBelowHp, CovetousRivalsOffer, XanaduBloodOffer, PlayerControlsCardWithTitle, EnfysNest198Offer, ProfundityChoice, SavageOpressChoice } from "@/server/engine/core-functions";
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost, CardIsPlayable, DiscardUnitsPlayableAtDiscount, DefeatedThisPhaseDiscardUnitsAtDiscount } from "@/server/engine/card-playability";
 import { WhenPlayedLostWithWhenDefeated, buildActOfAggressionBuff, DrawCardForPlayer, DrawCardsForPlayer, DefeatableNonLeadersWithPowerAtMost, ReadyableUnitsWithPowerAtMost, UpgradesOnEnemyUnits } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -1449,7 +1449,7 @@ export function resolveWhenPlayed(
                       // phase, you lose the game." Both halves are automatic.
       for (const u of GetUnitsForPlayer(player)) {
         const unit208 = GetUnitByPlayId(game.currentGameState, u.playId);
-        if (unit208) unit208.ready = true;
+        if (unit208) ReadyUnit(game.currentGameState, unit208);
       }
       game.currentGameState.currentEffects.push({
         cardId: "SHD_208_lose",
@@ -2586,7 +2586,7 @@ export function resolveWhenPlayed(
       const gs092 = game.currentGameState;
       for (let i = 0; i < 8; i++) {
         const tie = CreateTieFighter(gs092, player, game.gameLog, i === 0 ? cardId : undefined);
-        tie.ready = true; // tokens are created exhausted; this one says "and ready them"
+        ReadyUnit(gs092, tie); // tokens are created exhausted; this one says "and ready them"
         // The no-base restriction is per token, by the shared `<cardId>_no_base` convention.
         gs092.currentEffects.push({
           cardId: "JTL_092_no_base",
@@ -2598,6 +2598,61 @@ export function resolveWhenPlayed(
       game.gameLog.push(`${CardTitle(cardId)}: created 8 ready TIE Fighters (they can't attack bases this phase).`);
       return null;
     }
+    case "SEC_031": // Nute Gunray — "When Played/On Attack: You may give another friendly Official unit Sentinel for this phase."
+      return NuteGunrayOffer(player, playId, null);
+    case "SEC_056": { // Escape Pod — "When Played: You may have this unit capture a friendly non-Vehicle, non-leader unit."
+      const victims056 = GetUnitsForPlayer(player).filter(u => u.playId !== playId && !IsLeaderUnit(u)
+        && !TraitContains(u.cardId, "Vehicle", player, u.playId));
+      if (victims056.length === 0) return null;
+      return optionalTarget(cardId, player, victims056.map(u => u.playId), "Have Escape Pod capture a friendly unit?", { yesLabel: "Capture", sourcePlayId: playId });
+    }
+    case "SEC_084": { // Mas Amedda — "When Played: Give an Experience token to each of up to 2 other Official units."
+      const officials084 = AllUnits().filter(u => u.playId !== playId && TraitContains(u.cardId, "Official", u.controller, u.playId));
+      if (officials084.length === 0) return null;
+      return { type: "budget-select", cardId, player, eligiblePlayIds: officials084.map(u => u.playId), maxCount: 2, continuation: null } satisfies BudgetSelectPending;
+    }
+    case "SEC_149": { // Kaydel Connix — "When Played: You may defeat all non-unique upgrades on a unit."
+      const hosts149 = AllUnits().filter(u => u.upgrades.some(x => !CardIsUnique(x.cardId)));
+      if (hosts149.length === 0) return null;
+      return optionalTarget(cardId, player, hosts149.map(u => u.playId), "Defeat all non-unique upgrades on a unit?", { yesLabel: "Defeat them" });
+    }
+    case "SEC_183": { // Topple the Summit (Event) — "Deal 3 damage to each damaged unit."
+      const damaged183 = AllUnits().filter(u => u.damage > 0).map(u => u.playId);
+      for (const id of damaged183) DealDamageToUnit(game.currentGameState, cardId, id, 3, game.gameLog, player);
+      game.gameLog.push(`${CardTitle(cardId)}: dealt 3 damage to each damaged unit.`);
+      return null; // the sweep after the event resolves takes the defeated units
+    }
+    case "LOF_147": { // Kit Fisto's Aethersprite — "When Played: You may defeat any number of upgrades on a unit."
+      const hosts147 = AllUnits().filter(u => u.upgrades.length > 0);
+      if (hosts147.length === 0) return null;
+      return optionalTarget(cardId, player, hosts147.map(u => u.playId), "Defeat upgrades on a unit?", { yesLabel: "Choose a unit" });
+    }
+    case "LOF_185": { // Baylan Skoll — "When Played: You may use the Force. If you do, return a non-leader unit that
+                      // costs 4 or less to its owner's hand. Then, its owner may play it for free."
+      if (!HasTheForce(player) || BaylanTargets(player).length === 0) return null;
+      return { type: "ability-option", cardId, player, sourcePlayId: playId, helperText: "Use the Force to return a unit that costs 4 or less?", yesLabel: "Use the Force", continuation: null };
+    }
+    case "LOF_191": { // BD-1 — "When Played: Choose another friendly unit. While this unit is in play, the chosen unit
+                      // gets +1/+0 and gains Saboteur."
+      const others191 = GetUnitsForPlayer(player).filter(u => u.playId !== playId);
+      if (others191.length === 0) return null;
+      return { type: "ability-target", cardId, player, sourcePlayId: playId, fromPlayIds: others191.map(u => u.playId), continuation: null } satisfies AbilityTargetPending;
+    }
+    case "SEC_068": { // Lando Calrissian (Trust Me) — "When Played: You may choose an enemy unit and another friendly
+                      // non-leader unit. If you do, heal 6 damage from your base and the enemy unit captures the
+                      // friendly unit."
+      const enemies068 = GetUnitsForPlayer(GetOtherPlayer(player));
+      const friends068 = GetUnitsForPlayer(player).filter(u => u.playId !== playId && !IsLeaderUnit(u));
+      if (enemies068.length === 0 || friends068.length === 0) return null;
+      return optionalTarget(cardId, player, enemies068.map(u => u.playId), "Choose an enemy unit to capture one of your units (heal 6 from your base)?", { yesLabel: "Choose", sourcePlayId: playId });
+    }
+    case "SEC_103": { // Mon Mothma (Clinging to Hope) — "When Played: You may attack with any number of other units
+                      // (one at a time), even if those units are exhausted. They can't attack bases for these attacks."
+      if (!GetUnitsForPlayer(player).some(u => u.playId !== playId && CanUnitAttack(u))) return null;
+      return { type: "ability-option", cardId, player, sourcePlayId: playId, helperText: "Attack with other units (even exhausted; not bases)?", yesLabel: "Attack", continuation: null };
+    }
+    case "SEC_143": // The Elite Squad — "When Played: You may deal 2 damage to another unique unit."
+      return EliteSquadOffer(player, playId, null);
     case "SEC_129": { // With Thunderous Applause — "Give a unit +2/+2 for this phase. You may disclose Command.
                       // If you do, give another unit +2/+2 for this phase." The disclose is offered once the
                       // first unit is chosen (see the SEC_129 target handler).
@@ -2644,7 +2699,7 @@ export function resolveWhenPlayed(
       const opponent155 = GetOtherPlayer(player);
       for (let i = 0; i < 2; i++) {
         const tie = CreateTieFighter(gs155, opponent155, game.gameLog, i === 0 ? cardId : undefined);
-        tie.ready = true; // tokens are created exhausted; "and readies them"
+        ReadyUnit(gs155, tie); // tokens are created exhausted; "and readies them"
       }
       const eligible155 = GetPlayer(gs155, player).hand
         .map((c, i) => ({ c, i }))
@@ -3548,9 +3603,7 @@ export function resolveWhenPlayed(
       const d1 = CreateBattleDroid(gs190, player, game.gameLog, cardId);
       const d2 = CreateBattleDroid(gs190, player, game.gameLog, cardId);
       const d3 = CreateBattleDroid(gs190, player, game.gameLog, cardId);
-      d1.ready = true;
-      d2.ready = true;
-      d3.ready = true;
+      for (const d of [d1, d2, d3]) ReadyUnit(gs190, d);
       return null;
     }
     case "TWI_086": { // Admiral Trench — "When Played: Return up to 3 units that were defeated this phase from your discard pile to your hand."

@@ -631,6 +631,13 @@ export function TraitContains(cardId: string, trait: string, player?: PlayerId, 
         case "SHD_069"://Foundling
           if(trait === "Mandalorian") return true;
           break;
+        case "SEC_156"://Nemik's Manifesto
+        case "LAW_150"://Fulcrum
+          if(trait === "Rebel") return true;
+          break;
+        case "LAW_111"://Leia's Disguise
+          if(trait === "Underworld") return true;
+          break;
         case "LOF_052"://Jedi Trials
           if(trait === "Jedi" && (upgrades.length || 0) >= 4) return true;
           break;
@@ -1704,7 +1711,7 @@ export function UnitHasWhenDefeatedAbility(unit: Unit): boolean {
   if (unit.LostAbilities() || WhenDefeatedAbilitiesSuppressed()) return false;
   if (CardText(unit.cardId).includes("When Defeated")) return true;
   // Upgrades whose text grants the attached unit a When Defeated.
-  if (unit.upgrades.some(u => ["TWI_218", "TWI_169", "SHD_053", "SHD_104", "IC27_085"].includes(u.cardId))) return true;
+  if (unit.upgrades.some(u => ["TWI_218", "TWI_169", "SHD_053", "SHD_104", "IC27_085", "SEC_156", "LAW_201", "TS26_52", "TS26_35"].includes(u.cardId))) return true;
   // TWI_129 In Defense of Kamino — granted for the phase to each friendly Republic unit.
   if (GetGame()?.currentGameState.currentEffects.some(e => e.cardId === "TWI_129" && e.targetPlayId === unit.playId)) return true;
   return GetUnitsForPlayer(unit.controller)
@@ -2113,7 +2120,9 @@ export function ReadyUnit(
   unit: { playId: string; upgrades: Array<{ cardId: string }>; ready: boolean },
 ): boolean {
   if (!CanUnitReady(gs, unit)) return false;
+  const wasReady = unit.ready;
   unit.ready = true;
+  if (!wasReady) RexDC17sReact(gs, unit);
   return true;
 }
 
@@ -2669,6 +2678,9 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "TWI_183": //Rush Clovis — On Attack: Battle Droid if the defender has no ready resources
     case "TWI_198": //Enfys Nest (Champion of Justice) — On Attack: may bounce a weaker enemy non-leader
     case "JTL_007": //Admiral Holdo (deployed) — On Attack: may give another Resistance unit +2/+2
+    case "SEC_031": //Nute Gunray — On Attack: may give another friendly Official Sentinel
+    case "SEC_225": //Synara San (Harboring a Secret) — On Attack: ready a resource per friendly unit
+    case "LAW_086": //The Stranger — while attacking, may have the defender deal combat damage first
     case "JTL_090": //Executor — On Attack: create 3 TIE Fighters
     case "JTL_098": //Snap Wexley — On Attack: next Resistance card costs 1 less
     case "JTL_168": //Insurgent Saboteurs — On Attack: may defeat an upgrade
@@ -2843,6 +2855,12 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
       return TraitContains(host.cardId, "Force", host.controller, host.playId);
     }
 
+    // LOF_187 Corrupted Saber — "If attached unit is a Force unit, it gains: 'On Attack: …'"
+    if (cardId === "LOF_187") {
+      const host187 = AllUnits().find(u => u.upgrades.some(upg => upg.playId === playId));
+      return !!host187 && TraitContains(host187.cardId, "Force", host187.controller, host187.playId);
+    }
+
     // TWI_121 General's Blade — "If attached unit is a Jedi, it gains: 'On Attack: …'"
     if (cardId === "TWI_121") {
       const host121 = AllUnits().find(u => u.upgrades.some(upg => upg.playId === playId));
@@ -2868,6 +2886,10 @@ export function UpgradeGrantsOnAttack(cardId: string, player?: PlayerId, playId?
     case "JTL_066": //Trace Martez piloting — grants "On Attack: may heal 2 total from any units."
     case "JTL_139": //Dengar piloting — grants "On Attack: 2 indirect damage to a player (3 if Underworld)."
     case "JTL_187": //Bossk piloting — grants "On Attack: exhaust the defender, 1 damage to it."
+    case "LAW_186": //Enfys Nest's Helmet — grants "On Attack: may give another unit +3/+0 for this phase."
+    case "TS26_52": //Sith Traditions — grants "On Attack: Give an Experience token to this unit."
+    case "TS26_35": //Ahsoka's Lightsabers — grants "On Attack: may Shield an enemy unit; next event 2 less."
+    case "LOF_187": //Corrupted Saber (conditional: only a Force host)
     case "JTL_035": //Tam Ryvora piloting — grants "On Attack: an enemy unit in this arena –1/–1 this phase."
     case "TWI_121": //General's Blade (conditional: only a Jedi host)
     case "SHD_074": //Vambrace Grappleshot — grants "On Attack: Exhaust the defender."
@@ -3633,6 +3655,7 @@ export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: st
   // HMW_011 Darth Sidious — "when you deal 4 or more damage". `amount` here is post-prevention,
   // so a hit a Shield swallowed never reaches the threshold.
   QueueHeavyDamageReaction(gs, sourcePlayer, amount, { damagedPlayId: target.playId });
+  QueueEliteSquadReaction(gs, target, amount);
 
   // HMW_013 Cham Syndulla — every hit that reaches here is non-combat (combat damage is applied in
   // resolveAttack), and it has landed, so it is "damage dealt" to the target's controller.
@@ -3877,6 +3900,7 @@ export function AfterNonCombatUnitDamage(
   QueueSelfDamagedSurvivesReaction(gs, Unit.FromInterface(target));
   QueueLograyReaction(gs, Unit.FromInterface(target));
   QueueHeavyDamageReaction(gs, sourcePlayer, amount, { damagedPlayId: target.playId });
+  QueueEliteSquadReaction(gs, target, amount);
   QueueChamSyndullaReaction(gs, target.controller, { damagedPlayId: target.playId });
 }
 
@@ -3977,6 +4001,71 @@ export function SavageOpressChoice(player: PlayerId, sourcePlayId: string | unde
   }
   return { type: "ability-option", cardId: "LOF_137", player, sourcePlayId, helperText: "Use the Force? If you don't, deal 9 damage to your base.", yesLabel: "Use the Force", noLabel: "Take 9", continuation };
 }
+
+/** SEC_031 Nute Gunray (When Played/On Attack) — "You may give another friendly Official unit Sentinel for this phase." */
+export function NuteGunrayOffer(player: PlayerId, selfPlayId: string | undefined, continuation: PendingResolution | null): PendingResolution | null {
+  const officials = GetUnitsForPlayer(player).filter(u => u.playId !== selfPlayId && TraitContains(u.cardId, "Official", player, u.playId));
+  if (officials.length === 0) return continuation;
+  return optionalTarget("SEC_031", player, officials.map(u => u.playId), "Give another friendly Official unit Sentinel for this phase?", { yesLabel: "Give Sentinel", continuation });
+}
+
+/**
+ * TS26_35 Ahsoka's Lightsabers (granted On Attack/When Defeated) — "You may give a Shield token to an enemy
+ * unit. If you do, the next event you play this phase costs 2 resources less."
+ */
+export function AhsokasLightsabersOffer(player: PlayerId, continuation: PendingResolution | null): PendingResolution | null {
+  const enemies = GetUnitsForPlayer(player === 1 ? 2 : 1);
+  if (enemies.length === 0) return null;
+  return optionalTarget("TS26_35", player, enemies.map(u => u.playId), "Give a Shield token to an enemy unit (your next event this phase costs 2 less)?", { yesLabel: "Give Shield", continuation });
+}
+
+/** LOF_191 BD-1 — "While this unit is in play, the chosen unit gets +1/+0 and gains Saboteur." `value` holds BD-1's playId. */
+export function BD1GrantActive(effect: { cardId: string; value?: unknown }): boolean {
+  if (effect.cardId !== "LOF_191") return false;
+  const bd1 = AllUnits().find(u => u.playId === String(effect.value) && u.cardId === "LOF_191");
+  return !!bd1 && !Unit.FromInterface(bd1).LostAbilities();
+}
+
+/**
+ * SEC_143 The Elite Squad — "When damage is dealt to this unit: You may deal 2 damage to another unique unit."
+ * Queued wherever damage lands on a unit (ability or combat). It fires even if that damage defeats it.
+ */
+export function QueueEliteSquadReaction(gs: GameState, target: UnitInterface, amount: number): void {
+  if (amount <= 0 || target.cardId !== "SEC_143" || Unit.FromInterface(target).LostAbilities()) return;
+  gs.triggerBag.push({ triggerType: "when-unit-takes-damage", cardId: "SEC_143", fromPlayer: target.controller, playId: target.playId, nested: true });
+}
+
+/** SEC_143 The Elite Squad — the offer, from its When Played and its damage reaction. */
+export function EliteSquadOffer(player: PlayerId, selfPlayId: string | undefined, continuation: PendingResolution | null): PendingResolution | null {
+  const uniques = AllUnits().filter(u => u.playId !== selfPlayId && CardIsUnique(u.cardId));
+  if (uniques.length === 0) return continuation;
+  return optionalTarget("SEC_143", player, uniques.map(u => u.playId), "Deal 2 damage to another unique unit?", { yesLabel: "Deal 2", continuation });
+}
+
+/**
+ * TS26_63 Rex's DC-17s — attached unit gains "When an enemy unit readies during the action phase: Ready this unit.
+ * Use this ability only once each round." Called from ReadyUnit, the unit-readying chokepoint.
+ */
+function RexDC17sReact(gs: GameState, readied: { playId: string }): void {
+  if (gs.gamePhase !== "ActionPhase") return;
+  const readiedUnit = AllUnits().find(u => u.playId === readied.playId);
+  if (!readiedUnit) return;
+  for (const host of GetUnitsForPlayer(readiedUnit.controller === 1 ? 2 : 1)) {
+    if (host.ready || !host.upgrades.some(u => u.cardId === "TS26_63") || Unit.FromInterface(host).LostAbilities()) continue;
+    if (gs.currentEffects.some(e => e.cardId === "TS26_63_used" && e.targetPlayId === host.playId)) continue;
+    gs.currentEffects.push({ cardId: "TS26_63_used", duration: "Round", affectedPlayer: host.controller, targetPlayId: host.playId });
+    if (ReadyUnit(gs, host)) GetGame()?.gameLog.push(`${CardTitle("TS26_63")}: ${CardTitle(host.cardId)} readied as an enemy unit readied.`);
+  }
+}
+
+/** LOF_185 Baylan Skoll — the units he may return: non-leader, cost 4 or less, and not immune to an enemy bounce. */
+export function BaylanTargets(player: PlayerId): UnitInterface[] {
+  return AllUnits().filter(u => !IsLeaderUnit(u) && (CardCost(u.cardId) ?? 0) <= 4
+    && (u.controller === player || !UnitImmuneToEnemyBounce(u)));
+}
+
+/** LOF_211 Dooku (It Is Too Late) — "Each friendly unit with Hidden can't be attacked for this phase." */
+export const LOF_211_UNATTACKABLE = "LOF_211_unattackable";
 
 /** SHD_171 Covetous Rivals (When Played/On Attack) — "You may deal 2 damage to a unit with a Bounty." */
 export function CovetousRivalsOffer(player: PlayerId, continuation: PendingResolution | null): AbilityOptionPending | null {

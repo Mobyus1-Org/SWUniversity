@@ -1,7 +1,8 @@
+import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase, GivePowerMod, WhenPlayedLostWithWhenDefeated, UpgradesYouControl, FriendlyUnitsEnteredPlayThisPhase, PreventBaseHealingThisPhase, PlayerControlsCardWithTitle, UnitRemainingHp as UnitRemainingHpOf } from "@/server/engine/core-functions";
+import { LOF_211_UNATTACKABLE, LeaderSideTraits, DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase, GivePowerMod, WhenPlayedLostWithWhenDefeated, UpgradesYouControl, FriendlyUnitsEnteredPlayThisPhase, PreventBaseHealingThisPhase, PlayerControlsCardWithTitle, UnitRemainingHp as UnitRemainingHpOf } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
@@ -43,6 +44,10 @@ const WHEN_PLAYED_AUTO_EFFECT_CARDS = new Set([
   "JTL_098", // Snap Wexley (as a unit) — the next Resistance card this phase costs 1 less
   "JTL_252", // Tantive IV — an X-Wing token
   "LOF_121", // The Purrgil King — draw per friendly unit with 7+ remaining HP
+  "LOF_209", // Tusken Tracker — enemy units lose Hidden for this phase
+  "LOF_211", // Dooku — friendly Hidden units can't be attacked for this phase
+  "SEC_033", // Sly Moore (Witness to Power) — enemy units get –2/–0 attacking a base
+  "TS26_55", // Jedi General — a Clone Trooper with Experience per Republic leader
   "TWI_033", // Calculating MagnaGuard — gains Sentinel for this phase
   "TWI_145", // Jesse — an opponent creates 2 Battle Droid tokens
   "SHD_140", // Trandoshan Hunters — Experience token if an enemy unit has a Bounty
@@ -101,6 +106,31 @@ export function resolveWhenPlayedTrigger(
     case "LOF_121": { // The Purrgil King — "When Played: Draw a card for each friendly unit with 7 or more remaining HP."
       const big121 = [...player.groundArena, ...player.spaceArena].filter(u => UnitRemainingHpOf(u) >= 7).length;
       for (let i = 0; i < big121; i++) DrawCardForPlayer(gs, log, trigger.fromPlayer);
+      break;
+    }
+    case "LOF_209": // Tusken Tracker — "When Played: Each enemy unit loses Hidden for this phase."
+      for (const foe of GetUnitsForPlayer(trigger.fromPlayer === 1 ? 2 : 1)) {
+        gs.currentEffects.push({ cardId: "LOF_209", duration: "Phase", affectedPlayer: foe.controller, targetPlayId: foe.playId });
+      }
+      break;
+    case "LOF_211": // Dooku (It Is Too Late) — "When Played: Each friendly unit with Hidden can't be attacked for this phase."
+      for (const u of GetUnitsForPlayer(trigger.fromPlayer)) {
+        if (HasHidden(u.cardId, u.playId, trigger.fromPlayer)) {
+          gs.currentEffects.push({ cardId: LOF_211_UNATTACKABLE, duration: "Phase", affectedPlayer: trigger.fromPlayer, targetPlayId: u.playId });
+        }
+      }
+      break;
+    case "SEC_033": // Sly Moore (Witness to Power) — "For this phase, each enemy unit gets –2/–0 while it's attacking a base."
+      gs.currentEffects.push({ cardId: "SEC_033", duration: "Phase", affectedPlayer: trigger.fromPlayer });
+      log.push(`${CardTitle("SEC_033")}: enemy units get –2/–0 while attacking a base this phase.`);
+      break;
+    case "TS26_55": { // Jedi General — "For each Republic leader you control (as a leader or unit), create a Clone
+                      // Trooper token and give an Experience token to it."
+      const leader55 = trigger.fromPlayer === 1 ? gs.player1.leader : gs.player2.leader;
+      if (LeaderSideTraits(leader55.cardId, leader55.flipped === true).includes("Republic")) {
+        const clone55 = CreateCloneTrooper(gs, trigger.fromPlayer, log, "TS26_55");
+        GiveExperienceTokens(gs, clone55, 1, log, trigger.fromPlayer, "TS26_55");
+      }
       break;
     }
     case "TWI_033": // Calculating MagnaGuard — "When Played: This unit gains Sentinel for this phase."

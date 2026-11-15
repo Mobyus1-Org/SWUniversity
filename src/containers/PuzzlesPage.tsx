@@ -103,6 +103,7 @@ const LEADERS_WITH_ACTION_ABILITY = new Set([
   "TWI_015",
   //Hunt for the Missing Wookiee
   "ASH_001", // The Armorer — Steel Shapes Us
+  "ASH_002", // Fennec Shand — Ready for War
   "ASH_006", // Sabine Wren — Bargaining on Belief
   "ASH_007", // Grand Admiral Sloane — Holding the Empire Together
   "ASH_010", // Bo-Katan Kryze — Reclaiming Mandalore
@@ -170,6 +171,7 @@ const UPGRADES_WITH_ACTION_ABILITY: Record<string, string> = {
 const UPGRADE_GRANTED_UNIT_ACTIONS: Record<string, string> = {
   "SHD_155": "Attack +4/+0 with Overwhelm", // Heroic Resolve
   "TWI_120": "Play a unit for 1 less",      // Strategic Acumen
+  "LAW_126": "Set a unit's printed HP to 1", // Adventurer Sniper Rifle
 };
 
 const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
@@ -179,6 +181,7 @@ const UNITS_WITH_ACTION_ABILITY: Record<string, string | UnitAction[]> = {
   "SOR_184": "Exhaust a non-unique unit", // Fett's Firespray
   "SOR_177": "Play an event (1 less)", // Bib Fortuna
   "JTL_134": "Draw (if you played First Order)", // General Hux
+  "ASH_002": "Play a unit (enters ready)", // Fennec Shand (deployed)
   "LOF_206": "Attack with a Droid",
   "ASH_109": "+2/+2 to a unit",
   "ASH_142": "1 dmg to up to 3 ground units",

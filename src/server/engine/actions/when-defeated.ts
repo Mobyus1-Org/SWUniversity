@@ -1,7 +1,7 @@
 import { Unit } from "@/server/engine/unit";
 import { AbilityTargetPending, DeckSearchPending, MillPending, PendingResolution, SpreadDamagePending, SpreadTokensPending } from "@/server/engine/pending-resolution";
 import { PlayerId } from "@/lib/engine/core-models";
-import { WhenDefeatedAbilitiesSuppressed, buildAnnihilatorOffer, UnitTraits, AllUnits, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains, buildThrawnExperience, negotiatorResourceShuffle, ProfundityChoice, SavageOpressChoice } from "@/server/engine/core-functions";
+import { AhsokasLightsabersOffer, WhenDefeatedAbilitiesSuppressed, buildAnnihilatorOffer, UnitTraits, AllUnits, HealBaseForPlayer, CanDisclose, DealDamageToBase, CaptureVictimsExistFor, IsLeaderUnit, DefeatableUpgradePlayIds, DrawCardForPlayer, DrawCardsForPlayer, GetGame, GetGameState, GetPlayer, GetUnitsForPlayer, HasTheForce, InitiativePlayer, UnitsWithAspect, mandatoryTarget, optionalTarget, buildTakeControlOfUpgrade, CreateForceToken, GrantPlayFromDiscardThisPhase, searchDeck, buildPurrgilUltraOffer, TraitContains, buildThrawnExperience, negotiatorResourceShuffle, ProfundityChoice, SavageOpressChoice } from "@/server/engine/core-functions";
 import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { IsTokenUpgrade } from "@/server/engine/card-db/upgrade-attach-restrictions";
 import { CardCost, CardIsUnique, CardPower, CardTitle, CardType } from "@/server/engine/card-db/generated";
@@ -32,12 +32,12 @@ export function resolveWhenDefeated(
   if (pyrrhicActive) {
     const enemies103 = GetUnitsForPlayer(player === 1 ? 2 : 1);
     if (enemies103.length > 0) {
-      const own = withInspiringMentor(unit, player, resolveWhenDefeatedInner(unit, player, causedByCombatDamage));
+      const own = withGrantedWhenDefeated(unit, player, withInspiringMentor(unit, player, resolveWhenDefeatedInner(unit, player, causedByCombatDamage)));
       return mandatoryTarget("TWI_103", player, enemies103.map(u => u.playId), own);
     }
   }
 
-  return withInspiringMentor(unit, player, resolveWhenDefeatedInner(unit, player, causedByCombatDamage));
+  return withGrantedWhenDefeated(unit, player, withInspiringMentor(unit, player, resolveWhenDefeatedInner(unit, player, causedByCombatDamage)));
 }
 
 /**
@@ -46,6 +46,24 @@ export function resolveWhenDefeated(
  * every friendly unit left is "another"; they are read after the host's inline When Defeated
  * effects, so a token one of those created can take it. One prompt per Mentor, ahead of `rest`.
  */
+/**
+ * Upgrade-granted When Defeated prompts, chained like Inspiring Mentor's:
+ *   TS26_52 Sith Traditions — "When Defeated: Give an Experience token to a friendly unit."
+ *   TS26_35 Ahsoka's Lightsabers — "You may give a Shield token to an enemy unit. If you do, the next
+ *     event you play this phase costs 2 resources less."
+ */
+function withGrantedWhenDefeated(unit: Unit, player: PlayerId, rest: PendingResolution | null): PendingResolution | null {
+  let chain = rest;
+  for (const up of unit.upgrades) {
+    if (up.cardId === "TS26_52") {
+      const friendly = GetUnitsForPlayer(player);
+      if (friendly.length > 0) chain = mandatoryTarget("TS26_52", player, friendly.map(u => u.playId), chain);
+    }
+    if (up.cardId === "TS26_35") chain = AhsokasLightsabersOffer(player, chain) ?? chain;
+  }
+  return chain;
+}
+
 function withInspiringMentor(
   unit: Unit,
   player: PlayerId,
@@ -73,6 +91,20 @@ function resolveWhenDefeatedInner(
     const grants169 = unit.upgrades.filter(u => u.cardId === "TWI_169").length
       + (game169?.currentGameState.currentEffects.filter(e => e.cardId === "TWI_129" && e.targetPlayId === unit.playId).length ?? 0);
     for (let i = 0; i < grants169 && game169; i++) CreateCloneTrooper(game169.currentGameState, player, game169.gameLog, "TWI_169");
+  }
+
+  // SEC_156 Nemik's Manifesto: attached unit gains "When Defeated: Deal 1 damage to each enemy base for each
+  // other friendly Rebel unit." The host has left play, so every friendly Rebel still in play is "other".
+  {
+    const manifestos156 = unit.upgrades.filter(u => u.cardId === "SEC_156").length;
+    const game156 = GetGame();
+    if (manifestos156 > 0 && game156) {
+      const rebels156 = GetUnitsForPlayer(player).filter(u => TraitContains(u.cardId, "Rebel", player, u.playId)).length;
+      if (rebels156 > 0) {
+        DealDamageToBase(game156.currentGameState, player === 1 ? 2 : 1, rebels156 * manifestos156, player);
+        game156.gameLog.push(`${CardTitle("SEC_156")}: ${rebels156 * manifestos156} damage to the enemy base.`);
+      }
+    }
   }
 
   // TWI_218 Droid Cohort: attached unit gains "When Defeated: Create a Battle Droid token."
@@ -287,6 +319,26 @@ function resolveOwnWhenDefeated(
       return searchDeck("LOF_057", player, 5, "draw", { filter: { type: "Unit", trait: "Force" }, maxChoices: 1 });
     case "LOF_137": // Savage Opress — the same as his When Played.
       return SavageOpressChoice(player, undefined, null);
+    case "LOF_200": { // Qui-Gon Jinn — "When Defeated: You may choose a non-leader ground unit. Its owner puts it on
+                      // the top or bottom of their deck."
+      const g200 = GetGame();
+      if (!g200) return null;
+      const ground200 = [...g200.currentGameState.player1.groundArena, ...g200.currentGameState.player2.groundArena].filter(u => !IsLeaderUnit(u));
+      if (ground200.length === 0) return null;
+      return optionalTarget("LOF_200", player, ground200.map(u => u.playId), "Put a non-leader ground unit on the top or bottom of its owner's deck?", { yesLabel: "Choose" });
+    }
+    case "SEC_094": // Mina Bonteri — "When Defeated: You may disclose Command Command Heroism. If you do, draw a card."
+      if (!CanDisclose(player, ["Command", "Command", "Heroism"])) return null;
+      return { type: "ability-option", cardId: "SEC_094", player, revealsFromHand: player, helperText: "Disclose Command, Command and Heroism to draw a card?", yesLabel: "Disclose", noLabel: "Skip", continuation: null } as PendingResolution;
+    case "LOF_159": { // Jedi In Hiding — "When Defeated: You may use the Force. If you do, each opponent discards a card."
+      if (!HasTheForce(player)) return null;
+      return { type: "ability-option", cardId: "LOF_159", player, helperText: "Use the Force to make your opponent discard a card?", yesLabel: "Use the Force", continuation: null } as PendingResolution;
+    }
+    case "LOF_180": { // Deceptive Shade — "When Defeated: The next unit you play this phase gains Ambush for this phase."
+      const g180 = GetGame();
+      g180?.currentGameState.currentEffects.push({ cardId: "LOF_180_armed", duration: "Phase", affectedPlayer: player });
+      return null;
+    }
     case "TWI_043": { // Outspoken Representative — "When Defeated: Create a Clone Trooper token."
       const g043 = GetGame();
       if (g043) CreateCloneTrooper(g043.currentGameState, player, g043.gameLog, "TWI_043");

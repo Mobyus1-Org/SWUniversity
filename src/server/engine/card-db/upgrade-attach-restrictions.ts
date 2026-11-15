@@ -128,6 +128,7 @@ export function UpgradeEligibleTargets(
     case "SHD_193": //Frozen in Carbonite
     case "SHD_226": //Unrefusable Offer
     case "TWI_122": //Squad Support
+    case "LAW_128": //Veiled Strength
     case "LAW_077": //Shadow of Stygeon Prime
       return everyone.filter(u => !IsLeaderUnit(u)).map(u => u.playId);
 
