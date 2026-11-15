@@ -2598,6 +2598,13 @@ export function resolveWhenPlayed(
       game.gameLog.push(`${CardTitle(cardId)}: created 8 ready TIE Fighters (they can't attack bases this phase).`);
       return null;
     }
+    case "SEC_129": { // With Thunderous Applause — "Give a unit +2/+2 for this phase. You may disclose Command.
+                      // If you do, give another unit +2/+2 for this phase." The disclose is offered once the
+                      // first unit is chosen (see the SEC_129 target handler).
+      const units129 = AllUnits();
+      if (units129.length === 0) return null;
+      return mandatoryTarget(cardId, player, units129.map(u => u.playId));
+    }
     case "SEC_181": { // Unauthorized Investigation — "Create a Spy token. You may disclose Aggression. If you do, create another Spy token."
       CreateSpy(game.currentGameState, player, game.gameLog, cardId);
       if (!CanDisclose(player, ["Aggression"])) return null;

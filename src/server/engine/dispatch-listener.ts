@@ -31,7 +31,7 @@ import { HasOverwhelm } from "@/server/engine/card-db/keyword-dictionaries.ts/ov
 import { HasSentinel } from "@/server/engine/card-db/keyword-dictionaries.ts/sentinel";
 import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidden";
 import { SharesKeyword } from "@/server/engine/card-db/keyword-dictionaries.ts/all-keywords";
-import { RecordIndirectDealt, RAZOR_CREST_DEFEAT_BATCH, RazorCrestActive, WhenDefeatedAbilitiesSuppressed, buildActOfAggressionBuff, optionalPayResource, GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, AllCaptives, QueueFriendlyDamagedSurvivesReactions, JABBA_USED_THIS_ROUND, QueueSelfDamagedSurvivesReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, DefeatableNonLeaderUnitsAtOrBelowHp, DiscardFromTopOfDeck, DiscardCardFromDeck, FriendlyTokenCardIds, buildHanDamage, buildHanCreditCount, MaulCanEmpower, buildMaulChoice, RevealFromHand, PlayedFromResources, FriendlyUnitsEnteredPlayThisPhase, OtherFriendlyUnitsThatEnteredPlayThisPhase, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, buildBadFeelingShield, buildLeiaDrawAndReturn, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases, UpgradeLeavesPlay, BaseUpgradeHolder, BaseUpgradeDefeatReplacer, RemoveUpgradeFromBase } from "@/server/engine/core-functions";
+import { RecordIndirectDealt, RAZOR_CREST_DEFEAT_BATCH, RazorCrestActive, WhenDefeatedAbilitiesSuppressed, buildActOfAggressionBuff, optionalPayResource, GetAllUnits, ApplyDamagePrevention, CardIsLeader, DuplicateUniqueCopies, InPlayCopiesControlled, FindUpgradeByPlayId, IsLeaderUnit, CardsCanDisclose, CanDisclose, DealDamageToUnit, DrawCardForPlayer, GetGame, GetUnitsForPlayer, HasOnAttack, GetOtherPlayer, GetPlayer, SetGame, TraitContains, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, UnitsDefeatedThisPhaseCount, CardWasPlayedThisPhase, GetUnitByPlayId, AllGroundUnits, AllSpaceUnits, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, CreateForceToken, UseTheForce, HasTheForce, GetLeaderForPlayer, HealBaseForPlayer, DiscardRandomCardFromHand, ResourceTopCardOfDeck, GiveStatModForPhase, GivePowerMod, GrantKeywordForPhase, buildCaptainRexSentinel, DistinctAspectCount, DistinctAspectsAmongUnits, CanDiscloseAnyOf, SEC_004_ASPECTS, UnitsNotSharingAspectWith, QueueJangoDamageReaction, AttackedThisPhasePlayIds, AllCaptives, QueueFriendlyDamagedSurvivesReactions, JABBA_USED_THIS_ROUND, QueueSelfDamagedSurvivesReaction, QueueLograyReaction, QueueHeavyDamageReaction, MarkUnitDamaged, GetHand, GiveHpMod, ReadyUnit, ReadyUnitByPlayId, MoveUpgradeDestinations, DefeatableUpgradePlayIds, RemoveResourcePreservingReady, DealDamageToBase, DamageIsUnpreventable, UnitsEnterPlayReady, EffectiveRestore, SWAP_TO_RAID, SWAP_TO_RESTORE, DrawCardsForPlayer, PlayerHasLost, buildMultiAttack, parseMultiAttack, MarkPlayerLost, QueueMigsMayfeldReaction, UnitRemainingHp, DefeatableNonLeaderUnitsAtOrBelowHp, DiscardFromTopOfDeck, DiscardCardFromDeck, FriendlyTokenCardIds, buildHanDamage, buildHanCreditCount, MaulCanEmpower, buildMaulChoice, RevealFromHand, PlayedFromResources, FriendlyUnitsEnteredPlayThisPhase, OtherFriendlyUnitsThatEnteredPlayThisPhase, NumberOfUnitsInArena, EnemyNonLeadersThatAttackedBase, GrantPlayFromDiscardThisPhase, UpgradesYouControl, FriendlyUnitsAloneInArena, HealUnit, buildInvisibleHandOffer, buildBadFeelingShield, buildLeiaDrawAndReturn, UnitArenaOf, MoveUnitToArena, SuppressTraitForPlayer, AmbushMayAttackBases, UpgradeLeavesPlay, BaseUpgradeHolder, BaseUpgradeDefeatReplacer, RemoveUpgradeFromBase } from "@/server/engine/core-functions";
 import { Unit, ProjectsEnemyStatAura } from "@/server/engine/unit";
 
 import type {
@@ -10861,6 +10861,15 @@ function handleChooseTarget(
         if (bag109) return { response: resolutionResponse(pendingToResolution(bag109, game)), pending: bag109, stateChanged: true };
         return { response: stateResponse(game), pending: null, stateChanged: true };
       }
+      case "SEC_129": { // With Thunderous Applause disclose: reveal must have Command; then another unit's +2/+2.
+        if (!CardsCanDisclose([cardId], ["Command"]))
+          return { response: invalidResponse("Disclose: revealed card does not have a Command aspect."), pending, stateChanged: false };
+        log.push(`${CardTitle(pending.cardId)}: disclosed ${CardTitle(cardId)} (Command).`);
+        RevealFromHand(game, pending.player, "SEC_129");
+        const others129 = GetAllUnits(game).filter(u => u.playId !== pending.firstChosenPlayId);
+        const second129 = mandatoryTarget("SEC_129_second", pending.player, others129.map(u => u.playId));
+        return { response: resolutionResponse(pendingToResolution(second129, game)), pending: second129, stateChanged: true };
+      }
       case "SEC_181": { // Unauthorized Investigation disclose: reveal must have Aggression
         if (!CardsCanDisclose([cardId], ["Aggression"]))
           return { response: invalidResponse("Disclose: revealed card does not have an Aggression aspect."), pending, stateChanged: false };
@@ -21556,6 +21565,28 @@ function applyAbilityEffect(
       if (!targetPlayId) break;
       const t229 = GetUnitByPlayId(game.currentGameState, targetPlayId);
       if (t229) GrantKeywordForPhase("JTL_229", Unit.FromInterface(t229), game.gameLog, "Sentinel");
+      break;
+    }
+    case "SEC_129": { // With Thunderous Applause — +2/+2 on the chosen unit, then the Command disclose for
+                      // another unit's +2/+2.
+      if (!targetPlayId) break;
+      const t129 = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (!t129) break;
+      GiveStatModForPhase("SEC_129", Unit.FromInterface(t129), 2, game.gameLog);
+      const p129 = pending.player!;
+      const others129 = GetAllUnits(game.currentGameState).filter(u => u.playId !== targetPlayId);
+      if (others129.length === 0 || !CanDisclose(p129, ["Command"])) break;
+      return {
+        type: "ability-option", cardId: "SEC_129", player: p129,
+        helperText: "Disclose Command to give another unit +2/+2 for this phase?", yesLabel: "Disclose", noLabel: "Skip",
+        onYes: { type: "play-from-hand", cardId: "SEC_129", player: p129, firstChosenPlayId: targetPlayId },
+        continuation: pending.continuation ?? null,
+      };
+    }
+    case "SEC_129_second": { // With Thunderous Applause — the disclosed +2/+2 on another unit.
+      if (!targetPlayId) break;
+      const t129b = GetUnitByPlayId(game.currentGameState, targetPlayId);
+      if (t129b) GiveStatModForPhase("SEC_129", Unit.FromInterface(t129b), 2, game.gameLog);
       break;
     }
     case "LOF_126": { // Overpower — +3/+3 and Overwhelm for this phase.

@@ -1479,6 +1479,7 @@ export const Cards = {
       grassrootsResistance: "SEC_258",
       emergencyPowers: "SEC_040",
       knowledgeAndDefense: "SEC_075", // Give a unit –2/–2 for this phase. Draw a card.
+      withThunderousApplause: "SEC_129",
     },
     ash: {
       displayOfStrength: "ASH_136",

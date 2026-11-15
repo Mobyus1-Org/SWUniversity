@@ -388,6 +388,8 @@ export interface PlayFromHandPending {
   costReduction?: number;
   /** SEC_018 DJ: the friendly unit that captures the unit played this way. */
   captorPlayId?: string;
+  /** SEC_129 With Thunderous Applause: the unit already given +2/+2 — the disclosed bonus goes to another. */
+  firstChosenPlayId?: string;
   /** Hand indices that may be chosen, when only some cards qualify (JTL_155: Vehicle units). */
   eligibleHandIndices?: number[];
   /** An empty selection declines ("Choose nothing") instead of being rejected. */
