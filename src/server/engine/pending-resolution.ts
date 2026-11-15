@@ -548,6 +548,14 @@ export interface TriggerOrderPending {
 export interface TriggerPlayerOrderPending {
   type: "trigger-player-order";
   activePlayer: PlayerId;
+  /**
+   * Set when the two stacks are already-built chains rather than triggers in the bag: a defeated
+   * unit's Bounty (collector's) and its own When Defeated (controller's), see defeatUnit. "Mine"
+   * runs `mine` then `theirs`; "Theirs" the reverse; `continuation` follows both.
+   */
+  mine?: PendingResolution;
+  theirs?: PendingResolution;
+  continuation?: PendingResolution | null;
 }
 
 

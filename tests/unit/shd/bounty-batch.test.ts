@@ -54,8 +54,9 @@ describe("SHD_058 Val", () => {
     const g = load(board().WithGroundUnitForPlayer(2, Cards.units.shd.val, true, 1).WithGroundUnitForPlayer(2, CSF).Build());
     await g.attackWithGroundUnitAsync(1, 0);
     await g.dispatchAsync(1, "choose-target", { targetPlayIds: [g.state.player2.groundArena[0].playId] });
-    // Val's own When Defeated (P2's) and the Bounty (P1's) both trigger; P1 is active and resolves first.
-    if (g.lastDispatchResponse?.resolutionNeeded?.type === "Option") await g.chooseYesAsync(1);
+    // Val's own When Defeated (P2's) and the Bounty (P1's) both trigger; P1 is active and picks theirs first.
+    await g.dispatchAsync(1, "choose-option", { option: "Mine" });
+    await g.chooseYesAsync(1);
     const enemyCsf = g.state.player2.groundArena.find(u => u.cardId === CSF)!;
     await g.dispatchAsync(1, "choose-target", { targetPlayIds: [enemyCsf.playId] });
     expect(g.state.player2.groundArena.find(u => u.cardId === CSF)!.damage).toBe(3);
@@ -65,7 +66,8 @@ describe("SHD_058 Val", () => {
     const g = load(board().WithGroundUnitForPlayer(2, Cards.units.shd.val, true, 1).WithGroundUnitForPlayer(2, CSF).Build());
     await g.attackWithGroundUnitAsync(1, 0);
     await g.dispatchAsync(1, "choose-target", { targetPlayIds: [g.state.player2.groundArena[0].playId] });
-    if (g.lastDispatchResponse?.resolutionNeeded?.type === "Option") await g.chooseNoAsync(1); // skip the Bounty
+    await g.dispatchAsync(1, "choose-option", { option: "Mine" });
+    await g.chooseNoAsync(1); // skip the Bounty
     const friend = g.state.player2.groundArena.find(u => u.cardId === CSF)!;
     await g.dispatchAsync(2, "choose-target", { targetPlayIds: [friend.playId] });
     expect(xp(g.state.player2.groundArena.find(u => u.cardId === CSF)!)).toBe(2);

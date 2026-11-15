@@ -54,14 +54,45 @@ function step(run: Run, ctx: EngineContext, type: string, data: Record<string, u
   return run({ dispatchId: randomUUID(), dispatchType: type as never, dispatchData: data as never, fromPlayer: 1 }, ctx);
 }
 
-/** Sundari Peacekeeper attacks and defeats Val, leaving the solver on Val's bounty prompt. */
-function killVal(run: Run, ctx: EngineContext) {
+/** Sundari Peacekeeper attacks and defeats Val. */
+function attackVal(run: Run, ctx: EngineContext) {
   const gs = ctx.game.currentGameState;
   const r1 = step(run, ctx, "initiate-attack", { playId: gs.player1.groundArena[0].playId });
   return step(run, r1.context, "choose-target", { targetPlayIds: [gs.player2.groundArena[0].playId] });
 }
 
+/** Kills Val and puts the solver's Bounty first, leaving them on its prompt. */
+function killVal(run: Run, ctx: EngineContext) {
+  return step(run, attackVal(run, ctx).context, "choose-option", { option: "Mine" });
+}
+
 describe("SHD_058 Val — Loyal to the End", () => {
+  it("the active player chooses whether the Bounty or the When Defeated resolves first", () => {
+    const res = attackVal(processPuzzleDispatch, newCtx([headhunter()]));
+
+    expect(res.context.pending).toMatchObject({ type: "trigger-player-order", activePlayer: 1 });
+    expect(res.response.resolutionNeeded).toMatchObject({ options: ["Mine", "Theirs"] });
+  });
+
+  it("puzzle: choosing Theirs lets P2 place the Experience tokens before the solver collects", () => {
+    const ctx = newCtx([headhunter()]);
+    const hh = ctx.game.currentGameState.player2.spaceArena[0].playId;
+
+    let res = attackVal(processPuzzleDispatch, ctx);
+    res = step(processPuzzleDispatch, res.context, "choose-option", { option: "Theirs" });
+
+    // P2's When Defeated already resolved: the Headhunter is 5/4, too big for the 3-damage Bounty.
+    const before = res.context.game.currentGameState.player2.spaceArena[0];
+    expect(before.upgrades.filter(u => u.cardId === Cards.upgrades.token.experience)).toHaveLength(2);
+    expect(res.response.resolutionNeeded).toMatchObject({ helperText: "Collect bounty (Val)?" });
+
+    res = step(processPuzzleDispatch, res.context, "choose-option", { option: "Yes" });
+    res = step(processPuzzleDispatch, res.context, "choose-target", { targetPlayIds: [hh] });
+
+    expect(res.context.pending).toBeNull();
+    expect(res.context.game.currentGameState.player2.spaceArena[0].damage).toBe(3);
+  });
+
   it("puzzle: Val's bounty defeating P2's last unit drops the When Defeated instead of softlocking", () => {
     const ctx = newCtx([headhunter()]);
     const hh = ctx.game.currentGameState.player2.spaceArena[0].playId;

@@ -3767,10 +3767,11 @@ function defeatUnit(
   }
 
   // The bounty (the opponent's trigger) and the unit's own When Defeated (its controller's) go off
-  // simultaneously, so they resolve in active-player-first order. Which one lands first is not
-  // cosmetic: SHD_226 Unrefusable Offer replays the card out of the discard, while SOR_083
-  // Superlaser Technician moves it to the resource row — whichever resolves first takes the card,
-  // and the other finds nothing.
+  // simultaneously, so the active player chooses which player resolves first (CR 7.6.10; Val
+  // SHD_058 prints it as reminder text). Which one lands first is not cosmetic: SHD_226
+  // Unrefusable Offer replays the card out of the discard, while SOR_083 Superlaser Technician
+  // moves it to the resource row — whichever resolves first takes the card, and the other finds
+  // nothing.
   let whenDefeated: PendingResolution | null = null;
   if (!opts.deferWhenDefeated) {
     whenDefeated = resolveWhenDefeatedWithThrawn(game, unit, removed.player, causedByCombatDamage);
@@ -3789,10 +3790,15 @@ function defeatUnit(
   let chainedDefeated: PendingResolution | null;
   if (!bounty) chainedDefeated = whenDefeated;
   else if (!whenDefeated) chainedDefeated = bounty;
-  else if ((game.roundState.actingPlayer ?? game.activePlayer) === collectingPlayer) {
-    chainedDefeated = injectContinuation(bounty, whenDefeated);
-  } else {
-    chainedDefeated = injectContinuation(whenDefeated, bounty);
+  else {
+    const chooser = game.roundState.actingPlayer ?? game.activePlayer;
+    chainedDefeated = {
+      type: "trigger-player-order",
+      activePlayer: chooser,
+      mine: chooser === collectingPlayer ? bounty : whenDefeated,
+      theirs: chooser === collectingPlayer ? whenDefeated : bounty,
+      continuation: null,
+    } satisfies TriggerPlayerOrderPending;
   }
 
   // Luke Skywalker (JTL_094) as a pilot upgrade: when his vehicle is defeated, he may eject.
@@ -13649,6 +13655,12 @@ function handleChooseOption(
     // CR 7.6.10 — active player chose which player's stack resolves first.
     if (option !== "Mine" && option !== "Theirs") {
       return { response: invalidResponse(`Unknown option: ${option}`), pending, stateChanged: false };
+    }
+    // Pre-built chains (a defeated unit's Bounty vs its When Defeated): run the chosen one first.
+    if (pending.mine && pending.theirs) {
+      const [first, second] = option === "Mine" ? [pending.mine, pending.theirs] : [pending.theirs, pending.mine];
+      const ordered = injectContinuation(injectContinuation(first, second), pending.continuation ?? null);
+      return { response: resolutionResponse(pendingToResolution(ordered, game)), pending: ordered, stateChanged: true };
     }
     game.triggerBatchPlayer = option === "Mine" ? pending.activePlayer : GetOtherPlayer(pending.activePlayer);
     const nextPending = drainTriggerBag(game, log);

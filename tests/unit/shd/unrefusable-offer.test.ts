@@ -97,8 +97,9 @@ describe("SHD_226 Unrefusable Offer", () => {
 
   // -------------------------------------------------------------------------
   // Scenario 2 — on Superlaser Technician, defeated by the COLLECTOR's Vanquish.
-  // The collector is the active player, so the bounty resolves first: they take
-  // the card, and SLT's When Defeated can no longer resolve.
+  // The collector is the active player and chooses whose trigger resolves first
+  // (CR 7.6.10). Bounty first: they take the card, and SLT's When Defeated can no
+  // longer resolve.
   // -------------------------------------------------------------------------
 
   it("collector's own removal resolves the bounty before the victim's When Defeated", async () => {
@@ -106,7 +107,8 @@ describe("SHD_226 Unrefusable Offer", () => {
     g.loadNewState(attachedState(Cards.units.sor.superlaserTechnician).Build());
 
     await vanquishTheVictim(g);
-    await g.chooseYesAsync(1); // the bounty is offered first
+    await g.dispatchAsync(1, "choose-option", { option: "Mine" }); // the bounty first
+    await g.chooseYesAsync(1);
 
     const stolen = g.state.player1.groundArena.find(u => u.cardId === Cards.units.sor.superlaserTechnician);
     expect(stolen).toBeDefined();
@@ -119,7 +121,9 @@ describe("SHD_226 Unrefusable Offer", () => {
     const resourcesBefore = g.state.player2.resources.length;
 
     await vanquishTheVictim(g);
+    await g.dispatchAsync(1, "choose-option", { option: "Mine" });
     await g.chooseYesAsync(1);
+    expect(g.lastDispatchResponse?.invalidAction).toBeFalsy();
 
     // No dead prompt is left over for player 2 …
     expect(g.lastDispatchResponse?.resolutionNeeded).toBeFalsy();
@@ -134,6 +138,7 @@ describe("SHD_226 Unrefusable Offer", () => {
     const resourcesBefore = g.state.player2.resources.length;
 
     await vanquishTheVictim(g);
+    await g.dispatchAsync(1, "choose-option", { option: "Mine" });
     await g.chooseNoAsync(1); // decline the bounty — SLT's own trigger follows
     await g.chooseYesAsync(2);
 
@@ -142,9 +147,23 @@ describe("SHD_226 Unrefusable Offer", () => {
     expect(g.state.player1.groundArena).toHaveLength(0);
   });
 
+  it("the collector may let SLT's When Defeated go first — it resources itself and the bounty finds nothing", async () => {
+    const g = new GameTestAdapter();
+    g.loadNewState(attachedState(Cards.units.sor.superlaserTechnician).Build());
+
+    await vanquishTheVictim(g);
+    await g.dispatchAsync(1, "choose-option", { option: "Theirs" });
+    await g.chooseYesAsync(2); // SLT's controller resources it
+    expect(g.lastDispatchResponse?.resolutionNeeded).toMatchObject({ helperText: expect.stringContaining("Collect bounty") });
+    await g.chooseYesAsync(1);
+
+    expect(g.state.player1.groundArena.some(u => u.cardId === Cards.units.sor.superlaserTechnician)).toBe(false);
+    expect(g.state.player2.resources.some(r => r.cardId === Cards.units.sor.superlaserTechnician)).toBe(true);
+  });
+
   // -------------------------------------------------------------------------
   // Scenario 3 — SLT's own controller kills it by attacking. They are the active
-  // player, so their When Defeated resolves first: SLT becomes a resource (a zone
+  // player and put their When Defeated first: SLT becomes a resource (a zone
   // hidden from the opponent) and the bounty can no longer find it.
   // -------------------------------------------------------------------------
 
@@ -160,7 +179,8 @@ describe("SHD_226 Unrefusable Offer", () => {
     await g.attackWithGroundUnitAsync(2, 0); // SLT attacks into the Marine and dies
     await g.chooseGroundUnitAsync(1, 0);
 
-    // Player 2's own trigger comes first.
+    // Player 2 puts their own trigger first.
+    await g.dispatchAsync(2, "choose-option", { option: "Mine" });
     await g.chooseYesAsync(2);
     expect(g.state.player2.resources).toHaveLength(resourcesBefore + 1);
     expect(g.state.player2.resources.some(r => r.cardId === Cards.units.sor.superlaserTechnician)).toBe(true);
@@ -176,12 +196,12 @@ describe("SHD_226 Unrefusable Offer", () => {
 
     await g.attackWithGroundUnitAsync(2, 0);
     await g.chooseGroundUnitAsync(1, 0);
+    await g.dispatchAsync(2, "choose-option", { option: "Mine" });
     await g.chooseYesAsync(2); // SLT resourced itself
 
     // The bounty is still offered, but there is no longer a card it can reach.
-    if (g.lastDispatchResponse?.resolutionNeeded?.type === "Option") {
-      await g.chooseYesAsync(1);
-    }
+    expect(g.lastDispatchResponse?.resolutionNeeded).toMatchObject({ helperText: expect.stringContaining("Collect bounty") });
+    await g.chooseYesAsync(1);
     expect(g.state.player1.groundArena).toHaveLength(1); // only the Marine
     expect(g.state.player1.groundArena.some(u => u.cardId === Cards.units.sor.superlaserTechnician)).toBe(false);
     expect(g.state.player2.resources.some(r => r.cardId === Cards.units.sor.superlaserTechnician)).toBe(true);
@@ -197,6 +217,7 @@ describe("SHD_226 Unrefusable Offer", () => {
 
     await g.attackWithGroundUnitAsync(2, 0);
     await g.chooseGroundUnitAsync(1, 0);
+    await g.dispatchAsync(2, "choose-option", { option: "Mine" });
     await g.chooseNoAsync(2); // SLT stays in the discard
     await g.chooseYesAsync(1); // now the bounty finds it
 
