@@ -152,6 +152,9 @@ export function HasAmbush(cardId: string, playId?: string, playedFrom?: Zones, p
     case "LOF_087"://Eighth Brother
     case "SEC_087"://Dedra Meero
     case "SEC_209"://The Mandalorian
+    case "SEC_088"://First Light (Threatening Elegance)
+    case "LAW_086"://The Stranger
+    case "TS26_55"://Jedi General
     case "LAW_078"://Sabine Wren - Spectre Five
     case "LAW_081"://Sullustan Sapper
     case "LAW_135"://Pirate Snub Fighter

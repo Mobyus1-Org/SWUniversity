@@ -3,7 +3,7 @@ import { Unit } from "@/server/engine/unit";
 import { ChooseIndirectTargetPending, OnAttackOrderPending, OnAttackTriggerEntry, PendingResolution, ResolveAttackPending, SpreadDamagePending, GiveXpMultiplePending, SpreadHealPending, MillPending, AbilityTargetPending, AbilityOptionPending, DiscardFromHandPending } from "@/server/engine/pending-resolution";
 import { CountBounties } from "@/server/engine/card-db/keyword-dictionaries.ts/bounty";
 import { CreateTieFighter } from "@/server/engine/token-helpers";
-import { AhsokasLightsabersOffer, NuteGunrayOffer, DefeatableUpgradePlayIds, EnfysNest198Offer, CovetousRivalsOffer, XanaduBloodOffer, PreventBaseHealingThisPhase, BossNassOffer, IsResistanceOrResistanceUpgraded, MostPowerfulFriendlyVillainyUnits, GetUnitByPlayId, GetOtherPlayer, ReadyUnit, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage, FriendlyUnitsWithTrait, DiscardFromTopOfDeck, buildThrawnExperience, buildLeiaDrawAndReturn, buildHanTokenDefeat, buildMaulChoice, OtherFriendlyUnitsThatEnteredPlayThisPhase, LeaderAbilitiesIgnored, negotiatorResourceShuffle } from "@/server/engine/core-functions";
+import { ExhaustUnitByAbility, AhsokasLightsabersOffer, NuteGunrayOffer, DefeatableUpgradePlayIds, EnfysNest198Offer, CovetousRivalsOffer, XanaduBloodOffer, PreventBaseHealingThisPhase, BossNassOffer, IsResistanceOrResistanceUpgraded, MostPowerfulFriendlyVillainyUnits, GetUnitByPlayId, GetOtherPlayer, ReadyUnit, CardsDrawnThisPhase, buildIndirectDamage, AllGroundUnits, AllSpaceUnits, AllUnits, IsCoordinateActive, DealDamageToBase, GetBaseDamage, GetGame, GetHand, GetUnitsForPlayer, GetPlayer, GetLeaderForPlayer, InitiativePlayer, TraitContains, IsLeaderUnit, UnitAttackedThisPhase, UnitWasDefeatedThisPhase, CardWasPlayedThisPhase, HasOnAttack, UpgradeGrantsOnAttack, GetCurrentEffectsForPlayer, CanDisclose, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, DealDamageToUnit, DrawCardForPlayer, PlayerControlsCardWithTitle, PlayerHasUnitWithAspectInPlay, CanDiscloseAnyOf, SEC_004_ASPECTS, LAWBRINGER_ASPECTS, GivePowerMod, QueueWhenDiscardedTrigger, ResourceTopCardOfDeck, optionalPayResource, CreateForceToken, GiveStatModForPhase, UnitRemainingHp, NumberOfUnitsInArena, UpgradesYouControl, FriendlyUnitsAloneInArena, buildPhasmaOnMyCommandOffer, UnitArenaOf, UnitTraits, buildJarJarDamageAndHeal, AfterNonCombatUnitDamage, FriendlyUnitsWithTrait, DiscardFromTopOfDeck, buildThrawnExperience, buildLeiaDrawAndReturn, buildHanTokenDefeat, buildMaulChoice, OtherFriendlyUnitsThatEnteredPlayThisPhase, LeaderAbilitiesIgnored, negotiatorResourceShuffle } from "@/server/engine/core-functions";
 import { HasSaboteur } from "@/server/engine/card-db/keyword-dictionaries.ts/saboteur";
 import { AttackAbilityCardIds } from "@/server/engine/card-db/keyword-dictionaries.ts/support";
 import { CardCost, CardTitle, CardIsUnique, CardAspects, CardType, AllCardTitles, AllCardTraits } from "@/server/engine/card-db/generated";
@@ -367,7 +367,7 @@ function resolveUpgradeOnAttack(
       if (continuation.target.type !== "unit") break;
       const defender074 = GetUnitByPlayId(GetGame()!.currentGameState, continuation.target.playId);
       if (defender074) {
-        defender074.ready = false;
+        ExhaustUnitByAbility(defender074, attacker.controller);
         GetGame()!.gameLog.push(`${CardTitle("SHD_074")}: exhausted ${CardTitle(defender074.cardId)}.`);
       }
       break;
@@ -944,7 +944,7 @@ function resolveInnateOnAttack(
       if (continuation.target.type !== "unit") return continuation;
       const defender183 = GetUnitByPlayId(GetGame()!.currentGameState, continuation.target.playId);
       if (defender183) {
-        defender183.ready = false;
+        ExhaustUnitByAbility(defender183, attacker.controller);
         GetGame()!.gameLog.push(`${CardTitle("SHD_183")}: exhausted ${CardTitle(defender183.cardId)}.`);
       }
       return continuation;
@@ -1265,6 +1265,19 @@ function resolveInnateOnAttack(
       const damaged003 = AllUnits().filter(u => u.damage > 0);
       if (damaged003.length === 0) return continuation;
       return mandatoryTarget("TWI_003_OA", attacker.controller, damaged003.map(u => u.playId), continuation);
+    }
+    case "HMW_182": { // Arena Nexu — "On Attack: You may deal 3 damage to a friendly Creature unit (including this one) and
+                      // ready this unit. Use this ability only once each round."
+      const g182 = GetGame()!.currentGameState;
+      if (g182.currentEffects.some(e => e.cardId === "HMW_182_used" && e.targetPlayId === attacker.playId)) return continuation;
+      const creatures182 = GetUnitsForPlayer(attacker.controller).filter(u => TraitContains(u.cardId, "Creature", attacker.controller, u.playId));
+      if (creatures182.length === 0) return continuation;
+      return optionalTarget("HMW_182", attacker.controller, creatures182.map(u => u.playId), "Deal 3 damage to a friendly Creature to ready this unit?", { yesLabel: "Deal 3", sourcePlayId: attacker.playId, continuation });
+    }
+    case "HMW_185": { // Ty Yorrick — "On Attack: You may deal 1 damage to a Creature unit."
+      const creatures185 = AllUnits().filter(u => TraitContains(u.cardId, "Creature", u.controller, u.playId));
+      if (creatures185.length === 0) return continuation;
+      return optionalTarget("HMW_185", attacker.controller, creatures185.map(u => u.playId), "Deal 1 damage to a Creature unit?", { yesLabel: "Deal 1", continuation });
     }
     case "SEC_031": // Nute Gunray — the same offer as his When Played.
       return NuteGunrayOffer(attacker.controller, attacker.playId, continuation) ?? continuation;

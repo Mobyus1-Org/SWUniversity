@@ -57,6 +57,8 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
         case "TWI_250"://Sword and Shield Maneuver
           if(TraitContains(cardId, "Jedi", player)) hasSentinel = true;
           break;
+        case "HMW_221": hasSentinel = true; break;//Teeka — given for the phase
+        case "HMW_221_lose": return false;//Teeka — loses Sentinel for the phase
         case "JTL_229": hasSentinel = true; break;//Diversion
         case "SEC_031": hasSentinel = true; break;//Nute Gunray — another friendly Official, for the phase
         case "JTL_130": hasSentinel = true; break;//Timely Reinforcements
@@ -112,6 +114,8 @@ export function HasSentinel(cardId: string, playId?: string, player?: PlayerId, 
       //Spark of Rebellion
       case "SOR_211"://Gamorrean Guards
         return PlayerHasUnitWithAspectInPlay(player, "Cunning", true, playId);
+      case "HMW_259"://Pack Guardian — while ready
+        return unit.ready;
       case "HMW_142": {//Wookiee Rangers — "another Wookiee unit OR a Kashyyyk base". Both halves
                        //are independent; a board with a second Wookiee hides a missing base check.
         const pState142 = player === 1

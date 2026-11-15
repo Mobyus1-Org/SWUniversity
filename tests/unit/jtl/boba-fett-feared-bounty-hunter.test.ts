@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { Cards } from "../../card-helpers";
 import * as F from "../shd/scan-fixtures";
 const { board, load, CSF, XWING } = F;
@@ -34,5 +35,13 @@ describe("JTL_189 Boba Fett", () => {
     await asPilot(g);
     await g.chooseNoAsync(1);
     expect(g.state.player2.groundArena[0].damage).toBe(0);
+  });
+});
+
+describe("JTL_189 Boba Fett — keywords", () => {
+  it("has Shielded", () => {
+    const g = load(board().WithGroundUnitForPlayer(1, BOBA).Build());
+    const u = g.state.player1.groundArena[0];
+    expect(HasKeyword(u.cardId, "Shielded", u.playId, 1)).toBe(true);
   });
 });

@@ -17,7 +17,7 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
       const units = GetUnitsForPlayer(player);
       for (const u of units) {
         switch (u.cardId) {
-          case "SEC_088"://First Light - Headquarters of the Crimson Dawn
+          case "SHD_036"://First Light - Headquarters of the Crimson Dawn
             return true;
           default:
             break;
@@ -41,6 +41,9 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
         case "JTL_150"://Biggs Darklighter
           if(TraitContains(cardId, "Speeder", player)) return true;
           break;
+        case "HMW_191"://Hunter's Instinct — only a Creature
+          if(TraitContains(cardId, "Creature", player, playId)) return true;
+          break;
         case "LOF_238"://Darth Revan's Lightsabers (yes there are two of them in one card)
           if(TraitContains(cardId, "Sith", player)) return true;
           break;
@@ -53,6 +56,7 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
       if(currentEffect.targetPlayId && currentEffect.targetPlayId !== playId) continue;
       switch(currentEffect.cardId) {
         case "TWI_172": return true;//Grim Resolve
+        case "HMW_243": return true;//Sun Fac — for this phase
         case "HMW_006": return true;//Omega leader Action — for this attack
         default: break;
       }
@@ -92,12 +96,13 @@ export function HasGrit(cardId: string, playId?: string, player?: PlayerId, isRe
     case "SOR_003"://Chewbacca - Walking Carpet
     case "SHD_136"://Death Watch Loyalist
     case "SHD_027"://Hylobon Enforcer
+    case "HMW_166"://Gungi
+    case "HMW_182"://Arena Nexu
     case "SHD_048"://Gentle Giant
     case "SHD_171"://Covetous Rivals
     case "SHD_061"://Wroshyr Tree Tender
-    case "SEC_225"://Synara San
     case "SHD_033"://Synara San - Loyal to Kragan
-    case "SEC_088"://First Light
+    case "SHD_036"://First Light (Headquarters of the Crimson Dawn)
     case "SHD_002"://Qi'Ra Leader Unit
     case "SHD_249"://Wookiee Warrior
     case "SHD_146"://Heroic Renegade

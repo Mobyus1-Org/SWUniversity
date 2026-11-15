@@ -160,6 +160,8 @@ export interface DiscardFromHandPending {
   thenDrawForPlayer?: PlayerId;
   /** LOF_001 Kylo Ren: draw for this player only if the discarded card was an upgrade. */
   thenDrawIfUpgradeFor?: PlayerId;
+  /** HMW_166 Gungi — "If you do, ready this unit": the unit readied once a card is discarded. */
+  thenReadyPlayId?: string;
   /** HMW_010 Tarfful: after the discard COST is paid, this player creates a Beast token. */
   thenCreateBeastFor?: PlayerId;
   /** SEC_008 Bail Organa: once both discards (his deploy cost) are paid, this player's leader deploys. */

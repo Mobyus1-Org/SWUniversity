@@ -206,6 +206,7 @@ export class Unit implements UnitInterface {
 
     power += selfStatBonus(this) + supremacyBonus(this) + fulcrumBonus(this);
     power += selfPowerOnlyBonus(this);
+    power += landingPadBonus(this);
     power += friendlyAuraBonus(this);
     power -= enemyAuraDebuff(this);
     power -= friendlyAuraDebuff(this);
@@ -675,6 +676,15 @@ function fulcrumBonus(unit: Unit): number {
   return GetUnitsForPlayer(unit.controller)
     .filter(u => u.playId !== unit.playId && !Unit.FromInterface(u).LostAbilities())
     .reduce((n, u) => n + 2 * u.upgrades.filter(x => x.cardId === "LAW_150").length, 0);
+}
+
+/** HMW_271 Landing Pad — attached base gains "Friendly space units get +1/+0." One per Landing Pad on the base. */
+function landingPadBonus(unit: Unit): number {
+  const game = GetGame();
+  if (!game) return 0;
+  const p = unit.controller === 1 ? game.currentGameState.player1 : game.currentGameState.player2;
+  if (!p.spaceArena.some(u => u.playId === unit.playId)) return 0;
+  return (p.base.upgrades ?? []).filter(u => u.cardId === "HMW_271").length;
 }
 
 function supremacyBonus(unit: Unit): number {

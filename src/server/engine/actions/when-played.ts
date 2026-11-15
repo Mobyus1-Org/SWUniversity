@@ -1,6 +1,6 @@
 import { PilotingCost } from "@/server/engine/card-db/keyword-dictionaries.ts/piloting";
 import { PlayerId } from "@/lib/engine/core-models";
-import { ReadyUnit, BaylanTargets, EliteSquadOffer, NuteGunrayOffer, buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, IsLeaderUnit, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits, CanUnitReady, buildThrawnExperience, buildBadFeelingShield, BossNassOffer, DefeatableNonLeaderUnitsAtOrBelowHp, CovetousRivalsOffer, XanaduBloodOffer, PlayerControlsCardWithTitle, EnfysNest198Offer, ProfundityChoice, SavageOpressChoice } from "@/server/engine/core-functions";
+import { CheapUpgradeBounceOffer, ReadyUnit, BaylanTargets, EliteSquadOffer, NuteGunrayOffer, buildIndirectDamage, CreateForceToken, PlayerHasUnitsInHand, buildCaptainRexSentinel, AllCaptives, AllGroundUnits, AllSpaceUnits, AllUnits, GetOtherPlayer, CanDisclose, DealDamageToBase, GetGame, GetUnitByPlayId, GetUnitsForPlayer, GetPlayer, TraitContains, CardIsLeader, IsLeaderUnit, chooseAndDefeatUnit, mandatoryTarget, optionalTarget, searchDeck, buildVaneeAbility, buildNihilusAbility, buildTakeControlOfUpgrade, buildMoveUpgradeSameController, PlayerHasUnitWithTraitInPlay, PlayerHasUnitWithAspectInPlay, HasTheForce, HealBaseForPlayer, GetHand, UseTheForce, DefeatableUpgradePlayIds, UnitHasWhenDefeatedAbility, PlayerHasAspectInDiscard, FindUpgradeByPlayId, ReadyUnitByPlayId, LAWBRINGER_ASPECTS, UnitImmuneToEnemyDefeat, UnitImmuneToEnemyBounce, UnitImmuneToEnemyCapture, DealDamageToUnit, CanUnitAttack, optionalPayResource, buildMultiAttack, ArenasWhereYouControlTheMostUnits, GiveStatModForPhase, UnitWasDefeatedThisPhase, EnemyNonLeadersThatAttackedBase, UnitRemainingHp, buildPurrgilUltraOffer, buildPhasmaOnMyCommandOffer, buildInvisibleHandOffer, UnitArenaOf, IsVehicleUnitCard, DiscardFromTopOfDeck, buildAnnihilatorOffer, UnitTraits, CanUnitReady, buildThrawnExperience, buildBadFeelingShield, BossNassOffer, DefeatableNonLeaderUnitsAtOrBelowHp, CovetousRivalsOffer, XanaduBloodOffer, PlayerControlsCardWithTitle, EnfysNest198Offer, ProfundityChoice, SavageOpressChoice } from "@/server/engine/core-functions";
 import { onlyHopeCost, aspectPenalty, palpatinesReturnCost, spendableFor, playCost, CardIsPlayable, DiscardUnitsPlayableAtDiscount, DefeatedThisPhaseDiscardUnitsAtDiscount } from "@/server/engine/card-playability";
 import { WhenPlayedLostWithWhenDefeated, buildActOfAggressionBuff, DrawCardForPlayer, DrawCardsForPlayer, DefeatableNonLeadersWithPowerAtMost, ReadyableUnitsWithPowerAtMost, UpgradesOnEnemyUnits } from "@/server/engine/core-functions";
 import { chooseFriendlyForPowerDamage } from "@/server/engine/actions/deal-power-damage";
@@ -2653,6 +2653,57 @@ export function resolveWhenPlayed(
     }
     case "SEC_143": // The Elite Squad — "When Played: You may deal 2 damage to another unique unit."
       return EliteSquadOffer(player, playId, null);
+    case "HMW_186": // Mining Guild Trespasser — "When Played: You may deal 2 damage to a base and 2 damage to an enemy unit."
+      return { type: "ability-option", cardId, player, helperText: "Deal 2 damage to a base and 2 damage to an enemy unit?", yesLabel: "Deal damage", continuation: null };
+    case "HMW_195": { // Catch the Scent (Event) — "Create 2 Beast tokens and ready 1 of them."
+      const beast195 = CreateBeast(game.currentGameState, player, game.gameLog, cardId);
+      CreateBeast(game.currentGameState, player, game.gameLog, cardId);
+      ReadyUnit(game.currentGameState, beast195);
+      return null;
+    }
+    case "HMW_221": // Teeka — "When Played: Choose one: Give a unit Sentinel for this phase. / A unit loses Sentinel for this phase."
+      return { type: "choose-one", cardId, player, options: [{ id: "give", label: "Give a unit Sentinel" }, { id: "lose", label: "A unit loses Sentinel" }], continuation: null } satisfies ChooseOnePending;
+    case "HMW_222": { // Sandcrawler Sales Team — "When Played: If you control a Tatooine base, you may return an upgrade that
+                      // costs 3 or less to its owner's hand."
+      const base222 = GetPlayer(game.currentGameState, player).base.cardId;
+      if (!TraitContains(base222, "Tatooine", player)) return null;
+      return CheapUpgradeBounceOffer(cardId, player);
+    }
+    case "HMW_230": { // Raiding Party — "When Played: If you control another Tusken unit or a Tatooine base, you may
+                      // exhaust a ground unit."
+      const p230 = GetPlayer(game.currentGameState, player);
+      const qualifies230 = GetUnitsForPlayer(player).some(u => u.playId !== playId && TraitContains(u.cardId, "Tusken", player, u.playId))
+        || TraitContains(p230.base.cardId, "Tatooine", player);
+      const ground230 = AllGroundUnits();
+      if (!qualifies230 || ground230.length === 0) return null;
+      return optionalTarget(cardId, player, ground230.map(u => u.playId), "Exhaust a ground unit?", { yesLabel: "Exhaust" });
+    }
+    case "HMW_232": { // Mon Cal Cruiser — "When Played: Choose one: Attack with a unit. It gets +2/+0 for this attack. / Look
+                      // at an opponent's hand. You may discard a card from it. If you do, they draw a card."
+      return { type: "choose-one", cardId, player, options: [{ id: "attack", label: "Attack with a unit (+2/+0)" }, { id: "look", label: "Look at your opponent's hand" }], continuation: null } satisfies ChooseOnePending;
+    }
+    case "HMW_240": { // Sandstorm (Event) — "Choose an arena. Give a Weakness token to each exhausted enemy unit in that arena."
+      return { type: "choose-one", cardId, player, options: [{ id: "ground", label: "Ground arena" }, { id: "space", label: "Space arena" }], continuation: null } satisfies ChooseOnePending;
+    }
+    case "HMW_241": { // Howl (Event) — "Create a Beast token. You may return a non-leader unit to its owner's hand."
+      CreateBeast(game.currentGameState, player, game.gameLog, cardId);
+      const bounce241 = AllUnits().filter(u => !IsLeaderUnit(u) && (u.controller === player || !UnitImmuneToEnemyBounce(u)));
+      if (bounce241.length === 0) return null;
+      return optionalTarget(cardId, player, bounce241.map(u => u.playId), "Return a non-leader unit to its owner's hand?", { yesLabel: "Return" });
+    }
+    case "HMW_243": { // Sun Fac — "When Played: Give a unit Grit for this phase."
+      const units243 = AllUnits();
+      if (units243.length === 0) return null;
+      return mandatoryTarget(cardId, player, units243.map(u => u.playId));
+    }
+    case "HMW_263": // Wrecker (Wrecking the Empire) — "When Played: Each player chooses a unit they control. Deal 3 damage to
+                    // each chosen unit." You choose first (Wrecker himself is a legal choice), then your opponent.
+      return mandatoryTarget("HMW_263_mine", player, GetUnitsForPlayer(player).map(u => u.playId));
+    case "HMW_272": // Growth (Event) — "Create a Beast token. Heal 3 damage from your base. Draw a card."
+      CreateBeast(game.currentGameState, player, game.gameLog, cardId);
+      HealBaseForPlayer(game.currentGameState, player, 3, game.gameLog, cardId);
+      DrawCardForPlayer(game.currentGameState, game.gameLog, player);
+      return null;
     case "SEC_129": { // With Thunderous Applause — "Give a unit +2/+2 for this phase. You may disclose Command.
                       // If you do, give another unit +2/+2 for this phase." The disclose is offered once the
                       // first unit is chosen (see the SEC_129 target handler).

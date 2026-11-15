@@ -67,6 +67,7 @@ export function HasShielded(cardId: string, playId?: string, player?: PlayerId, 
     case "SHD_192"://Dryden Vos
     case "SHD_240"://Hutt's Henchman
     case "SHD_034"://Supercommando Squad
+    case "JTL_189"://Boba Fett (Feared Bounty Hunter)
       return true;
     //Jump to Lightspeed
     case "JTL_032"://Director Krennic

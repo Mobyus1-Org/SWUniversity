@@ -77,6 +77,7 @@ export function HasHidden(cardId: string, playId?: string, player?: PlayerId, is
 
     //Secrets of Power
     case "SEC_201"://Anakin Skywalker
+    case "SEC_225"://Synara San (Harboring a Secret)
     case "SEC_148"://Karis Nemik
     case "SEC_221"://Unruly Astromech
     case "SEC_238"://Sith Assassin

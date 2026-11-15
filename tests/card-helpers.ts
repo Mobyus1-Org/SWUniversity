@@ -519,6 +519,7 @@ export const Cards = {
       kyloRenKillingThePast: "SHD_141",
       preVizsla: "SHD_142",
       ig11: "SHD_170",
+      firstLight: "SHD_036",
     },
     jtl: {
       directorKrennicVerge: "JTL_032",    // 2/2 Ground — Shielded; first WD unit each round costs 1 less
@@ -775,6 +776,7 @@ export const Cards = {
       confederateTriFighter: "TWI_132",
       the501stLiberator: "TWI_109",
       kalani: "TWI_085",
+      clone: "TWI_116",
     },
     sec: {
       craitVeteran: "SEC_251", // 4/3 Ground Resistance/Trooper, cost 3, no text
@@ -1107,6 +1109,18 @@ export const Cards = {
       greaterSarlacc: "HMW_049",    // 9/8 Ground, cost 9 — Overwhelm; defeat ready resources, -3 cost each
       vernestraRwoh: "HMW_048",     // 5/5 Ground, cost 6 — Sentinel; recycle up to 2 cost-≤5 units, gains their When Played
       hijackedAtSt: "HMW_121",      // 7/7 Ground, cost 5 — Overwhelm; When Played: this unit doesn't ready next regroup
+      gungi: "HMW_166",
+      arenaNexu: "HMW_182",
+      tyYorrick: "HMW_185",
+      miningGuildTrespasser: "HMW_186",
+      tech: "HMW_211",
+      teeka: "HMW_221",
+      sandcrawlerSalesTeam: "HMW_222",
+      raidingParty: "HMW_230",
+      monCalCruiser: "HMW_232",
+      sunFac: "HMW_243",
+      packGuardian: "HMW_259",
+      wrecker: "HMW_263",
     },
     ic27: {
       // Keyword-only (new and reprinted).
@@ -1330,6 +1344,12 @@ export const Cards = {
       tarkinDoctrine: "HMW_206",         // unique Fortify — base gains "play a Fortification: exhaust an enemy"
       direProwess: "HMW_097",            // +1/+1 Learned — When Played: may give a Weakness token
       devotion: "HMW_096",               // +1/+1 Innate — attached unit gains Restore 2
+      huntersInstinct: "HMW_191",
+      insurgentCamp: "HMW_216",
+      boomaBall: "HMW_236",
+      villainousAmbition: "HMW_252",
+      heroicBravery: "HMW_264",
+      landingPad: "HMW_271",
     },
     ic27: {
       inspiringMentor: "IC27_085",       // reprint of SHD_104
@@ -1611,6 +1631,10 @@ export const Cards = {
       mysteriousDisappearance: "HMW_058", // A player picks their non-leader unit; may defeat → Beast
       torrent: "HMW_100",           // 1 Weakness to a unit; 2 instead with a Naboo base
       migrate: "HMW_150",           // Create a Beast per 3 resources you control
+      catchTheScent: "HMW_195",
+      sandstorm: "HMW_240",
+      howl: "HMW_241",
+      growth: "HMW_272",
     },
     ic27: {
       lethalCrackdown: "IC27_030",  // reprint of TWI_041

@@ -247,6 +247,7 @@ export function RaidAmount(cardId: string, playId?: string, player?: PlayerId, i
     case "LOF_157": amount += 2; break; //Cartel Interceptor
     case "LOF_132": amount += 1; break; //Grand Inquisitor LOF
     case "LOF_209": amount += 2; break; //Tusken Tracker
+    case "HMW_230": amount += 6; break; //Raiding Party
     case "IBH_004": //Rogue Squadron Speeder — Raid 1
     case "IBH_017":
     case "IBH_034": amount += 1; break;

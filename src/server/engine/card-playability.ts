@@ -686,6 +686,10 @@ function jtlConditionalSelfDiscount(game: GameState, player: PlayerId, cardId: s
       return [...game.player1.groundArena, ...game.player2.groundArena].filter(u => u.damage > 0).length;
     case "JTL_204":
       return opp.spaceArena.length >= 3 ? 3 : 0;
+    case "HMW_240": { // Sandstorm — "While you control a Tatooine base, this event costs 1 resource less to play."
+      const own = player === 1 ? game.player1 : game.player2;
+      return TraitContains(own.base.cardId, "Tatooine", player) ? 1 : 0;
+    }
     default:
       return 0;
   }

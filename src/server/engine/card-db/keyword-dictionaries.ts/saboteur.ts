@@ -96,6 +96,7 @@ export function HasSaboteur(cardId: string, playId?: string, player?: PlayerId, 
   switch(cardId)
   {
     //Spark of Rebellion
+    case "HMW_222"://Sandcrawler Sales Team
     case "SOR_194"://Rogue Operative
     case "SOR_205"://Jawa Scavenger
     case "SOR_239"://Rebel Pathfinder

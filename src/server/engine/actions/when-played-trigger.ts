@@ -2,7 +2,7 @@ import { HasHidden } from "@/server/engine/card-db/keyword-dictionaries.ts/hidde
 import { CardTitle, CardIsUnique } from "@/server/engine/card-db/generated";
 import type { TriggerEntry } from "@/lib/engine/trigger-types";
 import type { GameState } from "@/lib/engine/game";
-import { LOF_211_UNATTACKABLE, LeaderSideTraits, DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase, GivePowerMod, WhenPlayedLostWithWhenDefeated, UpgradesYouControl, FriendlyUnitsEnteredPlayThisPhase, PreventBaseHealingThisPhase, PlayerControlsCardWithTitle, UnitRemainingHp as UnitRemainingHpOf } from "@/server/engine/core-functions";
+import { ExhaustUnitByAbility, LOF_211_UNATTACKABLE, LeaderSideTraits, DealDamageToBase, DealDamageToUnit, HealBaseForPlayer, DiscardRandomCardFromHand, DrawCardForPlayer, GetUnitsForPlayer, PlayerHasUnitWithAspectInPlay, ReadyUnit, UnitWasDefeatedThisPhase, GetUnitByPlayId, TraitContains, HealUnit, GiveStatModForPhase, GivePowerMod, WhenPlayedLostWithWhenDefeated, UpgradesYouControl, FriendlyUnitsEnteredPlayThisPhase, PreventBaseHealingThisPhase, PlayerControlsCardWithTitle, UnitRemainingHp as UnitRemainingHpOf } from "@/server/engine/core-functions";
 import { Unit } from "@/server/engine/unit";
 import { ArmInvisibleHandDiscount } from "@/server/engine/card-playability";
 import { HasShielded } from "@/server/engine/card-db/keyword-dictionaries.ts/shielded";
@@ -217,7 +217,7 @@ export function resolveWhenPlayedTrigger(
     }
     case "IC27_027": // reprint of SOR_039
     case "SOR_039": // AT-AT Suppressor — When Played: Exhaust all ground units.
-      for (const u of [...player.groundArena, ...otherPlayer.groundArena]) u.ready = false;
+      for (const u of [...player.groundArena, ...otherPlayer.groundArena]) ExhaustUnitByAbility(u, trigger.fromPlayer);
       log.push(`${CardTitle(trigger.cardId)}: all ground units exhausted.`);
       break;
     case "SHD_066": { // Cargo Juggernaut — "If you control another Vigilance unit, heal 4 damage

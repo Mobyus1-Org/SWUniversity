@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { Cards } from "../../card-helpers";
 import * as F from "../shd/scan-fixtures";
 const { board, load, MARINE, XWING } = F;
@@ -26,5 +27,15 @@ describe("SEC_088 First Light", () => {
     const g = setup(Cards.units.jtl.tantiveIV);
     await F.attackUnit(g, 0, g.state.player2.spaceArena[0].playId, "space");
     expect(F.prompt(g)).toBeNull();
+  });
+});
+
+describe("SEC_088 First Light — keywords", () => {
+  it("has Ambush and Plot, and no Grit", () => {
+    const g = load(board().WithSpaceUnitForPlayer(1, FIRST_LIGHT).Build());
+    const u = g.state.player1.spaceArena[0];
+    expect(HasKeyword(u.cardId, "Ambush", u.playId, 1)).toBe(true);
+    expect(HasKeyword(u.cardId, "Plot", u.playId, 1)).toBe(true);
+    expect(HasKeyword(u.cardId, "Grit", u.playId, 1)).toBe(false);
   });
 });

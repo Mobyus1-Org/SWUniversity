@@ -982,7 +982,8 @@ export function UpgradeEntriesYouControl(
  * riding a Vehicle are two copies, so reading only the arenas silently permits a duplicate.
  */
 export function InPlayCopiesControlled(gs: GameState, player: PlayerId, cardId: string): string[] {
-  const asUnits = GetUnitsForPlayer(player).filter(u => u.cardId === cardId).map(u => u.playId);
+  // TWI_116 Clone — a copy "is not unique", so it never counts toward the uniqueness rule.
+  const asUnits = GetUnitsForPlayer(player).filter(u => u.cardId === cardId && !u.isClone).map(u => u.playId);
   const asUpgrades = UpgradeEntriesYouControl(gs, player)
     .filter(e => e.cardId === cardId)
     .map(e => e.playId);
@@ -1622,6 +1623,8 @@ export function DealDamageToBase(
   /** Combat damage — an attack on the base, including Overwhelm excess (CR 7.5.7.d). */
   combat = false,
 ): void {
+  // HMW_185 Ty Yorrick — ability damage only (an attack's damage to a base is combat damage).
+  if (!combat) amount += TyYorrickBonus(gs, byPlayer, player);
   // HMW_081 Alliance Shield Generator replaces the whole instance before anything else reads it.
   if (preventBigBaseHit(gs, player, amount)) return;
   amount = CapBaseDamage(player, amount);
@@ -2678,6 +2681,8 @@ export function HasOnAttack(cardId: string, player?: PlayerId, playId?: string):
     case "TWI_183": //Rush Clovis — On Attack: Battle Droid if the defender has no ready resources
     case "TWI_198": //Enfys Nest (Champion of Justice) — On Attack: may bounce a weaker enemy non-leader
     case "JTL_007": //Admiral Holdo (deployed) — On Attack: may give another Resistance unit +2/+2
+    case "HMW_182": //Arena Nexu — On Attack: may deal 3 to a friendly Creature and ready, once each round
+    case "HMW_185": //Ty Yorrick — On Attack: may deal 1 damage to a Creature unit
     case "SEC_031": //Nute Gunray — On Attack: may give another friendly Official Sentinel
     case "SEC_225": //Synara San (Harboring a Secret) — On Attack: ready a resource per friendly unit
     case "LAW_086": //The Stranger — while attacking, may have the defender deal combat damage first
@@ -3580,11 +3585,24 @@ export function MarkUnitDamaged(gs: GameState, playId: string): void {
   }
 }
 
+/**
+ * HMW_185 Ty Yorrick — "If a friendly ability would deal damage, you may have that ability deal that much damage
+ * plus 1 instead." The ability's controller is `sourcePlayer`, or the player resolving it. Taken only against an
+ * enemy target: the "may" is never worth more damage to your own unit or base.
+ */
+export function TyYorrickBonus(gs: GameState, sourcePlayer: PlayerId | undefined, targetController: PlayerId): number {
+  const actor = sourcePlayer ?? gs.roundState.actingPlayer;
+  if (actor === undefined || actor === targetController) return 0;
+  return GetUnitsForPlayer(actor).filter(u => u.cardId === "HMW_185" && !Unit.FromInterface(u).LostAbilities()).length;
+}
+
 export function DealDamageToUnit(gs: GameState, cardId: string, targetPlayId: string|undefined, amount: number, withLog?: string[], sourcePlayer?: PlayerId, bypassMandoPrevention = false): void {
   if (!targetPlayId) return;
   const target = GetUnitByPlayId(gs, targetPlayId);
   if (!target) return;
   if (amount <= 0) return;
+  // HMW_185 Ty Yorrick. Not on a re-issued instance: its amount already carries the bonus.
+  if (!bypassMandoPrevention) amount += TyYorrickBonus(gs, sourcePlayer, target.controller);
   // ASH_150 Deadly Vulnerability: the attached unit takes twice as much damage. Applied before
   // prevention and Shield so downstream absorption sees the doubled instance.
   if (target.upgrades.some(u => u.cardId === "ASH_150")) amount *= 2;
@@ -3716,6 +3734,8 @@ export function QueueLograyReaction(gs: GameState, damaged: Unit): void {
 const SELF_DAMAGED_SURVIVES_UNITS = new Set([
   "HMW_156", // Arena Acklay — deal 2 damage to each enemy base
   "HMW_169", // Crosshair (I've Changed) — each player draws a card
+  "HMW_166", // Gungi — may discard a card to ready himself
+  "HMW_211", // Tech — may exhaust a unit
 ]);
 
 /**
@@ -4062,6 +4082,35 @@ function RexDC17sReact(gs: GameState, readied: { playId: string }): void {
 export function BaylanTargets(player: PlayerId): UnitInterface[] {
   return AllUnits().filter(u => !IsLeaderUnit(u) && (CardCost(u.cardId) ?? 0) <= 4
     && (u.controller === player || !UnitImmuneToEnemyBounce(u)));
+}
+
+/** HMW_222 / HMW_236 — "You may return an upgrade that costs 3 or less to its owner's hand." */
+export function CheapUpgradeBounceOffer(cardId: string, player: PlayerId): PendingResolution | null {
+  const gs = GetGameState();
+  const cheap = [...AllUnits().flatMap(u => u.upgrades), ...(gs.player1.base.upgrades ?? []), ...(gs.player2.base.upgrades ?? [])]
+    .filter(u => (CardCost(u.cardId) ?? 0) <= 3);
+  if (cheap.length === 0) return null;
+  return optionalTarget(cardId, player, cheap.map(u => u.playId), "Return an upgrade that costs 3 or less to its owner's hand?", { yesLabel: "Return" });
+}
+
+/**
+ * Exhausts a unit as the effect of a card ability — the one path for "exhaust a unit" effects, so that LOF_040
+ * Kylo Ren's Lightsaber ("If attached unit is a Force unit, it gains: 'This unit can't be exhausted by enemy card
+ * abilities.'") can refuse. `sourcePlayer` is the ability's controller (else the player resolving it). Attack
+ * exhausts and a unit exhausting itself to pay a cost do not come through here. False when nothing happened.
+ */
+export function ExhaustUnitByAbility(
+  unit: { playId: string; cardId: string; controller: PlayerId; ready: boolean; upgrades: Array<{ cardId: string }> },
+  sourcePlayer?: PlayerId,
+): boolean {
+  const actor = sourcePlayer ?? GetGame()?.currentGameState.roundState.actingPlayer;
+  if (actor !== undefined && actor !== unit.controller && unit.upgrades.some(u => u.cardId === "LOF_040")
+      && TraitContains(unit.cardId, "Force", unit.controller, unit.playId) && !Unit.FromInterface(unit as UnitInterface).LostAbilities()) {
+    GetGame()?.gameLog.push(`${CardTitle("LOF_040")}: ${CardTitle(unit.cardId)} can't be exhausted by enemy card abilities.`);
+    return false;
+  }
+  unit.ready = false;
+  return true;
 }
 
 /** LOF_211 Dooku (It Is Too Late) — "Each friendly unit with Hidden can't be attacked for this phase." */

@@ -12,6 +12,7 @@ export function HasPlot(cardId: string, playId?: string, player?: PlayerId)
   switch(cardId) {
     //Secrets of Power
     case "SEC_033"://Sly Moore (SEC)
+    case "SEC_088"://First Light (Threatening Elegance)
     case "SEC_034"://Cad Bane (SEC)
     case "SEC_036"://Dogmatic Shock Squad
     case "SEC_070"://Armor of Fortune

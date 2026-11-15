@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { HasKeyword } from "@/server/engine/card-db/dictionaries";
 import { Cards } from "../../card-helpers";
 import * as F from "../shd/scan-fixtures";
 const { board, load, MARINE } = F;
@@ -27,5 +28,14 @@ describe("LAW_086 The Stranger", () => {
     const g = setup();
     await F.attackBase(g);
     expect(F.prompt(g)).toBeNull();
+  });
+});
+
+describe("LAW_086 The Stranger — keywords", () => {
+  it("has Ambush and Grit", () => {
+    const g = load(board().WithGroundUnitForPlayer(1, STRANGER).Build());
+    const u = g.state.player1.groundArena[0];
+    expect(HasKeyword(u.cardId, "Ambush", u.playId, 1)).toBe(true);
+    expect(HasKeyword(u.cardId, "Grit", u.playId, 1)).toBe(true);
   });
 });
