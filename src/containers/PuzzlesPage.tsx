@@ -262,7 +262,7 @@ function CardVisual({
   square = false,
   handScaleHalf = false,
   centerDamageBadge,
-  rotateWhenExhausted = true,
+  landscapeTap = false,
   cardScale90 = false,
   customGlowClass,
   epicUsed = false,
@@ -285,7 +285,12 @@ function CardVisual({
   square?: boolean;
   handScaleHalf?: boolean;
   centerDamageBadge?: number;
-  rotateWhenExhausted?: boolean;
+  /**
+   * Landscape card (an undeployed leader at xl): exhausting turns the WHOLE card 90° clockwise, as
+   * a player taps their leader at the table. Rotating only the image would clip it inside the
+   * landscape frame. The slot is budgeted for both orientations so the board never shifts.
+   */
+  landscapeTap?: boolean;
   cardScale90?: boolean;
   customGlowClass?: string;
   epicUsed?: boolean;
@@ -327,7 +332,7 @@ function CardVisual({
       : (arenaScale60 ? "h-[7.2rem]" : "h-48");
 
   const cardBody = <>
-    <div className="relative">
+    <div className={landscapeTap ? `relative transition-transform duration-200 ${exhausted ? "rotate-90" : ""}` : "relative"}>
       <div
         className={`relative overflow-hidden rounded-2xl border border-white/15 bg-black/40 ${selectable ? `cursor-pointer ${customGlowClass ?? lightsaberGlow}` : "opacity-90"}`}
         {...hold.props}
@@ -335,7 +340,7 @@ function CardVisual({
         onMouseEnter={(e) => onPreviewStart(previewState, { source: e.currentTarget })}
         onMouseLeave={onPreviewEnd}
       >
-        <div className={`relative transition-transform duration-200 ${exhausted && rotateWhenExhausted ? "rotate-90" : ""}`}>
+        <div className={`relative transition-transform duration-200 ${exhausted && !landscapeTap ? "rotate-90" : ""}`}>
           <img
             src={imageSrc}
             alt={title}
@@ -405,11 +410,17 @@ function CardVisual({
     {footer ? <div className="mt-2">{footer}</div> : null}
   </>;
 
+  // A tapped landscape card stands as tall as its frame is wide — 90% of the slot with cardScale90 —
+  // so the slot is always that tall, ready or not.
+  const tapSlotClass = landscapeTap ? "flex aspect-[10/9] w-full flex-col justify-center" : "";
+
   if (!selectable || !onClick) {
-    return <div>{cardBody}</div>;
+    return <div className={tapSlotClass}>{cardBody}</div>;
   }
 
-  return <button type="button" className="w-full text-left" onClick={onClick}>{cardBody}</button>;
+  // `block`: an inline-block button sits on a line box and gains a few px of descender space, so a
+  // card that turns clickable (a leader readying) would nudge everything below it.
+  return <button type="button" className={`w-full text-left ${tapSlotClass || "block"}`} onClick={onClick}>{cardBody}</button>;
 }
 
 function FaceDownResource({
@@ -1811,7 +1822,6 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     exhausted={!opponent.leader.ready}
-                    rotateWhenExhausted={false}
                     compact
                     square
                     epicUsed={opponent.leader.epicActionUsed}
@@ -1893,7 +1903,6 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     exhausted={!opponent.leader.ready}
-                    rotateWhenExhausted={false}
                     compact
                     square
                     epicUsed={opponent.leader.epicActionUsed}
@@ -1922,7 +1931,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     exhausted={!opponent.leader.ready}
-                    rotateWhenExhausted={false}
+                    landscapeTap
                     cardScale90
                     compact
                     epicUsed={opponent.leader.epicActionUsed}
@@ -2010,7 +2019,6 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     exhausted={!player.leader.ready}
-                    rotateWhenExhausted={false}
                     compact
                     square
                     epicUsed={player.leader.epicActionUsed}
@@ -2193,7 +2201,6 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     exhausted={!player.leader.ready}
-                    rotateWhenExhausted={false}
                     compact
                     square
                     epicUsed={player.leader.epicActionUsed}
@@ -2240,7 +2247,7 @@ function PuzzlesPage({ showBuilderTools = false, isAdmin = false, accessLevel = 
                     onPreviewStart={handlePreviewStart}
                     onPreviewEnd={handlePreviewEnd}
                     exhausted={!player.leader.ready}
-                    rotateWhenExhausted={false}
+                    landscapeTap
                     compact
                     cardScale90
                     epicUsed={player.leader.epicActionUsed}
